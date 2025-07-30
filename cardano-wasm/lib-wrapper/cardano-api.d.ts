@@ -4,9 +4,9 @@ export default initialise;
 
 /**
  * Initialises the Cardano API.
- * @returns A promise that resolves to the main `CardanoAPI` object.
+ * @returns A promise that resolves to the main `CardanoApi` object.
  */
-declare function initialise(): Promise<CardanoAPI>;
+declare function initialise(): Promise<CardanoApi>;
 
 /**
  * Represents an unsigned transaction.
@@ -108,6 +108,19 @@ declare interface GrpcConnection {
      * @returns A promise that resolves to the current protocol parameters.
      */
     getProtocolParams(): Promise<any>;
+
+    /**
+     * Get all UTXOs from the node using a GRPC-web client.
+     * @returns A promise that resolves to the current UTXO set.
+     */
+    getAllUtxos(): Promise<{ address: string, txId: string, txIndex: number, lovelace: number, assets: any[], datum?: any, script?: any }[]>;
+
+    /**
+     * Get UTXOs for a given address using a GRPC-web client.
+     * @param address The address to get UTXOs for.
+     * @returns A promise that resolves to the UTXOs for the given address.
+     */
+    getUtxosForAddress(address: string): Promise<{ txId: string, txIndex: number, lovelace: number, assets: any[], datum?: any, script?: any }[]>;
 }
 
 /**
@@ -147,9 +160,9 @@ declare interface Wallet {
 /**
  * The main Cardano API object with static methods.
  */
-declare interface CardanoAPI {
+declare interface CardanoApi {
     /**
-     * The type of the object, used for identification (the "CardanoAPI" string).
+     * The type of the object, used for identification (the "CardanoApi" string).
      */
     objectType: string;
 

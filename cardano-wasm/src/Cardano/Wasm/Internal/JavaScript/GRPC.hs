@@ -4,7 +4,7 @@
 module Cardano.Wasm.Internal.JavaScript.GRPC where
 #else
 
-module Cardano.Wasm.Internal.JavaScript.GRPC (js_newWebGrpcClient, js_getEra, js_submitTx, js_getProtocolParams) where
+module Cardano.Wasm.Internal.JavaScript.GRPC (js_newWebGrpcClient, js_getEra, js_submitTx, js_getProtocolParams, js_readAllUtxos, js_readUtxosForAddress) where
 
 import GHC.Wasm.Prim
 import Cardano.Wasm.Internal.Api.Tx (ProtocolParamsJSON(..))
@@ -29,6 +29,48 @@ foreign import javascript safe "atob((await ($1).node.getProtocolParamsJson(new 
 js_getProtocolParams :: JSVal -> IO ProtocolParamsJSON
 js_getProtocolParams client =
   ProtocolParamsJSON . fromJSString <$> js_getProtocolParamsImpl client
+
+-- | Get all UTXOs using a GRPC-web client.
+foreign import javascript safe
+  "{ let req = new proto.utxorpc.v1alpha.query.ReadUtxosRequest(); \
+     let res = (await ($1).query.readUtxos(req, {})).toObject(); \
+     return res.itemsList.map(utxo => { \
+       return { \
+         address: atob(utxo.cardano.address), \
+         txId: cardanoWasm.base64ToHex(utxo.txoRef.hash), \
+         txIndex: utxo.txoRef.index, \
+         lovelace: utxo.cardano.coin, \
+         assets: utxo.cardano.assetsList, \
+         datum: utxo.cardano.datum, \
+         script: utxo.cardano.script, \
+       }; \
+     });\
+  }"
+  js_readAllUtxos :: JSVal -> IO JSVal
+
+-- | Get UTXOs for a given address using a GRPC-web client.
+foreign import javascript safe
+  "{ let req = new proto.utxorpc.v1alpha.query.ReadUtxosRequest(); \
+     let addresses = new proto.utxorpc.v1alpha.query.AddressArray(); \
+     addresses.addItems(btoa($2)); \
+     req.setAddresses(addresses); \
+     let res = (await ($1).query.readUtxos(req, {})).toObject(); \
+     return res.itemsList.map(utxo => { \
+       return { \
+         txId: cardanoWasm.base64ToHex(utxo.txoRef.hash), \
+         txIndex: utxo.txoRef.index, \
+         lovelace: utxo.cardano.coin, \
+         assets: utxo.cardano.assetsList, \
+         datum: utxo.cardano.datum, \
+         script: utxo.cardano.script, \
+       }; \
+     }); \
+  }"
+  js_readUtxosForAddressImpl :: JSVal -> JSString -> IO JSVal
+
+js_readUtxosForAddress :: JSVal -> String -> IO JSVal
+js_readUtxosForAddress client address =
+  js_readUtxosForAddressImpl client (toJSString address)
 
 -- | Submit a transaction to the Cardano API using a GRPC-web client.
 foreign import javascript safe "{ let tx = new cardano_node.submit.AnyChainTx(); \

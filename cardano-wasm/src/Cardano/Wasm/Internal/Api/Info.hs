@@ -274,12 +274,31 @@ apiInfo =
                   , methodReturnType = OtherType "any"
                   , methodReturnDoc = "A promise that resolves to the current protocol parameters."
                   }
+              , MethodInfo
+                  { methodName = "getAllUtxos"
+                  , methodDoc =
+                      "Get all UTXOs from the node using a GRPC-web client."
+                  , methodParams = []
+                  , methodReturnType =
+                      OtherType
+                        "{ address: string, txId: string, txIndex: number, lovelace: number, assets: any[], datum?: any, script?: any }[]"
+                  , methodReturnDoc = "A promise that resolves to the current UTXO set."
+                  }
+              , MethodInfo
+                  { methodName = "getUtxosForAddress"
+                  , methodDoc = "Get UTXOs for a given address using a GRPC-web client."
+                  , methodParams = [ParamInfo "address" "string" "The address to get UTXOs for."]
+                  , methodReturnType =
+                      OtherType
+                        "{ txId: string, txIndex: number, lovelace: number, assets: any[], datum?: any, script?: any }[]"
+                  , methodReturnDoc = "A promise that resolves to the UTXOs for the given address."
+                  }
               ]
           }
    in ApiInfo
         { mainObject =
             VirtualObjectInfo
-              { virtualObjectName = "CardanoAPI"
+              { virtualObjectName = "CardanoApi"
               , virtualObjectDoc = "The main Cardano API object with static methods."
               , virtualObjectMethods =
                   [ MethodInfo
@@ -331,5 +350,5 @@ apiInfo =
               }
         , virtualObjects = [unsignedTxObj, signedTxObj, grpcConnection, walletObj]
         , initialiseFunctionDoc = "Initialises the Cardano API."
-        , initialiseFunctionReturnDoc = "A promise that resolves to the main `CardanoAPI` object."
+        , initialiseFunctionReturnDoc = "A promise that resolves to the main `CardanoApi` object."
         }
