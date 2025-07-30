@@ -169,7 +169,6 @@ import Cardano.Crypto.Hash qualified as Hash
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
-import Cardano.Ledger.Conway.TxBody qualified as L
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Hashes qualified as L hiding (Hash)
 
@@ -289,7 +288,7 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
           & L.datsTxWitsL .~ datums
           & L.rdmrsTxWitsL .~ redeemers
 
-  eraSpecificTxBody <- eraSpecificLedgerTxBody era ledgerTxBody bc
+  let eraSpecificTxBody = eraSpecificLedgerTxBody era ledgerTxBody bc
 
   return . UnsignedTx $
     L.mkBasicTx eraSpecificTxBody
@@ -301,22 +300,25 @@ eraSpecificLedgerTxBody
   :: Era era
   -> Ledger.TxBody (LedgerEra era)
   -> TxBodyContent BuildTx era
-  -> Either TxBodyError (Ledger.TxBody (LedgerEra era))
-eraSpecificLedgerTxBody ConwayEra ledgerbody bc =
-  let propProcedures = txProposalProcedures bc
-      voteProcedures = txVotingProcedures bc
-      treasuryDonation = txTreasuryDonation bc
-      currentTresuryValue = txCurrentTreasuryValue bc
-   in return $
-        ledgerbody
-          & L.proposalProceduresTxBodyL
-            .~ convProposalProcedures (maybe TxProposalProceduresNone unFeatured propProcedures)
-          & L.votingProceduresTxBodyL
-            .~ convVotingProcedures (maybe TxVotingProceduresNone unFeatured voteProcedures)
-          & L.treasuryDonationTxBodyL
-            .~ maybe (L.Coin 0) unFeatured treasuryDonation
-          & L.currentTreasuryValueTxBodyL
-            .~ L.maybeToStrictMaybe (unFeatured =<< currentTresuryValue)
+  -> Ledger.TxBody (LedgerEra era)
+eraSpecificLedgerTxBody era ledgerbody bc =
+  body era
+ where
+  body e =
+    let propProcedures = txProposalProcedures bc
+        voteProcedures = txVotingProcedures bc
+        treasuryDonation = txTreasuryDonation bc
+        currentTresuryValue = txCurrentTreasuryValue bc
+     in obtainCommonConstraints e $
+          ledgerbody
+            & L.proposalProceduresTxBodyL
+              .~ convProposalProcedures (maybe TxProposalProceduresNone unFeatured propProcedures)
+            & L.votingProceduresTxBodyL
+              .~ convVotingProcedures (maybe TxVotingProceduresNone unFeatured voteProcedures)
+            & L.treasuryDonationTxBodyL
+              .~ maybe (L.Coin 0) unFeatured treasuryDonation
+            & L.currentTreasuryValueTxBodyL
+              .~ L.maybeToStrictMaybe (unFeatured =<< currentTresuryValue)
 
 hashTxBody
   :: L.HashAnnotated (Ledger.TxBody era) L.EraIndependentTxBody
