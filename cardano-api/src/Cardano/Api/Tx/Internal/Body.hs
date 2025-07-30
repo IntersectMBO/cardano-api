@@ -286,7 +286,6 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (Annotated (..))
 import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Core ()
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Credential qualified as Shelley
@@ -1424,6 +1423,13 @@ validateTxBodyContent
             validateMetadata txMetadata
             validateTxInsCollateral txInsCollateral languages
             validateProtocolParameters txProtocolParams languages
+          ShelleyBasedEraDijkstra -> do
+            validateTxIns txIns
+            first TxBodyOutputError $
+              validateTxOuts sbe txOuts
+            validateMetadata txMetadata
+            validateTxInsCollateral txInsCollateral languages
+            validateProtocolParameters txProtocolParams languages
 
 validateMetadata :: TxMetadataInEra era -> Either TxBodyError ()
 validateMetadata txMetadata =
@@ -1588,6 +1594,7 @@ fromLedgerTxIns sbe body =
   inputs_ ShelleyBasedEraAlonzo = view L.inputsTxBodyL
   inputs_ ShelleyBasedEraBabbage = view L.inputsTxBodyL
   inputs_ ShelleyBasedEraConway = view L.inputsTxBodyL
+  inputs_ ShelleyBasedEraDijkstra = view L.inputsTxBodyL
 
 fromLedgerTxInsCollateral
   :: forall era
@@ -1692,6 +1699,11 @@ fromLedgerAuxiliaryData ShelleyBasedEraBabbage txAuxData =
 fromLedgerAuxiliaryData ShelleyBasedEraConway txAuxData =
   ( fromShelleyMetadata (L.atadMetadata txAuxData)
   , fromShelleyBasedScript ShelleyBasedEraConway
+      <$> toList (L.getAlonzoTxAuxDataScripts txAuxData)
+  )
+fromLedgerAuxiliaryData ShelleyBasedEraDijkstra txAuxData =
+  ( fromShelleyMetadata (L.atadMetadata txAuxData)
+  , fromShelleyBasedScript ShelleyBasedEraDijkstra
       <$> toList (L.getAlonzoTxAuxDataScripts txAuxData)
   )
 
@@ -2031,7 +2043,10 @@ mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData =
         & L.auxDataHashTxBodyL
           .~ maybe SNothing (SJust . Ledger.hashTxAuxData) txAuxData
 
-{-# DEPRECATED makeShelleyTransactionBody "Use 'createTransactionBody' instead." #-}
+{-# DEPRECATED
+  makeShelleyTransactionBody
+  "Use 'createTransactionBody' instead. 'makeShelleyTransactionBody' will be removed after 11.0.0.0 release"
+  #-}
 makeShelleyTransactionBody
   :: forall era
    . ()
@@ -2591,6 +2606,159 @@ makeShelleyTransactionBody
 
     txAuxData :: Maybe (L.TxAuxData E.ConwayEra)
     txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts
+makeShelleyTransactionBody
+  sbe@ShelleyBasedEraDijkstra
+  txbodycontent@TxBodyContent
+    { txIns
+    , txInsCollateral
+    , txInsReference
+    , txReturnCollateral
+    , txTotalCollateral
+    , txOuts
+    , txFee
+    , txValidityLowerBound
+    , txValidityUpperBound
+    , txMetadata
+    , txAuxScripts
+    , txExtraKeyWits
+    , txProtocolParams
+    , txWithdrawals
+    , txCertificates
+    , txMintValue
+    , txScriptValidity
+    , txProposalProcedures
+    , txVotingProcedures
+    , txCurrentTreasuryValue
+    , txTreasuryDonation
+    } = do
+    let aOn = AllegraEraOnwardsDijkstra
+    let cOn = ConwayEraOnwardsDijkstra
+    let mOn = MaryEraOnwardsDijkstra
+    let bOn = BabbageEraOnwardsDijkstra
+    validateTxBodyContent sbe txbodycontent
+    let scriptIntegrityHash =
+          convPParamsToScriptIntegrityHash
+            AlonzoEraOnwardsDijkstra
+            txProtocolParams
+            redeemers
+            datums
+            languages
+    let txbody =
+          ( mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
+              & A.collateralInputsTxBodyL azOn
+                .~ case txInsCollateral of
+                  TxInsCollateralNone -> Set.empty
+                  TxInsCollateral _ txins -> fromList (map toShelleyTxIn txins)
+              & A.referenceInputsTxBodyL bOn
+                .~ convReferenceInputs txInsReference
+              & A.collateralReturnTxBodyL bOn
+                .~ convReturnCollateral sbe txReturnCollateral
+              & A.totalCollateralTxBodyL bOn
+                .~ convTotalCollateral txTotalCollateral
+              & A.certsTxBodyL sbe
+                .~ convCertificates sbe txCertificates
+              & A.invalidBeforeTxBodyL aOn
+                .~ convValidityLowerBound txValidityLowerBound
+              & A.invalidHereAfterTxBodyL sbe
+                .~ convValidityUpperBound sbe txValidityUpperBound
+              & A.reqSignerHashesTxBodyL azOn
+                .~ convExtraKeyWitnesses txExtraKeyWits
+              & A.mintTxBodyL mOn
+                .~ convMintValue txMintValue
+              & A.scriptIntegrityHashTxBodyL azOn
+                .~ scriptIntegrityHash
+              & A.votingProceduresTxBodyL cOn
+                .~ convVotingProcedures (maybe TxVotingProceduresNone unFeatured txVotingProcedures)
+              & A.proposalProceduresTxBodyL cOn
+                .~ convProposalProcedures (maybe TxProposalProceduresNone unFeatured txProposalProcedures)
+              & A.currentTreasuryValueTxBodyL cOn
+                .~ Ledger.maybeToStrictMaybe (unFeatured =<< txCurrentTreasuryValue)
+              & A.treasuryDonationTxBodyL cOn
+                .~ maybe (L.Coin 0) unFeatured txTreasuryDonation
+                -- TODO Conway: support optional network id in TxBodyContent
+                -- & L.networkIdTxBodyL .~ SNothing
+          )
+            ^. A.txBodyL
+    return $
+      ShelleyTxBody
+        sbe
+        txbody
+        scripts
+        ( TxBodyScriptData
+            AlonzoEraOnwardsDijkstra
+            datums
+            redeemers
+        )
+        txAuxData
+        txScriptValidity
+   where
+    azOn = AlonzoEraOnwardsDijkstra
+
+    witnesses :: [(ScriptWitnessIndex, AnyScriptWitness DijkstraEra)]
+    witnesses = collectTxBodyScriptWitnesses sbe txbodycontent
+
+    scripts :: [Ledger.Script L.DijkstraEra]
+    scripts =
+      catMaybes
+        [ toShelleyScript <$> getScriptWitnessScript scriptwitness
+        | (_, AnyScriptWitness scriptwitness) <- witnesses
+        ]
+
+    -- Note these do not include inline datums!
+    datums :: Alonzo.TxDats L.DijkstraEra
+    datums =
+      Alonzo.TxDats $
+        fromList
+          [ (L.hashData d, d)
+          | d <- toAlonzoData <$> scriptdata
+          ]
+
+    scriptdata :: [HashableScriptData]
+    scriptdata =
+      [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
+        <> [ d
+           | ( _
+               , AnyScriptWitness
+                   ( PlutusScriptWitness
+                       _
+                       _
+                       _
+                       (ScriptDatumForTxIn (Just d))
+                       _
+                       _
+                     )
+               ) <-
+               witnesses
+           ]
+
+    redeemers :: Alonzo.Redeemers L.DijkstraEra
+    redeemers =
+      Alonzo.Redeemers $
+        fromList
+          [ (i, (toAlonzoData d, toAlonzoExUnits e))
+          | ( idx
+              , AnyScriptWitness
+                  (PlutusScriptWitness _ _ _ _ d e)
+              ) <-
+              witnesses
+          , Just i <- [fromScriptWitnessIndex azOn idx]
+          ]
+
+    languages :: Set Plutus.Language
+    languages =
+      fromList $
+        catMaybes
+          [ getScriptLanguage sw
+          | (_, AnyScriptWitness sw) <- witnesses
+          ]
+
+    getScriptLanguage :: ScriptWitness witctx era -> Maybe Plutus.Language
+    getScriptLanguage (PlutusScriptWitness _ v _ _ _ _) =
+      Just $ toAlonzoLanguage (AnyPlutusScriptVersion v)
+    getScriptLanguage SimpleScriptWitness{} = Nothing
+
+    txAuxData :: Maybe (L.TxAuxData L.DijkstraEra)
+    txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts
 
 -- ----------------------------------------------------------------------------
 -- Script witnesses within the tx body
@@ -2695,6 +2863,7 @@ fromScriptWitnessIndex aOnwards widx =
     AlonzoEraOnwardsAlonzo -> fromScriptWitnessIndexAlonzo widx
     AlonzoEraOnwardsBabbage -> fromScriptWitnessIndexBabbage widx
     AlonzoEraOnwardsConway -> fromScriptWitnessIndexConway widx
+    AlonzoEraOnwardsDijkstra -> fromScriptWitnessIndexDijkstra widx
 
 fromScriptWitnessIndexAlonzo
   :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIx (ShelleyLedgerEra AlonzoEra))
@@ -2727,6 +2896,17 @@ fromScriptWitnessIndexConway i =
     ScriptWitnessIndexVoting n -> Just $ L.ConwayVoting (L.AsIx n)
     ScriptWitnessIndexProposing n -> Just $ L.ConwayProposing (L.AsIx n)
 
+fromScriptWitnessIndexDijkstra
+  :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIx (ShelleyLedgerEra DijkstraEra))
+fromScriptWitnessIndexDijkstra i =
+  case i of
+    ScriptWitnessIndexTxIn n -> Just $ L.ConwaySpending (L.AsIx n)
+    ScriptWitnessIndexMint n -> Just $ L.ConwayMinting (L.AsIx n)
+    ScriptWitnessIndexCertificate n -> Just $ L.ConwayCertifying (L.AsIx n)
+    ScriptWitnessIndexWithdrawal n -> Just $ L.ConwayRewarding (L.AsIx n)
+    ScriptWitnessIndexVoting n -> Just $ L.ConwayVoting (L.AsIx n)
+    ScriptWitnessIndexProposing n -> Just $ L.ConwayProposing (L.AsIx n)
+
 toScriptIndex
   :: AlonzoEraOnwards era
   -> L.PlutusPurpose L.AsIx (ShelleyLedgerEra era)
@@ -2736,6 +2916,7 @@ toScriptIndex sbe scriptPurposeIndex =
     AlonzoEraOnwardsAlonzo -> toScriptIndexAlonzo scriptPurposeIndex
     AlonzoEraOnwardsBabbage -> toScriptIndexAlonzo scriptPurposeIndex
     AlonzoEraOnwardsConway -> toScriptIndexConway scriptPurposeIndex
+    AlonzoEraOnwardsDijkstra -> toScriptIndexConway scriptPurposeIndex
 
 toScriptIndexAlonzo
   :: L.AlonzoPlutusPurpose L.AsIx (ShelleyLedgerEra era)
@@ -3006,18 +3187,21 @@ extractWitnessableVotes
   :: ConwayEraOnwards era
   -> Maybe (Featured eon era (TxVotingProcedures BuildTx era))
   -> [(Witnessable VoterItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+<<<<<<< HEAD
 extractWitnessableVotes e@ConwayEraOnwardsConway txVotingProcedures =
+=======
+extractWitnessableVotes e TxBodyContent{txVotingProcedures} =
+>>>>>>> e41bf72f9 (Update `makeShelleyTransactionBody` with Dijkstra era)
   List.nub
-    [ (WitVote vote, BuildTxWith wit)
-    | (vote, wit) <- getVotes e $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
+    [ (conwayEraOnwardsConstraints e $ WitVote vote, BuildTxWith wit)
+    | (vote, wit) <- getVotes $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
     ]
  where
   getVotes
-    :: ConwayEraOnwards era
-    -> TxVotingProcedures BuildTx era
+    :: TxVotingProcedures BuildTx era
     -> [(L.Voter, Witness WitCtxStake era)]
-  getVotes ConwayEraOnwardsConway TxVotingProceduresNone = []
-  getVotes ConwayEraOnwardsConway (TxVotingProcedures allVotingProcedures (BuildTxWith scriptWitnessedVotes)) =
+  getVotes TxVotingProceduresNone = []
+  getVotes (TxVotingProcedures allVotingProcedures (BuildTxWith scriptWitnessedVotes)) =
     [ (voter, wit)
     | (voter, _) <- toList $ L.unVotingProcedures allVotingProcedures
     , let wit = case Map.lookup voter scriptWitnessedVotes of
@@ -3030,9 +3214,9 @@ extractWitnessableProposals
   -> Maybe
        (Featured eon era (TxProposalProcedures BuildTx era))
   -> [(Witnessable ProposalItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
-extractWitnessableProposals e@ConwayEraOnwardsConway txProposalProcedures =
+extractWitnessableProposals e TxBodyContent{txProposalProcedures} =
   List.nub
-    [ (WitProposal prop, BuildTxWith wit)
+    [ (conwayEraOnwardsConstraints e $ WitProposal prop, BuildTxWith wit)
     | (Proposal prop, wit) <-
         getProposals e $ maybe TxProposalProceduresNone unFeatured txProposalProcedures
     ]
@@ -3041,9 +3225,9 @@ extractWitnessableProposals e@ConwayEraOnwardsConway txProposalProcedures =
     :: ConwayEraOnwards era
     -> TxProposalProcedures BuildTx era
     -> [(Proposal era, Witness WitCtxStake era)]
-  getProposals ConwayEraOnwardsConway TxProposalProceduresNone = []
-  getProposals ConwayEraOnwardsConway (TxProposalProcedures txps) =
-    [ (Proposal p, wit)
+  getProposals _ TxProposalProceduresNone = []
+  getProposals w (TxProposalProcedures txps) =
+    [ (conwayEraOnwardsConstraints w $ Proposal p, wit)
     | (p, BuildTxWith mScriptWit) <- toList txps
     , let wit = case mScriptWit of
             Just sWit -> ScriptWitness ScriptWitnessForStakeAddr sWit
@@ -3093,6 +3277,8 @@ toAuxiliaryData sbe txMetadata txAuxScripts =
         ShelleyBasedEraBabbage ->
           guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
         ShelleyBasedEraConway ->
+          guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
+        ShelleyBasedEraDijkstra ->
           guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
 
 -- ----------------------------------------------------------------------------
