@@ -326,6 +326,7 @@ library gen
     cardano-ledger-conway,
     cardano-ledger-core >=1.14,
     cardano-ledger-mary,
+    cardano-ledger-dijkstra >=0.1,
     cardano-ledger-shelley >=1.13,
     cardano-strict-containers,
     containers,
