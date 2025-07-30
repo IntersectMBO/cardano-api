@@ -16,18 +16,18 @@ document.body.appendChild(output);
 
 function log(out) {
     console.log(out);
-    if (typeof(out) == "object") {
-	output.innerText += "> [object] {\n";
-	for (let [key, val] of Object.entries(out)) {
-	    let text = val.toString();
-	    if (typeof(val) == "function") {
-		text = text.split("{")[0];
-	    }
-	    output.innerText += "    " + key + ": " + text + "\n";
-	}
-	output.innerText += "  }\n";
+    if (typeof (out) == "object") {
+        output.innerText += "> [object] {\n";
+        for (let [key, val] of Object.entries(out)) {
+            let text = val.toString();
+            if (typeof (val) == "function") {
+                text = text.split("{")[0];
+            }
+            output.innerText += "    " + key + ": " + text + "\n";
+        }
+        output.innerText += "  }\n";
     } else {
-	output.innerText += "> " + JSON.stringify(out) + "\n";
+        output.innerText += "> " + JSON.stringify(out) + "\n";
     }
 }
 
@@ -43,19 +43,27 @@ async function do_async_work() {
     log("Api object:");
     log(api);
 
+    let PREVIEW_MAGIC_NUMBER = 2;
+    let secretKey = "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms";
+    let wallet = await api.restoreTestnetPaymentWalletFromSigningKeyBech32(PREVIEW_MAGIC_NUMBER, secretKey);
+    let bech32Address = await wallet.getAddressBech32();
+
+    log("Bech32 of address:");
+    log(bech32Address);
+
     let emptyTx = await api.newConwayTx();
     log("UnsignedTx object:");
     log(emptyTx);
 
     let tx = await emptyTx.addTxInput("be6efd42a3d7b9a00d09d77a5d41e55ceaf0bd093a8aa8a893ce70d9caafd978", 0)
-	.addSimpleTxOut("addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v", 10_000_000n)
+        .addSimpleTxOut("addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v", 10_000_000n)
 
     let feeEstimate = await tx.estimateMinFee(protocolParams, 1, 0, 0);
     log("Estimated fee:");
     log(feeEstimate);
 
     let signedTx = await tx.setFee(feeEstimate)
-	.signWithPaymentKey("addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms");
+        .signWithPaymentKey(secretKey);
     log("SignedTx object:");
     log(signedTx);
 
