@@ -108,6 +108,13 @@ declare interface GrpcConnection {
      * @returns A promise that resolves to the current protocol parameters.
      */
     getProtocolParams(): Promise<any>;
+
+    /**
+     * Get UTXOs from the node using a GRPC-web client.
+     * @param utxoFilter UTXO filter: a list of addresses to query
+     * @returns A promise that resolves to the current UTXO set.
+     */
+    getUtxos(utxoFilter: { addresses: string[] } | null): Promise<any>;
 }
 
 /**

@@ -95,4 +95,18 @@ async function initialise() {
   });
   return cardanoAPI;
 }
+
+window.base64ToHex = function (base64) {
+  // Decode Base64 to raw binary string
+  const binary = atob(base64);
+  let hex = '';
+  for (let i = 0; i < binary.length; i++) {
+    // Convert each char code to a 2-digit hex string
+    let byte = binary.charCodeAt(i).toString(16);
+    if (byte.length < 2) byte = '0' + byte;
+    hex += byte;
+  }
+  return hex;
+}
+
 export default initialise;

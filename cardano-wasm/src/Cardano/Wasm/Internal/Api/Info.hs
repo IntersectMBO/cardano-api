@@ -274,6 +274,16 @@ apiInfo =
                   , methodReturnType = OtherType "any"
                   , methodReturnDoc = "A promise that resolves to the current protocol parameters."
                   }
+              , MethodInfo
+                  { methodName = "getUtxos"
+                  , methodDoc =
+                      "Get UTXOs from the node using a GRPC-web client."
+                  , methodParams =
+                      [ ParamInfo "utxoFilter" "{ addresses: string[] } | null" "UTXO filter: a list of addresses to query"
+                      ]
+                  , methodReturnType = OtherType "any"
+                  , methodReturnDoc = "A promise that resolves to the current UTXO set."
+                  }
               ]
           }
    in ApiInfo

@@ -21,11 +21,11 @@ import Cardano.Wasm.Internal.Api.GRPC qualified as Wasm
 import Cardano.Wasm.Internal.Api.Info (apiInfo)
 import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
 import Cardano.Wasm.Internal.ExceptionHandling (rightOrError)
-import Cardano.Wasm.Internal.JavaScript.GRPC (js_getEra, js_newWebGrpcClient, js_submitTx, js_getProtocolParams)
+import Cardano.Wasm.Internal.JavaScript.GRPC (js_getEra, js_newWebGrpcClient, js_submitTx, js_getProtocolParams, js_readUtxos)
 import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient)
 
 import Control.Exception (evaluate)
-import Control.Monad 
+import Control.Monad
 import Data.Aeson qualified as Aeson
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Text (Text)
@@ -116,6 +116,10 @@ type JSCoin = JSVal
 type JSSigningKey = JSString
 
 type JSProtocolParams = JSVal
+
+type JSUtxos = JSVal
+
+type JSUtxoFilter = JSVal
 
 type JSGrpc = JSGRPCClient
 
@@ -363,6 +367,9 @@ foreign export javascript "getEra"
 foreign export javascript "getProtocolParams"
   getProtocolParams :: JSGrpc -> IO JSVal
 
+foreign export javascript "getUtxos"
+  getUtxos :: JSGrpc -> JSUtxoFilter -> IO JSVal
+
 foreign export javascript "submitTx"
   submitTx :: JSGrpc -> JSString -> IO JSString
 
@@ -377,6 +384,11 @@ getEra grpcObject = Wasm.getEraImpl js_getEra =<< fromJSVal grpcObject
 -- | Get the protocol parameters from the Cardano Node using GRPC-web.
 getProtocolParams :: HasCallStack => JSGrpc -> IO JSProtocolParams
 getProtocolParams = toJSVal <=< Wasm.getProtocolParamsImpl js_getProtocolParams <=< fromJSVal
+
+getUtxos :: HasCallStack => JSGrpc -> JSUtxoFilter -> IO JSUtxos
+getUtxos grpcObject utxoFilter = do
+  grpObj <- fromJSVal grpcObject
+  Wasm.getUtxosImpl js_readUtxos grpObj utxoFilter
 
 -- | Submit a transaction to the Cardano Node using GRPC-web.
 submitTx :: HasCallStack => JSGrpc -> JSString -> IO JSString

@@ -4,7 +4,7 @@
 module Cardano.Wasm.Internal.JavaScript.GRPC where
 #else
 
-module Cardano.Wasm.Internal.JavaScript.GRPC (js_newWebGrpcClient, js_getEra, js_submitTx, js_getProtocolParams) where
+module Cardano.Wasm.Internal.JavaScript.GRPC (js_newWebGrpcClient, js_getEra, js_submitTx, js_getProtocolParams, js_readUtxos) where
 
 import GHC.Wasm.Prim
 import Cardano.Wasm.Internal.Api.Tx (ProtocolParamsJSON(..))
@@ -29,6 +29,26 @@ foreign import javascript safe "atob((await ($1).node.getProtocolParamsJson(new 
 js_getProtocolParams :: JSVal -> IO ProtocolParamsJSON
 js_getProtocolParams client =
   ProtocolParamsJSON . fromJSString <$> js_getProtocolParamsImpl client
+
+-- | Get UTXOs using a GRPC-web client.
+foreign import javascript safe
+  "{ let req = new proto.utxorpc.v1alpha.query.ReadUtxosRequest(); \
+     if(!!($2)?.addresses) { \
+       let addresses = new proto.utxorpc.v1alpha.query.AddressArray(); \
+       ($2).addresses.forEach(addr => { \
+         addresses.addItems(btoa(addr)); \
+       }); \
+       req.setAddresses(addresses); \
+     } \
+     let res = (await ($1).query.readUtxos(req, {})).toObject(); \
+     res.itemsList = res.itemsList.map(utxo => { \
+       utxo.cardano.address = atob(utxo.cardano.address); \
+       utxo.txoRef.hash = base64ToHex(utxo.txoRef.hash); \
+       return utxo; \
+     });\
+    return res; \
+  }"
+  js_readUtxos :: JSVal -> JSVal -> IO JSVal
 
 -- | Submit a transaction to the Cardano API using a GRPC-web client.
 foreign import javascript safe "{ let tx = new cardano_node.submit.AnyChainTx(); \
