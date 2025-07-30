@@ -295,6 +295,7 @@ type EraCommonConstraints era =
   , L.AlonzoEraTx (LedgerEra era)
   , L.BabbageEraPParams (LedgerEra era)
   , L.BabbageEraTxBody (LedgerEra era)
+  , L.ConwayEraTxBody (LedgerEra era)
   , L.ConwayEraTxCert (LedgerEra era)
   , L.TxCert (LedgerEra era) ~ L.ConwayTxCert (LedgerEra era)
   , L.Era (LedgerEra era)
