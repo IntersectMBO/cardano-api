@@ -92,8 +92,8 @@ generatePaymentWalletImpl = do
 -- | Restore a mainnet payment wallet from a Bech32 encoded signing key.
 restorePaymentWalletFromSigningKeyBech32Impl :: String -> IO WalletObject
 restorePaymentWalletFromSigningKeyBech32Impl signingKeyBech32 = do
-  let key = rightOrError $ deserialiseFromBech32 (Text.pack signingKeyBech32)
-  PaymentWallet Mainnet <$> toMonadFail key
+  key <- rightOrError $ deserialiseFromBech32 (Text.pack signingKeyBech32)
+  pure $ PaymentWallet Mainnet key
 
 -- | Generate a simple payment wallet for testnet, given the testnet's network magic.
 generateTestnetPaymentWalletImpl :: Int -> IO WalletObject
@@ -102,13 +102,13 @@ generateTestnetPaymentWalletImpl networkMagic = do
   randomBytes <- getRandomBytes seedSize
   let seed = mkSeedFromBytes randomBytes
       key = deterministicSigningKey AsPaymentKey seed
-  return (PaymentWallet (Testnet (NetworkMagic (fromIntegral networkMagic))) key)
+  return $ PaymentWallet (Testnet $ NetworkMagic $ fromIntegral networkMagic) key
 
 -- | Restore a testnet payment wallet from a Bech32 encoded signing key.
 restoreTestnetPaymentWalletFromSigningKeyBech32Impl :: Int -> String -> IO WalletObject
 restoreTestnetPaymentWalletFromSigningKeyBech32Impl networkMagic signingKeyHex = do
-  let key = rightOrError $ deserialiseFromBech32 (Text.pack signingKeyHex)
-  PaymentWallet (Testnet (NetworkMagic (fromIntegral networkMagic))) <$> toMonadFail key
+  key <- rightOrError $ deserialiseFromBech32 (Text.pack signingKeyHex)
+  pure $ PaymentWallet (Testnet (NetworkMagic (fromIntegral networkMagic))) key
 
 -- | Get the Bech32 representation of the address. (Can be shared for receiving funds.)
 getAddressBech32 :: WalletObject -> String
