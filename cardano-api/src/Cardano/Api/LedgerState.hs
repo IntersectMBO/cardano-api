@@ -159,6 +159,7 @@ import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Coin qualified as SL
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import Cardano.Ledger.Dijkstra.Genesis
 import Cardano.Ledger.Keys qualified as SL
 import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
 import Cardano.Ledger.Shelley.Core qualified as Core
@@ -1147,6 +1148,7 @@ instance FromJSON NodeConfig where
         <*> parseAlonzoHardForkEpoch o
         <*> parseBabbageHardForkEpoch o
         <*> parseConwayHardForkEpoch o
+        <*> error "dijkstra"
 
     parseShelleyHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseShelleyHardForkEpoch o =
@@ -1363,7 +1365,7 @@ encodeLedgerState (LedgerState hst@(HFC.HardForkLedgerState st) tbs) =
   mconcat
     [ CBOR.encodeListLen 2
     , HFC.encodeTelescope
-        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
+        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
         st
     , Ledger.valuesMKEncoder hst tbs
     ]
@@ -1375,13 +1377,15 @@ encodeLedgerState (LedgerState hst@(HFC.HardForkLedgerState st) tbs) =
   alonzo = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
   babbage = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
   conway = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
+  dijkstra = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
 
 decodeLedgerState :: forall s. CBOR.Decoder s LedgerState
 decodeLedgerState = do
   2 <- CBOR.decodeListLen
   hst <-
     HFC.HardForkLedgerState
-      <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
+      <$> HFC.decodeTelescope
+        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
   tbs <- Ledger.valuesMKDecoder hst
   pure (LedgerState hst tbs)
  where
@@ -1392,6 +1396,7 @@ decodeLedgerState = do
   alonzo = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
   babbage = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
   conway = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
+  dijkstra = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
 
 type LedgerStateEvents = (LedgerState, [LedgerEvent])
 
@@ -1477,7 +1482,8 @@ readCardanoGenesisConfig mEra enc = do
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
   alonzoGenesis <- readAlonzoGenesisConfig mEra enc
   conwayGenesis <- readConwayGenesisConfig enc
-  let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis
+  let dijkstraGenesis = DijkstraGenesis $ error "dijkstra"
+  let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
 
 data GenesisConfigError
