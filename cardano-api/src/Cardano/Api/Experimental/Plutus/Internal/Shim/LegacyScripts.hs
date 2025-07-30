@@ -119,11 +119,13 @@ toPlutusScriptDatum
   -> Old.ScriptDatum Old.WitCtxTxIn
   -> PlutusScriptDatum (Old.ToLedgerPlutusLanguage lang) (ToPlutusScriptPurpose TxInItem)
 -- ^ Encapsulates CIP-69: V3 spending script datums are optional
+toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV4 (Old.ScriptDatumForTxIn r) = SpendingScriptDatum r
 toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV3 (Old.ScriptDatumForTxIn r) = SpendingScriptDatum r
 -- \^ V2 and V1 spending script datums are required
 toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV2 (Old.ScriptDatumForTxIn (Just r)) = SpendingScriptDatum r
 toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV1 (Old.ScriptDatumForTxIn (Just r)) = SpendingScriptDatum r
 -- \^ V2 and V3 scripts can have inline datums
+toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV4 Old.InlineScriptDatum = InlineDatum
 toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV3 Old.InlineScriptDatum = InlineDatum
 toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV2 Old.InlineScriptDatum = InlineDatum
 -- \^ Everything else is not allowed. The old api does not prevent these invalid combinations.
@@ -206,6 +208,7 @@ obtainConstraints v =
     Old.PlutusScriptV1 -> id
     Old.PlutusScriptV2 -> id
     Old.PlutusScriptV3 -> id
+    Old.PlutusScriptV4 -> id
 
 toPlutusSLanguage
   :: Old.PlutusScriptVersion lang -> L.SLanguage (Old.ToLedgerPlutusLanguage lang)
@@ -213,3 +216,4 @@ toPlutusSLanguage = \case
   Old.PlutusScriptV1 -> L.SPlutusV1
   Old.PlutusScriptV2 -> L.SPlutusV2
   Old.PlutusScriptV3 -> L.SPlutusV3
+  Old.PlutusScriptV4 -> L.SPlutusV4
