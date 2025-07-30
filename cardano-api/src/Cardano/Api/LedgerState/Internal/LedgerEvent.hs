@@ -20,6 +20,7 @@ import Cardano.Api.Key.Internal (Hash (..), StakePoolKey)
 
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Coin qualified as Ledger
+import Cardano.Ledger.Compactible qualified as Ledger
 import Cardano.Ledger.Conway.Governance qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger.Core
 import Cardano.Ledger.Credential qualified as Ledger
@@ -110,8 +111,9 @@ data PoolReapDetails = PoolReapDetails
 convertRetiredPoolsMap
   :: Map
        Ledger.StakeCredential
-       (Map (Ledger.KeyHash Ledger.StakePool) Ledger.Coin)
+       (Map (Ledger.KeyHash Ledger.StakePool) (Ledger.CompactForm Ledger.Coin))
   -> Map StakeCredential (Map (Hash StakePoolKey) L.Coin)
 convertRetiredPoolsMap =
   Map.mapKeys fromShelleyStakeCredential
     . fmap (Map.mapKeys StakePoolKeyHash)
+    . (fmap . fmap) Ledger.fromCompact
