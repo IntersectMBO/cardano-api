@@ -36,6 +36,7 @@ shelleyBasedEraTestConstraints = \case
   ShelleyBasedEraAlonzo -> id
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway -> id
+  ShelleyBasedEraDijkstra -> id
 
 conwayEraOnwardsTestConstraints
   :: ()
@@ -48,3 +49,4 @@ conwayEraOnwardsTestConstraints
   -> a
 conwayEraOnwardsTestConstraints = \case
   ConwayEraOnwardsConway -> id
+  ConwayEraOnwardsDijkstra -> id

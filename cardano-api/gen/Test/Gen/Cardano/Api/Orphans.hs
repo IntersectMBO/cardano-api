@@ -808,3 +808,9 @@ obtainArbitraryConstraints era f = case era of
   ShelleyBasedEraAlonzo -> f
   ShelleyBasedEraBabbage -> f
   ShelleyBasedEraConway -> f
+
+instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary (DijkstraPParams StrictMaybe DijkstraEra) where
+  arbitrary = genericArbitraryU
