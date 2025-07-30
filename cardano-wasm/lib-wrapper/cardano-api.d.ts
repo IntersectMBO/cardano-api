@@ -95,6 +95,13 @@ declare interface GrpcConnection {
      * @returns A promise that resolves to the current era number.
      */
     getEra(): Promise<number>;
+
+    /**
+     * Submit a signed and CBOR-encoded transaction to the Cardano node.
+     * @param txCbor The CBOR-encoded transaction as a hex string.
+     * @returns A promise that resolves to the transaction ID.
+     */
+    submitTx(txCbor: string): Promise<string>;
 }
 
 /**

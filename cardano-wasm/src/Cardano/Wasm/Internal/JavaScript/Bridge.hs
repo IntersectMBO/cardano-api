@@ -21,7 +21,7 @@ import Cardano.Wasm.Internal.Api.GRPC qualified as Wasm
 import Cardano.Wasm.Internal.Api.Info (apiInfo)
 import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
 import Cardano.Wasm.Internal.ExceptionHandling (rightOrError)
-import Cardano.Wasm.Internal.JavaScript.GRPC (js_getEra, js_newWebGrpcClient)
+import Cardano.Wasm.Internal.JavaScript.GRPC (js_getEra, js_newWebGrpcClient, js_submitTx)
 import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient)
 
 import Control.Exception (evaluate)
@@ -357,6 +357,9 @@ foreign export javascript "newGrpcConnection"
 foreign export javascript "getEra"
   getEra :: JSGrpc -> IO Int
 
+foreign export javascript "submitTx"
+  submitTx :: JSGrpc -> JSString -> IO JSString
+
 -- | Create a new gRPC object for making Conway era transactions.
 newGrpcConnection :: HasCallStack => JSString -> IO JSGrpc
 newGrpcConnection webGrpcUrl = toJSVal =<< join (Wasm.newGrpcConnectionImpl js_newWebGrpcClient <$> fromJSVal webGrpcUrl)
@@ -364,6 +367,10 @@ newGrpcConnection webGrpcUrl = toJSVal =<< join (Wasm.newGrpcConnectionImpl js_n
 -- | Get the era from the Cardano Node using GRPC-web.
 getEra :: HasCallStack => JSGrpc -> IO Int
 getEra grpcObject = Wasm.getEraImpl js_getEra =<< fromJSVal grpcObject
+
+-- | Submit a transaction to the Cardano Node using GRPC-web.
+submitTx :: HasCallStack => JSGrpc -> JSString -> IO JSString
+submitTx grpcObject tx = toJSVal =<< join (Wasm.submitTxImpl js_submitTx <$> fromJSVal grpcObject <*> fromJSVal tx)
 
 -- * API Information
 
