@@ -114,7 +114,14 @@ declare interface GrpcConnection {
      * @param utxoFilter UTXO filter: a list of addresses to query
      * @returns A promise that resolves to the current UTXO set.
      */
-    getUtxos(utxoFilter: { addresses: string[] } | null): Promise<any>;
+    getUtxosWithFilter(utxoFilter: { addresses: string[] } | null): Promise<any>;
+
+    /**
+     * Get UTXOs for a given address using a GRPC-web client.
+     * @param address The address to get UTXOs for.
+     * @returns A promise that resolves to the UTXOs for the given address.
+     */
+    getUtxosForAddress(address: string): Promise<{ address: string, lovelaces: number, assets: any[], datum?: any, script?: any }[]>;
 }
 
 /**

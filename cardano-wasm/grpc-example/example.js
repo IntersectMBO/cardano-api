@@ -49,13 +49,16 @@ async function do_async_work() {
   log("Protocol Parameters:");
   log(pparams);
 
-  let utxos = await grpcApi.getUtxos();
+  let utxos = await grpcApi.getUtxosWithFilter();
   log("Utxos:");
   log(utxos);
 
   let addr = utxos.itemsList[0].cardano.address;
   log(`Utxos for address: ${addr}`)
-  log(await grpcApi.getUtxos({ addresses: [addr] }));
+  log(await grpcApi.getUtxosWithFilter({ addresses: [addr] }));
+
+  log(`First utxo for address: ${addr}`);
+  log((await grpcApi.getUtxosForAddress(addr))[0]);
 
   finish_test();
 }

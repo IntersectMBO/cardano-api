@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 
-module Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient, JSUtxos, JSUtxoFilter) where
+module Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient, JSUtxos, JSUtxoFilter, JSAddressUtxos) where
 
 #if defined(wasm32_HOST_ARCH)
 
@@ -15,6 +15,9 @@ type JSUtxos = JSVal
 -- | Utxos filter represented as an arbitrary javascript object
 type JSUtxoFilter = JSVal
 
+-- | UTXOs for a specific address, represented as an arbitrary javascript object
+type JSAddressUtxos = JSVal
+
 #else
 
 -- | In the non-WebAssembly target, we use an opaque type to represent the gRPC client.
@@ -25,5 +28,8 @@ data JSUtxos
 
 -- | Uninhabited type for non-WASM targets.
 data JSUtxoFilter
+
+-- | Uninhabited type for non-WASM targets.
+data JSAddressUtxos
 
 #endif

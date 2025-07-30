@@ -275,7 +275,7 @@ apiInfo =
                   , methodReturnDoc = "A promise that resolves to the current protocol parameters."
                   }
               , MethodInfo
-                  { methodName = "getUtxos"
+                  { methodName = "getUtxosWithFilter"
                   , methodDoc =
                       "Get UTXOs from the node using a GRPC-web client."
                   , methodParams =
@@ -283,6 +283,14 @@ apiInfo =
                       ]
                   , methodReturnType = OtherType "any"
                   , methodReturnDoc = "A promise that resolves to the current UTXO set."
+                  }
+              , MethodInfo
+                  { methodName = "getUtxosForAddress"
+                  , methodDoc = "Get UTXOs for a given address using a GRPC-web client."
+                  , methodParams = [ParamInfo "address" "string" "The address to get UTXOs for."]
+                  , methodReturnType =
+                      OtherType "{ address: string, lovelaces: number, assets: any[], datum?: any, script?: any }[]"
+                  , methodReturnDoc = "A promise that resolves to the UTXOs for the given address."
                   }
               ]
           }
