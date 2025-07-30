@@ -132,6 +132,7 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.Void (Void)
 import GHC.Exts (IsList (..))
 import Network.Mux qualified as Net
+import Network.Mux.Trace (nullTracers)
 
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols
@@ -211,7 +212,7 @@ connectToLocalNodeWithVersion
         Net.connectTo
           (Net.localSnocket iomgr)
           Net.NetworkConnectTracers
-            { Net.nctMuxTracer = nullTracer
+            { Net.nctMuxTracers = nullTracers
             , Net.nctHandshakeTracer = nullTracer
             }
           versionedProtocls
