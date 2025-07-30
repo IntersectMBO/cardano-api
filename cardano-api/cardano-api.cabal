@@ -296,6 +296,7 @@ library gen
     Test.Gen.Cardano.Api.Era
     Test.Gen.Cardano.Api.Hardcoded
     Test.Gen.Cardano.Api.Metadata
+    Test.Gen.Cardano.Api.Orphans
     Test.Gen.Cardano.Api.ProtocolParameters
     Test.Gen.Cardano.Api.Typed
     Test.Gen.Cardano.Crypto.Seed
@@ -316,9 +317,11 @@ library gen
     cardano-ledger-byron-test >=1.5,
     cardano-ledger-conway:testlib,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
+    cardano-ledger-dijkstra >=0.1,
     cardano-ledger-shelley >=1.13,
     containers,
     filepath,
+    generic-random,
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,
