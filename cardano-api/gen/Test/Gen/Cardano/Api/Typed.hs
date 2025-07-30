@@ -301,6 +301,9 @@ genPlutusScript l =
     PlutusScriptV3 -> do
       PlutusScript _ s <- genPlutusV3Script
       return s
+    PlutusScriptV4 -> do
+      PlutusScript _ s <- genPlutusV4Script
+      return s
 
 genValidPlutusScript :: PlutusScriptVersion lang -> Gen (PlutusScript lang)
 genValidPlutusScript l =
@@ -313,6 +316,9 @@ genValidPlutusScript l =
       return s
     PlutusScriptV3 -> do
       PlutusScript _ s <- genValidPlutusV3Script
+      return s
+    PlutusScriptV4 -> do
+      PlutusScript _ s <- genValidPlutusV4Script
       return s
 
 genPlutusV1Script :: Gen (Script PlutusScriptV1)
@@ -346,12 +352,28 @@ genPlutusV3Script = do
   let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
   return . PlutusScript PlutusScriptV3 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
 
+-- TODO: This is not generating v4 scripts.
+genPlutusV4Script :: Gen (Script PlutusScriptV4)
+genPlutusV4Script = do
+  v3AlwaysSucceedsPlutusScriptHex <-
+    Gen.element [v3AlwaysSucceedsPlutusScriptDoubleEncoded, v3AlwaysSucceedsPlutusScript]
+  let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
+  return . PlutusScript PlutusScriptV4 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
+
 genValidPlutusV3Script :: Gen (Script PlutusScriptV3)
 genValidPlutusV3Script = do
   v3AlwaysSucceedsPlutusScriptHex <-
     Gen.element [v3AlwaysSucceedsPlutusScript]
   let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
   return . PlutusScript PlutusScriptV3 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
+
+-- TODO: This is not generating v4 scripts.
+genValidPlutusV4Script :: Gen (Script PlutusScriptV4)
+genValidPlutusV4Script = do
+  v3AlwaysSucceedsPlutusScriptHex <-
+    Gen.element [v3AlwaysSucceedsPlutusScript]
+  let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
+  return . PlutusScript PlutusScriptV4 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
 
 genScriptDataSchema :: Gen ScriptDataJsonSchema
 genScriptDataSchema = Gen.element [ScriptDataJsonNoSchema, ScriptDataJsonDetailedSchema]
@@ -1361,6 +1383,13 @@ genTxOutDatumHashTxContext era = case era of
       , TxOutSupplementalDatum AlonzoEraOnwardsConway <$> genHashableScriptData
       , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
       ]
+  ShelleyBasedEraDijkstra ->
+    Gen.choice
+      [ pure TxOutDatumNone
+      , TxOutDatumHash AlonzoEraOnwardsDijkstra <$> genHashScriptData
+      , TxOutSupplementalDatum AlonzoEraOnwardsDijkstra <$> genHashableScriptData
+      , TxOutDatumInline BabbageEraOnwardsDijkstra <$> genHashableScriptData
+      ]
 
 genTxOutDatumHashUTxOContext :: ShelleyBasedEra era -> Gen (TxOutDatum CtxUTxO era)
 genTxOutDatumHashUTxOContext era = case era of
@@ -1383,6 +1412,12 @@ genTxOutDatumHashUTxOContext era = case era of
       [ pure TxOutDatumNone
       , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
       , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
+      ]
+  ShelleyBasedEraDijkstra ->
+    Gen.choice
+      [ pure TxOutDatumNone
+      , TxOutDatumHash AlonzoEraOnwardsDijkstra <$> genHashScriptData
+      , TxOutDatumInline BabbageEraOnwardsDijkstra <$> genHashableScriptData
       ]
 
 mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a
