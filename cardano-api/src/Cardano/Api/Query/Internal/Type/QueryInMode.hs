@@ -432,9 +432,16 @@ decodeStakeSnapshot
 decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <$> Plain.decodeFull ls
 
 decodeBigLedgerPeerSnapshot
-  :: Serialised LedgerPeerSnapshot
+  :: Consensus.ShelleyNodeToClientVersion
+  -> Serialised LedgerPeerSnapshot
   -> Either (LBS.ByteString, DecoderError) LedgerPeerSnapshot
-decodeBigLedgerPeerSnapshot (Serialised lps) = first (lps,) (Plain.decodeFull lps)
+decodeBigLedgerPeerSnapshot ntcV (Serialised lps) =
+  first
+    (lps,)
+    $ Plain.decodeFullDecoder
+      "LedgerPeerSnapshot"
+      (decodeLedgerPeerSnapshot $ Consensus.ledgerPeerSnapshotSupportsSRV ntcV)
+      lps
 
 toShelleyAddrSet
   :: CardanoEra era
