@@ -157,14 +157,14 @@ declare interface CardanoAPI {
      * Generate a simple payment wallet for mainnet.
      * @returns A promise that resolves to a new `Wallet` object.
      */
-    generateMainnetPaymentWallet(): Promise<Wallet>;
+    generatePaymentWallet(): Promise<Wallet>;
 
     /**
      * Restore a mainnet payment wallet from a Bech32 encoded signing key.
      * @param signingKeyBech32 The Bech32 encoded signing key.
      * @returns A promise that resolves to a new `Wallet` object.
      */
-    restoreMainnetPaymentWalletFromSigningKeyBech32(signingKeyBech32: string): Promise<Wallet>;
+    restorePaymentWalletFromSigningKeyBech32(signingKeyBech32: string): Promise<Wallet>;
 
     /**
      * Generate a simple payment wallet for testnet, given the testnet's network magic.

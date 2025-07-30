@@ -180,11 +180,11 @@ instance FromJSVal JSGrpc Wasm.GrpcObject where
 
 -- * WalletObject
 
-foreign export javascript "generateMainnetPaymentWallet"
-  generateMainnetPaymentWallet :: IO JSWallet
+foreign export javascript "generatePaymentWallet"
+  generatePaymentWallet :: IO JSWallet
 
-foreign export javascript "restoreMainnetPaymentWalletFromSigningKeyBech32"
-  restoreMainnetPaymentWalletFromSigningKeyBech32 :: JSString -> IO JSWallet
+foreign export javascript "restorePaymentWalletFromSigningKeyBech32"
+  restorePaymentWalletFromSigningKeyBech32 :: JSString -> IO JSWallet
 
 foreign export javascript "generateTestnetPaymentWallet"
   generateTestnetPaymentWallet :: Int -> IO JSWallet
@@ -205,15 +205,15 @@ foreign export javascript "getBase16ForVerificationKeyHash"
   getBase16ForVerificationKeyHash :: JSWallet -> IO JSString
 
 -- | Generate a simple payment wallet for mainnet.
-generateMainnetPaymentWallet :: HasCallStack => IO JSWallet
-generateMainnetPaymentWallet = toJSVal =<< Wasm.generateMainnetPaymentWalletImpl
+generatePaymentWallet :: HasCallStack => IO JSWallet
+generatePaymentWallet = toJSVal =<< Wasm.generatePaymentWalletImpl
 
 -- | Restore a mainnet payment wallet from a Bech32 encoded signing key.
-restoreMainnetPaymentWalletFromSigningKeyBech32 :: HasCallStack => JSString -> IO JSWallet
-restoreMainnetPaymentWalletFromSigningKeyBech32 jsSigningKeyBech32 =
+restorePaymentWalletFromSigningKeyBech32 :: HasCallStack => JSString -> IO JSWallet
+restorePaymentWalletFromSigningKeyBech32 jsSigningKeyBech32 =
   toJSVal
     =<< join
-      ( Wasm.restoreMainnetPaymentWalletFromSigningKeyBech32Impl
+      ( Wasm.restorePaymentWalletFromSigningKeyBech32Impl
           <$> fromJSVal jsSigningKeyBech32
       )
 

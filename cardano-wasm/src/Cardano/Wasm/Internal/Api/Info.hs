@@ -282,14 +282,14 @@ apiInfo =
                       , methodReturnDoc = "A promise that resolves to a new `GrpcConnection`."
                       }
                   , MethodInfo
-                      { methodName = "generateMainnetPaymentWallet"
+                      { methodName = "generatePaymentWallet"
                       , methodDoc = "Generate a simple payment wallet for mainnet."
                       , methodParams = []
                       , methodReturnType = NewObject walletObjectName
                       , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
                   , MethodInfo
-                      { methodName = "restoreMainnetPaymentWalletFromSigningKeyBech32"
+                      { methodName = "restorePaymentWalletFromSigningKeyBech32"
                       , methodDoc = "Restore a mainnet payment wallet from a Bech32 encoded signing key."
                       , methodParams = [ParamInfo "signingKeyBech32" "string" "The Bech32 encoded signing key."]
                       , methodReturnType = NewObject walletObjectName

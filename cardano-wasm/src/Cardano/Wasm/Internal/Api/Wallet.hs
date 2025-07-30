@@ -5,8 +5,8 @@
 
 module Cardano.Wasm.Internal.Api.Wallet
   ( WalletObject (..)
-  , generateMainnetPaymentWalletImpl
-  , restoreMainnetPaymentWalletFromSigningKeyBech32Impl
+  , generatePaymentWalletImpl
+  , restorePaymentWalletFromSigningKeyBech32Impl
   , generateTestnetPaymentWalletImpl
   , restoreTestnetPaymentWalletFromSigningKeyBech32Impl
   , getAddressBech32
@@ -81,8 +81,8 @@ instance FromJSON WalletObject where
       other -> fail $ "Unsupported wallet type: " ++ show other
 
 -- | Generate a simple payment wallet for mainnet.
-generateMainnetPaymentWalletImpl :: IO WalletObject
-generateMainnetPaymentWalletImpl = do
+generatePaymentWalletImpl :: IO WalletObject
+generatePaymentWalletImpl = do
   let seedSize = deterministicSigningKeySeedSize AsPaymentKey
   randomBytes <- getRandomBytes seedSize
   let seed = mkSeedFromBytes randomBytes
@@ -90,8 +90,8 @@ generateMainnetPaymentWalletImpl = do
   return (PaymentWallet Mainnet key)
 
 -- | Restore a mainnet payment wallet from a Bech32 encoded signing key.
-restoreMainnetPaymentWalletFromSigningKeyBech32Impl :: String -> IO WalletObject
-restoreMainnetPaymentWalletFromSigningKeyBech32Impl signingKeyBech32 = do
+restorePaymentWalletFromSigningKeyBech32Impl :: String -> IO WalletObject
+restorePaymentWalletFromSigningKeyBech32Impl signingKeyBech32 = do
   let key = rightOrError $ deserialiseFromBech32 (Text.pack signingKeyBech32)
   PaymentWallet Mainnet <$> toMonadFail key
 
