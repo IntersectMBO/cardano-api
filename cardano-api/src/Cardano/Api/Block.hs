@@ -72,7 +72,6 @@ import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
-import Ouroboros.Consensus.Shelley.Protocol.Abstract qualified as Consensus
 import Ouroboros.Network.Block qualified as Consensus
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
@@ -153,6 +152,12 @@ instance Show (Block era) where
       ( showString "ShelleyBlock ShelleyBasedEraConway "
           . showsPrec 11 block
       )
+  showsPrec p (ShelleyBlock ShelleyBasedEraDijkstra block) =
+    showParen
+      (p >= 11)
+      ( showString "ShelleyBlock ShelleyBasedEraDijkstra "
+          . showsPrec 11 block
+      )
 
 getBlockTxs :: forall era. Block era -> [Tx era]
 getBlockTxs = \case
@@ -167,7 +172,6 @@ getShelleyBlockTxs
   :: forall era ledgerera blockheader
    . ShelleyLedgerEra era ~ ledgerera
   => Consensus.ShelleyCompatible (ConsensusProtocol era) ledgerera
-  => Consensus.ShelleyProtocolHeader (ConsensusProtocol era) ~ blockheader
   => ShelleyBasedEra era
   -> Ledger.Block blockheader ledgerera
   -> [Tx era]
@@ -203,6 +207,7 @@ fromConsensusBlock = \case
   Consensus.BlockAlonzo b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraAlonzo b'
   Consensus.BlockBabbage b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraBabbage b'
   Consensus.BlockConway b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraConway b'
+  Consensus.BlockDijkstra b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraDijkstra b'
 
 toConsensusBlock
   :: ()
@@ -217,6 +222,7 @@ toConsensusBlock = \case
   BlockInMode _ (ShelleyBlock ShelleyBasedEraAlonzo b') -> Consensus.BlockAlonzo b'
   BlockInMode _ (ShelleyBlock ShelleyBasedEraBabbage b') -> Consensus.BlockBabbage b'
   BlockInMode _ (ShelleyBlock ShelleyBasedEraConway b') -> Consensus.BlockConway b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraDijkstra b') -> Consensus.BlockDijkstra b'
 
 -- ----------------------------------------------------------------------------
 -- Block headers
