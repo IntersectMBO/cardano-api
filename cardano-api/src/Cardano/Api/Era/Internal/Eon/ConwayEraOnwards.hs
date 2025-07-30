@@ -38,9 +38,9 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
+import Cardano.Ledger.Conway.State qualified as L
 import Cardano.Ledger.Conway.TxCert qualified as L
 import Cardano.Ledger.Mary.Value qualified as L
-import Cardano.Ledger.State qualified as L
 import Cardano.Protocol.Crypto qualified as L
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
 import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
@@ -52,6 +52,7 @@ import Data.Typeable (Typeable)
 
 data ConwayEraOnwards era where
   ConwayEraOnwardsConway :: ConwayEraOnwards ConwayEra
+  ConwayEraOnwardsDijkstra :: ConwayEraOnwards DijkstraEra
 
 deriving instance Show (ConwayEraOnwards era)
 
@@ -68,10 +69,12 @@ instance Eon ConwayEraOnwards where
     AlonzoEra -> no
     BabbageEra -> no
     ConwayEra -> yes ConwayEraOnwardsConway
+    DijkstraEra -> yes ConwayEraOnwardsDijkstra
 
 instance ToCardanoEra ConwayEraOnwards where
   toCardanoEra = \case
     ConwayEraOnwardsConway -> ConwayEra
+    ConwayEraOnwardsDijkstra -> DijkstraEra
 
 instance Convert ConwayEraOnwards CardanoEra where
   convert = toCardanoEra
@@ -79,10 +82,12 @@ instance Convert ConwayEraOnwards CardanoEra where
 instance Convert ConwayEraOnwards ShelleyBasedEra where
   convert = \case
     ConwayEraOnwardsConway -> ShelleyBasedEraConway
+    ConwayEraOnwardsDijkstra -> ShelleyBasedEraDijkstra
 
 instance Convert ConwayEraOnwards AllegraEraOnwards where
   convert = \case
     ConwayEraOnwardsConway -> AllegraEraOnwardsConway
+    ConwayEraOnwardsDijkstra -> AllegraEraOnwardsDijkstra
 
 instance Convert ConwayEraOnwards AlonzoEraOnwards where
   convert ConwayEraOnwardsConway = AlonzoEraOnwardsConway
@@ -90,9 +95,11 @@ instance Convert ConwayEraOnwards AlonzoEraOnwards where
 instance Convert ConwayEraOnwards BabbageEraOnwards where
   convert = \case
     ConwayEraOnwardsConway -> BabbageEraOnwardsConway
+    ConwayEraOnwardsDijkstra -> BabbageEraOnwardsDijkstra
 
 type ConwayEraOnwardsConstraints era =
-  ( C.HashAlgorithm L.HASH
+  ( L.ConwayEraCertState (ShelleyLedgerEra era)
+  , C.HashAlgorithm L.HASH
   , C.Signable (L.VRF L.StandardCrypto) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
   , Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era) ~ ConsensusBlockForEra era
@@ -137,6 +144,7 @@ conwayEraOnwardsConstraints
   -> a
 conwayEraOnwardsConstraints = \case
   ConwayEraOnwardsConway -> id
+  ConwayEraOnwardsDijkstra -> id
 
 {-# DEPRECATED conwayEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 conwayEraOnwardsToShelleyBasedEra :: ConwayEraOnwards era -> ShelleyBasedEra era
