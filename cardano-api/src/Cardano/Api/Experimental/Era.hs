@@ -34,7 +34,7 @@ where
 
 import Cardano.Api.Consensus
 import Cardano.Api.Era qualified as Api
-import Cardano.Api.Era.Internal.Core (BabbageEra, ConwayEra, Eon (..))
+import Cardano.Api.Era.Internal.Core (BabbageEra, ConwayEra, DijkstraEra, Eon (..))
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.Convert
@@ -70,6 +70,7 @@ import Prettyprinter
 -- and the next (upcoming) era.
 type family LedgerEra era = (r :: Type) | r -> era where
   LedgerEra ConwayEra = Ledger.ConwayEra
+  LedgerEra DijkstraEra = L.DijkstraEra
 
 -- | An existential wrapper for types of kind @k -> Type@. It can hold any
 -- era, for example, @Some Era@. The era witness can be brought back into scope,
@@ -98,6 +99,7 @@ data Some (f :: k -> Type) where
 data Era era where
   -- | The currently active era on the Cardano mainnet.
   ConwayEra :: Era ConwayEra
+  DijkstraEra :: Era DijkstraEra
 
 deriving instance Show (Era era)
 
@@ -108,6 +110,8 @@ instance Pretty (Era era) where
 
 instance TestEquality Era where
   testEquality ConwayEra ConwayEra = Just Refl
+  testEquality DijkstraEra DijkstraEra = Just Refl
+  testEquality _ _ = Nothing
 
 instance ToJSON (Era era) where
   toJSON = eraToStringLike
@@ -126,6 +130,7 @@ instance Enum (Some Era) where
   toEnum 0 = Some ConwayEra
   toEnum i = error $ "Enum.toEnum: invalid argument " <> show i <> " - does not correspond to any era"
   fromEnum (Some ConwayEra) = 0
+  fromEnum (Some DijkstraEra) = 1
 
 instance Ord (Some Era) where
   compare e1 e2 = compare (fromEnum e1) (fromEnum e2)
@@ -155,16 +160,19 @@ instance Eon Era where
 instance Api.ToCardanoEra Era where
   toCardanoEra = \case
     ConwayEra -> Api.ConwayEra
+    DijkstraEra -> Api.DijkstraEra
 
 eraToStringLike :: IsString a => Era era -> a
 {-# INLINE eraToStringLike #-}
 eraToStringLike = \case
   ConwayEra -> "Conway"
+  DijkstraEra -> "Dijkstra"
 
 eraFromStringLike :: (IsString a, Eq a) => a -> Either a (Some Era)
 {-# INLINE eraFromStringLike #-}
 eraFromStringLike = \case
   "Conway" -> pure $ Some ConwayEra
+  "Dijkstra" -> pure $ Some DijkstraEra
   wrong -> Left wrong
 
 -- | How to deprecate an era:
@@ -205,30 +213,37 @@ eraToSbe = convert
 instance Convert Era Api.CardanoEra where
   convert = \case
     ConwayEra -> Api.ConwayEra
+    DijkstraEra -> Api.DijkstraEra
 
 instance Convert Era ShelleyBasedEra where
   convert = \case
     ConwayEra -> ShelleyBasedEraConway
+    DijkstraEra -> ShelleyBasedEraDijkstra
 
 instance Convert Era AlonzoEraOnwards where
   convert = \case
     ConwayEra -> AlonzoEraOnwardsConway
+    DijkstraEra -> AlonzoEraOnwardsDijkstra
 
 instance Convert Era BabbageEraOnwards where
   convert = \case
     ConwayEra -> BabbageEraOnwardsConway
+    DijkstraEra -> BabbageEraOnwardsDijkstra
 
 instance Convert Era MaryEraOnwards where
   convert = \case
     ConwayEra -> MaryEraOnwardsConway
+    DijkstraEra -> MaryEraOnwardsDijkstra
 
 instance Convert Era ConwayEraOnwards where
   convert = \case
     ConwayEra -> ConwayEraOnwardsConway
+    DijkstraEra -> ConwayEraOnwardsDijkstra
 
 instance Convert ConwayEraOnwards Era where
   convert = \case
     ConwayEraOnwardsConway -> ConwayEra
+    ConwayEraOnwardsDijkstra -> DijkstraEra
 
 newtype DeprecatedEra era
   = DeprecatedEra (ShelleyBasedEra era)
@@ -245,6 +260,7 @@ sbeToEra
   => ShelleyBasedEra era
   -> m (Era era)
 sbeToEra ShelleyBasedEraConway = return ConwayEra
+sbeToEra ShelleyBasedEraDijkstra = return DijkstraEra
 sbeToEra e@ShelleyBasedEraBabbage = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraAlonzo = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraMary = throwError $ DeprecatedEra e
@@ -264,11 +280,15 @@ class IsEra era where
 instance IsEra ConwayEra where
   useEra = ConwayEra
 
+instance IsEra DijkstraEra where
+  useEra = DijkstraEra
+
 obtainCommonConstraints
   :: Era era
   -> (EraCommonConstraints era => a)
   -> a
 obtainCommonConstraints ConwayEra x = x
+obtainCommonConstraints DijkstraEra x = x
 
 type EraCommonConstraints era =
   ( L.AllegraEraScript (LedgerEra era)
