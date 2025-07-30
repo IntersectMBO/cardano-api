@@ -83,6 +83,7 @@ type family ConsensusBlockForEra era where
   ConsensusBlockForEra AlonzoEra = Consensus.StandardAlonzoBlock
   ConsensusBlockForEra BabbageEra = Consensus.StandardBabbageBlock
   ConsensusBlockForEra ConwayEra = Consensus.StandardConwayBlock
+  ConsensusBlockForEra DijkstraEra = Consensus.StandardDijkstraBlock
 
 type family ConsensusCryptoForBlock block where
   ConsensusCryptoForBlock Consensus.ByronBlockHFC = StandardCrypto
@@ -98,6 +99,7 @@ type family ConsensusProtocol era where
   ConsensusProtocol AlonzoEra = Consensus.TPraos StandardCrypto
   ConsensusProtocol BabbageEra = Consensus.Praos StandardCrypto
   ConsensusProtocol ConwayEra = Consensus.Praos StandardCrypto
+  ConsensusProtocol DijkstraEra = Consensus.Praos StandardCrypto
 
 type family ChainDepStateProtocol era where
   ChainDepStateProtocol ShelleyEra = Consensus.TPraosState
@@ -128,6 +130,9 @@ eraIndex5 = eraIndexSucc eraIndex4
 eraIndex6 :: Consensus.EraIndex (x6 : x5 : x4 : x3 : x2 : x1 : x0 : xs)
 eraIndex6 = eraIndexSucc eraIndex5
 
+eraIndex7 :: Consensus.EraIndex (x7 : x6 : x5 : x4 : x3 : x2 : x1 : x0 : xs)
+eraIndex7 = eraIndexSucc eraIndex6
+
 toConsensusEraIndex
   :: ()
   => Consensus.CardanoBlock StandardCrypto ~ Consensus.HardForkBlock xs
@@ -141,6 +146,7 @@ toConsensusEraIndex = \case
   AlonzoEra -> eraIndex4
   BabbageEra -> eraIndex5
   ConwayEra -> eraIndex6
+  DijkstraEra -> eraIndex7
 
 fromConsensusEraIndex
   :: ()
@@ -161,3 +167,4 @@ fromConsensusEraIndex = \case
     AnyCardanoEra BabbageEra
   Consensus.EraIndex (S (S (S (S (S (S (Z (K ())))))))) ->
     AnyCardanoEra ConwayEra
+  Consensus.EraIndex (S (S (S (S (S (S (S _))))))) -> error "dijkstra"
