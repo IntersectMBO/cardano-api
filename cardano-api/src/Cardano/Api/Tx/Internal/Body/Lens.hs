@@ -58,7 +58,6 @@ import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Mary.Value qualified as L
 import Cardano.Ledger.Shelley.PParams qualified as L
 import Cardano.Ledger.TxIn qualified as L
