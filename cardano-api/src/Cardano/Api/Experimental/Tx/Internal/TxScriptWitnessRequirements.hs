@@ -61,6 +61,13 @@ instance Semigroup (TxScriptWitnessRequirements L.ConwayEra) where
 instance Monoid (TxScriptWitnessRequirements L.ConwayEra) where
   mempty = TxScriptWitnessRequirements mempty mempty mempty mempty
 
+instance Semigroup (TxScriptWitnessRequirements L.DijkstraEra) where
+  (<>) (TxScriptWitnessRequirements l1 s1 d1 r1) (TxScriptWitnessRequirements l2 s2 d2 r2) =
+    TxScriptWitnessRequirements (l1 <> l2) (s1 <> s2) (d1 <> d2) (r1 <> r2)
+
+instance Monoid (TxScriptWitnessRequirements L.DijkstraEra) where
+  mempty = TxScriptWitnessRequirements mempty mempty mempty mempty
+
 getTxScriptWitnessRequirements
   :: AlonzoEraOnwards era
   -> [(Witnessable witnessable (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
@@ -93,6 +100,7 @@ obtainMonoidConstraint eon = case eon of
   AlonzoEraOnwardsAlonzo -> id
   AlonzoEraOnwardsBabbage -> id
   AlonzoEraOnwardsConway -> id
+  AlonzoEraOnwardsDijkstra -> id
 
 extractExecutionUnits :: TxScriptWitnessRequirements era -> [ExecutionUnits]
 extractExecutionUnits (TxScriptWitnessRequirements _ _ _ redeemers) =
