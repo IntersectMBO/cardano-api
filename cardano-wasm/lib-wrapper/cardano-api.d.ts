@@ -48,7 +48,7 @@ declare interface UnsignedTx {
      * @param totalRefScriptSize The total size of reference scripts in bytes.
      * @returns A promise that resolves to the estimated minimum fee in lovelaces.
      */
-    estimateMinFee(protocolParams: any, numKeyWitnesses: number, numByronKeyWitnesses: number, totalRefScriptSize: number): Promise<BigInt>;
+    estimateMinFee(protocolParams: any, numKeyWitnesses: number, numByronKeyWitnesses: number, totalRefScriptSize: number): Promise<bigint>;
 
     /**
      * Signs the transaction with a payment key.

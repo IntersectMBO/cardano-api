@@ -211,7 +211,7 @@ apiInfo =
                       , ParamInfo "numByronKeyWitnesses" "number" "The number of Byron key witnesses."
                       , ParamInfo "totalRefScriptSize" "number" "The total size of reference scripts in bytes."
                       ]
-                  , methodReturnType = OtherType "BigInt"
+                  , methodReturnType = OtherType "bigint"
                   , methodReturnDoc = "A promise that resolves to the estimated minimum fee in lovelaces."
                   }
               , MethodInfo
