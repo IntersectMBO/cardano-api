@@ -40,6 +40,7 @@ message Script {
     bytes plutus_v1 = 2; // Plutus V1 script.
     bytes plutus_v2 = 3; // Plutus V2 script.
     bytes plutus_v3 = 4; // Plutus V3 script.
+    bytes plutus_v4 = 5; // Plutus V3 script.
   }
 }
 
