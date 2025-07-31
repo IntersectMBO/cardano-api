@@ -25,6 +25,7 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type
 
 import RIO hiding (toList)
 
+import Data.Default
 import Data.ProtoLens (defMessage)
 import Data.Text.Encoding qualified as T
 import GHC.IsList
@@ -51,7 +52,7 @@ readParamsMethod _req = do
     pure (pparams, chainPoint, blockNo)
 
   pure $
-    defMessage
+    def
       & #ledgerTip .~ mkChainPointMsg chainPoint blockNo
       & #values . #cardano .~ conwayEraOnwardsConstraints eon (inject pparams)
 
