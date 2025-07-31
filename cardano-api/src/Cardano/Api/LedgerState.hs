@@ -1148,8 +1148,7 @@ instance FromJSON NodeConfig where
         <*> parseAlonzoHardForkEpoch o
         <*> parseBabbageHardForkEpoch o
         <*> parseConwayHardForkEpoch o
-        <*> error "dijkstra"
-
+        <*> (pure Consensus.CardanoTriggerHardForkAtDefaultVersion) -- TODO: Dijkstra
     parseShelleyHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseShelleyHardForkEpoch o =
       asum
