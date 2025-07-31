@@ -35,7 +35,6 @@ hprop_roundtrip_protocol_parameters = H.property $ do
   pp <- fmap unLedgerProtocolParameters . H.forAll $ genValidProtocolParameters (convert era)
   let costModels = L.costModelsValid $ pp ^. L.ppCostModelsL
       mCms = map (`M.lookup` costModels) [minBound .. maxBound]
-
       nonEmptyCostModels =
         fromList . flip mapMaybe mCms $ \mCm ->
           mCm >>= \cm ->
