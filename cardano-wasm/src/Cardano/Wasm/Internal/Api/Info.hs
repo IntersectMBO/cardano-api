@@ -266,6 +266,14 @@ apiInfo =
                   , methodReturnType = OtherType "string"
                   , methodReturnDoc = "A promise that resolves to the transaction ID."
                   }
+              , MethodInfo
+                  { methodName = "getProtocolParams"
+                  , methodDoc =
+                      "Get the protocol parameters in the cardano-ledger format from the Cardano Node using a GRPC-web client."
+                  , methodParams = []
+                  , methodReturnType = OtherType "any"
+                  , methodReturnDoc = "A promise that resolves to the current protocol parameters."
+                  }
               ]
           }
    in ApiInfo
