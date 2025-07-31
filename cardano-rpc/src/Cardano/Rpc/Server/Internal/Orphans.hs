@@ -86,6 +86,8 @@ instance Inject (ReferenceScript era) (Proto UtxoRpc.Script) where
         defMessage & #plutusV2 .~ serialiseToRawBytes ps
       PlutusScript PlutusScriptV3 ps ->
         defMessage & #plutusV3 .~ serialiseToRawBytes ps
+      PlutusScript PlutusScriptV4 ps ->
+        defMessage & #plutusV4 .~ serialiseToRawBytes ps
 
 instance IsCardanoEra era => Inject (UTxO era) [Proto UtxoRpc.AnyUtxoData] where
   inject utxo =
