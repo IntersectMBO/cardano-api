@@ -6,19 +6,19 @@
 </head>
 
 <body>
-  <!--<script type="module" src="./cardano_node_grpc_web_pb.js"></script>
-    <script type="module" src="./example.js"></script>-->
+  <!--<script type="module" src="./cardano_node_grpc_web_pb.js"></script>-->
+  <script type="module" src="./example.js"></script>
   <div id="header">
     <h1>Wallet example (Cardano Preview)</h1>
   </div>
   <div id="wallet-info">
     <h2>Wallet info</h2>
     <div id="private-key" class="field-section"><span id="private-key-label" class="label">Private key</span><input
-        placeholder="Private key for the wallet" type="text" id="private-key-input" value="key...." /><button
+        placeholder="Private key for the wallet" type="text" id="private-key-input" value="Loading ..." /><button
         id="show-private-key-button">Show</button><button id="load-private-key-button">Load</button></div>
     <div id="address" class="field-section"><span id="address-label" class="label">Address</span><input
-        placeholder="Address for the wallet" type="text" id="address-input" value="addr...." /><button
-        id="regenerate-address-button">Regenerate</button><button id="load-address-button">Load</button></div>
+        placeholder="Address for the wallet" type="text" disabled="true" id="address-input"
+        value="Loading ..." /><button id="regenerate-address-button">Regenerate</button></div>
     <div id="wallet-utxos">
       <h3>Wallet UTxOs</h3>
       <table id="utxo-table">
