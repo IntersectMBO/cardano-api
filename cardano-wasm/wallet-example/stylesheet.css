@@ -10,7 +10,7 @@ body {
 }
 
 #app {
-    max-width: 80rem;
+    max-width: 85rem;
     margin: 0 auto;
 }
 
@@ -56,6 +56,7 @@ button:hover {
     border-radius: 8px;
     margin: 0 20px 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    overflow: auto;
 }
 
 .field-section {
@@ -134,8 +135,18 @@ table tr:last-child td {
     border-bottom: none;
 }
 
-td:has(button) {
+td:has(button),
+th:has(button) {
     text-align: right !important;
+    width: 7rem;
+}
+
+.long {
+    flex: 4;
+    width: 100%;
+}
+
+.filler {
     width: 7rem;
 }
 
