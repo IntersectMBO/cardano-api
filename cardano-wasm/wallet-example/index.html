@@ -6,39 +6,27 @@
 </head>
 
 <body>
-  <!--<script type="module" src="./cardano_node_grpc_web_pb.js"></script>
-    <script type="module" src="./example.js"></script>-->
+  <script type="module" src="./cardano_node_grpc_web_pb.js"></script>
+  <script type="module" src="./example.js"></script>
   <div id="header">
     <h1>Wallet example (Cardano Preview)</h1>
   </div>
   <div id="wallet-info">
     <h2>Wallet info</h2>
     <div id="private-key" class="field-section"><span id="private-key-label" class="label">Private key</span><input
-        placeholder="Private key for the wallet" type="text" id="private-key-input" value="key...." /><button
+        placeholder="Private key for the wallet" type="text" id="private-key-input" value="Loading ..." /><button
         id="show-private-key-button">Show</button><button id="load-private-key-button">Load</button></div>
     <div id="address" class="field-section"><span id="address-label" class="label">Address</span><input
-        placeholder="Address for the wallet" type="text" id="address-input" value="addr...." /><button
-        id="regenerate-address-button">Regenerate</button><button id="load-address-button">Load</button></div>
+        placeholder="Address for the wallet" type="text" disabled="true" id="address-input"
+        value="Loading ..." /><button id="regenerate-address-button">Regenerate</button></div>
     <div id="wallet-utxos">
       <h3>Wallet UTxOs</h3>
       <table id="utxo-table">
         <tr>
-          <th>TxId</th>
+          <th class="long">TxId</th>
           <th>TxIx</th>
           <th>Lovelaces</th>
-          <th class="utxo-reload"><button>Reload</button></th>
-        </tr>
-        <tr>
-          <td class="utxo-txid">dc89a8979a786a76e7686c876</td>
-          <td class="utxo-txix">0</td>
-          <td class="utxo-txada">234</td>
-          <td class="utxo-addtotx"><button>Add to tx</button></td>
-        </tr>
-        <tr>
-          <td class="utxo-txid">dc89a8979a786a76e7686c876</td>
-          <td class="utxo-txix">0</td>
-          <td class="utxo-txada">234</td>
-          <td class="utxo-addtotx"><button>Add to tx</button></td>
+          <th class="utxo-reload"><button id="utxo-reload-button">Reload</button></th>
         </tr>
       </table>
     </div>
@@ -50,22 +38,12 @@
       <h3>Inputs</h3>
       <table id="txin-table">
         <tr>
-          <th>TxId</th>
+          <th class="long">TxId</th>
           <th>TxIx</th>
           <th>Lovelaces</th>
-          <th></th>
-        </tr>
-        <tr>
-          <td class="txin-txid">dc89a8979a786a76e7686c876</td>
-          <td class="txin-txix">0</td>
-          <td class="txin-txada">234</td>
-          <td class="txin-remove"><button>Remove</button></td>
-        </tr>
-        <tr>
-          <td class="txin-txid">dc89a8979a786a76e7686c876</td>
-          <td class="txin-txix">0</td>
-          <td class="txin-txada">234</td>
-          <td class="txin-remove"><button>Remove</button></td>
+          <th>
+            <div class="filler"></div>
+          </th>
         </tr>
         <tr>
           <td></td>
@@ -85,12 +63,12 @@
           <th></th>
         </tr>
         <tr>
-          <td class="txout-txid">dc89a8979a786a76e7686c876</td>
+          <td class="txout-txid long">dc89a8979a786a76e7686c876</td>
           <td class="txout-txada">234</td>
           <td class="txout-remove"><button>Remove</button></td>
         </tr>
         <tr>
-          <td class="txout-txid">dc89a8979a786a76e7686c876</td>
+          <td class="txout-txid long">dc89a8979a786a76e7686c876</td>
           <td class="txout-txada">468</td>
           <td class="txout-remove"><button>Remove</button></td>
         </tr>
@@ -108,8 +86,8 @@
     </div>
     <div id="add-output">
       <div id="add-output" class="field-section"><span id="add-output-label" class="label">Add output</span><input
-          placeholder="Destination address" type="text" id="add-output-address" value="addr...." /><input
-          placeholder="Lovelace to transfer" type="text" id="add-output-lovelace" value="323" /><button
+          placeholder="Destination address" class="long" type="text" id="add-output-address" value="" /><input
+          placeholder="Lovelace to transfer" type="text" id="add-output-lovelace" value="" /><button
           id="add-output-button">Add
           output</button><button id="add-output-clear-button">Clear</button></div>
     </div>
