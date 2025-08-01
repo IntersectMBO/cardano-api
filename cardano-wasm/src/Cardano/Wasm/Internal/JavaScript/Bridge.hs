@@ -68,6 +68,10 @@ fromJSBigInt val = do
     [(n, "")] -> return n
     _ -> error ("Wrong format for argument when deserialising, expected integer but got: " ++ show str)
 
+-- | Convert a Haskell @String@ to a JavaScript @BigInt@ (@JSVal@).
+foreign import javascript unsafe "BigInt($1)"
+  js_toBigInt :: JSString -> IO JSVal
+
 -- | Convert a Haskell value with @ToJSON@ instance to a JavaScript object (@JSVal)
 jsonToJSVal :: Api.ToJSON a => a -> IO JSVal
 jsonToJSVal =
@@ -146,6 +150,10 @@ instance ToJSVal Wasm.ProtocolParamsJSON JSProtocolParams where
 instance ToJSVal Wasm.GrpcObject JSGrpc where
   toJSVal :: Wasm.GrpcObject -> IO JSGrpc
   toJSVal (Wasm.GrpcObject client) = return client
+
+instance ToJSVal Ledger.Coin JSCoin where
+  toJSVal :: Ledger.Coin -> IO JSCoin
+  toJSVal (Ledger.Coin n) = js_toBigInt $ toJSString $ show n
 
 -- |  Type class that provides functions to convert values from JavaScript to Haskell.
 class FromJSVal jsType haskellType where
