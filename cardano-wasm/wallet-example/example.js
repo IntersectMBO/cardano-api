@@ -22,6 +22,8 @@ async function do_async_work() {
     for (let output of transactionOutputs) {
       tx = tx.addSimpleTxOut(output.address, output.lovelace);
     }
+    let txFee = await tx.estimateMinFee(protocolParams, 1, 0, 0);
+    tx.setFee(txFee);
     return tx;
   }
 
@@ -218,7 +220,6 @@ async function do_async_work() {
     const cellTotalLabel = totalOutRow.insertCell();
     cellTotalLabel.className = 'total-label';
     cellTotalLabel.textContent = "Total";
-
   }
 
   // Callbacks
@@ -279,6 +280,22 @@ async function do_async_work() {
     // @ts-ignore
     document.getElementById('add-output-lovelace').value = '';
 
+    await refresh();
+  });
+
+  document.getElementById('submit-button')?.addEventListener('click', async () => {
+    let tx = await makeTransaction();
+    let signingKey = await wallet.getBech32ForSigningKey();
+    let signedTx = await tx.signWithPaymentKey(signingKey);
+
+    await grpcApi.submitTx(await signedTx.txToCbor()).then((txId) => {
+      alert("Transaction submitted successfully with ID: " + txId);
+    }).catch((err) => {
+      alert("Error submitting transaction: " + err);
+    });
+
+    transactionInputs = [];
+    transactionOutputs = [];
     await refresh();
   });
 
