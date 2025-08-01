@@ -244,7 +244,6 @@ async function do_async_work() {
     wallet = await api.restoreTestnetPaymentWalletFromSigningKeyBech32(2, pki.value);
     await refresh();
   };
-  // addInputToTx(utxo.txId, utxo.txIndex, utxo.lovelace)
 
   async function addInputToTx(txId, txIndex, lovelace) {
     // @ts-ignore
