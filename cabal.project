@@ -110,13 +110,13 @@ source-repository-package
 if arch(wasm32)
   source-repository-package
     type: git
-    location: https://github.com/amesgen/plutus.git
-    tag: dc1edea4458d6fb794b245a26c730620265645f3
+    location: https://github.com/intersectmbo/plutus.git
+    tag: 210c8375cd82eb2670b703b0975c26589dd40b2f
     subdir:
       plutus-core
       plutus-ledger-api
       plutus-tx
-    --sha256: sha256-QBtLmoS54b5QMAKIDOJIM6lmRC+1leBpuGKaFc7QQos=
+    --sha256: sha256-icAg87JKdCkeuNZvVwNlT0v1/O0wOYwIQ6LzXj9iTYM=
 
   package plutus-core
     flags: +do-not-build-plutus-exec
@@ -130,11 +130,11 @@ if arch(wasm32)
   source-repository-package
     type: git
     location: https://github.com/palas/ouroboros-network.git
-    tag: ef3e30603e4e45dac336a085114ee22b7aa8c9ed
+    tag: bbc8bd70386a951e8633e4966e661df079cdc103
     subdir:
       ouroboros-network
       ouroboros-network-framework
-    --sha256: sha256-+IdAmWJqzRy+erKONywtk+5YLrm63q942nZavoEA4E4=
+    --sha256: sha256-7m9lMZlQzjbfaGpWA5ipDGloQ2uhIQmFRoUFQ7GCDl8=
 
   source-repository-package
     type: git
