@@ -27,6 +27,8 @@ function log(out) {
             output.innerText += "    " + key + ": " + text + "\n";
         }
         output.innerText += "  }\n";
+    } else if (typeof (out) == "bigint") {
+        output.innerText += "> " + out.toString() + "n\n";
     } else {
         output.innerText += "> " + JSON.stringify(out) + "\n";
     }
