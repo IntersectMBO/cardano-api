@@ -12,6 +12,8 @@ async function do_async_work() {
   let wallet = await api.generateTestnetPaymentWallet(2);
   let transactionInputs = [];
   let transactionOutputs = [];
+  // always increasing index of a transaction to identify on a UI
+  let transactionOutputIx = 0;
 
   // Refresh function
   const refresh = async function () {
@@ -183,8 +185,6 @@ async function do_async_work() {
     cellLovelaces.className = 'txout-txada';
     cellLovelaces.textContent = lovelace;
 
-    let ix = transactionOutputs.length;
-
     // Remove the row of the clicked button
     function removeRow(button, index) {
       const row = button.closest('tr');
@@ -199,14 +199,15 @@ async function do_async_work() {
     cellRemove.className = 'txout-remove';
     const btn = document.createElement('button');
     btn.textContent = 'Remove';
-    btn.onclick = function() { removeRow(btn, ix); };
+    btn.onclick = removeRow.bind(null, btn, transactionOutputIx);
     cellRemove.appendChild(btn);
 
     transactionOutputs.push({
-      ix: ix,
+      ix: transactionOutputIx,
       address: address,
       lovelace: lovelace
     });
+    transactionOutputIx += 1;
   }
 
   document.getElementById('load-private-key-button')?.addEventListener('click', loadPrivateKey);
