@@ -137,16 +137,14 @@ async function do_async_work() {
     await refresh();
   }
 
-  // @ts-ignore
-  document.getElementById("regenerate-address-button").addEventListener("click", generateAddress);
+  document.getElementById("regenerate-address-button")?.addEventListener("click", generateAddress);
 
   async function togglePrivateKeyDisplay() {
     showPrivateKey = !showPrivateKey;
     await refresh();
   }
 
-  // @ts-ignore
-  document.getElementById("show-private-key-button").addEventListener("click", togglePrivateKeyDisplay);
+  document.getElementById("show-private-key-button")?.addEventListener("click", togglePrivateKeyDisplay);
 
   // @ts-ignore
   async function loadPrivateKey() {
@@ -167,12 +165,73 @@ async function do_async_work() {
     await refresh();
   }
 
-  // @ts-ignore
-  document.getElementById("load-private-key-button").addEventListener("click", loadPrivateKey);
+  async function addRow(address, lovelace) {
+    const table = document.getElementById('txout-table');
+    // @ts-ignore
+    const rowInsertIx = table.rows[table.rows.length - 2].rowIndex;
 
-  // @ts-ignore
-  document.getElementById("utxo-reload-button").addEventListener("click", refresh);
+    // @ts-ignore
+    const newRow = table.insertRow(rowInsertIx);
+
+    // Address cell
+    const cellAddress = newRow.insertCell(0);
+    cellAddress.className = 'txout-txid long';
+    cellAddress.textContent = address;
+
+    // Lovelaces cell
+    const cellLovelaces = newRow.insertCell(1);
+    cellLovelaces.className = 'txout-txada';
+    cellLovelaces.textContent = lovelace;
+
+    let ix = transactionOutputs.length;
+
+    // Remove the row of the clicked button
+    function removeRow(button, index) {
+      const row = button.closest('tr');
+      if (row) {
+        row.parentNode.removeChild(row);
+      }
+      transactionOutputs = transactionOutputs.filter(txOut => txOut.ix !== index);
+    }
+
+    // Remove button cell
+    const cellRemove = newRow.insertCell(2);
+    cellRemove.className = 'txout-remove';
+    const btn = document.createElement('button');
+    btn.textContent = 'Remove';
+    btn.onclick = function() { removeRow(btn, ix); };
+    cellRemove.appendChild(btn);
+
+    transactionOutputs.push({
+      ix: ix,
+      address: address,
+      lovelace: lovelace
+    });
+  }
+
+  document.getElementById('load-private-key-button')?.addEventListener('click', loadPrivateKey);
+
+  document.getElementById('utxo-reload-button')?.addEventListener('click', refresh);
+
+  document.getElementById('add-output-button')?.addEventListener('click', () => {
+    addRow(
+      // @ts-ignore
+      document.getElementById('add-output-address').value.trim(),
+      // @ts-ignore
+      Number(document.getElementById('add-output-lovelace').value.trim()),
+    );
+
+    // @ts-ignore
+    document.getElementById('add-output-address').value = '';
+    // @ts-ignore
+    document.getElementById('add-output-lovelace').value = '';
+  });
 
   generateAddress();
+
+
+  // TODO REMOVE THIS
+  addRow("dc89a8979a786a76e7686c876", 234);
+  addRow("dc89a8979a786a76e7686c876", 468);
 }
 do_async_work().then(() => { });
