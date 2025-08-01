@@ -256,7 +256,7 @@ async function do_async_work() {
     await refresh();
   }
 
-  async function addOutput(address, lovelace) {
+  function addOutput(address, lovelace) {
     transactionOutputs.push({
       address: address,
       lovelace: lovelace
@@ -268,7 +268,7 @@ async function do_async_work() {
   document.getElementById('utxo-reload-button')?.addEventListener('click', refresh);
 
   document.getElementById('add-output-button')?.addEventListener('click', async () => {
-    await addOutput(
+    addOutput(
       // @ts-ignore
       document.getElementById('add-output-address').value.trim(),
       // @ts-ignore
