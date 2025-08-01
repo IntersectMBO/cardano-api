@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+# Function to handle cleanup on exit or signal
+cleanup() {
+    echo "Cleaning up..."
+    if [[ -n "$SOCAT_PID" ]] && kill -0 "$SOCAT_PID" 2>/dev/null; then
+        kill "$SOCAT_PID"
+        wait "$SOCAT_PID" 2>/dev/null
+    fi
+    exit
+}
+
+# Set trap for SIGINT and SIGTERM
+trap cleanup SIGINT SIGTERM
+
+# Start socat in the background
+socat TCP-LISTEN:50051,reuseaddr,fork UNIX-CONNECT:./rpc.sock &
+SOCAT_PID=$!
+echo "Started socat with PID $SOCAT_PID"
+
+grpcui -import-path cardano-rpc/proto \
+  -proto utxorpc/v1alpha/query/query.proto \
+  -proto utxorpc/v1alpha/submit/submit.proto \
+  -plaintext localhost:50051
+
+cleanup
