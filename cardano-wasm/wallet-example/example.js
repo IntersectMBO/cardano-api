@@ -13,53 +13,8 @@ async function do_async_work() {
   let transactionInputs = [];
   let transactionOutputs = [];
 
-  // Refresh declaration
-  let refresh = async function () { };
-
-  // Callbacks
-  async function generateAddress() {
-    wallet = await api.generateTestnetPaymentWallet(2);
-    await refresh();
-  }
-
-  // @ts-ignore
-  document.getElementById("regenerate-address-button").addEventListener("click", generateAddress);
-
-  async function togglePrivateKeyDisplay() {
-    showPrivateKey = !showPrivateKey;
-    await refresh();
-  }
-
-  // @ts-ignore
-  document.getElementById("show-private-key-button").addEventListener("click", togglePrivateKeyDisplay);
-
-  // @ts-ignore
-  async function loadPrivateKey() {
-    let pki = document.getElementById("private-key-input");
-    // @ts-ignore
-    wallet = await api.restoreTestnetPaymentWalletFromSigningKeyBech32(2, pki.value);
-    await refresh();
-  };
-  // addInputToTx(utxo.txId, utxo.txIndex, utxo.lovelace)
-
-  async function addInputToTx(txId, txIndex, lovelace) {
-    // @ts-ignore
-    transactionInputs.push({
-      txId: txId,
-      txIndex: txIndex,
-      lovelace: lovelace
-    });
-    await refresh();
-  }
-
-  // @ts-ignore
-  document.getElementById("load-private-key-button").addEventListener("click", loadPrivateKey);
-
-  // @ts-ignore
-  document.getElementById("utxo-reload-button").addEventListener("click", refresh);
-
   // Refresh function
-  refresh = async function () {
+  const refresh = async function () {
     // @ts-ignore
 
     // Wallet rendering
@@ -175,6 +130,49 @@ async function do_async_work() {
     // @ts-ignore
     txinTable.appendChild(totalRow);
   }
+
+  // Callbacks
+  async function generateAddress() {
+    wallet = await api.generateTestnetPaymentWallet(2);
+    await refresh();
+  }
+
+  // @ts-ignore
+  document.getElementById("regenerate-address-button").addEventListener("click", generateAddress);
+
+  async function togglePrivateKeyDisplay() {
+    showPrivateKey = !showPrivateKey;
+    await refresh();
+  }
+
+  // @ts-ignore
+  document.getElementById("show-private-key-button").addEventListener("click", togglePrivateKeyDisplay);
+
+  // @ts-ignore
+  async function loadPrivateKey() {
+    let pki = document.getElementById("private-key-input");
+    // @ts-ignore
+    wallet = await api.restoreTestnetPaymentWalletFromSigningKeyBech32(2, pki.value);
+    await refresh();
+  };
+  // addInputToTx(utxo.txId, utxo.txIndex, utxo.lovelace)
+
+  async function addInputToTx(txId, txIndex, lovelace) {
+    // @ts-ignore
+    transactionInputs.push({
+      txId: txId,
+      txIndex: txIndex,
+      lovelace: lovelace
+    });
+    await refresh();
+  }
+
+  // @ts-ignore
+  document.getElementById("load-private-key-button").addEventListener("click", loadPrivateKey);
+
+  // @ts-ignore
+  document.getElementById("utxo-reload-button").addEventListener("click", refresh);
+
   generateAddress();
 }
 do_async_work().then(() => { });
