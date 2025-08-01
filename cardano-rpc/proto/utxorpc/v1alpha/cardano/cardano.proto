@@ -33,13 +33,14 @@ message MultiAsset {
 }
 
 // Represents a script in Cardano.
-// TODO u5c: removed native script representation
+// TODO u5c: removed native script representation, added plutus_v4
 message Script {
   oneof script {
     bytes native = 1; // Native script.
     bytes plutus_v1 = 2; // Plutus V1 script.
     bytes plutus_v2 = 3; // Plutus V2 script.
     bytes plutus_v3 = 4; // Plutus V3 script.
+    bytes plutus_v4 = 5; // Plutus V4 script.
   }
 }
 
@@ -76,6 +77,7 @@ message CostModels {
   CostModel plutus_v1 = 1;
   CostModel plutus_v2 = 2;
   CostModel plutus_v3 = 3;
+  CostModel plutus_v4 = 4;
 }
 
 message VotingThresholds {
