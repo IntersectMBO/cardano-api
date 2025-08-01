@@ -16,16 +16,23 @@ module Cardano.Wasm.Internal.JavaScript.Bridge where
 import Cardano.Api qualified as Api
 import Cardano.Api.Ledger qualified as Ledger
 
-import Cardano.Wasm.Internal.Api.Wallet qualified as Wasm
 import Cardano.Wasm.Internal.Api.GRPC qualified as Wasm
 import Cardano.Wasm.Internal.Api.Info (apiInfo)
 import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
+import Cardano.Wasm.Internal.Api.Wallet qualified as Wasm
 import Cardano.Wasm.Internal.ExceptionHandling (rightOrError)
-import Cardano.Wasm.Internal.JavaScript.GRPC (js_getEra, js_newWebGrpcClient, js_submitTx, js_getProtocolParams)
-import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient)
+import Cardano.Wasm.Internal.JavaScript.GRPC
+  ( js_getEra
+  , js_getProtocolParams
+  , js_newWebGrpcClient
+  , js_readAllUtxos
+  , js_readUtxosForAddress
+  , js_submitTx
+  )
+import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient, JSUtxos)
 
 import Control.Exception (evaluate)
-import Control.Monad 
+import Control.Monad
 import Data.Aeson qualified as Aeson
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Text (Text)
@@ -363,6 +370,12 @@ foreign export javascript "getEra"
 foreign export javascript "getProtocolParams"
   getProtocolParams :: JSGrpc -> IO JSVal
 
+foreign export javascript "getAllUtxos"
+  getAllUtxos :: JSGrpc -> IO JSUtxos
+
+foreign export javascript "getUtxosForAddress"
+  getUtxosForAddress :: JSGrpc -> JSString -> IO JSUtxos
+
 foreign export javascript "submitTx"
   submitTx :: JSGrpc -> JSString -> IO JSString
 
@@ -377,6 +390,16 @@ getEra grpcObject = Wasm.getEraImpl js_getEra =<< fromJSVal grpcObject
 -- | Get the protocol parameters from the Cardano Node using GRPC-web.
 getProtocolParams :: HasCallStack => JSGrpc -> IO JSProtocolParams
 getProtocolParams = toJSVal <=< Wasm.getProtocolParamsImpl js_getProtocolParams <=< fromJSVal
+
+-- | Get all UTXOs from the node using a GRPC-web client.
+getAllUtxos :: HasCallStack => JSGrpc -> IO JSUtxos
+getAllUtxos grpcObject =
+  Wasm.getAllUtxosImpl js_readAllUtxos =<< fromJSVal grpcObject
+
+-- | Get UTXOs for a given address using a GRPC-web client.
+getUtxosForAddress :: HasCallStack => JSGrpc -> JSString -> IO JSUtxos
+getUtxosForAddress grpcObject address =
+  join $ Wasm.getUtxosForAddressImpl js_readUtxosForAddress <$> fromJSVal grpcObject <*> fromJSVal address
 
 -- | Submit a transaction to the Cardano Node using GRPC-web.
 submitTx :: HasCallStack => JSGrpc -> JSString -> IO JSString

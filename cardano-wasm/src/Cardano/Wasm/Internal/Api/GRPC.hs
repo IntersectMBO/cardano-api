@@ -2,7 +2,10 @@ module Cardano.Wasm.Internal.Api.GRPC where
 
 import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
 import Cardano.Wasm.Internal.ExceptionHandling (rightOrError, toMonadFail)
-import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient)
+import Cardano.Wasm.Internal.JavaScript.GRPCTypes
+  ( JSGRPCClient
+  , JSUtxos
+  )
 
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Base64 qualified as Base64
@@ -25,6 +28,21 @@ getEraImpl getEraJsFunc (GrpcObject client) = getEraJsFunc client
 getProtocolParamsImpl
   :: (JSGRPCClient -> IO Wasm.ProtocolParamsJSON) -> GrpcObject -> IO Wasm.ProtocolParamsJSON
 getProtocolParamsImpl getProtocolParamsJsFunc (GrpcObject client) = getProtocolParamsJsFunc client
+
+-- | Get all UTXOs from the node using a GRPC-web client.
+getAllUtxosImpl
+  :: (JSGRPCClient -> IO JSUtxos)
+  -> GrpcObject
+  -> IO JSUtxos
+getAllUtxosImpl getUtxosJsFunc (GrpcObject client) = getUtxosJsFunc client
+
+-- | Get UTXOs for a given address using a GRPC-web client.
+getUtxosForAddressImpl
+  :: (JSGRPCClient -> String -> IO JSUtxos)
+  -> GrpcObject
+  -> String
+  -> IO JSUtxos
+getUtxosForAddressImpl getUtxosForAddressJsFunc (GrpcObject client) = getUtxosForAddressJsFunc client
 
 -- | Submit a transaction to the Cardano Node using GRPC-web.
 submitTxImpl

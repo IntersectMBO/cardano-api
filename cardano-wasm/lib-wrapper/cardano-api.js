@@ -41,10 +41,10 @@ async function initialise() {
   // Dynamically build the API
   const apiInfo = await instance.exports.getApiInfo();
   let makers = {};
-  let cardanoAPI = { objectType: "cardano-api" };
+  let cardanoApi = { objectType: "cardano-api" };
   // Create maker functions for each virtual object type
   apiInfo.virtualObjects.forEach(vo => {
-    makers[vo.objectName] = function (initialHaskellValuePromise) {
+    makers[vo.objectName] = function(initialHaskellValuePromise) {
       // currentHaskellValueProvider is a function that returns a Promise for the Haskell value
       // It starts with the initial value promise and fluent methods accumulate transformations
       let currentHaskellValueProvider = () => initialHaskellValuePromise;
@@ -54,7 +54,7 @@ async function initialise() {
         if (method.return.type === "fluent") {
           // Fluent methods are synchronous and update the provider
           // A fluent method is one that returns the same object type
-          jsObject[method.name] = fixateArgs(method.params, function (...args) {
+          jsObject[method.name] = fixateArgs(method.params, function(...args) {
             const previousProvider = currentHaskellValueProvider;
             // We update the provider so that it resolves the previous provider and chains the next call
             currentHaskellValueProvider = async () => {
@@ -65,7 +65,7 @@ async function initialise() {
           });
         } else {
           // Non-fluent methods (newObject or other) are async and apply the accumulated method calls
-          jsObject[method.name] = fixateArgs(method.params, async function (...args) {
+          jsObject[method.name] = fixateArgs(method.params, async function(...args) {
             const haskellValue = await currentHaskellValueProvider(); // Resolve accumulated method calls
             const resultPromise = instance.exports[method.name](haskellValue, ...args); // Call the non-fluent method
 
@@ -83,7 +83,7 @@ async function initialise() {
 
   // Populate the main API object with static methods
   apiInfo.mainObject.methods.forEach(method => {
-    cardanoAPI[method.name] = async function (...args) {
+    cardanoApi[method.name] = async function(...args) {
       const resultPromise = instance.exports[method.name](...args);
 
       if (method.return.type === "newObject") { // Create a new object
@@ -93,6 +93,24 @@ async function initialise() {
       }
     };
   });
-  return cardanoAPI;
+
+  return cardanoApi;
 }
+
+/**
+ * Global utilities module used in JS foreign imports in WASM
+ */
+globalThis.cardanoWasm = {
+  /**
+   * Convert Base64 to Base16 encoding
+   */
+  base64ToHex: function(base64) {
+    const binary = atob(base64);
+    return [...binary].reduce((hex, char) => {
+      const byteHex = char.charCodeAt(0).toString(16).padStart(2, '0');
+      return hex + byteHex;
+    }, '');
+  }
+}
+
 export default initialise;
