@@ -317,7 +317,7 @@ data QueryInShelleyBasedEra era result where
     :: Set L.GovActionId
     -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)))
   QueryLedgerPeerSnapshot
-    :: QueryInShelleyBasedEra era (Serialised LedgerPeerSnapshot)
+    :: QueryInShelleyBasedEra era LedgerPeerSnapshot
   QueryStakePoolDefaultVote
     :: Ledger.KeyHash 'Ledger.StakePool
     -> QueryInShelleyBasedEra era L.DefaultVote
@@ -1024,7 +1024,7 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         _ -> fromConsensusQueryResultMismatch
     QueryLedgerPeerSnapshot{} ->
       case q' of
-        Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot ->
+        Consensus.GetBigLedgerPeerSnapshot ->
           r'
         _ -> fromConsensusQueryResultMismatch
     QueryStakePoolDefaultVote{} ->

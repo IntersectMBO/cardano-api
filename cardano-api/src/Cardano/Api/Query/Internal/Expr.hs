@@ -67,7 +67,6 @@ import Cardano.Ledger.Keys qualified as L
 import Cardano.Slotting.Slot
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
-import Ouroboros.Network.Block (Serialised)
 import Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeerSnapshot)
 
 import Data.Map (Map)
@@ -159,7 +158,7 @@ queryLedgerPeerSnapshot
        QueryInMode
        r
        IO
-       (Either UnsupportedNtcVersionError (Either EraMismatch (Serialised LedgerPeerSnapshot)))
+       (Either UnsupportedNtcVersionError (Either EraMismatch LedgerPeerSnapshot))
 queryLedgerPeerSnapshot eon = querySbe eon QueryLedgerPeerSnapshot
 
 queryEraHistory
