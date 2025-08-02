@@ -143,6 +143,7 @@ fromPlutusRunnable L.SPlutusV3 eon runnable =
     AlonzoEraOnwardsConway ->
       let plutusScript = L.plutusFromRunnable runnable
        in Just $ L.ConwayPlutusV3 plutusScript
+fromPlutusRunnable _ _ _ = undefined
 
 toAlonzoDatum
   :: AlonzoEraOnwards era
@@ -162,3 +163,5 @@ getPlutusDatum L.SPlutusV2 (SpendingScriptDatum d) = Just d
 getPlutusDatum L.SPlutusV3 (SpendingScriptDatum d) = d
 getPlutusDatum _ InlineDatum = Nothing
 getPlutusDatum _ NoScriptDatum = Nothing
+getPlutusDatum _ _ = undefined
+
