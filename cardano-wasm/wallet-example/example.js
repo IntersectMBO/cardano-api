@@ -23,6 +23,15 @@ async function do_async_work() {
     return cell;
   }
 
+  function addButtonCell(tableRow, className, caption, onClick) {
+    const cell = insertCell(tableRow, className, "");
+    const button = document.createElement("button");
+    button.innerText = caption;
+    button.addEventListener("click", onClick);
+    cell.appendChild(button);
+    return cell;
+  }
+
   async function makeTransaction() {
     let tx = await api.newConwayTx();
     for (let input of transactionInputs) {
@@ -74,12 +83,7 @@ async function do_async_work() {
       insertCell(row, "utxo-txid long", utxo.txId);
       insertCell(row, "utxo-txix", utxo.txIndex.toString());
       insertCell(row, "utxo-txada", utxo.lovelace.toString());
-      let addToTx = insertCell(row, "utxo-addtotx", "");
-      let button = document.createElement("button");
-      button.innerText = "Add to tx";
-      button.addEventListener("click", () => { addInputToTx(utxo.txId, utxo.txIndex, utxo.lovelace); });
-      // @ts-ignore
-      addToTx.appendChild(button);
+      addButtonCell(row, "utxo-addtotx", "Add to tx", () => { addInputToTx(utxo.txId, utxo.txIndex, utxo.lovelace); });
     }
 
     // Transaction Inputs
@@ -98,16 +102,11 @@ async function do_async_work() {
       insertCell(row, "txin-txix", input.txIndex.toString());
       insertCell(row, "txin-txada", input.lovelace.toString());
       total += input.lovelace;
-      let removeButton = insertCell(row, "txin-remove", "");
-      let button = document.createElement("button");
-      button.innerText = "Remove";
       let thisIndex = index;
-      button.addEventListener("click", async () => {
+      addButtonCell(row, "txin-remove", "Remove", async () => {
         transactionInputs.splice(thisIndex, 1);
         await refresh();
       });
-      // @ts-ignore
-      removeButton.appendChild(button);
       index++;
     }
     // @ts-ignore
@@ -132,16 +131,11 @@ async function do_async_work() {
       insertCell(newRow, 'txout-txid long', output.address);
       insertCell(newRow, 'txout-txada', output.lovelace);
       // Remove the row of the clicked button
-      async function removeRow(index) {
-        transactionOutputs.splice(index, 1);
-        await refresh();
-      }
-      const cellRemove = insertCell(newRow, 'txout-remove', "");
-      const btn = document.createElement('button');
-      btn.textContent = 'Remove';
       let ix = transactionOutputIx;
-      btn.onclick = removeRow.bind(null, ix);
-      cellRemove.appendChild(btn);
+      addButtonCell(newRow, 'txout-remove', 'Remove', async () => {
+        transactionOutputs.splice(ix, 1);
+        await refresh();
+      });
       outputsTotal += output.lovelace;
       transactionOutputIx += 1;
     }
