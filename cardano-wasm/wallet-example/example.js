@@ -214,12 +214,11 @@ async function do_async_work() {
 
     await grpcApi.submitTx(await signedTx.txToCbor()).then((txId) => {
       alert("Transaction submitted successfully with ID: " + txId);
+      transactionInputs = [];
+      transactionOutputs = [];
     }).catch((err) => {
       alert("Error submitting transaction: " + err);
     });
-
-    transactionInputs = [];
-    transactionOutputs = [];
     await refresh();
   }
 
