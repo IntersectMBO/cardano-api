@@ -11,78 +11,80 @@
   <div id="header">
     <h1>Wallet example</h1>
   </div>
-  <div id="wallet-info">
-    <h2>Wallet info</h2>
-    <div id="private-key" class="field-section"><span id="private-key-label" class="label">Private key</span><input
-        placeholder="Private key for the wallet" type="text" id="private-key-input" value="Loading ..." /><button
-        id="show-private-key-button">Show</button><button id="load-private-key-button">Load</button></div>
-    <div id="address" class="field-section"><span id="address-label" class="label">Address</span><input
-        placeholder="Address for the wallet" type="text" disabled="true" id="address-input"
-        value="Loading ..." /><button id="regenerate-address-button">Regenerate</button></div>
-    <div id="wallet-utxos">
-      <h3>Wallet UTxOs</h3>
-      <table id="utxo-table">
-        <tr>
-          <th class="long">TxId</th>
-          <th>TxIx</th>
-          <th>Lovelaces</th>
-          <th class="utxo-reload"><button id="utxo-reload-button">Reload</button></th>
-        </tr>
-      </table>
-    </div>
-  </div>
-  <div id="transaction-composer">
-    <h2>Transaction composer</h2>
-
-    <div id="transaction-inputs">
-      <h3>Inputs</h3>
-      <table id="txin-table">
-        <tr>
-          <th class="long">TxId</th>
-          <th>TxIx</th>
-          <th>Lovelaces</th>
-          <th>
-            <div class="filler"></div>
-          </th>
-        </tr>
-        <tr>
-          <td></td>
-          <td></td>
-          <td class="total">0</td>
-          <td class="total-label">Total</td>
-        </tr>
-      </table>
-    </div>
-
-    <div id="transaction-outputs">
-      <h3>Outputs</h3>
-      <table id="txout-table">
-        <tr>
-          <th>Address</th>
-          <th>Lovelaces</th>
-          <th></th>
-        </tr>
-        <tr>
-          <td></td>
-          <td>0</td>
-          <td class="total-label">Fees</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td class="total">0</td>
-          <td class="total-label">Total</td>
-        </tr>
-      </table>
-    </div>
-    <div id="add-output">
-      <div id="add-output" class="field-section"><span id="add-output-label" class="label">Add output</span>
-        <input placeholder="Destination address" class="long" type="text" id="add-output-address" value="" /><input
-          placeholder="Lovelace to transfer" type="text" id="add-output-lovelace" value="" /><button
-          id="add-output-button">Add
-          output</button><button id="add-output-clear-button">Clear</button>
+  <div id="app">
+    <div id="wallet-info">
+      <h2>Wallet info</h2>
+      <div id="private-key" class="field-section"><span id="private-key-label" class="label">Private key</span><input
+          placeholder="Private key for the wallet" type="text" id="private-key-input" value="Loading ..." /><button
+          id="show-private-key-button">Show</button><button id="load-private-key-button">Load</button></div>
+      <div id="address" class="field-section"><span id="address-label" class="label">Address</span><input
+          placeholder="Address for the wallet" type="text" disabled="true" id="address-input"
+          value="Loading ..." /><button id="regenerate-address-button">Regenerate</button></div>
+      <div id="wallet-utxos">
+        <h3>Wallet UTxOs</h3>
+        <table id="utxo-table">
+          <tr>
+            <th class="long">TxId</th>
+            <th>TxIx</th>
+            <th>Lovelaces</th>
+            <th class="utxo-reload"><button id="utxo-reload-button">Reload</button></th>
+          </tr>
+        </table>
       </div>
     </div>
-    <button id="submit-button">Submit</button>
+    <div id="transaction-composer">
+      <h2>Transaction composer</h2>
+
+      <div id="transaction-inputs">
+        <h3>Inputs</h3>
+        <table id="txin-table">
+          <tr>
+            <th class="long">TxId</th>
+            <th>TxIx</th>
+            <th>Lovelaces</th>
+            <th>
+              <div class="filler"></div>
+            </th>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td class="total">0</td>
+            <td class="total-label">Total</td>
+          </tr>
+        </table>
+      </div>
+
+      <div id="transaction-outputs">
+        <h3>Outputs</h3>
+        <table id="txout-table">
+          <tr>
+            <th>Address</th>
+            <th>Lovelaces</th>
+            <th></th>
+          </tr>
+          <tr>
+            <td></td>
+            <td>0</td>
+            <td class="total-label">Fees</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td class="total">0</td>
+            <td class="total-label">Total</td>
+          </tr>
+        </table>
+      </div>
+      <div id="add-output">
+        <div id="add-output" class="field-section"><span id="add-output-label" class="label">Add output</span>
+          <input placeholder="Destination address" class="long" type="text" id="add-output-address" value="" /><input
+            placeholder="Lovelace to transfer" type="text" id="add-output-lovelace" value="" /><button
+            id="add-output-button">Add
+            output</button><button id="add-output-clear-button">Clear</button>
+        </div>
+      </div>
+      <button id="submit-button">Submit</button>
+    </div>
   </div>
 </body>
 
