@@ -1,6 +1,7 @@
 //@ts-check
 import cardano_api from "./cardano-api.js";
 
+const TESTNET_MAGIC=42;
 let promise = cardano_api();
 
 async function do_async_work() {
@@ -10,7 +11,7 @@ async function do_async_work() {
 
   // State
   let showPrivateKey = true;
-  let wallet = await api.generateTestnetPaymentWallet(2);
+  let wallet = await api.generateTestnetPaymentWallet(42);
   let transactionInputs = [];
   let transactionOutputs = [];
 
@@ -224,7 +225,7 @@ async function do_async_work() {
 
   // Callbacks
   async function generateAddress() {
-    wallet = await api.generateTestnetPaymentWallet(2);
+    wallet = await api.generateTestnetPaymentWallet(TESTNET_MAGIC);
     await refresh();
   }
 
@@ -241,7 +242,7 @@ async function do_async_work() {
   async function loadPrivateKey() {
     let pki = document.getElementById("private-key-input");
     // @ts-ignore
-    wallet = await api.restoreTestnetPaymentWalletFromSigningKeyBech32(2, pki.value);
+    wallet = await api.restoreTestnetPaymentWalletFromSigningKeyBech32(TESTNET_MAGIC, pki.value);
     await refresh();
   };
 

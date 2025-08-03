@@ -135,4 +135,4 @@ static_resources:
         - endpoint:
             address:
               pipe:
-                path: ../../rpc.socket
+                path: ../../../cardano-node/testnet-data/socket/node1/rpc.sock
