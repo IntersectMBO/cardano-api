@@ -39,7 +39,7 @@ foreign import javascript safe
          address: atob(utxo.cardano.address), \
          txId: cardanoWasm.base64ToHex(utxo.txoRef.hash), \
          txIndex: utxo.txoRef.index, \
-         lovelace: utxo.cardano.coin, \
+         lovelace: BigInt(utxo.cardano.coin), \
          assets: utxo.cardano.assetsList, \
          datum: utxo.cardano.datum, \
          script: utxo.cardano.script, \
@@ -59,7 +59,7 @@ foreign import javascript safe
        return { \
          txId: cardanoWasm.base64ToHex(utxo.txoRef.hash), \
          txIndex: utxo.txoRef.index, \
-         lovelace: utxo.cardano.coin, \
+         lovelace: BigInt(utxo.cardano.coin), \
          assets: utxo.cardano.assetsList, \
          datum: utxo.cardano.datum, \
          script: utxo.cardano.script, \
