@@ -94,7 +94,7 @@ async function do_async_work() {
       // @ts-ignore
       txinTable.deleteRow(1);
     }
-    let total = 0;
+    let total = 0n;
     let index = 0;
     for (let input of transactionInputs) {
       // @ts-ignore
@@ -133,6 +133,32 @@ async function do_async_work() {
       insertCell(newRow, 'txout-txada', output.lovelace);
       // Remove the row of the clicked button
       let ix = transactionOutputIx;
+      addButtonCell(newRow, 'txout-balance', 'Balance', async () => {
+        // 1. Calculate totalInputs
+        let totalInputs = 0n;
+        for (const input of transactionInputs) {
+          totalInputs += input.lovelace;
+        }
+
+        // 2. Calculate totalOutputs
+        let totalOutputs = 0n;
+        for (const output of transactionOutputs) {
+          totalOutputs += output.lovelace;
+        }
+
+        // 3. Estimate fees
+        const tx = await makeTransaction();
+        const fees = await tx.estimateMinFee(protocolParams, 1, 0, 0);
+
+        // 4. Calculate diffAda
+        const diffAda = totalInputs - totalOutputs - fees;
+
+        // 5. Modify the output
+        transactionOutputs[ix].lovelace = transactionOutputs[ix].lovelace + diffAda;
+
+        // 6. Refresh UI
+        await refresh();
+      });
       addButtonCell(newRow, 'txout-remove', 'Remove', async () => {
         transactionOutputs.splice(ix, 1);
         await refresh();
@@ -147,6 +173,8 @@ async function do_async_work() {
     insertCell(feesRow, 'txout-txid long', '');
     insertCell(feesRow, '', fees.toString());
     insertCell(feesRow, 'total-label', "Fees");
+    insertCell(feesRow, '', '');
+    insertCell(feesRow, '', '');
 
     let totalSpent = outputsTotal + fees;
     // @ts-ignore
@@ -154,6 +182,8 @@ async function do_async_work() {
     insertCell(totalOutRow, 'txout-txid long', '');
     insertCell(totalOutRow, 'total', totalSpent.toString());
     insertCell(totalOutRow, 'total-label', "Total");
+    insertCell(totalOutRow, '', '');
+    insertCell(totalOutRow, '', '');
   }
 
   // Callbacks
