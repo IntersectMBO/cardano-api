@@ -1,7 +1,7 @@
 //@ts-check
 import cardano_api from "./cardano-api.js";
 
-const TESTNET_MAGIC=42;
+const TESTNET_MAGIC = 42;
 let promise = cardano_api();
 
 async function do_async_work() {
@@ -14,6 +14,14 @@ async function do_async_work() {
   let wallet = await api.generateTestnetPaymentWallet(42);
   let transactionInputs = [];
   let transactionOutputs = [];
+
+  // Helper function for table cell creation using insertCell
+  function insertCell(tableRow, className, textContent) {
+    const cell = tableRow.insertCell();
+    cell.className = className;
+    cell.textContent = textContent;
+    return cell;
+  }
 
   async function makeTransaction() {
     let tx = await api.newConwayTx();
@@ -61,29 +69,17 @@ async function do_async_work() {
       utxoTable.deleteRow(1);
     }
     for (let utxo of utxos) {
-      let row = document.createElement("tr");
-      let txId = document.createElement("td");
-      txId.className = "utxo-txid long";
-      txId.innerText = utxo.txId;
-      row.appendChild(txId);
-      let txIx = document.createElement("td");
-      txIx.className = "utxo-txix";
-      txIx.innerText = utxo.txIndex.toString();
-      row.appendChild(txIx);
-      let txAda = document.createElement("td");
-      txAda.className = "utxo-txada";
-      txAda.innerText = utxo.lovelace.toString();
-      row.appendChild(txAda);
-      let addToTx = document.createElement("td");
-      addToTx.className = "utxo-addtotx";
+      // @ts-ignore
+      let row = utxoTable.insertRow();
+      insertCell(row, "utxo-txid long", utxo.txId);
+      insertCell(row, "utxo-txix", utxo.txIndex.toString());
+      insertCell(row, "utxo-txada", utxo.lovelace.toString());
+      let addToTx = insertCell(row, "utxo-addtotx", "");
       let button = document.createElement("button");
       button.innerText = "Add to tx";
       button.addEventListener("click", () => { addInputToTx(utxo.txId, utxo.txIndex, utxo.lovelace); });
       // @ts-ignore
       addToTx.appendChild(button);
-      row.appendChild(addToTx);
-      // @ts-ignore
-      utxoTable.appendChild(row);
     }
 
     // Transaction Inputs
@@ -96,23 +92,13 @@ async function do_async_work() {
     let total = 0;
     let index = 0;
     for (let input of transactionInputs) {
-      let row = document.createElement("tr");
-      let txId = document.createElement("td");
-      txId.className = "txin-txid long";
-      txId.innerText = input.txId;
-      row.appendChild(txId);
-      let txIx = document.createElement("td");
-      txIx.className = "txin-txix";
-      txIx.innerText = input.txIndex.toString();
-      row.appendChild(txIx);
-      let txAda = document.createElement("td");
-      txAda.className = "txin-txada";
-      txAda.innerText = input.lovelace.toString();
+      // @ts-ignore
+      let row = txinTable.insertRow();
+      insertCell(row, "txin-txid long", input.txId);
+      insertCell(row, "txin-txix", input.txIndex.toString());
+      insertCell(row, "txin-txada", input.lovelace.toString());
       total += input.lovelace;
-      row.appendChild(txAda);
-      let removeButton =
-        document.createElement("td");
-      removeButton.className = "txin-remove";
+      let removeButton = insertCell(row, "txin-remove", "");
       let button = document.createElement("button");
       button.innerText = "Remove";
       let thisIndex = index;
@@ -122,28 +108,14 @@ async function do_async_work() {
       });
       // @ts-ignore
       removeButton.appendChild(button);
-      row.appendChild(removeButton);
-      // @ts-ignore
-      txinTable.appendChild(row);
       index++;
     }
-    let totalRow = document.createElement("tr");
-    let emptyCell = document.createElement("td");
-    emptyCell.innerText = "";
-    totalRow.appendChild(emptyCell);
-    emptyCell = document.createElement("td");
-    emptyCell.innerText = "";
-    totalRow.appendChild(emptyCell);
-    let totalCell = document.createElement("td");
-    totalCell.className = "total";
-    totalCell.innerText = total.toString();
-    totalRow.appendChild(totalCell);
-    let labelCell = document.createElement("td");
-    labelCell.className = "total-label";
-    labelCell.innerText = "Total";
-    totalRow.appendChild(labelCell);
     // @ts-ignore
-    txinTable.appendChild(totalRow);
+    let totalRow = txinTable.insertRow();
+    insertCell(totalRow, "", "");
+    insertCell(totalRow, "", "");
+    insertCell(totalRow, "total", total.toString());
+    insertCell(totalRow, "total-label", "Total");
 
     // Transaction Outputs
     const txOutTable = document.getElementById('txout-table');
@@ -157,26 +129,14 @@ async function do_async_work() {
     for (let output of transactionOutputs) {
       // @ts-ignore
       const newRow = txOutTable.insertRow();
-
-      // Address cell
-      const cellAddress = newRow.insertCell();
-      cellAddress.className = 'txout-txid long';
-      cellAddress.textContent = output.address;
-
-      // Lovelaces cell
-      const cellLovelaces = newRow.insertCell();
-      cellLovelaces.className = 'txout-txada';
-      cellLovelaces.textContent = output.lovelace;
-
+      insertCell(newRow, 'txout-txid long', output.address);
+      insertCell(newRow, 'txout-txada', output.lovelace);
       // Remove the row of the clicked button
       async function removeRow(index) {
         transactionOutputs.splice(index, 1);
         await refresh();
       }
-
-      // Remove button cell
-      const cellRemove = newRow.insertCell();
-      cellRemove.className = 'txout-remove';
+      const cellRemove = insertCell(newRow, 'txout-remove', "");
       const btn = document.createElement('button');
       btn.textContent = 'Remove';
       let ix = transactionOutputIx;
@@ -189,38 +149,16 @@ async function do_async_work() {
     let fees = await tx.estimateMinFee(protocolParams, 1, 0, 0);
     // @ts-ignore
     const feesRow = txOutTable.insertRow();
-
-    // Empty cell
-    const cellEmpty = feesRow.insertCell();
-    cellEmpty.className = 'txout-txid long';
-    cellEmpty.textContent = '';
-
-    // Lovelaces cell
-    const cellLovelaces = feesRow.insertCell();
-    cellLovelaces.textContent = fees.toString();
-
-    // Label cell
-    const cellAddress = feesRow.insertCell();
-    cellAddress.className = 'total-label';
-    cellAddress.textContent = "Fees";
+    insertCell(feesRow, 'txout-txid long', '');
+    insertCell(feesRow, '', fees.toString());
+    insertCell(feesRow, 'total-label', "Fees");
 
     let totalSpent = outputsTotal + fees;
     // @ts-ignore
     const totalOutRow = txOutTable.insertRow();
-    // Empty cell
-    const cellEmpty2 = totalOutRow.insertCell();
-    cellEmpty2.className = 'txout-txid long';
-    cellEmpty2.textContent = '';
-
-    // Total spent cell
-    const cellTotalSpent = totalOutRow.insertCell();
-    cellTotalSpent.className = 'total';
-    cellTotalSpent.textContent = totalSpent.toString();
-
-    // Label cell for total spent
-    const cellTotalLabel = totalOutRow.insertCell();
-    cellTotalLabel.className = 'total-label';
-    cellTotalLabel.textContent = "Total";
+    insertCell(totalOutRow, 'txout-txid long', '');
+    insertCell(totalOutRow, 'total', totalSpent.toString());
+    insertCell(totalOutRow, 'total-label', "Total");
   }
 
   // Callbacks
