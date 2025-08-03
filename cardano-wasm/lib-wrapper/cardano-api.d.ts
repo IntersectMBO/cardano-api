@@ -113,14 +113,14 @@ declare interface GrpcConnection {
      * Get all UTXOs from the node using a GRPC-web client.
      * @returns A promise that resolves to the current UTXO set.
      */
-    getAllUtxos(): Promise<{ address: string, txId: string, txIndex: number, lovelace: number, assets: any[], datum?: any, script?: any }[]>;
+    getAllUtxos(): Promise<{ address: string, txId: string, txIndex: number, lovelace: bigint, assets: any[], datum?: any, script?: any }[]>;
 
     /**
      * Get UTXOs for a given address using a GRPC-web client.
      * @param address The address to get UTXOs for.
      * @returns A promise that resolves to the UTXOs for the given address.
      */
-    getUtxosForAddress(address: string): Promise<{ txId: string, txIndex: number, lovelace: number, assets: any[], datum?: any, script?: any }[]>;
+    getUtxosForAddress(address: string): Promise<{ txId: string, txIndex: number, lovelace: bigint, assets: any[], datum?: any, script?: any }[]>;
 }
 
 /**

@@ -281,7 +281,7 @@ apiInfo =
                   , methodParams = []
                   , methodReturnType =
                       OtherType
-                        "{ address: string, txId: string, txIndex: number, lovelace: number, assets: any[], datum?: any, script?: any }[]"
+                        "{ address: string, txId: string, txIndex: number, lovelace: bigint, assets: any[], datum?: any, script?: any }[]"
                   , methodReturnDoc = "A promise that resolves to the current UTXO set."
                   }
               , MethodInfo
@@ -290,7 +290,7 @@ apiInfo =
                   , methodParams = [ParamInfo "address" "string" "The address to get UTXOs for."]
                   , methodReturnType =
                       OtherType
-                        "{ txId: string, txIndex: number, lovelace: number, assets: any[], datum?: any, script?: any }[]"
+                        "{ txId: string, txIndex: number, lovelace: bigint, assets: any[], datum?: any, script?: any }[]"
                   , methodReturnDoc = "A promise that resolves to the UTXOs for the given address."
                   }
               ]
