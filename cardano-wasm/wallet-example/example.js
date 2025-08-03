@@ -23,6 +23,7 @@ async function do_async_work() {
     return cell;
   }
 
+  // Helper function to add a button cell to a table row
   function addButtonCell(tableRow, className, caption, onClick) {
     const cell = insertCell(tableRow, className, "");
     const button = document.createElement("button");
@@ -188,34 +189,25 @@ async function do_async_work() {
     await refresh();
   }
 
-  function addOutput(address, lovelace) {
+  async function addOutputFromForm() {
+    const address =
+      // @ts-ignore
+      document.getElementById('add-output-address').value.trim();
+    const lovelace =
+      // @ts-ignore
+      BigInt(document.getElementById('add-output-lovelace').value.trim());
     transactionOutputs.push({
       address: address,
       lovelace: lovelace
     });
-  }
-
-  document.getElementById('load-private-key-button')?.addEventListener('click', loadPrivateKey);
-
-  document.getElementById('utxo-reload-button')?.addEventListener('click', refresh);
-
-  document.getElementById('add-output-button')?.addEventListener('click', async () => {
-    addOutput(
-      // @ts-ignore
-      document.getElementById('add-output-address').value.trim(),
-      // @ts-ignore
-      BigInt(document.getElementById('add-output-lovelace').value.trim()),
-    );
-
     // @ts-ignore
     document.getElementById('add-output-address').value = '';
     // @ts-ignore
     document.getElementById('add-output-lovelace').value = '';
-
     await refresh();
-  });
+  }
 
-  document.getElementById('submit-button')?.addEventListener('click', async () => {
+  async function submitTransaction() {
     let tx = await makeTransaction();
     let signingKey = await wallet.getBech32ForSigningKey();
     let signedTx = await tx.signWithPaymentKey(signingKey);
@@ -229,7 +221,15 @@ async function do_async_work() {
     transactionInputs = [];
     transactionOutputs = [];
     await refresh();
-  });
+  }
+
+  document.getElementById('load-private-key-button')?.addEventListener('click', loadPrivateKey);
+
+  document.getElementById('utxo-reload-button')?.addEventListener('click', refresh);
+
+  document.getElementById('add-output-button')?.addEventListener('click', addOutputFromForm);
+
+  document.getElementById('submit-button')?.addEventListener('click', submitTransaction);
 
   generateAddress();
 }
