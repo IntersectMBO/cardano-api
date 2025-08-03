@@ -10,7 +10,7 @@ async function do_async_work() {
   let protocolParams = await grpcApi.getProtocolParams();
 
   // State
-  let showPrivateKey = true;
+  let showPrivateKey = false;
   let wallet = await api.generateTestnetPaymentWallet(42);
   let transactionInputs = [];
   let transactionOutputs = [];
