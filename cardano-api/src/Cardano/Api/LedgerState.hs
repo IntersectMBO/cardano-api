@@ -207,7 +207,6 @@ import Ouroboros.Network.Block qualified
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as CS
 import Ouroboros.Network.Protocol.ChainSync.ClientPipelined qualified as CSP
 import Ouroboros.Network.Protocol.ChainSync.PipelineDecision
-import Test.Cardano.Ledger.Api.Examples.Consensus.Dijkstra
 
 import Control.Concurrent
 import Control.DeepSeq
@@ -261,6 +260,8 @@ import Lens.Micro
 import Network.Mux qualified as Mux
 import Network.TypedProtocol.Core (Nat (..))
 import System.FilePath
+
+import Test.Cardano.Ledger.Api.Examples.Consensus.Dijkstra
 
 data InitialLedgerStateError
   = -- | Failed to read or parse the network config file.
