@@ -126,7 +126,7 @@ library
     cardano-data >=1.0,
     cardano-ledger-allegra >=1.7,
     cardano-ledger-alonzo >=1.13,
-    cardano-ledger-api >=1.11,
+    cardano-ledger-api:{cardano-ledger-api, testlib} >=1.11,
     cardano-ledger-babbage >=1.11,
     cardano-ledger-binary >=1.6,
     cardano-ledger-byron >=1.2,
@@ -302,7 +302,6 @@ library gen
     Test.Gen.Cardano.Api.Era
     Test.Gen.Cardano.Api.Hardcoded
     Test.Gen.Cardano.Api.Metadata
-    Test.Gen.Cardano.Api.Orphans
     Test.Gen.Cardano.Api.ProtocolParameters
     Test.Gen.Cardano.Api.Typed
     Test.Gen.Cardano.Crypto.Seed
@@ -331,7 +330,6 @@ library gen
     cardano-strict-containers,
     containers,
     filepath,
-    generic-random,
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,
