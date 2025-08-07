@@ -159,7 +159,6 @@ import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Coin qualified as SL
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Dijkstra.Genesis
 import Cardano.Ledger.Keys qualified as SL
 import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
 import Cardano.Ledger.Shelley.Core qualified as Core
@@ -208,6 +207,7 @@ import Ouroboros.Network.Block qualified
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as CS
 import Ouroboros.Network.Protocol.ChainSync.ClientPipelined qualified as CSP
 import Ouroboros.Network.Protocol.ChainSync.PipelineDecision
+import Test.Cardano.Ledger.Api.Examples.Consensus.Dijkstra
 
 import Control.Concurrent
 import Control.DeepSeq
@@ -1496,7 +1496,7 @@ readCardanoGenesisConfig mEra enc = do
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
   alonzoGenesis <- readAlonzoGenesisConfig mEra enc
   conwayGenesis <- readConwayGenesisConfig enc
-  let dijkstraGenesis = DijkstraGenesis $ error "dijkstra"
+  let dijkstraGenesis = exampleDijkstraGenesis -- TODO: Dijkstra - add plumbing to read Dijkstra genesis
   let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
 
