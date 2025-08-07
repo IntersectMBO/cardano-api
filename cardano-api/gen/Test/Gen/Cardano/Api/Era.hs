@@ -17,8 +17,6 @@ import Cardano.Ledger.Core qualified as Ledger
 
 import Data.Functor.Identity qualified as Ledger
 
-import Test.Gen.Cardano.Api.Orphans ()
-
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 
