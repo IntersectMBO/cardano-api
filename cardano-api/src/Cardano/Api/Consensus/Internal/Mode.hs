@@ -167,4 +167,5 @@ fromConsensusEraIndex = \case
     AnyCardanoEra BabbageEra
   Consensus.EraIndex (S (S (S (S (S (S (Z (K ())))))))) ->
     AnyCardanoEra ConwayEra
-  Consensus.EraIndex (S (S (S (S (S (S (S _))))))) -> error "dijkstra"
+  Consensus.EraIndex (S (S (S (S (S (S (S _))))))) -> 
+    AnyCardanoEra DijkstraEra
