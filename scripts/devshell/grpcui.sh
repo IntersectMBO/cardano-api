@@ -14,7 +14,7 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 # Start socat in the background
-socat TCP-LISTEN:50051,fork UNIX-CONNECT:./rpc.socket &
+socat TCP-LISTEN:50051,reuseaddr,fork UNIX-CONNECT:../cardano-node/testnet-data/socket/node1/rpc.sock &
 SOCAT_PID=$!
 echo "Started socat with PID $SOCAT_PID"
 
