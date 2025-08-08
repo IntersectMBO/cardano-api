@@ -18,6 +18,9 @@ socat TCP-LISTEN:50051,reuseaddr,fork UNIX-CONNECT:../cardano-node/testnet-data/
 SOCAT_PID=$!
 echo "Started socat with PID $SOCAT_PID"
 
-grpcui -import-path cardano-rpc/proto -proto utxorpc/v1alpha/query/query.proto -plaintext localhost:50051
+grpcui -import-path cardano-rpc/proto \
+  -proto utxorpc/v1alpha/query/query.proto \
+  -proto utxorpc/v1alpha/submit/submit.proto \
+  -plaintext localhost:50051
 
 cleanup
