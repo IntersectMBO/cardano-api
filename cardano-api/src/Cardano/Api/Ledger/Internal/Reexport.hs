@@ -112,7 +112,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , toPlainDecoder
   -- Shelley
   , secondsToNominalDiffTimeMicro
-  , AccountState (..)
+  , AccountState
   , NewEpochState (..)
   , ShelleyGenesisStaking (..)
   -- Babbage
@@ -266,7 +266,6 @@ import Cardano.Ledger.Binary
   , toPlainDecoder
   )
 import Cardano.Ledger.Binary.Plain (Decoder, serializeAsHexText)
-import Cardano.Ledger.CertState (DRepState (..), csCommitteeCredsL)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Conway.Core
   ( DRepVotingThresholds (..)
@@ -293,6 +292,7 @@ import Cardano.Ledger.Conway.Governance
   )
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.State (DRepState (..), csCommitteeCredsL)
 import Cardano.Ledger.Conway.TxCert
   ( ConwayDelegCert (..)
   , ConwayEraTxCert (..)
@@ -336,7 +336,7 @@ import Cardano.Ledger.Plutus.Data (Data (..), unData)
 import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
 import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import Cardano.Ledger.Shelley.API
-  ( AccountState (..)
+  ( AccountState
   , GenDelegPair (..)
   , NewEpochState (..)
   , StakeReference (..)

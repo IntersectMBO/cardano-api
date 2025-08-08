@@ -83,9 +83,10 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
           cm1 <- L.mkCostModel L.PlutusV1 $ pp ^. #costModels . #plutusV1 . #values
           cm2 <- L.mkCostModel L.PlutusV2 $ pp ^. #costModels . #plutusV2 . #values
           cm3 <- L.mkCostModel L.PlutusV3 $ pp ^. #costModels . #plutusV3 . #values
+          cm4 <- L.mkCostModel L.PlutusV4 $ pp ^. #costModels . #plutusV4 . #values
           -- do not add empty cost models
           let nonEmptyCostModels =
-                fromList . flip mapMaybe [cm1, cm2, cm3] $ \cm ->
+                fromList . flip mapMaybe [cm1, cm2, cm3, cm4] $ \cm ->
                   if not (null $ L.getCostModelParams cm)
                     then Just (L.getCostModelLanguage cm, cm)
                     else Nothing

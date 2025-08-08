@@ -15,8 +15,8 @@ where
 
 import Cardano.Api.Address qualified as Api
 import Cardano.Api.Certificate.Internal qualified as Api
+import Cardano.Api.Era.Internal.Core (DijkstraEra)
 import Cardano.Api.Era.Internal.Eon.Convert
-import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra qualified as Api
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Plutus.Internal.Script qualified as Exp
@@ -45,13 +45,18 @@ deriving instance Eq (Certificate era)
 deriving instance Ord (Certificate era)
 
 convertToOldApiCertificate :: Era era -> Certificate (LedgerEra era) -> Api.Certificate era
-convertToOldApiCertificate ConwayEra (Certificate cert) =
-  Api.ConwayCertificate ConwayEraOnwardsConway cert
+convertToOldApiCertificate e (Certificate cert) =
+  obtainCommonConstraints e $ Api.ConwayCertificate (convert e) cert
 
 convertToNewCertificate :: Era era -> Api.Certificate era -> Certificate (LedgerEra era)
-convertToNewCertificate ConwayEra (Api.ConwayCertificate _ cert) = Certificate cert
-convertToNewCertificate ConwayEra (Api.ShelleyRelatedCertificate sToBab _) =
-  case sToBab :: Api.ShelleyToBabbageEra ConwayEra of {}
+convertToNewCertificate era (Api.ConwayCertificate _ cert) =
+  case era of
+    ConwayEra -> Certificate cert
+    DijkstraEra -> Certificate cert
+convertToNewCertificate era (Api.ShelleyRelatedCertificate sToBab _) =
+  case era of
+    ConwayEra -> case sToBab :: Api.ShelleyToBabbageEra ConwayEra of {}
+    DijkstraEra -> case sToBab :: Api.ShelleyToBabbageEra DijkstraEra of {}
 
 mkTxCertificates
   :: forall era
@@ -61,29 +66,29 @@ mkTxCertificates
 mkTxCertificates [] = TxCertificatesNone
 mkTxCertificates certs =
   TxCertificates (convert useEra) $ fromList $ map (getStakeCred useEra) certs
- where
-  getStakeCred
-    :: Era era
-    -> (Certificate (LedgerEra era), AnyWitness (LedgerEra era))
-    -> ( Api.Certificate era
-       , Api.BuildTxWith
-           Api.BuildTx
-           (Maybe (Api.StakeCredential, Api.Witness Api.WitCtxStake era))
-       )
-  getStakeCred era (Certificate cert, witness) =
-    case era of
-      ConwayEra -> do
-        let oldApiCert = Api.ConwayCertificate (convert era) cert
-            mStakeCred = Api.selectStakeCredentialWitness oldApiCert
-            wit =
-              case witness of
-                AnyKeyWitnessPlaceholder -> Api.KeyWitness Api.KeyWitnessForStakeAddr
-                AnySimpleScriptWitness ss ->
-                  Api.ScriptWitness Api.ScriptWitnessForStakeAddr $ newToOldSimpleScriptWitness era ss
-                AnyPlutusScriptWitness psw ->
-                  Api.ScriptWitness Api.ScriptWitnessForStakeAddr $
-                    newToOldPlutusCertificateScriptWitness ConwayEra psw
-        (oldApiCert, pure $ (,wit) <$> mStakeCred)
+
+getStakeCred
+  :: Era era
+  -> (Certificate (LedgerEra era), AnyWitness (LedgerEra era))
+  -> ( Api.Certificate era
+     , Api.BuildTxWith
+         Api.BuildTx
+         (Maybe (Api.StakeCredential, Api.Witness Api.WitCtxStake era))
+     )
+getStakeCred e (Certificate cert, witness) = do
+  let oldApiCert = obtainCommonConstraints e $ Api.ConwayCertificate (convert e) cert
+      mStakeCred = Api.selectStakeCredentialWitness oldApiCert
+      wit =
+        case witness of
+          AnyKeyWitnessPlaceholder -> Api.KeyWitness Api.KeyWitnessForStakeAddr
+          AnySimpleScriptWitness ss ->
+            Api.ScriptWitness Api.ScriptWitnessForStakeAddr $
+              obtainCommonConstraints e $
+                newToOldSimpleScriptWitness e ss
+          AnyPlutusScriptWitness psw ->
+            Api.ScriptWitness Api.ScriptWitnessForStakeAddr $
+              newToOldPlutusCertificateScriptWitness e psw
+  (oldApiCert, pure $ (,wit) <$> mStakeCred)
 
 newToOldSimpleScriptWitness
   :: L.AllegraEraScript (LedgerEra era)
@@ -127,12 +132,40 @@ newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus
     Api.NoScriptDatumForStake
     redeemer
     execUnits
+newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus.SPlutusV4 _scriptOrRef _ _redeemer _execUnits) =
+  error "dijkstra"
+newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV1 scriptOrRef _ redeemer execUnits) =
+  Api.PlutusScriptWitness
+    Api.PlutusScriptV1InDijkstra
+    Api.PlutusScriptV1
+    (newToOldPlutusScriptOrReferenceInput DijkstraEra scriptOrRef)
+    Api.NoScriptDatumForStake
+    redeemer
+    execUnits
+newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV2 scriptOrRef _ redeemer execUnits) =
+  Api.PlutusScriptWitness
+    Api.PlutusScriptV2InDijkstra
+    Api.PlutusScriptV2
+    (newToOldPlutusScriptOrReferenceInput DijkstraEra scriptOrRef)
+    Api.NoScriptDatumForStake
+    redeemer
+    execUnits
+newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV3 scriptOrRef _ redeemer execUnits) =
+  Api.PlutusScriptWitness
+    Api.PlutusScriptV3InDijkstra
+    Api.PlutusScriptV3
+    (newToOldPlutusScriptOrReferenceInput DijkstraEra scriptOrRef)
+    Api.NoScriptDatumForStake
+    redeemer
+    execUnits
+newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV4 _scriptOrRef _ _redeemer _execUnits) =
+  error "dijkstra"
 
 newToOldPlutusScriptOrReferenceInput
   :: Era era
   -> Exp.PlutusScriptOrReferenceInput lang (LedgerEra era)
   -> Api.PlutusScriptOrReferenceInput oldlang
-newToOldPlutusScriptOrReferenceInput ConwayEra (Exp.PReferenceScript txin) = Api.PReferenceScript txin
-newToOldPlutusScriptOrReferenceInput ConwayEra (Exp.PScript (Exp.PlutusScriptInEra plutusRunnable)) =
+newToOldPlutusScriptOrReferenceInput _ (Exp.PReferenceScript txin) = Api.PReferenceScript txin
+newToOldPlutusScriptOrReferenceInput _ (Exp.PScript (Exp.PlutusScriptInEra plutusRunnable)) =
   let oldScript = L.unPlutusBinary . L.plutusBinary $ L.plutusFromRunnable plutusRunnable
    in Api.PScript $ Api.PlutusScriptSerialised oldScript
