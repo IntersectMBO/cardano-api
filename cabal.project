@@ -64,8 +64,8 @@ if impl (ghc >= 9.12)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 15fc8c4fee64473350e1904347bfd5852f9cdbfa
-  --sha256: sha256-Tvw0dLGZkBAflpvcEwl7Acnrux9H5UaniW5YwMvIeIs=
+  tag: 5aac28bec41b7709f75a5c9f20e2431259cf237f
+  --sha256: sha256-PXnD7mAIZgnodqbMU3ImCb/uoat61vLsqnc6dUyTRIw=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
