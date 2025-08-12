@@ -161,10 +161,10 @@ fromPlutusRunnable L.SPlutusV4 eon runnable =
     AlonzoEraOnwardsBabbage -> Nothing
     AlonzoEraOnwardsConway ->
       let plutusScript = L.plutusFromRunnable runnable
-       in Just $ (error "fromPlutusRunnable: ConwayPlutusV4") plutusScript
+       in Just $ error "fromPlutusRunnable: ConwayPlutusV4" plutusScript
     AlonzoEraOnwardsDijkstra ->
       let plutusScript = L.plutusFromRunnable runnable
-       in Just $ Dijkstra.MkDijkstraPlutusScript $ (error "fromPlutusRunnable: DijkstraPlutusV4") plutusScript
+       in Just $ Dijkstra.MkDijkstraPlutusScript $ error "fromPlutusRunnable: DijkstraPlutusV4" plutusScript
 
 toAlonzoDatum
   :: AlonzoEraOnwards era
