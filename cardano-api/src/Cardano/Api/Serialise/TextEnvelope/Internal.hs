@@ -27,6 +27,7 @@ module Cardano.Api.Serialise.TextEnvelope.Internal
   , textEnvelopeToJSON
   , serialiseTextEnvelope
   , legacyComparison
+  , textEnvelopeTypeToEra
 
     -- * Reading one of several key types
   , FromSomeType (..)
@@ -130,6 +131,8 @@ data TextEnvelopeError
     TextEnvelopeTypeError ![TextEnvelopeType] !TextEnvelopeType
   | TextEnvelopeDecodeError !DecoderError
   | TextEnvelopeAesonDecodeError !String
+  | TextEnvelopeUnknownKeyWitness !TextEnvelopeDescr
+  | TextEnvelopeUnknownType !Text
   deriving (Eq, Show, Data)
 
 instance Error TextEnvelopeError where
@@ -151,6 +154,10 @@ instance Error TextEnvelopeError where
       "TextEnvelope aeson decode error: " <> pretty decErr
     TextEnvelopeDecodeError decErr ->
       "TextEnvelope decode error: " <> pshow decErr
+    TextEnvelopeUnknownKeyWitness desc ->
+      "Unknown key witness specified: " <> pshow desc
+    TextEnvelopeUnknownType unknownType ->
+      "Unknown TextEnvelope type: " <> pretty unknownType
 
 -- | Check that the \"type\" of the 'TextEnvelope' is as expected.
 --
@@ -304,3 +311,32 @@ readTextEnvelopeOfTypeFromFile expectedType path =
       hoistEither $
         expectTextEnvelopeOfType expectedType te
     return te
+
+textEnvelopeTypeToEra :: Text -> Either TextEnvelopeError AnyShelleyBasedEra
+textEnvelopeTypeToEra =
+  \case
+    "TxSignedShelley" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+    "Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+    "Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+    "Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+    "Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+    "Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "Witnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+    "Witnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+    "Witnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+    "Witnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+    "Witnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+    "Witnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "Unwitnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+    "Unwitnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+    "Unwitnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+    "Unwitnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+    "Unwitnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+    "Unwitnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "TxWitness ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+    "TxWitness AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+    "TxWitness MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+    "TxWitness AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+    "TxWitness BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+    "TxWitness ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    unknownCddlType -> Left $ TextEnvelopeUnknownType unknownCddlType
