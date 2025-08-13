@@ -211,3 +211,4 @@ obtainAlonzoScriptPurposeConstraints v =
     AlonzoEraOnwardsAlonzo -> id
     AlonzoEraOnwardsBabbage -> id
     AlonzoEraOnwardsConway -> id
+    AlonzoEraOnwardsDijkstra -> id

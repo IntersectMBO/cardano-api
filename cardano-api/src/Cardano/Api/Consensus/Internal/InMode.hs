@@ -100,6 +100,9 @@ fromConsensusGenTx = \case
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (Z tx')))))))) ->
     let Consensus.ShelleyTx _txid shelleyEraTx = tx'
      in TxInMode ShelleyBasedEraConway (ShelleyTx ShelleyBasedEraConway shelleyEraTx)
+  Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (S (Z tx'))))))))) ->
+    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+     in TxInMode ShelleyBasedEraDijkstra (ShelleyTx ShelleyBasedEraDijkstra shelleyEraTx)
 
 toConsensusGenTx
   :: ()
@@ -130,6 +133,10 @@ toConsensusGenTx (TxInMode ShelleyBasedEraBabbage (ShelleyTx _ tx)) =
   tx' = Consensus.mkShelleyTx tx
 toConsensusGenTx (TxInMode ShelleyBasedEraConway (ShelleyTx _ tx)) =
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (Z tx'))))))))
+ where
+  tx' = Consensus.mkShelleyTx tx
+toConsensusGenTx (TxInMode ShelleyBasedEraDijkstra (ShelleyTx _ tx)) =
+  Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (S (Z tx')))))))))
  where
   tx' = Consensus.mkShelleyTx tx
 
@@ -192,6 +199,12 @@ toConsensusTxId (TxIdInMode ConwayEra txid) =
     (Consensus.OneEraGenTxId (S (S (S (S (S (S (Z (Consensus.WrapGenTxId txid')))))))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardConwayBlock)
+  txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
+toConsensusTxId (TxIdInMode DijkstraEra txid) =
+  Consensus.HardForkGenTxId
+    (Consensus.OneEraGenTxId (S (S (S (S (S (S (S (Z (Consensus.WrapGenTxId txid'))))))))))
+ where
+  txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardDijkstraBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
 -- ----------------------------------------------------------------------------
@@ -300,5 +313,7 @@ fromConsensusApplyTxErr = \case
     TxValidationErrorInCardanoMode $ ShelleyTxValidationError ShelleyBasedEraBabbage err
   Consensus.ApplyTxErrConway err ->
     TxValidationErrorInCardanoMode $ ShelleyTxValidationError ShelleyBasedEraConway err
+  Consensus.ApplyTxErrDijkstra err ->
+    TxValidationErrorInCardanoMode $ ShelleyTxValidationError ShelleyBasedEraDijkstra err
   Consensus.ApplyTxErrWrongEra err ->
     TxValidationEraMismatch err
