@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-06-22T20:18:27Z
-  , cardano-haskell-packages 2025-06-20T09:11:51Z
+  , hackage.haskell.org 2025-07-22T09:13:54Z
+  , cardano-haskell-packages 2025-07-28T14:33:19Z
 
 packages:
     cardano-api
@@ -61,18 +61,62 @@ if impl (ghc >= 9.12)
     -- https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
 
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 5aac28bec41b7709f75a5c9f20e2431259cf237f
+  --sha256: sha256-PXnD7mAIZgnodqbMU3ImCb/uoat61vLsqnc6dUyTRIw=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+    sop-extras
+    strict-sop-core 
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: 20485948f78ab139d246695e540f9ec00963a16e
+  --sha256: sha256-SHnyp+GvNeR82UXoKeDEgsp1AUE2yF5dGL4HIZm0zK8=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/babbage/test-suite
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/conway/impl
+    eras/dijkstra
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley-ma/test-suite
+    eras/shelley/test-suite
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/set-algebra
+    libs/small-steps
+    libs/vector-map
+
 -- WASM compilation specific
 
 if arch(wasm32)
   source-repository-package
     type: git
-    location: https://github.com/amesgen/plutus.git
-    tag: dc1edea4458d6fb794b245a26c730620265645f3
+    location: https://github.com/intersectmbo/plutus.git
+    tag: 210c8375cd82eb2670b703b0975c26589dd40b2f
     subdir:
       plutus-core
       plutus-ledger-api
       plutus-tx
-    --sha256: sha256-QBtLmoS54b5QMAKIDOJIM6lmRC+1leBpuGKaFc7QQos=
+    --sha256: sha256-icAg87JKdCkeuNZvVwNlT0v1/O0wOYwIQ6LzXj9iTYM=
 
   package plutus-core
     flags: +do-not-build-plutus-exec
@@ -86,11 +130,11 @@ if arch(wasm32)
   source-repository-package
     type: git
     location: https://github.com/palas/ouroboros-network.git
-    tag: ef3e30603e4e45dac336a085114ee22b7aa8c9ed
+    tag: bbc8bd70386a951e8633e4966e661df079cdc103
     subdir:
       ouroboros-network
       ouroboros-network-framework
-    --sha256: sha256-+IdAmWJqzRy+erKONywtk+5YLrm63q942nZavoEA4E4=
+    --sha256: sha256-7m9lMZlQzjbfaGpWA5ipDGloQ2uhIQmFRoUFQ7GCDl8=
 
   source-repository-package
     type: git
@@ -161,3 +205,9 @@ if arch(wasm32)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+allow-newer:
+    , cardano-ledger-byron
+    -- https://github.com/phadej/vec/issues/121
+    , ral:QuickCheck
+    , fin:QuickCheck
+    , bin:QuickCheck
