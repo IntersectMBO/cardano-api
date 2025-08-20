@@ -113,6 +113,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   -- Shelley
   , secondsToNominalDiffTimeMicro
   , AccountState
+  , ChainAccountState (..)
   , NewEpochState (..)
   , ShelleyGenesisStaking (..)
   -- Babbage

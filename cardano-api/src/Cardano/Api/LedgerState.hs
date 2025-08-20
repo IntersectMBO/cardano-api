@@ -193,6 +193,7 @@ import Ouroboros.Consensus.Ledger.Tables.Utils qualified as Ledger
 import Ouroboros.Consensus.Node.ProtocolInfo qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
 import Ouroboros.Consensus.Protocol.Praos qualified as Praos
+import Ouroboros.Consensus.Protocol.Praos.AgentClient
 import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
 import Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import Ouroboros.Consensus.Protocol.TPraos qualified as TPraos
@@ -214,6 +215,7 @@ import Control.Error.Util (note)
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.State.Strict
+import qualified Control.Tracer as Tracer
 import Data.Aeson as Aeson
   ( FromJSON (parseJSON)
   , Object
@@ -1399,8 +1401,12 @@ decodeLedgerState = do
   2 <- CBOR.decodeListLen
   hst <-
     HFC.HardForkLedgerState
+<<<<<<< HEAD
       <$> HFC.decodeTelescope
         (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
+=======
+      <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* undefined :* Nil)
+>>>>>>> origin/fraser-iohk/cardano-api-kes-agent
   tbs <- Ledger.valuesMKDecoder hst
   pure (LedgerState hst tbs)
  where
@@ -1454,7 +1460,7 @@ mkProtocolInfoCardano
   :: GenesisConfig
   -> ( Consensus.ProtocolInfo
          (Consensus.CardanoBlock Consensus.StandardCrypto)
-     , IO [BlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
+     , Tracer.Tracer IO KESAgentClientTrace -> IO [BlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
      )
 mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transCfg) =
   Consensus.protocolInfoCardano

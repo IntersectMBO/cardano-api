@@ -40,10 +40,6 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.State (ChainAccountState (..), DRepState (..))
 import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Keys qualified as L
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
-import Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
-
-import Control.Exception.Safe (SomeException, displayException)
 import Control.Monad
 import Data.Bifunctor (first)
 import Data.Function ((&))

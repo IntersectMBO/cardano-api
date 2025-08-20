@@ -139,6 +139,7 @@ import Data.Text qualified as Text
 import Data.Word (Word64)
 import GHC.Exts (IsList (..))
 import GHC.Stack
+import Data.Coerce (coerce)
 
 -- ----------------------------------------------------------------------------
 -- Queries
@@ -643,7 +644,7 @@ toConsensusQueryShelleyBased sbe = \case
       )
       (const $ Some (consensusQueryInEraInMode era Consensus.GetFuturePParams))
       sbe
-  QueryDRepState creds ->
+  QueryDRepState _creds ->
     caseShelleyToBabbageOrConwayEraOnwards
       (const $ error "toConsensusQueryShelleyBased: QueryDRepState is only available in the Conway era")
       ( \w ->
@@ -664,15 +665,16 @@ toConsensusQueryShelleyBased sbe = \case
       )
       (const $ Some (consensusQueryInEraInMode era (Consensus.GetSPOStakeDistr spos)))
       sbe
-  QueryCommitteeMembersState coldCreds hotCreds statuses ->
+  QueryCommitteeMembersState _coldCreds _hotCreds _statuses ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
           error "toConsensusQueryShelleyBased: QueryCommitteeMembersState is only available in the Conway era"
       )
-      ( const $
-          Some
-            (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
-      )
+      undefined
+      -- ( const $
+      --     Some
+      --       (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
+      -- )
       sbe
   QueryStakeVoteDelegatees creds ->
     caseShelleyToBabbageOrConwayEraOnwards
