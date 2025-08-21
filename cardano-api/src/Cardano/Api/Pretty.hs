@@ -9,6 +9,7 @@ module Cardano.Api.Pretty
   , docToText
   , docToString
   , prettyShow
+  , renderBuildable
   , textShow
   , pshow
   , prettyException
@@ -34,6 +35,9 @@ import Control.Exception.Safe
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Lazy qualified as TextLazy
+import Data.Text.Lazy.Builder qualified as LText
+import Formatting.Buildable (Buildable)
+import Formatting.Buildable qualified as Build
 import Prettyprinter
 import Prettyprinter.Render.Terminal
 
@@ -85,6 +89,9 @@ pshow = viaShow
 -- | Short hand for @'pretty' . 'displayException'@
 prettyException :: Exception a => a -> Doc ann
 prettyException = pretty . displayException
+
+renderBuildable :: Buildable a => a -> Text
+renderBuildable e = TextLazy.toStrict . LText.toLazyText $ Build.build e
 
 textShow :: Show a => a -> Text
 textShow = Text.pack . show

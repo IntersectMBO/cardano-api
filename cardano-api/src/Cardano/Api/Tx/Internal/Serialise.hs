@@ -74,7 +74,10 @@ deserialiseWitnessLedger sbe te =
       deserialiseFromTextEnvelope te
  where
   -- This wrapper ensures that we can still decode the key witness
-  -- that were serialized before we migrated to using 'serialiseToTextEnvelope'
+  -- that were serialized before we migrated to using 'serialiseToTextEnvelope'.
+  -- Previously we were differentiating between the bootstrap key witness and the
+  -- shelley key witness with CBOR tags 0 and 1. This is a deviation from the ledger's
+  -- CDDL. See `legacyKeyWitnessEncode` for more details.
   legacyDecoding
     :: TextEnvelope
     -> Either TextEnvelopeError (KeyWitness era)

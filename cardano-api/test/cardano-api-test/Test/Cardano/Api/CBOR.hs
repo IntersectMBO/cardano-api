@@ -17,6 +17,7 @@ import Cardano.Binary qualified as CBOR
 import Codec.CBOR.Read qualified as CBOR
 import Codec.CBOR.Term (Term (..))
 import Codec.CBOR.Term qualified as CBOR
+import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Builder qualified as BS
 import Data.ByteString.Lazy qualified as LBS
@@ -24,6 +25,7 @@ import Data.ByteString.Short qualified as SBS
 import Data.List (sortOn)
 import Data.Text (Text)
 import Data.Text qualified as T
+import GHC.Stack qualified as GHC
 
 import Test.Gen.Cardano.Api.Hardcoded
 import Test.Gen.Cardano.Api.Typed
@@ -113,6 +115,23 @@ prop_roundtrip_witness_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ genCardanoKeyWitness era
   shelleyBasedEraConstraints era $ H.trippingCbor (AsKeyWitness (proxyToAsType Proxy)) x
+
+prop_roundtrip_legacy_key_witness_CBOR :: Property
+prop_roundtrip_legacy_key_witness_CBOR = H.property $ do
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
+  x <- H.forAll $ genCardanoKeyWitness era
+  GHC.withFrozenCallStack $
+    H.tripping
+      x
+      legacyKeyWitnessEncode
+      (deserialiseKeyWitness era)
+ where
+  deserialiseKeyWitness
+    :: ShelleyBasedEra era
+    -> ByteString
+    -> Either CBOR.DecoderError (KeyWitness era)
+  deserialiseKeyWitness sbe v =
+    shelleyBasedEraConstraints sbe $ deserialiseFromCBOR (AsKeyWitness (proxyToAsType Proxy)) v
 
 prop_roundtrip_operational_certificate_CBOR :: Property
 prop_roundtrip_operational_certificate_CBOR = H.property $ do
@@ -411,6 +430,7 @@ tests =
     , testProperty "txbody backwards compatibility" prop_txbody_backwards_compatibility
     , testProperty "rountrip tx text envelope" prop_text_envelope_roundtrip_tx_CBOR
     , testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR
+    , testProperty "roundtrip legacy key witness CBOR" prop_roundtrip_legacy_key_witness_CBOR
     , testProperty
         "roundtrip operational certificate CBOR"
         prop_roundtrip_operational_certificate_CBOR
