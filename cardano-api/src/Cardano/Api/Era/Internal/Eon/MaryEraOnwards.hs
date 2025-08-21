@@ -48,6 +48,7 @@ data MaryEraOnwards era where
   MaryEraOnwardsAlonzo :: MaryEraOnwards AlonzoEra
   MaryEraOnwardsBabbage :: MaryEraOnwards BabbageEra
   MaryEraOnwardsConway :: MaryEraOnwards ConwayEra
+  MaryEraOnwardsDijkstra :: MaryEraOnwards DijkstraEra
 
 deriving instance Show (MaryEraOnwards era)
 
@@ -62,6 +63,7 @@ instance Eon MaryEraOnwards where
     AlonzoEra -> yes MaryEraOnwardsAlonzo
     BabbageEra -> yes MaryEraOnwardsBabbage
     ConwayEra -> yes MaryEraOnwardsConway
+    DijkstraEra -> yes MaryEraOnwardsDijkstra
 
 instance ToCardanoEra MaryEraOnwards where
   toCardanoEra = \case
@@ -69,6 +71,7 @@ instance ToCardanoEra MaryEraOnwards where
     MaryEraOnwardsAlonzo -> AlonzoEra
     MaryEraOnwardsBabbage -> BabbageEra
     MaryEraOnwardsConway -> ConwayEra
+    MaryEraOnwardsDijkstra -> DijkstraEra
 
 instance Convert MaryEraOnwards CardanoEra where
   convert = toCardanoEra
@@ -79,6 +82,7 @@ instance Convert MaryEraOnwards ShelleyBasedEra where
     MaryEraOnwardsAlonzo -> ShelleyBasedEraAlonzo
     MaryEraOnwardsBabbage -> ShelleyBasedEraBabbage
     MaryEraOnwardsConway -> ShelleyBasedEraConway
+    MaryEraOnwardsDijkstra -> ShelleyBasedEraDijkstra
 
 type MaryEraOnwardsConstraints era =
   ( C.HashAlgorithm L.HASH
@@ -117,6 +121,7 @@ maryEraOnwardsConstraints = \case
   MaryEraOnwardsAlonzo -> id
   MaryEraOnwardsBabbage -> id
   MaryEraOnwardsConway -> id
+  MaryEraOnwardsDijkstra -> id
 
 {-# DEPRECATED maryEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 maryEraOnwardsToShelleyBasedEra :: MaryEraOnwards era -> ShelleyBasedEra era

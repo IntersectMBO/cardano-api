@@ -193,6 +193,7 @@ import Ouroboros.Consensus.Ledger.Tables.Utils qualified as Ledger
 import Ouroboros.Consensus.Node.ProtocolInfo qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
 import Ouroboros.Consensus.Protocol.Praos qualified as Praos
+import Ouroboros.Consensus.Protocol.Praos.AgentClient
 import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
 import Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import Ouroboros.Consensus.Protocol.TPraos qualified as TPraos
@@ -214,6 +215,7 @@ import Control.Error.Util (note)
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.State.Strict
+import qualified Control.Tracer as Tracer
 import Data.Aeson as Aeson
   ( FromJSON (parseJSON)
   , Object
@@ -260,6 +262,8 @@ import Lens.Micro
 import Network.Mux qualified as Mux
 import Network.TypedProtocol.Core (Nat (..))
 import System.FilePath
+
+import Test.Cardano.Ledger.Api.Examples.Consensus.Dijkstra
 
 data InitialLedgerStateError
   = -- | Failed to read or parse the network config file.
@@ -1147,7 +1151,7 @@ instance FromJSON NodeConfig where
         <*> parseAlonzoHardForkEpoch o
         <*> parseBabbageHardForkEpoch o
         <*> parseConwayHardForkEpoch o
-
+        <*> pure Consensus.CardanoTriggerHardForkAtDefaultVersion -- TODO: Dijkstra
     parseShelleyHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseShelleyHardForkEpoch o =
       asum
@@ -1288,6 +1292,11 @@ getNewEpochState era x = do
         ConwayLedgerState conwayCurrent ->
           pure $ Shelley.shelleyLedgerState $ unFlip $ currentState conwayCurrent
         _ -> Left err
+    ShelleyBasedEraDijkstra ->
+      case tip of
+        DijkstraLedgerState dijkstraCurrent ->
+          pure $ Shelley.shelleyLedgerState $ unFlip $ currentState dijkstraCurrent
+        _ -> Left err
 
 {-# COMPLETE
   ShelleyLedgerState
@@ -1358,12 +1367,22 @@ pattern ConwayLedgerState
   -> NS (Current (Flip Consensus.LedgerState mk)) (Consensus.CardanoEras Consensus.StandardCrypto)
 pattern ConwayLedgerState x = S (S (S (S (S (S (Z x))))))
 
+pattern DijkstraLedgerState
+  :: Current
+       (Flip Consensus.LedgerState mk)
+       ( Shelley.ShelleyBlock
+           (Praos.Praos Ledger.StandardCrypto)
+           Consensus.DijkstraEra
+       )
+  -> NS (Current (Flip Consensus.LedgerState mk)) (Consensus.CardanoEras Consensus.StandardCrypto)
+pattern DijkstraLedgerState x = S (S (S (S (S (S (S (Z x)))))))
+
 encodeLedgerState :: LedgerState -> CBOR.Encoding
 encodeLedgerState (LedgerState hst@(HFC.HardForkLedgerState st) tbs) =
   mconcat
     [ CBOR.encodeListLen 2
     , HFC.encodeTelescope
-        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
+        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
         st
     , Ledger.valuesMKEncoder hst tbs
     ]
@@ -1375,13 +1394,19 @@ encodeLedgerState (LedgerState hst@(HFC.HardForkLedgerState st) tbs) =
   alonzo = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
   babbage = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
   conway = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
+  dijkstra = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
 
 decodeLedgerState :: forall s. CBOR.Decoder s LedgerState
 decodeLedgerState = do
   2 <- CBOR.decodeListLen
   hst <-
     HFC.HardForkLedgerState
-      <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
+<<<<<<< HEAD
+      <$> HFC.decodeTelescope
+        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
+=======
+      <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* undefined :* Nil)
+>>>>>>> origin/fraser-iohk/cardano-api-kes-agent
   tbs <- Ledger.valuesMKDecoder hst
   pure (LedgerState hst tbs)
  where
@@ -1392,6 +1417,7 @@ decodeLedgerState = do
   alonzo = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
   babbage = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
   conway = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
+  dijkstra = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
 
 type LedgerStateEvents = (LedgerState, [LedgerEvent])
 
@@ -1434,7 +1460,7 @@ mkProtocolInfoCardano
   :: GenesisConfig
   -> ( Consensus.ProtocolInfo
          (Consensus.CardanoBlock Consensus.StandardCrypto)
-     , IO [BlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
+     , Tracer.Tracer IO KESAgentClientTrace -> IO [BlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
      )
 mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transCfg) =
   Consensus.protocolInfoCardano
@@ -1477,7 +1503,8 @@ readCardanoGenesisConfig mEra enc = do
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
   alonzoGenesis <- readAlonzoGenesisConfig mEra enc
   conwayGenesis <- readConwayGenesisConfig enc
-  let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis
+  let dijkstraGenesis = exampleDijkstraGenesis -- TODO: Dijkstra - add plumbing to read Dijkstra genesis
+  let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
 
 data GenesisConfigError
@@ -2261,6 +2288,7 @@ getLedgerTablesUTxOValues sbe tbs =
       ShelleyBasedEraAlonzo -> ejectTables (IS (IS (IS (IS IZ))))
       ShelleyBasedEraBabbage -> ejectTables (IS (IS (IS (IS (IS IZ)))))
       ShelleyBasedEraConway -> ejectTables (IS (IS (IS (IS (IS (IS IZ))))))
+      ShelleyBasedEraDijkstra -> ejectTables (IS (IS (IS (IS (IS (IS (IS IZ)))))))
 
 -- | Reconstructs the ledger's new epoch state and applies a supplied condition to it for every block. This
 -- function only terminates if the condition is met or we have reached the termination epoch. We need to

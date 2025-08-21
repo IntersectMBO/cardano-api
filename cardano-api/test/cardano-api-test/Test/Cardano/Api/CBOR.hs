@@ -77,6 +77,7 @@ prop_txbody_backwards_compatibility = H.property $ do
         ShelleyBasedEraAlonzo -> "Tx AlonzoEra"
         ShelleyBasedEraBabbage -> "Tx BabbageEra"
         ShelleyBasedEraConway -> "Tx ConwayEra"
+        ShelleyBasedEraDijkstra -> "Tx DijkstraEra"
 
 prop_text_envelope_roundtrip_txbody_CBOR :: Property
 prop_text_envelope_roundtrip_txbody_CBOR = H.property $ do
