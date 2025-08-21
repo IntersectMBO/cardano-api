@@ -187,6 +187,7 @@ library
     transformers,
     transformers-except ^>=0.1.3,
     typed-protocols ^>=0.3,
+    validation,
     vector,
     yaml,
 
