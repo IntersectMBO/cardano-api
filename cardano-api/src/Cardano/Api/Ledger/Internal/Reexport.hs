@@ -339,7 +339,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), unData)
 import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
-import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
+import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import Cardano.Ledger.Shelley.API
   ( ChainAccountState (..)
   , GenDelegPair (..)
@@ -348,6 +348,7 @@ import Cardano.Ledger.Shelley.API
   , WitVKey (..)
   , hashKey
   , hashVerKeyVRF
+  , ChainAccountState (..)
   )
 import Cardano.Ledger.Shelley.Genesis
   ( ShelleyGenesisStaking (..)
