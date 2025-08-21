@@ -10,6 +10,7 @@ import Cardano.Api.Byron
 import Cardano.Api.Key
 
 import Test.Cardano.Crypto.Orphans ()
+import Test.Cardano.Ledger.Core.Arbitrary ()
 
 -- Signing Key instances
 

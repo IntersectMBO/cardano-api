@@ -375,6 +375,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Address
     Test.Cardano.Api.Bech32
     Test.Cardano.Api.CBOR
+    Test.Cardano.Api.Cip129
     Test.Cardano.Api.Crypto
     Test.Cardano.Api.Envelope
     Test.Cardano.Api.EpochLeadership

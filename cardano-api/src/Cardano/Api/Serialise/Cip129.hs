@@ -23,7 +23,6 @@ import Cardano.Api.Internal.Orphans (AsType (..))
 import Cardano.Api.Monad.Error
 import Cardano.Api.Serialise.Bech32
 import Cardano.Api.Serialise.Raw
-import Cardano.Api.Tx.Internal.TxIn
 
 import Cardano.Ledger.Conway.Governance qualified as Gov
 import Cardano.Ledger.Credential (Credential (..))
@@ -135,24 +134,11 @@ deserialiseFromBech32Cip129 bech32Str = do
 -- According to Cip129 there is no header byte for GovActionId.
 -- Instead they append the txid and index to form the payload.
 serialiseGovActionIdToBech32Cip129 :: Gov.GovActionId -> Text
-serialiseGovActionIdToBech32Cip129 (Gov.GovActionId txid index) =
-  let txidHex = serialiseToRawBytes $ fromShelleyTxId txid
-      indexHex = C8.pack $ show $ Gov.unGovActionIx index
-      payload = txidHex <> indexHex
-   in Bech32.encodeLenient
-        humanReadablePart
-        (Bech32.dataPartFromBytes payload)
- where
-  humanReadablePart =
-    let prefix = "gov_action"
-     in case Bech32.humanReadablePartFromText prefix of
-          Right p -> p
-          Left err ->
-            error $
-              "serialiseGovActionIdToBech32Cip129: invalid prefix "
-                ++ show prefix
-                ++ ", "
-                ++ show err
+serialiseGovActionIdToBech32Cip129 govActionId = do
+  let humanReadablePart = unsafeHumanReadablePartFromText "gov_action"
+  Bech32.encodeLenient
+    humanReadablePart
+    (Bech32.dataPartFromBytes $ serialiseToRawBytes govActionId)
 
 deserialiseGovActionIdFromBech32Cip129
   :: Text -> Either Bech32DecodeError Gov.GovActionId
@@ -169,6 +155,5 @@ deserialiseGovActionIdFromBech32Cip129 bech32Str = do
     Bech32.dataPartToBytes dataPart
       ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
 
-  case deserialiseFromRawBytes AsGovActionId payload of
-    Right a -> Right a
-    Left _ -> Left $ Bech32DeserialiseFromBytesError payload
+  deserialiseFromRawBytes AsGovActionId payload
+    ?!& const (Bech32DeserialiseFromBytesError payload)
