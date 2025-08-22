@@ -25,6 +25,7 @@ where
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Orphans.Misc
 import Cardano.Api.Ledger qualified as Ledger
+import Cardano.Api.Monad.Error (MonadError (..), (?!))
 import Cardano.Api.Pretty (Pretty (..), prettyException, (<+>))
 import Cardano.Api.Pretty.Internal.ShowOf
 import Cardano.Api.Serialise.Raw
@@ -95,8 +96,10 @@ import Data.Aeson (KeyValue ((.=)), ToJSON (..), ToJSONKey (..), object, pairs)
 import Data.Aeson qualified as A
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor
+import Data.Bits (Bits (..))
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Char8 qualified as C8
 import Data.ByteString.Short qualified as SBS
 import Data.Data (Data)
@@ -108,12 +111,14 @@ import Data.Monoid
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (Typeable)
+import Data.Word (Word16)
 import GHC.Exts (IsList (..), IsString (..))
 import GHC.Generics
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import Lens.Micro
 import Network.Mux qualified as Mux
+import Numeric (showHex)
 import Prettyprinter (punctuate, viaShow)
 import Text.Read
 
@@ -426,20 +431,35 @@ instance SerialiseAsRawBytes (Ledger.Credential L.DRepRole) where
       )
       . CBOR.decodeFull'
 
+instance HasTypeProxy L.GovActionIx where
+  data AsType L.GovActionIx = AsGovActionIx
+  proxyToAsType _ = AsGovActionIx
+
 instance HasTypeProxy L.GovActionId where
   data AsType L.GovActionId = AsGovActionId
   proxyToAsType _ = AsGovActionId
 
-instance SerialiseAsRawBytes L.GovActionId where
-  serialiseToRawBytes (L.GovActionId txid (L.GovActionIx actionIx)) =
-    let hex = Base16.encode $ C8.pack $ show actionIx
-     in mconcat [serialiseToRawBytes $ fromShelleyTxId txid, hex]
-  deserialiseFromRawBytes AsGovActionId bytes = do
-    let (txidBs, index) = BS.splitAt 32 bytes
+instance SerialiseAsRawBytes L.GovActionIx where
+  serialiseToRawBytes (L.GovActionIx actionIx) = C8.toStrict . BSB.toLazyByteString $ BSB.word16BE actionIx
+  deserialiseFromRawBytes _ bs =
+    L.GovActionIx
+      <$> case fromIntegral <$> BS.unpack bs of
+        [] -> throwError $ SerialiseAsRawBytesError "Cannot deserialise empty bytes into GovActionIx"
+        [b0] -> pure b0 -- just return the single byte present
+        [b0, b1] ->
+          -- we have number > 255, so we have to convert from big endian
+          pure $ b0 `shiftL` 8 .|. b1
+        _ ->
+          -- we cannot have more than two bytes for the index here
+          throwError . SerialiseAsRawBytesError $
+            "Governance action index is larger than two bytes! hex index: " <> C8.unpack (Base16.encode bs)
 
-    txid <- deserialiseFromRawBytes AsTxId txidBs
-    let asciiIndex = C8.unpack $ Base16.decodeLenient index
-    case readMaybe asciiIndex of
-      Just actionIx -> return $ L.GovActionId (toShelleyTxId txid) (L.GovActionIx actionIx)
-      Nothing ->
-        Left $ SerialiseAsRawBytesError $ "Unable to deserialise GovActionId: invalid index: " <> asciiIndex
+instance SerialiseAsRawBytes L.GovActionId where
+  serialiseToRawBytes (L.GovActionId txid govActIx) =
+    serialiseToRawBytes (fromShelleyTxId txid) <> serialiseToRawBytes govActIx
+
+  deserialiseFromRawBytes AsGovActionId bytes = do
+    let (txIdBs, index) = BS.splitAt 32 bytes
+    L.GovActionId . toShelleyTxId
+      <$> deserialiseFromRawBytes AsTxId txIdBs
+      <*> deserialiseFromRawBytes AsGovActionIx index
