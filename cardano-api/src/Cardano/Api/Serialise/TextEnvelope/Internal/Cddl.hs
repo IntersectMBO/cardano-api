@@ -29,7 +29,6 @@ module Cardano.Api.Serialise.TextEnvelope.Internal.Cddl
   , deserialiseWitnessLedgerCddl
 
     -- * Byron tx serialization
-  , serializeByronTx
   , writeByronTxFileTextEnvelopeCddl
   )
 where
@@ -49,6 +48,7 @@ import Cardano.Api.Serialise.TextEnvelope.Internal
   , serialiseTextEnvelope
   , serialiseToTextEnvelope
   )
+import Cardano.Api.Tx.Internal.Serialise
 import Cardano.Api.Tx.Internal.Sign
 
 import Cardano.Chain.UTxO qualified as Byron
@@ -106,6 +106,8 @@ textEnvelopeErrorToTextEnvelopeCddlError = \case
       (T.pack $ show actualType)
   TextEnvelopeDecodeError decoderError -> TextEnvelopeCddlErrCBORDecodingError decoderError
   TextEnvelopeAesonDecodeError errorString -> TextEnvelopeCddlAesonDecodeError "" errorString
+  TextEnvelopeUnknownKeyWitness _desc -> TextEnvelopeCddlUnknownKeyWitness
+  TextEnvelopeUnknownType unknownType -> TextEnvelopeCddlErrUnknownType unknownType
 
 instance Error TextEnvelopeCddlError where
   prettyError = \case
@@ -130,6 +132,7 @@ instance Error TextEnvelopeCddlError where
     TextEnvelopeCddlErrByronKeyWitnessUnsupported ->
       "TextEnvelopeCddl error: Byron key witnesses are currently unsupported."
 
+{-# DEPRECATED writeByronTxFileTextEnvelopeCddl "Use writeByronTxFileTextEnvelope instead." #-}
 writeByronTxFileTextEnvelopeCddl
   :: File content Out
   -> Byron.ATxAux ByteString
@@ -137,16 +140,9 @@ writeByronTxFileTextEnvelopeCddl
 writeByronTxFileTextEnvelopeCddl path =
   writeLazyByteStringFile path
     . serialiseTextEnvelope
-    . serializeByronTx
+    . serialiseByronTx
 
-serializeByronTx :: Byron.ATxAux ByteString -> TextEnvelope
-serializeByronTx tx =
-  TextEnvelope
-    { teType = "Tx ByronEra"
-    , teDescription = "Ledger Cddl Format"
-    , teRawCBOR = CBOR.recoverBytes tx
-    }
-
+{-# DEPRECATED deserialiseByronTxCddl "Use deserialiseByronTx instead." #-}
 deserialiseByronTxCddl :: TextEnvelope -> Either TextEnvelopeCddlError (Byron.ATxAux ByteString)
 deserialiseByronTxCddl tec =
   first TextEnvelopeCddlErrCBORDecodingError $
@@ -156,6 +152,7 @@ deserialiseByronTxCddl tec =
       CBOR.decCBOR
       (LBS.fromStrict $ teRawCBOR tec)
 
+{-# DEPRECATED serialiseWitnessLedgerCddl "Use serialiseWitnessLedger instead." #-}
 serialiseWitnessLedgerCddl :: forall era. ShelleyBasedEra era -> KeyWitness era -> TextEnvelope
 serialiseWitnessLedgerCddl sbe kw =
   shelleyBasedEraConstraints sbe $
@@ -166,6 +163,7 @@ serialiseWitnessLedgerCddl sbe kw =
     ShelleyBootstrapWitness{} -> "Key BootstrapWitness ShelleyEra"
     ShelleyKeyWitness{} -> "Key Witness ShelleyEra"
 
+{-# DEPRECATED deserialiseWitnessLedgerCddl "Use deserialiseWitnessLedger instead." #-}
 deserialiseWitnessLedgerCddl
   :: forall era
    . ShelleyBasedEra era
@@ -206,6 +204,7 @@ deserialiseWitnessLedgerCddl sbe te =
       _ -> Left TextEnvelopeCddlUnknownKeyWitness
   legacyDecoding _ v = v
 
+{-# DEPRECATED writeTxFileTextEnvelopeCddl "Use writeTxFileTextEnvelope instead." #-}
 writeTxFileTextEnvelopeCddl
   :: ShelleyBasedEra era
   -> File content Out
@@ -221,6 +220,7 @@ writeTxFileTextEnvelopeCddl sbe path =
 --
 -- 1. RFC 7049: https://datatracker.ietf.org/doc/html/rfc7049#section-3.9
 -- 2. CIP-21: https://github.com/cardano-foundation/CIPs/blob/master/CIP-0021/README.md#canonical-cbor-serialization-format
+{-# DEPRECATED writeTxFileTextEnvelopeCanonicalCddl "Use writeTxFileTextEnvelopeCanonical instead." #-}
 writeTxFileTextEnvelopeCanonicalCddl
   :: ShelleyBasedEra era
   -> File content Out
@@ -246,11 +246,7 @@ writeTxFileTextEnvelopeCanonicalCddl sbe path =
             $ teRawCBOR te
     te{teRawCBOR = canonicalisedTxBs}
 
-serialiseTxToTextEnvelope :: ShelleyBasedEra era -> Tx era -> TextEnvelope
-serialiseTxToTextEnvelope era' tx' =
-  shelleyBasedEraConstraints era' $ do
-    serialiseToTextEnvelope (Just "Ledger Cddl Format") tx'
-
+{-# DEPRECATED writeTxWitnessFileTextEnvelopeCddl "Use writeTxWitnessFileTextEnvelope instead." #-}
 writeTxWitnessFileTextEnvelopeCddl
   :: ShelleyBasedEra era
   -> File () Out
@@ -275,6 +271,7 @@ data FromSomeTypeCDDL c b where
     -> (InAnyShelleyBasedEra KeyWitness -> b)
     -> FromSomeTypeCDDL TextEnvelope b
 
+{-# DEPRECATED deserialiseFromTextEnvelopeCddlAnyOf "Use deserialiseFromTextEnvelopeAnyOf instead." #-}
 deserialiseFromTextEnvelopeCddlAnyOf
   :: [FromSomeTypeCDDL TextEnvelope b]
   -> TextEnvelope
@@ -311,6 +308,7 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
 -- Parse the text into types because this will increase code readability and
 -- will make it easier to keep track of the different Cddl descriptions via
 -- a single sum data type.
+{-# DEPRECATED cddlTypeToEra "Use textEnvelopeTypeToEra instead." #-}
 cddlTypeToEra :: Text -> Either TextEnvelopeCddlError AnyShelleyBasedEra
 cddlTypeToEra =
   \case
@@ -340,6 +338,7 @@ cddlTypeToEra =
     "TxWitness ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
     unknownCddlType -> Left $ TextEnvelopeCddlErrUnknownType unknownCddlType
 
+{-# DEPRECATED readFileTextEnvelopeCddlAnyOf "Use readFileTextEnvelopeAnyOf instead." #-}
 readFileTextEnvelopeCddlAnyOf
   :: [FromSomeTypeCDDL TextEnvelope b]
   -> FilePath
@@ -350,6 +349,7 @@ readFileTextEnvelopeCddlAnyOf types path =
     firstExceptT (FileError path) $ hoistEither $ do
       deserialiseFromTextEnvelopeCddlAnyOf types te
 
+{-# DEPRECATED readTextEnvelopeCddlFromFile "Use readTextEnvelopeFromFile instead." #-}
 readTextEnvelopeCddlFromFile
   :: FilePath
   -> IO (Either (FileError TextEnvelopeCddlError) TextEnvelope)

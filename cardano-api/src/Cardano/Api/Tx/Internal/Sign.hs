@@ -68,6 +68,8 @@ module Cardano.Api.Tx.Internal.Sign
   , txScriptValidityToScriptValidity
   , TxBodyScriptData (..)
   , selectTxDatums
+  -- Exporting for testing. Deprecate in the future.
+  , legacyKeyWitnessEncode
   )
 where
 
@@ -75,6 +77,7 @@ import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
 import Cardano.Api.Certificate.Internal
 import Cardano.Api.Era
+import Cardano.Api.Error
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Key.Internal
 import Cardano.Api.Key.Internal.Class
@@ -108,7 +111,9 @@ import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
+import Data.Text qualified as Text
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import Data.Validation qualified as Valid
 import GHC.Exts (IsList (..))
 import Lens.Micro
 
@@ -683,18 +688,13 @@ pattern AsShelleyWitness = AsKeyWitness AsShelleyEra
 
 {-# COMPLETE AsShelleyWitness #-}
 
--- This custom instance differs from cardano-ledger
--- because we want to be able to tell the difference between
--- on disk witnesses for the cli's 'assemble' command.
 instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
   serialiseToCBOR (ByronKeyWitness wit) =
     Plain.serialize' wit
   serialiseToCBOR (ShelleyKeyWitness sbe wit) =
-    CBOR.serialize' (eraProtVerLow sbe) $
-      encodeShelleyBasedKeyWitness wit
+    CBOR.serialize' (eraProtVerLow sbe) wit
   serialiseToCBOR (ShelleyBootstrapWitness sbe wit) =
-    CBOR.serialize' (eraProtVerLow sbe) $
-      encodeShelleyBasedBootstrapWitness wit
+    CBOR.serialize' (eraProtVerLow sbe) wit
 
   deserialiseFromCBOR _ bs =
     case cardanoEra :: CardanoEra era of
@@ -708,13 +708,23 @@ instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
       BabbageEra -> decodeShelleyBasedWitness ShelleyBasedEraBabbage bs
       ConwayEra -> decodeShelleyBasedWitness ShelleyBasedEraConway bs
 
-encodeShelleyBasedKeyWitness :: CBOR.EncCBOR w => w -> CBOR.Encoding
-encodeShelleyBasedKeyWitness wit =
-  CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> CBOR.encCBOR wit
-
-encodeShelleyBasedBootstrapWitness :: CBOR.EncCBOR w => w -> CBOR.Encoding
-encodeShelleyBasedBootstrapWitness wit =
-  CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> CBOR.encCBOR wit
+-- | We no longer use the non-compliant CDDL legacy encoding.
+-- Instead of depending on a tag to differentiate which key witness
+-- we are dealing with, we opted to use `Validation` data type. This
+-- provides a convenient way to try multiple decoders until one succeeds.
+legacyKeyWitnessEncode :: KeyWitness era -> ByteString
+legacyKeyWitnessEncode (ShelleyKeyWitness sbe wit) =
+  CBOR.serialize' (eraProtVerLow sbe) $
+    CBOR.encodeListLen 2
+      <> CBOR.encodeWord 0
+      <> CBOR.encCBOR wit
+legacyKeyWitnessEncode (ShelleyBootstrapWitness sbe wit) =
+  CBOR.serialize' (eraProtVerLow sbe) $
+    CBOR.encodeListLen 2
+      <> CBOR.encodeWord 1
+      <> CBOR.encCBOR wit
+legacyKeyWitnessEncode (ByronKeyWitness wit) =
+  Plain.serialize' wit
 
 decodeShelleyBasedWitness
   :: forall era
@@ -722,15 +732,48 @@ decodeShelleyBasedWitness
   => ShelleyBasedEra era
   -> ByteString
   -> Either CBOR.DecoderError (KeyWitness era)
-decodeShelleyBasedWitness sbe =
-  CBOR.decodeFullAnnotator
-    (L.eraProtVerLow @(ShelleyLedgerEra era))
-    "Shelley Witness"
-    decode
-    . LBS.fromStrict
+decodeShelleyBasedWitness sbe bs =
+  let e =
+        Valid.toEither $
+          mconcat $
+            map
+              (Valid.liftError return)
+              [ bootstrapWitnessDecoder bs
+              , shelleyKeyWitnessDecoder bs
+              , legacyKeyWitnessDecoder bs
+              ]
+   in case e of
+        Left errs ->
+          let allErrs = Text.unlines $ map renderBuildable errs
+           in Left $ CBOR.DecoderErrorCustom "Failed to deserialise key witness" allErrs
+        Right res -> return res
  where
-  decode :: CBOR.Decoder s (CBOR.Annotator (KeyWitness era))
-  decode = do
+  shelleyKeyWitnessDecoder b =
+    ShelleyKeyWitness sbe
+      <$> CBOR.decodeFullAnnotator
+        (L.eraProtVerLow @(ShelleyLedgerEra era))
+        "Shelley Witness"
+        CBOR.decCBOR
+        (LBS.fromStrict b)
+
+  bootstrapWitnessDecoder b =
+    ShelleyBootstrapWitness sbe
+      <$> CBOR.decodeFullAnnotator
+        (L.eraProtVerLow @(ShelleyLedgerEra era))
+        "Shelley Witness"
+        CBOR.decCBOR
+        (LBS.fromStrict b)
+
+  legacyKeyWitnessDecoder b =
+    CBOR.decodeFullAnnotator
+      (L.eraProtVerLow @(ShelleyLedgerEra era))
+      "Shelley Witness"
+      decodeLegacy
+      (LBS.fromStrict b)
+
+  -- Non-CDDL compliant legacy decoder.
+  decodeLegacy :: CBOR.Decoder s (CBOR.Annotator (KeyWitness era))
+  decodeLegacy = do
     CBOR.decodeListLenOf 2
     t <- CBOR.decodeWord
     case t of

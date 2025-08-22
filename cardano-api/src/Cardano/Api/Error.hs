@@ -13,6 +13,7 @@ module Cardano.Api.Error
   , FileError (..)
   , fileIOExceptT
   , displayError
+  , renderBuildable
   )
 where
 
@@ -20,6 +21,11 @@ import Cardano.Api.Monad.Error
 import Cardano.Api.Pretty
 
 import Control.Exception (Exception (..), IOException, throwIO)
+import Data.Text (Text)
+import Data.Text.Lazy qualified as LText
+import Data.Text.Lazy.Builder qualified as LText
+import Formatting.Buildable (Buildable)
+import Formatting.Buildable qualified as Build
 import System.Directory (doesFileExist)
 import System.IO (Handle)
 
@@ -95,3 +101,6 @@ fileIOExceptT fp readFile' = do
   if fileExists
     then handleIOExceptT (FileIOError fp) $ readFile' fp
     else throwError (FileDoesNotExistError fp)
+
+renderBuildable :: Buildable a => a -> Text
+renderBuildable e = LText.toStrict . LText.toLazyText $ Build.build e
