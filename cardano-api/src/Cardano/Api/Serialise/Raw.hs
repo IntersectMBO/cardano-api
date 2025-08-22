@@ -17,10 +17,12 @@ where
 
 import Cardano.Api.Error (Error, failEitherError, prettyError)
 import Cardano.Api.HasTypeProxy
+import Cardano.Api.Monad.Error (MonadError (..))
 import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Pretty
 
 import Data.Bifunctor (Bifunctor (..))
+import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 as BSC
 import Data.Data (typeRep)
@@ -28,11 +30,24 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (TypeRep, Typeable)
+import Data.Word (Word8)
 
 class (HasTypeProxy a, Typeable a) => SerialiseAsRawBytes a where
   serialiseToRawBytes :: a -> ByteString
 
   deserialiseFromRawBytes :: AsType a -> ByteString -> Either SerialiseAsRawBytesError a
+
+instance SerialiseAsRawBytes Word8 where
+  serialiseToRawBytes = BS.singleton
+  deserialiseFromRawBytes AsWord8 bs = case BS.unpack bs of
+    [w] -> pure w
+    _ ->
+      throwError . SerialiseAsRawBytesError $
+        "Cannot decode Word8 from (hex): " <> show (Base16.encode bs)
+
+instance SerialiseAsRawBytes BS.ByteString where
+  serialiseToRawBytes = id
+  deserialiseFromRawBytes AsByteString = pure
 
 serialiseToRawBytesHex :: SerialiseAsRawBytes a => a -> ByteString
 serialiseToRawBytesHex = Base16.encode . serialiseToRawBytes
