@@ -26,6 +26,9 @@ module Cardano.Api.Experimental
   , convertToOldApiCertificate
   , mkTxCertificates
 
+    -- ** Transaction fee related
+  , estimateBalancedTxBody
+
     -- ** Era-related
   , BabbageEra
   , ConwayEra
@@ -75,4 +78,5 @@ import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx
 import Cardano.Api.Experimental.Tx.Internal.Certificate
+import Cardano.Api.Experimental.Tx.Internal.Fee
 import Cardano.Api.Tx.Internal.Fee (evaluateTransactionExecutionUnitsShelley)
