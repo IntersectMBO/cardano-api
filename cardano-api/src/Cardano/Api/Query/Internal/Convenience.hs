@@ -20,6 +20,10 @@ module Cardano.Api.Query.Internal.Convenience
   )
 where
 
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
+
+import Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
+
 import Cardano.Api.Address
 import Cardano.Api.Certificate.Internal
 import Cardano.Api.Consensus.Internal.Mode
@@ -54,6 +58,7 @@ import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import Data.Text (Text)
 import GHC.Exts (IsList (..), IsString (..))
+import Control.Exception (SomeException, displayException)
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
@@ -114,7 +119,7 @@ queryStateForBalancedTx
            , SystemStart
            , Set PoolId
            , Map StakeCredential L.Coin
-           , Map (L.Credential L.DRepRole) L.Coin
+           , Map (L.Credential L.DRepRole) (L.CompactForm L.Coin)
            , Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
            )
        )

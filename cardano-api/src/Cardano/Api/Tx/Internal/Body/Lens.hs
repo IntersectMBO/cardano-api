@@ -163,7 +163,7 @@ collateralInputsTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.collater
 
 reqSignerHashesTxBodyL
   :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set (L.KeyHash L.Witness))
-reqSignerHashesTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
+reqSignerHashesTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . undefined -- L.reqSignerHashesTxBodyL
 
 referenceInputsTxBodyL
   :: BabbageEraOnwards era -> Lens' (LedgerTxBody era) (Set L.TxIn)
