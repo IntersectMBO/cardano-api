@@ -218,7 +218,8 @@ newtype UnsignedTxError
   = UnsignedTxError TxBodyError
 
 makeUnsignedTx
-  :: Era era
+  :: Ledger.ProtVerAtMost (LedgerEra era) 11
+  => Era era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (UnsignedTx era)
 makeUnsignedTx era bc = obtainCommonConstraints era $ do
