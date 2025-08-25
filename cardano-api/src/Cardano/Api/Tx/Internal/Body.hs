@@ -272,7 +272,7 @@ import Cardano.Crypto.Hashing qualified as Byron
 import Cardano.Ledger.Allegra.Core qualified as L
 import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
-import Cardano.Ledger.Alonzo.Tx qualified as Alonzo (hashScriptIntegrity)
+-- import Cardano.Ledger.Alonzo.Tx qualified as Alonzo (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Babbage.UTxO qualified as L
@@ -1739,14 +1739,14 @@ fromLedgerTxExtraKeyWitnesses sbe body =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const TxExtraKeyWitnessesNone)
     ( \w ->
-        let keyhashes = body ^. L.reqSignerHashesTxBodyL
+        let keyhashes = body ^. L.reqSignerHashesTxBodyG
          in if Set.null keyhashes
               then TxExtraKeyWitnessesNone
               else
                 TxExtraKeyWitnesses
                   w
                   [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
-                  | keyhash <- toList $ body ^. L.reqSignerHashesTxBodyL
+                  | keyhash <- toList $ body ^. L.reqSignerHashesTxBodyG
                   ]
     )
     sbe
@@ -1981,12 +1981,13 @@ convPParamsToScriptIntegrityHash
   -> Alonzo.TxDats (ShelleyLedgerEra era)
   -> Set Plutus.Language
   -> StrictMaybe L.ScriptIntegrityHash
-convPParamsToScriptIntegrityHash w (BuildTxWith mTxProtocolParams) redeemers datums languages =
+convPParamsToScriptIntegrityHash w (BuildTxWith mTxProtocolParams) _ _ _ = -- redeemers datums languages =
   alonzoEraOnwardsConstraints w $
     case mTxProtocolParams of
       Nothing -> SNothing
-      Just (LedgerProtocolParameters pp) ->
-        Alonzo.hashScriptIntegrity (Set.map (L.getLanguageView pp) languages) redeemers datums
+      Just (LedgerProtocolParameters _) -> undefined
+      -- Just (LedgerProtocolParameters pp) -> 
+      --   Alonzo.hashScriptIntegrity (Set.map (L.getLanguageView pp) languages) redeemers datums
 
 convLanguages :: [(ScriptWitnessIndex, AnyScriptWitness era)] -> Set Plutus.Language
 convLanguages witnesses =

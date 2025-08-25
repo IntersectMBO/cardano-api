@@ -139,7 +139,6 @@ import Data.Text qualified as Text
 import Data.Word (Word64)
 import GHC.Exts (IsList (..))
 import GHC.Stack
-import Data.Coerce (coerce)
 
 -- ----------------------------------------------------------------------------
 -- Queries
@@ -648,7 +647,7 @@ toConsensusQueryShelleyBased sbe = \case
     caseShelleyToBabbageOrConwayEraOnwards
       (const $ error "toConsensusQueryShelleyBased: QueryDRepState is only available in the Conway era")
       ( \w ->
-          Some (consensusQueryInEraInMode era (conwayEraOnwardsConstraints w $ Consensus.GetDRepState creds))
+          Some (consensusQueryInEraInMode era (conwayEraOnwardsConstraints w $ Consensus.GetDRepState _creds))
       )
       sbe
   QueryDRepStakeDistr dreps ->
@@ -937,7 +936,7 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         Consensus.GetStakePoolParams{} ->
           Map.map fromShelleyPoolParams
             . Map.mapKeysMonotonic StakePoolKeyHash
-            $ r'
+            $ undefined -- r'
         _ -> fromConsensusQueryResultMismatch
     QueryDebugLedgerState{} ->
       case q' of

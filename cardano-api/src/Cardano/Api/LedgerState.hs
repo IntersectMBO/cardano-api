@@ -263,7 +263,8 @@ import Network.Mux qualified as Mux
 import Network.TypedProtocol.Core (Nat (..))
 import System.FilePath
 
-import Test.Cardano.Ledger.Api.Examples.Consensus.Dijkstra
+import Test.Cardano.Ledger.Dijkstra.Examples qualified as Dijkstra
+import Test.Cardano.Ledger.Shelley.Examples qualified as Shelley
 
 data InitialLedgerStateError
   = -- | Failed to read or parse the network config file.
@@ -1401,12 +1402,8 @@ decodeLedgerState = do
   2 <- CBOR.decodeListLen
   hst <-
     HFC.HardForkLedgerState
-<<<<<<< HEAD
       <$> HFC.decodeTelescope
         (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
-=======
-      <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* undefined :* Nil)
->>>>>>> origin/fraser-iohk/cardano-api-kes-agent
   tbs <- Ledger.valuesMKDecoder hst
   pure (LedgerState hst tbs)
  where
@@ -1503,7 +1500,7 @@ readCardanoGenesisConfig mEra enc = do
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
   alonzoGenesis <- readAlonzoGenesisConfig mEra enc
   conwayGenesis <- readConwayGenesisConfig enc
-  let dijkstraGenesis = exampleDijkstraGenesis -- TODO: Dijkstra - add plumbing to read Dijkstra genesis
+  let dijkstraGenesis = Shelley.leTranslationContext Dijkstra.ledgerExamples -- TODO: Dijkstra - add plumbing to read Dijkstra genesis
   let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
 

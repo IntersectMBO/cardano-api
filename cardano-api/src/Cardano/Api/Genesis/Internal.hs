@@ -312,7 +312,7 @@ decodeAlonzoGenesis (Just era) genesisBs = modifyError ("Cannot decode era-sensi
     -- use all available parameters >= conway
     | isConwayOnwards = length allCostModelParams
     -- use only required params in < conway
-    | otherwise = L.costModelParamsCount L.PlutusV2 -- Babbage
+    | otherwise = L.costModelInitParamCount L.PlutusV2 -- Babbage
 
   -- A list-like of tuples (param name, value) with default maxBound value
   optionalCostModelDefaultValues :: (Item l ~ (V2.ParamName, Int64), IsList l) => l
