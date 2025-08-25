@@ -199,20 +199,22 @@ deriving anyclass instance
   ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
   => ToJSON (L.ShelleyPpupPredFailure ledgerera)
 
-deriving anyclass instance
+instance
   ( ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
   , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
   , ToJSON (L.PlutusPurpose L.AsIx ledgerera)
   )
-  => ToJSON (L.AlonzoUtxowPredFailure ledgerera)
+  => ToJSON (L.AlonzoUtxowPredFailure ledgerera) where
+    toJSON = undefined
 
-deriving anyclass instance
+instance
   ( ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
   , ToJSON (L.TxCert ledgerera)
   , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
   , ToJSON (L.PlutusPurpose L.AsIx ledgerera)
   )
-  => ToJSON (L.BabbageUtxowPredFailure ledgerera)
+  => ToJSON (L.BabbageUtxowPredFailure ledgerera) where
+    toJSON = undefined
 
 deriving anyclass instance
   ToJSON (L.PredicateFailure (L.EraRule "LEDGER" ledgerera))
