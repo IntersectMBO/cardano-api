@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Api.Cip129
@@ -11,6 +12,10 @@ import Cardano.Api.Ledger qualified as L
 
 import Cardano.Ledger.Api.Governance qualified as Gov
 import Cardano.Ledger.Core qualified as L
+
+import Data.Text (Text)
+import Data.Text qualified as T
+import GHC.Stack
 
 import Test.Gen.Cardano.Api.Typed ()
 
@@ -26,62 +31,77 @@ import Test.Tasty.Hedgehog (testProperty)
 
 prop_decode_cip129 :: Property
 prop_decode_cip129 = H.propertyOnce $ do
-  H.noteShow_ $
-    serialiseToBech32Cip129 @(L.Credential L.HotCommitteeRole) $
-      L.KeyHashObj (L.KeyHash "00000000000000000000000000000000000000000000000000000000")
-  H.noteShow_ $
-    serialiseToBech32Cip129 @(L.Credential L.HotCommitteeRole) $
-      L.ScriptHashObj (L.ScriptHash "00000000000000000000000000000000000000000000000000000000")
-  ccCredKey <-
-    H.leftFail $
-      deserialiseFromBech32Cip129 @(L.Credential L.ColdCommitteeRole)
-        "cc_cold1zvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq6kflvs"
-  ccCredKey === L.KeyHashObj (L.KeyHash "91ce24460a9bf64bf5a829d8d57d3f7a157c2bf22d830c14b6b641ee")
+  "cc_cold1zgqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq6yewvh"
+    `assertDecodesTo` L.KeyHashObj @L.ColdCommitteeRole
+      (L.KeyHash "00000000000000000000000000000000000000000000000000000000")
 
-  ccCredScript <-
-    H.leftFail $
-      deserialiseFromBech32Cip129 @(L.Credential L.ColdCommitteeRole)
-        "cc_cold1zvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq6kflvs"
-  ccCredScript
-    === L.ScriptHashObj (L.ScriptHash "91ce24460a9bf64bf5a829d8d57d3f7a157c2bf22d830c14b6b641ee")
+  "cc_cold1zvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq6kflvs"
+    `assertDecodesTo` L.ScriptHashObj @L.ColdCommitteeRole
+      (L.ScriptHash "00000000000000000000000000000000000000000000000000000000")
 
-  hcCredKey <-
-    H.leftFail $
-      deserialiseFromBech32Cip129 @(L.Credential L.HotCommitteeRole)
-        "cc_hot1qgqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqvcdjk7"
-  hcCredKey === L.KeyHashObj (L.KeyHash "ece12e2051c92b3da63193ec3190a07ad7ec6883e10685d3664fc49c")
+  "cc_hot1qgqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqvcdjk7"
+    `assertDecodesTo` L.KeyHashObj @L.HotCommitteeRole
+      (L.KeyHash "00000000000000000000000000000000000000000000000000000000")
 
-  hcCredScript <-
-    H.leftFail $
-      deserialiseFromBech32Cip129 @(L.Credential L.HotCommitteeRole)
-        "cc_hot1qgqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqvcdjk7"
-  hcCredScript
-    === L.ScriptHashObj (L.ScriptHash "ece12e2051c92b3da63193ec3190a07ad7ec6883e10685d3664fc49c")
+  "cc_hot1qvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqv2arke"
+    `assertDecodesTo` L.ScriptHashObj @L.HotCommitteeRole
+      (L.ScriptHash "00000000000000000000000000000000000000000000000000000000")
 
-  drepCredKey <-
-    H.leftFail $
-      deserialiseFromBech32Cip129 @(L.Credential L.DRepRole)
-        "drep1ygqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq7vlc9n"
-  drepCredKey === L.KeyHashObj (L.KeyHash "ece12e2051c92b3da63193ec3190a07ad7ec6883e10685d3664fc49c")
+  "drep1ygqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq7vlc9n"
+    `assertDecodesTo` L.KeyHashObj @L.DRepRole (L.KeyHash "00000000000000000000000000000000000000000000000000000000")
 
-  drepCredScript <-
-    H.leftFail $
-      deserialiseFromBech32Cip129 @(L.Credential L.DRepRole)
-        "drep1ygqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq7vlc9n"
-  drepCredScript
-    === L.ScriptHashObj (L.ScriptHash "ece12e2051c92b3da63193ec3190a07ad7ec6883e10685d3664fc49c")
+  "drep1yvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq770f95"
+    `assertDecodesTo` L.ScriptHashObj @L.DRepRole
+      (L.ScriptHash "00000000000000000000000000000000000000000000000000000000")
 
-  govActId <-
-    H.leftFail $
-      deserialiseGovActionIdFromBech32Cip129
-        "gov_action1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpzklpgpf"
-
-  govActId
-    === L.GovActionId
+  "gov_action1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpzklpgpf"
+    `assertDecodesTo` L.GovActionId
       { L.gaidTxId =
-          L.TxId (L.unsafeMakeSafeHash "1c210d1b25116472d96fe6676b0ebcb4339280ba080edc6d3647a75b2dcc1798")
-      , L.gaidGovActionIx = L.GovActionIx 1
+          L.TxId (L.unsafeMakeSafeHash "0000000000000000000000000000000000000000000000000000000000000000")
+      , L.gaidGovActionIx = L.GovActionIx 17
       }
+
+  "gov_action1zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsq6dmejn"
+    `assertDecodesTo` L.GovActionId
+      { L.gaidTxId =
+          L.TxId (L.unsafeMakeSafeHash "1111111111111111111111111111111111111111111111111111111111111111")
+      , L.gaidGovActionIx = L.GovActionIx 0
+      }
+
+  do
+    govActId <-
+      H.leftFail $
+        deserialiseGovActionIdFromBech32Cip129
+          "gov_action1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpzklpgpf"
+    govActId
+      === L.GovActionId
+        { L.gaidTxId =
+            L.TxId (L.unsafeMakeSafeHash "0000000000000000000000000000000000000000000000000000000000000000")
+        , L.gaidGovActionIx = L.GovActionIx 17
+        }
+
+  do
+    govActId <-
+      H.leftFail $
+        deserialiseGovActionIdFromBech32Cip129
+          "gov_action1zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsq6dmejn"
+    govActId
+      === L.GovActionId
+        { L.gaidTxId =
+            L.TxId (L.unsafeMakeSafeHash "1111111111111111111111111111111111111111111111111111111111111111")
+        , L.gaidGovActionIx = L.GovActionIx 0
+        }
+ where
+  assertDecodesTo
+    :: (HasCallStack, Show a, Eq a, Cip129 a, MonadTest m)
+    => Text
+    -> a
+    -> m ()
+  assertDecodesTo bech32id refIdentifier = withFrozenCallStack $ do
+    identifier <- H.leftFail $ deserialiseFromBech32Cip129 bech32id
+    H.note_ "Expected identifier in CIP129 format:"
+    H.note_ . T.unpack $ serialiseToBech32Cip129 refIdentifier
+    identifier === refIdentifier
 
 prop_roundtrip_cip129 :: Property
 prop_roundtrip_cip129 = H.property $ do
@@ -95,7 +115,10 @@ prop_roundtrip_cip129 = H.property $ do
   tripping drep serialiseToBech32Cip129 deserialiseFromBech32Cip129
 
   govActionId <- forAll $ Q.arbitrary @Gov.GovActionId
-  tripping govActionId serialiseGovActionIdToBech32Cip129 deserialiseGovActionIdFromBech32Cip129
+  tripping govActionId serialiseToBech32Cip129 deserialiseFromBech32Cip129
+
+  govActionId' <- forAll $ Q.arbitrary @Gov.GovActionId
+  tripping govActionId' serialiseGovActionIdToBech32Cip129 deserialiseGovActionIdFromBech32Cip129
 
 tests :: TestTree
 tests =
