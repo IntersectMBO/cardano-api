@@ -45,10 +45,12 @@ import Cardano.Chain.Update.Validation.Voting qualified as L.Voting
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Ledger.Allegra.Rules qualified as L
 import Cardano.Ledger.Alonzo.PParams qualified as Ledger
+import Cardano.Ledger.Alonzo.Rules qualified as Alonzo
 import Cardano.Ledger.Alonzo.Rules qualified as L
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
+import Cardano.Ledger.Babbage.Rules qualified as Babbage
 import Cardano.Ledger.Babbage.Rules qualified as L
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.BaseTypes qualified as L
@@ -91,11 +93,20 @@ import PlutusLedgerApi.V2 qualified as V2
 
 import Codec.Binary.Bech32 qualified as Bech32
 import Codec.CBOR.Read qualified as CBOR
-import Data.Aeson (KeyValue ((.=)), ToJSON (..), ToJSONKey (..), object, pairs)
+import Data.Aeson
+  ( KeyValue ((.=))
+  , ToJSON (..)
+  , ToJSONKey (..)
+  , defaultOptions
+  , genericToJSON
+  , object
+  , pairs
+  )
 import Data.Aeson qualified as A
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor
 import Data.ByteString qualified as BS
+import Data.ByteString.Base16 qualified as B16
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as C8
 import Data.ByteString.Short qualified as SBS
@@ -106,6 +117,7 @@ import Data.ListMap qualified as ListMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid
 import Data.Text qualified as T
+import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (Typeable)
 import GHC.Exts (IsList (..), IsString (..))
@@ -200,8 +212,12 @@ instance
   , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
   , ToJSON (L.PlutusPurpose L.AsIx ledgerera)
   )
-  => ToJSON (L.AlonzoUtxowPredFailure ledgerera) where
-    toJSON = undefined
+  => ToJSON (L.AlonzoUtxowPredFailure ledgerera)
+  where
+  toJSON = genericToJSON defaultOptions
+
+instance ToJSON C8.ByteString where
+  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode
 
 instance
   ( ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
@@ -209,8 +225,9 @@ instance
   , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
   , ToJSON (L.PlutusPurpose L.AsIx ledgerera)
   )
-  => ToJSON (L.BabbageUtxowPredFailure ledgerera) where
-    toJSON = undefined
+  => ToJSON (L.BabbageUtxowPredFailure ledgerera)
+  where
+  toJSON = genericToJSON defaultOptions
 
 deriving anyclass instance
   ToJSON (L.PredicateFailure (L.EraRule "LEDGER" ledgerera))

@@ -643,11 +643,11 @@ toConsensusQueryShelleyBased sbe = \case
       )
       (const $ Some (consensusQueryInEraInMode era Consensus.GetFuturePParams))
       sbe
-  QueryDRepState _creds ->
+  QueryDRepState creds ->
     caseShelleyToBabbageOrConwayEraOnwards
       (const $ error "toConsensusQueryShelleyBased: QueryDRepState is only available in the Conway era")
       ( \w ->
-          Some (consensusQueryInEraInMode era (conwayEraOnwardsConstraints w $ Consensus.GetDRepState _creds))
+          Some (consensusQueryInEraInMode era (conwayEraOnwardsConstraints w $ Consensus.GetDRepState creds))
       )
       sbe
   QueryDRepStakeDistr dreps ->
@@ -664,16 +664,15 @@ toConsensusQueryShelleyBased sbe = \case
       )
       (const $ Some (consensusQueryInEraInMode era (Consensus.GetSPOStakeDistr spos)))
       sbe
-  QueryCommitteeMembersState _coldCreds _hotCreds _statuses ->
+  QueryCommitteeMembersState coldCreds hotCreds statuses ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
           error "toConsensusQueryShelleyBased: QueryCommitteeMembersState is only available in the Conway era"
       )
-      undefined
-      -- ( const $
-      --     Some
-      --       (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
-      -- )
+      ( const $
+          Some
+            (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
+      )
       sbe
   QueryStakeVoteDelegatees creds ->
     caseShelleyToBabbageOrConwayEraOnwards
@@ -934,9 +933,9 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryStakePoolParameters{} ->
       case q' of
         Consensus.GetStakePoolParams{} ->
-          Map.map fromShelleyPoolParams
-            . Map.mapKeysMonotonic StakePoolKeyHash
-            $ undefined -- r'
+          Map.mapKeysMonotonic StakePoolKeyHash
+            . Map.mapWithKey fromShelleyStakePoolState
+            $ r'
         _ -> fromConsensusQueryResultMismatch
     QueryDebugLedgerState{} ->
       case q' of

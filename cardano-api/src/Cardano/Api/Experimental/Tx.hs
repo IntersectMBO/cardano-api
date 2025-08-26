@@ -214,11 +214,11 @@ newtype UnsignedTxError
   = UnsignedTxError TxBodyError
 
 makeUnsignedTx
-  :: Ledger.ProtVerAtMost (LedgerEra era) 11
-  => Era era
+  :: Era era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (UnsignedTx era)
-makeUnsignedTx era bc = obtainCommonConstraints era $ do
+makeUnsignedTx DijkstraEra _ = error "makeUnsignedTx: Dijkstra era not supported yet"
+makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
   let sbe = convert era
       aeon = convert era
   TxScriptWitnessRequirements languages scripts datums redeemers <-
