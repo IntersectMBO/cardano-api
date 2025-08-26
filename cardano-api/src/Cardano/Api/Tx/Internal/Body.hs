@@ -278,6 +278,7 @@ import Cardano.Crypto.Hashing qualified as Byron
 import Cardano.Ledger.Allegra.Core qualified as L
 import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.Alonzo.Tx qualified as L
 -- import Cardano.Ledger.Alonzo.Tx qualified as Alonzo (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as L
@@ -1979,13 +1980,13 @@ convPParamsToScriptIntegrityHash
   -> Alonzo.TxDats (ShelleyLedgerEra era)
   -> Set Plutus.Language
   -> StrictMaybe L.ScriptIntegrityHash
-convPParamsToScriptIntegrityHash w (BuildTxWith mTxProtocolParams) _ _ _ = -- redeemers datums languages =
+convPParamsToScriptIntegrityHash w (BuildTxWith mTxProtocolParams) redeemers datums languages =
   alonzoEraOnwardsConstraints w $
     case mTxProtocolParams of
       Nothing -> SNothing
-      Just (LedgerProtocolParameters _) -> undefined
-      -- Just (LedgerProtocolParameters pp) -> 
-      --   Alonzo.hashScriptIntegrity (Set.map (L.getLanguageView pp) languages) redeemers datums
+      Just (LedgerProtocolParameters pp) ->
+        let scriptIntegrity = L.ScriptIntegrity redeemers datums (Set.map (L.getLanguageView pp) languages)
+         in SJust $ L.hashScriptIntegrity scriptIntegrity
 
 convLanguages :: [(ScriptWitnessIndex, AnyScriptWitness era)] -> Set Plutus.Language
 convLanguages witnesses =
