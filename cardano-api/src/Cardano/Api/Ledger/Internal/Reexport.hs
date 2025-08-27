@@ -133,11 +133,14 @@ module Cardano.Api.Ledger.Internal.Reexport
   , Script
   , CostModels
   , AlonzoGenesis
+  , pattern AlonzoGenesis
   , AsIxItem (..)
   , EraGov
   , EraTx (witsTxL, bodyTxL)
   , Tx
   , TxDats (..)
+  , costModelsValid
+  , getCostModelParams
   , getNativeScript
   , languageToText
   , plutusBinary
@@ -202,13 +205,15 @@ import Cardano.Ledger.Alonzo.Core
   , Tx
   , ppPricesL
   )
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (AlonzoGenesis))
 import Cardano.Ledger.Alonzo.Scripts
   ( AlonzoPlutusPurpose (..)
   , CostModels
   , ExUnits (..)
   , Prices (..)
   , Script
+  , costModelsValid
+  , getCostModelParams
   , plutusScriptLanguage
   )
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
