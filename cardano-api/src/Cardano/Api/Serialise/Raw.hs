@@ -22,15 +22,17 @@ import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Pretty
 
 import Data.Bifunctor (Bifunctor (..))
+import Data.Bits (Bits (..))
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Char8 as BSC
 import Data.Data (typeRep)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (TypeRep, Typeable)
-import Data.Word (Word8)
+import Data.Word (Word16, Word8)
 
 class (HasTypeProxy a, Typeable a) => SerialiseAsRawBytes a where
   serialiseToRawBytes :: a -> ByteString
@@ -43,7 +45,20 @@ instance SerialiseAsRawBytes Word8 where
     [w] -> pure w
     _ ->
       throwError . SerialiseAsRawBytesError $
-        "Cannot decode Word8 from (hex): " <> show (Base16.encode bs)
+        "Cannot decode Word8 from (hex): " <> BSC.unpack (Base16.encode bs)
+
+instance SerialiseAsRawBytes Word16 where
+  serialiseToRawBytes = BS.toStrict . BSB.toLazyByteString . BSB.word16BE
+  deserialiseFromRawBytes AsWord16 bs = case fromIntegral <$> BS.unpack bs of
+    [] -> throwError $ SerialiseAsRawBytesError "Cannot deserialise empty bytes into Word16"
+    [b0] -> pure b0 -- just return the single byte present
+    [b0, b1] ->
+      -- we have number > 255, so we have to convert from big endian
+      pure $ b0 `shiftL` 8 .|. b1
+    _ ->
+      -- we cannot have more than two bytes for Word16
+      throwError . SerialiseAsRawBytesError $
+        "Cannot decode Word16 from (hex): " <> BSC.unpack (Base16.encode bs)
 
 instance SerialiseAsRawBytes BS.ByteString where
   serialiseToRawBytes = id
