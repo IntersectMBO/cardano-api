@@ -1,0 +1,362 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE OverloadedLabels #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE QuantifiedConstraints #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Submit.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Submit</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Submit.html#submitTxMethod"><span class="hs-identifier">submitTxMethod</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Network.IPC.html"><span class="hs-identifier">Cardano.Api.Network.IPC</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Net.Tx</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Submit.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Submit</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UtxoRpc</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Error.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Error</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Monad.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Monad</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Orphans.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/rio-0.1.22.0-649580b77fcf8128d034f046db2ebedfe5982601bbd27653df051b05e016d498/share/doc/html/src/RIO.html"><span class="hs-identifier">RIO</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Foldable.html#toList"><span class="hs-identifier">toList</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Default</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grpc-spec-1.0.0-9a43eb6092af7488cfa7bef6f961e8dbcd6352735ac9396392317b3f10d9ee48/share/doc/html/src/Network.GRPC.Spec.html"><span class="hs-identifier">Network.GRPC.Spec</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><span class="hs-comment">-- | Submit a CBOR-serialised list of transactions to the node</span></span><span>
+</span><span id="line-30"></span><span id="local-6989586621679492467"><span id="local-6989586621679492468"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Submit.html#submitTxMethod"><span class="hs-identifier hs-type">submitTxMethod</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Monad.html#MonadRpc"><span class="hs-identifier hs-type">MonadRpc</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492467"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492468"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grpc-spec-1.0.0-9a43eb6092af7488cfa7bef6f961e8dbcd6352735ac9396392317b3f10d9ee48/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><a href="Proto.Utxorpc.V1alpha.Submit.Submit.html#SubmitTxRequest"><span class="hs-identifier hs-type">UtxoRpc.SubmitTxRequest</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679492468"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grpc-spec-1.0.0-9a43eb6092af7488cfa7bef6f961e8dbcd6352735ac9396392317b3f10d9ee48/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><a href="Proto.Utxorpc.V1alpha.Submit.Submit.html#SubmitTxResponse"><span class="hs-identifier hs-type">UtxoRpc.SubmitTxResponse</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-34"></span><span class="annot"><span class="hs-comment">-- ^ A list of succeeded transaction ids or errors for failed ones</span></span><span>
+</span><span id="line-35"></span><span id="submitTxMethod"><span class="annot"><span class="annottext">submitTxMethod :: forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Proto SubmitTxRequest -&gt; m (Proto SubmitTxResponse)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Submit.html#submitTxMethod"><span class="hs-identifier hs-var hs-var">submitTxMethod</span></a></span></span><span> </span><span id="local-6989586621679492757"><span class="annot"><span class="annottext">Proto SubmitTxRequest
+</span><a href="#local-6989586621679492757"><span class="hs-identifier hs-var">req</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-comment">-- index transactions in the request</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679492758"><span class="annot"><span class="annottext">serialisedTxs :: [(Int, ByteString)]
+</span><a href="#local-6989586621679492758"><span class="hs-identifier hs-var hs-var hs-var">serialisedTxs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.List.html#zip"><span class="hs-identifier hs-var">zip</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">([ByteString] -&gt; [(Int, ByteString)])
+-&gt; [ByteString] -&gt; [(Int, ByteString)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Proto SubmitTxRequest
+</span><a href="#local-6989586621679492757"><span class="hs-identifier hs-var">req</span></a></span><span> </span><span class="annot"><span class="annottext">Proto SubmitTxRequest
+-&gt; Getting (Endo [ByteString]) (Proto SubmitTxRequest) ByteString
+-&gt; [ByteString]
+forall s a. s -&gt; Getting (Endo [a]) s a -&gt; [a]
+</span><span class="hs-operator hs-var">^..</span></span><span> </span><span class="annot"><span class="annottext">([Proto AnyChainTx]
+ -&gt; Const (Endo [ByteString]) [Proto AnyChainTx])
+-&gt; Proto SubmitTxRequest
+-&gt; Const (Endo [ByteString]) (Proto SubmitTxRequest)
+</span><span class="">#tx</span></span><span> </span><span class="annot"><span class="annottext">(([Proto AnyChainTx]
+  -&gt; Const (Endo [ByteString]) [Proto AnyChainTx])
+ -&gt; Proto SubmitTxRequest
+ -&gt; Const (Endo [ByteString]) (Proto SubmitTxRequest))
+-&gt; ((ByteString -&gt; Const (Endo [ByteString]) ByteString)
+    -&gt; [Proto AnyChainTx]
+    -&gt; Const (Endo [ByteString]) [Proto AnyChainTx])
+-&gt; Getting (Endo [ByteString]) (Proto SubmitTxRequest) ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Proto AnyChainTx -&gt; Const (Endo [ByteString]) (Proto AnyChainTx))
+-&gt; [Proto AnyChainTx]
+-&gt; Const (Endo [ByteString]) [Proto AnyChainTx]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">((Proto AnyChainTx -&gt; Const (Endo [ByteString]) (Proto AnyChainTx))
+ -&gt; [Proto AnyChainTx]
+ -&gt; Const (Endo [ByteString]) [Proto AnyChainTx])
+-&gt; ((ByteString -&gt; Const (Endo [ByteString]) ByteString)
+    -&gt; Proto AnyChainTx
+    -&gt; Const (Endo [ByteString]) (Proto AnyChainTx))
+-&gt; (ByteString -&gt; Const (Endo [ByteString]) ByteString)
+-&gt; [Proto AnyChainTx]
+-&gt; Const (Endo [ByteString]) [Proto AnyChainTx]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Const (Endo [ByteString]) ByteString)
+-&gt; Proto AnyChainTx -&gt; Const (Endo [ByteString]) (Proto AnyChainTx)
+</span><span class="">#raw</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621679492762"><span class="annot"><a href="#local-6989586621679492762"><span class="hs-identifier hs-var">nodeConnInfo</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m LocalNodeConnectInfo
+forall field env (m :: * -&gt; *).
+(Has field env, MonadReader env m) =&gt;
+m field
+</span><a href="Cardano.Rpc.Server.Internal.Monad.html#grab"><span class="hs-identifier hs-var">grab</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#AnyCardanoEra"><span class="hs-identifier hs-type">AnyCardanoEra</span></a></span><span> </span><span id="local-6989586621679492852"><span class="annot"><a href="#local-6989586621679492852"><span class="hs-identifier hs-var">era</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-type">liftIO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Error.html#throwExceptT"><span class="hs-identifier hs-type">throwExceptT</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Query.Internal.Convenience.html#determineEra"><span class="hs-identifier hs-type">determineEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492762"><span class="hs-identifier hs-type">nodeConnInfo</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679492856"><span class="annot"><a href="#local-6989586621679492856"><span class="hs-identifier hs-var">eon</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#forEraInEon"><span class="hs-identifier hs-type">forEraInEon</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492852"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Err.html#error"><span class="hs-identifier hs-type">error</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;Minimum Shelley era required&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-comment">-- try to submit each one consecutively</span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679492859"><span class="annot"><a href="#local-6989586621679492859"><span class="hs-identifier hs-var">submitResults</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Traversable.html#forM"><span class="hs-identifier hs-type">forM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492758"><span class="hs-identifier hs-type">serialisedTxs</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679492861"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679492861"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679492862"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679492862"><span class="hs-identifier hs-var">txBytes</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679492863"><span class="annot"><span class="annottext">eTx :: Either String (Tx era)
+</span><a href="#local-6989586621679492863"><span class="hs-identifier hs-var hs-var hs-var">eTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-46"></span><span>          </span><span class="annot"><span class="annottext">(String -&gt; String)
+-&gt; Either String (Tx era) -&gt; Either String (Tx era)
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Failed to decode transaction with index &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679492861"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;: &quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either String (Tx era) -&gt; Either String (Tx era))
+-&gt; Either String (Tx era) -&gt; Either String (Tx era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-47"></span><span>            </span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; ByteString -&gt; Either String (Tx era)
+forall era.
+ShelleyBasedEra era -&gt; ByteString -&gt; Either String (Tx era)
+</span><a href="#local-6989586621679492866"><span class="hs-identifier hs-var">deserialiseTx</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679492856"><span class="hs-identifier hs-var">eon</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679492862"><span class="hs-identifier hs-var">txBytes</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span>    </span><span id="local-6989586621679492867"><span class="annot"><a href="#local-6989586621679492867"><span class="hs-identifier hs-var">eTxId</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">(Either String (Either String TxId) -&gt; Either String TxId)
+-&gt; m (Either String (Either String TxId)) -&gt; m (Either String TxId)
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Either String (Either String TxId) -&gt; Either String TxId
+forall (m :: * -&gt; *) a. Monad m =&gt; m (m a) -&gt; m a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#join"><span class="hs-identifier hs-var">join</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Either String (Either String TxId)) -&gt; m (Either String TxId))
+-&gt; ((Tx era -&gt; m (Either String TxId))
+    -&gt; m (Either String (Either String TxId)))
+-&gt; (Tx era -&gt; m (Either String TxId))
+-&gt; m (Either String TxId)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Either String (Tx era)
+-&gt; (Tx era -&gt; m (Either String TxId))
+-&gt; m (Either String (Either String TxId))
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m (t b)
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Traversable.html#forM"><span class="hs-identifier hs-var">forM</span></a></span><span> </span><span class="annot"><span class="annottext">Either String (Tx era)
+</span><a href="#local-6989586621679492863"><span class="hs-identifier hs-var">eTx</span></a></span><span> </span><span class="annot"><span class="annottext">((Tx era -&gt; m (Either String TxId)) -&gt; m (Either String TxId))
+-&gt; (Tx era -&gt; m (Either String TxId)) -&gt; m (Either String TxId)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><span class="annottext">(Either String TxId -&gt; Either String TxId)
+-&gt; m (Either String TxId) -&gt; m (Either String TxId)
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span>
+</span><span id="line-52"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; Either String TxId -&gt; Either String TxId
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span>
+</span><span id="line-53"></span><span>              </span><span class="hs-special">(</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Failed to submit transaction with index &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679492861"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;: &quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>                  </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>
+</span><span id="line-55"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>          </span><span class="annot"><span class="annottext">(m (Either String TxId) -&gt; m (Either String TxId))
+-&gt; (Tx era -&gt; m (Either String TxId))
+-&gt; Tx era
+-&gt; m (Either String TxId)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; Tx era -&gt; m (Either String TxId)
+forall e (m :: * -&gt; *) era.
+MonadRpc e m =&gt;
+ShelleyBasedEra era -&gt; Tx era -&gt; m (Either String TxId)
+</span><a href="#local-6989586621679492868"><span class="hs-identifier hs-var">submitTx</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679492856"><span class="hs-identifier hs-var">eon</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621679492867"><span class="hs-identifier hs-type">eTxId</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679492869"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679492869"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Proto TxSubmitResult
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">def</span></span><span> </span><span class="annot"><span class="annottext">Proto TxSubmitResult
+-&gt; (Proto TxSubmitResult -&gt; Proto TxSubmitResult)
+-&gt; Proto TxSubmitResult
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">ASetter (Proto TxSubmitResult) (Proto TxSubmitResult) Text Text
+</span><span class="">#errorMessage</span></span><span> </span><span class="annot"><span class="annottext">ASetter (Proto TxSubmitResult) (Proto TxSubmitResult) Text Text
+-&gt; Text -&gt; Proto TxSubmitResult -&gt; Proto TxSubmitResult
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+forall a. IsString a =&gt; String -&gt; a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.String.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679492869"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679492873"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679492873"><span class="hs-identifier hs-var">txId'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Proto TxSubmitResult
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">def</span></span><span> </span><span class="annot"><span class="annottext">Proto TxSubmitResult
+-&gt; (Proto TxSubmitResult -&gt; Proto TxSubmitResult)
+-&gt; Proto TxSubmitResult
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">ASetter
+  (Proto TxSubmitResult) (Proto TxSubmitResult) ByteString ByteString
+</span><span class="">#ref</span></span><span> </span><span class="annot"><span class="annottext">ASetter
+  (Proto TxSubmitResult) (Proto TxSubmitResult) ByteString ByteString
+-&gt; ByteString -&gt; Proto TxSubmitResult -&gt; Proto TxSubmitResult
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679492873"><span class="hs-identifier hs-var">txId'</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">def</span></span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-type">&amp;</span></a></span><span> </span><span class="annot"><span class="">#results</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">.~</span></span><span> </span><span class="annot"><a href="#local-6989586621679492859"><span class="hs-identifier hs-type">submitResults</span></a></span><span>
+</span><span id="line-64"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621679492589"><span class="annot"><a href="#local-6989586621679492866"><span class="hs-identifier hs-type">deserialiseTx</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492589"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492589"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621679492866"><span class="annot"><span class="annottext">deserialiseTx :: forall era.
+ShelleyBasedEra era -&gt; ByteString -&gt; Either String (Tx era)
+</span><a href="#local-6989586621679492866"><span class="hs-identifier hs-var hs-var">deserialiseTx</span></a></span></span><span> </span><span id="local-6989586621679492875"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679492875"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    ByteString -&gt; Either String (Tx era))
+-&gt; ByteString
+-&gt; Either String (Tx era)
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679492875"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt;
+  ByteString -&gt; Either String (Tx era))
+ -&gt; ByteString -&gt; Either String (Tx era))
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    ByteString -&gt; Either String (Tx era))
+-&gt; ByteString
+-&gt; Either String (Tx era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(DecoderError -&gt; String)
+-&gt; Either DecoderError (Tx era) -&gt; Either String (Tx era)
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DecoderError (Tx era) -&gt; Either String (Tx era))
+-&gt; (ByteString -&gt; Either DecoderError (Tx era))
+-&gt; ByteString
+-&gt; Either String (Tx era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">AsType (Tx era) -&gt; ByteString -&gt; Either DecoderError (Tx era)
+forall a.
+SerialiseAsCBOR a =&gt;
+AsType a -&gt; ByteString -&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Cbor.html#deserialiseFromCBOR"><span class="hs-identifier hs-var">deserialiseFromCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">AsType (Tx era)
+forall t. HasTypeProxy t =&gt; AsType t
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.HasTypeProxy.html#asType"><span class="hs-identifier hs-var">asType</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679492595"><span id="local-6989586621679492596"><span id="local-6989586621679492597"><span class="annot"><a href="#local-6989586621679492868"><span class="hs-identifier hs-type">submitTx</span></a></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Monad.html#MonadRpc"><span class="hs-identifier hs-type">MonadRpc</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492595"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492596"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492597"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492597"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679492596"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621679492868"><span class="annot"><span class="annottext">submitTx :: forall e (m :: * -&gt; *) era.
+MonadRpc e m =&gt;
+ShelleyBasedEra era -&gt; Tx era -&gt; m (Either String TxId)
+</span><a href="#local-6989586621679492868"><span class="hs-identifier hs-var hs-var">submitTx</span></a></span></span><span> </span><span id="local-6989586621679492919"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679492919"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span id="local-6989586621679492920"><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679492920"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679492921"><span class="annot"><a href="#local-6989586621679492921"><span class="hs-identifier hs-var">nodeConnInfo</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m LocalNodeConnectInfo
+forall field env (m :: * -&gt; *).
+(Has field env, MonadReader env m) =&gt;
+m field
+</span><a href="Cardano.Rpc.Server.Internal.Monad.html#grab"><span class="hs-identifier hs-var">grab</span></a></span><span>
+</span><span id="line-75"></span><span>    </span><span id="local-6989586621679492922"><span class="annot"><a href="#local-6989586621679492922"><span class="hs-identifier hs-var">eRes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">tryAny</span></span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-77"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Network.IPC.Internal.html#submitTxToNodeLocal"><span class="hs-identifier hs-type">submitTxToNodeLocal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492921"><span class="hs-identifier hs-type">nodeConnInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Consensus.Internal.InMode.html#TxInMode"><span class="hs-identifier hs-type">TxInMode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492919"><span class="hs-identifier hs-type">sbe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492920"><span class="hs-identifier hs-type">tx</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3E%3E%3D"><span class="hs-operator hs-type">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-78"></span><span>          </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/ouroboros-network-protocols-0.14.0.1-22675995fb3ba40072b1614123361fd86a1657d3738a4fb3ca0a2088c5abef1e/share/doc/html/src/Ouroboros.Network.Protocol.LocalTxSubmission.Type.html#SubmitFail"><span class="hs-identifier hs-type">Net.Tx.SubmitFail</span></a></span><span> </span><span id="local-6989586621679492927"><span class="annot"><span class="annottext">TxValidationErrorInCardanoMode
+</span><a href="#local-6989586621679492927"><span class="hs-identifier hs-var">reason</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either String TxId -&gt; m (Either String TxId)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String TxId -&gt; m (Either String TxId))
+-&gt; (String -&gt; Either String TxId)
+-&gt; String
+-&gt; m (Either String TxId)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String TxId
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m (Either String TxId))
+-&gt; String -&gt; m (Either String TxId)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxValidationErrorInCardanoMode -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">TxValidationErrorInCardanoMode
+</span><a href="#local-6989586621679492927"><span class="hs-identifier hs-var">reason</span></a></span><span>
+</span><span id="line-79"></span><span>          </span><span class="annot"><span class="annottext">SubmitResult TxValidationErrorInCardanoMode
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/ouroboros-network-protocols-0.14.0.1-22675995fb3ba40072b1614123361fd86a1657d3738a4fb3ca0a2088c5abef1e/share/doc/html/src/Ouroboros.Network.Protocol.LocalTxSubmission.Type.html#SubmitSuccess"><span class="hs-identifier hs-var">Net.Tx.SubmitSuccess</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either String TxId -&gt; m (Either String TxId)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String TxId -&gt; m (Either String TxId))
+-&gt; Either String TxId -&gt; m (Either String TxId)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Either String TxId
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(TxId -&gt; Either String TxId)
+-&gt; (TxBody era -&gt; TxId) -&gt; TxBody era -&gt; Either String TxId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody era -&gt; TxId
+forall era. TxBody era -&gt; TxId
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#getTxId"><span class="hs-identifier hs-var">getTxId</span></a></span><span> </span><span class="annot"><span class="annottext">(TxBody era -&gt; Either String TxId)
+-&gt; TxBody era -&gt; Either String TxId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era -&gt; TxBody era
+forall era. Tx era -&gt; TxBody era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.17.2.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Sign.html#getTxBody"><span class="hs-identifier hs-var">getTxBody</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679492920"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621679492922"><span class="hs-identifier hs-type">eRes</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-81"></span><span>      </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679492931"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679492931"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-82"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679492932"><span class="annot"><span class="annottext">errString :: String
+</span><a href="#local-6989586621679492932"><span class="hs-identifier hs-var hs-var hs-var">errString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; String
+forall e. Exception e =&gt; e -&gt; String
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Exception.Type.html#displayException"><span class="hs-identifier hs-var">displayException</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679492931"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-83"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; m ()
+forall (m :: * -&gt; *) t e.
+(Has (Tracer m t) e, MonadReader e m) =&gt;
+t -&gt; m ()
+</span><a href="Cardano.Rpc.Server.Internal.Monad.html#putTrace"><span class="hs-identifier hs-var">putTrace</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m ()) -&gt; String -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;N2C connection error while trying to submit a transaction: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679492932"><span class="hs-identifier hs-var">errString</span></a></span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><span class="annottext">Either String TxId -&gt; m (Either String TxId)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String TxId -&gt; m (Either String TxId))
+-&gt; Either String TxId -&gt; m (Either String TxId)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String TxId
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679492932"><span class="hs-identifier hs-var">errString</span></a></span><span>
+</span><span id="line-85"></span><span>      </span><span class="annot"><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679492935"><span class="annot"><span class="annottext">Either String TxId
+</span><a href="#local-6989586621679492935"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either String TxId -&gt; m (Either String TxId)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/bx38q9rbmxhkdkhvabgyf0ryb88xrlzf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Either String TxId
+</span><a href="#local-6989586621679492935"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-86"></span></pre></body></html>
