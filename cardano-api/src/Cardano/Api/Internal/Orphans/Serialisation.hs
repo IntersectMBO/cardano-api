@@ -96,7 +96,6 @@ import Data.Aeson (KeyValue ((.=)), ToJSON (..), ToJSONKey (..), object, pairs)
 import Data.Aeson qualified as A
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor
-import Data.Bits (Bits (..))
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Builder qualified as BSB
@@ -440,19 +439,8 @@ instance HasTypeProxy L.GovActionId where
   proxyToAsType _ = AsGovActionId
 
 instance SerialiseAsRawBytes L.GovActionIx where
-  serialiseToRawBytes (L.GovActionIx actionIx) = C8.toStrict . BSB.toLazyByteString $ BSB.word16BE actionIx
-  deserialiseFromRawBytes _ bs =
-    L.GovActionIx
-      <$> case fromIntegral <$> BS.unpack bs of
-        [] -> throwError $ SerialiseAsRawBytesError "Cannot deserialise empty bytes into GovActionIx"
-        [b0] -> pure b0 -- just return the single byte present
-        [b0, b1] ->
-          -- we have number > 255, so we have to convert from big endian
-          pure $ b0 `shiftL` 8 .|. b1
-        _ ->
-          -- we cannot have more than two bytes for the index here
-          throwError . SerialiseAsRawBytesError $
-            "Governance action index is larger than two bytes! hex index: " <> C8.unpack (Base16.encode bs)
+  serialiseToRawBytes (L.GovActionIx actionIx) = serialiseToRawBytes actionIx
+  deserialiseFromRawBytes _ = fmap L.GovActionIx . deserialiseFromRawBytes AsWord16
 
 instance SerialiseAsRawBytes L.GovActionId where
   serialiseToRawBytes (L.GovActionId txid govActIx) =
