@@ -182,13 +182,13 @@ import GHC.Stack
 import Numeric.Natural (Natural)
 
 import Test.Gen.Cardano.Api.Era
+import Test.Gen.Cardano.Api.Era ()
 import Test.Gen.Cardano.Api.Hardcoded
 import Test.Gen.Cardano.Api.Metadata (genTxMetadata)
+import Test.Gen.Cardano.Api.Orphans (obtainArb)
 
 import Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
-import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Core.Arbitrary ()
 
 import Hedgehog (Gen, MonadGen, Range)
 import Hedgehog.Gen qualified as Gen
@@ -1240,8 +1240,9 @@ genMaybePraosNonce :: Gen (Maybe PraosNonce)
 genMaybePraosNonce = Gen.maybe genPraosNonce
 
 -- | Generate valid protocol parameters which pass validations in Cardano.Api.ProtocolParameters
-genValidProtocolParameters :: ShelleyBasedEra era -> Gen (LedgerProtocolParameters era)
-genValidProtocolParameters sbe = shelleyBasedEraTestConstraints sbe $ LedgerProtocolParameters <$> Q.arbitrary
+genValidProtocolParameters
+  :: ShelleyBasedEra era -> Gen (LedgerProtocolParameters era)
+genValidProtocolParameters sbe = shelleyBasedEraTestConstraints sbe $ obtainArb sbe $ LedgerProtocolParameters <$> Q.arbitrary
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
 genProtocolParametersUpdate era = do
@@ -1387,7 +1388,7 @@ genProposals w = conwayEraOnwardsConstraints w $ do
 
 genProposal :: ConwayEraOnwards era -> Gen (L.ProposalProcedure (ShelleyLedgerEra era))
 genProposal w =
-  conwayEraOnwardsTestConstraints w Q.arbitrary
+  conwayEraOnwardsTestConstraints w $ obtainArb (convert w) Q.arbitrary
 
 genVotingProcedures
   :: Applicative (BuildTxWith build)
@@ -1398,7 +1399,7 @@ genVotingProcedures w = conwayEraOnwardsConstraints w $ do
   let sbe = convert w
   votersWithWitnesses <- fmap fromList . forM voters $ \voter ->
     (voter,) <$> genScriptWitnessForStake sbe
-  Api.TxVotingProcedures <$> Q.arbitrary <*> pure (pure votersWithWitnesses)
+  Api.TxVotingProcedures <$> obtainArb sbe Q.arbitrary <*> pure (pure votersWithWitnesses)
 
 genCurrentTreasuryValue :: ConwayEraOnwards era -> Gen L.Coin
 genCurrentTreasuryValue _era = Q.arbitrary
