@@ -19,7 +19,7 @@ import Test.Tasty.Hedgehog
 prop_byron_roundtrip_txbody_CBOR :: Property
 prop_byron_roundtrip_txbody_CBOR = property $ do
   x <- forAll $ makeSignedByronTransaction [] <$> genTxBodyByron
-  tripping x serializeByronTx deserialiseByronTxCddl
+  tripping x serialiseByronTx deserialiseByronTx
 
 prop_byron_roundtrip_witness_CBOR :: Property
 prop_byron_roundtrip_witness_CBOR = property $ do
@@ -30,7 +30,7 @@ prop_byron_roundtrip_witness_CBOR = property $ do
 prop_byron_roundtrip_Tx_Cddl :: Property
 prop_byron_roundtrip_Tx_Cddl = property $ do
   x <- forAll genTxByron
-  tripping x serializeByronTx deserialiseByronTxCddl
+  tripping x serialiseByronTx deserialiseByronTx
 
 tests :: TestTree
 tests =

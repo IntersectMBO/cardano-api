@@ -187,6 +187,7 @@ library
     transformers,
     transformers-except ^>=0.1.3,
     typed-protocols ^>=0.3,
+    validation,
     vector,
     yaml,
 
@@ -279,6 +280,7 @@ library
     Cardano.Api.Tx.Internal.Convenience
     Cardano.Api.Tx.Internal.Fee
     Cardano.Api.Tx.Internal.Output
+    Cardano.Api.Tx.Internal.Serialise
     Cardano.Api.Tx.Internal.Sign
     Cardano.Api.Tx.Internal.TxIn
     Cardano.Api.Tx.Internal.TxMetadata

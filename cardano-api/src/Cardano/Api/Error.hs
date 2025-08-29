@@ -13,6 +13,7 @@ module Cardano.Api.Error
   , FileError (..)
   , fileIOExceptT
   , displayError
+  , renderBuildable
   )
 where
 

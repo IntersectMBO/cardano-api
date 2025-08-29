@@ -843,6 +843,8 @@ module Cardano.Api.Tx
   , fromShelleyMetadata
   , toShelleyMetadatum
   , fromShelleyMetadatum
+  -- Exporting for testing. Deprecate in the future.
+  , legacyKeyWitnessEncode
 
     -- ** Shared parsing utils
   , parseAll

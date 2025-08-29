@@ -39,6 +39,7 @@ where
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.Convert
+import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Orphans ()
 import Cardano.Api.Pretty (Pretty)
 
@@ -225,6 +226,7 @@ type ShelleyBasedEraConstraints era =
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  , HasTypeProxy era
   , IsCardanoEra era
   , IsShelleyBasedEra era
   , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))

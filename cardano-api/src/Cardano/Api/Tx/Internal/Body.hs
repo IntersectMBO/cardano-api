@@ -325,14 +325,9 @@ import Data.OSet.Strict qualified as OSet
 import Data.Sequence.Strict qualified as Seq
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Text (Text)
-import Data.Text.Lazy qualified as LText
-import Data.Text.Lazy.Builder qualified as LText
 import Data.Type.Equality
 import Data.Typeable
 import Data.Word (Word16, Word32, Word64)
-import Formatting.Buildable (Buildable)
-import Formatting.Buildable qualified as Build
 import GHC.Exts (IsList (..))
 import GHC.Stack
 import Lens.Micro hiding (ix)
@@ -1189,9 +1184,6 @@ data TxBodyError
   | TxBodyMissingProtocolParams
   | TxBodyProtocolParamsConversionError !ProtocolParametersConversionError
   deriving (Eq, Show)
-
-renderBuildable :: Buildable a => a -> Text
-renderBuildable e = LText.toStrict . LText.toLazyText $ Build.build e
 
 instance Error TxBodyError where
   prettyError = \case
