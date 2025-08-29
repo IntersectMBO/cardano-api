@@ -193,6 +193,7 @@ import Ouroboros.Consensus.Ledger.Tables.Utils qualified as Ledger
 import Ouroboros.Consensus.Node.ProtocolInfo qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
 import Ouroboros.Consensus.Protocol.Praos qualified as Praos
+import Ouroboros.Consensus.Protocol.Praos.AgentClient
 import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
 import Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import Ouroboros.Consensus.Protocol.TPraos qualified as TPraos
@@ -214,6 +215,7 @@ import Control.Error.Util (note)
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.State.Strict
+import qualified Control.Tracer as Tracer
 import Data.Aeson as Aeson
   ( FromJSON (parseJSON)
   , Object
@@ -1147,6 +1149,7 @@ instance FromJSON NodeConfig where
         <*> parseAlonzoHardForkEpoch o
         <*> parseBabbageHardForkEpoch o
         <*> parseConwayHardForkEpoch o
+        <*> undefined
 
     parseShelleyHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseShelleyHardForkEpoch o =
@@ -1363,7 +1366,7 @@ encodeLedgerState (LedgerState hst@(HFC.HardForkLedgerState st) tbs) =
   mconcat
     [ CBOR.encodeListLen 2
     , HFC.encodeTelescope
-        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
+        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* undefined :* Nil)
         st
     , Ledger.valuesMKEncoder hst tbs
     ]
@@ -1381,7 +1384,7 @@ decodeLedgerState = do
   2 <- CBOR.decodeListLen
   hst <-
     HFC.HardForkLedgerState
-      <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
+      <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* undefined :* Nil)
   tbs <- Ledger.valuesMKDecoder hst
   pure (LedgerState hst tbs)
  where
@@ -1434,7 +1437,7 @@ mkProtocolInfoCardano
   :: GenesisConfig
   -> ( Consensus.ProtocolInfo
          (Consensus.CardanoBlock Consensus.StandardCrypto)
-     , IO [BlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
+     , Tracer.Tracer IO KESAgentClientTrace -> IO [BlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
      )
 mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transCfg) =
   Consensus.protocolInfoCardano

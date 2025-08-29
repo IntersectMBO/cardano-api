@@ -74,6 +74,7 @@ getPlutusScriptWitnessLanguage (PlutusScriptWitness l _ _ _ _) =
     L.SPlutusV1 -> L.plutusLanguage l
     L.SPlutusV2 -> L.plutusLanguage l
     L.SPlutusV3 -> L.plutusLanguage l
+    _ -> undefined
 
 -- | Every Plutus script has a purpose that indicates
 -- what that script is witnessing.

@@ -44,13 +44,13 @@ data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovAction era)
 -- TODO: Conway - Transitiion to Ledger.GovAction
 data GovernanceAction era
   = MotionOfNoConfidence
-      (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (ShelleyLedgerEra era)))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose))
   | ProposeNewConstitution
-      (StrictMaybe (Ledger.GovPurposeId Ledger.ConstitutionPurpose (ShelleyLedgerEra era)))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.ConstitutionPurpose))
       Ledger.Anchor
       (StrictMaybe Shelley.ScriptHash)
   | ProposeNewCommittee
-      (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (ShelleyLedgerEra era)))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose))
       [L.Credential ColdCommitteeRole]
       -- ^ Old constitutional committee
       (Map (L.Credential ColdCommitteeRole) EpochNo)
@@ -63,11 +63,11 @@ data GovernanceAction era
       [(Network, StakeCredential, L.Coin)]
       !(StrictMaybe Shelley.ScriptHash)
   | InitiateHardfork
-      (StrictMaybe (Ledger.GovPurposeId Ledger.HardForkPurpose (ShelleyLedgerEra era)))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.HardForkPurpose))
       ProtVer
   | -- | Governance policy
     UpdatePParams
-      (StrictMaybe (Ledger.GovPurposeId Ledger.PParamUpdatePurpose (ShelleyLedgerEra era)))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.PParamUpdatePurpose))
       (Ledger.PParamsUpdate (ShelleyLedgerEra era))
       !(StrictMaybe Shelley.ScriptHash)
 
