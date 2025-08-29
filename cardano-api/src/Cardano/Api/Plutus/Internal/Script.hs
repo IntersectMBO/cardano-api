@@ -153,7 +153,8 @@ import Cardano.Ledger.Keys qualified as Shelley
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Ledger.Shelley.Scripts qualified as Shelley
 import Cardano.Slotting.Slot (SlotNo)
-import PlutusLedgerApi.Test.Examples qualified as Plutus
+import PlutusCore.Version qualified as PLC
+import PlutusLedgerApi.Common (SerialisedScript, serialiseUPLC)
 
 import Codec.CBOR.Read qualified as CBOR
 import Control.Applicative
@@ -176,6 +177,8 @@ import Formatting qualified as B
 import GHC.Exts (IsList (..))
 import Numeric.Natural (Natural)
 import Prettyprinter
+
+import UntypedPlutusCore qualified as UPLC
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version
@@ -1126,8 +1129,18 @@ examplePlutusScriptAlwaysSucceeds
   -> PlutusScript PlutusScriptV1
 examplePlutusScriptAlwaysSucceeds =
   PlutusScriptSerialised
-    . Plutus.alwaysSucceedingNAryFunction
+    . alwaysSucceedingNAryFunction
     . scriptArityForWitCtx
+ where
+  -- Vendored from `plutus-ledger-api`'s testlib.
+
+  alwaysSucceedingNAryFunction :: Natural -> SerialisedScript
+  alwaysSucceedingNAryFunction n = serialiseUPLC $ UPLC.Program () PLC.plcVersion100 (body n)
+   where
+    -- No more arguments! The body can be anything that doesn't fail, so we return `\x . x`
+    body i | i == 0 = UPLC.LamAbs () (UPLC.DeBruijn 0) $ UPLC.Var () (UPLC.DeBruijn 1)
+    -- We're using de Bruijn indices, so we can use the same binder each time!
+    body i = UPLC.LamAbs () (UPLC.DeBruijn 0) $ body (i - 1)
 
 -- | An example Plutus script that always fails, irrespective of inputs.
 --
@@ -1140,8 +1153,17 @@ examplePlutusScriptAlwaysFails
   -> PlutusScript PlutusScriptV1
 examplePlutusScriptAlwaysFails =
   PlutusScriptSerialised
-    . Plutus.alwaysFailingNAryFunction
+    . alwaysFailingNAryFunction
     . scriptArityForWitCtx
+ where
+  -- Vendored from `plutus-ledger-api`'s testlib.
+  alwaysFailingNAryFunction :: Natural -> SerialisedScript
+  alwaysFailingNAryFunction n = serialiseUPLC $ UPLC.Program () PLC.plcVersion100 (body n)
+   where
+    -- No more arguments! The body should be error.
+    body i | i == 0 = UPLC.Error ()
+    -- We're using de Bruijn indices, so we can use the same binder each time!
+    body i = UPLC.LamAbs () (UPLC.DeBruijn 0) $ body (i - 1)
 
 -- | The expected arity of the Plutus function, depending on the context in
 -- which it is used.

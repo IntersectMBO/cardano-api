@@ -110,6 +110,7 @@ library
     aeson >=1.5.6.0,
     aeson-pretty >=0.8.5,
     attoparsec,
+    barbies,
     base16-bytestring >=1.0,
     base58-bytestring,
     base64-bytestring,
@@ -130,7 +131,7 @@ library
     cardano-ledger-binary >=1.6,
     cardano-ledger-byron >=1.1,
     cardano-ledger-conway >=1.19,
-    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17,
+    cardano-ledger-core:{cardano-ledger-core} >=1.17,
     cardano-ledger-mary >=1.8,
     cardano-ledger-shelley >=1.16,
     cardano-protocol-tpraos >=1.4,
@@ -168,7 +169,8 @@ library
     ouroboros-network-framework,
     ouroboros-network-protocols >=0.14,
     parsec,
-    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.45,
+    plutus-ledger-api:{plutus-ledger-api} ^>=1.45,
+    plutus-core,
     pretty-simple,
     prettyprinter,
     prettyprinter-ansi-terminal,
@@ -297,6 +299,7 @@ library gen
     Test.Gen.Cardano.Api.Era
     Test.Gen.Cardano.Api.Hardcoded
     Test.Gen.Cardano.Api.Metadata
+    Test.Gen.Cardano.Api.Orphans
     Test.Gen.Cardano.Api.ProtocolParameters
     Test.Gen.Cardano.Api.Typed
     Test.Gen.Cardano.Crypto.Seed
@@ -313,12 +316,14 @@ library gen
     cardano-binary >=1.6 && <1.8,
     cardano-crypto-class ^>=2.2.1,
     cardano-crypto-test ^>=1.6,
-    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.8.1,
+    cardano-ledger-alonzo:{cardano-ledger-alonzo} >=1.8.1,
+    cardano-ledger-api,
     cardano-ledger-byron-test >=1.5,
-    cardano-ledger-conway:testlib,
-    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
+    cardano-ledger-conway, 
+    cardano-ledger-core:{cardano-ledger-core} >=1.14,
     cardano-ledger-shelley >=1.13,
     containers,
+    generic-random,
     filepath,
     hedgehog >=1.1,
     hedgehog-extras,
@@ -343,13 +348,13 @@ test-suite cardano-api-test
     cardano-binary,
     cardano-crypto,
     cardano-crypto-class ^>=2.2.1,
-    cardano-crypto-test ^>=1.6,
     cardano-crypto-tests ^>=2.2,
+    cardano-crypto-wrapper,
     cardano-ledger-alonzo,
     cardano-ledger-api >=1.9,
     cardano-ledger-binary,
     cardano-ledger-conway,
-    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
+    cardano-ledger-core:{cardano-ledger-core} >=1.14,
     cardano-ledger-mary,
     cardano-protocol-tpraos,
     cardano-slotting,
@@ -421,7 +426,7 @@ test-suite cardano-api-golden
     cardano-ledger-alonzo,
     cardano-ledger-api >=1.9,
     cardano-ledger-binary,
-    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
+    cardano-ledger-core:{cardano-ledger-core} >=1.14,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test >=1.2.0.1,
     cardano-protocol-tpraos,
@@ -448,6 +453,7 @@ test-suite cardano-api-golden
   other-modules:
     Test.Golden.Cardano.Api.Genesis
     Test.Golden.Cardano.Api.Ledger
+    Test.Golden.Cardano.Api.Orphans
     Test.Golden.Cardano.Api.Script
     Test.Golden.Cardano.Api.Value
     Test.Golden.ErrorsSpec

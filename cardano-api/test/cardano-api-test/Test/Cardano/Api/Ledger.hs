@@ -17,7 +17,7 @@ import Control.Monad.Identity
 
 import Test.Gen.Cardano.Api.Typed
 
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Api.Orphans ()
 
 import Hedgehog qualified as H
 import Hedgehog.Gen.QuickCheck (arbitrary)
