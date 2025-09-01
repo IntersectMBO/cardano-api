@@ -819,6 +819,7 @@ module Cardano.Api.Tx
   , TxMetadata (..)
 
     -- ** Constructing metadata
+  , AsTxMetadata (..)
   , TxMetadataValue (..)
   , makeTransactionMetadata
   , mergeTransactionMetadata
