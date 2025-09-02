@@ -10,7 +10,7 @@ To run the example in this folder:
 1.  Run an instance of the `cardano-node` with the GRPC server enabled and put the socket file for the GRPC server in the root folder of this repo with the name `rpc.socket`. (You can put it somewhere else, but you will have to update the `envoy-conf.yaml` function later.)
 
 >[!NOTE]
->You can run `cardano-testnet cardano --testnet-magic 42 --conway-era --enable-grpc` and then export `CARDANO_NODE_SOCKET_PATH` variable as shown on the screen.
+>You can run `cardano-testnet cardano --enable-grpc` and then export `CARDANO_NODE_SOCKET_PATH` variable as shown on the screen.
 >Then you can create a symlink to the node socket:
 >```bash
 >ln -sf $(dirname $CARDANO_NODE_SOCKET_PATH)/rpc.sock $(git rev-parse --show-toplevel)/rpc.socket
