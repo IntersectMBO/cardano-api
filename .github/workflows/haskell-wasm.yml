@@ -144,9 +144,9 @@ jobs:
 
     - name: Prepare example
       run: |
-        cp $(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1) cardano-wasm/example/
-        $(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i "$(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1)" -o cardano-wasm/example/cardano-wasm.js
-        cp cardano-wasm/lib-wrapper/* cardano-wasm/example/
+        cp $(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1) cardano-wasm/examples/basic/
+        $(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i "$(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1)" -o cardano-wasm/examples/basic/cardano-wasm.js
+        cp cardano-wasm/lib-wrapper/* cardano-wasm/examples/basic/
 
     - uses: rrbutani/use-nix-shell-action@v1
       with:
@@ -154,7 +154,7 @@ jobs:
 
     - name: Run playwright test in example
       run: |
-       httpserver -h localhost -a 127.0.0.1 -p 8080 cardano-wasm/example &
+       httpserver -h localhost -a 127.0.0.1 -p 8080 cardano-wasm/examples/basic &
        playwright test cardano-wasm/js-test/basic-test.spec.ts
 
     # - name: Run tests

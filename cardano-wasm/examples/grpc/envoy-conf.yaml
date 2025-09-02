@@ -53,16 +53,6 @@ static_resources:
                   body:
                     filename: "./index.html"
               - match:
-                  path: "/stylesheet.css"
-                response_headers_to_add:
-                  - header:
-                      key: "Content-Type"
-                      value: "text/css"
-                direct_response:
-                  status: 200
-                  body:
-                    filename: "./stylesheet.css"
-              - match:
                   path: "/cardano-api.js"
                 response_headers_to_add:
                   - header:
@@ -135,4 +125,4 @@ static_resources:
         - endpoint:
             address:
               pipe:
-                path: ../../rpc.socket
+                path: ../../../rpc.socket
