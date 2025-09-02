@@ -125,4 +125,4 @@ static_resources:
         - endpoint:
             address:
               pipe:
-                path: ../../rpc.socket
+                path: ../../../rpc.socket
