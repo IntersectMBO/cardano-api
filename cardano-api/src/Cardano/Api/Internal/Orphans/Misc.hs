@@ -39,6 +39,7 @@ import Data.ListMap qualified as ListMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid
 import Data.Text.Encoding.Error qualified as T
+import Data.Typeable
 import GHC.Exts (IsList (..))
 import Network.Mux qualified as Mux
 import Text.Parsec.Error qualified as P
@@ -292,3 +293,5 @@ instance Error Byron.GenesisDataGenerationError where
 
 instance Error P.ParseError where
   prettyError = pretty . show
+
+deriving via ShowOf TypeRep instance Pretty TypeRep
