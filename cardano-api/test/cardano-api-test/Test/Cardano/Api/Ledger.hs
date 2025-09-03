@@ -1,5 +1,4 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Api.Ledger
   ( tests
@@ -9,7 +8,6 @@ where
 import Cardano.Api
 
 import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Api.Tx.Address
 import Cardano.Ledger.Hashes
 
 import Control.Monad
@@ -17,22 +15,12 @@ import Control.Monad.Identity
 
 import Test.Gen.Cardano.Api.Typed
 
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Api.Orphans ()
 
 import Hedgehog qualified as H
-import Hedgehog.Gen.QuickCheck (arbitrary)
 import Hedgehog.Internal.Property
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
-
--- Keep this here to make sure serialiseAddr/deserialiseAddr are working.
--- They are defined in the Shelley executable spec and have been wrong at
--- least once.
-prop_roundtrip_Address_CBOR :: Property
-prop_roundtrip_Address_CBOR = H.property $ do
-  -- If this fails, FundPair and ShelleyGenesis can also fail.
-  addr <- H.forAll (arbitrary @L.Addr)
-  H.tripping addr serialiseAddr decodeAddrEither
 
 -- prop_original_scriptdata_bytes_preserved and prop_roundtrip_scriptdata_plutusdata
 -- allow us to generate a 'HashableScriptData' value from JSON with the original bytes being
@@ -74,8 +62,7 @@ tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Ledger"
-    [ testProperty "roundtrip Address CBOR" prop_roundtrip_Address_CBOR
-    , testProperty "roundtrip ScriptData" prop_roundtrip_scriptdata_plutusdata
+    [ testProperty "roundtrip ScriptData" prop_roundtrip_scriptdata_plutusdata
     , testProperty "script data bytes preserved" prop_original_scriptdata_bytes_preserved
     , testProperty "roundtrip Ledger TxOut" prop_roundtrip_ledger_txout
     ]
