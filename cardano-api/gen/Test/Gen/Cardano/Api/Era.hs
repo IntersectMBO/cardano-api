@@ -7,7 +7,6 @@
 
 module Test.Gen.Cardano.Api.Era
   ( shelleyBasedEraTestConstraints
-  , shelleyToBabbageEraTestConstraints
   , conwayEraOnwardsTestConstraints
   )
 where
@@ -38,20 +37,6 @@ shelleyBasedEraTestConstraints = \case
   ShelleyBasedEraAlonzo -> id
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway -> id
-
-shelleyToBabbageEraTestConstraints
-  :: ()
-  => ShelleyToBabbageEra era
-  -> ( Ledger.Era (ShelleyLedgerEra era)
-       => a
-     )
-  -> a
-shelleyToBabbageEraTestConstraints = \case
-  ShelleyToBabbageEraShelley -> id
-  ShelleyToBabbageEraAllegra -> id
-  ShelleyToBabbageEraMary -> id
-  ShelleyToBabbageEraAlonzo -> id
-  ShelleyToBabbageEraBabbage -> id
 
 conwayEraOnwardsTestConstraints
   :: ()
