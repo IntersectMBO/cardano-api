@@ -1,7 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Test.Gen.Cardano.Api.Era
   ( shelleyBasedEraTestConstraints
@@ -12,22 +14,19 @@ where
 
 import Cardano.Api hiding (txIns)
 
-import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
 
-import Data.Functor.Identity qualified as Ledger
+import Data.Maybe.Strict
 
-import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Gen.Cardano.Api.Orphans ()
 
-import Test.QuickCheck (Arbitrary (..))
+import Test.QuickCheck
 
 shelleyBasedEraTestConstraints
   :: ()
   => ShelleyBasedEra era
   -> ( ( Ledger.Era (ShelleyLedgerEra era)
-       , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (ShelleyLedgerEra era))
-       , Arbitrary (Ledger.PParamsHKD Ledger.Identity (ShelleyLedgerEra era))
+       , Arbitrary (Ledger.PParams (ShelleyLedgerEra era))
        )
        => a
      )
@@ -43,10 +42,7 @@ shelleyBasedEraTestConstraints = \case
 shelleyToBabbageEraTestConstraints
   :: ()
   => ShelleyToBabbageEra era
-  -> ( ( Ledger.Era (ShelleyLedgerEra era)
-       , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (ShelleyLedgerEra era))
-       , Arbitrary (Ledger.PParamsHKD Ledger.Identity (ShelleyLedgerEra era))
-       )
+  -> ( Ledger.Era (ShelleyLedgerEra era)
        => a
      )
   -> a
@@ -61,8 +57,7 @@ conwayEraOnwardsTestConstraints
   :: ()
   => ConwayEraOnwards era
   -> ( ( Ledger.Era (ShelleyLedgerEra era)
-       , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (ShelleyLedgerEra era))
-       , Arbitrary (Ledger.PParamsHKD Ledger.Identity (ShelleyLedgerEra era))
+       , Arbitrary (Ledger.PParamsHKD StrictMaybe (ShelleyLedgerEra era))
        )
        => a
      )
