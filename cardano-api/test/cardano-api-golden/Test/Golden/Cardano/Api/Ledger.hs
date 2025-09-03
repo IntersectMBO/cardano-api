@@ -3,8 +3,6 @@ module Test.Golden.Cardano.Api.Ledger
   )
 where
 
-import Test.Cardano.Ledger.Core.Arbitrary ()
-
 import Hedgehog.Extras.Aeson qualified as H
 import Test.Golden.Cardano.Api.Genesis (exampleShelleyGenesis)
 import Test.Tasty (TestTree)
