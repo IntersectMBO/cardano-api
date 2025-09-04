@@ -193,6 +193,12 @@ module Cardano.Api.Tx.Internal.Body
   , convValidityUpperBound
   , convVotingProcedures
   , convWithdrawals
+  , extractWitnessableCertificates
+  , extractWitnessableTxIns
+  , extractWitnessableMints
+  , extractWitnessableProposals
+  , extractWitnessableWithdrawals
+  , extractWitnessableVotes
   , getScriptIntegrityHash
   , mkCommonTxBody
   , toAuxiliaryData
