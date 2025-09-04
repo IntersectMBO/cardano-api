@@ -36,10 +36,12 @@ data PlutusScriptInEra (lang :: L.Language) era where
 
 deriving instance Show (PlutusScriptInEra lang era)
 
+deriving instance Eq (PlutusScriptInEra lang era)
+
 -- | You can provide the plutus script directly in the transaction
 -- or a reference input that points to the script in the UTxO.
 -- Using a reference script saves space in your transaction.
 data PlutusScriptOrReferenceInput lang era
   = PScript (PlutusScriptInEra lang era)
   | PReferenceScript TxIn
-  deriving Show
+  deriving (Show, Eq)
