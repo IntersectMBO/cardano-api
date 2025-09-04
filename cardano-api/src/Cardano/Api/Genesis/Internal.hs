@@ -300,7 +300,7 @@ conwayGenesisDefaults =
         , paramIndexArray = mempty
         }
 
-    -- \| A helper function to lift to a "full" `MCostModel`, by mapping *all* of its fields to `Just`.
+    -- A helper function to lift to a "full" `MCostModel`, by mapping *all* of its fields to `Just`.
     -- The fields can be later on cleared, by assigning them to `Nothing`.
     toMCostModel
       :: CostModel CekMachineCosts BuiltinCostModel
@@ -336,12 +336,7 @@ type MCekMachineCosts = CekMachineCostsBase Maybe
 type MBuiltinCostModel = BuiltinCostModelBase MCostingFun
 
 (%!) :: forall r. (HasCallStack, Typeable r, BoundedRational r) => Integer -> Integer -> r
-n %! d = unsafeBoundRational $ n Data.Ratio.% d
-
-unsafeBoundRational :: forall r. (HasCallStack, Typeable r, BoundedRational r) => Rational -> r
-unsafeBoundRational x = fromMaybe (error errMessage) $ boundRational x
- where
-  errMessage = show (typeRep (Proxy :: Proxy r)) <> " is out of bounds: " <> show x
+n %! d = unsafeBoundedRational $ n Data.Ratio.% d
 
 -- | Decode Alonzo genesis in an optionally era sensitive way.
 --

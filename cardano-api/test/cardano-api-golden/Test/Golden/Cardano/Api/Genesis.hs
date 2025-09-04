@@ -30,15 +30,13 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Exts (IsList (..))
 import Lens.Micro
 
-import Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
-
 exampleShelleyGenesis :: ShelleyGenesis
 exampleShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
     , sgNetworkMagic = 4036000900
     , sgNetworkId = Testnet
-    , sgActiveSlotsCoeff = unsafeBoundRational 0.259
+    , sgActiveSlotsCoeff = unsafeBoundedRational 0.259
     , sgSecurityParam = knownNonZeroBounded @120842
     , sgEpochLength = EpochSize 1215
     , sgSlotsPerKESPeriod = 8541
@@ -48,7 +46,7 @@ exampleShelleyGenesis =
     , sgMaxLovelaceSupply = 71
     , sgProtocolParams =
         emptyPParams
-          & ppDL .~ unsafeBoundRational 1.9e-2
+          & ppDL .~ unsafeBoundedRational 1.9e-2
           & ppMaxBBSizeL .~ 65535
           & ppMaxBHSizeL .~ 65535
     , sgGenDelegs =
