@@ -11,6 +11,7 @@ where
 
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Genesis qualified as Genesis
 import Cardano.Api.Ledger qualified as Ledger
 import Cardano.Api.Plutus qualified as Script
@@ -23,15 +24,21 @@ import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
 import Control.Monad.Identity (Identity)
+import Data.Bifunctor (first)
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
+import Data.Text.Encoding qualified as Text
 import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time
 import Lens.Micro ((&))
 
-import Hedgehog (Property)
+import Test.Gen.Cardano.Api.Typed (genTx)
+
+import Hedgehog (Gen, Property)
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Internal.Property qualified as H
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
@@ -52,6 +59,12 @@ tests =
     , testProperty
         "Check two methods of balancing transaction are equivalent"
         prop_balance_transaction_two_ways
+    , testProperty
+        "Roundtrip SerialiseAsRawBytes UnsignedTx"
+        prop_roundtrip_serialise_as_raw_bytes_unsigned_tx
+    , testProperty
+        "Roundtrip SerialiseAsRawBytes SignedTx"
+        prop_roundtrip_serialise_as_raw_bytes_signed_tx
     ]
 
 prop_created_transaction_with_both_apis_are_the_same :: Property
@@ -280,3 +293,38 @@ exampleSigningKey =
   H.evalEither $
     Api.deserialiseFromBech32
       "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms"
+
+expEraGen :: Gen (Exp.Some Exp.Era)
+expEraGen =
+  let eras :: [Exp.Some Exp.Era] = [minBound .. maxBound]
+   in Gen.element eras
+
+expTxForEraGen :: Exp.Era era -> Gen (Ledger.Tx (Exp.LedgerEra era))
+expTxForEraGen era = do
+  Exp.obtainCommonConstraints era $ do
+    ShelleyTx _ tx <- genTx (convert era)
+    return tx
+
+prop_roundtrip_serialise_as_raw_bytes_unsigned_tx :: Property
+prop_roundtrip_serialise_as_raw_bytes_unsigned_tx = H.withTests (H.TestLimit 20) $ H.property $ do
+  Exp.Some era <- H.forAll expEraGen
+  Exp.obtainCommonConstraints era $ do
+    tx <- H.forAll $ expTxForEraGen era
+    let signedTx = Exp.UnsignedTx tx
+    signedTx H.=== signedTx
+    H.tripping
+      signedTx
+      (Text.decodeUtf8 . Api.serialiseToRawBytesHex)
+      (first show . Api.deserialiseFromRawBytesHex . Text.encodeUtf8)
+
+prop_roundtrip_serialise_as_raw_bytes_signed_tx :: Property
+prop_roundtrip_serialise_as_raw_bytes_signed_tx = H.withTests (H.TestLimit 20) $ H.property $ do
+  Exp.Some era <- H.forAll expEraGen
+  Exp.obtainCommonConstraints era $ do
+    tx <- H.forAll $ expTxForEraGen era
+    let signedTx = Exp.SignedTx tx
+    signedTx H.=== signedTx
+    H.tripping
+      signedTx
+      (Text.decodeUtf8 . Api.serialiseToRawBytesHex)
+      (first show . Api.deserialiseFromRawBytesHex . Text.encodeUtf8)
