@@ -209,6 +209,8 @@ instance
       :: Ledger.DecoderError -> SerialiseAsRawBytesError
     wrapError = SerialiseAsRawBytesError . displayException
 
+deriving instance Eq (UnsignedTx era)
+
 deriving instance Show (UnsignedTx era)
 
 newtype UnsignedTxError
@@ -337,6 +339,8 @@ makeKeyWitness era (UnsignedTx unsignedTx) wsk =
 -- | A transaction that has been witnesssed
 data SignedTx era
   = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx (LedgerEra era))
+
+deriving instance Eq (SignedTx era)
 
 deriving instance Show (SignedTx era)
 
