@@ -19,8 +19,6 @@ import GHC.Stack
 
 import Test.Gen.Cardano.Api.Typed ()
 
-import Test.Cardano.Api.Orphans ()
-
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
 import Hedgehog.Gen.QuickCheck qualified as Q

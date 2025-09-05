@@ -1,33 +1,30 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Test.Gen.Cardano.Api.Era
   ( shelleyBasedEraTestConstraints
-  , shelleyToBabbageEraTestConstraints
   , conwayEraOnwardsTestConstraints
   )
 where
 
 import Cardano.Api hiding (txIns)
 
-import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
 
-import Data.Functor.Identity qualified as Ledger
+import Data.Maybe.Strict
 
-import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Gen.Cardano.Api.Orphans ()
 
-import Test.QuickCheck (Arbitrary (..))
+import Test.QuickCheck
 
 shelleyBasedEraTestConstraints
   :: ()
   => ShelleyBasedEra era
   -> ( ( Ledger.Era (ShelleyLedgerEra era)
-       , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (ShelleyLedgerEra era))
-       , Arbitrary (Ledger.PParamsHKD Ledger.Identity (ShelleyLedgerEra era))
+       , Arbitrary (Ledger.PParams (ShelleyLedgerEra era))
        )
        => a
      )
@@ -40,29 +37,11 @@ shelleyBasedEraTestConstraints = \case
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway -> id
 
-shelleyToBabbageEraTestConstraints
-  :: ()
-  => ShelleyToBabbageEra era
-  -> ( ( Ledger.Era (ShelleyLedgerEra era)
-       , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (ShelleyLedgerEra era))
-       , Arbitrary (Ledger.PParamsHKD Ledger.Identity (ShelleyLedgerEra era))
-       )
-       => a
-     )
-  -> a
-shelleyToBabbageEraTestConstraints = \case
-  ShelleyToBabbageEraShelley -> id
-  ShelleyToBabbageEraAllegra -> id
-  ShelleyToBabbageEraMary -> id
-  ShelleyToBabbageEraAlonzo -> id
-  ShelleyToBabbageEraBabbage -> id
-
 conwayEraOnwardsTestConstraints
   :: ()
   => ConwayEraOnwards era
   -> ( ( Ledger.Era (ShelleyLedgerEra era)
-       , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (ShelleyLedgerEra era))
-       , Arbitrary (Ledger.PParamsHKD Ledger.Identity (ShelleyLedgerEra era))
+       , Arbitrary (Ledger.PParamsHKD StrictMaybe (ShelleyLedgerEra era))
        )
        => a
      )

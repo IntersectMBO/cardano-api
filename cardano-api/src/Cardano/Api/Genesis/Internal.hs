@@ -39,9 +39,19 @@ module Cardano.Api.Genesis.Internal
 where
 
 import Cardano.Api.Era.Internal.Core
+  ( CardanoEra
+  , forEraMaybeEon
+  , monoidForEraInEon
+  )
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.IO
 import Cardano.Api.Monad.Error
+  ( ExceptT
+  , MonadError (throwError)
+  , MonadTransError
+  , liftEither
+  , modifyError
+  )
 
 import Cardano.Chain.Genesis qualified
 import Cardano.Crypto.Hash.Blake2b qualified
@@ -67,7 +77,13 @@ import Cardano.Ledger.Shelley.Genesis
   , emptyGenesisStaking
   )
 import Cardano.Ledger.Shelley.Genesis qualified as Ledger
+import PlutusCore.Evaluation.Machine.BuiltinCostModel
+import PlutusCore.Evaluation.Machine.CostModelInterface
+import PlutusCore.Evaluation.Machine.ExBudgetingDefaults
+import PlutusCore.Evaluation.Machine.MachineParameters
+import PlutusLedgerApi.Common (IsParamName, readParamName)
 import PlutusLedgerApi.V2 qualified as V2
+import PlutusLedgerApi.V3 qualified as V3
 
 import Control.Monad
 import Control.Monad.Trans.Fail.String (errorFail)
@@ -75,12 +91,13 @@ import Data.Aeson qualified as A
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Default.Class qualified as DefaultClass
-import Data.Functor.Identity (Identity)
+import Data.Functor.Identity
 import Data.Int (Int64)
 import Data.List (sortOn)
 import Data.ListMap qualified as ListMap
 import Data.Map (Map)
 import Data.Map.Strict qualified as M
+import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Ratio
 import Data.Set qualified as S
@@ -93,8 +110,8 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Lens.Micro.Aeson qualified as AL
 
-import Test.Cardano.Ledger.Core.Rational ((%!))
-import Test.Cardano.Ledger.Plutus (testingCostModelV3)
+import Barbies (bmap)
+import UntypedPlutusCore.Evaluation.Machine.Cek.CekMachineCosts
 
 data ShelleyConfig = ShelleyConfig
   { scConfig :: !Ledger.ShelleyGenesis
@@ -242,6 +259,84 @@ conwayGenesisDefaults =
         , dvtCommitteeNormal = 1 %! 2
         , dvtCommitteeNoConfidence = 0 %! 1
         }
+    testingCostModelV3 :: HasCallStack => L.CostModel
+    testingCostModelV3 = mkCostModel' PlutusV3 $ snd <$> costModelParamsForTesting
+
+    mkCostModel' :: (Integral i, Show i, HasCallStack) => Language -> [i] -> L.CostModel
+    mkCostModel' lang params =
+      case L.mkCostModel lang $ map fromIntegral params of
+        Left err ->
+          error $
+            "CostModel parameters are not well-formed for "
+              ++ show lang
+              ++ ": "
+              ++ show err
+              ++ "\n"
+              ++ show params
+        Right costModel -> costModel
+
+    costModelParamsForTesting :: HasCallStack => [(V3.ParamName, Int64)]
+    costModelParamsForTesting =
+      Map.toList $
+        fromJust $
+          extractCostModelParamsLedgerOrder mCostModel
+
+    mCostModel :: MCostModel
+    mCostModel =
+      -- nothing to clear because v4 does not exist (yet).
+      toMCostModel defaultCekCostModelForTesting & builtinCostModel %~ clearBuiltinCostModel'
+
+    -- \*** FIXME!!! ***
+    -- This is temporary to get the tests to pass
+    clearBuiltinCostModel' :: m ~ MBuiltinCostModel => m -> m
+    clearBuiltinCostModel' r =
+      r
+        { -- , paramIntegerToByteString = mempty -- Required for V2
+          -- , paramByteStringToInteger = mempty -- Required for V2
+          paramExpModInteger = mempty
+        , paramDropList = mempty
+        , paramLengthOfArray = mempty
+        , paramListToArray = mempty
+        , paramIndexArray = mempty
+        }
+
+    -- A helper function to lift to a "full" `MCostModel`, by mapping *all* of its fields to `Just`.
+    -- The fields can be later on cleared, by assigning them to `Nothing`.
+    toMCostModel
+      :: CostModel CekMachineCosts BuiltinCostModel
+      -> MCostModel
+    toMCostModel cm =
+      cm
+        & machineCostModel
+          %~ bmap (Just . runIdentity)
+        & builtinCostModel
+          %~ bmap (MCostingFun . Just)
+
+    extractCostModelParamsLedgerOrder
+      :: (IsParamName p, Ord p)
+      => MCostModel
+      -> Maybe (Map.Map p Int64)
+    extractCostModelParamsLedgerOrder =
+      extractInAlphaOrder
+        >=> toLedgerOrder
+     where
+      extractInAlphaOrder = extractCostModelParams
+      toLedgerOrder = mapKeysM readParamName
+
+      mapKeysM :: (Monad m, Ord k2) => (k1 -> m k2) -> Map.Map k1 a -> m (Map.Map k2 a)
+      mapKeysM = viaListM . mapM . firstM
+
+      viaListM op = fmap Map.fromList . op . Map.toList
+      firstM f (k, v) = (,v) <$> f k
+
+type MCostModel = CostModel MCekMachineCosts MBuiltinCostModel
+
+type MCekMachineCosts = CekMachineCostsBase Maybe
+
+type MBuiltinCostModel = BuiltinCostModelBase MCostingFun
+
+(%!) :: forall r. (HasCallStack, Typeable r, BoundedRational r) => Integer -> Integer -> r
+n %! d = unsafeBoundedRational $ n Data.Ratio.% d
 
 -- | Decode Alonzo genesis in an optionally era sensitive way.
 --
