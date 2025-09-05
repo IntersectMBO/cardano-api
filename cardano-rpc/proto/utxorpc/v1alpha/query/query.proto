@@ -22,7 +22,7 @@ message TxoRef {
 }
 
 message TxoRefArray {
-  // TODO u5c: changed to repeated
+  // TODO u5c: changed to repeated - https://github.com/utxorpc/spec/pull/167
   repeated TxoRef items = 1;
 }
 
@@ -44,11 +44,6 @@ message ReadParamsResponse {
   ChainPoint ledger_tip = 2; // The chain point that represent the ledger current position.
 }
 
-// TODO u5c: new type
-message AddressArray {
-  repeated bytes items = 1;
-}
-
 // An evenlope that holds an UTxO from any of compatible chains
 message AnyUtxoData {
   bytes native_bytes = 1; // Original bytes as defined by the chain
@@ -60,10 +55,10 @@ message AnyUtxoData {
 
 // Request to get specific UTxOs
 message ReadUtxosRequest {
-  // TODO u5c: new oneof
+  // TODO u5c: new oneof - https://github.com/utxorpc/spec/pull/167
   oneof query_args {
     TxoRefArray txoRefs = 1; // Array of Tx Output references
-    AddressArray addresses = 2; // Array of addresses
+    utxorpc.v1alpha.cardano.AddressArray cardano_addresses = 2; // Array of addresses
   }
   google.protobuf.FieldMask field_mask = 3; // Field mask to selectively return fields.
 }

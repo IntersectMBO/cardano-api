@@ -65,7 +65,7 @@ readUtxosMethod req = do
     if
       | Just txoRefs <- req ^. #maybe'txoRefs ->
           QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (txoRefs ^. #items)
-      | Just addressesProto <- req ^. #maybe'addresses ->
+      | Just addressesProto <- req ^. #maybe'cardanoAddresses ->
           QueryUTxOByAddress . fromList <$> mapM readAddress (addressesProto ^. #items)
       | otherwise -> pure QueryUTxOWhole
 

@@ -14,7 +14,7 @@ message SubmitTxRequest {
   repeated AnyChainTx tx = 1; // List of transactions to submit.
 }
 
-// TODO u5c: new type
+// TODO u5c: new type - https://github.com/utxorpc/spec/pull/163
 message TxSubmitResult {
   oneof result {
     bytes ref = 1; // Transaction references.
@@ -23,7 +23,7 @@ message TxSubmitResult {
 }
 
 // Response containing references to the submitted transactions.
-// TODO u5c: changed type
+// TODO u5c: changed type - https://github.com/utxorpc/spec/pull/163
 message SubmitTxResponse {
   repeated TxSubmitResult results = 1; // List of either transaction references or error messages.
 }
