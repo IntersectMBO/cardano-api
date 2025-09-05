@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -89,6 +90,28 @@ instance Inject (ReferenceScript era) (Proto UtxoRpc.Script) where
       PlutusScript PlutusScriptV4 ps ->
         defMessage & #plutusV4 .~ serialiseToRawBytes ps
 
+instance Inject ScriptData (Proto UtxoRpc.PlutusData) where
+  inject = \case
+    ScriptDataBytes bs ->
+      defMessage & #boundedBytes .~ bs
+    ScriptDataNumber int ->
+      defMessage & #bigInt . #int .~ fromIntegral int
+    ScriptDataList sds ->
+      defMessage & #array . #items .~ map inject sds
+    ScriptDataMap elements -> do
+      let pairs =
+            elements <&> \(k, v) ->
+              defMessage
+                & #key .~ inject k
+                & #value .~ inject v
+      defMessage & #map . #pairs .~ pairs
+    ScriptDataConstructor tag args -> do
+      let constr =
+            defMessage
+              & #tag .~ fromIntegral tag
+              & #fields .~ map inject args
+      defMessage & #constr .~ constr
+
 instance IsCardanoEra era => Inject (UTxO era) [Proto UtxoRpc.AnyUtxoData] where
   inject utxo =
     toList utxo <&> \(txIn, TxOut addressInEra txOutValue datum script) -> do
@@ -112,10 +135,12 @@ instance IsCardanoEra era => Inject (UTxO era) [Proto UtxoRpc.AnyUtxoData] where
             TxOutDatumHash _ scriptDataHash ->
               defMessage
                 & #hash .~ serialiseToRawBytes scriptDataHash
+                & #maybe'payload .~ Nothing -- we don't have it
                 & #originalCbor .~ mempty -- we don't have it
             TxOutDatumInline _ hashableScriptData ->
               defMessage
                 & #hash .~ serialiseToRawBytes (hashScriptDataBytes hashableScriptData)
+                & #payload .~ inject (getScriptData hashableScriptData)
                 & #originalCbor .~ getOriginalScriptDataBytes hashableScriptData
 
           protoTxOut =
