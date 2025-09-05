@@ -207,4 +207,3 @@ declare interface CardanoApi {
      */
     restoreTestnetPaymentWalletFromSigningKeyBech32(networkMagic: number, signingKeyBech32: string): Promise<Wallet>;
 }
-

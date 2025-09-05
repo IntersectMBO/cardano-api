@@ -16,12 +16,15 @@ module Cardano.Wasm.Internal.Api.TypeScriptDefs where
 import Data.List.NonEmpty qualified as LNE
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as TLB
+import Data.Text.Lazy.IO qualified as TL
+import System.FilePath ((</>))
 
--- | Prints the TypeScript declaration file to stdout.
-printTypeScriptFile :: TypeScriptFile -> IO ()
-printTypeScriptFile tsFile = do
+-- | Output the TypeScript declaration files to the specified directory.
+writeTypeScriptToDir :: FilePath -> TypeScriptFile -> IO ()
+writeTypeScriptToDir dir tsFile = do
   let content = buildTypeScriptFile tsFile
-  putStrLn $ TL.unpack $ TLB.toLazyText content
+      filePath = dir </> typeScriptFileName tsFile
+  TL.writeFile filePath (TLB.toLazyText content)
 
 -- | Creates a builder for a JavaScript-style multiline comment
 -- with the specified indentation level (in spaces) and each line
