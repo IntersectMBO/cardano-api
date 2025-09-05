@@ -125,6 +125,7 @@ module Test.Gen.Cardano.Api.Typed
   , genLedgerValueForTxOut
   , genLedgerMultiAssetValue
   , genWitnesses
+  , genWitnessedTxIn
   , genWitnessNetworkIdOrByronAddress
   , genRational
   , genGovernancePoll
@@ -1441,6 +1442,10 @@ genPlutusScriptWitness = do
 
 genPlutusScriptDatum :: Gen (Exp.PlutusScriptDatum lang purpose)
 genPlutusScriptDatum = return Exp.NoScriptDatum
+
+genWitnessedTxIn
+  :: ShelleyBasedEra era -> Gen [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+genWitnessedTxIn _ = return []
 
 -- | This generator does not generate a valid witness - just a random one.
 genScriptWitnessForStake :: ShelleyBasedEra era -> Gen (Api.ScriptWitness WitCtxStake era)
