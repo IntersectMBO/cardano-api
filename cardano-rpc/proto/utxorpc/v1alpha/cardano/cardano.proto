@@ -5,7 +5,7 @@ package utxorpc.v1alpha.cardano;
 // Represents a transaction output in the Cardano blockchain.
 message TxOutput {
   bytes address = 1; // Address receiving the output.
-  uint64 coin = 2; // Amount of ADA in the output.
+  uint64 coin = 2 [jstype = JS_STRING]; // Amount of ADA in the output.
   repeated MultiAsset assets = 3; // Additional native (non-ADA) assets in the output.
   Datum datum = 4; // Plutus data associated with the output.
   Script script = 5; // Script associated with the output.
