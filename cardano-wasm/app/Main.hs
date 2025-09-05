@@ -2,7 +2,24 @@ module Main where
 
 import Cardano.Wasm.Internal.Api.Info (apiInfo)
 import Cardano.Wasm.Internal.Api.InfoToTypeScript (apiInfoToTypeScriptFile)
-import Cardano.Wasm.Internal.Api.TypeScriptDefs (printTypeScriptFile)
+import Cardano.Wasm.Internal.Api.TypeScriptDefs (writeTypeScriptToDir)
+
+import Options.Applicative
+
+newtype CmdArgs
+  = CmdArgs {outputDir :: String}
+
+parser :: Parser CmdArgs
+parser =
+  CmdArgs
+    <$> strOption
+      ( long "output-dir"
+          <> short 'o'
+          <> metavar "OUTPUT_DIR"
+          <> help "Output directory for the TypeScript declaration files (it must exist)"
+      )
 
 main :: IO ()
-main = printTypeScriptFile (apiInfoToTypeScriptFile apiInfo)
+main = do
+  cmdArgs <- execParser (info (parser <**> helper) fullDesc)
+  writeTypeScriptToDir (outputDir cmdArgs) (apiInfoToTypeScriptFile apiInfo)

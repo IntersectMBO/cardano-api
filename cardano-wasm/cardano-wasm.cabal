@@ -63,7 +63,9 @@ executable cardano-wasm
     cardano-strict-containers,
     containers,
     exceptions,
+    filepath,
     microlens,
+    optparse-applicative,
     text,
 
   if arch(wasm32)
@@ -80,10 +82,13 @@ test-suite cardano-wasm-golden
   if !arch(wasm32)
     import: project-config
     build-depends:
+      filepath,
       hedgehog >=1.1,
       hedgehog-extras ^>=0.8,
+      monad-control,
       tasty,
       tasty-hedgehog,
+      temporary,
 
     ghc-options:
       -threaded
