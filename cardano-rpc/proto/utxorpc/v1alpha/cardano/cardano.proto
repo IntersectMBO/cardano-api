@@ -11,6 +11,11 @@ message TxOutput {
   Script script = 5; // Script associated with the output.
 }
 
+// TODO u5c: new type - https://github.com/utxorpc/spec/pull/167
+message AddressArray {
+  repeated bytes items = 1;
+}
+
 // TODO u5c: replaced plutus_data with just bytes
 message Datum {
   bytes hash = 1; // Hash of this datum as seen on-chain
