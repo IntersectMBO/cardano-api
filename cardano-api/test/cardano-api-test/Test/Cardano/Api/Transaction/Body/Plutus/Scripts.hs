@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Api.Transaction.Body.Plutus.Scripts
@@ -10,13 +11,18 @@ where
 import Cardano.Api (AlonzoEraOnwards (..))
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental
+import Cardano.Api.Experimental.Plutus
+import Cardano.Api.Experimental.Tx
 import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Tx (setTxIns, setTxMintValue, setTxProposalProcedures)
 
+import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Conway qualified as L
 
 import Prelude
 
+import Data.Function
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
 
@@ -24,12 +30,15 @@ import Test.Gen.Cardano.Api.Typed
   ( genIndexedPlutusScriptWitness
   , genMintWitnessable
   , genSimpleScriptMintWitness
+  , genTxBodyContent
   , genWitnessable
+  , genWitnessedTxIn
   )
 
 import Test.Cardano.Api.Orphans ()
 
 import Hedgehog
+import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Test.Tasty (TestTree, testGroup)
@@ -115,6 +124,76 @@ prop_toAnyWitness =
 
     finalLength === length (extractSimpleScripts res) + length (extractPlutusScripts res)
 
+-- | Confirm `extractAllIndexedPlutusScriptWitnesses` extracts all expected script
+-- witnesses from a given transaction.
+
+{-
+1. Generate a TxBodyContent with at least one script witnessed tx input
+2. Use extractAllIndexedPlutusScriptWitnesses
+3. Convert to a transaction
+4. Use ledger lenses to extract the script witnesses
+5. Compare
+
+-}
+
+prop_extractAllIndexedPlutusScriptWitnesses :: Property
+prop_extractAllIndexedPlutusScriptWitnesses =
+  property $ do
+    -- TODO: Need to insert this into tx body
+    plutusScriptwitnessedTxIns <- forAll $ genWitnessedTxIn Api.ShelleyBasedEraConway
+
+    txBodyContent <- forAll $ genTxBodyContent Api.ShelleyBasedEraConway
+    let txBodyContentWithPlutusWitnesses =
+          plutusScriptwitnessedTxIns `setTxIns` txBodyContent
+            & setTxProposalProcedures Nothing
+            & setTxMintValue mempty
+    indexedPlutusScriptWitnesses <-
+      evalEither $ extractAllIndexedPlutusScriptWitnesses ConwayEra txBodyContentWithPlutusWitnesses
+
+    -- Create required type for createIndexedPlutusScriptWitnesses
+    allGeneratedWitnesses <-
+      evalEither $ toWitnessable Api.AlonzoEraOnwardsConway plutusScriptwitnessedTxIns
+
+    let allGeneratedScriptWitnesses = createIndexedPlutusScriptWitnesses allGeneratedWitnesses
+    H.note_ "All generated script witnesses"
+    H.noteShow_ allGeneratedScriptWitnesses
+    H.note_ "Extracted indexed plutus script witnesses"
+    H.noteShow_ indexedPlutusScriptWitnesses
+    length allGeneratedScriptWitnesses === length indexedPlutusScriptWitnesses
+
+-- txBody <-
+--   evalEither $ Api.createTransactionBody Api.ShelleyBasedEraConway txBodyContentWithPlutusWitnesses
+-- UnsignedTx t <- evalEither $ makeUnsignedTx ConwayEra txBodyContentWithPlutusWitnesses
+--
+-- -- Generated redeemer pointer map
+-- let generatedRedeemerPtrMap = constructRedeeemerPointerMap Api.AlonzoEraOnwardsConway indexedPlutusScriptWitnesses
+--
+-- -- Redeemer pointer map from transaction
+-- let txRedeemerPtrMap = constructRedeeemerPointerMap Api.AlonzoEraOnwardsConway indexedPlutusScriptWitnesses
+-- undefined
+
+toWitnessable
+  :: forall era
+   . Api.AlonzoEraOnwards era
+  -> [(Api.TxIn, Api.BuildTxWith Api.BuildTx (Api.Witness Api.WitCtxTxIn era))]
+  -> Either
+       CBOR.DecoderError
+       [ ( Witnessable TxInItem (Api.ShelleyLedgerEra era)
+         , AnyWitness (Api.ShelleyLedgerEra era)
+         )
+       ]
+toWitnessable aeon plutusScriptwitnessedTxIns = do
+  let first
+        :: [ ( Witnessable TxInItem (Api.ShelleyLedgerEra era)
+             , Api.BuildTxWith Api.BuildTx (Api.Witness Api.WitCtxTxIn era)
+             )
+           ]
+      first =
+        Api.alonzoEraOnwardsConstraints aeon [(WitTxIn txin, b) | (txin, b) <- plutusScriptwitnessedTxIns]
+  legacyWitnessConversion
+    aeon
+    first
+
 -- | We exclude reference scripts because they do not end up in the resulting transaction.
 isReferenceScript :: Api.Witness witctx era -> Bool
 isReferenceScript (Api.ScriptWitness _ (Api.SimpleScriptWitness _ (Api.SReferenceScript{}))) = True
@@ -135,6 +214,9 @@ tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Transaction.Body.Plutus.Scripts"
-    [ testProperty "prop_getAnyWitnessRedeemerPointerMap" prop_getAnyWitnessRedeemerPointerMap
+    [ testProperty
+        "prop_extractAllIndexedPlutusScriptWitnesses"
+        prop_extractAllIndexedPlutusScriptWitnesses
+    , testProperty "prop_getAnyWitnessRedeemerPointerMap" prop_getAnyWitnessRedeemerPointerMap
     , testProperty "prop_toAnyWitness" prop_toAnyWitness
     ]

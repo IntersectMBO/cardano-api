@@ -136,6 +136,7 @@ module Cardano.Api.Experimental.Tx
   , TxScriptWitnessRequirements (..)
 
     -- ** Collecting plutus script witness related transaction requirements.
+  , extractAllIndexedPlutusScriptWitnesses
   , getTxScriptWitnessesRequirements
   , obtainMonoidConstraint
 
@@ -151,6 +152,7 @@ import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Feature
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
+import Cardano.Api.Experimental.Tx.Internal.Body
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)
 import Cardano.Api.Ledger.Internal.Reexport (StrictMaybe (..), maybeToStrictMaybe)

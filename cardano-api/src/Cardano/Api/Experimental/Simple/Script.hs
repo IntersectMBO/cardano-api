@@ -18,7 +18,9 @@ data SimpleScript era where
 
 deriving instance Show (SimpleScript era)
 
+deriving instance Eq (SimpleScript era)
+
 data SimpleScriptOrReferenceInput era
   = SScript (SimpleScript era)
   | SReferenceScript TxIn
-  deriving Show
+  deriving (Show, Eq)
