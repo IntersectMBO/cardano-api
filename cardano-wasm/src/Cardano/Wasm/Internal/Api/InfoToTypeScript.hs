@@ -1,5 +1,6 @@
 module Cardano.Wasm.Internal.Api.InfoToTypeScript where
 
+import Cardano.Wasm.Internal.Api.Info (tsTypeAsString)
 import Cardano.Wasm.Internal.Api.Info qualified as Info
 import Cardano.Wasm.Internal.Api.TypeScriptDefs qualified as TypeScript
 
@@ -63,10 +64,10 @@ paramInfoToFunctionParam :: Info.ParamInfo -> TypeScript.FunctionParam
 paramInfoToFunctionParam p =
   TypeScript.FunctionParam
     { TypeScript.paramName = Info.paramName p
-    , TypeScript.paramType = Info.paramType p
+    , TypeScript.paramType = tsTypeAsString $ Info.paramType p
     }
 
 methodReturnTypeToString :: String -> Info.MethodReturnTypeInfo -> String
 methodReturnTypeToString selfTypeName Info.Fluent = selfTypeName
 methodReturnTypeToString _ (Info.NewObject objTypeName) = "Promise<" <> objTypeName <> ">"
-methodReturnTypeToString _ (Info.OtherType typeName) = "Promise<" <> typeName <> ">"
+methodReturnTypeToString _ (Info.OtherType typeName) = "Promise<" <> tsTypeAsString typeName <> ">"
