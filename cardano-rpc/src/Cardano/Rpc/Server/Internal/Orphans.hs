@@ -12,12 +12,12 @@
 module Cardano.Rpc.Server.Internal.Orphans () where
 
 import Cardano.Api.Address
+import Cardano.Api.Block (SlotNo (..))
 import Cardano.Api.Era
 import Cardano.Api.Error
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus
 import Cardano.Api.Pretty
-import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.Raw
 import Cardano.Api.Tx
 import Cardano.Api.Value
@@ -79,8 +79,8 @@ instance Inject (ReferenceScript era) (Proto UtxoRpc.Script) where
   inject ReferenceScriptNone = defMessage
   inject (ReferenceScript _ (ScriptInAnyLang _ script)) =
     case script of
-      SimpleScript _ ->
-        defMessage & #native .~ serialiseToCBOR script
+      SimpleScript ss ->
+        defMessage & #native .~ inject ss
       PlutusScript PlutusScriptV1 ps ->
         defMessage & #plutusV1 .~ serialiseToRawBytes ps
       PlutusScript PlutusScriptV2 ps ->
@@ -89,6 +89,25 @@ instance Inject (ReferenceScript era) (Proto UtxoRpc.Script) where
         defMessage & #plutusV3 .~ serialiseToRawBytes ps
       PlutusScript PlutusScriptV4 ps ->
         defMessage & #plutusV4 .~ serialiseToRawBytes ps
+
+instance Inject SimpleScript (Proto UtxoRpc.NativeScript) where
+  inject = \case
+    RequireSignature paymentKeyHash ->
+      defMessage & #scriptPubkey .~ serialiseToRawBytes paymentKeyHash
+    RequireTimeBefore (SlotNo slotNo) ->
+      defMessage & #invalidHereafter .~ slotNo
+    RequireTimeAfter (SlotNo slotNo) ->
+      defMessage & #invalidBefore .~ slotNo
+    RequireAllOf scripts ->
+      defMessage & #scriptAll . #items .~ map inject scripts
+    RequireAnyOf scripts ->
+      defMessage & #scriptAny . #items .~ map inject scripts
+    RequireMOf k scripts -> do
+      let nScriptsOf =
+            defMessage
+              & #k .~ fromIntegral k
+              & #scripts .~ map inject scripts
+      defMessage & #scriptNOfK .~ nScriptsOf
 
 instance Inject ScriptData (Proto UtxoRpc.PlutusData) where
   inject = \case
@@ -122,7 +141,7 @@ instance IsCardanoEra era => Inject (UTxO era) [Proto UtxoRpc.AnyUtxoData] where
                       toList policyAssets <&> \(assetName, Quantity qty) -> do
                         defMessage
                           & #name .~ serialiseToRawBytes assetName
-                          -- we don't have access to info it the coin was minted in the transaction,
+                          -- we don't have access to info if the coin was minted in the transaction,
                           -- maybe we should add it later
                           & #maybe'mintCoin .~ Nothing
                           & #outputCoin .~ fromIntegral qty

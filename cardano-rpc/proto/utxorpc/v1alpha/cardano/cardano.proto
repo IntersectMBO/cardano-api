@@ -38,6 +38,29 @@ message MultiAsset {
   repeated Asset assets = 2; // List of custom assets.
 }
 
+// Represents a native script in Cardano.
+message NativeScript {
+  oneof native_script {
+    bytes script_pubkey = 1; // Script based on an address key hash.
+    NativeScriptList script_all = 2; // Script that requires all nested scripts to be satisfied.
+    NativeScriptList script_any = 3; // Script that requires any of the nested scripts to be satisfied.
+    ScriptNOfK script_n_of_k = 4; // Script that requires k out of n nested scripts to be satisfied.
+    uint64 invalid_before = 5; // Slot number before which the script is invalid.
+    uint64 invalid_hereafter = 6; // Slot number after which the script is invalid.
+  }
+}
+
+// Represents a list of native scripts.
+message NativeScriptList {
+  repeated NativeScript items = 1; // List of native scripts.
+}
+
+// Represents a "k out of n" native script.
+message ScriptNOfK {
+  uint32 k = 1; // The number of required satisfied scripts.
+  repeated NativeScript scripts = 2; // List of native scripts.
+}
+
 // Represents a constructor for Plutus data in Cardano.
 message Constr {
   uint32 tag = 1;
@@ -87,7 +110,7 @@ message PlutusDataArray {
 // TODO u5c: removed native script representation, added plutus_v4
 message Script {
   oneof script {
-    bytes native = 1; // Native script.
+    NativeScript native = 1; // Native script.
     bytes plutus_v1 = 2; // Plutus V1 script.
     bytes plutus_v2 = 3; // Plutus V2 script.
     bytes plutus_v3 = 4; // Plutus V3 script.
