@@ -85,10 +85,8 @@ test-suite cardano-wasm-golden
       filepath,
       hedgehog >=1.1,
       hedgehog-extras ^>=0.8,
-      monad-control,
       tasty,
       tasty-hedgehog,
-      temporary,
 
     ghc-options:
       -threaded
