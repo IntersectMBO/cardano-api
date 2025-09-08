@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -11,12 +12,12 @@
 module Cardano.Rpc.Server.Internal.Orphans () where
 
 import Cardano.Api.Address
+import Cardano.Api.Block (SlotNo (..))
 import Cardano.Api.Era
 import Cardano.Api.Error
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus
 import Cardano.Api.Pretty
-import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.Raw
 import Cardano.Api.Tx
 import Cardano.Api.Value
@@ -78,14 +79,55 @@ instance Inject (ReferenceScript era) (Proto UtxoRpc.Script) where
   inject ReferenceScriptNone = defMessage
   inject (ReferenceScript _ (ScriptInAnyLang _ script)) =
     case script of
-      SimpleScript _ ->
-        defMessage & #native .~ serialiseToCBOR script
+      SimpleScript ss ->
+        defMessage & #native .~ inject ss
       PlutusScript PlutusScriptV1 ps ->
         defMessage & #plutusV1 .~ serialiseToRawBytes ps
       PlutusScript PlutusScriptV2 ps ->
         defMessage & #plutusV2 .~ serialiseToRawBytes ps
       PlutusScript PlutusScriptV3 ps ->
         defMessage & #plutusV3 .~ serialiseToRawBytes ps
+
+instance Inject SimpleScript (Proto UtxoRpc.NativeScript) where
+  inject = \case
+    RequireSignature paymentKeyHash ->
+      defMessage & #scriptPubkey .~ serialiseToRawBytes paymentKeyHash
+    RequireTimeBefore (SlotNo slotNo) ->
+      defMessage & #invalidHereafter .~ slotNo
+    RequireTimeAfter (SlotNo slotNo) ->
+      defMessage & #invalidBefore .~ slotNo
+    RequireAllOf scripts ->
+      defMessage & #scriptAll . #items .~ map inject scripts
+    RequireAnyOf scripts ->
+      defMessage & #scriptAny . #items .~ map inject scripts
+    RequireMOf k scripts -> do
+      let nScriptsOf =
+            defMessage
+              & #k .~ fromIntegral k
+              & #scripts .~ map inject scripts
+      defMessage & #scriptNOfK .~ nScriptsOf
+
+instance Inject ScriptData (Proto UtxoRpc.PlutusData) where
+  inject = \case
+    ScriptDataBytes bs ->
+      defMessage & #boundedBytes .~ bs
+    ScriptDataNumber int ->
+      defMessage & #bigInt . #int .~ fromIntegral int
+    ScriptDataList sds ->
+      defMessage & #array . #items .~ map inject sds
+    ScriptDataMap elements -> do
+      let pairs =
+            elements <&> \(k, v) ->
+              defMessage
+                & #key .~ inject k
+                & #value .~ inject v
+      defMessage & #map . #pairs .~ pairs
+    ScriptDataConstructor tag args -> do
+      let constr =
+            defMessage
+              & #tag .~ fromIntegral tag
+              & #fields .~ map inject args
+      defMessage & #constr .~ constr
 
 instance IsCardanoEra era => Inject (UTxO era) [Proto UtxoRpc.AnyUtxoData] where
   inject utxo =
@@ -97,7 +139,7 @@ instance IsCardanoEra era => Inject (UTxO era) [Proto UtxoRpc.AnyUtxoData] where
                       toList policyAssets <&> \(assetName, Quantity qty) -> do
                         defMessage
                           & #name .~ serialiseToRawBytes assetName
-                          -- we don't have access to info it the coin was minted in the transaction,
+                          -- we don't have access to info if the coin was minted in the transaction,
                           -- maybe we should add it later
                           & #maybe'mintCoin .~ Nothing
                           & #outputCoin .~ fromIntegral qty
@@ -110,10 +152,12 @@ instance IsCardanoEra era => Inject (UTxO era) [Proto UtxoRpc.AnyUtxoData] where
             TxOutDatumHash _ scriptDataHash ->
               defMessage
                 & #hash .~ serialiseToRawBytes scriptDataHash
+                & #maybe'payload .~ Nothing -- we don't have it
                 & #originalCbor .~ mempty -- we don't have it
             TxOutDatumInline _ hashableScriptData ->
               defMessage
                 & #hash .~ serialiseToRawBytes (hashScriptDataBytes hashableScriptData)
+                & #payload .~ inject (getScriptData hashableScriptData)
                 & #originalCbor .~ getOriginalScriptDataBytes hashableScriptData
 
           protoTxOut =
