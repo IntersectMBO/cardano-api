@@ -91,6 +91,10 @@ data DeclarationType
       -- ^ Name of the interface.
       [InterfaceContent]
       -- ^ Definitions of the interface.
+  | -- | Reference to import another TypeScript declaration file.
+    ImportDec
+      String
+      -- ^ Path to the TypeScript declaration file to import.
 
 -- | Creates a builder for a TypeScript declaration type and content.
 buildDeclarationType :: DeclarationType -> TLB.Builder
@@ -107,6 +111,10 @@ buildDeclarationType (InterfaceDec name properties) =
     <> " {"
     <> mconcat (map (\prop -> "\n" <> buildInterfaceContent prop <> "\n") properties)
     <> "}"
+buildDeclarationType (ImportDec path) =
+  "/// <reference path=\""
+    <> TLB.fromString path
+    <> "\" />"
 
 -- | Represents a function parameter in TypeScript.
 data FunctionParam = FunctionParam

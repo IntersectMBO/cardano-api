@@ -5,30 +5,49 @@ import Cardano.Wasm.Internal.Api.Info qualified as Info
 import Cardano.Wasm.Internal.Api.TypeScriptDefs qualified as TypeScript
 
 -- | Converts the Cardano API information to a TypeScript declaration file AST.
-apiInfoToTypeScriptFile :: Info.ApiInfo -> TypeScript.TypeScriptFile
+apiInfoToTypeScriptFile :: Info.ApiInfo -> [TypeScript.TypeScriptFile]
 apiInfoToTypeScriptFile apiInfo =
-  TypeScript.TypeScriptFile
-    { TypeScript.typeScriptFileName = "cardano-api.d.ts"
-    , TypeScript.typeScriptFileContent =
-        [ TypeScript.Declaration [] (TypeScript.ExportDec True "initialise")
-        , TypeScript.Declaration
-            [ Info.initialiseFunctionDoc apiInfo
-            , "@returns " <> Info.initialiseFunctionReturnDoc apiInfo
-            ]
-            ( TypeScript.FunctionDec $
-                TypeScript.FunctionHeader
-                  { TypeScript.functionName = "initialise"
-                  , TypeScript.functionParams = []
-                  , TypeScript.functionReturnType =
-                      "Promise<" <> Info.virtualObjectName (Info.mainObject apiInfo) <> ">"
-                  }
-            )
-        ]
-          <> virtualObjectInterfaces
-    }
+  ( TypeScript.TypeScriptFile
+      { TypeScript.typeScriptFileName = Info.dashCaseName (Info.mainObject apiInfo) <> ".d.ts"
+      , TypeScript.typeScriptFileContent =
+          map importDeclaration virtualObjectInterfaces
+            ++ [ TypeScript.Declaration [] (TypeScript.ExportDec True "initialise")
+               , TypeScript.Declaration
+                   [ Info.initialiseFunctionDoc apiInfo
+                   , "@returns " <> Info.initialiseFunctionReturnDoc apiInfo
+                   ]
+                   ( TypeScript.FunctionDec $
+                       TypeScript.FunctionHeader
+                         { TypeScript.functionName = "initialise"
+                         , TypeScript.functionParams = []
+                         , TypeScript.functionReturnType =
+                             "Promise<" <> Info.virtualObjectName (Info.mainObject apiInfo) <> ">"
+                         }
+                   )
+               ]
+            ++ [ virtualObjectInfoToInterfaceDec $ Info.mainObject apiInfo
+               ]
+      }
+  )
+    : virtualObjectInterfaces
  where
   virtualObjectInterfaces =
-    map virtualObjectInfoToInterfaceDec (Info.virtualObjects apiInfo <> [Info.mainObject apiInfo])
+    map virtualObjectInfoToTypeScriptFile (Info.virtualObjects apiInfo)
+
+importDeclaration :: TypeScript.TypeScriptFile -> TypeScript.Declaration
+importDeclaration file =
+  TypeScript.Declaration
+    { TypeScript.declarationComment = []
+    , TypeScript.declarationContent = TypeScript.ImportDec $ "./" <> TypeScript.typeScriptFileName file
+    }
+
+virtualObjectInfoToTypeScriptFile :: Info.VirtualObjectInfo -> TypeScript.TypeScriptFile
+virtualObjectInfoToTypeScriptFile vo =
+  TypeScript.TypeScriptFile
+    { TypeScript.typeScriptFileName = Info.dashCaseName vo <> ".d.ts"
+    , TypeScript.typeScriptFileContent =
+        [virtualObjectInfoToInterfaceDec vo]
+    }
 
 virtualObjectInfoToInterfaceDec :: Info.VirtualObjectInfo -> TypeScript.Declaration
 virtualObjectInfoToInterfaceDec vo =

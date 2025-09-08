@@ -24,4 +24,4 @@ parser =
 main :: IO ()
 main = do
   cmdArgs <- execParser (info (parser <**> helper) fullDesc)
-  writeTypeScriptToDir (outputDir cmdArgs) (apiInfoToTypeScriptFile apiInfo)
+  mapM_ (writeTypeScriptToDir (outputDir cmdArgs)) (apiInfoToTypeScriptFile apiInfo)

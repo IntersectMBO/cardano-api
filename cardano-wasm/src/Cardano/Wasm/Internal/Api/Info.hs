@@ -106,6 +106,8 @@ instance Aeson.ToJSON MethodInfo where
 data VirtualObjectInfo = VirtualObjectInfo
   { virtualObjectName :: String
   -- ^ Name of the virtual object.
+  , dashCaseName :: String
+  -- ^ A dash-case version of the virtual object name, used for typescript declaration file name.
   , virtualObjectDoc :: String
   -- ^ Documentation for the virtual object.
   , virtualObjectMethods :: [MethodInfo]
@@ -115,9 +117,10 @@ data VirtualObjectInfo = VirtualObjectInfo
 
 instance Aeson.ToJSON VirtualObjectInfo where
   toJSON :: VirtualObjectInfo -> Aeson.Value
-  toJSON (VirtualObjectInfo name doc methods) =
+  toJSON (VirtualObjectInfo name tsFileName doc methods) =
     Aeson.object
       [ "objectName" Aeson..= name
+      , "fileName" Aeson..= tsFileName
       , "doc" Aeson..= doc
       , "methods" Aeson..= methods
       ]
@@ -157,6 +160,7 @@ apiInfo =
       walletObj =
         VirtualObjectInfo
           { virtualObjectName = walletObjectName
+          , dashCaseName = "wallet"
           , virtualObjectDoc = "Represents a wallet."
           , virtualObjectMethods =
               [ MethodInfo
@@ -195,6 +199,7 @@ apiInfo =
       unsignedTxObj =
         VirtualObjectInfo
           { virtualObjectName = unsignedTxObjectName
+          , dashCaseName = "unsigned-tx"
           , virtualObjectDoc = "Represents an unsigned transaction."
           , virtualObjectMethods =
               [ MethodInfo
@@ -252,6 +257,7 @@ apiInfo =
       signedTxObj =
         VirtualObjectInfo
           { virtualObjectName = signedTxObjectName
+          , dashCaseName = "signed-tx"
           , virtualObjectDoc = "Represents a signed transaction."
           , virtualObjectMethods =
               [ MethodInfo
@@ -275,6 +281,7 @@ apiInfo =
       grpcConnection =
         VirtualObjectInfo
           { virtualObjectName = grpcConnectionName
+          , dashCaseName = "grpc-connection"
           , virtualObjectDoc = "Represents a gRPC-web client connection to a Cardano node."
           , virtualObjectMethods =
               [ MethodInfo
@@ -324,6 +331,7 @@ apiInfo =
         { mainObject =
             VirtualObjectInfo
               { virtualObjectName = "CardanoApi"
+              , dashCaseName = "cardano-api"
               , virtualObjectDoc = "The main Cardano API object with static methods."
               , virtualObjectMethods =
                   [ MethodInfo
