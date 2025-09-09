@@ -10,7 +10,6 @@ where
 import Cardano.Api.Address
 import Cardano.Api.Certificate.Internal
 import Cardano.Api.Era.Internal.Eon.Convert
-import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus
@@ -68,12 +67,8 @@ estimateBalancedTxBody
       Fee.estimateBalancedTxBody
         (convert w)
         txbodycontent
-        (ledgerPParamsShim w pparams)
+        pparams
         poolids
         stakeDelegDeposits
         drepDelegDeposits
         (Map.mapKeys (toScriptIndex (convert w)) exUnitsMap)
-
-ledgerPParamsShim
-  :: Era era -> L.PParams (LedgerEra era) -> L.PParams (ShelleyLedgerEra era)
-ledgerPParamsShim ConwayEra pp = pp
