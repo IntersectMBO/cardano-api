@@ -17,8 +17,10 @@ import Cardano.Api.Serialise.Json
 import Cardano.Api.Serialise.Raw
 
 import Data.Aeson.Types qualified as Aeson
+import Data.ByteString qualified as B
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (tyConName, typeRep, typeRepTyCon)
+import Numeric (showBin)
 
 -- | For use with @deriving via@, to provide 'ToCBOR' and 'FromCBOR' instances,
 -- based on the 'SerialiseAsRawBytes' instance.
@@ -38,6 +40,10 @@ instance SerialiseAsRawBytes a => FromCBOR (UsingRawBytes a) where
    where
     ttoken = proxyToAsType (Proxy :: Proxy a)
     tname = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
+
+-- | Prints the representation in binary format, quoted
+instance SerialiseAsRawBytes a => Show (UsingRawBytes a) where
+  showsPrec _ (UsingRawBytes x) = showChar '"' . mconcat (map showBin . B.unpack $ serialiseToRawBytes x) . showChar '"'
 
 -- | For use with @deriving via@, to provide instances for any\/all of 'Show',
 -- 'ToJSON', 'FromJSON', 'ToJSONKey', FromJSONKey' using a hex

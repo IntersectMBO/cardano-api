@@ -9,8 +9,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Rpc.Server.Internal.Orphans () where
+module Cardano.Rpc.Server.Internal.Orphans where
 
+import Cardano.Api (SerialiseAsCBOR (serialiseToCBOR), ToCBOR (..))
 import Cardano.Api.Address
 import Cardano.Api.Block (SlotNo (..))
 import Cardano.Api.Era
@@ -19,6 +20,7 @@ import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus
 import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Raw
+import Cardano.Api.Serialise.SerialiseUsing
 import Cardano.Api.Tx
 import Cardano.Api.Value
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
@@ -30,6 +32,7 @@ import Cardano.Ledger.Plutus qualified as L
 
 import RIO hiding (toList)
 
+import Data.ByteString qualified as B
 import Data.Default
 import Data.Map.Strict qualified as M
 import Data.ProtoLens (defMessage)
@@ -113,8 +116,15 @@ instance Inject ScriptData (Proto UtxoRpc.PlutusData) where
   inject = \case
     ScriptDataBytes bs ->
       defMessage & #boundedBytes .~ bs
-    ScriptDataNumber int ->
-      defMessage & #bigInt . #int .~ fromIntegral int
+    ScriptDataNumber int
+      | int <= fromIntegral (maxBound @Int64)
+          && int >= fromIntegral (minBound @Int64) ->
+          defMessage & #bigInt . #int .~ fromIntegral int
+      | int < 0 ->
+          -- https://www.rfc-editor.org/rfc/rfc8949.html#name-bignums see 3.4.3 for negative integers
+          defMessage & #bigInt . #bigNInt .~ serialiseToRawBytes (fromIntegral @_ @Natural (-1 - int))
+      | otherwise ->
+          defMessage & #bigInt . #bigUInt .~ serialiseToRawBytes (fromIntegral @_ @Natural int)
     ScriptDataList sds ->
       defMessage & #array . #items .~ map inject sds
     ScriptDataMap elements -> do

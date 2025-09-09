@@ -13,10 +13,12 @@ module Cardano.Api.HasTypeProxy
 where
 
 import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BSL
 import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word8)
+import Numeric.Natural (Natural)
 
 class Typeable t => HasTypeProxy t where
   -- | A family of singleton types used in this API to indicate which type to
@@ -35,9 +37,17 @@ instance HasTypeProxy Word16 where
   data AsType Word16 = AsWord16
   proxyToAsType _ = AsWord16
 
+instance HasTypeProxy Natural where
+  data AsType Natural = AsNatural
+  proxyToAsType _ = AsNatural
+
 instance HasTypeProxy BS.ByteString where
   data AsType BS.ByteString = AsByteString
   proxyToAsType _ = AsByteString
+
+instance HasTypeProxy BSL.ByteString where
+  data AsType BSL.ByteString = AsByteStringLazy
+  proxyToAsType _ = AsByteStringLazy
 
 data FromSomeType (c :: Type -> Constraint) b where
   FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b

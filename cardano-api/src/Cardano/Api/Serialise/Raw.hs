@@ -26,13 +26,17 @@ import Data.Bits (Bits (..))
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Builder qualified as BSB
-import Data.ByteString.Char8 as BSC
+import Data.ByteString.Char8 (ByteString)
+import Data.ByteString.Char8 qualified as BSC
+import Data.ByteString.Lazy qualified as BSL
 import Data.Data (typeRep)
+import Data.Foldable qualified as F
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (TypeRep, Typeable)
 import Data.Word (Word16, Word8)
+import Numeric.Natural (Natural)
 
 class (HasTypeProxy a, Typeable a) => SerialiseAsRawBytes a where
   serialiseToRawBytes :: a -> ByteString
@@ -60,9 +64,22 @@ instance SerialiseAsRawBytes Word16 where
       throwError . SerialiseAsRawBytesError $
         "Cannot decode Word16 from (hex): " <> BSC.unpack (Base16.encode bs)
 
+instance SerialiseAsRawBytes Natural where
+  serialiseToRawBytes 0 = BS.singleton 0x00
+  serialiseToRawBytes n = BS.toStrict . BSB.toLazyByteString $ go n mempty
+   where
+    go 0 acc = acc
+    go x acc = go (x `shiftR` 8) (BSB.word8 (fromIntegral (x .&. 0xFF)) <> acc)
+  deserialiseFromRawBytes AsNatural "\x00" = pure 0
+  deserialiseFromRawBytes AsNatural input = pure . F.foldl' (\acc byte -> acc `shiftL` 8 .|. fromIntegral byte) 0 $ BS.unpack input
+
 instance SerialiseAsRawBytes BS.ByteString where
   serialiseToRawBytes = id
   deserialiseFromRawBytes AsByteString = pure
+
+instance SerialiseAsRawBytes BSL.ByteString where
+  serialiseToRawBytes = BSL.toStrict
+  deserialiseFromRawBytes AsByteStringLazy = pure . BSL.fromStrict
 
 serialiseToRawBytesHex :: SerialiseAsRawBytes a => a -> ByteString
 serialiseToRawBytesHex = Base16.encode . serialiseToRawBytes
