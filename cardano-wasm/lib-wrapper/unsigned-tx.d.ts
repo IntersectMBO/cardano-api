@@ -1,5 +1,7 @@
 // unsigned-tx.d.ts
 
+import SignedTx from './signed-tx';
+
 /**
  * Represents an unsigned transaction.
  */
@@ -49,3 +51,5 @@ declare interface UnsignedTx {
      */
     signWithPaymentKey(signingKey: string): Promise<SignedTx>;
 }
+
+export default UnsignedTx;

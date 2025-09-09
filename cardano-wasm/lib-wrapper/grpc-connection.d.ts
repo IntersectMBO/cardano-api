@@ -41,3 +41,5 @@ declare interface GrpcConnection {
      */
     getUtxosForAddress(address: string): Promise<{ txId: string, txIndex: number, lovelace: bigint, assets: any[], datum?: any, script?: any }[]>;
 }
+
+export default GrpcConnection;

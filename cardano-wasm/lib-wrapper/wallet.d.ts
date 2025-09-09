@@ -33,3 +33,5 @@ declare interface Wallet {
      */
     getBase16ForVerificationKeyHash(): Promise<string>;
 }
+
+export default Wallet;

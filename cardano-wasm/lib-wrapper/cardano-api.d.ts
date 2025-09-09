@@ -1,20 +1,10 @@
 // cardano-api.d.ts
 
-/// <reference path="./unsigned-tx.d.ts" />
+import UnsignedTx from './unsigned-tx';
 
-/// <reference path="./signed-tx.d.ts" />
+import GrpcConnection from './grpc-connection';
 
-/// <reference path="./grpc-connection.d.ts" />
-
-/// <reference path="./wallet.d.ts" />
-
-export default initialise;
-
-/**
- * Initialises the Cardano API.
- * @returns A promise that resolves to the main `CardanoApi` object.
- */
-declare function initialise(): Promise<CardanoApi>;
+import Wallet from './wallet';
 
 /**
  * The main Cardano API object with static methods.
@@ -66,3 +56,11 @@ declare interface CardanoApi {
      */
     restoreTestnetPaymentWalletFromSigningKeyBech32(networkMagic: number, signingKeyBech32: string): Promise<Wallet>;
 }
+
+/**
+ * Initialises the Cardano API.
+ * @returns A promise that resolves to the main `CardanoApi` object.
+ */
+declare function initialise(): Promise<CardanoApi>;
+
+export default initialise;

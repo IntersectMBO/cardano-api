@@ -22,3 +22,5 @@ declare interface SignedTx {
      */
     txToCbor(): Promise<string>;
 }
+
+export default SignedTx;

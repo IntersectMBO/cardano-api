@@ -94,6 +94,8 @@ data DeclarationType
   | -- | Reference to import another TypeScript declaration file.
     ImportDec
       String
+      -- ^ Name of the symbol to import.
+      String
       -- ^ Path to the TypeScript declaration file to import.
 
 -- | Creates a builder for a TypeScript declaration type and content.
@@ -111,10 +113,8 @@ buildDeclarationType (InterfaceDec name properties) =
     <> " {"
     <> mconcat (map (\prop -> "\n" <> buildInterfaceContent prop <> "\n") properties)
     <> "}"
-buildDeclarationType (ImportDec path) =
-  "/// <reference path=\""
-    <> TLB.fromString path
-    <> "\" />"
+buildDeclarationType (ImportDec symbolName path) =
+  "import " <> TLB.fromString symbolName <> " from './" <> TLB.fromString path <> "';"
 
 -- | Represents a function parameter in TypeScript.
 data FunctionParam = FunctionParam
