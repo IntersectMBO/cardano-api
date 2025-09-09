@@ -71,7 +71,7 @@ message Constr {
 // Represents a big integer for Plutus data in Cardano.
 message BigInt {
   oneof big_int {
-    int64 int = 1;
+    int64 int = 1 [jstype = JS_STRING];
     bytes big_u_int = 2;
     bytes big_n_int = 3;
   }
