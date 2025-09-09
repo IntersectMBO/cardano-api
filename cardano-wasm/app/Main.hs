@@ -13,10 +13,12 @@ parser :: Parser CmdArgs
 parser =
   CmdArgs
     <$> strOption
-      ( long "output-dir"
-          <> short 'o'
-          <> metavar "OUTPUT_DIR"
-          <> help "Output directory for the TypeScript declaration files (it must exist)"
+      ( mconcat
+          [ long "output-dir"
+          , short 'o'
+          , metavar "OUTPUT_DIR"
+          , help "Output directory for the TypeScript declaration files (it must exist)"
+          ]
       )
 
 main :: IO ()
