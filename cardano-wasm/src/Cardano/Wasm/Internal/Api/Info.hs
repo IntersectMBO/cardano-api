@@ -7,12 +7,14 @@ module Cardano.Wasm.Internal.Api.Info
   , MethodInfo (..)
   , ParamInfo (..)
   , MethodReturnTypeInfo (..)
+  , dashCaseName
   , tsTypeAsString
   )
 where
 
 import Data.Aeson qualified as Aeson
 import Data.Text qualified as Text
+import Text.Casing (fromHumps, toKebab)
 
 -- * API Information Data Types
 
@@ -105,9 +107,7 @@ instance Aeson.ToJSON MethodInfo where
 -- | Information about a virtual object and its methods.
 data VirtualObjectInfo = VirtualObjectInfo
   { virtualObjectName :: String
-  -- ^ Name of the virtual object.
-  , dashCaseName :: String
-  -- ^ A dash-case version of the virtual object name, used for typescript declaration file name.
+  -- ^ Name of the virtual object in the JS API (which should match the exported class and be PascalCase).
   , virtualObjectDoc :: String
   -- ^ Documentation for the virtual object.
   , virtualObjectMethods :: [MethodInfo]
@@ -115,12 +115,14 @@ data VirtualObjectInfo = VirtualObjectInfo
   }
   deriving (Show, Eq)
 
+dashCaseName :: VirtualObjectInfo -> String
+dashCaseName = toKebab . fromHumps . virtualObjectName
+
 instance Aeson.ToJSON VirtualObjectInfo where
   toJSON :: VirtualObjectInfo -> Aeson.Value
-  toJSON (VirtualObjectInfo name tsFileName doc methods) =
+  toJSON (VirtualObjectInfo name doc methods) =
     Aeson.object
       [ "objectName" Aeson..= name
-      , "fileName" Aeson..= tsFileName
       , "doc" Aeson..= doc
       , "methods" Aeson..= methods
       ]
@@ -152,15 +154,9 @@ instance Aeson.ToJSON ApiInfo where
 -- This is intended to help generate JavaScript wrappers.
 apiInfo :: ApiInfo
 apiInfo =
-  let unsignedTxObjectName = "UnsignedTx"
-      signedTxObjectName = "SignedTx"
-      grpcConnectionName = "GrpcConnection"
-      walletObjectName = "Wallet"
-
-      walletObj =
+  let walletObj =
         VirtualObjectInfo
-          { virtualObjectName = walletObjectName
-          , dashCaseName = "wallet"
+          { virtualObjectName = "Wallet"
           , virtualObjectDoc = "Represents a wallet."
           , virtualObjectMethods =
               [ MethodInfo
@@ -198,8 +194,7 @@ apiInfo =
 
       unsignedTxObj =
         VirtualObjectInfo
-          { virtualObjectName = unsignedTxObjectName
-          , dashCaseName = "unsigned-tx"
+          { virtualObjectName = "UnsignedTx"
           , virtualObjectDoc = "Represents an unsigned transaction."
           , virtualObjectMethods =
               [ MethodInfo
@@ -248,7 +243,7 @@ apiInfo =
                   { methodName = "signWithPaymentKey"
                   , methodDoc = "Signs the transaction with a payment key."
                   , methodParams = [ParamInfo "signingKey" TSString "The signing key to witness the transaction."]
-                  , methodReturnType = NewObject signedTxObjectName
+                  , methodReturnType = NewObject (virtualObjectName signedTxObj)
                   , methodReturnDoc = "A promise that resolves to a `SignedTx` object."
                   }
               ]
@@ -256,8 +251,7 @@ apiInfo =
 
       signedTxObj =
         VirtualObjectInfo
-          { virtualObjectName = signedTxObjectName
-          , dashCaseName = "signed-tx"
+          { virtualObjectName = "SignedTx"
           , virtualObjectDoc = "Represents a signed transaction."
           , virtualObjectMethods =
               [ MethodInfo
@@ -280,8 +274,7 @@ apiInfo =
 
       grpcConnection =
         VirtualObjectInfo
-          { virtualObjectName = grpcConnectionName
-          , dashCaseName = "grpc-connection"
+          { virtualObjectName = "GrpcConnection"
           , virtualObjectDoc = "Represents a gRPC-web client connection to a Cardano node."
           , virtualObjectMethods =
               [ MethodInfo
@@ -331,42 +324,41 @@ apiInfo =
         { mainObject =
             VirtualObjectInfo
               { virtualObjectName = "CardanoApi"
-              , dashCaseName = "cardano-api"
               , virtualObjectDoc = "The main Cardano API object with static methods."
               , virtualObjectMethods =
                   [ MethodInfo
                       { methodName = "newConwayTx"
                       , methodDoc = "Creates a new Conway-era transaction."
                       , methodParams = []
-                      , methodReturnType = NewObject unsignedTxObjectName
+                      , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
                       , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
                       }
                   , MethodInfo
                       { methodName = "newGrpcConnection"
                       , methodDoc = "Create a new client connection for communicating with a Cardano node through gRPC-web."
                       , methodParams = [ParamInfo "webGrpcUrl" TSString "The URL of the gRPC-web server."]
-                      , methodReturnType = NewObject grpcConnectionName
+                      , methodReturnType = NewObject (virtualObjectName grpcConnection)
                       , methodReturnDoc = "A promise that resolves to a new `GrpcConnection`."
                       }
                   , MethodInfo
                       { methodName = "generatePaymentWallet"
                       , methodDoc = "Generate a simple payment wallet for mainnet."
                       , methodParams = []
-                      , methodReturnType = NewObject walletObjectName
+                      , methodReturnType = NewObject (virtualObjectName walletObj)
                       , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
                   , MethodInfo
                       { methodName = "restorePaymentWalletFromSigningKeyBech32"
                       , methodDoc = "Restore a mainnet payment wallet from a Bech32 encoded signing key."
                       , methodParams = [ParamInfo "signingKeyBech32" TSString "The Bech32 encoded signing key."]
-                      , methodReturnType = NewObject walletObjectName
+                      , methodReturnType = NewObject (virtualObjectName walletObj)
                       , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
                   , MethodInfo
                       { methodName = "generateTestnetPaymentWallet"
                       , methodDoc = "Generate a simple payment wallet for testnet, given the testnet's network magic."
                       , methodParams = [ParamInfo "networkMagic" TSNumber "The network magic for the testnet."]
-                      , methodReturnType = NewObject walletObjectName
+                      , methodReturnType = NewObject (virtualObjectName walletObj)
                       , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
                   , MethodInfo
@@ -376,7 +368,7 @@ apiInfo =
                           [ ParamInfo "networkMagic" TSNumber "The network magic for the testnet."
                           , ParamInfo "signingKeyBech32" TSString "The Bech32 encoded signing key."
                           ]
-                      , methodReturnType = NewObject walletObjectName
+                      , methodReturnType = NewObject (virtualObjectName walletObj)
                       , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
                   ]

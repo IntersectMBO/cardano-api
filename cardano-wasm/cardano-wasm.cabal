@@ -61,6 +61,7 @@ executable cardano-wasm
     cardano-crypto-class,
     cardano-ledger-api,
     cardano-strict-containers,
+    casing,
     containers,
     exceptions,
     filepath,
