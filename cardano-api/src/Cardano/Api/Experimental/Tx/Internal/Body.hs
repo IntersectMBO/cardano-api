@@ -25,21 +25,21 @@ extractAllIndexedPlutusScriptWitnesses
 extractAllIndexedPlutusScriptWitnesses era b = obtainCommonConstraints era $ do
   let sbe = convert era
       aeon = convert era
-      legacyTxInWits = extractWitnessableTxIns aeon b
-      legacyCertWits = extractWitnessableCertificates aeon b
-      legacyMintWits = extractWitnessableMints aeon b
+      legacyTxInWits = extractWitnessableTxIns aeon $ txIns b
+      legacyCertWits = extractWitnessableCertificates aeon $ txCertificates b
+      legacyMintWits = extractWitnessableMints aeon $ txMintValue b
       proposalWits
         :: [(Witnessable ProposalItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))] =
           caseShelleyToBabbageOrConwayEraOnwards
             (const [])
-            (`extractWitnessableProposals` b)
+            (`extractWitnessableProposals` txProposalProcedures b)
             sbe
-      legacyWithdrawalWits = extractWitnessableWithdrawals aeon b
+      legacyWithdrawalWits = extractWitnessableWithdrawals aeon $ txWithdrawals b
       legacyVoteWits
         :: [(Witnessable VoterItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))] =
           caseShelleyToBabbageOrConwayEraOnwards
             (const [])
-            (`extractWitnessableVotes` b)
+            (`extractWitnessableVotes` txVotingProcedures b)
             sbe
 
   txInWits <- legacyWitnessConversion aeon legacyTxInWits

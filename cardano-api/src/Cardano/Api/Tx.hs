@@ -844,6 +844,13 @@ module Cardano.Api.Tx
   , fromShelleyMetadata
   , toShelleyMetadatum
   , fromShelleyMetadatum
+  -- Exported for testing
+  , extractWitnessableCertificates
+  , extractWitnessableMints
+  , extractWitnessableProposals
+  , extractWitnessableTxIns
+  , extractWitnessableVotes
+  , extractWitnessableWithdrawals
   -- Exporting for testing. Deprecate in the future.
   , legacyKeyWitnessEncode
 
