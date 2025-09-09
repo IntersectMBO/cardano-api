@@ -157,7 +157,7 @@
               config,
               ...
             }: let
-              generatedExampleFiles = ["cardano-wasm/lib-wrapper/cardano-api.d.ts"];
+              generatedExampleFiles = map (f: "cardano-wasm/lib-wrapper/${f}") (builtins.filter (f: lib.strings.hasSuffix ".d.ts" f) (builtins.attrNames (builtins.readDir ./cardano-wasm/lib-wrapper)));
               exportWasmPath = "export CARDANO_WASM=${config.hsPkgs.cardano-wasm.components.exes.cardano-wasm}/bin/cardano-wasm${pkgs.stdenv.hostPlatform.extensions.executable}";
             in {
               packages.cardano-wasm.components.tests.cardano-wasm-golden.preCheck = let
