@@ -1604,6 +1604,7 @@ plutusScriptLangaugeInEra Exp.ConwayEra l =
     PlutusScriptV1 -> PlutusScriptV1InConway
     PlutusScriptV2 -> PlutusScriptV2InConway
     PlutusScriptV3 -> PlutusScriptV3InConway
+    PlutusScriptV4 -> error "plutusScriptLangaugeInEra: PlutusScriptV4 not supported yet"
 
 genApiPlutusScriptWitness
   :: WitCtx witctx -> Exp.Era era -> Gen (Api.ScriptWitness witctx era)

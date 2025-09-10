@@ -91,6 +91,7 @@ instance Convert ConwayEraOnwards AllegraEraOnwards where
 
 instance Convert ConwayEraOnwards AlonzoEraOnwards where
   convert ConwayEraOnwardsConway = AlonzoEraOnwardsConway
+  convert ConwayEraOnwardsDijkstra = AlonzoEraOnwardsDijkstra
 
 instance Convert ConwayEraOnwards BabbageEraOnwards where
   convert = \case

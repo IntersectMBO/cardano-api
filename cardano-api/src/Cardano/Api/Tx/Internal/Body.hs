@@ -3189,11 +3189,8 @@ extractWitnessableVotes
   :: ConwayEraOnwards era
   -> Maybe (Featured eon era (TxVotingProcedures BuildTx era))
   -> [(Witnessable VoterItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
-<<<<<<< HEAD
+extractWitnessableVotes ConwayEraOnwardsDijkstra _ = error "extractWitnessableVotes: Dijkstra era not supported"
 extractWitnessableVotes e@ConwayEraOnwardsConway txVotingProcedures =
-=======
-extractWitnessableVotes e TxBodyContent{txVotingProcedures} =
->>>>>>> e41bf72f9 (Update `makeShelleyTransactionBody` with Dijkstra era)
   List.nub
     [ (conwayEraOnwardsConstraints e $ WitVote vote, BuildTxWith wit)
     | (vote, wit) <- getVotes $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
@@ -3216,7 +3213,7 @@ extractWitnessableProposals
   -> Maybe
        (Featured eon era (TxProposalProcedures BuildTx era))
   -> [(Witnessable ProposalItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
-extractWitnessableProposals e TxBodyContent{txProposalProcedures} =
+extractWitnessableProposals e txProposalProcedures =
   List.nub
     [ (conwayEraOnwardsConstraints e $ WitProposal prop, BuildTxWith wit)
     | (Proposal prop, wit) <-
