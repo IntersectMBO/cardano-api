@@ -739,7 +739,7 @@ instance Arbitrary Alonzo.CostModels where
 
 genValidCostModel :: Ledger.Language -> Gen Ledger.CostModel
 genValidCostModel lang = do
-  newParamValues <- vectorOf (Ledger.costModelInitParamCount lang) arbitrary
+  newParamValues <- vectorOf (costModelParamsCountLegacy lang) arbitrary
   either (\err -> error $ "Corrupt cost model: " ++ show err) pure $
     Ledger.mkCostModel lang newParamValues
 
@@ -775,12 +775,12 @@ genCostModelValues lang = do
   Positive sub <- arbitrary
   (,) lang'
     <$> oneof
-      [ listAtLeast (Ledger.costModelInitParamCount lang)
+      [ listAtLeast (costModelParamsCountLegacy lang)
       , take (tooFew sub) <$> arbitrary
       ]
  where
   lang' = fromIntegral (fromEnum lang)
-  tooFew sub = Ledger.costModelInitParamCount lang - sub
+  tooFew sub = costModelParamsCountLegacy lang - sub
   listAtLeast :: Int -> Gen [Int64]
   listAtLeast x = do
     NonNegative y <- arbitrary

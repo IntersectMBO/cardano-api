@@ -29,6 +29,9 @@ module Cardano.Api.Genesis
     -- * Utilities
   , unsafeBoundedRational
   , fromShelleyGenesis
+
+    -- * Testing only
+  , costModelParamsCountLegacy
   )
 where
 

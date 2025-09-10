@@ -154,11 +154,20 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Api.Era qualified as Ledger
 import Cardano.Ledger.Api.Transition qualified as Ledger
 import Cardano.Ledger.BHeaderView qualified as Ledger
-import Cardano.Ledger.BaseTypes (Globals (..), Nonce, ProtVer (..), natVersion, (⭒))
+import Cardano.Ledger.BaseTypes
+  ( Globals (..)
+  , Nonce
+  , ProtVer (..)
+  , boundRational
+  , knownNonZeroBounded
+  , natVersion
+  , (⭒)
+  )
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Coin qualified as SL
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
 import Cardano.Ledger.Keys qualified as SL
 import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
 import Cardano.Ledger.Shelley.Core qualified as Core
@@ -1499,9 +1508,21 @@ readCardanoGenesisConfig mEra enc = do
   alonzoGenesis <- readAlonzoGenesisConfig mEra enc
   conwayGenesis <- readConwayGenesisConfig enc
   -- TODO: Build dummy dijkstra genesis value
-  let dijkstraGenesis = undefined -- Shelley.sleTranslationContext Dijkstra.ledgerExamples -- TODO: Dijkstra - add plumbing to read Dijkstra genesis
+  let dijkstraGenesis = exampleDijkstraGenesis -- TODO: Dijkstra - add plumbing to read Dijkstra genesis
   let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
+
+exampleDijkstraGenesis :: Ledger.DijkstraGenesis
+exampleDijkstraGenesis =
+  Ledger.DijkstraGenesis
+    { Ledger.dgUpgradePParams =
+        Ledger.UpgradeDijkstraPParams
+          { Ledger.udppMaxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
+          , Ledger.udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
+          , Ledger.udppRefScriptCostStride = knownNonZeroBounded @25600 -- 25 KiB
+          , Ledger.udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          }
+    }
 
 data GenesisConfigError
   = NEError !Text
