@@ -162,7 +162,7 @@ prop_make_transaction_body_autobalance_no_change = H.propertyOnce $ do
     LedgerProtocolParameters
       <$> H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
 
-  let expectedFee = 170_077
+  let expectedFee = 171_617
       utxoValue = 5_000_000
 
   let address =
@@ -394,7 +394,7 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.propertyOnce
   H.note_ "Sanity check: inputs == outputs"
   mconcat [deregDeposit, txInputsTotalCoin] === mconcat [txOutCoin, fee, changeCoin]
 
-  180_901 === fee
+  182_441 === fee
 
 prop_make_transaction_body_autobalance_multi_asset_collateral :: Property
 prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $ do

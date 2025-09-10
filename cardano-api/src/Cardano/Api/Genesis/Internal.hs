@@ -35,6 +35,9 @@ module Cardano.Api.Genesis.Internal
 
     -- * Utilities
   , unsafeBoundedRational
+
+    -- * Testing only
+  , costModelParamsCountLegacy
   )
 where
 
@@ -385,10 +388,13 @@ decodeAlonzoGenesis (Just era) genesisBs = modifyError ("Cannot decode era-sensi
       unless (allCostModelParams == (fst <$> costModelWithDefaults)) $ do
         let allCostModelParamsSet = fromList allCostModelParams
             providedCostModelParamsSet = fromList $ fst <$> costModelWithDefaults
+            missingParameters = toList $ S.difference allCostModelParamsSet providedCostModelParamsSet
         throwError $
-          "Missing V2 Plutus cost model parameters: "
-            <> show (toList $ S.difference allCostModelParamsSet providedCostModelParamsSet)
-
+          unlines
+            [ "Missing V2 Plutus cost model parameters: "
+            , show missingParameters
+            , "Number of missing parameters: " <> show (length missingParameters)
+            ]
       -- We have already have required params, we already added optional ones (which are trimmed later
       -- if required). Continue processing further in array representation.
       setCostModelDefaultValues . A.toJSON $ map snd costModelWithDefaults
@@ -407,7 +413,7 @@ decodeAlonzoGenesis (Just era) genesisBs = modifyError ("Cannot decode era-sensi
     -- use all available parameters >= conway
     | isConwayOnwards = length allCostModelParams
     -- use only required params in < conway
-    | otherwise = L.costModelInitParamCount L.PlutusV2 -- Babbage
+    | otherwise = costModelParamsCountLegacy L.PlutusV2 -- Babbage
 
   -- A list-like of tuples (param name, value) with default maxBound value
   optionalCostModelDefaultValues :: (Item l ~ (V2.ParamName, Int64), IsList l) => l
@@ -850,3 +856,15 @@ unsafeBoundedRational
 unsafeBoundedRational x = fromMaybe (error errMessage) $ boundRational x
  where
   errMessage = show (typeRep (Proxy @r)) <> " is out of bounds: " <> show x
+
+-- Only use this function in the generation of an Alonzo genesis file
+-- The number of parameters for PlutusV3 reflects that of the Babbage
+-- era cost model before the intra era hardfork.
+-- Pre intra-era hardfork the V3 cost model has 231 parameters
+-- Post intra-era hardfork the V3 cost model has 251 parameters
+-- TODO: This needs to be parameterized by the protocol version.
+costModelParamsCountLegacy :: Language -> Int
+costModelParamsCountLegacy PlutusV1 = 166
+costModelParamsCountLegacy PlutusV2 = 175
+costModelParamsCountLegacy PlutusV3 = 231
+costModelParamsCountLegacy PlutusV4 = 251
