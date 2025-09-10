@@ -185,8 +185,3 @@ getPlutusDatum L.SPlutusV3 (SpendingScriptDatum d) = d
 getPlutusDatum L.SPlutusV4 (SpendingScriptDatum _d) = error "dijkstra"
 getPlutusDatum _ InlineDatum = Nothing
 getPlutusDatum _ NoScriptDatum = Nothing
-<<<<<<< HEAD
-getPlutusDatum _ _ = undefined
-=======
-
->>>>>>> f18e5cb09 (Fix most compilation errors)

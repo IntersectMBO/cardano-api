@@ -20,10 +20,6 @@ module Cardano.Api.Query.Internal.Convenience
   )
 where
 
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
-
-import Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
-
 import Cardano.Api.Address
 import Cardano.Api.Certificate.Internal
 import Cardano.Api.Consensus.Internal.Mode
@@ -44,7 +40,6 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.State (ChainAccountState (..), DRepState (..))
 import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Keys qualified as L
-import Cardano.Ledger.State (ChainAccountState (..), DRepState (..))
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 import Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
@@ -58,7 +53,6 @@ import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import Data.Text (Text)
 import GHC.Exts (IsList (..), IsString (..))
-import Control.Exception (SomeException, displayException)
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure

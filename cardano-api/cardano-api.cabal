@@ -134,7 +134,7 @@ library
     cardano-ledger-core >=1.17 && <1.19,
     cardano-ledger-dijkstra >= 0.1,
     cardano-ledger-mary >=1.8,
-    cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.16,
+    cardano-ledger-shelley >=1.16,
     cardano-protocol-tpraos >=1.4,
     cardano-slotting >=0.2.0.0,
     cardano-strict-containers >=0.1,
@@ -171,7 +171,7 @@ library
     ouroboros-network-protocols >=0.15,
     parsec,
     plutus-core,
-    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.52,
+    plutus-ledger-api ^>=1.52,
     pretty-simple,
     prettyprinter,
     prettyprinter-ansi-terminal,
@@ -302,6 +302,7 @@ library gen
     Test.Gen.Cardano.Api.Era
     Test.Gen.Cardano.Api.Hardcoded
     Test.Gen.Cardano.Api.Metadata
+    Test.Gen.Cardano.Api.Orphans
     Test.Gen.Cardano.Api.ProtocolParameters
     Test.Gen.Cardano.Api.Typed
     Test.Gen.Cardano.Crypto.Seed
@@ -330,6 +331,7 @@ library gen
     cardano-strict-containers,
     containers,
     filepath,
+    generic-random,
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,
