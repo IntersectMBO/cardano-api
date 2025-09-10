@@ -15,6 +15,12 @@
   # - maintenance    # not directly related to the code
   # - release        # related to a new release preparation
   # - documentation  # change in code docs, haddocks...
+# uncomment at least one main project this PR is associated with
+  projects:
+  # - cardano-api
+  # - cardano-api-gen
+  # - cardano-grpc
+  # - cardano-wasm
 ```
 
 # Context
