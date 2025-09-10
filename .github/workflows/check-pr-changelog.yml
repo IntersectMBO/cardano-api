@@ -27,6 +27,7 @@ jobs:
           script: |
             const yaml = require('js-yaml');
             const fs   = require('fs');
+            const execSync = require('child_process').execSync;
 
             const prDescription = await github.rest.pulls.get({
               owner: context.repo.owner,
@@ -72,6 +73,18 @@ jobs:
               console.error(`PR changelog has invalid type: ${changelog.type}\nExpected one, or more of: ${validTypeValues}`)
             }
 
+            let isProjectsValid = false;
+            // .filter(Boolean) is a trick that removes empty values from the array (see https://michaeluloth.com/javascript-filter-boolean/)
+            const validProjectsValues = execSync("ls */CHANGELOG* | cut -d/ -f1").toString().split('\n').filter(Boolean)
+            if (Array.isArray(changelog.projects) && !!changelog.projects) {
+              isProjectsValid = changelog.projects.every(value => validProjectsValues.includes(value));
+            } else {
+              isProjectsValid = validProjectsValue.includes(changelog.projects);
+            }
+            if (!isProjectsValid) {
+              console.error(`PR changelog has invalid project: ${changelog.projects}\nExpected one, or more of: ${validProjectsValues}`)
+            }
+
             let isDescriptionValid = true;
             if (changelog.description.trim() === '<insert-changelog-description-here>') {
               console.error('PR changelog description has not been updated!')
@@ -81,7 +94,7 @@ jobs:
               isDescriptionValid = false;
             }
 
-            if (!isCompatibilityValid || !isTypeValid || !isDescriptionValid) {
+            if (!isCompatibilityValid || !isTypeValid || !isProjectsValid || !isDescriptionValid) {
               console.error('Failed PR changelog checks!');
               process.exit(1);
             }
