@@ -125,6 +125,12 @@ module Test.Gen.Cardano.Api.Typed
   , genLedgerValueForTxOut
   , genLedgerMultiAssetValue
   , genWitnesses
+  , genScriptWitnessedTxIn
+  , genScriptWitnessedTxMintValue
+  , genScriptWitnessedTxCertificates
+  , genScriptWitnessedTxProposals
+  , genScriptWitnessedTxWithdrawals
+  , genScriptWitnesssedTxVotingProcedures
   , genWitnessNetworkIdOrByronAddress
   , genRational
   , genGovernancePoll
@@ -742,6 +748,17 @@ genTxWithdrawals =
           ]
     )
 
+genScriptWitnessedTxWithdrawals :: Exp.Era era -> Gen (TxWithdrawals BuildTx era)
+genScriptWitnessedTxWithdrawals era = do
+  num <- Gen.integral (Range.constant 0 3)
+  sAddrs <- Gen.list (Range.singleton num) genStakeAddress
+  coins <- Gen.list (Range.singleton num) genPositiveLovelace
+  sWits <-
+    Gen.list (Range.singleton num) $
+      ScriptWitness ScriptWitnessForStakeAddr <$> genApiPlutusScriptWitness WitCtxStake era
+  let withdrawals = zipWith3 (\addr c wit -> (addr, c, BuildTxWith wit)) sAddrs coins sWits
+  return $ TxWithdrawals (convert era) withdrawals
+
 genTxCertificates :: Typeable era => CardanoEra era -> Gen (TxCertificates BuildTx era)
 genTxCertificates =
   inEonForEra
@@ -754,6 +771,20 @@ genTxCertificates =
           -- TODO: Generate certificates
           ]
     )
+
+genScriptWitnessedTxCertificates :: Typeable era => Exp.Era era -> Gen (TxCertificates BuildTx era)
+genScriptWitnessedTxCertificates era = do
+  let w = convert era
+  num <- Gen.integral (Range.linear 0 3)
+  certs <- Gen.list (Range.singleton num) $ genCertificate w
+  plutusScriptWits <- Gen.list (Range.singleton num) $ genApiPlutusScriptWitness WitCtxStake era
+  let certsAndWits =
+        zipWith
+          (\c p -> (c, Just p))
+          certs
+          plutusScriptWits
+
+  pure $ mkTxCertificates (convert era) certsAndWits
 
 genCertificate :: forall era. Typeable era => ShelleyBasedEra era -> Gen (Certificate era)
 genCertificate sbe =
@@ -1388,6 +1419,17 @@ genProposals w = conwayEraOnwardsConstraints w $ do
       (proposal,) <$> Gen.maybe (genScriptWitnessForStake sbe)
   pure $ mkTxProposalProcedures proposalsWithMaybeWitnesses
 
+genScriptWitnessedTxProposals
+  :: Exp.Era era
+  -> Gen (TxProposalProcedures BuildTx era)
+genScriptWitnessedTxProposals era = do
+  let w = convert era
+  num <- Gen.integral (Range.linear 0 3)
+  proposals <- Gen.list (Range.singleton num) (genProposal w)
+  sWits <- Gen.list (Range.singleton num) $ genApiPlutusScriptWitness WitCtxStake era
+  let proposalsWithMaybeWitnesses = zipWith (\p wit -> (p, Just wit)) proposals sWits
+  pure $ Exp.obtainCommonConstraints era $ mkTxProposalProcedures proposalsWithMaybeWitnesses
+
 genProposal :: ConwayEraOnwards era -> Gen (L.ProposalProcedure (ShelleyLedgerEra era))
 genProposal w =
   conwayEraOnwardsTestConstraints w Q.arbitrary
@@ -1403,6 +1445,18 @@ genVotingProcedures w = conwayEraOnwardsConstraints w $ do
     (voter,) <$> genScriptWitnessForStake sbe
   Api.TxVotingProcedures
     <$> Q.arbitrary
+    <*> pure (pure votersWithWitnesses)
+
+genScriptWitnesssedTxVotingProcedures
+  :: Exp.Era era
+  -> Gen (Api.TxVotingProcedures BuildTx era)
+genScriptWitnesssedTxVotingProcedures era = do
+  num <- Gen.integral (Range.linear 0 3)
+  voters <- Gen.list (Range.singleton num) Q.arbitrary
+  plutusScriptWits <- Gen.list (Range.singleton num) $ genApiPlutusScriptWitness WitCtxStake era
+  let votersWithWitnesses = fromList $ zip voters plutusScriptWits
+  Api.TxVotingProcedures
+    <$> Exp.obtainCommonConstraints era Q.arbitrary
     <*> pure (pure votersWithWitnesses)
 
 genCurrentTreasuryValue :: ConwayEraOnwards era -> Gen L.Coin
@@ -1447,8 +1501,38 @@ genPlutusScriptWitness = do
 genPlutusScriptDatum :: Gen (Exp.PlutusScriptDatum lang purpose)
 genPlutusScriptDatum = return Exp.NoScriptDatum
 
+genScriptWitnessedTxIn
+  :: Exp.Era era -> Gen [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+genScriptWitnessedTxIn era = do
+  num <- Gen.integral (Range.linear 0 3)
+  sWits <-
+    map (ScriptWitness ScriptWitnessForSpending)
+      <$> Gen.list (Range.singleton num) (genApiPlutusScriptWitness WitCtxTxIn era)
+  txIns <- Gen.list (Range.singleton num) genTxIn
+  pure $ zip txIns (BuildTxWith <$> sWits)
+
+genScriptWitnessedTxMintValue
+  :: Exp.Era era -> Gen (TxMintValue BuildTx era)
+genScriptWitnessedTxMintValue era = do
+  let w = convert era
+  num <- Gen.integral (Range.linear 0 3)
+  sWits <-
+    Gen.list (Range.singleton num) (genApiPlutusScriptWitness WitCtxMint era)
+
+  policies <- Gen.list (Range.singleton num) genPolicyId
+  mintValues <- Gen.list (Range.singleton num) genPolicyAssets
+  let assets =
+        [ (p, mintValue, BuildTxWith s)
+        | p <- policies
+        , s <- sWits
+        , mintValue <- mintValues
+        ]
+
+  pure $ mkTxMintValue w assets
+
 -- | This generator does not generate a valid witness - just a random one.
-genScriptWitnessForStake :: ShelleyBasedEra era -> Gen (Api.ScriptWitness WitCtxStake era)
+genScriptWitnessForStake
+  :: ShelleyBasedEra era -> Gen (Api.ScriptWitness WitCtxStake era)
 genScriptWitnessForStake sbe = do
   ScriptInEra scriptLangInEra script' <- genScriptInEra sbe
   case script' of
@@ -1473,6 +1557,50 @@ genScriptWitnessForStake sbe = do
         NoScriptDatumForStake
         scriptRedeemer
         <$> genExecutionUnits
+
+genAnyPlutusScriptVersion :: Gen AnyPlutusScriptVersion
+genAnyPlutusScriptVersion = do
+  Gen.element [minBound .. maxBound]
+
+plutusScriptLangaugeInEra
+  :: Exp.Era era -> PlutusScriptVersion lang -> ScriptLanguageInEra lang era
+plutusScriptLangaugeInEra Exp.ConwayEra l =
+  case l of
+    PlutusScriptV1 -> PlutusScriptV1InConway
+    PlutusScriptV2 -> PlutusScriptV2InConway
+    PlutusScriptV3 -> PlutusScriptV3InConway
+
+genApiPlutusScriptWitness
+  :: WitCtx witctx -> Exp.Era era -> Gen (Api.ScriptWitness witctx era)
+genApiPlutusScriptWitness witCtx era = do
+  dat <- case witCtx of
+    WitCtxTxIn -> do
+      datum <- Gen.maybe genHashableScriptData
+
+      Gen.element [ScriptDatumForTxIn datum, InlineScriptDatum]
+    WitCtxMint -> do
+      pure NoScriptDatumForMint
+    WitCtxStake -> do
+      pure NoScriptDatumForStake
+
+  AnyPlutusScriptVersion lang <- genAnyPlutusScriptVersion
+  PlutusScript plutusScriptVersion' plutusScript <-
+    PlutusScript lang <$> genValidPlutusScript lang
+
+  plutusScriptOrReferenceInput <-
+    Gen.choice
+      [ pure $ PScript plutusScript
+      , PReferenceScript <$> genTxIn
+      ]
+
+  scriptRedeemer <- genHashableScriptData
+  PlutusScriptWitness
+    (plutusScriptLangaugeInEra era lang)
+    plutusScriptVersion'
+    plutusScriptOrReferenceInput
+    dat
+    scriptRedeemer
+    <$> genExecutionUnits
 
 genScriptWitnessForMint :: ShelleyBasedEra era -> Gen (Api.ScriptWitness WitCtxMint era)
 genScriptWitnessForMint sbe = do

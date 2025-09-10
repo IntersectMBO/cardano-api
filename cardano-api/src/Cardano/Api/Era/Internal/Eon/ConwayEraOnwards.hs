@@ -22,6 +22,7 @@ where
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.AllegraEraOnwards (AllegraEraOnwards (..))
+import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
@@ -82,6 +83,9 @@ instance Convert ConwayEraOnwards ShelleyBasedEra where
 instance Convert ConwayEraOnwards AllegraEraOnwards where
   convert = \case
     ConwayEraOnwardsConway -> AllegraEraOnwardsConway
+
+instance Convert ConwayEraOnwards AlonzoEraOnwards where
+  convert ConwayEraOnwardsConway = AlonzoEraOnwardsConway
 
 instance Convert ConwayEraOnwards BabbageEraOnwards where
   convert = \case

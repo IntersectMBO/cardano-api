@@ -60,8 +60,8 @@ type ScriptRedeemer = HashableScriptData
 data PlutusScriptWitness (lang :: L.Language) (purpose :: PlutusScriptPurpose) era where
   PlutusScriptWitness
     :: L.SLanguage lang
-    -> (PlutusScriptOrReferenceInput lang era)
-    -> (PlutusScriptDatum lang purpose)
+    -> PlutusScriptOrReferenceInput lang era
+    -> PlutusScriptDatum lang purpose
     -> ScriptRedeemer
     -> ExecutionUnits
     -> PlutusScriptWitness lang purpose era

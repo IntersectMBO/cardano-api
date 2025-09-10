@@ -193,6 +193,12 @@ module Cardano.Api.Tx.Internal.Body
   , convValidityUpperBound
   , convVotingProcedures
   , convWithdrawals
+  , extractWitnessableCertificates
+  , extractWitnessableTxIns
+  , extractWitnessableMints
+  , extractWitnessableProposals
+  , extractWitnessableWithdrawals
+  , extractWitnessableVotes
   , getScriptIntegrityHash
   , mkCommonTxBody
   , toAuxiliaryData
@@ -2846,9 +2852,15 @@ collectTxBodyScriptWitnessRequirements
        (TxScriptWitnessRequirements (ShelleyLedgerEra era))
 collectTxBodyScriptWitnessRequirements
   aEon
-  bc@TxBodyContent
-    { txInsReference
+  TxBodyContent
+    { txIns
+    , txInsReference
     , txOuts
+    , txCertificates
+    , txMintValue
+    , txWithdrawals
+    , txVotingProcedures
+    , txProposalProcedures
     } =
     obtainAlonzoScriptPurposeConstraints aEon $ do
       let sbe = shelleyBasedEra @era
@@ -2861,22 +2873,22 @@ collectTxBodyScriptWitnessRequirements
       txInWits <-
         first TxBodyPlutusScriptDecodeError $
           legacyWitnessToScriptRequirements aEon $
-            extractWitnessableTxIns aEon bc
+            extractWitnessableTxIns aEon txIns
 
       txWithdrawalWits <-
         first TxBodyPlutusScriptDecodeError $
           legacyWitnessToScriptRequirements aEon $
-            extractWitnessableWithdrawals aEon bc
+            extractWitnessableWithdrawals aEon txWithdrawals
 
       txCertWits <-
         first TxBodyPlutusScriptDecodeError $
           legacyWitnessToScriptRequirements aEon $
-            extractWitnessableCertificates aEon bc
+            extractWitnessableCertificates aEon txCertificates
 
       txMintWits <-
         first TxBodyPlutusScriptDecodeError $
           legacyWitnessToScriptRequirements aEon $
-            extractWitnessableMints aEon bc
+            extractWitnessableMints aEon txMintValue
 
       txVotingWits <-
         caseShelleyToBabbageOrConwayEraOnwards
@@ -2886,7 +2898,7 @@ collectTxBodyScriptWitnessRequirements
           ( \eon ->
               first TxBodyPlutusScriptDecodeError $
                 legacyWitnessToScriptRequirements aEon $
-                  extractWitnessableVotes eon bc
+                  extractWitnessableVotes eon txVotingProcedures
           )
           sbe
       txProposalWits <-
@@ -2895,7 +2907,7 @@ collectTxBodyScriptWitnessRequirements
           ( \eon ->
               first TxBodyPlutusScriptDecodeError $
                 legacyWitnessToScriptRequirements aEon $
-                  extractWitnessableProposals eon bc
+                  extractWitnessableProposals eon txProposalProcedures
           )
           sbe
 
@@ -2940,17 +2952,17 @@ getDatums eon txInsRef txOutsFromTx = alonzoEraOnwardsConstraints eon $ do
 
 extractWitnessableTxIns
   :: AlonzoEraOnwards era
-  -> TxBodyContent BuildTx era
+  -> TxIns BuildTx era
   -> [(Witnessable TxInItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxTxIn era))]
-extractWitnessableTxIns aeon TxBodyContent{txIns} =
+extractWitnessableTxIns aeon txIns =
   alonzoEraOnwardsConstraints aeon $
     List.nub [(WitTxIn txin, wit) | (txin, wit) <- txIns]
 
 extractWitnessableWithdrawals
   :: AlonzoEraOnwards era
-  -> TxBodyContent BuildTx era
+  -> TxWithdrawals BuildTx era
   -> [(Witnessable WithdrawalItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
-extractWitnessableWithdrawals aeon TxBodyContent{txWithdrawals} =
+extractWitnessableWithdrawals aeon txWithdrawals =
   alonzoEraOnwardsConstraints aeon $
     List.nub
       [ (WitWithdrawal addr withAmt, wit)
@@ -2962,9 +2974,9 @@ extractWitnessableWithdrawals aeon TxBodyContent{txWithdrawals} =
 
 extractWitnessableCertificates
   :: AlonzoEraOnwards era
-  -> TxBodyContent BuildTx era
+  -> TxCertificates BuildTx era
   -> [(Witnessable CertItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
-extractWitnessableCertificates aeon TxBodyContent{txCertificates} =
+extractWitnessableCertificates aeon txCertificates =
   alonzoEraOnwardsConstraints aeon $
     List.nub
       [ ( WitTxCert (certificateToTxCert cert) stakeCred
@@ -2978,9 +2990,9 @@ extractWitnessableCertificates aeon TxBodyContent{txCertificates} =
 
 extractWitnessableMints
   :: AlonzoEraOnwards era
-  -> TxBodyContent BuildTx era
+  -> TxMintValue build era
   -> [(Witnessable MintItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxMint era))]
-extractWitnessableMints aeon TxBodyContent{txMintValue} =
+extractWitnessableMints aeon txMintValue =
   alonzoEraOnwardsConstraints aeon $
     List.nub
       [ (WitMint policyId policyAssets, BuildTxWith $ ScriptWitness ScriptWitnessForMinting wit)
@@ -2992,9 +3004,9 @@ extractWitnessableMints aeon TxBodyContent{txMintValue} =
 
 extractWitnessableVotes
   :: ConwayEraOnwards era
-  -> TxBodyContent BuildTx era
+  -> Maybe (Featured eon era (TxVotingProcedures BuildTx era))
   -> [(Witnessable VoterItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
-extractWitnessableVotes e@ConwayEraOnwardsConway TxBodyContent{txVotingProcedures} =
+extractWitnessableVotes e@ConwayEraOnwardsConway txVotingProcedures =
   List.nub
     [ (WitVote vote, BuildTxWith wit)
     | (vote, wit) <- getVotes e $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
@@ -3015,9 +3027,10 @@ extractWitnessableVotes e@ConwayEraOnwardsConway TxBodyContent{txVotingProcedure
 
 extractWitnessableProposals
   :: ConwayEraOnwards era
-  -> TxBodyContent BuildTx era
+  -> Maybe
+       (Featured eon era (TxProposalProcedures BuildTx era))
   -> [(Witnessable ProposalItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
-extractWitnessableProposals e@ConwayEraOnwardsConway TxBodyContent{txProposalProcedures} =
+extractWitnessableProposals e@ConwayEraOnwardsConway txProposalProcedures =
   List.nub
     [ (WitProposal prop, BuildTxWith wit)
     | (Proposal prop, wit) <-
