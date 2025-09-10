@@ -99,7 +99,6 @@ import Cardano.Ledger.Conway.State qualified as L
 import Cardano.Ledger.Credential qualified as Shelley
 import Cardano.Ledger.Shelley.API qualified as Shelley
 import Cardano.Ledger.Shelley.Core qualified as Core
-import Cardano.Ledger.State qualified as L
 import Cardano.Slotting.EpochInfo (hoistEpochInfo)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
@@ -493,8 +492,7 @@ fromShelleyPoolDistr =
   fromList
     . map (bimap StakePoolKeyHash Shelley.individualPoolStake)
     . toList
-    . Consensus.unPoolDistr
-    . Consensus.fromLedgerPoolDistr
+    . Shelley.unPoolDistr
 
 fromShelleyDelegations
   :: Map
