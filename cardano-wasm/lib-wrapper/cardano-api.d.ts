@@ -16,7 +16,19 @@ declare interface CardanoApi {
     objectType: string;
 
     /**
-     * Creates a new Conway-era transaction.
+     * Create a new unsigned transaction in the current era.
+     * @returns A promise that resolves to a new `UnsignedTx` object.
+     */
+    newTx(): Promise<UnsignedTx>;
+
+    /**
+     * Create a new unsigned transaction in the current experimental era.
+     * @returns A promise that resolves to a new `UnsignedTx` object.
+     */
+    newExperimentalEraTx(): Promise<UnsignedTx>;
+
+    /**
+     * Create a new unsigned transaction in the Conway era.
      * @returns A promise that resolves to a new `UnsignedTx` object.
      */
     newConwayTx(): Promise<UnsignedTx>;

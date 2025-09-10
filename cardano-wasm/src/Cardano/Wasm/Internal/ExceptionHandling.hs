@@ -24,6 +24,17 @@ instance Show ExpectedRightException where
 
 instance Exception ExpectedRightException
 
+data CustomException = HasCallStack => CustomException CallStack String
+
+instance Show CustomException where
+  show :: CustomException -> String
+  show (CustomException cs msg) = "Custom exception: " ++ msg ++ "\n" ++ prettyCallStack cs
+
+instance Exception CustomException
+
+throwError :: (HasCallStack, MonadThrow m) => String -> m a
+throwError e = withFrozenCallStack $ throwM $ CustomException callStack e
+
 justOrError :: (HasCallStack, MonadThrow m) => String -> Maybe a -> m a
 justOrError e Nothing = withFrozenCallStack $ throwM $ ExpectedJustException callStack e
 justOrError _ (Just a) = return a

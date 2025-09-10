@@ -327,8 +327,23 @@ apiInfo =
               , virtualObjectDoc = "The main Cardano API object with static methods."
               , virtualObjectMethods =
                   [ MethodInfo
+                      { methodName = "newTx"
+                      , methodDoc = "Create a new unsigned transaction in the current era."
+                      , methodParams = []
+                      , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
+                      , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
+                      }
+                  , MethodInfo
+                      { methodName = "newExperimentalEraTx"
+                      , methodDoc =
+                          "Create a new unsigned transaction in the current experimental era."
+                      , methodParams = []
+                      , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
+                      , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
+                      }
+                  , MethodInfo
                       { methodName = "newConwayTx"
-                      , methodDoc = "Creates a new Conway-era transaction."
+                      , methodDoc = "Create a new unsigned transaction in the Conway era."
                       , methodParams = []
                       , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
                       , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."

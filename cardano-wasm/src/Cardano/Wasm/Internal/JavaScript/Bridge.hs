@@ -272,6 +272,12 @@ getBase16ForVerificationKeyHash jsWallet =
 
 -- * UnsignedTxObject
 
+foreign export javascript "newTx"
+  newTx :: IO JSUnsignedTx
+
+foreign export javascript "newExperimentalEraTx"
+  newExperimentalEraTx :: IO JSUnsignedTx
+
 foreign export javascript "newConwayTx"
   newConwayTx :: IO JSUnsignedTx
 
@@ -289,6 +295,14 @@ foreign export javascript "estimateMinFee"
 
 foreign export javascript "signWithPaymentKey"
   signWithPaymentKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
+
+-- | Create a new unsigned transaction.
+newTx :: HasCallStack => IO JSUnsignedTx
+newTx = toJSVal Wasm.newTxImpl
+
+-- | Create a new experimental era unsigned transaction.
+newExperimentalEraTx :: HasCallStack => IO JSUnsignedTx
+newExperimentalEraTx = toJSVal =<< Wasm.newExperimentalEraTxImpl
 
 -- | Create a new Conway era unsigned transaction.
 newConwayTx :: HasCallStack => IO JSUnsignedTx
