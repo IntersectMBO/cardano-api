@@ -19,7 +19,7 @@
   projects:
   # - cardano-api
   # - cardano-api-gen
-  # - cardano-grpc
+  # - cardano-rpc
   # - cardano-wasm
 ```
 
