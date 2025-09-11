@@ -1,0 +1,1076 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveFoldable #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveFunctor #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DeriveTraversable #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- | Cabal-like file AST types: 'Field', 'Section' etc</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- These types are parametrized by an annotation.</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html"><span class="hs-identifier">Distribution.Fields.Field</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Cabal file</span></span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier">Field</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#fieldName"><span class="hs-identifier">fieldName</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#fieldAnn"><span class="hs-identifier">fieldAnn</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#fieldUniverse"><span class="hs-identifier">fieldUniverse</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier">FieldLine</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#fieldLineAnn"><span class="hs-identifier">fieldLineAnn</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#fieldLineBS"><span class="hs-identifier">fieldLineBS</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier">SectionArg</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#sectionArgAnn"><span class="hs-identifier">sectionArgAnn</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Name</span></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier">FieldName</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier">Name</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#mkName"><span class="hs-identifier">mkName</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#getName"><span class="hs-identifier">getName</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#nameAnn"><span class="hs-identifier">nameAnn</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Conversions to String</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#sectionArgsToString"><span class="hs-identifier">sectionArgsToString</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#fieldLinesToString"><span class="hs-identifier">fieldLinesToString</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../base-4.20.1.0-inplace/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Char</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Compat.Prelude.html"><span class="hs-identifier">Distribution.Compat.Prelude</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Pretty.html"><span class="hs-identifier">Distribution.Pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Pretty.html#showTokenStr"><span class="hs-identifier">showTokenStr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Distribution.Utils.Generic.html"><span class="hs-identifier">Distribution.Utils.Generic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier">fromUTF8BS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.20.1.0-inplace/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-cpp">
+#if MIN_VERSION_base(4,18,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html"><span class="hs-identifier">Data.Foldable1</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F1</span></span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- Cabal file</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><span class="hs-comment">-- | A Cabal-like file consists of a series of fields (@foo: bar@) and sections (@library ...@).</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">data</span><span> </span><span id="Field"><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-var">Field</span></a></span></span><span> </span><span id="local-6989586621679462658"><span class="annot"><a href="#local-6989586621679462658"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Field"><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-var">Field</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462658"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">FieldLine</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462658"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Section"><span class="annot"><a href="Distribution.Fields.Field.html#Section"><span class="hs-identifier hs-var">Section</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462658"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier hs-type">SectionArg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462658"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462658"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679462661"><span id="local-6989586621679462676"><span class="annot"><span class="annottext">Field ann -&gt; Field ann -&gt; Bool
+(Field ann -&gt; Field ann -&gt; Bool)
+-&gt; (Field ann -&gt; Field ann -&gt; Bool) -&gt; Eq (Field ann)
+forall ann. Eq ann =&gt; Field ann -&gt; Field ann -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall ann. Eq ann =&gt; Field ann -&gt; Field ann -&gt; Bool
+== :: Field ann -&gt; Field ann -&gt; Bool
+$c/= :: forall ann. Eq ann =&gt; Field ann -&gt; Field ann -&gt; Bool
+/= :: Field ann -&gt; Field ann -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679462684"><span id="local-6989586621679462699"><span id="local-6989586621679462703"><span class="annot"><span class="annottext">Int -&gt; Field ann -&gt; ShowS
+[Field ann] -&gt; ShowS
+Field ann -&gt; String
+(Int -&gt; Field ann -&gt; ShowS)
+-&gt; (Field ann -&gt; String)
+-&gt; ([Field ann] -&gt; ShowS)
+-&gt; Show (Field ann)
+forall ann. Show ann =&gt; Int -&gt; Field ann -&gt; ShowS
+forall ann. Show ann =&gt; [Field ann] -&gt; ShowS
+forall ann. Show ann =&gt; Field ann -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall ann. Show ann =&gt; Int -&gt; Field ann -&gt; ShowS
+showsPrec :: Int -&gt; Field ann -&gt; ShowS
+$cshow :: forall ann. Show ann =&gt; Field ann -&gt; String
+show :: Field ann -&gt; String
+$cshowList :: forall ann. Show ann =&gt; [Field ann] -&gt; ShowS
+showList :: [Field ann] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679462710"><span id="local-6989586621679462725"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; Field a -&gt; Field b)
+-&gt; (forall a b. a -&gt; Field b -&gt; Field a) -&gt; Functor Field
+forall a b. a -&gt; Field b -&gt; Field a
+forall a b. (a -&gt; b) -&gt; Field a -&gt; Field b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; Field a -&gt; Field b
+fmap :: forall a b. (a -&gt; b) -&gt; Field a -&gt; Field b
+$c&lt;$ :: forall a b. a -&gt; Field b -&gt; Field a
+&lt;$ :: forall a b. a -&gt; Field b -&gt; Field a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679462737"><span id="local-6989586621679462743"><span id="local-6989586621679462769"><span id="local-6989586621679462774"><span id="local-6989586621679462784"><span id="local-6989586621679462787"><span id="local-6989586621679462790"><span id="local-6989586621679462793"><span id="local-6989586621679462796"><span id="local-6989586621679462799"><span id="local-6989586621679462802"><span id="local-6989586621679462812"><span id="local-6989586621679462815"><span id="local-6989586621679462820"><span id="local-6989586621679462825"><span id="local-6989586621679462830"><span id="local-6989586621679462835"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; Field m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Field a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Field a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Field a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Field a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Field a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Field a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Field a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Field a -&gt; a)
+-&gt; (forall a. Field a -&gt; [a])
+-&gt; (forall a. Field a -&gt; Bool)
+-&gt; (forall a. Field a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; Field a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; Field a -&gt; a)
+-&gt; (forall a. Ord a =&gt; Field a -&gt; a)
+-&gt; (forall a. Num a =&gt; Field a -&gt; a)
+-&gt; (forall a. Num a =&gt; Field a -&gt; a)
+-&gt; Foldable Field
+forall a. Eq a =&gt; a -&gt; Field a -&gt; Bool
+forall a. Num a =&gt; Field a -&gt; a
+forall a. Ord a =&gt; Field a -&gt; a
+forall m. Monoid m =&gt; Field m -&gt; m
+forall a. Field a -&gt; Bool
+forall a. Field a -&gt; Int
+forall a. Field a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; Field a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Field a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Field a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Field a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall m. Monoid m =&gt; Field m -&gt; m
+fold :: forall m. Monoid m =&gt; Field m -&gt; m
+$cfoldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Field a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Field a -&gt; m
+$cfoldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Field a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Field a -&gt; m
+$cfoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Field a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Field a -&gt; b
+$cfoldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Field a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Field a -&gt; b
+$cfoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Field a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Field a -&gt; b
+$cfoldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Field a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Field a -&gt; b
+$cfoldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Field a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Field a -&gt; a
+$cfoldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Field a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Field a -&gt; a
+$ctoList :: forall a. Field a -&gt; [a]
+toList :: forall a. Field a -&gt; [a]
+$cnull :: forall a. Field a -&gt; Bool
+null :: forall a. Field a -&gt; Bool
+$clength :: forall a. Field a -&gt; Int
+length :: forall a. Field a -&gt; Int
+$celem :: forall a. Eq a =&gt; a -&gt; Field a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; Field a -&gt; Bool
+$cmaximum :: forall a. Ord a =&gt; Field a -&gt; a
+maximum :: forall a. Ord a =&gt; Field a -&gt; a
+$cminimum :: forall a. Ord a =&gt; Field a -&gt; a
+minimum :: forall a. Ord a =&gt; Field a -&gt; a
+$csum :: forall a. Num a =&gt; Field a -&gt; a
+sum :: forall a. Num a =&gt; Field a -&gt; a
+$cproduct :: forall a. Num a =&gt; Field a -&gt; a
+product :: forall a. Num a =&gt; Field a -&gt; a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679462848"><span id="local-6989586621679462875"><span id="local-6989586621679462880"><span id="local-6989586621679462885"><span class="annot"><span class="annottext">Functor Field
+Foldable Field
+(Functor Field, Foldable Field) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; Field a -&gt; f (Field b))
+-&gt; (forall (f :: * -&gt; *) a.
+    Applicative f =&gt;
+    Field (f a) -&gt; f (Field a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; Field a -&gt; m (Field b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; Field (m a) -&gt; m (Field a))
+-&gt; Traversable Field
+forall (t :: * -&gt; *).
+(Functor t, Foldable t) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; t a -&gt; f (t b))
+-&gt; (forall (f :: * -&gt; *) a. Applicative f =&gt; t (f a) -&gt; f (t a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; t (m a) -&gt; m (t a))
+-&gt; Traversable t
+forall (m :: * -&gt; *) a. Monad m =&gt; Field (m a) -&gt; m (Field a)
+forall (f :: * -&gt; *) a. Applicative f =&gt; Field (f a) -&gt; f (Field a)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Field a -&gt; m (Field b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Field a -&gt; f (Field b)
+$ctraverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Field a -&gt; f (Field b)
+traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Field a -&gt; f (Field b)
+$csequenceA :: forall (f :: * -&gt; *) a. Applicative f =&gt; Field (f a) -&gt; f (Field a)
+sequenceA :: forall (f :: * -&gt; *) a. Applicative f =&gt; Field (f a) -&gt; f (Field a)
+$cmapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Field a -&gt; m (Field b)
+mapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Field a -&gt; m (Field b)
+$csequence :: forall (m :: * -&gt; *) a. Monad m =&gt; Field (m a) -&gt; m (Field a)
+sequence :: forall (m :: * -&gt; *) a. Monad m =&gt; Field (m a) -&gt; m (Field a)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Traversable</span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><span class="hs-comment">-- | @since 3.12.0.0</span></span><span>
+</span><span id="line-56"></span><span id="local-6989586621679462521"><span id="local-6989586621679462896"><span id="local-6989586621679462908"><span id="local-6989586621679462918"><span id="local-6989586621679462922"><span id="local-6989586621679462925"><span id="local-6989586621679462928"><span id="local-6989586621679462931"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679462521"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462521"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><span class="hs-comment">-- | Section of field name</span></span><span>
+</span><span id="line-59"></span><span id="local-6989586621679462522"><span class="annot"><a href="Distribution.Fields.Field.html#fieldName"><span class="hs-identifier hs-type">fieldName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462522"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462522"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-60"></span><span id="fieldName"><span class="annot"><span class="annottext">fieldName :: forall ann. Field ann -&gt; Name ann
+</span><a href="Distribution.Fields.Field.html#fieldName"><span class="hs-identifier hs-var hs-var">fieldName</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span id="local-6989586621679462941"><span class="annot"><span class="annottext">Name ann
+</span><a href="#local-6989586621679462941"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="annot"><span class="annottext">[FieldLine ann]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name ann
+</span><a href="#local-6989586621679462941"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Distribution.Fields.Field.html#fieldName"><span class="hs-identifier hs-var">fieldName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Section"><span class="hs-identifier hs-type">Section</span></a></span><span> </span><span id="local-6989586621679462942"><span class="annot"><span class="annottext">Name ann
+</span><a href="#local-6989586621679462942"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="annot"><span class="annottext">[SectionArg ann]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">[Field ann]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name ann
+</span><a href="#local-6989586621679462942"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span id="local-6989586621679462524"><span class="annot"><a href="Distribution.Fields.Field.html#fieldAnn"><span class="hs-identifier hs-type">fieldAnn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462524"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679462524"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-64"></span><span id="fieldAnn"><span class="annot"><span class="annottext">fieldAnn :: forall ann. Field ann -&gt; ann
+</span><a href="Distribution.Fields.Field.html#fieldAnn"><span class="hs-identifier hs-var hs-var">fieldAnn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name ann -&gt; ann
+forall ann. Name ann -&gt; ann
+</span><a href="Distribution.Fields.Field.html#nameAnn"><span class="hs-identifier hs-var">nameAnn</span></a></span><span> </span><span class="annot"><span class="annottext">(Name ann -&gt; ann) -&gt; (Field ann -&gt; Name ann) -&gt; Field ann -&gt; ann
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Field ann -&gt; Name ann
+forall ann. Field ann -&gt; Name ann
+</span><a href="Distribution.Fields.Field.html#fieldName"><span class="hs-identifier hs-var">fieldName</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- | All transitive descendants of 'Field', including itself.</span><span>
+</span><span id="line-67"></span><span class="hs-comment">--</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- /Note:/ the resulting list is never empty.</span><span>
+</span><span id="line-69"></span><span id="local-6989586621679462530"><span class="annot"><a href="Distribution.Fields.Field.html#fieldUniverse"><span class="hs-identifier hs-type">fieldUniverse</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462530"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462530"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-70"></span><span id="fieldUniverse"><span class="annot"><span class="annottext">fieldUniverse :: forall ann. Field ann -&gt; [Field ann]
+</span><a href="Distribution.Fields.Field.html#fieldUniverse"><span class="hs-identifier hs-var hs-var">fieldUniverse</span></a></span></span><span> </span><span id="local-6989586621679462945"><span class="annot"><span class="annottext">f :: Field ann
+</span><a href="#local-6989586621679462945"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Section"><span class="hs-identifier hs-type">Section</span></a></span><span> </span><span class="annot"><span class="annottext">Name ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">[SectionArg ann]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679462946"><span class="annot"><span class="annottext">[Field ann]
+</span><a href="#local-6989586621679462946"><span class="hs-identifier hs-var">fs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Field ann
+</span><a href="#local-6989586621679462945"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Field ann -&gt; [Field ann] -&gt; [Field ann]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">(Field ann -&gt; [Field ann]) -&gt; [Field ann] -&gt; [Field ann]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="annot"><span class="annottext">Field ann -&gt; [Field ann]
+forall ann. Field ann -&gt; [Field ann]
+</span><a href="Distribution.Fields.Field.html#fieldUniverse"><span class="hs-identifier hs-var">fieldUniverse</span></a></span><span> </span><span class="annot"><span class="annottext">[Field ann]
+</span><a href="#local-6989586621679462946"><span class="hs-identifier hs-var">fs</span></a></span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Distribution.Fields.Field.html#fieldUniverse"><span class="hs-identifier hs-var">fieldUniverse</span></a></span><span> </span><span id="local-6989586621679462948"><span class="annot"><span class="annottext">f :: Field ann
+</span><a href="#local-6989586621679462948"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><span class="annottext">Name ann
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">[FieldLine ann]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Field ann
+</span><a href="#local-6989586621679462948"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- | A line of text representing the value of a field from a Cabal file.</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- A field may contain multiple lines.</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- /Invariant:/ 'ByteString' has no newlines.</span><span>
+</span><span id="line-77"></span><span class="hs-keyword">data</span><span> </span><span id="FieldLine"><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-var">FieldLine</span></a></span></span><span> </span><span id="local-6989586621679462949"><span class="annot"><a href="#local-6989586621679462949"><span class="hs-identifier hs-type">ann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="FieldLine"><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-var">FieldLine</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679462949"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679462953"><span id="local-6989586621679462958"><span class="annot"><span class="annottext">FieldLine ann -&gt; FieldLine ann -&gt; Bool
+(FieldLine ann -&gt; FieldLine ann -&gt; Bool)
+-&gt; (FieldLine ann -&gt; FieldLine ann -&gt; Bool) -&gt; Eq (FieldLine ann)
+forall ann. Eq ann =&gt; FieldLine ann -&gt; FieldLine ann -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall ann. Eq ann =&gt; FieldLine ann -&gt; FieldLine ann -&gt; Bool
+== :: FieldLine ann -&gt; FieldLine ann -&gt; Bool
+$c/= :: forall ann. Eq ann =&gt; FieldLine ann -&gt; FieldLine ann -&gt; Bool
+/= :: FieldLine ann -&gt; FieldLine ann -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679462962"><span id="local-6989586621679462968"><span id="local-6989586621679462971"><span class="annot"><span class="annottext">Int -&gt; FieldLine ann -&gt; ShowS
+[FieldLine ann] -&gt; ShowS
+FieldLine ann -&gt; String
+(Int -&gt; FieldLine ann -&gt; ShowS)
+-&gt; (FieldLine ann -&gt; String)
+-&gt; ([FieldLine ann] -&gt; ShowS)
+-&gt; Show (FieldLine ann)
+forall ann. Show ann =&gt; Int -&gt; FieldLine ann -&gt; ShowS
+forall ann. Show ann =&gt; [FieldLine ann] -&gt; ShowS
+forall ann. Show ann =&gt; FieldLine ann -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall ann. Show ann =&gt; Int -&gt; FieldLine ann -&gt; ShowS
+showsPrec :: Int -&gt; FieldLine ann -&gt; ShowS
+$cshow :: forall ann. Show ann =&gt; FieldLine ann -&gt; String
+show :: FieldLine ann -&gt; String
+$cshowList :: forall ann. Show ann =&gt; [FieldLine ann] -&gt; ShowS
+showList :: [FieldLine ann] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679462974"><span id="local-6989586621679462976"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; FieldLine a -&gt; FieldLine b)
+-&gt; (forall a b. a -&gt; FieldLine b -&gt; FieldLine a)
+-&gt; Functor FieldLine
+forall a b. a -&gt; FieldLine b -&gt; FieldLine a
+forall a b. (a -&gt; b) -&gt; FieldLine a -&gt; FieldLine b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; FieldLine a -&gt; FieldLine b
+fmap :: forall a b. (a -&gt; b) -&gt; FieldLine a -&gt; FieldLine b
+$c&lt;$ :: forall a b. a -&gt; FieldLine b -&gt; FieldLine a
+&lt;$ :: forall a b. a -&gt; FieldLine b -&gt; FieldLine a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679462978"><span id="local-6989586621679462983"><span id="local-6989586621679462986"><span id="local-6989586621679462991"><span id="local-6989586621679462993"><span id="local-6989586621679462996"><span id="local-6989586621679462999"><span id="local-6989586621679463002"><span id="local-6989586621679463005"><span id="local-6989586621679463008"><span id="local-6989586621679463011"><span id="local-6989586621679463013"><span id="local-6989586621679463016"><span id="local-6989586621679463021"><span id="local-6989586621679463026"><span id="local-6989586621679463031"><span id="local-6989586621679463036"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; FieldLine m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; FieldLine a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; FieldLine a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; FieldLine a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; FieldLine a -&gt; a)
+-&gt; (forall a. FieldLine a -&gt; [a])
+-&gt; (forall a. FieldLine a -&gt; Bool)
+-&gt; (forall a. FieldLine a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; FieldLine a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; FieldLine a -&gt; a)
+-&gt; (forall a. Ord a =&gt; FieldLine a -&gt; a)
+-&gt; (forall a. Num a =&gt; FieldLine a -&gt; a)
+-&gt; (forall a. Num a =&gt; FieldLine a -&gt; a)
+-&gt; Foldable FieldLine
+forall a. Eq a =&gt; a -&gt; FieldLine a -&gt; Bool
+forall a. Num a =&gt; FieldLine a -&gt; a
+forall a. Ord a =&gt; FieldLine a -&gt; a
+forall m. Monoid m =&gt; FieldLine m -&gt; m
+forall a. FieldLine a -&gt; Bool
+forall a. FieldLine a -&gt; Int
+forall a. FieldLine a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; FieldLine a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; FieldLine a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall m. Monoid m =&gt; FieldLine m -&gt; m
+fold :: forall m. Monoid m =&gt; FieldLine m -&gt; m
+$cfoldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; FieldLine a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; FieldLine a -&gt; m
+$cfoldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; FieldLine a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; FieldLine a -&gt; m
+$cfoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b
+$cfoldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b
+$cfoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b
+$cfoldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; FieldLine a -&gt; b
+$cfoldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; FieldLine a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; FieldLine a -&gt; a
+$cfoldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; FieldLine a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; FieldLine a -&gt; a
+$ctoList :: forall a. FieldLine a -&gt; [a]
+toList :: forall a. FieldLine a -&gt; [a]
+$cnull :: forall a. FieldLine a -&gt; Bool
+null :: forall a. FieldLine a -&gt; Bool
+$clength :: forall a. FieldLine a -&gt; Int
+length :: forall a. FieldLine a -&gt; Int
+$celem :: forall a. Eq a =&gt; a -&gt; FieldLine a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; FieldLine a -&gt; Bool
+$cmaximum :: forall a. Ord a =&gt; FieldLine a -&gt; a
+maximum :: forall a. Ord a =&gt; FieldLine a -&gt; a
+$cminimum :: forall a. Ord a =&gt; FieldLine a -&gt; a
+minimum :: forall a. Ord a =&gt; FieldLine a -&gt; a
+$csum :: forall a. Num a =&gt; FieldLine a -&gt; a
+sum :: forall a. Num a =&gt; FieldLine a -&gt; a
+$cproduct :: forall a. Num a =&gt; FieldLine a -&gt; a
+product :: forall a. Num a =&gt; FieldLine a -&gt; a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679463045"><span id="local-6989586621679463050"><span id="local-6989586621679463055"><span id="local-6989586621679463060"><span class="annot"><span class="annottext">Functor FieldLine
+Foldable FieldLine
+(Functor FieldLine, Foldable FieldLine) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; FieldLine a -&gt; f (FieldLine b))
+-&gt; (forall (f :: * -&gt; *) a.
+    Applicative f =&gt;
+    FieldLine (f a) -&gt; f (FieldLine a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; FieldLine a -&gt; m (FieldLine b))
+-&gt; (forall (m :: * -&gt; *) a.
+    Monad m =&gt;
+    FieldLine (m a) -&gt; m (FieldLine a))
+-&gt; Traversable FieldLine
+forall (t :: * -&gt; *).
+(Functor t, Foldable t) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; t a -&gt; f (t b))
+-&gt; (forall (f :: * -&gt; *) a. Applicative f =&gt; t (f a) -&gt; f (t a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; t (m a) -&gt; m (t a))
+-&gt; Traversable t
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+FieldLine (m a) -&gt; m (FieldLine a)
+forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+FieldLine (f a) -&gt; f (FieldLine a)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; FieldLine a -&gt; m (FieldLine b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; FieldLine a -&gt; f (FieldLine b)
+$ctraverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; FieldLine a -&gt; f (FieldLine b)
+traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; FieldLine a -&gt; f (FieldLine b)
+$csequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+FieldLine (f a) -&gt; f (FieldLine a)
+sequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+FieldLine (f a) -&gt; f (FieldLine a)
+$cmapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; FieldLine a -&gt; m (FieldLine b)
+mapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; FieldLine a -&gt; m (FieldLine b)
+$csequence :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+FieldLine (m a) -&gt; m (FieldLine a)
+sequence :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+FieldLine (m a) -&gt; m (FieldLine a)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Traversable</span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="annot"><span class="hs-comment">-- | @since 3.12.0.0</span></span><span>
+</span><span id="line-81"></span><span id="local-6989586621679462520"><span id="local-6989586621679463070"><span id="local-6989586621679463075"><span id="local-6989586621679463079"><span id="local-6989586621679463082"><span id="local-6989586621679463085"><span id="local-6989586621679463088"><span id="local-6989586621679463091"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679462520"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">FieldLine</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462520"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><span class="hs-comment">-- | @since 3.0.0.0</span></span><span>
+</span><span id="line-84"></span><span id="local-6989586621679462553"><span class="annot"><a href="Distribution.Fields.Field.html#fieldLineAnn"><span class="hs-identifier hs-type">fieldLineAnn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">FieldLine</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462553"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679462553"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-85"></span><span id="fieldLineAnn"><span class="annot"><span class="annottext">fieldLineAnn :: forall ann. FieldLine ann -&gt; ann
+</span><a href="Distribution.Fields.Field.html#fieldLineAnn"><span class="hs-identifier hs-var hs-var">fieldLineAnn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">FieldLine</span></a></span><span> </span><span id="local-6989586621679463093"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463093"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463093"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><span class="hs-comment">-- | @since 3.0.0.0</span></span><span>
+</span><span id="line-88"></span><span id="local-6989586621679462555"><span class="annot"><a href="Distribution.Fields.Field.html#fieldLineBS"><span class="hs-identifier hs-type">fieldLineBS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">FieldLine</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462555"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span></span><span>
+</span><span id="line-89"></span><span id="fieldLineBS"><span class="annot"><span class="annottext">fieldLineBS :: forall ann. FieldLine ann -&gt; ByteString
+</span><a href="Distribution.Fields.Field.html#fieldLineBS"><span class="hs-identifier hs-var hs-var">fieldLineBS</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">FieldLine</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679463094"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463094"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463094"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="annot"><span class="hs-comment">-- | Section arguments, e.g. name of the library</span></span><span>
+</span><span id="line-92"></span><span class="hs-keyword">data</span><span> </span><span id="SectionArg"><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier hs-var">SectionArg</span></a></span></span><span> </span><span id="local-6989586621679463095"><span class="annot"><a href="#local-6989586621679463095"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | identifier, or something which looks like number. Also many dot numbers, i.e. &quot;7.6.3&quot;</span></span><span>
+</span><span id="line-94"></span><span>    </span><span id="SecArgName"><span class="annot"><a href="Distribution.Fields.Field.html#SecArgName"><span class="hs-identifier hs-var">SecArgName</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679463095"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | quoted string</span></span><span>
+</span><span id="line-96"></span><span>    </span><span id="SecArgStr"><span class="annot"><a href="Distribution.Fields.Field.html#SecArgStr"><span class="hs-identifier hs-var">SecArgStr</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679463095"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | everything else, mm. operators (e.g. in if-section conditionals)</span></span><span>
+</span><span id="line-98"></span><span>    </span><span id="SecArgOther"><span class="annot"><a href="Distribution.Fields.Field.html#SecArgOther"><span class="hs-identifier hs-var">SecArgOther</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679463095"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679463101"><span id="local-6989586621679463111"><span class="annot"><span class="annottext">SectionArg ann -&gt; SectionArg ann -&gt; Bool
+(SectionArg ann -&gt; SectionArg ann -&gt; Bool)
+-&gt; (SectionArg ann -&gt; SectionArg ann -&gt; Bool)
+-&gt; Eq (SectionArg ann)
+forall ann. Eq ann =&gt; SectionArg ann -&gt; SectionArg ann -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall ann. Eq ann =&gt; SectionArg ann -&gt; SectionArg ann -&gt; Bool
+== :: SectionArg ann -&gt; SectionArg ann -&gt; Bool
+$c/= :: forall ann. Eq ann =&gt; SectionArg ann -&gt; SectionArg ann -&gt; Bool
+/= :: SectionArg ann -&gt; SectionArg ann -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679463115"><span id="local-6989586621679463126"><span id="local-6989586621679463129"><span class="annot"><span class="annottext">Int -&gt; SectionArg ann -&gt; ShowS
+[SectionArg ann] -&gt; ShowS
+SectionArg ann -&gt; String
+(Int -&gt; SectionArg ann -&gt; ShowS)
+-&gt; (SectionArg ann -&gt; String)
+-&gt; ([SectionArg ann] -&gt; ShowS)
+-&gt; Show (SectionArg ann)
+forall ann. Show ann =&gt; Int -&gt; SectionArg ann -&gt; ShowS
+forall ann. Show ann =&gt; [SectionArg ann] -&gt; ShowS
+forall ann. Show ann =&gt; SectionArg ann -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall ann. Show ann =&gt; Int -&gt; SectionArg ann -&gt; ShowS
+showsPrec :: Int -&gt; SectionArg ann -&gt; ShowS
+$cshow :: forall ann. Show ann =&gt; SectionArg ann -&gt; String
+show :: SectionArg ann -&gt; String
+$cshowList :: forall ann. Show ann =&gt; [SectionArg ann] -&gt; ShowS
+showList :: [SectionArg ann] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679463132"><span id="local-6989586621679463134"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; SectionArg a -&gt; SectionArg b)
+-&gt; (forall a b. a -&gt; SectionArg b -&gt; SectionArg a)
+-&gt; Functor SectionArg
+forall a b. a -&gt; SectionArg b -&gt; SectionArg a
+forall a b. (a -&gt; b) -&gt; SectionArg a -&gt; SectionArg b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; SectionArg a -&gt; SectionArg b
+fmap :: forall a b. (a -&gt; b) -&gt; SectionArg a -&gt; SectionArg b
+$c&lt;$ :: forall a b. a -&gt; SectionArg b -&gt; SectionArg a
+&lt;$ :: forall a b. a -&gt; SectionArg b -&gt; SectionArg a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679463136"><span id="local-6989586621679463141"><span id="local-6989586621679463144"><span id="local-6989586621679463149"><span id="local-6989586621679463151"><span id="local-6989586621679463154"><span id="local-6989586621679463157"><span id="local-6989586621679463160"><span id="local-6989586621679463163"><span id="local-6989586621679463166"><span id="local-6989586621679463169"><span id="local-6989586621679463171"><span id="local-6989586621679463174"><span id="local-6989586621679463179"><span id="local-6989586621679463184"><span id="local-6989586621679463189"><span id="local-6989586621679463194"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; SectionArg m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; SectionArg a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; SectionArg a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; SectionArg a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; SectionArg a -&gt; a)
+-&gt; (forall a. SectionArg a -&gt; [a])
+-&gt; (forall a. SectionArg a -&gt; Bool)
+-&gt; (forall a. SectionArg a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; SectionArg a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; SectionArg a -&gt; a)
+-&gt; (forall a. Ord a =&gt; SectionArg a -&gt; a)
+-&gt; (forall a. Num a =&gt; SectionArg a -&gt; a)
+-&gt; (forall a. Num a =&gt; SectionArg a -&gt; a)
+-&gt; Foldable SectionArg
+forall a. Eq a =&gt; a -&gt; SectionArg a -&gt; Bool
+forall a. Num a =&gt; SectionArg a -&gt; a
+forall a. Ord a =&gt; SectionArg a -&gt; a
+forall m. Monoid m =&gt; SectionArg m -&gt; m
+forall a. SectionArg a -&gt; Bool
+forall a. SectionArg a -&gt; Int
+forall a. SectionArg a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; SectionArg a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; SectionArg a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall m. Monoid m =&gt; SectionArg m -&gt; m
+fold :: forall m. Monoid m =&gt; SectionArg m -&gt; m
+$cfoldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; SectionArg a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; SectionArg a -&gt; m
+$cfoldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; SectionArg a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; SectionArg a -&gt; m
+$cfoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b
+$cfoldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b
+$cfoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b
+$cfoldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; SectionArg a -&gt; b
+$cfoldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; SectionArg a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; SectionArg a -&gt; a
+$cfoldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; SectionArg a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; SectionArg a -&gt; a
+$ctoList :: forall a. SectionArg a -&gt; [a]
+toList :: forall a. SectionArg a -&gt; [a]
+$cnull :: forall a. SectionArg a -&gt; Bool
+null :: forall a. SectionArg a -&gt; Bool
+$clength :: forall a. SectionArg a -&gt; Int
+length :: forall a. SectionArg a -&gt; Int
+$celem :: forall a. Eq a =&gt; a -&gt; SectionArg a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; SectionArg a -&gt; Bool
+$cmaximum :: forall a. Ord a =&gt; SectionArg a -&gt; a
+maximum :: forall a. Ord a =&gt; SectionArg a -&gt; a
+$cminimum :: forall a. Ord a =&gt; SectionArg a -&gt; a
+minimum :: forall a. Ord a =&gt; SectionArg a -&gt; a
+$csum :: forall a. Num a =&gt; SectionArg a -&gt; a
+sum :: forall a. Num a =&gt; SectionArg a -&gt; a
+$cproduct :: forall a. Num a =&gt; SectionArg a -&gt; a
+product :: forall a. Num a =&gt; SectionArg a -&gt; a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679463203"><span id="local-6989586621679463210"><span id="local-6989586621679463215"><span id="local-6989586621679463220"><span class="annot"><span class="annottext">Functor SectionArg
+Foldable SectionArg
+(Functor SectionArg, Foldable SectionArg) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; SectionArg a -&gt; f (SectionArg b))
+-&gt; (forall (f :: * -&gt; *) a.
+    Applicative f =&gt;
+    SectionArg (f a) -&gt; f (SectionArg a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; SectionArg a -&gt; m (SectionArg b))
+-&gt; (forall (m :: * -&gt; *) a.
+    Monad m =&gt;
+    SectionArg (m a) -&gt; m (SectionArg a))
+-&gt; Traversable SectionArg
+forall (t :: * -&gt; *).
+(Functor t, Foldable t) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; t a -&gt; f (t b))
+-&gt; (forall (f :: * -&gt; *) a. Applicative f =&gt; t (f a) -&gt; f (t a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; t (m a) -&gt; m (t a))
+-&gt; Traversable t
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+SectionArg (m a) -&gt; m (SectionArg a)
+forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+SectionArg (f a) -&gt; f (SectionArg a)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; SectionArg a -&gt; m (SectionArg b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; SectionArg a -&gt; f (SectionArg b)
+$ctraverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; SectionArg a -&gt; f (SectionArg b)
+traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; SectionArg a -&gt; f (SectionArg b)
+$csequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+SectionArg (f a) -&gt; f (SectionArg a)
+sequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+SectionArg (f a) -&gt; f (SectionArg a)
+$cmapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; SectionArg a -&gt; m (SectionArg b)
+mapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; SectionArg a -&gt; m (SectionArg b)
+$csequence :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+SectionArg (m a) -&gt; m (SectionArg a)
+sequence :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+SectionArg (m a) -&gt; m (SectionArg a)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Traversable</span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="annot"><span class="hs-comment">-- | @since 3.12.0.0</span></span><span>
+</span><span id="line-102"></span><span id="local-6989586621679462519"><span id="local-6989586621679463229"><span id="local-6989586621679463237"><span id="local-6989586621679463245"><span id="local-6989586621679463248"><span id="local-6989586621679463251"><span id="local-6989586621679463254"><span id="local-6989586621679463257"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679462519"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier hs-type">SectionArg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462519"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="annot"><span class="hs-comment">-- | Extract annotation from 'SectionArg'.</span></span><span>
+</span><span id="line-105"></span><span id="local-6989586621679462572"><span class="annot"><a href="Distribution.Fields.Field.html#sectionArgAnn"><span class="hs-identifier hs-type">sectionArgAnn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier hs-type">SectionArg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462572"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679462572"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-106"></span><span id="sectionArgAnn"><span class="annot"><span class="annottext">sectionArgAnn :: forall ann. SectionArg ann -&gt; ann
+</span><a href="Distribution.Fields.Field.html#sectionArgAnn"><span class="hs-identifier hs-var hs-var">sectionArgAnn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgName"><span class="hs-identifier hs-type">SecArgName</span></a></span><span> </span><span id="local-6989586621679463259"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463259"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463259"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-107"></span><span class="annot"><a href="Distribution.Fields.Field.html#sectionArgAnn"><span class="hs-identifier hs-var">sectionArgAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgStr"><span class="hs-identifier hs-type">SecArgStr</span></a></span><span> </span><span id="local-6989586621679463260"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463260"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463260"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-108"></span><span class="annot"><a href="Distribution.Fields.Field.html#sectionArgAnn"><span class="hs-identifier hs-var">sectionArgAnn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgOther"><span class="hs-identifier hs-type">SecArgOther</span></a></span><span> </span><span id="local-6989586621679463261"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463261"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463261"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- Name</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-keyword">type</span><span> </span><span id="FieldName"><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier hs-var">FieldName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- | A field name.</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- /Invariant/: 'ByteString' is lower-case ASCII.</span><span>
+</span><span id="line-119"></span><span class="hs-keyword">data</span><span> </span><span id="Name"><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-var">Name</span></a></span></span><span> </span><span id="local-6989586621679463262"><span class="annot"><a href="#local-6989586621679463262"><span class="hs-identifier hs-type">ann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Name"><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-var">Name</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679463262"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier hs-type">FieldName</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679463266"><span id="local-6989586621679463270"><span class="annot"><span class="annottext">Name ann -&gt; Name ann -&gt; Bool
+(Name ann -&gt; Name ann -&gt; Bool)
+-&gt; (Name ann -&gt; Name ann -&gt; Bool) -&gt; Eq (Name ann)
+forall ann. Eq ann =&gt; Name ann -&gt; Name ann -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall ann. Eq ann =&gt; Name ann -&gt; Name ann -&gt; Bool
+== :: Name ann -&gt; Name ann -&gt; Bool
+$c/= :: forall ann. Eq ann =&gt; Name ann -&gt; Name ann -&gt; Bool
+/= :: Name ann -&gt; Name ann -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679463274"><span id="local-6989586621679463279"><span id="local-6989586621679463282"><span class="annot"><span class="annottext">Int -&gt; Name ann -&gt; ShowS
+[Name ann] -&gt; ShowS
+Name ann -&gt; String
+(Int -&gt; Name ann -&gt; ShowS)
+-&gt; (Name ann -&gt; String) -&gt; ([Name ann] -&gt; ShowS) -&gt; Show (Name ann)
+forall ann. Show ann =&gt; Int -&gt; Name ann -&gt; ShowS
+forall ann. Show ann =&gt; [Name ann] -&gt; ShowS
+forall ann. Show ann =&gt; Name ann -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall ann. Show ann =&gt; Int -&gt; Name ann -&gt; ShowS
+showsPrec :: Int -&gt; Name ann -&gt; ShowS
+$cshow :: forall ann. Show ann =&gt; Name ann -&gt; String
+show :: Name ann -&gt; String
+$cshowList :: forall ann. Show ann =&gt; [Name ann] -&gt; ShowS
+showList :: [Name ann] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679463285"><span id="local-6989586621679463287"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; Name a -&gt; Name b)
+-&gt; (forall a b. a -&gt; Name b -&gt; Name a) -&gt; Functor Name
+forall a b. a -&gt; Name b -&gt; Name a
+forall a b. (a -&gt; b) -&gt; Name a -&gt; Name b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; Name a -&gt; Name b
+fmap :: forall a b. (a -&gt; b) -&gt; Name a -&gt; Name b
+$c&lt;$ :: forall a b. a -&gt; Name b -&gt; Name a
+&lt;$ :: forall a b. a -&gt; Name b -&gt; Name a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679463289"><span id="local-6989586621679463294"><span id="local-6989586621679463297"><span id="local-6989586621679463302"><span id="local-6989586621679463304"><span id="local-6989586621679463307"><span id="local-6989586621679463310"><span id="local-6989586621679463313"><span id="local-6989586621679463316"><span id="local-6989586621679463319"><span id="local-6989586621679463322"><span id="local-6989586621679463324"><span id="local-6989586621679463327"><span id="local-6989586621679463332"><span id="local-6989586621679463337"><span id="local-6989586621679463342"><span id="local-6989586621679463347"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; Name m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Name a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Name a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Name a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Name a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Name a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Name a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Name a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Name a -&gt; a)
+-&gt; (forall a. Name a -&gt; [a])
+-&gt; (forall a. Name a -&gt; Bool)
+-&gt; (forall a. Name a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; Name a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; Name a -&gt; a)
+-&gt; (forall a. Ord a =&gt; Name a -&gt; a)
+-&gt; (forall a. Num a =&gt; Name a -&gt; a)
+-&gt; (forall a. Num a =&gt; Name a -&gt; a)
+-&gt; Foldable Name
+forall a. Eq a =&gt; a -&gt; Name a -&gt; Bool
+forall a. Num a =&gt; Name a -&gt; a
+forall a. Ord a =&gt; Name a -&gt; a
+forall m. Monoid m =&gt; Name m -&gt; m
+forall a. Name a -&gt; Bool
+forall a. Name a -&gt; Int
+forall a. Name a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; Name a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Name a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Name a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Name a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall m. Monoid m =&gt; Name m -&gt; m
+fold :: forall m. Monoid m =&gt; Name m -&gt; m
+$cfoldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Name a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Name a -&gt; m
+$cfoldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Name a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Name a -&gt; m
+$cfoldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Name a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Name a -&gt; b
+$cfoldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Name a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Name a -&gt; b
+$cfoldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Name a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Name a -&gt; b
+$cfoldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Name a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Name a -&gt; b
+$cfoldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Name a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Name a -&gt; a
+$cfoldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Name a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Name a -&gt; a
+$ctoList :: forall a. Name a -&gt; [a]
+toList :: forall a. Name a -&gt; [a]
+$cnull :: forall a. Name a -&gt; Bool
+null :: forall a. Name a -&gt; Bool
+$clength :: forall a. Name a -&gt; Int
+length :: forall a. Name a -&gt; Int
+$celem :: forall a. Eq a =&gt; a -&gt; Name a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; Name a -&gt; Bool
+$cmaximum :: forall a. Ord a =&gt; Name a -&gt; a
+maximum :: forall a. Ord a =&gt; Name a -&gt; a
+$cminimum :: forall a. Ord a =&gt; Name a -&gt; a
+minimum :: forall a. Ord a =&gt; Name a -&gt; a
+$csum :: forall a. Num a =&gt; Name a -&gt; a
+sum :: forall a. Num a =&gt; Name a -&gt; a
+$cproduct :: forall a. Num a =&gt; Name a -&gt; a
+product :: forall a. Num a =&gt; Name a -&gt; a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679463356"><span id="local-6989586621679463361"><span id="local-6989586621679463366"><span id="local-6989586621679463371"><span class="annot"><span class="annottext">Functor Name
+Foldable Name
+(Functor Name, Foldable Name) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; Name a -&gt; f (Name b))
+-&gt; (forall (f :: * -&gt; *) a.
+    Applicative f =&gt;
+    Name (f a) -&gt; f (Name a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; Name a -&gt; m (Name b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; Name (m a) -&gt; m (Name a))
+-&gt; Traversable Name
+forall (t :: * -&gt; *).
+(Functor t, Foldable t) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; t a -&gt; f (t b))
+-&gt; (forall (f :: * -&gt; *) a. Applicative f =&gt; t (f a) -&gt; f (t a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; t (m a) -&gt; m (t a))
+-&gt; Traversable t
+forall (m :: * -&gt; *) a. Monad m =&gt; Name (m a) -&gt; m (Name a)
+forall (f :: * -&gt; *) a. Applicative f =&gt; Name (f a) -&gt; f (Name a)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Name a -&gt; m (Name b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Name a -&gt; f (Name b)
+$ctraverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Name a -&gt; f (Name b)
+traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Name a -&gt; f (Name b)
+$csequenceA :: forall (f :: * -&gt; *) a. Applicative f =&gt; Name (f a) -&gt; f (Name a)
+sequenceA :: forall (f :: * -&gt; *) a. Applicative f =&gt; Name (f a) -&gt; f (Name a)
+$cmapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Name a -&gt; m (Name b)
+mapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Name a -&gt; m (Name b)
+$csequence :: forall (m :: * -&gt; *) a. Monad m =&gt; Name (m a) -&gt; m (Name a)
+sequence :: forall (m :: * -&gt; *) a. Monad m =&gt; Name (m a) -&gt; m (Name a)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Traversable</span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="annot"><span class="hs-comment">-- | @since 3.12.0.0</span></span><span>
+</span><span id="line-123"></span><span id="local-6989586621679462518"><span id="local-6989586621679463380"><span id="local-6989586621679463384"><span id="local-6989586621679463388"><span id="local-6989586621679463391"><span id="local-6989586621679463394"><span id="local-6989586621679463397"><span id="local-6989586621679463400"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679462518"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462518"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span id="local-6989586621679462589"><span class="annot"><a href="Distribution.Fields.Field.html#mkName"><span class="hs-identifier hs-type">mkName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679462589"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier hs-type">FieldName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462589"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-126"></span><span id="mkName"><span class="annot"><span class="annottext">mkName :: forall ann. ann -&gt; ByteString -&gt; Name ann
+</span><a href="Distribution.Fields.Field.html#mkName"><span class="hs-identifier hs-var hs-var">mkName</span></a></span></span><span> </span><span id="local-6989586621679463402"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463402"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621679463403"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463403"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann -&gt; ByteString -&gt; Name ann
+forall ann. ann -&gt; ByteString -&gt; Name ann
+</span><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-var">Name</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463402"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Char) -&gt; ByteString -&gt; ByteString
+</span><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Char8.html#map"><span class="hs-identifier hs-var">B.map</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char
+</span><span class="hs-identifier hs-var">Char.toLower</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463403"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span id="local-6989586621679462591"><span class="annot"><a href="Distribution.Fields.Field.html#getName"><span class="hs-identifier hs-type">getName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462591"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldName"><span class="hs-identifier hs-type">FieldName</span></a></span></span><span>
+</span><span id="line-129"></span><span id="getName"><span class="annot"><span class="annottext">getName :: forall ann. Name ann -&gt; ByteString
+</span><a href="Distribution.Fields.Field.html#getName"><span class="hs-identifier hs-var hs-var">getName</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679463406"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463406"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463406"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span id="local-6989586621679462526"><span class="annot"><a href="Distribution.Fields.Field.html#nameAnn"><span class="hs-identifier hs-type">nameAnn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462526"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679462526"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-132"></span><span id="nameAnn"><span class="annot"><span class="annottext">nameAnn :: forall ann. Name ann -&gt; ann
+</span><a href="Distribution.Fields.Field.html#nameAnn"><span class="hs-identifier hs-var hs-var">nameAnn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span id="local-6989586621679463407"><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463407"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ann
+</span><a href="#local-6989586621679463407"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- To Strings</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-139"></span><span class="hs-comment">--</span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- @since 3.6.0.0</span><span>
+</span><span id="line-141"></span><span id="local-6989586621679462594"><span class="annot"><a href="Distribution.Fields.Field.html#sectionArgsToString"><span class="hs-identifier hs-type">sectionArgsToString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier hs-type">SectionArg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462594"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span></span><span>
+</span><span id="line-142"></span><span id="sectionArgsToString"><span class="annot"><span class="annottext">sectionArgsToString :: forall ann. [SectionArg ann] -&gt; String
+</span><a href="Distribution.Fields.Field.html#sectionArgsToString"><span class="hs-identifier hs-var hs-var">sectionArgsToString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><span class="hs-identifier hs-var">unwords</span></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; String)
+-&gt; ([SectionArg ann] -&gt; [String]) -&gt; [SectionArg ann] -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(SectionArg ann -&gt; String) -&gt; [SectionArg ann] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="annot"><span class="annottext">SectionArg ann -&gt; String
+forall ann. SectionArg ann -&gt; String
+</span><a href="#local-6989586621679463409"><span class="hs-identifier hs-var">toStr</span></a></span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-144"></span><span>    </span><span id="local-6989586621679462598"><span class="annot"><a href="#local-6989586621679463409"><span class="hs-identifier hs-type">toStr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier hs-type">SectionArg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462598"><span class="hs-identifier hs-type">ann</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span></span><span>
+</span><span id="line-145"></span><span>    </span><span id="local-6989586621679463409"><span class="annot"><span class="annottext">toStr :: forall ann. SectionArg ann -&gt; String
+</span><a href="#local-6989586621679463409"><span class="hs-identifier hs-var hs-var">toStr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgName"><span class="hs-identifier hs-type">SecArgName</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679463410"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463410"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS
+</span><a href="Distribution.Pretty.html#showTokenStr"><span class="hs-identifier hs-var">showTokenStr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier hs-var">fromUTF8BS</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463410"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>    </span><span class="annot"><a href="#local-6989586621679463409"><span class="hs-identifier hs-var">toStr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgStr"><span class="hs-identifier hs-type">SecArgStr</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679463411"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463411"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS
+</span><a href="Distribution.Pretty.html#showTokenStr"><span class="hs-identifier hs-var">showTokenStr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier hs-var">fromUTF8BS</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463411"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>    </span><span class="annot"><a href="#local-6989586621679463409"><span class="hs-identifier hs-var">toStr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#SecArgOther"><span class="hs-identifier hs-type">SecArgOther</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679463412"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463412"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier hs-var">fromUTF8BS</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463412"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- | Convert @['FieldLine']@ into String.</span><span>
+</span><span id="line-150"></span><span class="hs-comment">--</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- /Note:/ this doesn't preserve indentation or empty lines,</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- as the annotations (e.g. positions) are ignored.</span><span>
+</span><span id="line-153"></span><span class="hs-comment">--</span><span>
+</span><span id="line-154"></span><span class="hs-comment">-- @since 3.6.0.0</span><span>
+</span><span id="line-155"></span><span id="local-6989586621679462600"><span class="annot"><a href="Distribution.Fields.Field.html#fieldLinesToString"><span class="hs-identifier hs-type">fieldLinesToString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">FieldLine</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679462600"><span class="hs-identifier hs-type">ann</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span></span><span>
+</span><span id="line-156"></span><span id="fieldLinesToString"><span class="annot"><span class="annottext">fieldLinesToString :: forall ann. [FieldLine ann] -&gt; String
+</span><a href="Distribution.Fields.Field.html#fieldLinesToString"><span class="hs-identifier hs-var hs-var">fieldLinesToString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-comment">-- intercalate to avoid trailing newline.</span><span>
+</span><span id="line-158"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; String
+forall a. [a] -&gt; [[a]] -&gt; [a]
+</span><span class="hs-identifier hs-var">intercalate</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\n&quot;</span></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; String)
+-&gt; ([FieldLine ann] -&gt; [String]) -&gt; [FieldLine ann] -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(FieldLine ann -&gt; String) -&gt; [FieldLine ann] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="annot"><span class="annottext">FieldLine ann -&gt; String
+forall {ann}. FieldLine ann -&gt; String
+</span><a href="#local-6989586621679463414"><span class="hs-identifier hs-var">toStr</span></a></span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-160"></span><span>    </span><span id="local-6989586621679463414"><span class="annot"><span class="annottext">toStr :: FieldLine ann -&gt; String
+</span><a href="#local-6989586621679463414"><span class="hs-identifier hs-var hs-var">toStr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">FieldLine</span></a></span><span> </span><span class="annot"><span class="annottext">ann
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679463415"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463415"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="Distribution.Utils.Generic.html#fromUTF8BS"><span class="hs-identifier hs-var">fromUTF8BS</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679463415"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-161"></span><span>
+</span><span id="line-162"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- Foldable1</span><span>
+</span><span id="line-164"></span><span class="hs-comment">-------------------------------------------------------------------------------</span><span class="hs-cpp">
+
+#if MIN_VERSION_base(4,18,0)
+</span><span>
+</span><span id="line-168"></span><span class="annot"><span class="hs-comment">-- | @since 3.12.0.0</span></span><span>
+</span><span id="line-169"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679463419"><span id="local-6989586621679463426"><span id="local-6989586621679463431"><span id="local-6989586621679463434"><span id="local-6989586621679463439"><span id="local-6989586621679463444"><span id="local-6989586621679463447"><span id="local-6989586621679463450"><span id="local-6989586621679463453"><span id="local-6989586621679463456"><span id="local-6989586621679463459"><span class="annot"><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#Foldable1"><span class="hs-identifier hs-type">F1.Foldable1</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-170"></span><span>  </span><span id="local-6989586621679463481"><span class="annot"><span class="annottext">foldMap1 :: forall m a. Semigroup m =&gt; (a -&gt; m) -&gt; Field a -&gt; m
+</span><a href="#local-6989586621679463481"><span class="hs-identifier hs-var hs-var hs-var">foldMap1</span></a></span></span><span> </span><span id="local-6989586621679463483"><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679463483"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span id="local-6989586621679463484"><span class="annot"><span class="annottext">Name a
+</span><a href="#local-6989586621679463484"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679463485"><span class="annot"><span class="annottext">[FieldLine a]
+</span><a href="#local-6989586621679463485"><span class="hs-identifier hs-var">ys</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-171"></span><span>    </span><span class="annot"><span class="annottext">NonEmpty m -&gt; m
+forall m. Semigroup m =&gt; NonEmpty m -&gt; m
+forall (t :: * -&gt; *) m. (Foldable1 t, Semigroup m) =&gt; t m -&gt; m
+</span><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#fold1"><span class="hs-identifier hs-var">F1.fold1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; Name a -&gt; m
+forall m a. Semigroup m =&gt; (a -&gt; m) -&gt; Name a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable1 t, Semigroup m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#foldMap1"><span class="hs-identifier hs-var">F1.foldMap1</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679463483"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Name a
+</span><a href="#local-6989586621679463484"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; [m] -&gt; NonEmpty m
+forall a. a -&gt; [a] -&gt; NonEmpty a
+</span><span class="hs-operator hs-var">:|</span></span><span> </span><span class="annot"><span class="annottext">(FieldLine a -&gt; m) -&gt; [FieldLine a] -&gt; [m]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; FieldLine a -&gt; m
+forall m a. Semigroup m =&gt; (a -&gt; m) -&gt; FieldLine a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable1 t, Semigroup m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#foldMap1"><span class="hs-identifier hs-var">F1.foldMap1</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679463483"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[FieldLine a]
+</span><a href="#local-6989586621679463485"><span class="hs-identifier hs-var">ys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>  </span><span class="annot"><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#foldMap1"><span class="hs-identifier hs-var">foldMap1</span></a></span><span> </span><span id="local-6989586621679463488"><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679463488"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Distribution.Fields.Field.html#Section"><span class="hs-identifier hs-type">Section</span></a></span><span> </span><span id="local-6989586621679463489"><span class="annot"><span class="annottext">Name a
+</span><a href="#local-6989586621679463489"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679463490"><span class="annot"><span class="annottext">[SectionArg a]
+</span><a href="#local-6989586621679463490"><span class="hs-identifier hs-var">ys</span></a></span></span><span> </span><span id="local-6989586621679463491"><span class="annot"><span class="annottext">[Field a]
+</span><a href="#local-6989586621679463491"><span class="hs-identifier hs-var">zs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-173"></span><span>    </span><span class="annot"><span class="annottext">NonEmpty m -&gt; m
+forall m. Semigroup m =&gt; NonEmpty m -&gt; m
+forall (t :: * -&gt; *) m. (Foldable1 t, Semigroup m) =&gt; t m -&gt; m
+</span><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#fold1"><span class="hs-identifier hs-var">F1.fold1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; Name a -&gt; m
+forall m a. Semigroup m =&gt; (a -&gt; m) -&gt; Name a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable1 t, Semigroup m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#foldMap1"><span class="hs-identifier hs-var">F1.foldMap1</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679463488"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Name a
+</span><a href="#local-6989586621679463489"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; [m] -&gt; NonEmpty m
+forall a. a -&gt; [a] -&gt; NonEmpty a
+</span><span class="hs-operator hs-var">:|</span></span><span> </span><span class="annot"><span class="annottext">(SectionArg a -&gt; m) -&gt; [SectionArg a] -&gt; [m]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; SectionArg a -&gt; m
+forall m a. Semigroup m =&gt; (a -&gt; m) -&gt; SectionArg a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable1 t, Semigroup m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#foldMap1"><span class="hs-identifier hs-var">F1.foldMap1</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679463488"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[SectionArg a]
+</span><a href="#local-6989586621679463490"><span class="hs-identifier hs-var">ys</span></a></span><span> </span><span class="annot"><span class="annottext">[m] -&gt; [m] -&gt; [m]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">(Field a -&gt; m) -&gt; [Field a] -&gt; [m]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; Field a -&gt; m
+forall m a. Semigroup m =&gt; (a -&gt; m) -&gt; Field a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable1 t, Semigroup m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#foldMap1"><span class="hs-identifier hs-var">F1.foldMap1</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679463488"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Field a]
+</span><a href="#local-6989586621679463491"><span class="hs-identifier hs-var">zs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span class="annot"><span class="hs-comment">-- | @since 3.12.0.0</span></span><span>
+</span><span id="line-176"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679463495"><span id="local-6989586621679463501"><span id="local-6989586621679463506"><span id="local-6989586621679463509"><span id="local-6989586621679463514"><span id="local-6989586621679463519"><span id="local-6989586621679463522"><span id="local-6989586621679463525"><span id="local-6989586621679463528"><span id="local-6989586621679463531"><span id="local-6989586621679463534"><span class="annot"><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#Foldable1"><span class="hs-identifier hs-type">F1.Foldable1</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#FieldLine"><span class="hs-identifier hs-type">FieldLine</span></a></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-177"></span><span>  </span><span id="local-6989586621679463537"><span class="annot"><span class="annottext">foldMap1 :: forall m a. Semigroup m =&gt; (a -&gt; m) -&gt; FieldLine a -&gt; m
+</span><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#foldMap1"><span class="hs-identifier hs-var hs-var hs-var">foldMap1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; (FieldLine a -&gt; a) -&gt; FieldLine a -&gt; m
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">FieldLine a -&gt; a
+forall ann. FieldLine ann -&gt; ann
+</span><a href="Distribution.Fields.Field.html#fieldLineAnn"><span class="hs-identifier hs-var">fieldLineAnn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="annot"><span class="hs-comment">-- | @since 3.12.0.0</span></span><span>
+</span><span id="line-180"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679463541"><span id="local-6989586621679463547"><span id="local-6989586621679463552"><span id="local-6989586621679463555"><span id="local-6989586621679463560"><span id="local-6989586621679463565"><span id="local-6989586621679463568"><span id="local-6989586621679463571"><span id="local-6989586621679463574"><span id="local-6989586621679463577"><span id="local-6989586621679463580"><span class="annot"><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#Foldable1"><span class="hs-identifier hs-type">F1.Foldable1</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#SectionArg"><span class="hs-identifier hs-type">SectionArg</span></a></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-181"></span><span>  </span><span id="local-6989586621679463583"><span class="annot"><span class="annottext">foldMap1 :: forall m a. Semigroup m =&gt; (a -&gt; m) -&gt; SectionArg a -&gt; m
+</span><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#foldMap1"><span class="hs-identifier hs-var hs-var hs-var">foldMap1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; (SectionArg a -&gt; a) -&gt; SectionArg a -&gt; m
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">SectionArg a -&gt; a
+forall ann. SectionArg ann -&gt; ann
+</span><a href="Distribution.Fields.Field.html#sectionArgAnn"><span class="hs-identifier hs-var">sectionArgAnn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="annot"><span class="hs-comment">-- | @since 3.12.0.0</span></span><span>
+</span><span id="line-184"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679463587"><span id="local-6989586621679463593"><span id="local-6989586621679463598"><span id="local-6989586621679463601"><span id="local-6989586621679463606"><span id="local-6989586621679463611"><span id="local-6989586621679463614"><span id="local-6989586621679463617"><span id="local-6989586621679463620"><span id="local-6989586621679463623"><span id="local-6989586621679463626"><span class="annot"><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#Foldable1"><span class="hs-identifier hs-type">F1.Foldable1</span></a></span><span> </span><span class="annot"><a href="Distribution.Fields.Field.html#Name"><span class="hs-identifier hs-type">Name</span></a></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-185"></span><span>  </span><span id="local-6989586621679463629"><span class="annot"><span class="annottext">foldMap1 :: forall m a. Semigroup m =&gt; (a -&gt; m) -&gt; Name a -&gt; m
+</span><a href="../../base-4.20.1.0-inplace/src/Data.Foldable1.html#foldMap1"><span class="hs-identifier hs-var hs-var hs-var">foldMap1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; (Name a -&gt; a) -&gt; Name a -&gt; m
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Name a -&gt; a
+forall ann. Name ann -&gt; ann
+</span><a href="Distribution.Fields.Field.html#nameAnn"><span class="hs-identifier hs-var">nameAnn</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+
+#endif
+</span></pre></body></html>
