@@ -170,8 +170,8 @@ library
     ouroboros-network-framework,
     ouroboros-network-protocols >=0.15,
     parsec,
-    plutus-core,
-    plutus-ledger-api ^>=1.52,
+    plutus-core ^>=1.53,
+    plutus-ledger-api ^>=1.53,
     pretty-simple,
     prettyprinter,
     prettyprinter-ansi-terminal,
@@ -312,7 +312,7 @@ library gen
 
   build-depends:
     FailT,
-    QuickCheck ^>=2.16,
+    QuickCheck < 2.16,
     aeson >=1.5.6.0,
     base16-bytestring,
     bytestring,
@@ -322,7 +322,6 @@ library gen
     cardano-crypto-test ^>=1.6,
     cardano-ledger-alonzo >=1.8.1,
     cardano-ledger-babbage,
-    cardano-ledger-byron-test >=1.5,
     cardano-ledger-conway,
     cardano-ledger-core >=1.14,
     cardano-ledger-dijkstra >=0.1,
@@ -349,7 +348,7 @@ test-suite cardano-api-test
   type: exitcode-stdio-1.0
   build-depends:
     FailT,
-    QuickCheck ^>=2.16,
+    QuickCheck < 2.16,
     aeson >=1.5.6.0,
     base16-bytestring,
     bytestring,
@@ -445,8 +444,8 @@ test-suite cardano-api-golden
     hedgehog >=1.1,
     hedgehog-extras ^>=0.10,
     microlens,
-    plutus-core ^>=1.52,
-    plutus-ledger-api,
+    plutus-core ^>=1.53,
+    plutus-ledger-api ^>=1.53,
     tasty,
     tasty-discover,
     tasty-hedgehog,
