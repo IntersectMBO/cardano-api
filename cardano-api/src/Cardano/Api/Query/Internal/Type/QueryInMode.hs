@@ -125,7 +125,6 @@ import Control.Monad.Trans.Except
 import Data.Bifunctor (bimap, first)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
-import Data.Coerce (coerce)
 import Data.Either.Combinators (rightToMaybe)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -275,7 +274,7 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era (SerialisedCurrentEpochState era)
   QueryPoolState
     :: Maybe (Set PoolId)
-    -> QueryInShelleyBasedEra era (SerialisedPoolState era)
+    -> QueryInShelleyBasedEra era SerialisedPoolState
   QueryPoolDistribution
     :: Maybe (Set PoolId)
     -> QueryInShelleyBasedEra era (SerialisedPoolDistribution era)
@@ -389,17 +388,16 @@ decodeCurrentEpochState
 decodeCurrentEpochState sbe (SerialisedCurrentEpochState (Serialised ls)) =
   shelleyBasedEraConstraints sbe $ CurrentEpochState <$> Plain.decodeFull ls
 
-newtype SerialisedPoolState era
-  = SerialisedPoolState (Serialised (Shelley.PState (ShelleyLedgerEra era)))
+newtype SerialisedPoolState
+  = SerialisedPoolState (Serialised L.QueryPoolStateResult)
 
-newtype PoolState era = PoolState (Shelley.PState (ShelleyLedgerEra era))
+newtype PoolState era = PoolState L.QueryPoolStateResult
 
 decodePoolState
   :: forall era
    . ()
   => Core.Era (ShelleyLedgerEra era)
-  => DecCBOR (Shelley.PState (ShelleyLedgerEra era))
-  => SerialisedPoolState era
+  => SerialisedPoolState
   -> Either DecoderError (PoolState era)
 decodePoolState (SerialisedPoolState (Serialised ls)) =
   PoolState <$> decodeFull (Core.eraProtVerLow @(ShelleyLedgerEra era)) ls
@@ -934,9 +932,8 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryStakePoolParameters{} ->
       case q' of
         Consensus.GetStakePoolParams{} ->
-          Map.mapKeysMonotonic StakePoolKeyHash
-            . Map.mapWithKey fromShelleyStakePoolState
-            $ r'
+          Map.mapKeysMonotonic StakePoolKeyHash $
+            Map.map fromShelleyPoolParams r'
         _ -> fromConsensusQueryResultMismatch
     QueryDebugLedgerState{} ->
       case q' of
@@ -961,7 +958,7 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryPoolDistribution{} ->
       case q' of
         Consensus.GetCBOR Consensus.GetPoolDistr2{} ->
-          SerialisedPoolDistribution (coerce r')
+          SerialisedPoolDistribution r'
         _ -> fromConsensusQueryResultMismatch
     QueryStakeSnapshot{} ->
       case q' of

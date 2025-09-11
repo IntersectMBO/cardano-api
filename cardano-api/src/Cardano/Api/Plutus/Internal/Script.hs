@@ -617,6 +617,7 @@ data ScriptLanguageInEra lang era where
   PlutusScriptV2InDijkstra :: ScriptLanguageInEra PlutusScriptV2 DijkstraEra
   PlutusScriptV3InConway :: ScriptLanguageInEra PlutusScriptV3 ConwayEra
   PlutusScriptV3InDijkstra :: ScriptLanguageInEra PlutusScriptV3 DijkstraEra
+  PlutusScriptV4InDijkstra :: ScriptLanguageInEra PlutusScriptV4 DijkstraEra
 
 deriving instance Eq (ScriptLanguageInEra lang era)
 
@@ -676,6 +677,7 @@ languageOfScriptLanguageInEra langInEra =
     PlutusScriptV2InDijkstra -> PlutusScriptLanguage PlutusScriptV2
     PlutusScriptV3InConway -> PlutusScriptLanguage PlutusScriptV3
     PlutusScriptV3InDijkstra -> PlutusScriptLanguage PlutusScriptV3
+    PlutusScriptV4InDijkstra -> PlutusScriptLanguage PlutusScriptV4
 
 sbeToSimpleScriptLanguageInEra
   :: ShelleyBasedEra era
@@ -709,6 +711,7 @@ eraOfScriptLanguageInEra = \case
   PlutusScriptV2InDijkstra -> ShelleyBasedEraDijkstra
   PlutusScriptV3InConway -> ShelleyBasedEraConway
   PlutusScriptV3InDijkstra -> ShelleyBasedEraDijkstra
+  PlutusScriptV4InDijkstra -> ShelleyBasedEraDijkstra
 
 -- | Given a target era and a script in some language, check if the language is
 -- supported in that era, and if so return a 'ScriptInEra'.
@@ -1057,8 +1060,7 @@ hashScript (PlutusScript PlutusScriptV4 (PlutusScriptSerialised script)) =
   ScriptHash
     . Ledger.hashScript @(ShelleyLedgerEra DijkstraEra)
     . Alonzo.PlutusScript
-    . Dijkstra.MkDijkstraPlutusScript
-    . Conway.ConwayPlutusV3
+    . Dijkstra.DijkstraPlutusV4
     . Plutus.Plutus
     $ Plutus.PlutusBinary script
 
@@ -1240,10 +1242,10 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript script)) =
     SimpleScriptInShelley -> either (error . show) id (toShelleyMultiSig script)
     SimpleScriptInAllegra -> toAllegraTimelock script
     SimpleScriptInMary -> toAllegraTimelock script
-    SimpleScriptInAlonzo -> Alonzo.TimelockScript (toAllegraTimelock script)
-    SimpleScriptInBabbage -> Alonzo.TimelockScript (toAllegraTimelock script)
-    SimpleScriptInConway -> Alonzo.TimelockScript (toAllegraTimelock script)
-    SimpleScriptInDijkstra -> Alonzo.TimelockScript (toAllegraTimelock script)
+    SimpleScriptInAlonzo -> Alonzo.NativeScript (toAllegraTimelock script)
+    SimpleScriptInBabbage -> Alonzo.NativeScript (toAllegraTimelock script)
+    SimpleScriptInConway -> Alonzo.NativeScript (toAllegraTimelock script)
+    SimpleScriptInDijkstra -> Alonzo.NativeScript (toAllegraTimelock script)
 toShelleyScript
   ( ScriptInEra
       langInEra
@@ -1260,7 +1262,7 @@ toShelleyScript
       PlutusScriptV1InConway ->
         Alonzo.PlutusScript . Conway.ConwayPlutusV1 . Plutus.Plutus $ Plutus.PlutusBinary script
       PlutusScriptV1InDijkstra ->
-        Alonzo.PlutusScript . Dijkstra.MkDijkstraPlutusScript . Conway.ConwayPlutusV1 . Plutus.Plutus $
+        Alonzo.PlutusScript . Dijkstra.DijkstraPlutusV1 . Plutus.Plutus $
           Plutus.PlutusBinary script
 toShelleyScript
   ( ScriptInEra
@@ -1276,7 +1278,7 @@ toShelleyScript
       PlutusScriptV2InConway ->
         Alonzo.PlutusScript . Conway.ConwayPlutusV2 . Plutus.Plutus $ Plutus.PlutusBinary script
       PlutusScriptV2InDijkstra ->
-        Alonzo.PlutusScript . Dijkstra.MkDijkstraPlutusScript . Conway.ConwayPlutusV2 . Plutus.Plutus $
+        Alonzo.PlutusScript . Dijkstra.DijkstraPlutusV2 . Plutus.Plutus $
           Plutus.PlutusBinary script
 toShelleyScript
   ( ScriptInEra
@@ -1290,7 +1292,7 @@ toShelleyScript
       PlutusScriptV3InConway ->
         Alonzo.PlutusScript . Conway.ConwayPlutusV3 . Plutus.Plutus $ Plutus.PlutusBinary script
       PlutusScriptV3InDijkstra ->
-        Alonzo.PlutusScript . Dijkstra.MkDijkstraPlutusScript . Conway.ConwayPlutusV3 . Plutus.Plutus $
+        Alonzo.PlutusScript . Dijkstra.DijkstraPlutusV3 . Plutus.Plutus $
           Plutus.PlutusBinary script
 toShelleyScript
   ( ScriptInEra
@@ -1333,7 +1335,7 @@ fromShelleyBasedScript sbe script =
           ScriptInEra PlutusScriptV1InAlonzo
             . PlutusScript PlutusScriptV1
             $ PlutusScriptSerialised s
-        Alonzo.TimelockScript s ->
+        Alonzo.NativeScript s ->
           ScriptInEra SimpleScriptInAlonzo
             . SimpleScript
             $ fromAllegraTimelock s
@@ -1349,7 +1351,7 @@ fromShelleyBasedScript sbe script =
               ScriptInEra PlutusScriptV2InBabbage
                 . PlutusScript PlutusScriptV2
                 $ PlutusScriptSerialised s
-        Alonzo.TimelockScript s ->
+        Alonzo.NativeScript s ->
           ScriptInEra SimpleScriptInBabbage
             . SimpleScript
             $ fromAllegraTimelock s
@@ -1369,27 +1371,32 @@ fromShelleyBasedScript sbe script =
               ScriptInEra PlutusScriptV3InConway
                 . PlutusScript PlutusScriptV3
                 $ PlutusScriptSerialised s
-        Alonzo.TimelockScript s ->
+        Alonzo.NativeScript s ->
           ScriptInEra SimpleScriptInConway
             . SimpleScript
             $ fromAllegraTimelock s
     ShelleyBasedEraDijkstra ->
       case script of
-        (Alonzo.PlutusScript (Dijkstra.MkDijkstraPlutusScript plutusV)) ->
-          case plutusV of
-            Conway.ConwayPlutusV1 (PlutusScriptBinary s) ->
+        (Alonzo.PlutusScript dijkstraScript) ->
+          case dijkstraScript of
+            Dijkstra.DijkstraPlutusV1 (PlutusScriptBinary s) ->
               ScriptInEra PlutusScriptV1InDijkstra
                 . PlutusScript PlutusScriptV1
                 $ PlutusScriptSerialised s
-            Conway.ConwayPlutusV2 (PlutusScriptBinary s) ->
+            Dijkstra.DijkstraPlutusV2 (PlutusScriptBinary s) ->
               ScriptInEra PlutusScriptV2InDijkstra
                 . PlutusScript PlutusScriptV2
                 $ PlutusScriptSerialised s
-            Conway.ConwayPlutusV3 (PlutusScriptBinary s) ->
+            Dijkstra.DijkstraPlutusV3 (PlutusScriptBinary s) ->
               ScriptInEra PlutusScriptV3InDijkstra
                 . PlutusScript PlutusScriptV3
                 $ PlutusScriptSerialised s
-        Alonzo.TimelockScript s ->
+            Dijkstra.DijkstraPlutusV4 (PlutusScriptBinary s) ->
+              ScriptInEra
+                PlutusScriptV3InDijkstra
+                . PlutusScript PlutusScriptV3
+                $ PlutusScriptSerialised s
+        Alonzo.NativeScript s ->
           ScriptInEra SimpleScriptInDijkstra
             . SimpleScript
             $ fromAllegraTimelock s

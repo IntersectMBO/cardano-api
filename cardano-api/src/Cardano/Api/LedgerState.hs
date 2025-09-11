@@ -182,7 +182,7 @@ import Cardano.Slotting.EpochInfo.API qualified as Slot
 import Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import Cardano.Slotting.Slot qualified as Slot
 import Ouroboros.Consensus.Block.Abstract qualified as Consensus
-import Ouroboros.Consensus.Block.Forging (BlockForging)
+import Ouroboros.Consensus.Block.Forging (MkBlockForging (..))
 import Ouroboros.Consensus.Byron.ByronHFC qualified as Consensus
 import Ouroboros.Consensus.Byron.Ledger qualified as Byron
 import Ouroboros.Consensus.Cardano qualified as Consensus
@@ -1464,7 +1464,7 @@ mkProtocolInfoCardano
   -> ( Consensus.ProtocolInfo
          (Consensus.CardanoBlock Consensus.StandardCrypto)
      , Tracer.Tracer IO KESAgentClientTrace
-       -> IO [BlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
+       -> IO [MkBlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
      )
 mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transCfg) =
   Consensus.protocolInfoCardano

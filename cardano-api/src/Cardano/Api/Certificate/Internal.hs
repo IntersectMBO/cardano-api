@@ -236,7 +236,7 @@ certificateToTxCert c =
     ConwayCertificate eon cert ->
       case eon of
         ConwayEraOnwardsConway -> cert
-        ConwayEraOnwardsDijkstra -> cert
+        ConwayEraOnwardsDijkstra -> error "certificateToTxCert: Dijkstra era is not yet supported"
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters

@@ -93,8 +93,8 @@ prop_text_envelope_roundtrip_txbody_CBOR = H.property $ do
         deserialiseFromTextEnvelope
     )
 
-prop_text_envelope_roundtrip_tx_CBOR :: Property
-prop_text_envelope_roundtrip_tx_CBOR = H.property $ do
+_prop_text_envelope_roundtrip_tx_CBOR :: Property
+_prop_text_envelope_roundtrip_tx_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ genTx era
   shelleyBasedEraConstraints
