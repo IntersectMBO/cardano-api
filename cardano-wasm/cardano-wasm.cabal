@@ -85,7 +85,7 @@ test-suite cardano-wasm-golden
     build-depends:
       filepath,
       hedgehog >=1.1,
-      hedgehog-extras ^>=0.8,
+      hedgehog-extras ^>=0.10,
       tasty,
       tasty-hedgehog,
 
