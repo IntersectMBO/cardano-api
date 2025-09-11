@@ -99,10 +99,10 @@ getAnyWitnessScript era ss@(AnySimpleScriptWitness{}) =
     ShelleyBasedEraShelley -> getAnyWitnessSimpleScript ss
     ShelleyBasedEraAllegra -> getAnyWitnessSimpleScript ss
     ShelleyBasedEraMary -> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraAlonzo -> L.TimelockScript <$> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraBabbage -> L.TimelockScript <$> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraConway -> L.TimelockScript <$> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraDijkstra -> L.TimelockScript <$> getAnyWitnessSimpleScript ss
+    ShelleyBasedEraAlonzo -> L.NativeScript <$> getAnyWitnessSimpleScript ss
+    ShelleyBasedEraBabbage -> L.NativeScript <$> getAnyWitnessSimpleScript ss
+    ShelleyBasedEraConway -> L.NativeScript <$> getAnyWitnessSimpleScript ss
+    ShelleyBasedEraDijkstra -> L.NativeScript <$> getAnyWitnessSimpleScript ss
 getAnyWitnessScript era ps@(AnyPlutusScriptWitness{}) =
   forShelleyBasedEraInEon era Nothing $ \aEon ->
     case aEon of
@@ -132,7 +132,7 @@ fromPlutusRunnable L.SPlutusV1 eon runnable =
        in Just $ L.ConwayPlutusV1 plutusScript
     AlonzoEraOnwardsDijkstra ->
       let plutusScript = L.plutusFromRunnable runnable
-       in Just $ Dijkstra.MkDijkstraPlutusScript $ L.ConwayPlutusV1 plutusScript
+       in Just $ Dijkstra.DijkstraPlutusV1 plutusScript
 fromPlutusRunnable L.SPlutusV2 eon runnable =
   case eon of
     AlonzoEraOnwardsAlonzo -> Nothing
@@ -144,7 +144,7 @@ fromPlutusRunnable L.SPlutusV2 eon runnable =
        in Just $ L.ConwayPlutusV2 plutusScript
     AlonzoEraOnwardsDijkstra ->
       let plutusScript = L.plutusFromRunnable runnable
-       in Just $ Dijkstra.MkDijkstraPlutusScript $ L.ConwayPlutusV2 plutusScript
+       in Just $ Dijkstra.DijkstraPlutusV2 plutusScript
 fromPlutusRunnable L.SPlutusV3 eon runnable =
   case eon of
     AlonzoEraOnwardsAlonzo -> Nothing
@@ -154,7 +154,7 @@ fromPlutusRunnable L.SPlutusV3 eon runnable =
        in Just $ L.ConwayPlutusV3 plutusScript
     AlonzoEraOnwardsDijkstra ->
       let plutusScript = L.plutusFromRunnable runnable
-       in Just $ Dijkstra.MkDijkstraPlutusScript $ L.ConwayPlutusV3 plutusScript
+       in Just $ Dijkstra.DijkstraPlutusV3 plutusScript
 fromPlutusRunnable L.SPlutusV4 eon runnable =
   case eon of
     AlonzoEraOnwardsAlonzo -> Nothing
@@ -164,7 +164,7 @@ fromPlutusRunnable L.SPlutusV4 eon runnable =
        in Just $ error "fromPlutusRunnable: ConwayPlutusV4" plutusScript
     AlonzoEraOnwardsDijkstra ->
       let plutusScript = L.plutusFromRunnable runnable
-       in Just $ Dijkstra.MkDijkstraPlutusScript $ error "fromPlutusRunnable: DijkstraPlutusV4" plutusScript
+       in Just $ Dijkstra.DijkstraPlutusV4 plutusScript
 
 toAlonzoDatum
   :: AlonzoEraOnwards era

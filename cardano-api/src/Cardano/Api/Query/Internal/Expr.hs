@@ -203,7 +203,7 @@ queryPoolState
        QueryInMode
        r
        IO
-       (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolState era)))
+       (Either UnsupportedNtcVersionError (Either EraMismatch SerialisedPoolState))
 queryPoolState eon = querySbe eon . QueryPoolState
 
 queryProtocolParameters

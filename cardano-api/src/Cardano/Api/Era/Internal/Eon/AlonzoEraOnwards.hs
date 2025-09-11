@@ -131,7 +131,7 @@ alonzoEraOnwardsConstraints = \case
   AlonzoEraOnwardsAlonzo -> id
   AlonzoEraOnwardsBabbage -> id
   AlonzoEraOnwardsConway -> id
-  AlonzoEraOnwardsDijkstra -> id
+  AlonzoEraOnwardsDijkstra -> const $ error "alonzoEraOnwardsConstraints: Dijkstra era not yet supported"
 
 {-# DEPRECATED alonzoEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 alonzoEraOnwardsToShelleyBasedEra :: AlonzoEraOnwards era -> ShelleyBasedEra era

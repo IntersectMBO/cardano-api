@@ -90,7 +90,7 @@ convertToNewCertificate :: Era era -> Api.Certificate era -> Certificate (Ledger
 convertToNewCertificate era (Api.ConwayCertificate _ cert) =
   case era of
     ConwayEra -> Certificate cert
-    DijkstraEra -> Certificate cert
+    DijkstraEra -> error "convertToNewCertificate: DijkstraEra not supported"
 convertToNewCertificate era (Api.ShelleyRelatedCertificate sToBab _) =
   case era of
     ConwayEra -> case sToBab :: Api.ShelleyToBabbageEra ConwayEra of {}

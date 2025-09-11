@@ -120,7 +120,7 @@ allegraEraOnwardsConstraints = \case
   AllegraEraOnwardsAlonzo -> id
   AllegraEraOnwardsBabbage -> id
   AllegraEraOnwardsConway -> id
-  AllegraEraOnwardsDijkstra -> id
+  _ -> const $ error "allegraEraOnwardsConstraints: Dijkstra era not supported"
 
 {-# DEPRECATED allegraEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 allegraEraOnwardsToShelleyBasedEra :: AllegraEraOnwards era -> ShelleyBasedEra era
