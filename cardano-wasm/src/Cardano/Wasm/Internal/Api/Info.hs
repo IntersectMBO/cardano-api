@@ -12,6 +12,10 @@ module Cardano.Wasm.Internal.Api.Info
   )
 where
 
+import Cardano.Api (pretty)
+
+import Cardano.Wasm.Internal.Api.Tx (UnsignedTxObject (..), newExperimentalEraTxImpl, newTxImpl)
+
 import Data.Aeson qualified as Aeson
 import Data.Text qualified as Text
 import Text.Casing (fromHumps, toKebab)
@@ -149,6 +153,13 @@ instance Aeson.ToJSON ApiInfo where
       , "initialiseFunctionDoc" Aeson..= initDoc
       , "initialiseFunctionReturnDoc" Aeson..= initRetDoc
       ]
+
+-- | Get a comment about the era for unsigned transaction creation methods.
+getEraCommentForUnsignedTx :: Maybe UnsignedTxObject -> String
+getEraCommentForUnsignedTx utxMonad =
+  case utxMonad of
+    Just (UnsignedTxObject era _) -> "(currently " ++ show (pretty era) ++ ")"
+    Nothing -> "(currently unavailable)"
 
 -- | Provides metadata about the "virtual objects" and their methods.
 -- This is intended to help generate JavaScript wrappers.
@@ -328,7 +339,10 @@ apiInfo =
               , virtualObjectMethods =
                   [ MethodInfo
                       { methodName = "newTx"
-                      , methodDoc = "Create a new unsigned transaction in the current era."
+                      , methodDoc =
+                          "Create a new unsigned transaction in the current era "
+                            ++ getEraCommentForUnsignedTx (Just newTxImpl)
+                            ++ "."
                       , methodParams = []
                       , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
                       , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
@@ -336,7 +350,9 @@ apiInfo =
                   , MethodInfo
                       { methodName = "newExperimentalEraTx"
                       , methodDoc =
-                          "Create a new unsigned transaction in the current experimental era."
+                          "Create a new unsigned transaction in the current experimental era "
+                            ++ getEraCommentForUnsignedTx newExperimentalEraTxImpl
+                            ++ "."
                       , methodParams = []
                       , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
                       , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
