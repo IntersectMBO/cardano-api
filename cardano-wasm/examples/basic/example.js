@@ -54,7 +54,7 @@ async function do_async_work() {
     log("Bech32 of address:");
     log(bech32Address);
 
-    let emptyTx = await api.newConwayTx();
+    let emptyTx = await api.newTx();
     log("UnsignedTx object:");
     log(emptyTx);
 

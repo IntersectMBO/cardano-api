@@ -34,7 +34,7 @@ async function do_async_work() {
   }
 
   async function makeTransaction() {
-    let tx = await api.newConwayTx();
+    let tx = await api.newTx();
     for (let input of transactionInputs) {
       tx = tx.addTxInput(input.txId, input.txIndex);
     }
