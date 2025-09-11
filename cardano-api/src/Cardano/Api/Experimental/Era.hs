@@ -287,8 +287,9 @@ obtainCommonConstraints
   :: Era era
   -> (EraCommonConstraints era => a)
   -> a
-obtainCommonConstraints ConwayEra x = x
-obtainCommonConstraints DijkstraEra x = x
+obtainCommonConstraints = \case
+  ConwayEra -> id
+  _ -> const $ error "obtainCommonConstraints: Dijkstra era not yet supported"
 
 type EraCommonConstraints era =
   ( L.AllegraEraScript (LedgerEra era)

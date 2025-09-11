@@ -137,7 +137,7 @@ babbageEraOnwardsConstraints
 babbageEraOnwardsConstraints = \case
   BabbageEraOnwardsBabbage -> id
   BabbageEraOnwardsConway -> id
-  BabbageEraOnwardsDijkstra -> id
+  BabbageEraOnwardsDijkstra -> const $ error "babbageEraOnwardsConstraints: DijkstraEra is currently not supported"
 
 {-# DEPRECATED babbageEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 babbageEraOnwardsToShelleyBasedEra :: BabbageEraOnwards era -> ShelleyBasedEra era

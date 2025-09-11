@@ -1157,9 +1157,9 @@ toShelleyCommonPParamsUpdate
 
 toShelleyPParamsUpdate
   :: ( EraPParams ledgerera
-     , Ledger.AtMostEra Ledger.MaryEra ledgerera
-     , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
-     , Ledger.AtMostEra Ledger.BabbageEra ledgerera
+     , Ledger.AtMostEra "Mary" ledgerera
+     , Ledger.AtMostEra "Alonzo" ledgerera
+     , Ledger.AtMostEra "Babbage" ledgerera
      )
   => ProtocolParametersUpdate
   -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
@@ -1350,9 +1350,9 @@ fromShelleyCommonPParamsUpdate ppu =
 
 fromShelleyPParamsUpdate
   :: ( EraPParams ledgerera
-     , Ledger.AtMostEra Ledger.MaryEra ledgerera
-     , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
-     , Ledger.AtMostEra Ledger.BabbageEra ledgerera
+     , Ledger.AtMostEra "Mary" ledgerera
+     , Ledger.AtMostEra "Alonzo" ledgerera
+     , Ledger.AtMostEra "Babbage" ledgerera
      )
   => PParamsUpdate ledgerera
   -> ProtocolParametersUpdate
