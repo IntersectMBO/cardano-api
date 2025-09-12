@@ -74,6 +74,7 @@ getPlutusScriptWitnessLanguage (PlutusScriptWitness l _ _ _ _) =
     L.SPlutusV1 -> L.plutusLanguage l
     L.SPlutusV2 -> L.plutusLanguage l
     L.SPlutusV3 -> L.plutusLanguage l
+    L.SPlutusV4 -> L.plutusLanguage l
 
 -- | Every Plutus script has a purpose that indicates
 -- what that script is witnessing.
@@ -100,21 +101,27 @@ type family PlutusScriptDatumF (lang :: L.Language) (purpose :: PlutusScriptPurp
   PlutusScriptDatumF L.PlutusV1 SpendingScript = HashableScriptData
   PlutusScriptDatumF L.PlutusV2 SpendingScript = HashableScriptData
   PlutusScriptDatumF L.PlutusV3 SpendingScript = Maybe HashableScriptData -- CIP-69
+  PlutusScriptDatumF L.PlutusV4 SpendingScript = Maybe HashableScriptData -- CIP-69
   PlutusScriptDatumF L.PlutusV1 MintingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV2 MintingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV3 MintingScript = NoScriptDatum
+  PlutusScriptDatumF L.PlutusV4 MintingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV1 WithdrawingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV2 WithdrawingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV3 WithdrawingScript = NoScriptDatum
+  PlutusScriptDatumF L.PlutusV4 WithdrawingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV1 CertifyingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV2 CertifyingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV3 CertifyingScript = NoScriptDatum
+  PlutusScriptDatumF L.PlutusV4 CertifyingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV1 ProposingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV2 ProposingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV3 ProposingScript = NoScriptDatum
+  PlutusScriptDatumF L.PlutusV4 ProposingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV1 VotingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV2 VotingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV3 VotingScript = NoScriptDatum
+  PlutusScriptDatumF L.PlutusV4 VotingScript = NoScriptDatum
 
 data PlutusScriptDatum (lang :: L.Language) (purpose :: PlutusScriptPurpose) where
   SpendingScriptDatum

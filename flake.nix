@@ -123,11 +123,10 @@
               cabal-gild = "1.3.1.2";
               fourmolu = "0.18.0.0";
               haskell-language-server = "latest";
-              # This index-state makes it work for GHC 9.8.2 (it will need to tbe removed for 9.8.4)
               hlint = "3.10";
             };
           # and from nixpkgs or other inputs
-          shell.nativeBuildInputs = with nixpkgs; [gh jq yq-go actionlint shellcheck snappy protobuf];
+          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go actionlint shellcheck snappy protobuf];
           # disable Hoogle until someone request it
           shell.withHoogle = false;
           # Skip cross compilers for the shell
