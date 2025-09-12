@@ -48,6 +48,7 @@ import Cardano.Binary
 import Cardano.Ledger.Allegra.Scripts qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (Inject (..))
+import Cardano.Ledger.Binary qualified as L
 import Cardano.Ledger.Conway qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Hashes qualified as L
@@ -275,6 +276,7 @@ type EraCommonConstraints era =
   , L.BabbageEraPParams (LedgerEra era)
   , L.BabbageEraTxBody (LedgerEra era)
   , L.ConwayEraTxCert (LedgerEra era)
+  , L.DecCBOR (Ledger.TxCert (LedgerEra era))
   , L.TxCert (LedgerEra era) ~ L.ConwayTxCert (LedgerEra era)
   , L.Era (LedgerEra era)
   , L.EraScript (LedgerEra era)
