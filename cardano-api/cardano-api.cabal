@@ -227,6 +227,7 @@ library
     Cardano.Api.Experimental.Tx.Internal.AnyWitness
     Cardano.Api.Experimental.Tx.Internal.Body
     Cardano.Api.Experimental.Tx.Internal.Certificate
+    Cardano.Api.Experimental.Tx.Internal.Compatible
     Cardano.Api.Experimental.Tx.Internal.Fee
     Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
     Cardano.Api.Genesis.Internal
