@@ -20,7 +20,8 @@ packages:
     cardano-api
     cardano-api-gen
     cardano-wasm
-    cardano-rpc
+    -- TODO fix potential issues with build-type: Custom and protoc and reenable
+    -- cardano-rpc
 
 extra-packages: Cabal, process
 
@@ -198,14 +199,15 @@ source-repository-package
     kes-agent
 
 
-constraints:
-   contra-tracer == 0.1.0.2
- , lifted-async ^>=0.10.2.0
- , tls == 2.1.6
- , hashable ^>=1.4.7.0
- , hedgehog >=1.5
- , grapesy ^>= 1.0.0
- , http2-tls ^>= 0.4.0
- , random^>=1.2
+-- TODO remove this before merging 10.6 release PR if it is no longer needed
+-- constraints:
+--    contra-tracer == 0.1.0.2
+--  , lifted-async ^>=0.10.2.0
+--  , tls == 2.1.6
+--  , hashable ^>=1.4.7.0
+--  , hedgehog >=1.5
+--  , grapesy ^>= 1.0.0
+--  , http2-tls ^>= 0.4.0
+--  , random^>=1.2
 
 
