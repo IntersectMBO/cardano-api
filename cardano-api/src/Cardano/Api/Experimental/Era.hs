@@ -33,7 +33,8 @@ module Cardano.Api.Experimental.Era
   )
 where
 
-import Cardano.Api.Consensus
+import Cardano.Api.Consensus.Internal.Mode
+import Cardano.Api.Consensus.Internal.Reexport
 import Cardano.Api.Era qualified as Api
 import Cardano.Api.Era.Internal.Core (BabbageEra, ConwayEra, DijkstraEra, Eon (..))
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards

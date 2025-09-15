@@ -13,13 +13,11 @@
 
 module Cardano.Api.Experimental.Tx.Internal.Certificate
   ( Certificate (..)
-  , mkTxCertificates
   , convertToOldApiCertificate
   , convertToNewCertificate
   )
 where
 
-import Cardano.Api.Address qualified as Api
 import Cardano.Api.Certificate.Internal qualified as Api
 import Cardano.Api.Era.Internal.Core (DijkstraEra)
 import Cardano.Api.Era.Internal.Eon.Convert
@@ -87,124 +85,6 @@ convertToOldApiCertificate e@ConwayEra (Certificate cert) =
 convertToOldApiCertificate DijkstraEra _ = error "Dijkstra era not supported yet"
 
 convertToNewCertificate :: Era era -> Api.Certificate era -> Certificate (LedgerEra era)
-convertToNewCertificate era (Api.ConwayCertificate _ cert) =
-  case era of
-    ConwayEra -> Certificate cert
-    DijkstraEra -> error "convertToNewCertificate: DijkstraEra not supported"
-convertToNewCertificate era (Api.ShelleyRelatedCertificate sToBab _) =
-  case era of
-    ConwayEra -> case sToBab :: Api.ShelleyToBabbageEra ConwayEra of {}
-    DijkstraEra -> case sToBab :: Api.ShelleyToBabbageEra DijkstraEra of {}
-
-mkTxCertificates
-  :: forall era
-   . IsEra era
-  => [(Certificate (LedgerEra era), AnyWitness (LedgerEra era))]
-  -> Api.TxCertificates Api.BuildTx era
-mkTxCertificates [] = TxCertificatesNone
-mkTxCertificates certs =
-  TxCertificates (convert useEra) $ fromList $ map (getStakeCred useEra) certs
-
-getStakeCred
-  :: Era era
-  -> (Certificate (LedgerEra era), AnyWitness (LedgerEra era))
-  -> ( Api.Certificate era
-     , Api.BuildTxWith
-         Api.BuildTx
-         (Maybe (Api.StakeCredential, Api.Witness Api.WitCtxStake era))
-     )
-getStakeCred e@ConwayEra (Certificate cert, witness) = do
-  let oldApiCert = obtainConwayConstraints e $ Api.ConwayCertificate (convert e) cert
-      mStakeCred = Api.selectStakeCredentialWitness oldApiCert
-      wit =
-        case witness of
-          AnyKeyWitnessPlaceholder -> Api.KeyWitness Api.KeyWitnessForStakeAddr
-          AnySimpleScriptWitness ss ->
-            Api.ScriptWitness Api.ScriptWitnessForStakeAddr $
-              obtainCommonConstraints e $
-                newToOldSimpleScriptWitness e ss
-          AnyPlutusScriptWitness psw ->
-            Api.ScriptWitness Api.ScriptWitnessForStakeAddr $
-              newToOldPlutusCertificateScriptWitness e psw
-  (oldApiCert, pure $ (,wit) <$> mStakeCred)
-getStakeCred DijkstraEra _ = error "Dijkstra era not supported yet"
-
-newToOldSimpleScriptWitness
-  :: L.AllegraEraScript (LedgerEra era)
-  => Era era -> Exp.SimpleScriptOrReferenceInput (LedgerEra era) -> Api.ScriptWitness Api.WitCtxStake era
-newToOldSimpleScriptWitness era simple =
-  case simple of
-    Exp.SScript (Exp.SimpleScript script) ->
-      Api.SimpleScriptWitness
-        (sbeToSimpleScriptLanguageInEra $ convert era)
-        (Api.SScript $ fromAllegraTimelock script)
-    Exp.SReferenceScript inp ->
-      Api.SimpleScriptWitness
-        (sbeToSimpleScriptLanguageInEra $ convert era)
-        (Api.SReferenceScript inp)
-
-newToOldPlutusCertificateScriptWitness
-  :: Era era
-  -> Exp.PlutusScriptWitness lang purpose (LedgerEra era)
-  -> Api.ScriptWitness Api.WitCtxStake era
-newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus.SPlutusV1 scriptOrRef _ redeemer execUnits) =
-  Api.PlutusScriptWitness
-    Api.PlutusScriptV1InConway
-    Api.PlutusScriptV1
-    (newToOldPlutusScriptOrReferenceInput ConwayEra scriptOrRef)
-    Api.NoScriptDatumForStake
-    redeemer
-    execUnits
-newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus.SPlutusV2 scriptOrRef _ redeemer execUnits) =
-  Api.PlutusScriptWitness
-    Api.PlutusScriptV2InConway
-    Api.PlutusScriptV2
-    (newToOldPlutusScriptOrReferenceInput ConwayEra scriptOrRef)
-    Api.NoScriptDatumForStake
-    redeemer
-    execUnits
-newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus.SPlutusV3 scriptOrRef _ redeemer execUnits) =
-  Api.PlutusScriptWitness
-    Api.PlutusScriptV3InConway
-    Api.PlutusScriptV3
-    (newToOldPlutusScriptOrReferenceInput ConwayEra scriptOrRef)
-    Api.NoScriptDatumForStake
-    redeemer
-    execUnits
-newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus.SPlutusV4 _scriptOrRef _ _redeemer _execUnits) =
-  error "dijkstra"
-newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV1 scriptOrRef _ redeemer execUnits) =
-  Api.PlutusScriptWitness
-    Api.PlutusScriptV1InDijkstra
-    Api.PlutusScriptV1
-    (newToOldPlutusScriptOrReferenceInput DijkstraEra scriptOrRef)
-    Api.NoScriptDatumForStake
-    redeemer
-    execUnits
-newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV2 scriptOrRef _ redeemer execUnits) =
-  Api.PlutusScriptWitness
-    Api.PlutusScriptV2InDijkstra
-    Api.PlutusScriptV2
-    (newToOldPlutusScriptOrReferenceInput DijkstraEra scriptOrRef)
-    Api.NoScriptDatumForStake
-    redeemer
-    execUnits
-newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV3 scriptOrRef _ redeemer execUnits) =
-  Api.PlutusScriptWitness
-    Api.PlutusScriptV3InDijkstra
-    Api.PlutusScriptV3
-    (newToOldPlutusScriptOrReferenceInput DijkstraEra scriptOrRef)
-    Api.NoScriptDatumForStake
-    redeemer
-    execUnits
-newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV4 _scriptOrRef _ _redeemer _execUnits) =
-  error "dijkstra"
-
-newToOldPlutusScriptOrReferenceInput
-  :: Era era
-  -> Exp.PlutusScriptOrReferenceInput lang (LedgerEra era)
-  -> Api.PlutusScriptOrReferenceInput oldlang
-newToOldPlutusScriptOrReferenceInput _ (Exp.PReferenceScript txin) = Api.PReferenceScript txin
-newToOldPlutusScriptOrReferenceInput _ (Exp.PScript (Exp.PlutusScriptInEra plutusRunnable)) =
-  let oldScript = L.unPlutusBinary . L.plutusBinary $ L.plutusFromRunnable plutusRunnable
-   in Api.PScript $ Api.PlutusScriptSerialised oldScript
+convertToNewCertificate ConwayEra (Api.ConwayCertificate _ cert) = Certificate cert
+convertToNewCertificate ConwayEra (Api.ShelleyRelatedCertificate sToBab _) =
+  case sToBab :: Api.ShelleyToBabbageEra ConwayEra of {}
