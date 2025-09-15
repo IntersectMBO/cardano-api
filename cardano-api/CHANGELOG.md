@@ -1,5 +1,39 @@
 # Changelog for cardano-api
 
+## 10.18.0.0
+
+- Add some instance for `data Certificate era`
+  (compatible)
+  [PR 956](https://github.com/IntersectMBO/cardano-api/pull/956)
+
+- Implement experimental `estimateBalancedTxBody`
+  (feature, compatible)
+  [PR 887](https://github.com/IntersectMBO/cardano-api/pull/887)
+
+- Remove test library dependencies as it is bad practice to depend on them. This is a breaking change because there may be users that depend on both `cardano-api`'s test/gen libraries as well as ledger's test libraries. We think this is highly unlikely however.
+  (breaking)
+  [PR 942](https://github.com/IntersectMBO/cardano-api/pull/942)
+
+- Use raw bytes representation instead of CBOR for CIP-129 identifier serialisation
+  (breaking, bugfix)
+  [PR 937](https://github.com/IntersectMBO/cardano-api/pull/937)
+
+- Re-export `asTxMetadata`
+  (feature)
+  [PR 943](https://github.com/IntersectMBO/cardano-api/pull/943)
+
+- Expose additional ledger functionality:  `pattern AlonzoGenesis`, `costModelsValid`, `getCostModelParams`
+  (compatible)
+  [PR 939](https://github.com/IntersectMBO/cardano-api/pull/939)
+
+- Fix incorrect index in `GovActionId` serialisation
+  (bugfix)
+  [PR 936](https://github.com/IntersectMBO/cardano-api/pull/936)
+
+- Re-export `fromShelleyGenesis` in `Cardano.Api.Genesis`.
+  (compatible)
+  [PR 886](https://github.com/IntersectMBO/cardano-api/pull/886)
+
 ## 10.17.2.0
 
 - Add JavaScript wrapper and HTML browser example of usage for the `cardano-wasm` API
