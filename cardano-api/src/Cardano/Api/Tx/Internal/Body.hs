@@ -232,6 +232,7 @@ where
 
 import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
+import Cardano.Api.Certificate
 import Cardano.Api.Certificate.Internal
 import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
@@ -251,6 +252,7 @@ import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
   , obtainAlonzoScriptPurposeConstraints
   )
 import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
+import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Governance.Internal.Action.ProposalProcedure
 import Cardano.Api.Governance.Internal.Action.VotingProcedure
@@ -573,7 +575,7 @@ data TxCertificates build era where
   TxCertificates
     :: ShelleyBasedEra era
     -> OMap
-         (Certificate era)
+         (Exp.Certificate era)
          ( BuildTxWith
              build
              (Maybe (StakeCredential, Witness WitCtxStake era))
