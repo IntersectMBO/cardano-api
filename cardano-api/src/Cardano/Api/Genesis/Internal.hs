@@ -15,6 +15,7 @@ module Cardano.Api.Genesis.Internal
   , alonzoGenesisDefaults
   , decodeAlonzoGenesis
   , conwayGenesisDefaults
+  , costModelParamsCountLegacy
 
     -- ** Configuration
   , ByronGenesisConfig
@@ -35,17 +36,10 @@ module Cardano.Api.Genesis.Internal
 
     -- * Utilities
   , unsafeBoundedRational
-
-    -- * Testing only
-  , costModelParamsCountLegacy
   )
 where
 
 import Cardano.Api.Era.Internal.Core
-  ( CardanoEra
-  , forEraMaybeEon
-  , monoidForEraInEon
-  )
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.IO
 import Cardano.Api.Monad.Error
@@ -55,6 +49,7 @@ import Cardano.Api.Monad.Error
   , liftEither
   , modifyError
   )
+import Cardano.Api.Pretty
 
 import Cardano.Chain.Genesis qualified
 import Cardano.Crypto.Hash.Blake2b qualified
@@ -401,19 +396,14 @@ decodeAlonzoGenesis (Just era) genesisBs = modifyError ("Cannot decode era-sensi
     A.Array vec
       -- here we rely on an assumption that params are in correct order, so that we can take only the
       -- required ones for an era
-      | V.length vec < costModelExpectedCount ->
-          pure . A.Array . V.take costModelExpectedCount $
+      | V.length vec < v2paramsCount ->
+          pure . A.Array . V.take v2paramsCount $
             vec <> (A.toJSON . snd <$> optionalCostModelDefaultValues)
-      | V.length vec > costModelExpectedCount -> pure . A.Array $ V.take costModelExpectedCount vec
+      | V.length vec > v2paramsCount ->
+          pure . A.Array $ V.take v2paramsCount vec
     other -> pure other
 
-  -- Plutus V2 params expected count depending on an era
-  costModelExpectedCount :: Int
-  costModelExpectedCount
-    -- use all available parameters >= conway
-    | isConwayOnwards = length allCostModelParams
-    -- use only required params in < conway
-    | otherwise = costModelParamsCountLegacy L.PlutusV2 -- Babbage
+  v2paramsCount = costModelParamsCountLegacy (cardanoEraConstraints era $ AnyCardanoEra era) PlutusV2
 
   -- A list-like of tuples (param name, value) with default maxBound value
   optionalCostModelDefaultValues :: (Item l ~ (V2.ParamName, Int64), IsList l) => l
@@ -422,10 +412,11 @@ decodeAlonzoGenesis (Just era) genesisBs = modifyError ("Cannot decode era-sensi
   allCostModelParams :: [V2.ParamName]
   allCostModelParams = [minBound .. maxBound]
 
-  -- The new V2 cost model params introduced in Conway
+  -- The new V2 cost model params introduced in Later eras
   optionalV2costModelParams :: [V2.ParamName]
   optionalV2costModelParams =
-    [ V2.IntegerToByteString'cpu'arguments'c0
+    [ -- Conway
+      V2.IntegerToByteString'cpu'arguments'c0
     , V2.IntegerToByteString'cpu'arguments'c1
     , V2.IntegerToByteString'cpu'arguments'c2
     , V2.IntegerToByteString'memory'arguments'intercept
@@ -435,6 +426,117 @@ decodeAlonzoGenesis (Just era) genesisBs = modifyError ("Cannot decode era-sensi
     , V2.ByteStringToInteger'cpu'arguments'c2
     , V2.ByteStringToInteger'memory'arguments'intercept
     , V2.ByteStringToInteger'memory'arguments'slope
+    , -- Dijkstra
+      V2.CekConstrCost'exBudgetCPU
+    , V2.CekConstrCost'exBudgetMemory
+    , V2.CekCaseCost'exBudgetCPU
+    , V2.CekCaseCost'exBudgetMemory
+    , V2.Bls12_381_G1_add'cpu'arguments
+    , V2.Bls12_381_G1_add'memory'arguments
+    , V2.Bls12_381_G1_compress'cpu'arguments
+    , V2.Bls12_381_G1_compress'memory'arguments
+    , V2.Bls12_381_G1_equal'cpu'arguments
+    , V2.Bls12_381_G1_equal'memory'arguments
+    , V2.Bls12_381_G1_hashToGroup'cpu'arguments'intercept
+    , V2.Bls12_381_G1_hashToGroup'cpu'arguments'slope
+    , V2.Bls12_381_G1_hashToGroup'memory'arguments
+    , V2.Bls12_381_G1_neg'cpu'arguments
+    , V2.Bls12_381_G1_neg'memory'arguments
+    , V2.Bls12_381_G1_scalarMul'cpu'arguments'intercept
+    , V2.Bls12_381_G1_scalarMul'cpu'arguments'slope
+    , V2.Bls12_381_G1_scalarMul'memory'arguments
+    , V2.Bls12_381_G1_uncompress'cpu'arguments
+    , V2.Bls12_381_G1_uncompress'memory'arguments
+    , V2.Bls12_381_G2_add'cpu'arguments
+    , V2.Bls12_381_G2_add'memory'arguments
+    , V2.Bls12_381_G2_compress'cpu'arguments
+    , V2.Bls12_381_G2_compress'memory'arguments
+    , V2.Bls12_381_G2_equal'cpu'arguments
+    , V2.Bls12_381_G2_equal'memory'arguments
+    , V2.Bls12_381_G2_hashToGroup'cpu'arguments'intercept
+    , V2.Bls12_381_G2_hashToGroup'cpu'arguments'slope
+    , V2.Bls12_381_G2_hashToGroup'memory'arguments
+    , V2.Bls12_381_G2_neg'cpu'arguments
+    , V2.Bls12_381_G2_neg'memory'arguments
+    , V2.Bls12_381_G2_scalarMul'cpu'arguments'intercept
+    , V2.Bls12_381_G2_scalarMul'cpu'arguments'slope
+    , V2.Bls12_381_G2_scalarMul'memory'arguments
+    , V2.Bls12_381_G2_uncompress'cpu'arguments
+    , V2.Bls12_381_G2_uncompress'memory'arguments
+    , V2.Bls12_381_finalVerify'cpu'arguments
+    , V2.Bls12_381_finalVerify'memory'arguments
+    , V2.Bls12_381_millerLoop'cpu'arguments
+    , V2.Bls12_381_millerLoop'memory'arguments
+    , V2.Bls12_381_mulMlResult'cpu'arguments
+    , V2.Bls12_381_mulMlResult'memory'arguments
+    , V2.Keccak_256'cpu'arguments'intercept
+    , V2.Keccak_256'cpu'arguments'slope
+    , V2.Keccak_256'memory'arguments
+    , V2.Blake2b_224'cpu'arguments'intercept
+    , V2.Blake2b_224'cpu'arguments'slope
+    , V2.Blake2b_224'memory'arguments
+    , V2.AndByteString'cpu'arguments'intercept
+    , V2.AndByteString'cpu'arguments'slope1
+    , V2.AndByteString'cpu'arguments'slope2
+    , V2.AndByteString'memory'arguments'intercept
+    , V2.AndByteString'memory'arguments'slope
+    , V2.OrByteString'cpu'arguments'intercept
+    , V2.OrByteString'cpu'arguments'slope1
+    , V2.OrByteString'cpu'arguments'slope2
+    , V2.OrByteString'memory'arguments'intercept
+    , V2.OrByteString'memory'arguments'slope
+    , V2.XorByteString'cpu'arguments'intercept
+    , V2.XorByteString'cpu'arguments'slope1
+    , V2.XorByteString'cpu'arguments'slope2
+    , V2.XorByteString'memory'arguments'intercept
+    , V2.XorByteString'memory'arguments'slope
+    , V2.ComplementByteString'cpu'arguments'intercept
+    , V2.ComplementByteString'cpu'arguments'slope
+    , V2.ComplementByteString'memory'arguments'intercept
+    , V2.ComplementByteString'memory'arguments'slope
+    , V2.ReadBit'cpu'arguments
+    , V2.ReadBit'memory'arguments
+    , V2.WriteBits'cpu'arguments'intercept
+    , V2.WriteBits'cpu'arguments'slope
+    , V2.WriteBits'memory'arguments'intercept
+    , V2.WriteBits'memory'arguments'slope
+    , V2.ReplicateByte'cpu'arguments'intercept
+    , V2.ReplicateByte'cpu'arguments'slope
+    , V2.ReplicateByte'memory'arguments'intercept
+    , V2.ReplicateByte'memory'arguments'slope
+    , V2.ShiftByteString'cpu'arguments'intercept
+    , V2.ShiftByteString'cpu'arguments'slope
+    , V2.ShiftByteString'memory'arguments'intercept
+    , V2.ShiftByteString'memory'arguments'slope
+    , V2.RotateByteString'cpu'arguments'intercept
+    , V2.RotateByteString'cpu'arguments'slope
+    , V2.RotateByteString'memory'arguments'intercept
+    , V2.RotateByteString'memory'arguments'slope
+    , V2.CountSetBits'cpu'arguments'intercept
+    , V2.CountSetBits'cpu'arguments'slope
+    , V2.CountSetBits'memory'arguments
+    , V2.FindFirstSetBit'cpu'arguments'intercept
+    , V2.FindFirstSetBit'cpu'arguments'slope
+    , V2.FindFirstSetBit'memory'arguments
+    , V2.Ripemd_160'cpu'arguments'intercept
+    , V2.Ripemd_160'cpu'arguments'slope
+    , V2.Ripemd_160'memory'arguments
+    , V2.ExpModInteger'cpu'arguments'coefficient00
+    , V2.ExpModInteger'cpu'arguments'coefficient11
+    , V2.ExpModInteger'cpu'arguments'coefficient12
+    , V2.ExpModInteger'memory'arguments'intercept
+    , V2.ExpModInteger'memory'arguments'slope
+    , V2.DropList'cpu'arguments'intercept
+    , V2.DropList'cpu'arguments'slope
+    , V2.DropList'memory'arguments
+    , V2.LengthOfArray'cpu'arguments
+    , V2.LengthOfArray'memory'arguments
+    , V2.ListToArray'cpu'arguments'intercept
+    , V2.ListToArray'cpu'arguments'slope
+    , V2.ListToArray'memory'arguments'intercept
+    , V2.ListToArray'memory'arguments'slope
+    , V2.IndexArray'cpu'arguments
+    , V2.IndexArray'memory'arguments
     ]
 
   fromJsonE :: A.FromJSON a => A.Value -> ExceptT String m a
@@ -442,8 +544,6 @@ decodeAlonzoGenesis (Just era) genesisBs = modifyError ("Cannot decode era-sensi
     case A.fromJSON v of
       A.Success a -> pure a
       A.Error e -> throwError e
-
-  isConwayOnwards = isJust $ forEraMaybeEon @ConwayEraOnwards era
 
 -- | Some reasonable starting defaults for constructing a 'AlonzoGenesis'.
 -- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
@@ -863,8 +963,25 @@ unsafeBoundedRational x = fromMaybe (error errMessage) $ boundRational x
 -- Pre intra-era hardfork the V3 cost model has 231 parameters
 -- Post intra-era hardfork the V3 cost model has 251 parameters
 -- TODO: This needs to be parameterized by the protocol version.
-costModelParamsCountLegacy :: Language -> Int
-costModelParamsCountLegacy PlutusV1 = 166
-costModelParamsCountLegacy PlutusV2 = 175
-costModelParamsCountLegacy PlutusV3 = 231
-costModelParamsCountLegacy PlutusV4 = 251
+costModelParamsCountLegacy :: AnyCardanoEra -> Language -> Int
+costModelParamsCountLegacy era lang =
+  case lang of
+    PlutusV1
+      | era <= AnyCardanoEra ConwayEra -> L.costModelInitParamCount lang
+      | era == AnyCardanoEra DijkstraEra -> 295
+      | otherwise -> unknownCmErr
+    PlutusV2
+      | era <= AnyCardanoEra BabbageEra -> L.costModelInitParamCount lang
+      | era == AnyCardanoEra ConwayEra -> 185
+      | era == AnyCardanoEra DijkstraEra -> 295
+      | otherwise -> unknownCmErr
+    PlutusV3
+      | era <= AnyCardanoEra ConwayEra -> 297 -- here we changed from 251 (L.costModelInitParamCount lang) to 297 intra-era
+      | era == AnyCardanoEra DijkstraEra -> 313
+      | otherwise -> unknownCmErr
+    PlutusV4
+      | era <= AnyCardanoEra DijkstraEra -> L.costModelInitParamCount lang
+      | otherwise -> unknownCmErr
+ where
+  unknownCmErr =
+    error $ "Unknown " <> show lang <> " cost model parameters count for " <> prettyShow era <> " era"

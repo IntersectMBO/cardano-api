@@ -401,6 +401,9 @@ instance Enum AnyCardanoEra where
           <> show n
           <> " does not correspond to any known enumerated era."
 
+instance Ord AnyCardanoEra where
+  compare a b = compare (fromEnum a) (fromEnum b)
+
 instance ToJSON AnyCardanoEra where
   toJSON (AnyCardanoEra era) = toJSON era
 

@@ -21,6 +21,17 @@ import Cardano.Crypto.Wallet qualified as CC
 import Data.Proxy (Proxy (..))
 
 import Test.Crypto.Util
+    ( FromCBOR,
+      ToCBOR,
+      arbitrarySeedOfSize,
+      prop_cbor,
+      prop_cbor_direct_vs_class,
+      prop_cbor_size,
+      prop_cbor_with,
+      prop_no_thunks,
+      prop_raw_serialise,
+      prop_size_serialise,
+      Message )
 import Test.QuickCheck (Arbitrary (..), Gen, Property, (=/=), (===), (==>))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)

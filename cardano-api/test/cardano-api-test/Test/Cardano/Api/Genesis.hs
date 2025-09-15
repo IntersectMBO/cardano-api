@@ -146,6 +146,7 @@ loadPlutusV2CostModelFromGenesis
   -> FilePath
   -> m (Either String (L.CostModels, [Int64]))
 loadPlutusV2CostModelFromGenesis mEra filePath = withFrozenCallStack . runExceptT $ do
+  H.noteShow_ filePath
   genesisBs <- H.lbsReadFile filePath
   costModels <- modifyError show $ L.agCostModels <$> decodeAlonzoGenesis mEra genesisBs
   liftEither
