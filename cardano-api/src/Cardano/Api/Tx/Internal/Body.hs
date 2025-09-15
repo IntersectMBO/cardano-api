@@ -575,7 +575,7 @@ data TxCertificates build era where
   TxCertificates
     :: ShelleyBasedEra era
     -> OMap
-         (Exp.Certificate (ShelleyLedgerEra era))
+         (Exp.Certificate era)
          ( BuildTxWith
              build
              (Maybe (StakeCredential, Witness WitCtxStake era))
