@@ -13,6 +13,7 @@ module Test.Cardano.Api.Transaction.Autobalance
 where
 
 import Cardano.Api
+import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Tx
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Parser.Text qualified as P
@@ -368,8 +369,8 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.property $ d
         ]
   let certs =
         [
-          ( ConwayCertificate ceo $
-              L.ConwayTxCertDeleg (L.ConwayUnRegCert (toShelleyStakeCredential stakeCred) (L.SJust deregDeposit))
+          ( Exp.Certificate
+              (L.ConwayTxCertDeleg (L.ConwayUnRegCert (toShelleyStakeCredential stakeCred) (L.SJust deregDeposit)))
           , Nothing
           )
         ]

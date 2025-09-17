@@ -16,8 +16,8 @@ module Cardano.Api.Compatible.Tx
 where
 
 import Cardano.Api.Address (StakeCredential)
-import Cardano.Api.Certificate.Internal (Certificate)
 import Cardano.Api.Era
+import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Plutus.Internal.Script
 import Cardano.Api.ProtocolParameters
 import Cardano.Api.Tx.Internal.Body
@@ -155,7 +155,12 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
       (L.bodyTxL . L.votingProceduresTxBodyL) .~ votingProcedures
 
   indexedTxCerts
-    :: [(ScriptWitnessIndex, Certificate era, StakeCredential, Witness WitCtxStake era)]
+    :: [ ( ScriptWitnessIndex
+         , Exp.Certificate (ShelleyLedgerEra era)
+         , StakeCredential
+         , Witness WitCtxStake era
+         )
+       ]
   indexedTxCerts = indexTxCertificates txCertificates'
 
   setScriptWitnesses

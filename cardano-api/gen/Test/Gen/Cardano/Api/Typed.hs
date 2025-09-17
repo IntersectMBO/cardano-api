@@ -792,10 +792,42 @@ genTxCertificates =
         certs <- Gen.list (Range.constant 0 3) $ genCertificate w
         Gen.choice
           [ pure TxCertificatesNone
-          , pure (TxCertificates w $ fromList ((,BuildTxWith Nothing) <$> certs))
-          -- TODO: Generate certificates
+          , pure
+              ( TxCertificates w $
+                  fromList ((,BuildTxWith Nothing) <$> map (extractCertificate w) certs)
+              )
+              -- TODO: Generate certificates
           ]
     )
+
+extractCertificate
+  :: ShelleyBasedEra era
+  -> Api.Certificate era
+  -> Exp.Certificate (ShelleyLedgerEra era)
+extractCertificate ShelleyBasedEraShelley (Api.ShelleyRelatedCertificate _ c) =
+  Exp.Certificate c
+extractCertificate ShelleyBasedEraAllegra (Api.ShelleyRelatedCertificate _ c) =
+  Exp.Certificate c
+extractCertificate ShelleyBasedEraMary (Api.ShelleyRelatedCertificate _ c) =
+  Exp.Certificate c
+extractCertificate ShelleyBasedEraAlonzo (Api.ShelleyRelatedCertificate _ c) =
+  Exp.Certificate c
+extractCertificate ShelleyBasedEraBabbage (Api.ShelleyRelatedCertificate _ c) =
+  Exp.Certificate c
+extractCertificate ShelleyBasedEraConway (Api.ShelleyRelatedCertificate sToBab _) =
+  case sToBab :: ShelleyToBabbageEra ConwayEra of {}
+extractCertificate ShelleyBasedEraShelley (ConwayCertificate cOnwards _) =
+  case cOnwards :: ConwayEraOnwards ShelleyEra of {}
+extractCertificate ShelleyBasedEraAllegra (ConwayCertificate cOnwards _) =
+  case cOnwards :: ConwayEraOnwards AllegraEra of {}
+extractCertificate ShelleyBasedEraMary (ConwayCertificate cOnwards _) =
+  case cOnwards :: ConwayEraOnwards MaryEra of {}
+extractCertificate ShelleyBasedEraAlonzo (ConwayCertificate cOnwards _) =
+  case cOnwards :: ConwayEraOnwards AlonzoEra of {}
+extractCertificate ShelleyBasedEraBabbage (ConwayCertificate cOnwards _) =
+  case cOnwards :: ConwayEraOnwards BabbageEra of {}
+extractCertificate ShelleyBasedEraConway (ConwayCertificate _ c) =
+  Exp.Certificate c
 
 genScriptWitnessedTxCertificates :: Typeable era => Exp.Era era -> Gen (TxCertificates BuildTx era)
 genScriptWitnessedTxCertificates era = do

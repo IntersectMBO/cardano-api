@@ -76,6 +76,7 @@ module Cardano.Api.Certificate.Internal
   , certificateToTxCert
   , filterUnRegCreds
   , filterUnRegDRepCreds
+  , getTxCertWitness
   , isDRepRegOrUpdateCert
   )
 where
@@ -119,6 +120,8 @@ import Network.Socket (PortNumber)
 -- ----------------------------------------------------------------------------
 -- Certificates embedded in transactions
 --
+
+{-# DEPRECATED Certificate "Use `Certificate` type from Cardano.Api.Experimental.Tx.Internal.Certificate instead" #-}
 
 data Certificate era where
   -- Pre-Conway
