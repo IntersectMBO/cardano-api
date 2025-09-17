@@ -75,6 +75,7 @@ module Cardano.Api.Certificate.Internal
   , certificateToTxCert
   , filterUnRegCreds
   , filterUnRegDRepCreds
+  , getTxCertWitness
   , isDRepRegOrUpdateCert
   )
 where
