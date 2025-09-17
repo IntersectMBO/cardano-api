@@ -11,19 +11,19 @@ where
 import Cardano.Api.Address qualified as Api
 import Cardano.Api.Certificate.Internal qualified as Api
 import Cardano.Api.Era.Internal.Eon.Convert
+import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Plutus.Internal.Script qualified as Exp
 import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness qualified as Exp
 import Cardano.Api.Experimental.Simple.Script qualified as Exp
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
-import Cardano.Api.Experimental.Tx.Internal.Certificate
+import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal.Script (fromAllegraTimelock, sbeToSimpleScriptLanguageInEra)
 import Cardano.Api.Plutus.Internal.Script qualified as Api
 import Cardano.Api.Tx.Internal.Body (TxCertificates (..))
 import Cardano.Api.Tx.Internal.Body qualified as Api
 
-import Cardano.Binary
 import Cardano.Ledger.Allegra.Scripts qualified as L
 import Cardano.Ledger.Alonzo.Scripts qualified as L
 import Cardano.Ledger.Plutus.Language qualified as L
@@ -34,7 +34,7 @@ import GHC.Exts (IsList (..))
 mkTxCertificates
   :: forall era
    . IsEra era
-  => [(Certificate (LedgerEra era), AnyWitness (LedgerEra era))]
+  => [(Exp.Certificate (ShelleyLedgerEra era), AnyWitness (LedgerEra era))]
   -> Api.TxCertificates Api.BuildTx era
 mkTxCertificates [] = TxCertificatesNone
 mkTxCertificates certs =
@@ -42,16 +42,17 @@ mkTxCertificates certs =
  where
   getStakeCred
     :: Era era
-    -> (Certificate (LedgerEra era), AnyWitness (LedgerEra era))
-    -> ( Api.Certificate era
+    -> (Exp.Certificate (ShelleyLedgerEra era), AnyWitness (LedgerEra era))
+    -> ( Exp.Certificate (ShelleyLedgerEra era)
        , Api.BuildTxWith
            Api.BuildTx
            (Maybe (Api.StakeCredential, Api.Witness Api.WitCtxStake era))
        )
-  getStakeCred era (Certificate cert, witness) =
+  getStakeCred era (cert, witness) =
     case era of
       ConwayEra -> do
-        let oldApiCert = Api.ConwayCertificate (convert era) cert
+        let Exp.Certificate c = cert
+            oldApiCert = Api.ConwayCertificate (convert era) c
             mStakeCred = Api.selectStakeCredentialWitness oldApiCert
             wit =
               case witness of
