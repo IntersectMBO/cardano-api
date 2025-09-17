@@ -41,7 +41,6 @@ import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Fail.String (errorFail)
-import Data.ByteString.Char8 qualified as C8
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable qualified as F
 import Data.Functor.Identity
@@ -83,6 +82,7 @@ import Test.QuickCheck
   , vectorOf
   )
 import Test.QuickCheck.Gen (Gen (MkGen))
+import Test.QuickCheck.Instances.ByteString ()
 import Test.QuickCheck.Instances.Natural ()
 
 import Generic.Random (genericArbitraryU)
@@ -306,9 +306,6 @@ instance Arbitrary IPv6 where
 
 instance Arbitrary L.PoolMetadata where
   arbitrary = L.PoolMetadata <$> arbitrary <*> arbitrary
-
-instance Arbitrary Crypto.ByteString where
-  arbitrary = C8.pack <$> arbitrary
 
 instance Arbitrary L.ExUnits where
   arbitrary = L.ExUnits <$> genUnit <*> genUnit
