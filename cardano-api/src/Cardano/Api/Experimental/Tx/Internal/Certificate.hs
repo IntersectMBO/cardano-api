@@ -19,7 +19,6 @@ module Cardano.Api.Experimental.Tx.Internal.Certificate
 where
 
 import Cardano.Api.Certificate.Internal qualified as Api
-import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra qualified as Api
@@ -83,7 +82,7 @@ convertToOldApiCertificate :: Era era -> Certificate (LedgerEra era) -> Api.Cert
 convertToOldApiCertificate ConwayEra (Certificate cert) =
   Api.ConwayCertificate ConwayEraOnwardsConway cert
 
-convertToNewCertificate :: Era era -> Api.Certificate era -> Certificate (LedgerEra era)
+convertToNewCertificate :: Era era -> Api.Certificate era -> Certificate (ShelleyLedgerEra era)
 convertToNewCertificate ConwayEra (Api.ConwayCertificate _ cert) = Certificate cert
 convertToNewCertificate ConwayEra (Api.ShelleyRelatedCertificate sToBab _) =
   case sToBab :: Api.ShelleyToBabbageEra ConwayEra of {}
