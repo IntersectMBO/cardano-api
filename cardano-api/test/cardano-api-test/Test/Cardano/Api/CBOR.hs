@@ -110,6 +110,18 @@ prop_roundtrip_tx_CBOR = H.property $ do
   x <- H.forAll $ genTx era
   shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) x
 
+prop_roundtrip_tx_out_CBOR :: Property
+prop_roundtrip_tx_out_CBOR = H.property $ do
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
+  x <- H.forAll $ genTx era
+  txOut <- H.forAll $ Gen.element $ txOuts $ getTxBodyContent $ getTxBody x
+  txOutRT <- H.evalEither $ rtOnce era txOut -- We do this because some information gets lost on serialisation
+  shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) txOutRT
+ where
+  rtOnce
+    :: ShelleyBasedEra era -> TxOut CtxTx era -> Either CBOR.DecoderError (TxOut CtxTx era)
+  rtOnce sbe t = shelleyBasedEraConstraints sbe $ deserialiseFromCBOR (proxyToAsType Proxy) (serialiseToCBOR t)
+
 prop_roundtrip_witness_CBOR :: Property
 prop_roundtrip_witness_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
@@ -521,6 +533,7 @@ tests =
     , testProperty "roundtrip ScriptData CBOR" prop_roundtrip_ScriptData_CBOR
     , testProperty "roundtrip TxWitness Cddl" prop_roundtrip_TxWitness_Cddl
     , testProperty "roundtrip tx CBOR" prop_roundtrip_tx_CBOR
+    , testProperty "roundtrip tx out CBOR" prop_roundtrip_tx_out_CBOR
     , testProperty
         "roundtrip GovernancePoll CBOR"
         prop_roundtrip_GovernancePoll_CBOR
