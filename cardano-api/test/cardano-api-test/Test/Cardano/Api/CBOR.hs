@@ -109,6 +109,21 @@ prop_roundtrip_tx_CBOR = H.property $ do
   x <- H.forAll $ genTx era
   shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) x
 
+prop_roundtrip_tx_out_CBOR :: Property
+prop_roundtrip_tx_out_CBOR = H.property $ do
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
+  x <- H.forAll $ genTx era
+  txOut <- H.forAll $ Gen.element $ txOuts $ getTxBodyContent $ getTxBody x
+  let fixedTxOut = hashDatum txOut
+  shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) fixedTxOut
+ where
+  hashDatum :: TxOut CtxTx era -> TxOut CtxTx era
+  hashDatum txOut@(TxOut aie val datum rs) =
+    case datum of
+      (TxOutSupplementalDatum aeo d) ->
+        TxOut aie val (TxOutDatumHash aeo (hashScriptDataBytes d)) rs
+      _ -> txOut
+
 prop_roundtrip_witness_CBOR :: Property
 prop_roundtrip_witness_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
@@ -520,6 +535,7 @@ tests =
     , testProperty "roundtrip ScriptData CBOR" prop_roundtrip_ScriptData_CBOR
     , testProperty "roundtrip TxWitness Cddl" prop_roundtrip_TxWitness_Cddl
     , testProperty "roundtrip tx CBOR" prop_roundtrip_tx_CBOR
+    , testProperty "roundtrip tx out CBOR" prop_roundtrip_tx_out_CBOR
     , testProperty
         "roundtrip GovernancePoll CBOR"
         prop_roundtrip_GovernancePoll_CBOR
