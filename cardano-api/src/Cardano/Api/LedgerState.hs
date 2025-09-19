@@ -109,7 +109,7 @@ import Cardano.Api.Certificate.Internal
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Consensus.Internal.Mode qualified as Api
 import Cardano.Api.Era.Internal.Case
-import Cardano.Api.Era.Internal.Core (CardanoEra, forEraMaybeEon)
+import Cardano.Api.Era.Internal.Core (forEraMaybeEon)
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error as Api
 import Cardano.Api.Genesis.Internal
@@ -233,6 +233,7 @@ import Data.Aeson as Aeson
   , (.:)
   , (.:?)
   )
+import Data.Aeson qualified as A
 import Data.Aeson.Types (Parser)
 import Data.Bifunctor
 import Data.ByteArray (ByteArrayAccess)
@@ -358,7 +359,7 @@ initialLedgerState nodeConfigFile = do
   -- can remove the nodeConfigFile argument and much of the code in this
   -- module.
   config <- modifyError ILSEConfigFile (readNodeConfig nodeConfigFile)
-  genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig Nothing config)
+  genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig config)
   env <- modifyError ILSELedgerConsensusConfig (except (genesisConfigToEnv genesisConfig))
   let ledgerState = initLedgerStateVar genesisConfig
   return (env, ledgerState)
@@ -1497,15 +1498,12 @@ shelleyPraosNonce genesisHash =
 
 readCardanoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
-  => Maybe (CardanoEra era)
-  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
-  -- 'Cardano.Api.Genesis.Internal.decodeAlonzGenesis' for more details)
-  -> NodeConfig
+  => NodeConfig
   -> t m GenesisConfig
-readCardanoGenesisConfig mEra enc = do
+readCardanoGenesisConfig enc = do
   byronGenesis <- readByronGenesisConfig enc
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
-  alonzoGenesis <- readAlonzoGenesisConfig mEra enc
+  alonzoGenesis <- readAlonzoGenesisConfig enc
   conwayGenesis <- readConwayGenesisConfig enc
   -- TODO: Build dummy dijkstra genesis value
   let dijkstraGenesis = exampleDijkstraGenesis -- TODO: Dijkstra - add plumbing to read Dijkstra genesis
@@ -1597,15 +1595,12 @@ readShelleyGenesisConfig enc = do
 
 readAlonzoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
-  => Maybe (CardanoEra era)
-  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
-  -- 'Cardano.Api.Genesis.Internal.decodeAlonzGenesis' for more details)
-  -> NodeConfig
+  => NodeConfig
   -> t m AlonzoGenesis
-readAlonzoGenesisConfig mEra enc = do
+readAlonzoGenesisConfig enc = do
   let file = ncAlonzoGenesisFile enc
   modifyError (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError) $
-    readAlonzoGenesis mEra file (ncAlonzoGenesisHash enc)
+    readAlonzoGenesis file (ncAlonzoGenesisHash enc)
 
 -- | If the conway genesis file does not exist we simply put in a default.
 readConwayGenesisConfig
@@ -1678,21 +1673,18 @@ renderShelleyGenesisError sge =
         ]
 
 readAlonzoGenesis
-  :: forall m t era
+  :: forall m t
    . MonadIOTransError AlonzoGenesisError t m
-  => Maybe (CardanoEra era)
-  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
-  -- 'Cardano.Api.Genesis.Internal.decodeAlonzGenesis' for more details)
-  -> File AlonzoGenesis 'In
+  => File AlonzoGenesis 'In
   -> GenesisHashAlonzo
   -> t m AlonzoGenesis
-readAlonzoGenesis mEra (File file) expectedGenesisHash = do
+readAlonzoGenesis (File file) expectedGenesisHash = do
   content <-
     modifyError id $ handleIOExceptT (AlonzoGenesisReadError file . textShow) $ LBS.readFile file
   let genesisHash = GenesisHashAlonzo . Cardano.Crypto.Hash.Class.hashWith id $ LBS.toStrict content
   checkExpectedGenesisHash genesisHash
-  modifyError (AlonzoGenesisDecodeError file . Text.pack) $
-    decodeAlonzoGenesis mEra content
+  modifyError (AlonzoGenesisDecodeError file . Text.pack) . liftEither $
+    A.eitherDecode content
  where
   checkExpectedGenesisHash :: GenesisHashAlonzo -> t m ()
   checkExpectedGenesisHash actual =
