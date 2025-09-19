@@ -83,8 +83,9 @@ instance
     shelleyBasedEraConstraints (shelleyBasedEra @era) $ Certificate <$> CBOR.decodeFull' bs
 
 convertToOldApiCertificate :: Era era -> Certificate (LedgerEra era) -> Api.Certificate era
-convertToOldApiCertificate e (Certificate cert) =
-  obtainCommonConstraints e $ Api.ConwayCertificate (convert e) cert
+convertToOldApiCertificate e@ConwayEra (Certificate cert) =
+  obtainConwayConstraints e $ Api.ConwayCertificate (convert e) cert
+convertToOldApiCertificate DijkstraEra _ = error "Dijkstra era not supported yet"
 
 convertToNewCertificate :: Era era -> Api.Certificate era -> Certificate (LedgerEra era)
 convertToNewCertificate era (Api.ConwayCertificate _ cert) =
@@ -113,8 +114,8 @@ getStakeCred
          Api.BuildTx
          (Maybe (Api.StakeCredential, Api.Witness Api.WitCtxStake era))
      )
-getStakeCred e (Certificate cert, witness) = do
-  let oldApiCert = obtainCommonConstraints e $ Api.ConwayCertificate (convert e) cert
+getStakeCred e@ConwayEra (Certificate cert, witness) = do
+  let oldApiCert = obtainConwayConstraints e $ Api.ConwayCertificate (convert e) cert
       mStakeCred = Api.selectStakeCredentialWitness oldApiCert
       wit =
         case witness of
@@ -127,6 +128,7 @@ getStakeCred e (Certificate cert, witness) = do
             Api.ScriptWitness Api.ScriptWitnessForStakeAddr $
               newToOldPlutusCertificateScriptWitness e psw
   (oldApiCert, pure $ (,wit) <$> mStakeCred)
+getStakeCred DijkstraEra _ = error "Dijkstra era not supported yet"
 
 newToOldSimpleScriptWitness
   :: L.AllegraEraScript (LedgerEra era)
