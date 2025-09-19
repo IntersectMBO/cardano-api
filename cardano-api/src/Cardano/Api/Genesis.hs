@@ -2,7 +2,6 @@ module Cardano.Api.Genesis
   ( ShelleyGenesis (..)
   , shelleyGenesisDefaults
   , alonzoGenesisDefaults
-  , decodeAlonzoGenesis
   , conwayGenesisDefaults
 
     -- ** Configuration
@@ -29,9 +28,6 @@ module Cardano.Api.Genesis
     -- * Utilities
   , unsafeBoundedRational
   , fromShelleyGenesis
-
-    -- * Testing only
-  , costModelParamsCountLegacy
   )
 where
 

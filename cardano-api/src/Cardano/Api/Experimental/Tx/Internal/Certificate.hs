@@ -23,7 +23,6 @@ import Cardano.Api.Address qualified as Api
 import Cardano.Api.Certificate.Internal qualified as Api
 import Cardano.Api.Era.Internal.Core (DijkstraEra)
 import Cardano.Api.Era.Internal.Eon.Convert
-import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra qualified as Api
 import Cardano.Api.Experimental.Era
