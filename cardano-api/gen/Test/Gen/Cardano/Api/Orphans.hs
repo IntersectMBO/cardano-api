@@ -36,6 +36,7 @@ import Cardano.Ledger.HKD (HKD, NoUpdate (..))
 import Cardano.Ledger.Keys (VRFVerKeyHash (..))
 import Cardano.Ledger.Mary.Value qualified as ConcreteValue
 import Cardano.Ledger.Mary.Value qualified as Ledger
+import Cardano.Ledger.Plutus.CostModels qualified as L
 import Cardano.Ledger.Plutus.CostModels qualified as Ledger
 import Cardano.Ledger.Plutus.Language qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Ledger
@@ -739,7 +740,7 @@ instance Arbitrary Alonzo.CostModels where
 
 genValidCostModel :: Ledger.Language -> Gen Ledger.CostModel
 genValidCostModel lang = do
-  newParamValues <- vectorOf (costModelParamsCountLegacy lang) arbitrary
+  newParamValues <- vectorOf (L.costModelInitParamCount lang) arbitrary
   either (\err -> error $ "Corrupt cost model: " ++ show err) pure $
     Ledger.mkCostModel lang newParamValues
 
@@ -775,12 +776,12 @@ genCostModelValues lang = do
   Positive sub <- arbitrary
   (,) lang'
     <$> oneof
-      [ listAtLeast (costModelParamsCountLegacy lang)
+      [ listAtLeast (L.costModelInitParamCount lang)
       , take (tooFew sub) <$> arbitrary
       ]
  where
   lang' = fromIntegral (fromEnum lang)
-  tooFew sub = costModelParamsCountLegacy lang - sub
+  tooFew sub = L.costModelInitParamCount lang - sub
   listAtLeast :: Int -> Gen [Int64]
   listAtLeast x = do
     NonNegative y <- arbitrary

@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -13,7 +12,6 @@ module Cardano.Api.Genesis.Internal
   ( ShelleyGenesis (..)
   , shelleyGenesisDefaults
   , alonzoGenesisDefaults
-  , decodeAlonzoGenesis
   , conwayGenesisDefaults
 
     -- ** Configuration
@@ -35,26 +33,10 @@ module Cardano.Api.Genesis.Internal
 
     -- * Utilities
   , unsafeBoundedRational
-
-    -- * Testing only
-  , costModelParamsCountLegacy
   )
 where
 
-import Cardano.Api.Era.Internal.Core
-  ( CardanoEra
-  , forEraMaybeEon
-  , monoidForEraInEon
-  )
-import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.IO
-import Cardano.Api.Monad.Error
-  ( ExceptT
-  , MonadError (throwError)
-  , MonadTransError
-  , liftEither
-  , modifyError
-  )
 
 import Cardano.Chain.Genesis qualified
 import Cardano.Crypto.Hash.Blake2b qualified
@@ -64,6 +46,7 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices (..))
 import Cardano.Ledger.Api (CoinPerWord (..))
 import Cardano.Ledger.BaseTypes as Ledger
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.PParams
   ( DRepVotingThresholds (..)
@@ -85,33 +68,25 @@ import PlutusCore.Evaluation.Machine.CostModelInterface
 import PlutusCore.Evaluation.Machine.ExBudgetingDefaults
 import PlutusCore.Evaluation.Machine.MachineParameters
 import PlutusLedgerApi.Common (IsParamName, readParamName)
-import PlutusLedgerApi.V2 qualified as V2
 import PlutusLedgerApi.V3 qualified as V3
 
 import Control.Monad
 import Control.Monad.Trans.Fail.String (errorFail)
-import Data.Aeson qualified as A
 import Data.ByteString (ByteString)
-import Data.ByteString.Lazy qualified as LBS
 import Data.Default.Class qualified as DefaultClass
 import Data.Functor.Identity
 import Data.Int (Int64)
-import Data.List (sortOn)
 import Data.ListMap qualified as ListMap
-import Data.Map (Map)
 import Data.Map.Strict qualified as M
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Ratio
-import Data.Set qualified as S
 import Data.Text (Text)
 import Data.Time qualified as Time
 import Data.Typeable
-import Data.Vector qualified as V
 import GHC.Exts (IsList (..))
 import GHC.Stack (HasCallStack)
 import Lens.Micro
-import Lens.Micro.Aeson qualified as AL
 
 import Barbies (bmap)
 import UntypedPlutusCore.Evaluation.Machine.Cek.CekMachineCosts
@@ -198,7 +173,7 @@ shelleyGenesisDefaults =
           -- pot = tx_fees + ρ * remaining_reserves
           & ppRhoL .~ unsafeBR (1 % 10) -- How much of reserves goes into pot
           & ppTauL .~ unsafeBR (1 % 10) -- τ * remaining_reserves is sent to treasury every epoch
-          & ppKeyDepositL .~ 400000 -- require a non-zero deposit when registering keys
+          & ppKeyDepositL .~ L.Coin 400000 -- require a non-zero deposit when registering keys
     , -- genesis keys and initial funds
       sgGenDelegs = M.empty
     , sgStaking = emptyGenesisStaking
@@ -280,9 +255,11 @@ conwayGenesisDefaults =
 
     costModelParamsForTesting :: HasCallStack => [(V3.ParamName, Int64)]
     costModelParamsForTesting =
-      Map.toList $
-        fromJust $
-          extractCostModelParamsLedgerOrder mCostModel
+      -- all geneses should contain only the number of cost model params equal to the initial number
+      take (L.costModelInitParamCount PlutusV3)
+        . Map.toList
+        . fromJust
+        $ extractCostModelParamsLedgerOrder mCostModel
 
     mCostModel :: MCostModel
     mCostModel =
@@ -341,119 +318,11 @@ type MBuiltinCostModel = BuiltinCostModelBase MCostingFun
 (%!) :: forall r. (HasCallStack, Typeable r, BoundedRational r) => Integer -> Integer -> r
 n %! d = unsafeBoundedRational $ n Data.Ratio.% d
 
--- | Decode Alonzo genesis in an optionally era sensitive way.
---
--- Because the Plutus V2 cost model has changed between Babbage and Conway era, we need to know the era if we
--- want to decde Alonzo Genesis with a cost model baked in. If the V2 cost model is present in genesis, you
--- need to provide an era witness.
---
--- When an era witness is provided, for Plutus V2 model the function additionally:
--- 1. Does extra cost model parameters name validation: Checks for mandatory 175 parameters if provided in
---    a map form.
--- 2. If >= Conway: adds defaults for new 10 parameters, if they were not provided (maxBound)
--- 3. Removes extra parameters above the max count: Babbage - 175, Conway - 185.
-decodeAlonzoGenesis
-  :: forall era t m
-   . MonadTransError String t m
-  => Maybe (CardanoEra era)
-  -- ^ An optional era witness in which we're reading the genesis
-  -> LBS.ByteString
-  -- ^ Genesis JSON
-  -> t m AlonzoGenesis
-decodeAlonzoGenesis Nothing genesisBs =
-  modifyError ("Cannot decode Alonzo genesis: " <>) $
-    liftEither $
-      A.eitherDecode genesisBs
-decodeAlonzoGenesis (Just era) genesisBs = modifyError ("Cannot decode era-sensitive Alonzo genesis: " <>) $ do
-  genesisValue :: A.Value <- liftEither $ A.eitherDecode genesisBs
-  -- Making a fixup of a costmodel is easier before JSON deserialization. This also saves us from building
-  -- plutus' EvaluationContext one more time after cost model update.
-  genesisValue' <-
-    (AL.key "costModels" . AL.key "PlutusV2" . AL._Value) setCostModelDefaultValues genesisValue
-  fromJsonE genesisValue'
- where
-  setCostModelDefaultValues :: A.Value -> ExceptT String m A.Value
-  setCostModelDefaultValues = \case
-    obj@(A.Object _) -> do
-      -- decode cost model into a map first
-      costModel :: Map V2.ParamName Int64 <-
-        modifyError ("Decoding cost model object: " <>) $ fromJsonE obj
-
-      let costModelWithDefaults =
-            sortOn fst
-              . toList
-              $ M.union costModel optionalCostModelDefaultValues
-
-      -- check that we have all required params
-      unless (allCostModelParams == (fst <$> costModelWithDefaults)) $ do
-        let allCostModelParamsSet = fromList allCostModelParams
-            providedCostModelParamsSet = fromList $ fst <$> costModelWithDefaults
-            missingParameters = toList $ S.difference allCostModelParamsSet providedCostModelParamsSet
-        throwError $
-          unlines
-            [ "Missing V2 Plutus cost model parameters: "
-            , show missingParameters
-            , "Number of missing parameters: " <> show (length missingParameters)
-            ]
-      -- We have already have required params, we already added optional ones (which are trimmed later
-      -- if required). Continue processing further in array representation.
-      setCostModelDefaultValues . A.toJSON $ map snd costModelWithDefaults
-    A.Array vec
-      -- here we rely on an assumption that params are in correct order, so that we can take only the
-      -- required ones for an era
-      | V.length vec < costModelExpectedCount ->
-          pure . A.Array . V.take costModelExpectedCount $
-            vec <> (A.toJSON . snd <$> optionalCostModelDefaultValues)
-      | V.length vec > costModelExpectedCount -> pure . A.Array $ V.take costModelExpectedCount vec
-    other -> pure other
-
-  -- Plutus V2 params expected count depending on an era
-  costModelExpectedCount :: Int
-  costModelExpectedCount
-    -- use all available parameters >= conway
-    | isConwayOnwards = length allCostModelParams
-    -- use only required params in < conway
-    | otherwise = costModelParamsCountLegacy L.PlutusV2 -- Babbage
-
-  -- A list-like of tuples (param name, value) with default maxBound value
-  optionalCostModelDefaultValues :: (Item l ~ (V2.ParamName, Int64), IsList l) => l
-  optionalCostModelDefaultValues = fromList $ map (,maxBound) optionalV2costModelParams
-
-  allCostModelParams :: [V2.ParamName]
-  allCostModelParams = [minBound .. maxBound]
-
-  -- The new V2 cost model params introduced in Conway
-  optionalV2costModelParams :: [V2.ParamName]
-  optionalV2costModelParams =
-    [ V2.IntegerToByteString'cpu'arguments'c0
-    , V2.IntegerToByteString'cpu'arguments'c1
-    , V2.IntegerToByteString'cpu'arguments'c2
-    , V2.IntegerToByteString'memory'arguments'intercept
-    , V2.IntegerToByteString'memory'arguments'slope
-    , V2.ByteStringToInteger'cpu'arguments'c0
-    , V2.ByteStringToInteger'cpu'arguments'c1
-    , V2.ByteStringToInteger'cpu'arguments'c2
-    , V2.ByteStringToInteger'memory'arguments'intercept
-    , V2.ByteStringToInteger'memory'arguments'slope
-    ]
-
-  fromJsonE :: A.FromJSON a => A.Value -> ExceptT String m a
-  fromJsonE v =
-    case A.fromJSON v of
-      A.Success a -> pure a
-      A.Error e -> throwError e
-
-  isConwayOnwards = isJust $ forEraMaybeEon @ConwayEraOnwards era
-
 -- | Some reasonable starting defaults for constructing a 'AlonzoGenesis'.
 -- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
--- The era determines Plutus V2 cost model parameters:
--- * Conway: 185
--- * <= Babbage: 175
 alonzoGenesisDefaults
-  :: CardanoEra era
-  -> AlonzoGenesis
-alonzoGenesisDefaults era =
+  :: AlonzoGenesis
+alonzoGenesisDefaults =
   AlonzoGenesis
     { agPrices =
         Prices
@@ -829,23 +698,6 @@ alonzoGenesisDefaults era =
       , 32947
       , 10
       ]
-        <> defaultV2CostModelNewConwayParams
-
-    -- New Conway cost model parameters
-    defaultV2CostModelNewConwayParams =
-      monoidForEraInEon @ConwayEraOnwards era $
-        const
-          [ 1292075
-          , 24469
-          , 74
-          , 0
-          , 1
-          , 936157
-          , 49601
-          , 237
-          , 0
-          , 1
-          ]
 
 -- | Convert Rational to a bounded rational. Throw an exception when the rational is out of bounds.
 unsafeBoundedRational
@@ -856,15 +708,3 @@ unsafeBoundedRational
 unsafeBoundedRational x = fromMaybe (error errMessage) $ boundRational x
  where
   errMessage = show (typeRep (Proxy @r)) <> " is out of bounds: " <> show x
-
--- Only use this function in the generation of an Alonzo genesis file
--- The number of parameters for PlutusV3 reflects that of the Babbage
--- era cost model before the intra era hardfork.
--- Pre intra-era hardfork the V3 cost model has 231 parameters
--- Post intra-era hardfork the V3 cost model has 251 parameters
--- TODO: This needs to be parameterized by the protocol version.
-costModelParamsCountLegacy :: Language -> Int
-costModelParamsCountLegacy PlutusV1 = 166
-costModelParamsCountLegacy PlutusV2 = 175
-costModelParamsCountLegacy PlutusV3 = 231
-costModelParamsCountLegacy PlutusV4 = 251
