@@ -395,12 +395,12 @@ newtype PoolState era = PoolState L.QueryPoolStateResult
 
 decodePoolState
   :: forall era
-   . ()
-  => Core.Era (ShelleyLedgerEra era)
-  => SerialisedPoolState
+   . ShelleyBasedEra era
+  -> SerialisedPoolState
   -> Either DecoderError (PoolState era)
-decodePoolState (SerialisedPoolState (Serialised ls)) =
-  PoolState <$> decodeFull (Core.eraProtVerLow @(ShelleyLedgerEra era)) ls
+decodePoolState sbe (SerialisedPoolState (Serialised ls)) =
+  shelleyBasedEraConstraints sbe $
+    PoolState <$> decodeFull (Core.eraProtVerLow @(ShelleyLedgerEra era)) ls
 
 newtype SerialisedPoolDistribution era
   = SerialisedPoolDistribution

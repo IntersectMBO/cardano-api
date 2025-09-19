@@ -64,6 +64,8 @@ module Cardano.Api.Ledger.Internal.Reexport
   , fromEraCBOR
   , ppMinFeeAL
   , ppMinUTxOValueL
+  -- Dijkstra
+  , DijkstraPlutusPurpose (..)
   -- Conway
   , Anchor (..)
   , Committee (..)
@@ -320,6 +322,7 @@ import Cardano.Ledger.Core
   )
 import Cardano.Ledger.Credential (Credential (..), credToText)
 import Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Hashes
   ( ADDRHASH
   , SafeHash
@@ -339,7 +342,6 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), unData)
 import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
-import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import Cardano.Ledger.Shelley.API
   ( ChainAccountState (..)
   , GenDelegPair (..)
@@ -348,7 +350,6 @@ import Cardano.Ledger.Shelley.API
   , WitVKey (..)
   , hashKey
   , hashVerKeyVRF
-  , ChainAccountState (..)
   )
 import Cardano.Ledger.Shelley.Genesis
   ( ShelleyGenesisStaking (..)
@@ -365,6 +366,7 @@ import Cardano.Ledger.Shelley.TxCert
   , ShelleyEraTxCert (..)
   , ShelleyTxCert (..)
   )
+import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Protocol.Crypto (Crypto, StandardCrypto)
 import Cardano.Slotting.Slot (EpochNo (..))

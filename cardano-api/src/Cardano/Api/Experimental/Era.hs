@@ -26,6 +26,7 @@ module Cardano.Api.Experimental.Era
   , DeprecatedEra (..)
   , EraCommonConstraints
   , obtainCommonConstraints
+  , obtainConwayConstraints
   , eraToSbe
   , eraToBabbageEraOnwards
   , sbeToEra
@@ -289,7 +290,10 @@ obtainCommonConstraints
   -> a
 obtainCommonConstraints = \case
   ConwayEra -> id
-  _ -> const $ error "obtainCommonConstraints: Dijkstra era not yet supported"
+  DijkstraEra -> id
+
+obtainConwayConstraints :: Era ConwayEra -> (EraConwayConstraints => a) -> a
+obtainConwayConstraints ConwayEra a = a
 
 type EraCommonConstraints era =
   ( L.AllegraEraScript (LedgerEra era)
@@ -298,7 +302,6 @@ type EraCommonConstraints era =
   , L.BabbageEraTxBody (LedgerEra era)
   , L.ConwayEraTxBody (LedgerEra era)
   , L.ConwayEraTxCert (LedgerEra era)
-  , L.TxCert (LedgerEra era) ~ L.ConwayTxCert (LedgerEra era)
   , L.Era (LedgerEra era)
   , L.EraScript (LedgerEra era)
   , L.EraTx (LedgerEra era)
@@ -308,11 +311,16 @@ type EraCommonConstraints era =
   , FromCBOR (ChainDepState (ConsensusProtocol era))
   , L.NativeScript (LedgerEra era) ~ L.Timelock (LedgerEra era)
   , PraosProtocolSupportsNode (ConsensusProtocol era)
-  , L.ShelleyEraTxCert (LedgerEra era)
   , ShelleyLedgerEra era ~ LedgerEra era
   , ToJSON (ChainDepState (ConsensusProtocol era))
   , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
   , Api.IsCardanoEra era
   , Api.IsShelleyBasedEra era
   , IsEra era
+  )
+
+type EraConwayConstraints =
+  ( EraCommonConstraints ConwayEra
+  , L.TxCert (LedgerEra ConwayEra) ~ L.ConwayTxCert (LedgerEra ConwayEra)
+  , L.ShelleyEraTxCert (LedgerEra ConwayEra)
   )
