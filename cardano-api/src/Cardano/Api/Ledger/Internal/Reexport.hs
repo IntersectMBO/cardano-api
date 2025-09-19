@@ -64,6 +64,8 @@ module Cardano.Api.Ledger.Internal.Reexport
   , fromEraCBOR
   , ppMinFeeAL
   , ppMinUTxOValueL
+  -- Dijkstra
+  , DijkstraPlutusPurpose (..)
   -- Conway
   , Anchor (..)
   , Committee (..)
@@ -112,7 +114,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , toPlainDecoder
   -- Shelley
   , secondsToNominalDiffTimeMicro
-  , AccountState (..)
+  , ChainAccountState (..)
   , NewEpochState (..)
   , ShelleyGenesisStaking (..)
   -- Babbage
@@ -271,7 +273,6 @@ import Cardano.Ledger.Binary
   , toPlainDecoder
   )
 import Cardano.Ledger.Binary.Plain (Decoder, serializeAsHexText)
-import Cardano.Ledger.CertState (DRepState (..), csCommitteeCredsL)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Conway.Core
   ( DRepVotingThresholds (..)
@@ -298,6 +299,7 @@ import Cardano.Ledger.Conway.Governance
   )
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.State (DRepState (..), csCommitteeCredsL)
 import Cardano.Ledger.Conway.TxCert
   ( ConwayDelegCert (..)
   , ConwayEraTxCert (..)
@@ -320,6 +322,7 @@ import Cardano.Ledger.Core
   )
 import Cardano.Ledger.Credential (Credential (..), credToText)
 import Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Hashes
   ( ADDRHASH
   , SafeHash
@@ -339,9 +342,8 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), unData)
 import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
-import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import Cardano.Ledger.Shelley.API
-  ( AccountState (..)
+  ( ChainAccountState (..)
   , GenDelegPair (..)
   , NewEpochState (..)
   , StakeReference (..)
@@ -364,6 +366,7 @@ import Cardano.Ledger.Shelley.TxCert
   , ShelleyEraTxCert (..)
   , ShelleyTxCert (..)
   )
+import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Protocol.Crypto (Crypto, StandardCrypto)
 import Cardano.Slotting.Slot (EpochNo (..))

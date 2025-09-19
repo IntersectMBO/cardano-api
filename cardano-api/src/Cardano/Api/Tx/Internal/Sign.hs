@@ -184,6 +184,10 @@ instance Show (Tx era) where
     showParen (p >= 11) $
       showString "ShelleyTx ShelleyBasedEraConway "
         . showsPrec 11 tx
+  showsPrec p (ShelleyTx ShelleyBasedEraDijkstra tx) =
+    showParen (p >= 11) $
+      showString "ShelleyTx ShelleyBasedEraDijkstra "
+        . showsPrec 11 tx
 
 instance HasTypeProxy era => HasTypeProxy (Tx era) where
   data AsType (Tx era) = AsTx (AsType era)
@@ -282,6 +286,7 @@ instance IsShelleyBasedEra era => HasTextEnvelope (Tx era) where
       ShelleyBasedEraAlonzo -> "Tx AlonzoEra"
       ShelleyBasedEraBabbage -> "Tx BabbageEra"
       ShelleyBasedEraConway -> "Tx ConwayEra"
+      ShelleyBasedEraDijkstra -> "Tx DijkstraEra"
 
 -- ----------------------------------------------------------------------------
 -- Transaction bodies
@@ -477,6 +482,29 @@ instance Show (TxBody era) where
             . showChar ' '
             . showsPrec 11 scriptValidity
         )
+  showsPrec
+    p
+    ( ShelleyTxBody
+        ShelleyBasedEraDijkstra
+        txbody
+        txscripts
+        redeemers
+        txmetadata
+        scriptValidity
+      ) =
+      showParen
+        (p >= 11)
+        ( showString "ShelleyTxBody ShelleyBasedEraDijkstra "
+            . showsPrec 11 txbody
+            . showChar ' '
+            . showsPrec 11 txscripts
+            . showChar ' '
+            . showsPrec 11 redeemers
+            . showChar ' '
+            . showsPrec 11 txmetadata
+            . showChar ' '
+            . showsPrec 11 scriptValidity
+        )
 
 instance HasTypeProxy era => HasTypeProxy (TxBody era) where
   data AsType (TxBody era) = AsTxBody (AsType era)
@@ -518,6 +546,7 @@ instance IsShelleyBasedEra era => HasTextEnvelope (TxBody era) where
       ShelleyBasedEraAlonzo -> "TxBodyAlonzo"
       ShelleyBasedEraBabbage -> "TxBodyBabbage"
       ShelleyBasedEraConway -> "TxBodyConway"
+      ShelleyBasedEraDijkstra -> "TxBodyDijkstra"
 
 data TxBodyScriptData era where
   TxBodyNoScriptData :: TxBodyScriptData era
@@ -536,7 +565,7 @@ selectTxDatums
   :: TxBodyScriptData era
   -> Map L.DataHash (L.Data (ShelleyLedgerEra era))
 selectTxDatums TxBodyNoScriptData = Map.empty
-selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats' datums) _) = datums
+selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats datums) _) = datums
 
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity
@@ -647,6 +676,10 @@ instance Show (KeyWitness era) where
     showParen (p >= 11) $
       showString "ShelleyBootstrapWitness ShelleyBasedEraConway "
         . showsPrec 11 tx
+  showsPrec p (ShelleyBootstrapWitness ShelleyBasedEraDijkstra tx) =
+    showParen (p >= 11) $
+      showString "ShelleyBootstrapWitness ShelleyBasedEraDijkstra "
+        . showsPrec 11 tx
   showsPrec p (ShelleyKeyWitness ShelleyBasedEraShelley tx) =
     showParen (p >= 11) $
       showString "ShelleyKeyWitness ShelleyBasedEraShelley "
@@ -670,6 +703,10 @@ instance Show (KeyWitness era) where
   showsPrec p (ShelleyKeyWitness ShelleyBasedEraConway tx) =
     showParen (p >= 11) $
       showString "ShelleyKeyWitness ShelleyBasedEraConway "
+        . showsPrec 11 tx
+  showsPrec p (ShelleyKeyWitness ShelleyBasedEraDijkstra tx) =
+    showParen (p >= 11) $
+      showString "ShelleyKeyWitness ShelleyBasedEraDijkstra "
         . showsPrec 11 tx
 
 instance HasTypeProxy era => HasTypeProxy (KeyWitness era) where
@@ -707,6 +744,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
       AlonzoEra -> decodeShelleyBasedWitness ShelleyBasedEraAlonzo bs
       BabbageEra -> decodeShelleyBasedWitness ShelleyBasedEraBabbage bs
       ConwayEra -> decodeShelleyBasedWitness ShelleyBasedEraConway bs
+      DijkstraEra -> decodeShelleyBasedWitness ShelleyBasedEraDijkstra bs
 
 -- | We no longer use the non-compliant CDDL legacy encoding.
 -- Instead of depending on a tag to differentiate which key witness
@@ -795,6 +833,7 @@ instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
       AlonzoEra -> "TxWitness AlonzoEra"
       BabbageEra -> "TxWitness BabbageEra"
       ConwayEra -> "TxWitness ConwayEra"
+      DijkstraEra -> "TxWitness DijkstraEra"
 
 getTxBodyAndWitnesses :: Tx era -> (TxBody era, [KeyWitness era])
 getTxBodyAndWitnesses tx = (getTxBody tx, getTxWitnesses tx)
@@ -948,6 +987,7 @@ makeSignedTransaction
       ShelleyBasedEraAlonzo -> alonzoSignedTransaction
       ShelleyBasedEraBabbage -> alonzoSignedTransaction
       ShelleyBasedEraConway -> alonzoSignedTransaction
+      ShelleyBasedEraDijkstra -> alonzoSignedTransaction
    where
     txCommon
       :: forall ledgerera
@@ -1068,7 +1108,7 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
     -- Byron era witnesses were weird. This reveals all that weirdness.
     Shelley.BootstrapWitness
       { Shelley.bwKey = vk
-      , Shelley.bwSig = signature
+      , Shelley.bwSignature = signature
       , Shelley.bwChainCode = chainCode
       , Shelley.bwAttributes = attributes
       }

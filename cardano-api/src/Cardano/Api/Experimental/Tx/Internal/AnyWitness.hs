@@ -29,6 +29,7 @@ import Cardano.Ledger.Alonzo.Scripts qualified as L
 import Cardano.Ledger.Babbage.Scripts qualified as L
 import Cardano.Ledger.Conway.Scripts qualified as L
 import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Dijkstra.Scripts qualified as Dijkstra
 import Cardano.Ledger.Plutus.Data qualified as L
 import Cardano.Ledger.Plutus.Language qualified as L
 
@@ -98,15 +99,17 @@ getAnyWitnessScript era ss@(AnySimpleScriptWitness{}) =
     ShelleyBasedEraShelley -> getAnyWitnessSimpleScript ss
     ShelleyBasedEraAllegra -> getAnyWitnessSimpleScript ss
     ShelleyBasedEraMary -> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraAlonzo -> L.TimelockScript <$> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraBabbage -> L.TimelockScript <$> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraConway -> L.TimelockScript <$> getAnyWitnessSimpleScript ss
+    ShelleyBasedEraAlonzo -> L.NativeScript <$> getAnyWitnessSimpleScript ss
+    ShelleyBasedEraBabbage -> L.NativeScript <$> getAnyWitnessSimpleScript ss
+    ShelleyBasedEraConway -> L.NativeScript <$> getAnyWitnessSimpleScript ss
+    ShelleyBasedEraDijkstra -> L.NativeScript <$> getAnyWitnessSimpleScript ss
 getAnyWitnessScript era ps@(AnyPlutusScriptWitness{}) =
   forShelleyBasedEraInEon era Nothing $ \aEon ->
     case aEon of
       AlonzoEraOnwardsAlonzo -> L.PlutusScript <$> getAnyWitnessPlutusScript aEon ps
       AlonzoEraOnwardsBabbage -> L.PlutusScript <$> getAnyWitnessPlutusScript aEon ps
       AlonzoEraOnwardsConway -> L.PlutusScript <$> getAnyWitnessPlutusScript aEon ps
+      AlonzoEraOnwardsDijkstra -> L.PlutusScript <$> getAnyWitnessPlutusScript aEon ps
 
 -- It should be noted that 'PlutusRunnable' is constructed via deserialization. The deserialization
 -- instance lives in ledger and will fail for an invalid script language/era pairing. Therefore
@@ -127,6 +130,9 @@ fromPlutusRunnable L.SPlutusV1 eon runnable =
     AlonzoEraOnwardsConway ->
       let plutusScript = L.plutusFromRunnable runnable
        in Just $ L.ConwayPlutusV1 plutusScript
+    AlonzoEraOnwardsDijkstra ->
+      let plutusScript = L.plutusFromRunnable runnable
+       in Just $ Dijkstra.DijkstraPlutusV1 plutusScript
 fromPlutusRunnable L.SPlutusV2 eon runnable =
   case eon of
     AlonzoEraOnwardsAlonzo -> Nothing
@@ -136,6 +142,9 @@ fromPlutusRunnable L.SPlutusV2 eon runnable =
     AlonzoEraOnwardsConway ->
       let plutusScript = L.plutusFromRunnable runnable
        in Just $ L.ConwayPlutusV2 plutusScript
+    AlonzoEraOnwardsDijkstra ->
+      let plutusScript = L.plutusFromRunnable runnable
+       in Just $ Dijkstra.DijkstraPlutusV2 plutusScript
 fromPlutusRunnable L.SPlutusV3 eon runnable =
   case eon of
     AlonzoEraOnwardsAlonzo -> Nothing
@@ -143,6 +152,19 @@ fromPlutusRunnable L.SPlutusV3 eon runnable =
     AlonzoEraOnwardsConway ->
       let plutusScript = L.plutusFromRunnable runnable
        in Just $ L.ConwayPlutusV3 plutusScript
+    AlonzoEraOnwardsDijkstra ->
+      let plutusScript = L.plutusFromRunnable runnable
+       in Just $ Dijkstra.DijkstraPlutusV3 plutusScript
+fromPlutusRunnable L.SPlutusV4 eon runnable =
+  case eon of
+    AlonzoEraOnwardsAlonzo -> Nothing
+    AlonzoEraOnwardsBabbage -> Nothing
+    AlonzoEraOnwardsConway ->
+      let plutusScript = L.plutusFromRunnable runnable
+       in Just $ error "fromPlutusRunnable: ConwayPlutusV4" plutusScript
+    AlonzoEraOnwardsDijkstra ->
+      let plutusScript = L.plutusFromRunnable runnable
+       in Just $ Dijkstra.DijkstraPlutusV4 plutusScript
 
 toAlonzoDatum
   :: AlonzoEraOnwards era
@@ -160,5 +182,6 @@ getPlutusDatum
 getPlutusDatum L.SPlutusV1 (SpendingScriptDatum d) = Just d
 getPlutusDatum L.SPlutusV2 (SpendingScriptDatum d) = Just d
 getPlutusDatum L.SPlutusV3 (SpendingScriptDatum d) = d
+getPlutusDatum L.SPlutusV4 (SpendingScriptDatum _d) = error "dijkstra"
 getPlutusDatum _ InlineDatum = Nothing
 getPlutusDatum _ NoScriptDatum = Nothing
