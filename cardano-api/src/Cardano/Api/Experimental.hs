@@ -22,8 +22,6 @@ module Cardano.Api.Experimental
   , hashTxBody
   , evaluateTransactionExecutionUnitsShelley
   , Certificate (..)
-  , convertToNewCertificate
-  , convertToOldApiCertificate
   , mkTxCertificates
 
     -- ** Transaction fee related
