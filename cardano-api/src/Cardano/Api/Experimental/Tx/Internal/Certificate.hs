@@ -13,8 +13,6 @@
 
 module Cardano.Api.Experimental.Tx.Internal.Certificate
   ( Certificate (..)
-  , convertToOldApiCertificate
-  , convertToNewCertificate
   )
 where
 
@@ -80,12 +78,38 @@ instance
   deserialiseFromCBOR _ bs =
     shelleyBasedEraConstraints (shelleyBasedEra @era) $ Certificate <$> CBOR.decodeFull' bs
 
-convertToOldApiCertificate :: Era era -> Certificate (LedgerEra era) -> Api.Certificate era
-convertToOldApiCertificate e@ConwayEra (Certificate cert) =
-  obtainConwayConstraints e $ Api.ConwayCertificate (convert e) cert
-convertToOldApiCertificate DijkstraEra _ = error "Dijkstra era not supported yet"
-
-convertToNewCertificate :: Era era -> Api.Certificate era -> Certificate (ShelleyLedgerEra era)
-convertToNewCertificate ConwayEra (Api.ConwayCertificate _ cert) = Certificate cert
-convertToNewCertificate ConwayEra (Api.ShelleyRelatedCertificate sToBab _) =
-  case sToBab :: Api.ShelleyToBabbageEra ConwayEra of {}
+getAnchorDataFromCertificate
+  :: Era era
+  -> Certificate (ShelleyLedgerEra era)
+  -> Either AnchorDataFromCertificateError (Maybe Ledger.Anchor)
+getAnchorDataFromCertificate ConwayEra (Certificate c) =
+  case c of
+    Ledger.RegTxCert _ -> return Nothing
+    Ledger.UnRegTxCert _ -> return Nothing
+    Ledger.RegDepositTxCert _ _ -> return Nothing
+    Ledger.UnRegDepositTxCert _ _ -> return Nothing
+    Ledger.RegDepositDelegTxCert{} -> return Nothing
+    Ledger.DelegTxCert{} -> return Nothing
+    Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+    Ledger.RetirePoolTxCert _ _ -> return Nothing
+    Ledger.RegDRepTxCert _ _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+    Ledger.UnRegDRepTxCert _ _ -> return Nothing
+    Ledger.UpdateDRepTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+    Ledger.AuthCommitteeHotKeyTxCert _ _ -> return Nothing
+    Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+ where
+  anchorDataFromPoolMetadata
+    :: MonadError AnchorDataFromCertificateError m
+    => Ledger.PoolMetadata
+    -> m (Maybe Ledger.Anchor)
+  anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashBytes}) = do
+    hash <-
+      maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return $
+        Ledger.hashFromBytes hashBytes
+    return $
+      Just
+        ( Ledger.Anchor
+            { Ledger.anchorUrl = url
+            , Ledger.anchorDataHash = Ledger.unsafeMakeSafeHash hash
+            }
+        )

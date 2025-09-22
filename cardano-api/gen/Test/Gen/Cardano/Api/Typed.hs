@@ -839,6 +839,7 @@ genScriptWitnessedTxCertificates era = do
         zipWith
           (\c p -> (c, Just p))
           certs
+          (map (extractCertificate era) certs)
           plutusScriptWits
 
   pure $ mkTxCertificates (convert era) certsAndWits
