@@ -834,12 +834,12 @@ genScriptWitnessedTxCertificates era = do
   let w = convert era
   num <- Gen.integral (Range.linear 0 3)
   certs <- Gen.list (Range.singleton num) $ genCertificate w
-  plutusScriptWits <- Gen.list (Range.singleton num) $ genApiPlutusScriptWitness WitCtxStake era
+  plutusScriptWits <-
+    Gen.list (Range.singleton num) $ genApiPlutusScriptWitness WitCtxStake era
   let certsAndWits =
         zipWith
           (\c p -> (c, Just p))
-          certs
-          (map (extractCertificate era) certs)
+          (map (extractCertificate w) certs)
           plutusScriptWits
 
   pure $ mkTxCertificates (convert era) certsAndWits

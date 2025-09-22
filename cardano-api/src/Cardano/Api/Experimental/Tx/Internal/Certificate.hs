@@ -23,26 +23,20 @@ import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra qualified as Api
 import Cardano.Api.Experimental.Era
-import Cardano.Api.Experimental.Plutus.Internal.Script qualified as Exp
-import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness qualified as Exp
-import Cardano.Api.Experimental.Simple.Script qualified as Exp
-import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Plutus.Internal.Script
-import Cardano.Api.Plutus.Internal.Script qualified as Api
+import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
+import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.TextEnvelope.Internal
-import Cardano.Api.Tx.Internal.Body (TxCertificates (..))
-import Cardano.Api.Tx.Internal.Body qualified as Api
 
 import Cardano.Binary qualified as CBOR
-import Cardano.Ledger.Allegra.Scripts qualified as L
-import Cardano.Ledger.Plutus.Language qualified as L
-import Cardano.Ledger.Plutus.Language qualified as Plutus
+import Cardano.Ledger.BaseTypes (strictMaybe)
 
+import Control.Monad.Error.Class
+import Data.ByteString (ByteString)
+import Data.String
 import Data.Typeable
-import GHC.IsList
 
 data Certificate era where
   Certificate :: L.EraTxCert era => L.TxCert era -> Certificate era
