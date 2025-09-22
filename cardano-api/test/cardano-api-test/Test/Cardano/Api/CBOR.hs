@@ -115,12 +115,15 @@ prop_roundtrip_tx_out_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ genTx era
   txOut <- H.forAll $ Gen.element $ txOuts $ getTxBodyContent $ getTxBody x
-  txOutRT <- H.evalEither $ rtOnce era txOut -- We do this because some information gets lost on serialisation
-  shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) txOutRT
+  let fixedTxOut = hashDatum txOut
+  shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) fixedTxOut
  where
-  rtOnce
-    :: ShelleyBasedEra era -> TxOut CtxTx era -> Either CBOR.DecoderError (TxOut CtxTx era)
-  rtOnce sbe t = shelleyBasedEraConstraints sbe $ deserialiseFromCBOR (proxyToAsType Proxy) (serialiseToCBOR t)
+  hashDatum :: TxOut CtxTx era -> TxOut CtxTx era
+  hashDatum txOut@(TxOut aie val datum rs) =
+    case datum of
+      (TxOutSupplementalDatum aeo d) ->
+        TxOut aie val (TxOutDatumHash aeo (hashScriptDataBytes d)) rs
+      _ -> txOut
 
 prop_roundtrip_witness_CBOR :: Property
 prop_roundtrip_witness_CBOR = H.property $ do
