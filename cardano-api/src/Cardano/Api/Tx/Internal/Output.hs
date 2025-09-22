@@ -6,7 +6,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
@@ -142,7 +141,7 @@ instance (Typeable ctx, IsShelleyBasedEra era) => FromCBOR (TxOut ctx era) where
   fromCBOR :: Ledger.Decoder s (TxOut ctx era)
   fromCBOR =
     shelleyBasedEraConstraints (shelleyBasedEra @era) $
-      fromShelleyTxOut <$> pure shelleyBasedEra <*> L.fromEraCBOR @(ShelleyLedgerEra era)
+      pure (fromShelleyTxOut shelleyBasedEra) <*> L.fromEraCBOR @(ShelleyLedgerEra era)
 
 deriving instance Eq (TxOut ctx era)
 
