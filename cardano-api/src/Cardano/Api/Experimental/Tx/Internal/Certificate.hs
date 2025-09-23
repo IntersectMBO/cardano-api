@@ -19,10 +19,7 @@ module Cardano.Api.Experimental.Tx.Internal.Certificate
   )
 where
 
-import Cardano.Api.Certificate.Internal qualified as Api
-import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
-import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra qualified as Api
 import Cardano.Api.Error
 import Cardano.Api.Experimental.Era
 import Cardano.Api.HasTypeProxy

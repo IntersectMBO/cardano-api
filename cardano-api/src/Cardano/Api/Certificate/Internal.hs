@@ -587,8 +587,8 @@ filterUnRegDRepCreds sbe (Exp.Certificate cert) =
     ShelleyBasedEraBabbage -> Nothing
     ShelleyBasedEraConway ->
       conwayEraOnwardsConstraints ConwayEraOnwardsConway $
-        fmap fst $
-          Ledger.getUnRegDRepTxCert cert
+        fst
+          <$> Ledger.getUnRegDRepTxCert cert
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
