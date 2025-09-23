@@ -347,6 +347,9 @@ test-suite cardano-api-test
   hs-source-dirs: test/cardano-api-test
   main-is: cardano-api-test.hs
   type: exitcode-stdio-1.0
+
+  if arch(wasm32)
+    buildable: False
   build-depends:
     FailT,
     QuickCheck <2.16,
@@ -422,6 +425,9 @@ test-suite cardano-api-golden
   hs-source-dirs: test/cardano-api-golden
   main-is: cardano-api-golden.hs
   type: exitcode-stdio-1.0
+
+  if arch(wasm32)
+    buildable: False
   build-depends:
     aeson,
     base64-bytestring,

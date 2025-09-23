@@ -68,12 +68,12 @@ if arch(wasm32)
   source-repository-package
     type: git
     location: https://github.com/intersectmbo/plutus.git
-    tag: 210c8375cd82eb2670b703b0975c26589dd40b2f
+    tag: 5f3517c6937a24dc4d852cda079b2c3cdcaa5ef0
     subdir:
       plutus-core
       plutus-ledger-api
       plutus-tx
-    --sha256: sha256-icAg87JKdCkeuNZvVwNlT0v1/O0wOYwIQ6LzXj9iTYM=
+    --sha256: sha256-+GhWhzGQ94KfxHKS6Bycfxf+TWVkMyWDY/51EFipkZI=
 
   package plutus-core
     flags: +do-not-build-plutus-exec
@@ -87,11 +87,11 @@ if arch(wasm32)
   source-repository-package
     type: git
     location: https://github.com/palas/ouroboros-network.git
-    tag: bbc8bd70386a951e8633e4966e661df079cdc103
+    tag: 2fddbdb8ed23b63a43852bb98bd6ddc1a6d96d98
     subdir:
       ouroboros-network
       ouroboros-network-framework
-    --sha256: sha256-7m9lMZlQzjbfaGpWA5ipDGloQ2uhIQmFRoUFQ7GCDl8=
+    --sha256: sha256-OAPsul8TaOpNwd2BlTE0jwqWiRk83rNVSxtIA5Se9Kg=
 
   source-repository-package
     type: git
@@ -141,6 +141,22 @@ if arch(wasm32)
     tag: ab92e48e9fdf3abe214f85fdbe5301c1280e14e9
     --sha256: sha256-U+ln/gbXoQZpNjZHydNa0FG/9GdJFgL1+T3+7KTzDWo=
 
+  source-repository-package
+    type: git
+    location: https://github.com/palas/kes-agent
+    tag: a234ca2beede6fb557dfb4ce829b52874cc94613
+    --sha256: sha256-k6PJC2uYr4VP+erPrVCFHMAbJaGMqESRowSvoB/w0ss=
+    subdir:
+      kes-agent
+
+  source-repository-package
+    type: git
+    location: https://github.com/palas/fs-sim 
+    tag: c39efe618cf63df909e8e0acab31684b10223550
+    --sha256: sha256-zHJfVFEzdeq9WhInEIRCJ1OQTYM06k++9gzfUaG//S8=
+    subdir:
+      fs-sim
+
   package cardano-crypto-praos
     flags: -external-libsodium-vrf
 
@@ -176,10 +192,11 @@ source-repository-package
       sop-extras
       strict-sop-core
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/kes-agent
-  tag: bf203c4e7f7e6aab947b077e178baac3ecb2541d
-  --sha256: sha256-cURVbhbTvK6iPKaXVjCovBezyE5UVs46iarmVyWA2Uc=
-  subdir:
-    kes-agent
+if !arch(wasm32)
+  source-repository-package
+    type: git
+    location: https://github.com/input-output-hk/kes-agent
+    tag: bf203c4e7f7e6aab947b077e178baac3ecb2541d
+    --sha256: sha256-cURVbhbTvK6iPKaXVjCovBezyE5UVs46iarmVyWA2Uc=
+    subdir:
+      kes-agent
