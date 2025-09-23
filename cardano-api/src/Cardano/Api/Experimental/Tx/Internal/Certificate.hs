@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -13,6 +14,8 @@
 
 module Cardano.Api.Experimental.Tx.Internal.Certificate
   ( Certificate (..)
+  , AnchorDataFromCertificateError (..)
+  , getAnchorDataFromCertificate
   )
 where
 
@@ -20,6 +23,7 @@ import Cardano.Api.Certificate.Internal qualified as Api
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra qualified as Api
+import Cardano.Api.Error
 import Cardano.Api.Experimental.Era
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Ledger qualified as L
@@ -105,3 +109,12 @@ getAnchorDataFromCertificate ConwayEra (Certificate c) =
             , Ledger.anchorDataHash = Ledger.unsafeMakeSafeHash hash
             }
         )
+
+data AnchorDataFromCertificateError
+  = InvalidPoolMetadataHashError Ledger.Url ByteString
+  deriving (Eq, Show)
+
+instance Error AnchorDataFromCertificateError where
+  prettyError :: AnchorDataFromCertificateError -> Doc ann
+  prettyError (InvalidPoolMetadataHashError url hash) =
+    "Invalid pool metadata hash for URL " <> fromString (show url) <> ": " <> fromString (show hash)
