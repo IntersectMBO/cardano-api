@@ -1,11 +1,10 @@
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -13,15 +12,14 @@
 
 module Cardano.Api.Experimental.Tx.Internal.Certificate
   ( Certificate (..)
+  , AnchorDataFromCertificateError (..)
+  , getAnchorDataFromCertificate
   )
 where
 
-import Cardano.Api.Certificate.Internal qualified as Api
-import Cardano.Api.Era.Internal.Core (DijkstraEra)
-import Cardano.Api.Era.Internal.Eon.Convert
-import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra qualified as Api
+import Cardano.Api.Error
 import Cardano.Api.Experimental.Era
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Ledger qualified as L
@@ -74,7 +72,7 @@ instance
 
 getAnchorDataFromCertificate
   :: Era era
-  -> Certificate (ShelleyLedgerEra era)
+  -> Certificate (LedgerEra era)
   -> Either AnchorDataFromCertificateError (Maybe Ledger.Anchor)
 getAnchorDataFromCertificate ConwayEra (Certificate c) =
   case c of
@@ -91,19 +89,43 @@ getAnchorDataFromCertificate ConwayEra (Certificate c) =
     Ledger.UpdateDRepTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
     Ledger.AuthCommitteeHotKeyTxCert _ _ -> return Nothing
     Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
- where
-  anchorDataFromPoolMetadata
-    :: MonadError AnchorDataFromCertificateError m
-    => Ledger.PoolMetadata
-    -> m (Maybe Ledger.Anchor)
-  anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashBytes}) = do
-    hash <-
-      maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return $
-        Ledger.hashFromBytes hashBytes
-    return $
-      Just
-        ( Ledger.Anchor
-            { Ledger.anchorUrl = url
-            , Ledger.anchorDataHash = Ledger.unsafeMakeSafeHash hash
-            }
-        )
+    _ -> error "getAnchorDataFromCertificate: Unrecognized cert"
+getAnchorDataFromCertificate DijkstraEra (Certificate c) =
+  case c of
+    Ledger.RegDepositTxCert _ _ -> return Nothing
+    Ledger.UnRegDepositTxCert _ _ -> return Nothing
+    Ledger.RegDepositDelegTxCert{} -> return Nothing
+    Ledger.DelegTxCert{} -> return Nothing
+    Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+    Ledger.RetirePoolTxCert _ _ -> return Nothing
+    Ledger.RegDRepTxCert _ _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+    Ledger.UnRegDRepTxCert _ _ -> return Nothing
+    Ledger.UpdateDRepTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+    Ledger.AuthCommitteeHotKeyTxCert _ _ -> return Nothing
+    Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+    _ -> error "getAnchorDataFromCertificate: Unrecognized cert"
+
+anchorDataFromPoolMetadata
+  :: MonadError AnchorDataFromCertificateError m
+  => Ledger.PoolMetadata
+  -> m (Maybe Ledger.Anchor)
+anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashBytes}) = do
+  hash <-
+    maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return $
+      Ledger.hashFromBytes hashBytes
+  return $
+    Just
+      ( Ledger.Anchor
+          { Ledger.anchorUrl = url
+          , Ledger.anchorDataHash = Ledger.unsafeMakeSafeHash hash
+          }
+      )
+
+data AnchorDataFromCertificateError
+  = InvalidPoolMetadataHashError Ledger.Url ByteString
+  deriving (Eq, Show)
+
+instance Error AnchorDataFromCertificateError where
+  prettyError :: AnchorDataFromCertificateError -> Doc ann
+  prettyError (InvalidPoolMetadataHashError url hash) =
+    "Invalid pool metadata hash for URL " <> fromString (show url) <> ": " <> fromString (show hash)

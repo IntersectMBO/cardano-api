@@ -22,6 +22,8 @@ module Cardano.Api.Experimental
   , hashTxBody
   , evaluateTransactionExecutionUnitsShelley
   , Certificate (..)
+  , AnchorDataFromCertificateError (..)
+  , getAnchorDataFromCertificate
   , mkTxCertificates
 
     -- ** Transaction fee related

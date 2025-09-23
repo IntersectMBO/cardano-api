@@ -62,6 +62,18 @@ mkTxCertificates certs =
                   Api.ScriptWitness Api.ScriptWitnessForStakeAddr $
                     newToOldPlutusCertificateScriptWitness ConwayEra psw
         (cert, pure $ (,wit) <$> mStakeCred)
+      DijkstraEra -> do
+        let Exp.Certificate c = cert
+            mStakeCred = Api.getTxCertWitness (convert era) c
+            wit =
+              case witness of
+                AnyKeyWitnessPlaceholder -> Api.KeyWitness Api.KeyWitnessForStakeAddr
+                AnySimpleScriptWitness ss ->
+                  Api.ScriptWitness Api.ScriptWitnessForStakeAddr $ newToOldSimpleScriptWitness era ss
+                AnyPlutusScriptWitness psw ->
+                  Api.ScriptWitness Api.ScriptWitnessForStakeAddr $
+                    newToOldPlutusCertificateScriptWitness DijkstraEra psw
+        (cert, pure $ (,wit) <$> mStakeCred)
 
 newToOldSimpleScriptWitness
   :: L.AllegraEraScript (LedgerEra era)
@@ -85,7 +97,7 @@ newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus
   Api.PlutusScriptWitness
     Api.PlutusScriptV1InConway
     Api.PlutusScriptV1
-    (newToOldPlutusScriptOrReferenceInput ConwayEra scriptOrRef)
+    (newToOldPlutusScriptOrReferenceInput scriptOrRef)
     Api.NoScriptDatumForStake
     redeemer
     execUnits
@@ -93,7 +105,7 @@ newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus
   Api.PlutusScriptWitness
     Api.PlutusScriptV2InConway
     Api.PlutusScriptV2
-    (newToOldPlutusScriptOrReferenceInput ConwayEra scriptOrRef)
+    (newToOldPlutusScriptOrReferenceInput scriptOrRef)
     Api.NoScriptDatumForStake
     redeemer
     execUnits
@@ -101,16 +113,49 @@ newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus
   Api.PlutusScriptWitness
     Api.PlutusScriptV3InConway
     Api.PlutusScriptV3
-    (newToOldPlutusScriptOrReferenceInput ConwayEra scriptOrRef)
+    (newToOldPlutusScriptOrReferenceInput scriptOrRef)
+    Api.NoScriptDatumForStake
+    redeemer
+    execUnits
+newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus.SPlutusV4 _ _ _ _) =
+  error "newToOldPlutusCertificateScriptWitness: PlutusV4 script not possible in Conway era"
+newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV1 scriptOrRef _ redeemer execUnits) =
+  Api.PlutusScriptWitness
+    Api.PlutusScriptV1InDijkstra
+    Api.PlutusScriptV1
+    (newToOldPlutusScriptOrReferenceInput scriptOrRef)
+    Api.NoScriptDatumForStake
+    redeemer
+    execUnits
+newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV2 scriptOrRef _ redeemer execUnits) =
+  Api.PlutusScriptWitness
+    Api.PlutusScriptV2InDijkstra
+    Api.PlutusScriptV2
+    (newToOldPlutusScriptOrReferenceInput scriptOrRef)
+    Api.NoScriptDatumForStake
+    redeemer
+    execUnits
+newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV3 scriptOrRef _ redeemer execUnits) =
+  Api.PlutusScriptWitness
+    Api.PlutusScriptV3InDijkstra
+    Api.PlutusScriptV3
+    (newToOldPlutusScriptOrReferenceInput scriptOrRef)
+    Api.NoScriptDatumForStake
+    redeemer
+    execUnits
+newToOldPlutusCertificateScriptWitness DijkstraEra (Exp.PlutusScriptWitness Plutus.SPlutusV4 scriptOrRef _ redeemer execUnits) =
+  Api.PlutusScriptWitness
+    Api.PlutusScriptV4InDijkstra
+    Api.PlutusScriptV4
+    (newToOldPlutusScriptOrReferenceInput scriptOrRef)
     Api.NoScriptDatumForStake
     redeemer
     execUnits
 
 newToOldPlutusScriptOrReferenceInput
-  :: Era era
-  -> Exp.PlutusScriptOrReferenceInput lang (LedgerEra era)
+  :: Exp.PlutusScriptOrReferenceInput lang (LedgerEra era)
   -> Api.PlutusScriptOrReferenceInput oldlang
-newToOldPlutusScriptOrReferenceInput ConwayEra (Exp.PReferenceScript txin) = Api.PReferenceScript txin
-newToOldPlutusScriptOrReferenceInput ConwayEra (Exp.PScript (Exp.PlutusScriptInEra plutusRunnable)) =
+newToOldPlutusScriptOrReferenceInput (Exp.PReferenceScript txin) = Api.PReferenceScript txin
+newToOldPlutusScriptOrReferenceInput (Exp.PScript (Exp.PlutusScriptInEra plutusRunnable)) =
   let oldScript = L.unPlutusBinary . L.plutusBinary $ L.plutusFromRunnable plutusRunnable
    in Api.PScript $ Api.PlutusScriptSerialised oldScript
