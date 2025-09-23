@@ -52,9 +52,6 @@ test-show-details: direct
 -- Always write GHC env files, because they are needed for ghci.
 write-ghc-environment-files: always
 
--- mingw32 build seems to be broken without that
-constraints: process >= 1.6.26.1
-
 -- enable parallel builds
 jobs: $ncpus
 semaphore: True
