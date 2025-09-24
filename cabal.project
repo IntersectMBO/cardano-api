@@ -20,10 +20,7 @@ packages:
     cardano-api
     cardano-api-gen
     cardano-wasm
-    -- TODO fix potential issues with build-type: Custom and protoc and reenable
-    -- When uncommenting this line, remember to reenable in .github/workflows/hls.yml
-    -- by removing the line that moves it away before calling `haskell-language-server`.
-    -- cardano-rpc
+    cardano-rpc
 
 extra-packages: Cabal, process
 
@@ -56,6 +53,19 @@ write-ghc-environment-files: always
 -- enable parallel builds
 jobs: $ncpus
 semaphore: True
+
+constraints:
+  , hedgehog == 1.5
+  , lifted-async == 0.10.2.7
+  , random == 1.2.1.3
+  , tls == 2.1.6
+  , optparse-applicative==0.18.1.0
+  , kes-agent == 0.1.0.1
+
+allow-newer:
+  -- https://github.com/kapralVV/Unique/issues/11
+  , Unique:hashable
+  , kes-agent:filepath
 
 if impl (ghc >= 9.12)
   allow-newer:
