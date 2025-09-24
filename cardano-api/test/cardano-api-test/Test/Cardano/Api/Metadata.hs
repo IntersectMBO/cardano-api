@@ -18,7 +18,7 @@ import Data.Maybe (mapMaybe)
 import Data.Word (Word64)
 import GHC.Exts (IsList (..))
 import GHC.Stack
-import Text.InterpolatedString.Perl6
+import Text.RawString.QQ
 
 import Test.Gen.Cardano.Api.Metadata
 
@@ -38,42 +38,42 @@ prop_golden_1 :: Property
 prop_golden_1 =
   matchMetadata
     TxMetadataJsonNoSchema
-    [q|{"0": 1}|]
+    [r|{"0": 1}|]
     (TxMetadata (fromList [(0, TxMetaNumber 1)]))
 
 prop_golden_2 :: Property
 prop_golden_2 =
   matchMetadata
     TxMetadataJsonNoSchema
-    [q|{"0": "deadbeef"}|]
+    [r|{"0": "deadbeef"}|]
     (txMetadataSingleton 0 (TxMetaText "deadbeef"))
 
 prop_golden_3 :: Property
 prop_golden_3 =
   matchMetadata
     TxMetadataJsonNoSchema
-    [q|{"0": "0xDEADBEEF"}|]
+    [r|{"0": "0xDEADBEEF"}|]
     (txMetadataSingleton 0 (TxMetaText "0xDEADBEEF"))
 
 prop_golden_4 :: Property
 prop_golden_4 =
   matchMetadata
     TxMetadataJsonNoSchema
-    [q|{"0": "0xdeadbeef"}|]
+    [r|{"0": "0xdeadbeef"}|]
     (txMetadataSingleton 0 (TxMetaBytes "\xde\xad\xbe\xef"))
 
 prop_golden_5 :: Property
 prop_golden_5 =
   matchMetadata
     TxMetadataJsonNoSchema
-    [q|{"0": [] }|]
+    [r|{"0": [] }|]
     (txMetadataSingleton 0 (TxMetaList []))
 
 prop_golden_6 :: Property
 prop_golden_6 =
   matchMetadata
     TxMetadataJsonNoSchema
-    [q|{"0": [1, "a", "0x42"] }|]
+    [r|{"0": [1, "a", "0x42"] }|]
     ( txMetadataSingleton
         0
         ( TxMetaList
@@ -88,14 +88,14 @@ prop_golden_7 :: Property
 prop_golden_7 =
   matchMetadata
     TxMetadataJsonNoSchema
-    [q|{"0": {} }|]
+    [r|{"0": {} }|]
     (txMetadataSingleton 0 (TxMetaMap []))
 
 prop_golden_8 :: Property
 prop_golden_8 =
   matchMetadata
     TxMetadataJsonNoSchema
-    [q|{"0": {
+    [r|{"0": {
         "0x41": "0x42",
         "0x154041": "0x44",
         "0x104041": "0x43",
@@ -159,7 +159,7 @@ prop_golden_9 :: Property
 prop_golden_9 =
   matchMetadata
     TxMetadataJsonDetailedSchema
-    [q|{"0":
+    [r|{"0":
       {"map":
         [ { "k": {"string": "aaa"}
           , "v": {"string": "b4"}

@@ -4,6 +4,7 @@ module Cardano.Api.Plutus
   , PlutusScriptV1
   , PlutusScriptV2
   , PlutusScriptV3
+  , PlutusScriptV4
   , ScriptLanguage (..)
   , PlutusScriptVersion (..)
   , AnyScriptLanguage (..)

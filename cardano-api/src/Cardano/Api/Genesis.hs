@@ -2,7 +2,6 @@ module Cardano.Api.Genesis
   ( ShelleyGenesis (..)
   , shelleyGenesisDefaults
   , alonzoGenesisDefaults
-  , decodeAlonzoGenesis
   , conwayGenesisDefaults
 
     -- ** Configuration

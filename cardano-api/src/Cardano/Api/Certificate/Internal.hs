@@ -67,6 +67,7 @@ module Cardano.Api.Certificate.Internal
   , fromShelleyCertificate
   , toShelleyPoolParams
   , fromShelleyPoolParams
+  , fromShelleyStakePoolState
 
     -- * Data family instances
   , AsType (..)
@@ -100,6 +101,7 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Keys qualified as Ledger
+import Cardano.Ledger.State qualified as Ledger
 
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString (ByteString)
@@ -234,6 +236,7 @@ certificateToTxCert c =
     ConwayCertificate eon cert ->
       case eon of
         ConwayEraOnwardsConway -> cert
+        ConwayEraOnwardsDijkstra -> error "certificateToTxCert: Dijkstra era is not yet supported"
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters
@@ -576,6 +579,7 @@ filterUnRegCreds =
         Ledger.RetirePoolTxCert _ _ -> Nothing
         Ledger.MirTxCert _ -> Nothing
         Ledger.GenesisDelegTxCert{} -> Nothing
+        _ -> error "dijkstra"
     ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
       case conwayCert of
         Ledger.RegPoolTxCert _ -> Nothing
@@ -593,6 +597,7 @@ filterUnRegCreds =
         Ledger.RegTxCert _ -> Nothing
         -- stake cred deregistration w/o deposit
         Ledger.UnRegTxCert cred -> Just cred
+        _ -> error "dijkstra"
 
 filterUnRegDRepCreds
   :: Certificate era -> Maybe (Ledger.Credential Ledger.DRepRole)
@@ -615,6 +620,7 @@ filterUnRegDRepCreds = \case
       Ledger.RegTxCert _ -> Nothing
       -- stake cred deregistration w/o deposit
       Ledger.UnRegTxCert _ -> Nothing
+      _ -> error "dijkstra"
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
@@ -777,6 +783,74 @@ fromShelleyPoolParams
       Text.encodeUtf8
         . Ledger.dnsToText
 
+fromShelleyStakePoolState
+  :: Ledger.KeyHash Ledger.StakePool
+  -> Ledger.StakePoolState
+  -> StakePoolParameters
+fromShelleyStakePoolState
+  poolId
+  Ledger.StakePoolState
+    { Ledger.spsVrf
+    , Ledger.spsPledge
+    , Ledger.spsCost
+    , Ledger.spsMargin
+    , Ledger.spsRewardAccount
+    , Ledger.spsOwners
+    , Ledger.spsRelays
+    , Ledger.spsMetadata
+    } =
+    StakePoolParameters
+      { stakePoolId = StakePoolKeyHash poolId
+      , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash spsVrf)
+      , stakePoolCost = spsCost
+      , stakePoolMargin = Ledger.unboundRational spsMargin
+      , stakePoolRewardAccount = fromShelleyStakeAddr spsRewardAccount
+      , stakePoolPledge = spsPledge
+      , stakePoolOwners = map StakeKeyHash (toList spsOwners)
+      , stakePoolRelays =
+          map
+            fromShelleyStakePoolRelay
+            (toList spsRelays)
+      , stakePoolMetadata =
+          fromShelleyPoolMetadata
+            <$> Ledger.strictMaybeToMaybe spsMetadata
+      }
+   where
+    fromShelleyStakePoolRelay :: Ledger.StakePoolRelay -> StakePoolRelay
+    fromShelleyStakePoolRelay (Ledger.SingleHostAddr mport mipv4 mipv6) =
+      StakePoolRelayIp
+        (Ledger.strictMaybeToMaybe mipv4)
+        (Ledger.strictMaybeToMaybe mipv6)
+        (fromIntegral . Ledger.portToWord16 <$> Ledger.strictMaybeToMaybe mport)
+    fromShelleyStakePoolRelay (Ledger.SingleHostName mport dnsname) =
+      StakePoolRelayDnsARecord
+        (fromShelleyDnsName dnsname)
+        (fromIntegral . Ledger.portToWord16 <$> Ledger.strictMaybeToMaybe mport)
+    fromShelleyStakePoolRelay (Ledger.MultiHostName dnsname) =
+      StakePoolRelayDnsSrvRecord
+        (fromShelleyDnsName dnsname)
+
+    fromShelleyPoolMetadata :: Ledger.PoolMetadata -> StakePoolMetadataReference
+    fromShelleyPoolMetadata
+      Ledger.PoolMetadata
+        { Ledger.pmUrl
+        , Ledger.pmHash
+        } =
+        StakePoolMetadataReference
+          { stakePoolMetadataURL = Ledger.urlToText pmUrl
+          , stakePoolMetadataHash =
+              StakePoolMetadataHash
+                . fromMaybe (error "fromShelleyPoolMetadata: invalid hash. TODO: proper validation")
+                . Ledger.hashFromBytes
+                $ pmHash
+          }
+
+    -- TODO: change the ledger rep of the DNS name to use ShortByteString
+    fromShelleyDnsName :: Ledger.DnsName -> ByteString
+    fromShelleyDnsName =
+      Text.encodeUtf8
+        . Ledger.dnsToText
+
 data AnchorDataFromCertificateError
   = InvalidPoolMetadataHashError Ledger.Url ByteString
   deriving (Eq, Show)
@@ -803,6 +877,7 @@ getAnchorDataFromCertificate c =
           Ledger.RetirePoolTxCert _ _ -> return Nothing
           Ledger.GenesisDelegTxCert{} -> return Nothing
           Ledger.MirTxCert _ -> return Nothing
+          _ -> error "dijkstra"
     ConwayCertificate ceo ccert ->
       conwayEraOnwardsConstraints ceo $
         case ccert of
@@ -819,6 +894,7 @@ getAnchorDataFromCertificate c =
           Ledger.UpdateDRepTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
           Ledger.AuthCommitteeHotKeyTxCert _ _ -> return Nothing
           Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+          _ -> error "dijkstra"
  where
   anchorDataFromPoolMetadata
     :: MonadError AnchorDataFromCertificateError m

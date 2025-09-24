@@ -46,6 +46,7 @@ data AllegraEraOnwards era where
   AllegraEraOnwardsAlonzo :: AllegraEraOnwards AlonzoEra
   AllegraEraOnwardsBabbage :: AllegraEraOnwards BabbageEra
   AllegraEraOnwardsConway :: AllegraEraOnwards ConwayEra
+  AllegraEraOnwardsDijkstra :: AllegraEraOnwards DijkstraEra
 
 deriving instance Show (AllegraEraOnwards era)
 
@@ -60,6 +61,7 @@ instance Eon AllegraEraOnwards where
     AlonzoEra -> yes AllegraEraOnwardsAlonzo
     BabbageEra -> yes AllegraEraOnwardsBabbage
     ConwayEra -> yes AllegraEraOnwardsConway
+    DijkstraEra -> yes AllegraEraOnwardsDijkstra
 
 instance ToCardanoEra AllegraEraOnwards where
   toCardanoEra = \case
@@ -68,6 +70,7 @@ instance ToCardanoEra AllegraEraOnwards where
     AllegraEraOnwardsAlonzo -> AlonzoEra
     AllegraEraOnwardsBabbage -> BabbageEra
     AllegraEraOnwardsConway -> ConwayEra
+    AllegraEraOnwardsDijkstra -> DijkstraEra
 
 instance Convert AllegraEraOnwards CardanoEra where
   convert = toCardanoEra
@@ -79,6 +82,7 @@ instance Convert AllegraEraOnwards ShelleyBasedEra where
     AllegraEraOnwardsAlonzo -> ShelleyBasedEraAlonzo
     AllegraEraOnwardsBabbage -> ShelleyBasedEraBabbage
     AllegraEraOnwardsConway -> ShelleyBasedEraConway
+    AllegraEraOnwardsDijkstra -> ShelleyBasedEraDijkstra
 
 type AllegraEraOnwardsConstraints era =
   ( C.HashAlgorithm L.HASH
@@ -116,6 +120,7 @@ allegraEraOnwardsConstraints = \case
   AllegraEraOnwardsAlonzo -> id
   AllegraEraOnwardsBabbage -> id
   AllegraEraOnwardsConway -> id
+  _ -> const $ error "allegraEraOnwardsConstraints: Dijkstra era not supported"
 
 {-# DEPRECATED allegraEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 allegraEraOnwardsToShelleyBasedEra :: AllegraEraOnwards era -> ShelleyBasedEra era
