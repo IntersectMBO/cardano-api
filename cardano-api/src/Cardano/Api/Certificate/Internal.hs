@@ -103,6 +103,7 @@ import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Keys qualified as Ledger
 
+import Control.Monad
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -579,16 +580,10 @@ filterUnRegDRepCreds
   -> Exp.Certificate (ShelleyLedgerEra era)
   -> Maybe (Ledger.Credential Ledger.DRepRole)
 filterUnRegDRepCreds sbe (Exp.Certificate cert) =
-  case sbe of
-    ShelleyBasedEraShelley -> Nothing
-    ShelleyBasedEraAllegra -> Nothing
-    ShelleyBasedEraMary -> Nothing
-    ShelleyBasedEraAlonzo -> Nothing
-    ShelleyBasedEraBabbage -> Nothing
-    ShelleyBasedEraConway ->
-      conwayEraOnwardsConstraints ConwayEraOnwardsConway $
-        fst
-          <$> Ledger.getUnRegDRepTxCert cert
+  join $ forEraInEonMaybe (toCardanoEra sbe) $ \w ->
+    conwayEraOnwardsConstraints w $
+      fst
+        <$> Ledger.getUnRegDRepTxCert cert
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
