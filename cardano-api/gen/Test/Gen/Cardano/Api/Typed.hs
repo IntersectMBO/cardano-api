@@ -794,40 +794,19 @@ genTxCertificates =
           [ pure TxCertificatesNone
           , pure
               ( TxCertificates w $
-                  fromList ((,BuildTxWith Nothing) <$> map (extractCertificate w) certs)
+                  fromList ((,BuildTxWith Nothing) <$> map extractCertificate certs)
               )
               -- TODO: Generate certificates
           ]
     )
 
 extractCertificate
-  :: ShelleyBasedEra era
-  -> Api.Certificate era
+  :: Api.Certificate era
   -> Exp.Certificate (ShelleyLedgerEra era)
-extractCertificate ShelleyBasedEraShelley (Api.ShelleyRelatedCertificate _ c) =
-  Exp.Certificate c
-extractCertificate ShelleyBasedEraAllegra (Api.ShelleyRelatedCertificate _ c) =
-  Exp.Certificate c
-extractCertificate ShelleyBasedEraMary (Api.ShelleyRelatedCertificate _ c) =
-  Exp.Certificate c
-extractCertificate ShelleyBasedEraAlonzo (Api.ShelleyRelatedCertificate _ c) =
-  Exp.Certificate c
-extractCertificate ShelleyBasedEraBabbage (Api.ShelleyRelatedCertificate _ c) =
-  Exp.Certificate c
-extractCertificate ShelleyBasedEraConway (Api.ShelleyRelatedCertificate sToBab _) =
-  case sToBab :: ShelleyToBabbageEra ConwayEra of {}
-extractCertificate ShelleyBasedEraShelley (ConwayCertificate cOnwards _) =
-  case cOnwards :: ConwayEraOnwards ShelleyEra of {}
-extractCertificate ShelleyBasedEraAllegra (ConwayCertificate cOnwards _) =
-  case cOnwards :: ConwayEraOnwards AllegraEra of {}
-extractCertificate ShelleyBasedEraMary (ConwayCertificate cOnwards _) =
-  case cOnwards :: ConwayEraOnwards MaryEra of {}
-extractCertificate ShelleyBasedEraAlonzo (ConwayCertificate cOnwards _) =
-  case cOnwards :: ConwayEraOnwards AlonzoEra of {}
-extractCertificate ShelleyBasedEraBabbage (ConwayCertificate cOnwards _) =
-  case cOnwards :: ConwayEraOnwards BabbageEra of {}
-extractCertificate ShelleyBasedEraConway (ConwayCertificate _ c) =
-  Exp.Certificate c
+extractCertificate (Api.ShelleyRelatedCertificate w c) =
+  shelleyToBabbageEraConstraints w $ Exp.Certificate c
+extractCertificate (ConwayCertificate w c) =
+  conwayEraOnwardsConstraints w $ Exp.Certificate c
 
 genScriptWitnessedTxCertificates :: Typeable era => Exp.Era era -> Gen (TxCertificates BuildTx era)
 genScriptWitnessedTxCertificates era = do
@@ -839,7 +818,7 @@ genScriptWitnessedTxCertificates era = do
   let certsAndWits =
         zipWith
           (\c p -> (c, Just p))
-          (map (extractCertificate w) certs)
+          (map extractCertificate certs)
           plutusScriptWits
 
   pure $ mkTxCertificates (convert era) certsAndWits

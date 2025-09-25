@@ -127,4 +127,4 @@ data AnchorDataFromCertificateError
 instance Error AnchorDataFromCertificateError where
   prettyError :: AnchorDataFromCertificateError -> Doc ann
   prettyError (InvalidPoolMetadataHashError url hash) =
-    "Invalid pool metadata hash for URL " <> fromString (show url) <> ": " <> fromString (show hash)
+    "Invalid pool metadata hash for URL " <> pretty url <> ": " <> fromString (show hash)
