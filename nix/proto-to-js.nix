@@ -8,7 +8,7 @@ let
   node-deps = pkgs.buildNpmPackage {
     version = "1.0.0";
     name = "proto-js-dependencies";
-    src = ../nix/npm-deps;
+    src = ../nix/proto-to-js-npm-deps;
     npmDepsHash = "sha256-b8x9xZ0dCu1cvILF0HPVVLfkCGHOWCcPUKyC2x1gQ+c=";
     dontNpmBuild = true;
     dontNpmInstall = true;
