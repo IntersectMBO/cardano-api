@@ -144,8 +144,8 @@ jobs:
 
     - name: Prepare example
       run: |
-        cp $(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1) cardano-wasm/examples/basic/
-        $(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i "$(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1)" -o cardano-wasm/examples/basic/cardano-wasm.js
+        cp $(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1) cardano-wasm/lib-wrapper/
+        $(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i "$(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1)" -o cardano-wasm/lib-wrapper/cardano-wasm.js
         cp cardano-wasm/lib-wrapper/* cardano-wasm/examples/basic/
 
     - uses: rrbutani/use-nix-shell-action@v1
@@ -180,6 +180,18 @@ jobs:
     #  uses: mxschmitt/action-tmate@v3
     #  with:
     #     limit-access-to-actor: true
+
+    - name: Build grpc bridge
+      run: |
+        nix build .#proto-js-bundle
+        cp result/cardano_node_grpc_web_pb.js cardano-wasm/lib-wrapper/
+
+    - name: Upload built wasm library
+      uses: actions/upload-artifact@v4
+      with:
+        name: cardano-wasm
+        path: cardano-wasm/lib-wrapper/*
+        compression-level: 9
 
   wasm-builds-complete:
     needs: [build]
