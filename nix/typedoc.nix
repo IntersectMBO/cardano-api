@@ -29,12 +29,12 @@ pkgs.stdenv.mkDerivation {
 
     cp -r ${typedoc-deps} ./node_modules
     TS_FILES_PATH=$src
-    
+
     OUT_DOCS_PATH=./generated-docs
 
     echo "--- Generating TypeDoc docs ---"
-    node_modules/.bin/typedoc --plugin typedoc-plugin-missing-exports --plugin typedoc-plugin-rename-defaults --name cardano-wasm --disableGit --sourceLinkTemplate 'https://github.com/IntersectMBO/cardano-api/blob/master/cardano-wasm/lib-wrapper/{path}#L{line}' --basePath "$TS_FILES_PATH" --out "$OUT_DOCS_PATH" "$TS_FILES_PATH/*.d.ts" 
-    
+    node_modules/.bin/typedoc --excludeExternals --plugin typedoc-plugin-missing-exports --plugin typedoc-plugin-rename-defaults --name cardano-wasm --disableGit --sourceLinkTemplate 'https://github.com/IntersectMBO/cardano-api/blob/master/cardano-wasm/lib-wrapper/{path}#L{line}' --basePath "$TS_FILES_PATH" --out "$OUT_DOCS_PATH" "$TS_FILES_PATH/*.d.ts"
+
     runHook postBuild
   '';
 
