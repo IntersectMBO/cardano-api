@@ -1,14 +1,36 @@
 /// <reference path="./cardano-api.d.ts" />
 
-import { WASI } from "https://unpkg.com/@bjorn3/browser_wasi_shim@0.4.1/dist/index.js";
 import ghc_wasm_jsffi from "./cardano-wasm.js";
 const __exports = {};
-const wasi = new WASI([], [], []);
 async function initialise() {
-  let { instance } = await WebAssembly.instantiateStreaming(fetch("./cardano-wasm.wasm"), {
+  let wasmModule;
+  let WASI;
+
+  if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
+    ({ WASI } = await import("https://unpkg.com/@bjorn3/browser_wasi_shim@0.4.1/dist/index.js"));
+  } else {
+    ({ WASI } = await import("@bjorn3/browser_wasi_shim"));
+  }
+
+  const wasi = new WASI([], [], []);
+  const importObject = {
     ghc_wasm_jsffi: ghc_wasm_jsffi(__exports),
     wasi_snapshot_preview1: wasi.wasiImport,
-  })
+  };
+
+
+  if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
+    const response = await fetch("./cardano-wasm.wasm");
+    wasmModule = await WebAssembly.instantiateStreaming(response, importObject);
+  } else {
+    const { promises: fs } = await import('fs');
+    const path = await import('path');
+    const wasmPath = path.join(path.dirname(import.meta.url.replace('file://', '')), 'cardano-wasm.wasm');
+    const wasmBuffer = await fs.readFile(wasmPath);
+    wasmModule = await WebAssembly.instantiate(wasmBuffer, importObject);
+  }
+
+  const { instance } = wasmModule;
   Object.assign(__exports, instance.exports);
   wasi.initialize(instance);
 

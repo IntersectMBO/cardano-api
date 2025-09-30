@@ -1,0 +1,43 @@
+{
+  "name": "cardano-api",
+  "version": "10.0.0",
+  "description": "JavaScript bindings to the WASM build of cardano-api (https://github.com/intersectmbo/cardano-api), which provides functionalities to inspect, create, and manipulate, transactions and other information related to Cardano blockchains, as well as interacting directly with them through the cardano-node.",
+  "main": "cardano-api.js",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IntersectMBO/cardano-api.git"
+  },
+  "keywords": [
+    "cardano",
+    "cardano-api",
+    "wasm",
+    "cardano-node",
+    "cryptocurrency",
+    "blockchain",
+    "transaction",
+    "ada",
+    "lovelace",
+    "testnet",
+    "mainnet"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "types": "./cardano-api.d.ts",
+  "bugs": {
+    "url": "https://github.com/IntersectMBO/cardano-api/issues"
+  },
+  "homepage": "https://github.com/IntersectMBO/cardano-api/tree/master/cardano-wasm#readme",
+  "dependencies": {
+    "@bjorn3/browser_wasi_shim": "^0.4.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  }
+}
