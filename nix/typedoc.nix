@@ -8,7 +8,7 @@ let
     version = "1.0.0";
     name = "typedoc-deps";
     src = ../nix/typedoc-npm-deps;
-    npmDepsHash = "sha256-JirDw50WURgzAeB+NysA05J5bEA8w/03jPaR1hu7VJw=";
+    npmDepsHash = "sha256-SiC4T1IEwF/We4rHd+k+kraZmPl72bHmGzLd9Vc8SDk=";
     installPhase = ''
       mv node_modules $out
     '';
@@ -33,7 +33,7 @@ pkgs.stdenv.mkDerivation {
     OUT_DOCS_PATH=./generated-docs
 
     echo "--- Generating TypeDoc docs ---"
-    node_modules/.bin/typedoc --excludeExternals --plugin typedoc-plugin-missing-exports --plugin typedoc-plugin-rename-defaults --name cardano-wasm --disableGit --sourceLinkTemplate 'https://github.com/IntersectMBO/cardano-api/blob/master/cardano-wasm/lib-wrapper/{path}#L{line}' --basePath "$TS_FILES_PATH" --out "$OUT_DOCS_PATH" "$TS_FILES_PATH/*.d.ts"
+    node_modules/.bin/typedoc --excludeExternals --plugin typedoc-plugin-mdn-links --plugin typedoc-plugin-missing-exports --plugin typedoc-plugin-rename-defaults --name cardano-wasm --disableGit --sourceLinkTemplate 'https://github.com/IntersectMBO/cardano-api/blob/master/cardano-wasm/lib-wrapper/{path}#L{line}' --basePath "$TS_FILES_PATH" --out "$OUT_DOCS_PATH" "$TS_FILES_PATH/*.d.ts"
 
     runHook postBuild
   '';

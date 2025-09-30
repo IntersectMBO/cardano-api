@@ -6,6 +6,7 @@
   },
   "devDependencies": {
     "typedoc": "^0.28.13",
+    "typedoc-plugin-mdn-links": "^5.0.9",
     "typedoc-plugin-missing-exports": "^4.1.0",
     "typedoc-plugin-rename-defaults": "^0.7.3"
   }
