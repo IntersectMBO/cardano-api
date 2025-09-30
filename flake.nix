@@ -75,6 +75,7 @@
         inherit (nixpkgs) lib;
 
         proto-js-bundle-drv = import ./nix/proto-to-js.nix {pkgs = nixpkgs;};
+        wasm-typedoc-drv = import ./nix/typedoc.nix {pkgs = nixpkgs;};
 
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
@@ -249,13 +250,15 @@
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
                   proto-js-bundle = proto-js-bundle-drv;
+                  wasm-typedoc = wasm-typedoc-drv;
                 };
             }
-            // lib.optionalAttrs (system != "aarch64-darwin")
-            {
-              packages = {
-                proto-js-bundle = proto-js-bundle-drv;
-              };
+            // {
+              packages =
+                {wasm-typedoc = wasm-typedoc-drv;}
+                // lib.optionalAttrs (system != "aarch64-darwin") {
+                  proto-js-bundle = proto-js-bundle-drv;
+                };
             };
           legacyPackages = {
             inherit cabalProject nixpkgs;
