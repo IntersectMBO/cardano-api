@@ -3,9 +3,10 @@
   # Node dependencies
   typedoc-deps = pkgs.buildNpmPackage {
     version = "1.0.0";
-    name = "typedoc-deps";
+    name = "typedoc-npm-deps";
     src = ../nix/typedoc-npm-deps;
-    npmDepsHash = "sha256-SiC4T1IEwF/We4rHd+k+kraZmPl72bHmGzLd9Vc8SDk=";
+    npmDepsHash = "sha256-JuIdLb/SXo6+VO4wVTVT0VqJnqIBWnA8lQ7N5I0FtNU=";
+    dontNpmBuild = true;
     installPhase = ''
       mv node_modules $out
     '';

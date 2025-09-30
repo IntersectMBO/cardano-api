@@ -5,7 +5,7 @@
     version = "1.0.0";
     name = "proto-js-dependencies";
     src = ../nix/proto-to-js-npm-deps;
-    npmDepsHash = "sha256-b8x9xZ0dCu1cvILF0HPVVLfkCGHOWCcPUKyC2x1gQ+c=";
+    npmDepsHash = "sha256-cF6OP9YkQ3m9d0+ijXZb8AUWrf+VTZjykk/ApgwJMag=";
     dontNpmBuild = true;
     dontNpmInstall = true;
     installPhase = ''
