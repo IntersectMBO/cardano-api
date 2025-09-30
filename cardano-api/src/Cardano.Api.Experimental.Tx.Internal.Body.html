@@ -1,0 +1,445 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Body.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.Body</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Body.html#extractAllIndexedPlutusScriptWitnesses"><span class="hs-identifier">extractAllIndexedPlutusScriptWitnesses</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.html"><span class="hs-identifier">Cardano.Api.Era</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html"><span class="hs-identifier">Cardano.Api.Experimental.Era</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.html"><span class="hs-identifier">Cardano.Api.Experimental.Plutus</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html"><span class="hs-identifier">Cardano.Api.Plutus.Internal.Script</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Body</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-binary-1.7.1.0-85ca908bdfd0957ef6295792ae8c618e452b173a178cd62d286d9a8c86bfa464/share/doc/html/src/Cardano.Binary.html"><span class="hs-identifier">Cardano.Binary</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Body.html#extractAllIndexedPlutusScriptWitnesses"><span class="hs-identifier hs-type">extractAllIndexedPlutusScriptWitnesses</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681265855"><span class="annot"><a href="#local-6989586621681265855"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-20"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265855"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxBodyContent"><span class="hs-identifier hs-type">TxBodyContent</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTx"><span class="hs-identifier hs-type">BuildTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265855"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span>
+</span><span id="line-23"></span><span>       </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-binary-1.7.1.0-85ca908bdfd0957ef6295792ae8c618e452b173a178cd62d286d9a8c86bfa464/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">CBOR.DecoderError</span></a></span><span>
+</span><span id="line-24"></span><span>       </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#AnyIndexedPlutusScriptWitness"><span class="hs-identifier hs-type">AnyIndexedPlutusScriptWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265855"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-25"></span><span id="extractAllIndexedPlutusScriptWitnesses"><span class="annot"><span class="annottext">extractAllIndexedPlutusScriptWitnesses :: forall era.
+Era era
+-&gt; TxBodyContent BuildTx era
+-&gt; Either
+     DecoderError [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Body.html#extractAllIndexedPlutusScriptWitnesses"><span class="hs-identifier hs-var hs-var">extractAllIndexedPlutusScriptWitnesses</span></a></span></span><span> </span><span id="local-6989586621681265968"><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681265968"><span class="hs-identifier hs-var">era</span></a></span></span><span> </span><span id="local-6989586621681265969"><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><a href="#local-6989586621681265969"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt;
+    Either
+      DecoderError [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; Either
+     DecoderError [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681265968"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt;
+  Either
+    DecoderError [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+ -&gt; Either
+      DecoderError [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; (EraCommonConstraints era =&gt;
+    Either
+      DecoderError [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; Either
+     DecoderError [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681265991"><span class="annot"><span class="annottext">sbe :: ShelleyBasedEra era
+</span><a href="#local-6989586621681265991"><span class="hs-identifier hs-var hs-var hs-var">sbe</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Era era -&gt; ShelleyBasedEra era
+forall era. Era era -&gt; ShelleyBasedEra era
+forall a (f :: a -&gt; *) (g :: a -&gt; *) (era :: a).
+Convert f g =&gt;
+f era -&gt; g era
+</span><a href="Cardano.Api.Era.Internal.Eon.Convert.html#convert"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681265968"><span class="hs-identifier hs-var">era</span></a></span><span>
+</span><span id="line-27"></span><span>      </span><span id="local-6989586621681265993"><span class="annot"><span class="annottext">aeon :: AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var hs-var hs-var">aeon</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Era era -&gt; AlonzoEraOnwards era
+forall era. Era era -&gt; AlonzoEraOnwards era
+forall a (f :: a -&gt; *) (g :: a -&gt; *) (era :: a).
+Convert f g =&gt;
+f era -&gt; g era
+</span><a href="Cardano.Api.Era.Internal.Eon.Convert.html#convert"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681265968"><span class="hs-identifier hs-var">era</span></a></span><span>
+</span><span id="line-28"></span><span>      </span><span id="local-6989586621681265994"><span class="annot"><span class="annottext">legacyTxInWits :: [(Witnessable 'TxInItem (ShelleyLedgerEra era),
+  BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+</span><a href="#local-6989586621681265994"><span class="hs-identifier hs-var hs-var hs-var">legacyTxInWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; TxIns BuildTx era
+-&gt; [(Witnessable 'TxInItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+forall era.
+AlonzoEraOnwards era
+-&gt; TxIns BuildTx era
+-&gt; [(Witnessable 'TxInItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+</span><a href="Cardano.Api.Tx.Internal.Body.html#extractWitnessableTxIns"><span class="hs-identifier hs-var">extractWitnessableTxIns</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var">aeon</span></a></span><span> </span><span class="annot"><span class="annottext">(TxIns BuildTx era
+ -&gt; [(Witnessable 'TxInItem (ShelleyLedgerEra era),
+      BuildTxWith BuildTx (Witness WitCtxTxIn era))])
+-&gt; TxIns BuildTx era
+-&gt; [(Witnessable 'TxInItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era -&gt; TxIns BuildTx era
+forall build era. TxBodyContent build era -&gt; TxIns build era
+</span><a href="Cardano.Api.Tx.Internal.Body.html#txIns"><span class="hs-identifier hs-var">txIns</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><a href="#local-6989586621681265969"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-29"></span><span>      </span><span id="local-6989586621681265997"><span class="annot"><span class="annottext">legacyCertWits :: [(Witnessable 'CertItem (ShelleyLedgerEra era),
+  BuildTxWith BuildTx (Witness WitCtxStake era))]
+</span><a href="#local-6989586621681265997"><span class="hs-identifier hs-var hs-var hs-var">legacyCertWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; TxCertificates BuildTx era
+-&gt; [(Witnessable 'CertItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+forall era.
+AlonzoEraOnwards era
+-&gt; TxCertificates BuildTx era
+-&gt; [(Witnessable 'CertItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+</span><a href="Cardano.Api.Tx.Internal.Body.html#extractWitnessableCertificates"><span class="hs-identifier hs-var">extractWitnessableCertificates</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var">aeon</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCertificates BuildTx era
+ -&gt; [(Witnessable 'CertItem (ShelleyLedgerEra era),
+      BuildTxWith BuildTx (Witness WitCtxStake era))])
+-&gt; TxCertificates BuildTx era
+-&gt; [(Witnessable 'CertItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era -&gt; TxCertificates BuildTx era
+forall build era.
+TxBodyContent build era -&gt; TxCertificates build era
+</span><a href="Cardano.Api.Tx.Internal.Body.html#txCertificates"><span class="hs-identifier hs-var">txCertificates</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><a href="#local-6989586621681265969"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-30"></span><span>      </span><span id="local-6989586621681266000"><span class="annot"><span class="annottext">legacyMintWits :: [(Witnessable 'MintItem (ShelleyLedgerEra era),
+  BuildTxWith BuildTx (Witness WitCtxMint era))]
+</span><a href="#local-6989586621681266000"><span class="hs-identifier hs-var hs-var hs-var">legacyMintWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; TxMintValue BuildTx era
+-&gt; [(Witnessable 'MintItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxMint era))]
+forall era build.
+AlonzoEraOnwards era
+-&gt; TxMintValue build era
+-&gt; [(Witnessable 'MintItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxMint era))]
+</span><a href="Cardano.Api.Tx.Internal.Body.html#extractWitnessableMints"><span class="hs-identifier hs-var">extractWitnessableMints</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var">aeon</span></a></span><span> </span><span class="annot"><span class="annottext">(TxMintValue BuildTx era
+ -&gt; [(Witnessable 'MintItem (ShelleyLedgerEra era),
+      BuildTxWith BuildTx (Witness WitCtxMint era))])
+-&gt; TxMintValue BuildTx era
+-&gt; [(Witnessable 'MintItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxMint era))]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era -&gt; TxMintValue BuildTx era
+forall build era. TxBodyContent build era -&gt; TxMintValue build era
+</span><a href="Cardano.Api.Tx.Internal.Body.html#txMintValue"><span class="hs-identifier hs-var">txMintValue</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><a href="#local-6989586621681265969"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-31"></span><span>      </span><span id="local-6989586621681266003"><span class="annot"><span class="annottext">[(Witnessable 'ProposalItem (ShelleyLedgerEra era),
+  BuildTxWith BuildTx (Witness WitCtxStake era))]
+</span><a href="#local-6989586621681266003"><span class="hs-identifier hs-var hs-var">proposalWits</span></a></span></span><span>
+</span><span id="line-32"></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#Witnessable"><span class="hs-identifier hs-type">Witnessable</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#ProposalItem"><span class="hs-identifier hs-type">ProposalItem</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265855"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTxWith"><span class="hs-identifier hs-type">BuildTxWith</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTx"><span class="hs-identifier hs-type">BuildTx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#WitCtxStake"><span class="hs-identifier hs-type">WitCtxStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265855"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>          </span><span class="annot"><span class="annottext">(ShelleyToBabbageEraConstraints era =&gt;
+ ShelleyToBabbageEra era
+ -&gt; [(Witnessable 'ProposalItem (LedgerEra era),
+      BuildTxWith BuildTx (Witness WitCtxStake era))])
+-&gt; (ConwayEraOnwardsConstraints era =&gt;
+    ConwayEraOnwards era
+    -&gt; [(Witnessable 'ProposalItem (LedgerEra era),
+         BuildTxWith BuildTx (Witness WitCtxStake era))])
+-&gt; ShelleyBasedEra era
+-&gt; [(Witnessable 'ProposalItem (LedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+forall era a.
+(ShelleyToBabbageEraConstraints era =&gt;
+ ShelleyToBabbageEra era -&gt; a)
+-&gt; (ConwayEraOnwardsConstraints era =&gt; ConwayEraOnwards era -&gt; a)
+-&gt; ShelleyBasedEra era
+-&gt; a
+</span><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToBabbageOrConwayEraOnwards"><span class="hs-identifier hs-var">caseShelleyToBabbageOrConwayEraOnwards</span></a></span><span>
+</span><span id="line-34"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Witnessable 'ProposalItem (LedgerEra era),
+  BuildTxWith BuildTx (Witness WitCtxStake era))]
+-&gt; ShelleyToBabbageEra era
+-&gt; [(Witnessable 'ProposalItem (LedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; Maybe
+     (Featured ConwayEraOnwards era (TxProposalProcedures BuildTx era))
+-&gt; [(Witnessable 'ProposalItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+forall era (eon :: * -&gt; *).
+ConwayEraOnwards era
+-&gt; Maybe (Featured eon era (TxProposalProcedures BuildTx era))
+-&gt; [(Witnessable 'ProposalItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+</span><a href="Cardano.Api.Tx.Internal.Body.html#extractWitnessableProposals"><span class="hs-operator hs-var">`extractWitnessableProposals`</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+-&gt; Maybe
+     (Featured ConwayEraOnwards era (TxProposalProcedures BuildTx era))
+forall build era.
+TxBodyContent build era
+-&gt; Maybe
+     (Featured ConwayEraOnwards era (TxProposalProcedures build era))
+</span><a href="Cardano.Api.Tx.Internal.Body.html#txProposalProcedures"><span class="hs-identifier hs-var">txProposalProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><a href="#local-6989586621681265969"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>            </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681265991"><span class="hs-identifier hs-var">sbe</span></a></span><span>
+</span><span id="line-37"></span><span>      </span><span id="local-6989586621681266010"><span class="annot"><span class="annottext">legacyWithdrawalWits :: [(Witnessable 'WithdrawalItem (ShelleyLedgerEra era),
+  BuildTxWith BuildTx (Witness WitCtxStake era))]
+</span><a href="#local-6989586621681266010"><span class="hs-identifier hs-var hs-var hs-var">legacyWithdrawalWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; TxWithdrawals BuildTx era
+-&gt; [(Witnessable 'WithdrawalItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+forall era.
+AlonzoEraOnwards era
+-&gt; TxWithdrawals BuildTx era
+-&gt; [(Witnessable 'WithdrawalItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+</span><a href="Cardano.Api.Tx.Internal.Body.html#extractWitnessableWithdrawals"><span class="hs-identifier hs-var">extractWitnessableWithdrawals</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var">aeon</span></a></span><span> </span><span class="annot"><span class="annottext">(TxWithdrawals BuildTx era
+ -&gt; [(Witnessable 'WithdrawalItem (ShelleyLedgerEra era),
+      BuildTxWith BuildTx (Witness WitCtxStake era))])
+-&gt; TxWithdrawals BuildTx era
+-&gt; [(Witnessable 'WithdrawalItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era -&gt; TxWithdrawals BuildTx era
+forall build era.
+TxBodyContent build era -&gt; TxWithdrawals build era
+</span><a href="Cardano.Api.Tx.Internal.Body.html#txWithdrawals"><span class="hs-identifier hs-var">txWithdrawals</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><a href="#local-6989586621681265969"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-38"></span><span>      </span><span id="local-6989586621681266013"><span class="annot"><span class="annottext">[(Witnessable 'VoterItem (ShelleyLedgerEra era),
+  BuildTxWith BuildTx (Witness WitCtxStake era))]
+</span><a href="#local-6989586621681266013"><span class="hs-identifier hs-var hs-var">legacyVoteWits</span></a></span></span><span>
+</span><span id="line-39"></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#Witnessable"><span class="hs-identifier hs-type">Witnessable</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#VoterItem"><span class="hs-identifier hs-type">VoterItem</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265855"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTxWith"><span class="hs-identifier hs-type">BuildTxWith</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTx"><span class="hs-identifier hs-type">BuildTx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#WitCtxStake"><span class="hs-identifier hs-type">WitCtxStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265855"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>          </span><span class="annot"><span class="annottext">(ShelleyToBabbageEraConstraints era =&gt;
+ ShelleyToBabbageEra era
+ -&gt; [(Witnessable 'VoterItem (LedgerEra era),
+      BuildTxWith BuildTx (Witness WitCtxStake era))])
+-&gt; (ConwayEraOnwardsConstraints era =&gt;
+    ConwayEraOnwards era
+    -&gt; [(Witnessable 'VoterItem (LedgerEra era),
+         BuildTxWith BuildTx (Witness WitCtxStake era))])
+-&gt; ShelleyBasedEra era
+-&gt; [(Witnessable 'VoterItem (LedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+forall era a.
+(ShelleyToBabbageEraConstraints era =&gt;
+ ShelleyToBabbageEra era -&gt; a)
+-&gt; (ConwayEraOnwardsConstraints era =&gt; ConwayEraOnwards era -&gt; a)
+-&gt; ShelleyBasedEra era
+-&gt; a
+</span><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToBabbageOrConwayEraOnwards"><span class="hs-identifier hs-var">caseShelleyToBabbageOrConwayEraOnwards</span></a></span><span>
+</span><span id="line-41"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Witnessable 'VoterItem (LedgerEra era),
+  BuildTxWith BuildTx (Witness WitCtxStake era))]
+-&gt; ShelleyToBabbageEra era
+-&gt; [(Witnessable 'VoterItem (LedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; Maybe
+     (Featured ConwayEraOnwards era (TxVotingProcedures BuildTx era))
+-&gt; [(Witnessable 'VoterItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+forall era (eon :: * -&gt; *).
+ConwayEraOnwards era
+-&gt; Maybe (Featured eon era (TxVotingProcedures BuildTx era))
+-&gt; [(Witnessable 'VoterItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxStake era))]
+</span><a href="Cardano.Api.Tx.Internal.Body.html#extractWitnessableVotes"><span class="hs-operator hs-var">`extractWitnessableVotes`</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+-&gt; Maybe
+     (Featured ConwayEraOnwards era (TxVotingProcedures BuildTx era))
+forall build era.
+TxBodyContent build era
+-&gt; Maybe
+     (Featured ConwayEraOnwards era (TxVotingProcedures build era))
+</span><a href="Cardano.Api.Tx.Internal.Body.html#txVotingProcedures"><span class="hs-identifier hs-var">txVotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><a href="#local-6989586621681265969"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>            </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681265991"><span class="hs-identifier hs-var">sbe</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621681266018"><span class="annot"><a href="#local-6989586621681266018"><span class="hs-identifier hs-var">txInWits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; [(Witnessable 'TxInItem (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+-&gt; Either
+     DecoderError
+     [(Witnessable 'TxInItem (ShelleyLedgerEra era),
+       AnyWitness (ShelleyLedgerEra era))]
+forall era (witnessable :: WitnessableItem) ctx.
+AlonzoEraOnwards era
+-&gt; [(Witnessable witnessable (ShelleyLedgerEra era),
+     BuildTxWith BuildTx (Witness ctx era))]
+-&gt; Either
+     DecoderError
+     [(Witnessable witnessable (ShelleyLedgerEra era),
+       AnyWitness (ShelleyLedgerEra era))]
+</span><a href="Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts.html#legacyWitnessConversion"><span class="hs-identifier hs-var">legacyWitnessConversion</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var">aeon</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'TxInItem (ShelleyLedgerEra era),
+  BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+</span><a href="#local-6989586621681265994"><span class="hs-identifier hs-var">legacyTxInWits</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681266020"><span class="annot"><a href="#local-6989586621681266020"><span class="hs-identifier hs-var hs-var">indexedScriptTxInWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era a.
+AlonzoEraOnwards era -&gt; (AlonzoEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#alonzoEraOnwardsConstraints"><span class="hs-identifier hs-var">alonzoEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var">aeon</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoEraOnwardsConstraints era =&gt;
+  [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+ -&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'TxInItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era (witnessable :: WitnessableItem).
+AlonzoEraScript era =&gt;
+[(Witnessable witnessable era, AnyWitness era)]
+-&gt; [AnyIndexedPlutusScriptWitness era]
+</span><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#createIndexedPlutusScriptWitnesses"><span class="hs-identifier hs-var">createIndexedPlutusScriptWitnesses</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'TxInItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+</span><a href="#local-6989586621681266018"><span class="hs-identifier hs-var">txInWits</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621681266025"><span class="annot"><a href="#local-6989586621681266025"><span class="hs-identifier hs-var">certWits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts.html#legacyWitnessConversion"><span class="hs-identifier hs-type">legacyWitnessConversion</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265993"><span class="hs-identifier hs-type">aeon</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265997"><span class="hs-identifier hs-type">legacyCertWits</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681266026"><span class="annot"><a href="#local-6989586621681266026"><span class="hs-identifier hs-var hs-var">indexedCertScriptWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era a.
+AlonzoEraOnwards era -&gt; (AlonzoEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#alonzoEraOnwardsConstraints"><span class="hs-identifier hs-var">alonzoEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var">aeon</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoEraOnwardsConstraints era =&gt;
+  [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+ -&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'CertItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era (witnessable :: WitnessableItem).
+AlonzoEraScript era =&gt;
+[(Witnessable witnessable era, AnyWitness era)]
+-&gt; [AnyIndexedPlutusScriptWitness era]
+</span><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#createIndexedPlutusScriptWitnesses"><span class="hs-identifier hs-var">createIndexedPlutusScriptWitnesses</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'CertItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+</span><a href="#local-6989586621681266025"><span class="hs-identifier hs-var">certWits</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621681266029"><span class="annot"><a href="#local-6989586621681266029"><span class="hs-identifier hs-var">mintWits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts.html#legacyWitnessConversion"><span class="hs-identifier hs-type">legacyWitnessConversion</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265993"><span class="hs-identifier hs-type">aeon</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681266000"><span class="hs-identifier hs-type">legacyMintWits</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681266030"><span class="annot"><a href="#local-6989586621681266030"><span class="hs-identifier hs-var hs-var">indexedMintScriptWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era a.
+AlonzoEraOnwards era -&gt; (AlonzoEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#alonzoEraOnwardsConstraints"><span class="hs-identifier hs-var">alonzoEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var">aeon</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoEraOnwardsConstraints era =&gt;
+  [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+ -&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'MintItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era (witnessable :: WitnessableItem).
+AlonzoEraScript era =&gt;
+[(Witnessable witnessable era, AnyWitness era)]
+-&gt; [AnyIndexedPlutusScriptWitness era]
+</span><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#createIndexedPlutusScriptWitnesses"><span class="hs-identifier hs-var">createIndexedPlutusScriptWitnesses</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'MintItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+</span><a href="#local-6989586621681266029"><span class="hs-identifier hs-var">mintWits</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621681266033"><span class="annot"><a href="#local-6989586621681266033"><span class="hs-identifier hs-var">withdrawalWits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts.html#legacyWitnessConversion"><span class="hs-identifier hs-type">legacyWitnessConversion</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265993"><span class="hs-identifier hs-type">aeon</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681266010"><span class="hs-identifier hs-type">legacyWithdrawalWits</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681266034"><span class="annot"><a href="#local-6989586621681266034"><span class="hs-identifier hs-var hs-var">indexedWithdrawalScriptWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era a.
+AlonzoEraOnwards era -&gt; (AlonzoEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#alonzoEraOnwardsConstraints"><span class="hs-identifier hs-var">alonzoEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var">aeon</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoEraOnwardsConstraints era =&gt;
+  [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+ -&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'WithdrawalItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era (witnessable :: WitnessableItem).
+AlonzoEraScript era =&gt;
+[(Witnessable witnessable era, AnyWitness era)]
+-&gt; [AnyIndexedPlutusScriptWitness era]
+</span><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#createIndexedPlutusScriptWitnesses"><span class="hs-identifier hs-var">createIndexedPlutusScriptWitnesses</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'WithdrawalItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+</span><a href="#local-6989586621681266033"><span class="hs-identifier hs-var">withdrawalWits</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621681266037"><span class="annot"><a href="#local-6989586621681266037"><span class="hs-identifier hs-var">proposalScriptWits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts.html#legacyWitnessConversion"><span class="hs-identifier hs-type">legacyWitnessConversion</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265993"><span class="hs-identifier hs-type">aeon</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681266003"><span class="hs-identifier hs-type">proposalWits</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681266038"><span class="annot"><a href="#local-6989586621681266038"><span class="hs-identifier hs-var hs-var">indexedProposalScriptWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era a.
+AlonzoEraOnwards era -&gt; (AlonzoEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#alonzoEraOnwardsConstraints"><span class="hs-identifier hs-var">alonzoEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var">aeon</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoEraOnwardsConstraints era =&gt;
+  [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+ -&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'ProposalItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era (witnessable :: WitnessableItem).
+AlonzoEraScript era =&gt;
+[(Witnessable witnessable era, AnyWitness era)]
+-&gt; [AnyIndexedPlutusScriptWitness era]
+</span><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#createIndexedPlutusScriptWitnesses"><span class="hs-identifier hs-var">createIndexedPlutusScriptWitnesses</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'ProposalItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+</span><a href="#local-6989586621681266037"><span class="hs-identifier hs-var">proposalScriptWits</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621681266041"><span class="annot"><a href="#local-6989586621681266041"><span class="hs-identifier hs-var">voteWits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts.html#legacyWitnessConversion"><span class="hs-identifier hs-type">legacyWitnessConversion</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681265993"><span class="hs-identifier hs-type">aeon</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681266013"><span class="hs-identifier hs-type">legacyVoteWits</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681266042"><span class="annot"><a href="#local-6989586621681266042"><span class="hs-identifier hs-var hs-var">indexedVoteScriptWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era a.
+AlonzoEraOnwards era -&gt; (AlonzoEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#alonzoEraOnwardsConstraints"><span class="hs-identifier hs-var">alonzoEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681265993"><span class="hs-identifier hs-var">aeon</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoEraOnwardsConstraints era =&gt;
+  [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+ -&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    [AnyIndexedPlutusScriptWitness (LedgerEra era)])
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'VoterItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+-&gt; [AnyIndexedPlutusScriptWitness (LedgerEra era)]
+forall era (witnessable :: WitnessableItem).
+AlonzoEraScript era =&gt;
+[(Witnessable witnessable era, AnyWitness era)]
+-&gt; [AnyIndexedPlutusScriptWitness era]
+</span><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#createIndexedPlutusScriptWitnesses"><span class="hs-identifier hs-var">createIndexedPlutusScriptWitnesses</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable 'VoterItem (LedgerEra era),
+  AnyWitness (LedgerEra era))]
+</span><a href="#local-6989586621681266041"><span class="hs-identifier hs-var">voteWits</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mconcat"><span class="hs-identifier hs-type">mconcat</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><a href="#local-6989586621681266020"><span class="hs-identifier hs-type">indexedScriptTxInWits</span></a></span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621681266030"><span class="hs-identifier hs-type">indexedMintScriptWits</span></a></span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621681266026"><span class="hs-identifier hs-type">indexedCertScriptWits</span></a></span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621681266034"><span class="hs-identifier hs-type">indexedWithdrawalScriptWits</span></a></span><span>
+</span><span id="line-68"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621681266038"><span class="hs-identifier hs-type">indexedProposalScriptWits</span></a></span><span>
+</span><span id="line-69"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621681266042"><span class="hs-identifier hs-type">indexedVoteScriptWits</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span></pre></body></html>

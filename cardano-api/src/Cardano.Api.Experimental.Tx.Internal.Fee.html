@@ -1,0 +1,205 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Fee.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.Fee</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Fee.html#estimateBalancedTxBody"><span class="hs-identifier">estimateBalancedTxBody</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html"><span class="hs-identifier">Cardano.Api.Address</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html"><span class="hs-identifier">Cardano.Api.Certificate.Internal</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.Convert.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.Convert</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html"><span class="hs-identifier">Cardano.Api.Experimental.Era</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Ledger.Internal.Reexport.html"><span class="hs-identifier">Cardano.Api.Ledger.Internal.Reexport</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.html"><span class="hs-identifier">Cardano.Api.Plutus</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Body</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Fee</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Fee</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Value.Internal.html"><span class="hs-identifier">Cardano.Api.Value.Internal</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.13.0.0-6acab71123c158825e07520d337ee45fdcee26161aa5f457fb76bf2c95cd0fa6/share/doc/html/src/Cardano.Ledger.Alonzo.Core.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Core</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.17.0.0-087282da6c1ee1b2d2bc92534fd88a49ecbfa08de6a3d0b1eabe35720a2dc8c7/share/doc/html/src/Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.17.0.0-087282da6c1ee1b2d2bc92534fd88a49ecbfa08de6a3d0b1eabe35720a2dc8c7/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier">Credential</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier">Set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><span class="hs-comment">-- | Use when you do not have access to the UTxOs you intend to spend</span></span><span>
+</span><span id="line-29"></span><span id="local-6989586621681308536"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Fee.html#estimateBalancedTxBody"><span class="hs-identifier hs-type">estimateBalancedTxBody</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681308536"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxBodyContent"><span class="hs-identifier hs-type">TxBodyContent</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTx"><span class="hs-identifier hs-type">BuildTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681308536"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.17.0.0-087282da6c1ee1b2d2bc92534fd88a49ecbfa08de6a3d0b1eabe35720a2dc8c7/share/doc/html/src/Cardano.Ledger.Core.PParams.html#PParams"><span class="hs-identifier hs-type">L.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681308536"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#PoolId"><span class="hs-identifier hs-type">PoolId</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-comment">-- ^ The set of registered stake pools, being</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-comment">--   unregistered in this transaction.</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#StakeCredential"><span class="hs-identifier hs-type">StakeCredential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.17.0.0-087282da6c1ee1b2d2bc92534fd88a49ecbfa08de6a3d0b1eabe35720a2dc8c7/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-comment">-- ^ A map of all deposits for stake credentials that are being</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-comment">--   unregistered in this transaction.</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.17.0.0-087282da6c1ee1b2d2bc92534fd88a49ecbfa08de6a3d0b1eabe35720a2dc8c7/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Ledger.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.17.0.0-087282da6c1ee1b2d2bc92534fd88a49ecbfa08de6a3d0b1eabe35720a2dc8c7/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#DRepRole"><span class="hs-identifier hs-type">Ledger.DRepRole</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.17.0.0-087282da6c1ee1b2d2bc92534fd88a49ecbfa08de6a3d0b1eabe35720a2dc8c7/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-comment">-- ^ A map of all deposits for DRep credentials that are being</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-comment">--   unregistered in this transaction.</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.13.0.0-6acab71123c158825e07520d337ee45fdcee26161aa5f457fb76bf2c95cd0fa6/share/doc/html/src/Cardano.Ledger.Alonzo.Scripts.html#PlutusPurpose"><span class="hs-identifier hs-type">Ledger.PlutusPurpose</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.13.0.0-6acab71123c158825e07520d337ee45fdcee26161aa5f457fb76bf2c95cd0fa6/share/doc/html/src/Cardano.Ledger.Alonzo.Scripts.html#AsIx"><span class="hs-identifier hs-type">Ledger.AsIx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681308536"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ExecutionUnits"><span class="hs-identifier hs-type">ExecutionUnits</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Plutus script execution units.</span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.17.0.0-087282da6c1ee1b2d2bc92534fd88a49ecbfa08de6a3d0b1eabe35720a2dc8c7/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Total potential collateral amount.</span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The number of key witnesses to be added to the transaction.</span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The number of Byron key witnesses to be added to the transaction.</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The size of all reference scripts in bytes.</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#AddressInEra"><span class="hs-identifier hs-type">AddressInEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681308536"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Change address.</span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Value.Internal.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Total value of UTXOs being spent.</span></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#TxFeeEstimationError"><span class="hs-identifier hs-type">Fee.TxFeeEstimationError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681308536"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#BalancedTxBody"><span class="hs-identifier hs-type">Fee.BalancedTxBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681308536"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-58"></span><span id="estimateBalancedTxBody"><span class="annot"><span class="annottext">estimateBalancedTxBody :: forall era.
+HasCallStack =&gt;
+Era era
+-&gt; TxBodyContent BuildTx era
+-&gt; PParams (LedgerEra era)
+-&gt; Set PoolId
+-&gt; Map StakeCredential Coin
+-&gt; Map (Credential 'DRepRole) Coin
+-&gt; Map (PlutusPurpose AsIx (LedgerEra era)) ExecutionUnits
+-&gt; Coin
+-&gt; Int
+-&gt; Int
+-&gt; Int
+-&gt; AddressInEra era
+-&gt; Value
+-&gt; Either (TxFeeEstimationError era) (BalancedTxBody era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Fee.html#estimateBalancedTxBody"><span class="hs-identifier hs-var hs-var">estimateBalancedTxBody</span></a></span></span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621681308603"><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681308603"><span class="hs-identifier hs-var">w</span></a></span></span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621681308604"><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><a href="#local-6989586621681308604"><span class="hs-identifier hs-var">txbodycontent</span></a></span></span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621681308605"><span class="annot"><span class="annottext">PParams (LedgerEra era)
+</span><a href="#local-6989586621681308605"><span class="hs-identifier hs-var">pparams</span></a></span></span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621681308606"><span class="annot"><span class="annottext">Set PoolId
+</span><a href="#local-6989586621681308606"><span class="hs-identifier hs-var">poolids</span></a></span></span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621681308607"><span class="annot"><span class="annottext">Map StakeCredential Coin
+</span><a href="#local-6989586621681308607"><span class="hs-identifier hs-var">stakeDelegDeposits</span></a></span></span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621681308608"><span class="annot"><span class="annottext">Map (Credential 'DRepRole) Coin
+</span><a href="#local-6989586621681308608"><span class="hs-identifier hs-var">drepDelegDeposits</span></a></span></span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621681308609"><span class="annot"><span class="annottext">Map (PlutusPurpose AsIx (LedgerEra era)) ExecutionUnits
+</span><a href="#local-6989586621681308609"><span class="hs-identifier hs-var">exUnitsMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt;
+    Coin
+    -&gt; Int
+    -&gt; Int
+    -&gt; Int
+    -&gt; AddressInEra era
+    -&gt; Value
+    -&gt; Either (TxFeeEstimationError era) (BalancedTxBody era))
+-&gt; Coin
+-&gt; Int
+-&gt; Int
+-&gt; Int
+-&gt; AddressInEra era
+-&gt; Value
+-&gt; Either (TxFeeEstimationError era) (BalancedTxBody era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681308603"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt;
+  Coin
+  -&gt; Int
+  -&gt; Int
+  -&gt; Int
+  -&gt; AddressInEra era
+  -&gt; Value
+  -&gt; Either (TxFeeEstimationError era) (BalancedTxBody era))
+ -&gt; Coin
+ -&gt; Int
+ -&gt; Int
+ -&gt; Int
+ -&gt; AddressInEra era
+ -&gt; Value
+ -&gt; Either (TxFeeEstimationError era) (BalancedTxBody era))
+-&gt; (EraCommonConstraints era =&gt;
+    Coin
+    -&gt; Int
+    -&gt; Int
+    -&gt; Int
+    -&gt; AddressInEra era
+    -&gt; Value
+    -&gt; Either (TxFeeEstimationError era) (BalancedTxBody era))
+-&gt; Coin
+-&gt; Int
+-&gt; Int
+-&gt; Int
+-&gt; AddressInEra era
+-&gt; Value
+-&gt; Either (TxFeeEstimationError era) (BalancedTxBody era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><span class="annottext">MaryEraOnwards era
+-&gt; TxBodyContent BuildTx era
+-&gt; PParams (ShelleyLedgerEra era)
+-&gt; Set PoolId
+-&gt; Map StakeCredential Coin
+-&gt; Map (Credential 'DRepRole) Coin
+-&gt; Map ScriptWitnessIndex ExecutionUnits
+-&gt; Coin
+-&gt; Int
+-&gt; Int
+-&gt; Int
+-&gt; AddressInEra era
+-&gt; Value
+-&gt; Either (TxFeeEstimationError era) (BalancedTxBody era)
+forall era.
+HasCallStack =&gt;
+MaryEraOnwards era
+-&gt; TxBodyContent BuildTx era
+-&gt; PParams (ShelleyLedgerEra era)
+-&gt; Set PoolId
+-&gt; Map StakeCredential Coin
+-&gt; Map (Credential 'DRepRole) Coin
+-&gt; Map ScriptWitnessIndex ExecutionUnits
+-&gt; Coin
+-&gt; Int
+-&gt; Int
+-&gt; Int
+-&gt; AddressInEra era
+-&gt; Value
+-&gt; Either (TxFeeEstimationError era) (BalancedTxBody era)
+</span><a href="Cardano.Api.Tx.Internal.Fee.html#estimateBalancedTxBody"><span class="hs-identifier hs-var">Fee.estimateBalancedTxBody</span></a></span><span>
+</span><span id="line-68"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Era era -&gt; MaryEraOnwards era
+forall era. Era era -&gt; MaryEraOnwards era
+forall a (f :: a -&gt; *) (g :: a -&gt; *) (era :: a).
+Convert f g =&gt;
+f era -&gt; g era
+</span><a href="Cardano.Api.Era.Internal.Eon.Convert.html#convert"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681308603"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>        </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><a href="#local-6989586621681308604"><span class="hs-identifier hs-var">txbodycontent</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span class="annot"><span class="annottext">PParams (ShelleyLedgerEra era)
+PParams (LedgerEra era)
+</span><a href="#local-6989586621681308605"><span class="hs-identifier hs-var">pparams</span></a></span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><span class="annottext">Set PoolId
+</span><a href="#local-6989586621681308606"><span class="hs-identifier hs-var">poolids</span></a></span><span>
+</span><span id="line-72"></span><span>        </span><span class="annot"><span class="annottext">Map StakeCredential Coin
+</span><a href="#local-6989586621681308607"><span class="hs-identifier hs-var">stakeDelegDeposits</span></a></span><span>
+</span><span id="line-73"></span><span>        </span><span class="annot"><span class="annottext">Map (Credential 'DRepRole) Coin
+</span><a href="#local-6989586621681308608"><span class="hs-identifier hs-var">drepDelegDeposits</span></a></span><span>
+</span><span id="line-74"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(PlutusPurpose AsIx (LedgerEra era) -&gt; ScriptWitnessIndex)
+-&gt; Map (PlutusPurpose AsIx (LedgerEra era)) ExecutionUnits
+-&gt; Map ScriptWitnessIndex ExecutionUnits
+forall k2 k1 a. Ord k2 =&gt; (k1 -&gt; k2) -&gt; Map k1 a -&gt; Map k2 a
+</span><a href="file:///nix/store/v373vgkb2sjwpvbniw6d1raf1zr8y0sf-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#mapKeys"><span class="hs-identifier hs-var">Map.mapKeys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; PlutusPurpose AsIx (ShelleyLedgerEra era) -&gt; ScriptWitnessIndex
+forall era.
+AlonzoEraOnwards era
+-&gt; PlutusPurpose AsIx (ShelleyLedgerEra era) -&gt; ScriptWitnessIndex
+</span><a href="Cardano.Api.Tx.Internal.Body.html#toScriptIndex"><span class="hs-identifier hs-var">toScriptIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Era era -&gt; AlonzoEraOnwards era
+forall era. Era era -&gt; AlonzoEraOnwards era
+forall a (f :: a -&gt; *) (g :: a -&gt; *) (era :: a).
+Convert f g =&gt;
+f era -&gt; g era
+</span><a href="Cardano.Api.Era.Internal.Eon.Convert.html#convert"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681308603"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map (PlutusPurpose AsIx (LedgerEra era)) ExecutionUnits
+</span><a href="#local-6989586621681308609"><span class="hs-identifier hs-var">exUnitsMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span></pre></body></html>
