@@ -20,7 +20,7 @@ pkgs.stdenv.mkDerivation {
 
   src = ../cardano-wasm/lib-wrapper;
   nativeBuildInputs = [
-    pkgs.nodejs_24
+    pkgs.nodejs_22
     typedoc-deps
   ];
 
