@@ -1,5 +1,5 @@
 {
-  "name": "cardano-api",
+  "name": "cardano-wasm",
   "version": "10.0.0",
   "description": "JavaScript bindings to the WASM build of cardano-api (https://github.com/intersectmbo/cardano-api), which provides functionalities to inspect, create, and manipulate, transactions and other information related to Cardano blockchains, as well as interacting directly with them through the cardano-node.",
   "main": "cardano-api.js",
