@@ -1,14 +1,14 @@
 /// <reference path="./cardano-api.d.ts" />
 
-import ghc_wasm_jsffi from "./cardano-wasm.js";
 const __exports = {};
 
 export function createInitializer(getWasi, loadWasmModule) {
   return async function initialise() {
 
-    const WASI = await getWasi();
+    const ghc_wasm_jsffi = (await eval(`import('./cardano-wasm.js')`)).default;
 
-    const wasi = new WASI([], [], []);
+    const wasi = await getWasi();
+
     const importObject = {
       ghc_wasm_jsffi: ghc_wasm_jsffi(__exports),
       wasi_snapshot_preview1: wasi.wasiImport,
@@ -27,10 +27,12 @@ export function createInitializer(getWasi, loadWasmModule) {
       // 'this' and 'arguments' are passed through from the wrapper to 'func'.
       // Using eval allows the returned function to have named parameters for inspectability.
       const wrapper = eval(`
-        (function(${paramString}) {
-          return func.apply(this, arguments);
+        (function (f) {
+          return (function (${paramString}) {
+            return f.apply(this, arguments);
+          });
         })
-      `);
+      `)(func);
       return wrapper;
     }
 
@@ -39,10 +41,12 @@ export function createInitializer(getWasi, loadWasmModule) {
       const paramString = params.map(p => p.name).join(',');
       // Dynamically create an async function.
       const wrapper = eval(`
-        (async function(${paramString}) {
-          return await func.apply(this, arguments);
+        (function (f) {
+           return (async function (${paramString}) {
+             return await f.apply(this, arguments);
+           });
         })
-      `);
+      `)(func);
       return wrapper;
     }
 
@@ -113,11 +117,15 @@ export function createInitializer(getWasi, loadWasmModule) {
      * Convert Base64 to Base16 encoding
      */
     base64ToHex: function(base64) {
-      const binary = atob(base64);
-      return [...binary].reduce((hex, char) => {
-        const byteHex = char.charCodeAt(0).toString(16).padStart(2, '0');
-        return hex + byteHex;
-      }, '');
+      if (typeof atob === 'function') {
+        const binary = atob(base64);
+        return [...binary].reduce((hex, char) => {
+          const byteHex = char.charCodeAt(0).toString(16).padStart(2, '0');
+          return hex + byteHex;
+        }, '');
+      } else {
+        return Buffer.from(base64, 'base64').toString('hex');
+      }
     }
   }
 };

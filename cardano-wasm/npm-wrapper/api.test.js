@@ -1,16 +1,13 @@
 /**
  * @jest-environment node
  */
-import initialise from "./cardano-api.js";
-import fs from 'fs';
-import path from 'path';
+import initialise from "./dist/node.cjs";
 
 // Main test suite for the Cardano API
 describe('Cardano API', () => {
 
     let api;
 
-    // Initialize the API once before all tests run
     beforeAll(async () => {
         api = await initialise();
     });
@@ -22,7 +19,6 @@ describe('Cardano API', () => {
         const secretKey = "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms";
 
         const expectedAddress = "addr_test1vp93p9em3regvgylxuvet6fgr3e9sn259pcejgrk4ykystcs7v8j6";
-        const expectedCBOR = "";
         const txInputHash = "be6efd42a3d7b9a00d09d77a5d41e55ceaf0bd093a8aa8a893ce70d9caafd978";
         const outputAddress = "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v";
 

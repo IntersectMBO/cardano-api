@@ -2,8 +2,10 @@
   "name": "cardano-wasm",
   "version": "10.0.0",
   "description": "JavaScript bindings to the WASM build of cardano-api (https://github.com/intersectmbo/cardano-api), which provides functionalities to inspect, create, and manipulate, transactions and other information related to Cardano blockchains, as well as interacting directly with them through the cardano-node.",
-  "main": "cardano-api.js",
+  "main": "./dist/node.cjs",
   "scripts": {
+    "build": "rollup -c",
+    "prepublishOnly": "npm run build",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "type": "module",
@@ -24,6 +26,9 @@
     "testnet",
     "mainnet"
   ],
+  "files": [
+    "dist"
+  ],
   "author": "",
   "license": "Apache-2.0",
   "types": "./cardano-api.d.ts",
@@ -31,11 +36,27 @@
     "url": "https://github.com/IntersectMBO/cardano-api/issues"
   },
   "homepage": "https://github.com/IntersectMBO/cardano-api/tree/master/cardano-wasm#readme",
-  "dependencies": {
-    "@bjorn3/browser_wasi_shim": "^0.4.2"
+  "module": "./dist/node.mjs",
+  "browser": "./dist/browser.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/node.mjs",
+      "require": "./dist/node.cjs"
+    },
+    "./browser": {
+      "import": "./dist/browser.mjs",
+      "require": "./dist/browser.umd.js"
+    }
   },
   "devDependencies": {
     "jest": "^29.7.0"
+  },
+  "dependencies": {
+    "@bjorn3/browser_wasi_shim": "^0.4.2",
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "rollup": "^4.52.3",
+    "rollup-plugin-copy": "^3.5.0"
   },
   "jest": {
     "testEnvironment": "node"
