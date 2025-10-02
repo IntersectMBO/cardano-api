@@ -3,7 +3,8 @@ import { createInitializer } from './main.js';
 const wasmUrl = './cardano-wasm.wasm';
 
 const getWasi = async () => {
-    return (await import("https://unpkg.com/@bjorn3/browser_wasi_shim@0.4.1/dist/index.js")).WASI;
+    const { WASI } = await import("https://unpkg.com/@bjorn3/browser_wasi_shim@0.4.1/dist/index.js");
+    return new WASI([], [], []);
 };
 
 const loadWasmModule = async (importObject) => {
