@@ -78,38 +78,6 @@ instance Inject TxIn (Proto UtxoRpc.TxoRef) where
       & #hash .~ serialiseToRawBytes txId'
       & #index .~ fromIntegral txIx
 
-instance Inject (ReferenceScript era) (Proto UtxoRpc.Script) where
-  inject ReferenceScriptNone = defMessage
-  inject (ReferenceScript _ (ScriptInAnyLang _ script)) =
-    case script of
-      SimpleScript ss ->
-        defMessage & #native .~ inject ss
-      PlutusScript PlutusScriptV1 ps ->
-        defMessage & #plutusV1 .~ serialiseToRawBytes ps
-      PlutusScript PlutusScriptV2 ps ->
-        defMessage & #plutusV2 .~ serialiseToRawBytes ps
-      PlutusScript PlutusScriptV3 ps ->
-        defMessage & #plutusV3 .~ serialiseToRawBytes ps
-
-instance Inject SimpleScript (Proto UtxoRpc.NativeScript) where
-  inject = \case
-    RequireSignature paymentKeyHash ->
-      defMessage & #scriptPubkey .~ serialiseToRawBytes paymentKeyHash
-    RequireTimeBefore (SlotNo slotNo) ->
-      defMessage & #invalidHereafter .~ slotNo
-    RequireTimeAfter (SlotNo slotNo) ->
-      defMessage & #invalidBefore .~ slotNo
-    RequireAllOf scripts ->
-      defMessage & #scriptAll . #items .~ map inject scripts
-    RequireAnyOf scripts ->
-      defMessage & #scriptAny . #items .~ map inject scripts
-    RequireMOf k scripts -> do
-      let nScriptsOf =
-            defMessage
-              & #k .~ fromIntegral k
-              & #scripts .~ map inject scripts
-      defMessage & #scriptNOfK .~ nScriptsOf
-
 instance Inject ScriptData (Proto UtxoRpc.PlutusData) where
   inject = \case
     ScriptDataBytes bs ->
@@ -135,54 +103,11 @@ instance Inject ScriptData (Proto UtxoRpc.PlutusData) where
     ScriptDataConstructor tag args -> do
       let constr =
             defMessage
+              -- TODO investigate if tag is the right field, or should any_constructor be used here
+              -- https://github.com/IntersectMBO/plutus/blob/fc78c36b545ee287ae8796a0c1a7d04cf31f4cee/plutus-core/plutus-core/src/PlutusCore/Data.hs#L72
               & #tag .~ fromIntegral tag
               & #fields .~ map inject args
       defMessage & #constr .~ constr
-
-instance IsCardanoEra era => Inject (UTxO era) [Proto UtxoRpc.AnyUtxoData] where
-  inject utxo =
-    toList utxo <&> \(txIn, TxOut addressInEra txOutValue datum script) -> do
-      let multiAsset =
-            fromList $
-              toList (valueToPolicyAssets $ txOutValueToValue txOutValue) <&> \(pId, policyAssets) -> do
-                let assets =
-                      toList policyAssets <&> \(assetName, Quantity qty) -> do
-                        defMessage
-                          & #name .~ serialiseToRawBytes assetName
-                          -- we don't have access to info if the coin was minted in the transaction,
-                          -- maybe we should add it later
-                          & #maybe'mintCoin .~ Nothing
-                          & #outputCoin .~ fromIntegral qty
-                defMessage
-                  & #policyId .~ serialiseToRawBytes pId
-                  & #assets .~ assets
-          datumRpc = case datum of
-            TxOutDatumNone ->
-              defMessage
-            TxOutDatumHash _ scriptDataHash ->
-              defMessage
-                & #hash .~ serialiseToRawBytes scriptDataHash
-                & #maybe'payload .~ Nothing -- we don't have it
-                & #originalCbor .~ mempty -- we don't have it
-            TxOutDatumInline _ hashableScriptData ->
-              defMessage
-                & #hash .~ serialiseToRawBytes (hashScriptDataBytes hashableScriptData)
-                & #payload .~ inject (getScriptData hashableScriptData)
-                & #originalCbor .~ getOriginalScriptDataBytes hashableScriptData
-
-          protoTxOut =
-            defMessage
-              -- TODO we don't have serialiseToRawBytes for AddressInEra, so perhaps this is wrong, because 'address'
-              -- has type bytes, but we're putting text there
-              & #address .~ T.encodeUtf8 (cardanoEraConstraints (cardanoEra @era) $ serialiseAddress addressInEra)
-              & #coin .~ fromIntegral (L.unCoin (txOutValueToLovelace txOutValue))
-              & #assets .~ multiAsset
-              & #datum .~ datumRpc
-              & #script .~ inject script
-      defMessage
-        & #nativeBytes .~ "" -- TODO where to get that from? run cbor serialisation of utxos list?
-        & #txoRef .~ inject txIn
-        & #cardano .~ protoTxOut
 
 instance L.ConwayEraPParams lera => Inject (L.PParams lera) (Proto UtxoRpc.PParams) where
   inject pparams = do
