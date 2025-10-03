@@ -40,12 +40,9 @@
   "browser": "./dist/browser.mjs",
   "exports": {
     ".": {
+      "browser": "./dist/browser.mjs",
       "import": "./dist/node.mjs",
       "require": "./dist/node.cjs"
-    },
-    "./browser": {
-      "import": "./dist/browser.mjs",
-      "require": "./dist/browser.umd.js"
     }
   },
   "devDependencies": {
