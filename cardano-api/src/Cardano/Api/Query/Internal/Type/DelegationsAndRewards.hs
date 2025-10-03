@@ -18,7 +18,6 @@ import GHC.Exts (IsList (..))
 
 -- | A mapping of Shelley reward accounts to both the stake pool that they
 -- delegate to and their reward account balance.
--- TODO: Move to cardano-api
 newtype DelegationsAndRewards
   = DelegationsAndRewards (Map StakeAddress L.Coin, Map StakeAddress PoolId)
   deriving (Eq, Show)
