@@ -50,11 +50,72 @@ Create an `index.js` file:
 })();
 ```
 
-To run this file, simply use Node.js:
+### Node.js
+
+To run this file, you can simply use Node.js:
 
 ```bash
 node index.js
 ```
+
+### Webpack
+
+Alternatively you can use `cardano-wasm` as part of a `webpack` project, but you'll need to install `html-webpack-plugin` and `copy-webpack-plugin`:
+
+```bash
+npm install html-webpack-plugin copy-webpack-plugin
+```
+
+And do a couple of adjustments to the `webpack.config.js`:
+
+```js
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const path = require('path');
+
+module.exports = {
+  entry: './src/index.js',
+
+  target: ['web', 'es2020'],
+
+  output: {
+    filename: 'main.js',
+    path: path.resolve(__dirname, 'dist'),
+    publicPath: '',
+  },
+
+  experiments: {
+    asyncWebAssembly: true,
+  },
+
+  devtool: 'source-map',
+
+  plugins: [
+    new HtmlWebpackPlugin({ template: './index.html' }),
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: 'node_modules/cardano-wasm/dist/cardano-wasm.js',
+          to: 'cardano-wasm.js',
+        },
+      ],
+    }),
+  ],
+
+  module: {
+    rules: [
+      {
+        test: /\.wasm$/,
+        type: 'asset/resource',
+      },
+    ],
+  },
+
+  mode: 'development',
+};
+```
+
+Your `webpack.config.js` configuration may vary, but it could be necessary to adjust the `target`, `experiments`, `devtool`, `plugins`, and `module` keys as shown in the example above.
 
 -----
 
