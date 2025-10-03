@@ -63,6 +63,7 @@ export default [
         inlineDynamicImports: true,
       }
     ],
+    external: ['./cardano-wasm.wasm'],
     plugins
   }
 ];
