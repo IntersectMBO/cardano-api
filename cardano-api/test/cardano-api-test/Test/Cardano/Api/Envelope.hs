@@ -16,8 +16,6 @@ import Hedgehog qualified as H
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 prop_roundtrip_ByronVerificationKey_envelope :: Property
 prop_roundtrip_ByronVerificationKey_envelope =
   roundtrip_VerificationKey_envelope AsByronKey

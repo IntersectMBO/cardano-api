@@ -16,8 +16,6 @@ import Hedgehog qualified as H
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 -- Address CBOR round trips
 
 prop_roundtrip_shelley_address_raw :: Property

@@ -6,8 +6,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
-{- HLINT ignore "Use camelCase" -}
-
 module Test.Cardano.Api.TxBody
   ( tests
   )
