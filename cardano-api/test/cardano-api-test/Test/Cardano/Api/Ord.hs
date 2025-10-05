@@ -16,8 +16,6 @@ import Hedgehog.Gen qualified as H
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 ord_distributive
   :: (Show a, Ord a, Ord b)
   => H.Gen a -> (a -> b) -> Property

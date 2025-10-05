@@ -25,8 +25,6 @@ import Hedgehog.Gen.QuickCheck qualified as Q
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 -- | Test CIP-129 encodings. Contains examples from CIP-129 and dual hash types for committee roles.
 -- https://github.com/cardano-foundation/CIPs/blob/master/CIP-0129/README.md#abstract
 prop_decode_cip129 :: Property
