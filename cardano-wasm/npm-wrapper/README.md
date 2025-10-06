@@ -125,6 +125,32 @@ For a detailed understanding of all available functionalities, please refer to t
 
 -----
 
+## 🚗 Road map
+
+So far, `cardano-wasm` supports:
+- Basic wallet management.
+- Basic transaction building.
+- Transaction signing and submission through web-grpc.
+- Basic node communication through web-grpc.
+
+In the future, we aim to add support for:
+- Core wallet and staking features:
+  - Extended wallet management (with mnemonics and stake addresses)
+  - Staking and Delegation (certificates)
+  - Multi-asset and metadata support
+- Native scripts and Plutus support
+- Governance:
+  - DRep management
+  - Voting
+  - Constitution and committee management
+- Advanced transaction features
+  - Validity interval
+  - Reward withdrawals
+
+In parallel, we will be working on expanding the support for querying the node through gRPC and web-grpc.
+
+-----
+
 ## 📄 License
 
 This project is licensed under **Apache-2.0 license**.
