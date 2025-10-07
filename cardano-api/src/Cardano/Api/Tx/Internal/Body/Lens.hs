@@ -1,8 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 
-{- HLINT ignore "Eta reduce" -}
-
 module Cardano.Api.Tx.Internal.Body.Lens
   ( -- * Types
     LedgerTxBody (..)

@@ -11,8 +11,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-{- HLINT ignore "Redundant fmap" -}
-
 module Cardano.Api.LedgerState
   ( -- * Initialization / Accumulation
     envSecurityParam
@@ -995,8 +993,6 @@ extractHistory historySeq =
 
 getBlockNo :: WithOrigin BlockInMode -> BlockNo
 getBlockNo = Consensus.withOrigin (BlockNo 0) (blockNo . toConsensusBlock)
-
-{- HLINT ignore chainSyncClientPipelinedWithLedgerState "Use fmap" -}
 
 -- | A history of k (security parameter) recent ledger states. The head is the
 -- most recent item. Elements are:
