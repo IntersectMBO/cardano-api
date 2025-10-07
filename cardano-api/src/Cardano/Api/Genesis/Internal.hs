@@ -13,6 +13,7 @@ module Cardano.Api.Genesis.Internal
   , shelleyGenesisDefaults
   , alonzoGenesisDefaults
   , conwayGenesisDefaults
+  , dijkstraGenesisDefaults
 
     -- ** Configuration
   , ByronGenesisConfig
@@ -53,6 +54,8 @@ import Cardano.Ledger.Conway.PParams
   , PoolVotingThresholds (..)
   , UpgradeConwayPParams (..)
   )
+import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
+import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus qualified as L
 import Cardano.Ledger.Plutus.CostModels (mkCostModelsLenient)
@@ -185,6 +188,19 @@ shelleyGenesisDefaults =
   zeroTime = Time.UTCTime (Time.fromGregorian 1970 1 1) 0 -- tradition
   unsafeBR :: (HasCallStack, Typeable r, BoundedRational r) => Rational -> r
   unsafeBR = unsafeBoundedRational
+
+dijkstraGenesisDefaults :: DijkstraGenesis
+dijkstraGenesisDefaults =
+  -- copied from: https://github.com/IntersectMBO/cardano-ledger/blob/232511b0fa01cd848cd7a569d1acc322124cf9b8/eras/dijkstra/impl/testlib/Test/Cardano/Ledger/Dijkstra/ImpTest.hs#L121
+  DijkstraGenesis
+    { dgUpgradePParams =
+        UpgradeDijkstraPParams
+          { udppMaxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
+          , udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
+          , udppRefScriptCostStride = knownNonZeroBounded @25600 -- 25 KiB
+          , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          }
+    }
 
 -- | Some reasonable starting defaults for constructing a 'ConwayGenesis'.
 -- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs

@@ -3,6 +3,7 @@ module Cardano.Api.Genesis
   , shelleyGenesisDefaults
   , alonzoGenesisDefaults
   , conwayGenesisDefaults
+  , dijkstraGenesisDefaults
 
     -- ** Configuration
   , ByronGenesisConfig
