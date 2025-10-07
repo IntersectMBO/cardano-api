@@ -4,6 +4,22 @@ import ghc_wasm_jsffi from "./cardano-wasm.js";
 const __exports = {};
 
 export function createInitializer(getWasi, loadWasmModule) {
+  /**
+   * Global utilities module used in JS foreign imports in WASM
+   */
+  globalThis.cardanoWasm = {
+    /**
+     * Convert Base64 to Base16 encoding
+     */
+    base64ToHex: function(base64) {
+      const binary = atob(base64);
+      return [...binary].reduce((hex, char) => {
+        const byteHex = char.charCodeAt(0).toString(16).padStart(2, '0');
+        return hex + byteHex;
+      }, '');
+    }
+  }
+
   return async function initialise() {
 
     const WASI = await getWasi();
@@ -103,22 +119,6 @@ export function createInitializer(getWasi, loadWasmModule) {
     });
 
     return cardanoApi;
-  }
-
-  /**
-   * Global utilities module used in JS foreign imports in WASM
-   */
-  globalThis.cardanoWasm = {
-    /**
-     * Convert Base64 to Base16 encoding
-     */
-    base64ToHex: function(base64) {
-      const binary = atob(base64);
-      return [...binary].reduce((hex, char) => {
-        const byteHex = char.charCodeAt(0).toString(16).padStart(2, '0');
-        return hex + byteHex;
-      }, '');
-    }
   }
 };
 
