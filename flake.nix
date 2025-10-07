@@ -265,9 +265,13 @@
             # also provide hydraJobs through legacyPackages to allow building without system prefix:
             inherit hydraJobs;
           };
-          packages = lib.optionalAttrs (system != "aarch64-darwin") {
-            proto-js-bundle = proto-js-bundle-drv;
-          };
+          packages =
+            lib.optionalAttrs (system != "aarch64-darwin") {
+              proto-js-bundle = proto-js-bundle-drv;
+            }
+            // {
+              wasm-typedoc = wasm-typedoc-drv;
+            };
           devShells = let
             # profiling shell
             profilingShell = p: {

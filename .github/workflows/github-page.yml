@@ -1,4 +1,4 @@
-name: "Haddock documentation"
+name: "Update github pages"
 
 on:
   push:
@@ -34,27 +34,34 @@ jobs:
         run: |
           cabal build all
 
-      - name: Build documentation
+      - name: Build haddock documentation
         run: |
-          cabal haddock-project --output=./haddocks --internal --foreign-libraries
+          mkdir website
+          cabal haddock-project --output=./website --internal --foreign-libraries
 
-      - name: Compress haddocks
+      - name: Build typedoc documentation
         run: |
-          tar -czf haddocks.tgz -C haddocks .
+          nix build .#wasm-typedoc
+          mkdir -p website/cardano-wasm/typedoc
+          cp -r result/. website/cardano-wasm/typedoc/
 
-      - name: Upload haddocks artifact
+      - name: Compress website
+        run: |
+          tar -czf website.tgz -C website .
+
+      - name: Upload website artifact
         uses: actions/upload-artifact@v4
         if: ${{ always() }}
         continue-on-error: true
         with:
-          name: haddocks
-          path: ./haddocks.tgz
+          name: website
+          path: ./website.tgz
 
       - name: Deploy documentation to gh-pages 🚀
         if: github.ref == 'refs/heads/master'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN || github.token }}
-          publish_dir: haddocks
+          publish_dir: website
           cname: cardano-api.cardano.intersectmbo.org
           force_orphan: true
