@@ -3,6 +3,26 @@
 const __exports = {};
 
 export function createInitializer(getWasi, loadWasmModule) {
+  /**
+   * Global utilities module used in JS foreign imports in WASM
+   */
+  globalThis.cardanoWasm = {
+    /**
+     * Convert Base64 to Base16 encoding
+     */
+    base64ToHex: function (base64) {
+      if (typeof atob === 'function') {
+        const binary = atob(base64);
+        return [...binary].reduce((hex, char) => {
+          const byteHex = char.charCodeAt(0).toString(16).padStart(2, '0');
+          return hex + byteHex;
+        }, '');
+      } else {
+        return Buffer.from(base64, 'base64').toString('hex');
+      }
+    }
+  };
+
   return async function initialise() {
 
     const ghc_wasm_jsffi = (await eval(`import('./cardano-wasm.js')`)).default;
@@ -107,26 +127,6 @@ export function createInitializer(getWasi, loadWasmModule) {
     });
 
     return cardanoApi;
-  }
-
-  /**
-   * Global utilities module used in JS foreign imports in WASM
-   */
-  globalThis.cardanoWasm = {
-    /**
-     * Convert Base64 to Base16 encoding
-     */
-    base64ToHex: function(base64) {
-      if (typeof atob === 'function') {
-        const binary = atob(base64);
-        return [...binary].reduce((hex, char) => {
-          const byteHex = char.charCodeAt(0).toString(16).padStart(2, '0');
-          return hex + byteHex;
-        }, '');
-      } else {
-        return Buffer.from(base64, 'base64').toString('hex');
-      }
-    }
   }
 };
 
