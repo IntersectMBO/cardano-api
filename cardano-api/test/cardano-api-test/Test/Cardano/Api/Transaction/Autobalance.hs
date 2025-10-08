@@ -7,8 +7,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
-{- HLINT ignore "Use camelCase" -}
-
 module Test.Cardano.Api.Transaction.Autobalance
   ( tests
   )

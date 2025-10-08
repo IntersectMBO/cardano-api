@@ -9,8 +9,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-{- HLINT ignore "Avoid lambda using `infix`" -}
-
 -- | Cardano addresses: payment and stake addresses.
 module Cardano.Api.Address
   ( -- * Payment addresses

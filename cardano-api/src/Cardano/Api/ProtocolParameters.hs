@@ -20,8 +20,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Redundant ==" #-}
-
 -- | The various Cardano protocol parameters, including:
 --
 -- * the current values of updatable protocol parameters: 'ProtocolParameters'

@@ -15,9 +15,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{- HLINT ignore "Avoid lambda using `infix`" -}
-{- HLINT ignore "Use section" -}
-
 module Cardano.Api.Plutus.Internal.Script
   ( -- * Languages
     SimpleScript'

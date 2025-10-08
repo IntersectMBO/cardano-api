@@ -82,9 +82,6 @@ import Data.ByteString.Short qualified as SBS
 import Data.Foldable (Foldable (toList))
 import Data.Text (Text)
 
-{- HLINT ignore "Use lambda" -}
-{- HLINT ignore "Use lambda-case" -}
-
 -- ----------------------------------------------------------------------------
 -- Blocks in an era
 --

@@ -57,11 +57,10 @@ import Ouroboros.Consensus.Byron.Ledger.Mempool qualified as Mempool
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as LB
+import Data.Functor (void)
 import Data.Map.Strict qualified as M
 import Data.Word
 import Numeric.Natural
-
-{- HLINT ignore "Use void" -}
 
 -- | Byron era update proposal
 newtype ByronUpdateProposal
@@ -193,7 +192,7 @@ instance HasTypeProxy ByronVote where
   proxyToAsType _ = AsByronVote
 
 instance SerialiseAsRawBytes ByronVote where
-  serialiseToRawBytes (ByronVote vote) = Binary.serialize' $ fmap (const ()) vote
+  serialiseToRawBytes (ByronVote vote) = Binary.serialize' $ void vote
   deserialiseFromRawBytes AsByronVote bs =
     let lBs = LB.fromStrict bs
      in case Binary.decodeFull lBs of

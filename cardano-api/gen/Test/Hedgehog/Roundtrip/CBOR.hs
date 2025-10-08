@@ -23,8 +23,6 @@ import GHC.Stack qualified as GHC
 import Hedgehog qualified as H
 import Hedgehog.Internal.Property (failWith)
 
-{- HLINT ignore "Use camelCase" -}
-
 -- | Assert that CBOR serialisation and deserialisation roundtrips.
 trippingCbor
   :: ()
