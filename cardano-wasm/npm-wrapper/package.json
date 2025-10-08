@@ -29,7 +29,7 @@
   "files": [
     "dist"
   ],
-  "author": "",
+  "author": "Input Output Global <operations@iohk.io>",
   "license": "Apache-2.0",
   "types": "./cardano-api.d.ts",
   "bugs": {
