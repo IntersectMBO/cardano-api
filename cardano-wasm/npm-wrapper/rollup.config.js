@@ -1,11 +1,15 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import copy from 'rollup-plugin-copy';
+import { string } from 'rollup-plugin-string';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
 const plugins = [
   resolve({ browser: true }),
+  string({
+    include: '**/cardano_node_grpc_web_pb.js',
+  }),
   commonjs(),
 ];
 
