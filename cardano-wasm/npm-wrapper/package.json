@@ -31,7 +31,7 @@
   ],
   "author": "Input Output Global <operations@iohk.io>",
   "license": "Apache-2.0",
-  "types": "./cardano-api.d.ts",
+  "types": "./dist/cardano-api.d.ts",
   "bugs": {
     "url": "https://github.com/IntersectMBO/cardano-api/issues"
   },
@@ -40,6 +40,7 @@
   "browser": "./dist/browser.mjs",
   "exports": {
     ".": {
+      "types": "./dist/cardano-api.d.ts",
       "browser": "./dist/browser.mjs",
       "import": "./dist/node.mjs",
       "require": "./dist/node.cjs"
