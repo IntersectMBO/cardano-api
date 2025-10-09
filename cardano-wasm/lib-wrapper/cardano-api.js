@@ -1,3 +1,10 @@
+/**
+ * This is an entry point for the cardano-wasm API for
+ * use from vanilla JS, from the browser without bundling
+ * nor using NPM. See the README.md and examples folder
+ * for more info.
+ **/
+
 import { createInitializer } from './main.js';
 
 const wasmUrl = './cardano-wasm.wasm';

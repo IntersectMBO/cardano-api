@@ -1,5 +1,17 @@
 /// <reference path="./cardano-api.d.ts" />
 
+/**
+ * This module abstracts the resource fetching so that
+ * it can be done in different ways depending on the
+ * environment (e.g: node.js, webpack, vite, vanilla js).
+ *
+ * The entry point is a wrapper that is specific for
+ * each environment. For example, "cardano-api.js"
+ * provides an entry point for use from vanilla JS from
+ * the browser directly. We will provide other wrappers
+ * for the NPM package (e.g: "browser.js" and "node.js").
+ **/
+
 import ghc_wasm_jsffi from "./cardano-wasm.js";
 const __exports = {};
 
