@@ -51,7 +51,7 @@ module Cardano.Api.Era
   , module Cardano.Api.Era.Internal.Feature
 
     -- * Data family instances
-  , AsType (AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
+  , AsType (AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra, AsDijkstraEra)
 
     -- * Era case handling
 
