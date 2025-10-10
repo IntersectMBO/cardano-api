@@ -23,6 +23,7 @@ in
     src = cardano-rpc-src;
 
     nativeBuildInputs = [
+      pkgs.grpc-tools
       pkgs.protobuf
       pkgs.protoc-gen-js
       pkgs.protoc-gen-grpc-web
@@ -46,8 +47,11 @@ in
       do
         protoc \
           -I="$PROTO_INCLUDE_PATH" \
+          -I="${pkgs.protobuf}/include" \
+          --plugin=protoc-gen-grpc=${pkgs.grpc-tools}/bin/grpc_node_plugin \
           --js_out=import_style=commonjs,binary:"$GEN_JS_PATH" \
           --grpc-web_out=import_style=commonjs,mode=grpcwebtext:"$GEN_JS_PATH" \
+          --grpc_out=grpc_js,import_style=commonjs:"$GEN_JS_PATH" \
           "$PROTO_FILE"
       done
 
@@ -101,8 +105,17 @@ in
     installPhase = ''
       runHook preInstall
       mkdir -p $out
-      # Copy the final, correctly named bundle to the output directory.
+
+      echo "--- Installing browser bundle ---"
       cp ./bundled-js/cardano_node_grpc_web_pb.js $out/
+
+      echo "--- Installing Node.js modules ---"
+      mkdir -p $out/node
+      cp -r ./generated-js/* $out/node/
+
+      echo "--- Installation complete. Output structure: ---"
+      ls -R $out
+
       runHook postInstall
     '';
 
