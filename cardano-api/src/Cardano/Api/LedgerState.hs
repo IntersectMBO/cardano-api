@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -10,6 +11,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-x-ord-preserving-coercions #-}
+#if __GLASGOW_HASKELL__ < 908
+{-# OPTIONS_GHC -Wno-unrecognised-warning-flags #-}
+#endif
 
 module Cardano.Api.LedgerState
   ( -- * Initialization / Accumulation
@@ -207,6 +212,7 @@ import Ouroboros.Consensus.Shelley.HFEras qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Block qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Ledger qualified as Shelley
 import Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
+import Ouroboros.Consensus.Util (coerceMapKeys)
 import Ouroboros.Network.Block (blockNo)
 import Ouroboros.Network.Block qualified
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as CS
@@ -2285,7 +2291,7 @@ getLedgerTablesUTxOValues sbe tbs =
       -> Map TxIn (TxOut CtxUTxO era)
     ejectTables idx =
       let Consensus.LedgerTables (Ledger.ValuesMK values) = HFC.ejectLedgerTables idx tbs
-       in Map.mapKeys fromShelleyTxIn $ Map.map (fromShelleyTxOut sbe) values
+       in Map.mapKeys fromShelleyTxIn $ coerceMapKeys $ Map.map (fromShelleyTxOut sbe) values
    in
     case sbe of
       ShelleyBasedEraShelley -> ejectTables (IS IZ)
