@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-09-11T01:58:40Z
-  , cardano-haskell-packages 2025-10-20T10:49:20Z
+  , hackage.haskell.org 2025-09-26T20:57:57Z
+  , cardano-haskell-packages 2025-10-01T14:54:25Z
 
 packages:
     cardano-api
@@ -177,3 +177,41 @@ if arch(wasm32)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+source-repository-package
+   type: git
+   location: https://github.com/IntersectMBO/ouroboros-consensus
+   tag: 50c611ab8237d544c3ba57b8ffae67c0684dcbb8
+   subdir:
+     ouroboros-consensus
+     ouroboros-consensus-cardano
+     ouroboros-consensus-diffusion
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: fb09078fa55015c881303a2ddb609c024cec258f
+  --sha256: sha256-9Y9CRiyMn0AWD+C4aNVMaJgrj3FDAYfCX4VrLvtoMaI=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley/test-suite
+    eras/shelley-ma/test-suite
+    libs/cardano-ledger-api
+    libs/cardano-ledger-core
+    libs/cardano-ledger-binary
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/cardano-data
+    libs/set-algebra
+    libs/vector-map
+    eras/byron/chain/executable-spec
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/crypto
