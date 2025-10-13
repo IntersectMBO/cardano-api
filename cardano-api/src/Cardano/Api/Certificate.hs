@@ -31,9 +31,6 @@ module Cardano.Api.Certificate
   , makeDrepUpdateCertificate
   , makeStakeAddressAndDRepDelegationCertificate
 
-    -- * Registering DReps
-  , DRepMetadataReference (..)
-
     -- * Special certificates
   , GenesisKeyDelegationRequirements (..)
   , MirCertificateRequirements (..)
