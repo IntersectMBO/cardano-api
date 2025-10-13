@@ -46,9 +46,6 @@ module Cardano.Api.Certificate.Internal
   , makeDrepUpdateCertificate
   , makeStakeAddressAndDRepDelegationCertificate
 
-    -- * Registering DReps
-  , DRepMetadataReference (..)
-
     -- * Special certificates
   , GenesisKeyDelegationRequirements (..)
   , MirCertificateRequirements (..)
@@ -279,17 +276,6 @@ data StakePoolMetadataReference
   = StakePoolMetadataReference
   { stakePoolMetadataURL :: Text
   , stakePoolMetadataHash :: Hash StakePoolMetadata
-  }
-  deriving (Eq, Show)
-
--- ----------------------------------------------------------------------------
--- DRep parameters
---
--- TODO: Remove me, its not in use anywhere
-data DRepMetadataReference
-  = DRepMetadataReference
-  { drepMetadataURL :: Text
-  , drepMetadataHash :: Hash DRepMetadata
   }
   deriving (Eq, Show)
 
