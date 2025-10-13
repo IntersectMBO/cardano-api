@@ -180,7 +180,7 @@ if arch(wasm32)
 source-repository-package
    type: git
    location: https://github.com/IntersectMBO/ouroboros-consensus
-   tag: 50c611ab8237d544c3ba57b8ffae67c0684dcbb8
+   tag: a284bc406cb10af5d714e15cbb85839886c360ba
    subdir:
      ouroboros-consensus
      ouroboros-consensus-cardano
