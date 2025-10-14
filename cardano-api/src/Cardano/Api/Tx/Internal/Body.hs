@@ -279,7 +279,6 @@ import Cardano.Ledger.Allegra.Core qualified as L
 import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tx qualified as L
--- import Cardano.Ledger.Alonzo.Tx qualified as Alonzo (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Babbage.UTxO qualified as L
@@ -1982,12 +1981,18 @@ convPParamsToScriptIntegrityHash
   -> Set Plutus.Language
   -> StrictMaybe L.ScriptIntegrityHash
 convPParamsToScriptIntegrityHash w (BuildTxWith mTxProtocolParams) redeemers datums languages =
-  alonzoEraOnwardsConstraints w $
-    case mTxProtocolParams of
-      Nothing -> SNothing
-      Just (LedgerProtocolParameters pp) ->
-        let scriptIntegrity = L.ScriptIntegrity redeemers datums (Set.map (L.getLanguageView pp) languages)
-         in SJust $ L.hashScriptIntegrity scriptIntegrity
+  alonzoEraOnwardsConstraints w $ do
+    LedgerProtocolParameters pp <- Ledger.maybeToStrictMaybe mTxProtocolParams
+    -- This logic is copied from ledger, because their code is not reusable
+    -- c.f. https://github.com/IntersectMBO/cardano-ledger/commit/5a975d9af507c9ee835a86d3bb77f3e2670ad228#diff-8236dfec9688f22550b91fc9a87af9915523ab9c5bd817218ecceec8ca7a789bR282
+    let shouldCalculateHash =
+          not $
+            null (redeemers ^. L.unRedeemersL)
+              && null (datums ^. L.unTxDatsL)
+              && null languages
+    guard shouldCalculateHash
+    let scriptIntegrity = L.ScriptIntegrity redeemers datums (Set.map (L.getLanguageView pp) languages)
+    pure $ L.hashScriptIntegrity scriptIntegrity
 
 convLanguages :: [(ScriptWitnessIndex, AnyScriptWitness era)] -> Set Plutus.Language
 convLanguages witnesses =
