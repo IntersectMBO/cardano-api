@@ -16,7 +16,15 @@ const loadWasmModule = async (importObject) => {
     return await WebAssembly.instantiateStreaming(response, importObject);
 };
 
-const initialise = createInitializer(getWasiInstance, loadWasmModule);
+const createClient = function (address) {
+    return {
+        node: new cardano_node.node.NodePromiseClient(address, null, null),
+        query: new cardano_node.query.QueryServicePromiseClient(address, null, null),
+        submit: new cardano_node.submit.SubmitServicePromiseClient(address, null, null)
+    }
+}
+
+const initialise = createInitializer(getWasiInstance, loadWasmModule, createClient);
 
 export default initialise;
 
