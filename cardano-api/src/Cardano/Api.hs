@@ -48,6 +48,9 @@ module Cardano.Api
   , module Cardano.Api.Key
   , module Cardano.Api.Hash
 
+    -- * HasTypeProxy
+  , module Cardano.Api.HasTypeProxy
+
     -- * Transaction building
   , module Cardano.Api.Tx
 
