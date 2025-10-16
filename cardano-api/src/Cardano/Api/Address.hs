@@ -53,6 +53,7 @@ module Cardano.Api.Address
   , StakeExtendedKey
 
     -- * Conversion functions
+  , shelleyPayAddrToPaymentKeyHash
   , shelleyPayAddrToPlutusPubKHash
 
     -- * Internal conversion functions
@@ -113,6 +114,7 @@ import Data.Bifunctor (first)
 import Data.ByteString.Base58 qualified as Base58
 import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
 import Data.Either.Combinators (rightToMaybe)
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -612,10 +614,13 @@ makeStakeAddress nw sc =
 -- | Is the UTxO at the address only spendable via a key witness.
 isKeyAddress :: AddressInEra era -> Bool
 isKeyAddress (AddressInEra ByronAddressInAnyEra _) = True
-isKeyAddress (AddressInEra (ShelleyAddressInEra _) (ShelleyAddress _ pCred _)) =
+isKeyAddress (AddressInEra (ShelleyAddressInEra _) addr) = isJust $ shelleyPayAddrToPaymentKeyHash addr
+
+shelleyPayAddrToPaymentKeyHash :: Address ShelleyAddr -> Maybe (Hash PaymentKey)
+shelleyPayAddrToPaymentKeyHash (ShelleyAddress _ pCred _) =
   case fromShelleyPaymentCredential pCred of
-    PaymentCredentialByKey _ -> True
-    PaymentCredentialByScript _ -> False
+    PaymentCredentialByKey key -> Just key
+    PaymentCredentialByScript _ -> Nothing
 
 -- | Converts a Shelley payment address to a Plutus public key hash.
 shelleyPayAddrToPlutusPubKHash :: Address ShelleyAddr -> Maybe PlutusAPI.PubKeyHash
