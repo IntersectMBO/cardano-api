@@ -165,7 +165,6 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.Coin qualified as SL
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
 import Cardano.Ledger.Keys qualified as SL
@@ -209,8 +208,6 @@ import Ouroboros.Consensus.Protocol.TPraos qualified as TPraos
 import Ouroboros.Consensus.Shelley.HFEras qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Block qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Ledger qualified as Shelley
-import Ouroboros.Consensus.Shelley.Ledger.Query.Types qualified as Consensus
-import Ouroboros.Consensus.Shelley.Ledger.Query.Types qualified as Shelley
 import Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import Ouroboros.Network.Block (blockNo)
 import Ouroboros.Network.Block qualified

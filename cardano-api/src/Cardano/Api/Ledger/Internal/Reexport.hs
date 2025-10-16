@@ -46,6 +46,9 @@ module Cardano.Api.Ledger.Internal.Reexport
   , pattern UpdateDRepTxCert
   -- Core
   , Coin (..)
+  , Compactible (..)
+  , partialCompactFL
+  , toCompactPartial
   , EraPParams (..)
   , Era (..)
   , EraTxOut
@@ -274,6 +277,7 @@ import Cardano.Ledger.Binary
   )
 import Cardano.Ledger.Binary.Plain (Decoder, serializeAsHexText)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Core
   ( DRepVotingThresholds (..)
   , PoolVotingThresholds (..)
