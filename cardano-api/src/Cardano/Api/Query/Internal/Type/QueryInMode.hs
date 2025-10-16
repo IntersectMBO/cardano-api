@@ -42,7 +42,6 @@ module Cardano.Api.Query.Internal.Type.QueryInMode
   , SerialisedPoolState (..)
   , PoolState (..)
   , decodePoolState
-  , SerialisedPoolDistribution (..)
   , PoolDistribution (..)
   , decodePoolDistribution
   , SerialisedStakeSnapshots (..)
@@ -115,7 +114,6 @@ import Ouroboros.Consensus.HardFork.History.Qry qualified as Qry
 import Ouroboros.Consensus.Ledger.Query qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
-import Ouroboros.Consensus.Shelley.Ledger.Query.Types qualified as Consensus
 import Ouroboros.Network.Block (Serialised (..))
 import Ouroboros.Network.PeerSelection.LedgerPeers.Type
 import Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
@@ -277,7 +275,7 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era SerialisedPoolState
   QueryPoolDistribution
     :: Maybe (Set PoolId)
-    -> QueryInShelleyBasedEra era (SerialisedPoolDistribution era)
+    -> QueryInShelleyBasedEra era (Serialised (PoolDistribution era))
   QueryStakeSnapshot
     :: Maybe (Set PoolId)
     -> QueryInShelleyBasedEra era (SerialisedStakeSnapshots era)
@@ -402,20 +400,16 @@ decodePoolState sbe (SerialisedPoolState (Serialised ls)) =
   shelleyBasedEraConstraints sbe $
     PoolState <$> decodeFull (Core.eraProtVerLow @(ShelleyLedgerEra era)) ls
 
-newtype SerialisedPoolDistribution era
-  = SerialisedPoolDistribution
-      (Serialised Shelley.PoolDistr)
-
 newtype PoolDistribution era = PoolDistribution
-  { unPoolDistr :: Consensus.PoolDistr StandardCrypto
+  { unPoolDistr :: Shelley.PoolDistr
   }
 
 decodePoolDistribution
   :: forall era
    . ShelleyBasedEra era
-  -> SerialisedPoolDistribution era
+  -> Serialised (PoolDistribution era)
   -> Either DecoderError (PoolDistribution era)
-decodePoolDistribution sbe (SerialisedPoolDistribution (Serialised ls)) =
+decodePoolDistribution sbe (Serialised ls) =
   PoolDistribution <$> decodeFull (eraProtVerLow sbe) ls
 
 newtype SerialisedStakeSnapshots era
@@ -958,7 +952,7 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryPoolDistribution{} ->
       case q' of
         Consensus.GetCBOR Consensus.GetPoolDistr2{} ->
-          SerialisedPoolDistribution r'
+          Serialised . unSerialised $ r'
         _ -> fromConsensusQueryResultMismatch
     QueryStakeSnapshot{} ->
       case q' of

@@ -22,7 +22,6 @@ module Cardano.Api.Query
   , SerialisedPoolState (..)
   , PoolState (..)
   , decodePoolState
-  , SerialisedPoolDistribution (..)
   , PoolDistribution (..)
   , decodePoolDistribution
   , SerialisedStakeSnapshots (..)

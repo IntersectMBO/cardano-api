@@ -190,7 +190,7 @@ queryPoolDistribution
        QueryInMode
        r
        IO
-       (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolDistribution era)))
+       (Either UnsupportedNtcVersionError (Either EraMismatch (Serialised (PoolDistribution era))))
 queryPoolDistribution eon = querySbe eon . QueryPoolDistribution
 
 queryPoolState

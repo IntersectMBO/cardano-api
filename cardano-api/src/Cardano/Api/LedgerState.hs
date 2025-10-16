@@ -119,6 +119,7 @@ import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
 import Cardano.Api.LedgerState.Internal.ConvertLedgerEvent
 import Cardano.Api.LedgerState.Internal.LedgerEvent
 import Cardano.Api.Monad.Error
+import Cardano.Api.Network (Serialised (..))
 import Cardano.Api.Network.IPC.Internal
   ( LocalChainSyncClient (LocalChainSyncClientPipelined)
   , LocalNodeClientProtocols (..)
@@ -133,7 +134,6 @@ import Cardano.Api.Query.Internal.Type.QueryInMode
   , PoolDistribution (unPoolDistr)
   , ProtocolState
   , SerialisedCurrentEpochState (..)
-  , SerialisedPoolDistribution
   , decodeCurrentEpochState
   , decodePoolDistribution
   , decodeProtocolState
@@ -1967,6 +1967,7 @@ data LeadershipError
   = LeaderErrDecodeLedgerStateFailure
   | LeaderErrDecodeProtocolStateFailure (LBS.ByteString, DecoderError)
   | LeaderErrDecodeProtocolEpochStateFailure DecoderError
+  | LeaderErrDecodePoolDistributionFailure DecoderError
   | LeaderErrGenesisSlot
   | LeaderErrStakePoolHasNoStake PoolId
   | LeaderErrStakeDistribUnstable
@@ -1995,6 +1996,8 @@ instance Api.Error LeadershipError where
       "Leadership schedule currently cannot be calculated from genesis"
     LeaderErrStakePoolHasNoStake poolId ->
       "The stake pool: " <> pshow poolId <> " has no stake"
+    LeaderErrDecodePoolDistributionFailure decoderError ->
+      "Failed to successfully decode the pool stake distribution: " <> pshow decoderError
     LeaderErrDecodeProtocolEpochStateFailure decoderError ->
       "Failed to successfully decode the current epoch state: " <> pshow decoderError
     LeaderErrStakeDistribUnstable curSlot stableAfterSlot stabWindow predictedLastSlot ->
@@ -2192,7 +2195,7 @@ currentEpochEligibleLeadershipSlots
   -> ProtocolState era
   -> PoolId
   -> SigningKey VrfKey
-  -> SerialisedPoolDistribution era
+  -> Serialised (PoolDistribution era)
   -> EpochNo
   -- ^ Current EpochInfo
   -> Either LeadershipError (Set SlotNo)
@@ -2211,9 +2214,10 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigni
       first LeaderErrSlotRangeCalculationFailure $
         Slot.epochInfoRange eInfo currentEpoch
 
+    -- FUCKED UP HERE:
     setSnapshotPoolDistr <-
-      first LeaderErrDecodeProtocolEpochStateFailure
-        . fmap (SL.unPoolDistr . fromConsensusPoolDistr . unPoolDistr)
+      first LeaderErrDecodePoolDistributionFailure
+        . fmap (SL.unPoolDistr . unPoolDistr)
         $ decodePoolDistribution sbe serPoolDistr
 
     let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
@@ -2552,22 +2556,3 @@ handleExceptions = liftEither <=< liftIO . runExceptT . flip catches handlers
     [ Handler $ throwError . FoldBlocksIOException
     , Handler $ throwError . FoldBlocksMuxError
     ]
-
--- WARNING: Do NOT use this function anywhere else except in its current call sites.
--- This is a temporary work around.
-fromConsensusPoolDistr :: Consensus.PoolDistr c -> SL.PoolDistr
-fromConsensusPoolDistr cpd =
-  SL.PoolDistr
-    { SL.unPoolDistr = Map.map toLedgerIndividualPoolStake $ Shelley.unPoolDistr cpd
-    , SL.pdTotalActiveStake = SL.CompactCoin 0
-    }
-
--- WARNING: Do NOT use this function anywhere else except in its current call sites.
--- This is a temporary work around.
-toLedgerIndividualPoolStake :: Consensus.IndividualPoolStake c -> SL.IndividualPoolStake
-toLedgerIndividualPoolStake ips =
-  SL.IndividualPoolStake
-    { SL.individualPoolStake = Shelley.individualPoolStake ips
-    , SL.individualPoolStakeVrf = SL.toVRFVerKeyHash $ Shelley.individualPoolStakeVrf ips
-    , SL.individualTotalPoolStake = SL.CompactCoin 0
-    }
