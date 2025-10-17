@@ -58,6 +58,13 @@ To run this file, you can simply use Node.js:
 node index.js
 ```
 
+When using `node.js`, the `grpc` module will use normal GRPC and can be used with UNIX socket files as follows:
+
+```bash
+    const grpc = await api.newGrpcConnection("unix:///path/to/cardano-node/rpc/socket/node1/rpc.sock");
+    const era = await grpc.getEra();
+```
+
 ### Webpack
 
 Alternatively you can use `cardano-wasm` as part of a `webpack` project, but you'll need to install `html-webpack-plugin` and `copy-webpack-plugin`:
@@ -116,6 +123,8 @@ module.exports = {
 ```
 
 Your `webpack.config.js` configuration may vary, but it could be necessary to adjust the `target`, `experiments`, `devtool`, `plugins`, and `module` keys as shown in the example above.
+
+When using from the browser, the `grpc` module uses `web-grpc`, so the RPC socket from `cardano-node` needs to be proxied with a tool like `envoy` (see the [README.md](https://github.com/IntersectMBO/cardano-api/tree/master/cardano-wasm) at GitHub repo for more info).
 
 -----
 

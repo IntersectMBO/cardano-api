@@ -2,10 +2,12 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import copy from 'rollup-plugin-copy';
 import { string } from 'rollup-plugin-string';
+import json from '@rollup/plugin-json';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
 const plugins = [
+  json(),
   resolve({ browser: true }),
   string({
     include: '**/cardano_node_grpc_web_pb.js',
@@ -45,7 +47,7 @@ export default [
       })
     ],
     // Mark Node.js built-in modules as external so they are not bundled.
-    external: ['fs/promises', 'path', 'url', 'wasi']
+    external: ['fs/promises', 'path', 'url', 'wasi', '@grpc/grpc-js', 'google-protobuf']
   },
 
   // --- Browser Builds ---

@@ -14,7 +14,7 @@
 
 const __exports = {};
 
-export function createInitializer(getWasi, loadWasmModule) {
+export function createInitializer(getWasi, loadWasmModule, createClient) {
   /**
    * Global utilities module used in JS foreign imports in WASM
    */
@@ -34,6 +34,8 @@ export function createInitializer(getWasi, loadWasmModule) {
       }
     }
   }
+
+  globalThis.createClient = createClient;
 
   return async function initialise() {
 

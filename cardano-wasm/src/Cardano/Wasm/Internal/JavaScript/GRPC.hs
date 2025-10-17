@@ -10,10 +10,7 @@ import GHC.Wasm.Prim
 import Cardano.Wasm.Internal.Api.Tx (ProtocolParamsJSON(..))
 
 -- | Create a GRPC-web client for the Cardano API.
-foreign import javascript safe "{ node: new cardano_node.node.NodePromiseClient($1, null, null), \
-                                  query: new cardano_node.query.QueryServicePromiseClient($1, null, null), \
-                                  submit: new cardano_node.submit.SubmitServicePromiseClient($1, null, null) \
-                                }"
+foreign import javascript safe "globalThis.createClient($1)"
   js_newWebGrpcClientImpl :: JSString -> IO JSVal
 
 js_newWebGrpcClient :: String -> IO JSVal
