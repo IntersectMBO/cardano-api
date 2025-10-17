@@ -184,6 +184,21 @@ jobs:
     - name: Build grpc bridge
       run: |
         nix build .#proto-js-bundle
+
+    - name: Prepare NPM package
+      run: |
+        cp cardano-wasm/lib-wrapper/* cardano-wasm/npm-wrapper/src/
+        rm cardano-wasm/npm-wrapper/src/cardano-api.js
+        cp result/cardano_node_grpc_web_pb.js cardano-wasm/npm-wrapper/src/
+        cp -r result/node cardano-wasm/npm-wrapper/src/
+        cd cardano-wasm/npm-wrapper
+        npm install
+        npm run build
+        npm test
+        npm pack
+
+    - name: Prepare wasm library
+      run: |
         cp result/cardano_node_grpc_web_pb.js cardano-wasm/lib-wrapper/
 
     - name: Upload built wasm library
@@ -192,6 +207,12 @@ jobs:
         name: cardano-wasm
         path: cardano-wasm/lib-wrapper/*
         compression-level: 9
+
+    - name: Upload built NPM package
+      uses: actions/upload-artifact@v4
+      with:
+        name: npm-package
+        path: cardano-wasm/npm-wrapper/*.tgz
 
   wasm-builds-complete:
     needs: [build]
