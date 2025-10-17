@@ -1,28 +1,44 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   ( utxoRpcPParamsToProtocolParams
+  , utxoToUtxoRpcAnyUtxoData
   , protocolParamsToUtxoRpcPParams
+  , simpleScriptToUtxoRpcNativeScript
   , mkChainPointMsg
   )
 where
 
+import Cardano.Api (SerialiseAsCBOR (serialiseToCBOR), ToCBOR (..))
+import Cardano.Api.Address
 import Cardano.Api.Block
+import Cardano.Api.Block (SlotNo (..))
 import Cardano.Api.Era
+import Cardano.Api.Error
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Monad.Error
+import Cardano.Api.Plutus
+import Cardano.Api.Pretty
+import Cardano.Api.Serialise.Raw
+import Cardano.Api.Serialise.SerialiseUsing
+import Cardano.Api.Tx
+import Cardano.Api.Value
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Orphans ()
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (WithOrigin (..))
+import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.Binary.Version qualified as L
 import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Conway.PParams qualified as L
@@ -33,6 +49,7 @@ import RIO hiding (toList)
 import Data.ByteString.Short qualified as SBS
 import Data.Default
 import Data.ProtoLens (defMessage)
+import Data.Text.Encoding qualified as T
 import GHC.IsList
 import Network.GRPC.Spec
 
@@ -217,3 +234,80 @@ mkChainPointMsg chainPoint blockNo = do
     & #slot .~ slotNo
     & #hash .~ blockHash
     & #height .~ blockHeight
+
+simpleScriptToUtxoRpcNativeScript :: SimpleScript -> Proto UtxoRpc.NativeScript
+simpleScriptToUtxoRpcNativeScript = \case
+  RequireSignature paymentKeyHash ->
+    defMessage & #scriptPubkey .~ serialiseToRawBytes paymentKeyHash
+  RequireTimeBefore (SlotNo slotNo) ->
+    defMessage & #invalidHereafter .~ slotNo
+  RequireTimeAfter (SlotNo slotNo) ->
+    defMessage & #invalidBefore .~ slotNo
+  RequireAllOf scripts ->
+    defMessage & #scriptAll . #items .~ map simpleScriptToUtxoRpcNativeScript scripts
+  RequireAnyOf scripts ->
+    defMessage & #scriptAny . #items .~ map simpleScriptToUtxoRpcNativeScript scripts
+  RequireMOf k scripts -> do
+    let nScriptsOf =
+          defMessage
+            & #k .~ fromIntegral k
+            & #scripts .~ map simpleScriptToUtxoRpcNativeScript scripts
+    defMessage & #scriptNOfK .~ nScriptsOf
+
+referenceScriptToUtxoRpcScript :: ReferenceScript era -> Proto UtxoRpc.Script
+referenceScriptToUtxoRpcScript ReferenceScriptNone = defMessage
+referenceScriptToUtxoRpcScript (ReferenceScript _ (ScriptInAnyLang _ script)) =
+  case script of
+    SimpleScript ss ->
+      defMessage & #native .~ simpleScriptToUtxoRpcNativeScript ss
+    PlutusScript PlutusScriptV1 ps ->
+      defMessage & #plutusV1 .~ serialiseToRawBytes ps
+    PlutusScript PlutusScriptV2 ps ->
+      defMessage & #plutusV2 .~ serialiseToRawBytes ps
+    PlutusScript PlutusScriptV3 ps ->
+      defMessage & #plutusV3 .~ serialiseToRawBytes ps
+
+utxoToUtxoRpcAnyUtxoData :: forall era. IsCardanoEra era => UTxO era -> [Proto UtxoRpc.AnyUtxoData]
+utxoToUtxoRpcAnyUtxoData utxo =
+  toList utxo <&> \(txIn, TxOut addressInEra txOutValue datum script) -> do
+    let multiAsset =
+          fromList $
+            toList (valueToPolicyAssets $ txOutValueToValue txOutValue) <&> \(pId, policyAssets) -> do
+              let assets =
+                    toList policyAssets <&> \(assetName, Quantity qty) -> do
+                      defMessage
+                        & #name .~ serialiseToRawBytes assetName
+                        -- we don't have access to info if the coin was minted in the transaction,
+                        -- maybe we should add it later
+                        & #maybe'mintCoin .~ Nothing
+                        & #outputCoin .~ fromIntegral qty
+              defMessage
+                & #policyId .~ serialiseToRawBytes pId
+                & #assets .~ assets
+        datumRpc = case datum of
+          TxOutDatumNone ->
+            defMessage
+          TxOutDatumHash _ scriptDataHash ->
+            defMessage
+              & #hash .~ serialiseToRawBytes scriptDataHash
+              & #maybe'payload .~ Nothing -- we don't have it
+              & #originalCbor .~ mempty -- we don't have it
+          TxOutDatumInline _ hashableScriptData ->
+            defMessage
+              & #hash .~ serialiseToRawBytes (hashScriptDataBytes hashableScriptData)
+              & #payload .~ inject (getScriptData hashableScriptData)
+              & #originalCbor .~ getOriginalScriptDataBytes hashableScriptData
+
+        protoTxOut =
+          defMessage
+            -- TODO we don't have serialiseToRawBytes for AddressInEra, so perhaps this is wrong, because 'address'
+            -- has type bytes, but we're putting text there
+            & #address .~ T.encodeUtf8 (cardanoEraConstraints (cardanoEra @era) $ serialiseAddress addressInEra)
+            & #coin .~ fromIntegral (L.unCoin (txOutValueToLovelace txOutValue))
+            & #assets .~ multiAsset
+            & #datum .~ datumRpc
+            & #script .~ referenceScriptToUtxoRpcScript script
+    defMessage
+      & #nativeBytes .~ "" -- TODO where to get that from? run cbor serialisation of utxos list?
+      & #txoRef .~ inject txIn
+      & #cardano .~ protoTxOut
