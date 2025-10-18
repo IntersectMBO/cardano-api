@@ -65,6 +65,7 @@ import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Feature
 import Cardano.Api.Error
+import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus
 import Cardano.Api.Pretty
@@ -1535,7 +1536,7 @@ substituteExecutionUnits
     mapScriptWitnessesCertificates TxCertificatesNone = Right TxCertificatesNone
     mapScriptWitnessesCertificates txCertificates'@(TxCertificates supported _) = do
       let mappedScriptWitnesses
-            :: [ ( Certificate era
+            :: [ ( Exp.Certificate (ShelleyLedgerEra era)
                  , Either
                      (TxBodyErrorAutoBalance era)
                      ( BuildTxWith
