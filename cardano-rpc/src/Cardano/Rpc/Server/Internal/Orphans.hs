@@ -101,11 +101,14 @@ instance Inject ScriptData (Proto UtxoRpc.PlutusData) where
                 & #value .~ inject v
       defMessage & #map . #pairs .~ pairs
     ScriptDataConstructor tag args -> do
+      -- Details of plutus tag serialisation:
+      -- https://github.com/IntersectMBO/plutus/blob/fc78c36b545ee287ae8796a0c1a7d04cf31f4cee/plutus-core/plutus-core/src/PlutusCore/Data.hs#L72
       let constr =
             defMessage
-              -- TODO investigate if tag is the right field, or should any_constructor be used here
-              -- https://github.com/IntersectMBO/plutus/blob/fc78c36b545ee287ae8796a0c1a7d04cf31f4cee/plutus-core/plutus-core/src/PlutusCore/Data.hs#L72
-              & #tag .~ fromIntegral tag
+              & ( if tag <= fromIntegral (maxBound @Word32)
+                    then #tag .~ fromIntegral tag
+                    else (#tag .~ 102) . (#anyConstructor .~ fromIntegral @_ @Word64 tag)
+                )
               & #fields .~ map inject args
       defMessage & #constr .~ constr
 
