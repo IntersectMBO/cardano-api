@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 -- TODO remove when serialiseTxLedgerCddl is removed
 {-# OPTIONS_GHC -Wno-deprecations #-}
@@ -11,6 +12,7 @@ module Test.Cardano.Api.CBOR
 where
 
 import Cardano.Api
+import Cardano.Api.Ledger qualified as Ledger
 
 import Cardano.Binary qualified as CBOR
 
@@ -115,7 +117,8 @@ prop_roundtrip_tx_out_CBOR = H.property $ do
   x <- H.forAll $ genTx era
   txOut <- H.forAll $ Gen.element $ txOuts $ getTxBodyContent $ getTxBody x
   let fixedTxOut = hashDatum txOut
-  shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) fixedTxOut
+  shelleyBasedEraConstraints era $
+    H.tripping fixedTxOut lossyEncodingForTesting CBOR.decodeFull'
  where
   hashDatum :: TxOut CtxTx era -> TxOut CtxTx era
   hashDatum txOut@(TxOut aie val datum rs) =
@@ -123,6 +126,14 @@ prop_roundtrip_tx_out_CBOR = H.property $ do
       (TxOutSupplementalDatum aeo d) ->
         TxOut aie val (TxOutDatumHash aeo (hashScriptDataBytes d)) rs
       _ -> txOut
+
+  lossyEncodingForTesting :: IsShelleyBasedEra era => TxOut CtxTx era -> ByteString
+  lossyEncodingForTesting txOut = LBS.toStrict $ CBOR.serialize $ toCBOR' txOut
+   where
+    toCBOR' :: forall ctx era. IsShelleyBasedEra era => TxOut ctx era -> CBOR.Encoding
+    toCBOR' txOut' =
+      shelleyBasedEraConstraints (shelleyBasedEra @era) $
+        Ledger.toEraCBOR @(ShelleyLedgerEra era) (toShelleyTxOutAny shelleyBasedEra txOut')
 
 prop_roundtrip_witness_CBOR :: Property
 prop_roundtrip_witness_CBOR = H.property $ do

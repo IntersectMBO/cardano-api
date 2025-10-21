@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE EmptyCase #-}
@@ -89,7 +88,6 @@ import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Data qualified as Plutus
 
-import Codec.CBOR.Encoding (Encoding)
 import Data.Aeson (object, withObject, (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Aeson
@@ -125,18 +123,11 @@ data TxOut ctx era
       (TxOutValue era)
       (TxOutDatum ctx era)
       (ReferenceScript era)
-  deriving SerialiseAsCBOR
 
 instance (Typeable ctx, IsShelleyBasedEra era) => HTP.HasTypeProxy (TxOut ctx era) where
   data AsType (TxOut ctx era) = AsTxOut (AsType era)
   proxyToAsType :: HTP.Proxy (TxOut ctx era) -> AsType (TxOut ctx era)
   proxyToAsType _ = AsTxOut (HTP.asType @era)
-
-instance (Typeable ctx, IsShelleyBasedEra era) => ToCBOR (TxOut ctx era) where
-  toCBOR :: TxOut ctx era -> Encoding
-  toCBOR txOut =
-    shelleyBasedEraConstraints (shelleyBasedEra @era) $
-      Ledger.toEraCBOR @(ShelleyLedgerEra era) (toShelleyTxOutAny shelleyBasedEra txOut)
 
 instance (Typeable ctx, IsShelleyBasedEra era) => FromCBOR (TxOut ctx era) where
   fromCBOR :: Ledger.Decoder s (TxOut ctx era)
