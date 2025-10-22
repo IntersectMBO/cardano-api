@@ -334,7 +334,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
   feeWithTxoutAsset === fee
 
 prop_make_transaction_body_autobalance_when_deregistering_certs :: Property
-prop_make_transaction_body_autobalance_when_deregistering_certs = H.propertyOnce $ do
+prop_make_transaction_body_autobalance_when_deregistering_certs = H.property $ do
   let ceo = ConwayEraOnwardsConway
       beo = convert ceo
       sbe = convert beo
@@ -354,15 +354,22 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.propertyOnce
       address = mkAddress sbe scriptHash
       deregDeposit = L.Coin 20_000_000
       txOutCoin = L.Coin 20_800_000
+      mkStakeKeyFromHash hashStr = do
+        (L.KeyHashObj kh) <-
+          pure $ mkCredential hashStr
+        pure . StakeCredentialByKey $ StakeKeyHash kh
 
-  -- that's the same stake credential as in UTXO
-  lStakeCred@(L.KeyHashObj kh) <-
-    pure $ mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137"
-  let stakeCred = StakeCredentialByKey $ StakeKeyHash kh
+  (expectedFee, stakeCred) <-
+    forAll $
+      Gen.choice
+        -- expected fee is larger, when the certificate credential does not match the credential required when witnessing UTXO
+        [ (180_901,) <$> genStakeCredential
+        , (176_457,) <$> mkStakeKeyFromHash "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137"
+        ]
   let certs =
         [
           ( ConwayCertificate ceo $
-              L.ConwayTxCertDeleg (L.ConwayUnRegCert lStakeCred (L.SJust deregDeposit))
+              L.ConwayTxCertDeleg (L.ConwayUnRegCert (toShelleyStakeCredential stakeCred) (L.SJust deregDeposit))
           , Nothing
           )
         ]
@@ -395,7 +402,7 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.propertyOnce
   H.note_ "Sanity check: inputs == outputs"
   mconcat [deregDeposit, txInputsTotalCoin] === mconcat [txOutCoin, fee, changeCoin]
 
-  176_457 === fee
+  expectedFee === fee
 
 prop_make_transaction_body_autobalance_multi_asset_collateral :: Property
 prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $ do

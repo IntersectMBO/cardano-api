@@ -271,7 +271,8 @@ conwayGenesisDefaults =
 
     costModelParamsForTesting :: HasCallStack => [(V3.ParamName, Int64)]
     costModelParamsForTesting =
-      -- all geneses should contain only the number of cost model params equal to the initial number
+      -- all geneses should have exactly the number of cost model params equal to the initial number
+      -- initial number - a number of parameters for the language, when the plutus language was introduced
       take (L.costModelInitParamCount PlutusV3)
         . Map.toList
         . fromJust

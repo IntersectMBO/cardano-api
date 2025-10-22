@@ -91,8 +91,8 @@ prop_text_envelope_roundtrip_txbody_CBOR = H.property $ do
         deserialiseFromTextEnvelope
     )
 
-_prop_text_envelope_roundtrip_tx_CBOR :: Property
-_prop_text_envelope_roundtrip_tx_CBOR = H.property $ do
+prop_text_envelope_roundtrip_tx_CBOR :: Property
+prop_text_envelope_roundtrip_tx_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ genTx era
   shelleyBasedEraConstraints
@@ -427,8 +427,8 @@ tests =
     [ testProperty "test canonicalisation of CBOR" prop_canonicalise_cbor
     , testProperty "rountrip txbody text envelope" prop_text_envelope_roundtrip_txbody_CBOR
     , testProperty "txbody backwards compatibility" prop_txbody_backwards_compatibility
-    , -- , testProperty "rountrip tx text envelope" prop_text_envelope_roundtrip_tx_CBOR
-      testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR
+    , testProperty "rountrip tx text envelope" prop_text_envelope_roundtrip_tx_CBOR
+    , testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR
     , testProperty "roundtrip legacy key witness CBOR" prop_roundtrip_legacy_key_witness_CBOR
     , testProperty
         "roundtrip operational certificate CBOR"
