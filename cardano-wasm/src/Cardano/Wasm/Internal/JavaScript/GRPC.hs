@@ -10,10 +10,7 @@ import GHC.Wasm.Prim
 import Cardano.Wasm.Internal.Api.Tx (ProtocolParamsJSON(..))
 
 -- | Create a GRPC-web client for the Cardano API.
-foreign import javascript safe "{ node: new cardano_node.node.NodePromiseClient($1, null, null), \
-                                  query: new cardano_node.query.QueryServicePromiseClient($1, null, null), \
-                                  submit: new cardano_node.submit.SubmitServicePromiseClient($1, null, null) \
-                                }"
+foreign import javascript safe "globalThis.createClient($1)"
   js_newWebGrpcClientImpl :: JSString -> IO JSVal
 
 js_newWebGrpcClient :: String -> IO JSVal
@@ -32,12 +29,13 @@ js_getProtocolParams client =
 
 -- | Get all UTXOs using a GRPC-web client.
 foreign import javascript safe
-  "{ let req = new proto.utxorpc.v1alpha.query.ReadUtxosRequest(); \
-     let res = (await ($1).query.readUtxos(req, {})).toObject(); \
+  "{ let req = new cardano_node.query.ReadUtxosRequest(); \
+     let pres = await ($1).query.readUtxos(req, {}); \
+     let res = pres.toObject(); \
      return res.itemsList.map(utxo => { \
        return { \
          address: atob(utxo.cardano.address), \
-         txId: cardanoWasm.base64ToHex(utxo.txoRef.hash), \
+         txId: globalThis.cardanoWasm.base64ToHex(utxo.txoRef.hash), \
          txIndex: utxo.txoRef.index, \
          lovelace: BigInt(utxo.cardano.coin), \
          assets: utxo.cardano.assetsList, \
@@ -50,14 +48,15 @@ foreign import javascript safe
 
 -- | Get UTXOs for a given address using a GRPC-web client.
 foreign import javascript safe
-  "{ let req = new proto.utxorpc.v1alpha.query.ReadUtxosRequest(); \
-     let addresses = new proto.utxorpc.v1alpha.query.AddressArray(); \
+  "{ let req = new cardano_node.query.ReadUtxosRequest(); \
+     let addresses = new proto.AddressArray(); \
      addresses.addItems(btoa($2)); \
-     req.setAddresses(addresses); \
-     let res = (await ($1).query.readUtxos(req, {})).toObject(); \
+     req.setCardanoAddresses(addresses); \
+     let pres = await ($1).query.readUtxos(req, {}); \
+     let res = pres.toObject(); \
      return res.itemsList.map(utxo => { \
        return { \
-         txId: cardanoWasm.base64ToHex(utxo.txoRef.hash), \
+         txId: globalThis.cardanoWasm.base64ToHex(utxo.txoRef.hash), \
          txIndex: utxo.txoRef.index, \
          lovelace: BigInt(utxo.cardano.coin), \
          assets: utxo.cardano.assetsList, \

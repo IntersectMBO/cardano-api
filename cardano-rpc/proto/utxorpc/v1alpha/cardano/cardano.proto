@@ -5,7 +5,7 @@ package utxorpc.v1alpha.cardano;
 // Represents a transaction output in the Cardano blockchain.
 message TxOutput {
   bytes address = 1; // Address receiving the output.
-  uint64 coin = 2; // Amount of ADA in the output.
+  uint64 coin = 2 [jstype = JS_STRING]; // Amount of ADA in the output.
   repeated MultiAsset assets = 3; // Additional native (non-ADA) assets in the output.
   Datum datum = 4; // Plutus data associated with the output.
   Script script = 5; // Script associated with the output.
@@ -22,12 +22,13 @@ message Datum {
   bytes original_cbor = 3; // Original cbor-encoded data as seen on-chain
 }
 
-// TODO u5c: mint_coin made optional
 // Represents a custom asset in the Cardano blockchain.
 message Asset {
   bytes name = 1; // Name of the custom asset.
-  uint64 output_coin = 2; // Quantity of the custom asset in case of an output.
-  optional int64 mint_coin = 3; // Quantity of the custom asset in case of a mint.
+  oneof quantity {
+    uint64 output_coin = 2 [jstype = JS_STRING]; // Quantity of the custom asset in case of an output.
+    int64 mint_coin = 3 [jstype = JS_STRING]; // Quantity of the custom asset in case of a mint.
+  }
 }
 
 // TODO u5c: redeemer was removed
@@ -52,8 +53,8 @@ message Script {
 // Represents a rational number as a fraction.
 // TODO u5c increased precision to 64 bits
 message RationalNumber {
-  int64 numerator = 1;
-  uint64 denominator = 2;
+  int64 numerator = 1 [jstype = JS_STRING];
+  uint64 denominator = 2 [jstype = JS_STRING];
 }
 
 // PARAMS
@@ -90,24 +91,24 @@ message VotingThresholds {
 }
 
 message PParams {
-  uint64 coins_per_utxo_byte = 1; // The number of coins per UTXO byte.
-  uint64 max_tx_size = 2; // The maximum transaction size.
-  uint64 min_fee_coefficient = 3; // The minimum fee coefficient.
-  uint64 min_fee_constant = 4; // The minimum fee constant.
-  uint64 max_block_body_size = 5; // The maximum block body size.
-  uint64 max_block_header_size = 6; // The maximum block header size.
-  uint64 stake_key_deposit = 7; // The stake key deposit.
-  uint64 pool_deposit = 8; // The pool deposit.
+  uint64 coins_per_utxo_byte = 1 [jstype = JS_STRING]; // The number of coins per UTXO byte.
+  uint64 max_tx_size = 2 [jstype = JS_STRING]; // The maximum transaction size.
+  uint64 min_fee_coefficient = 3 [jstype = JS_STRING]; // The minimum fee coefficient.
+  uint64 min_fee_constant = 4 [jstype = JS_STRING]; // The minimum fee constant.
+  uint64 max_block_body_size = 5 [jstype = JS_STRING]; // The maximum block body size.
+  uint64 max_block_header_size = 6 [jstype = JS_STRING]; // The maximum block header size.
+  uint64 stake_key_deposit = 7 [jstype = JS_STRING]; // The stake key deposit.
+  uint64 pool_deposit = 8 [jstype = JS_STRING]; // The pool deposit.
   uint64 pool_retirement_epoch_bound = 9; // The pool retirement epoch bound.
   uint64 desired_number_of_pools = 10; // The desired number of pools.
   RationalNumber pool_influence = 11; // The pool influence.
   RationalNumber monetary_expansion = 12; // The monetary expansion.
   RationalNumber treasury_expansion = 13; // The treasury expansion.
-  uint64 min_pool_cost = 14; // The minimum pool cost.
-  ProtocolVersion protocol_version = 15; // The maximum value size in an output.
-  uint64 max_value_size = 16; // The maximum value size.
-  uint64 collateral_percentage = 17; // Percentage of the txfee which must be provided as collateral when including non-native scripts.
-  uint64 max_collateral_inputs = 18; // The maximum collateral inputs.
+  uint64 min_pool_cost = 14 [jstype = JS_STRING]; // The minimum pool cost.
+  ProtocolVersion protocol_version = 15; // The protocol version.
+  uint64 max_value_size = 16 [jstype = JS_STRING]; // The maximum value size.
+  uint64 collateral_percentage = 17 [jstype = JS_STRING]; // The collateral percentage.
+  uint64 max_collateral_inputs = 18 [jstype = JS_STRING]; // The maximum collateral inputs.
   CostModels cost_models = 19; // The cost models.
   ExPrices prices = 20; // The prices.
   ExUnits max_execution_units_per_transaction = 21; // The maximum execution units per transaction.
@@ -118,8 +119,8 @@ message PParams {
   uint32 min_committee_size = 26; // The minimum committee size.
   uint64 committee_term_limit = 27; // The committee term limit.
   uint64 governance_action_validity_period = 28; // The governance action validity period.
-  uint64 governance_action_deposit = 29; // The governance action deposit.
-  uint64 drep_deposit = 30; // The drep deposit.
+  uint64 governance_action_deposit = 29 [jstype = JS_STRING]; // The governance action deposit.
+  uint64 drep_deposit = 30 [jstype = JS_STRING]; // The drep deposit.
   uint64 drep_inactivity_period = 31; // The drep inactivity period.
 }
 

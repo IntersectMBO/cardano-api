@@ -63,6 +63,16 @@ static_resources:
                   body:
                     filename: "./cardano-api.js"
               - match:
+                  path: "/main.js"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "text/javascript"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "./main.js"
+              - match:
                   path: "/cardano-wasm.js"
                 response_headers_to_add:
                   - header:

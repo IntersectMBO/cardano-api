@@ -28,7 +28,6 @@ extra-packages: Cabal, process
 if impl(ghc < 9.8)
   constraints: interpolatedstring-perl6:setup.time source
 
-
 -- It may slow down build plan preparation, but without it cabal has problems
 -- with solving constraints. Remove this when not needed anymore.
 max-backjumps: 50000

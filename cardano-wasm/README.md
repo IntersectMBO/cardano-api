@@ -257,3 +257,16 @@ wasm32-wasi-cabal build cardano-wasm -j1 --ghc-options="-j1" --no-semaphore
 
 You can find examples of how to use the `cardano-wasm` library in the [examples](./examples) subfolder.
 
+# Downloading the latest unstable build of `cardano-wasm`
+
+The CI of this repo automatically builds `cardano-wasm` for every commit in the `master` branch.
+
+**Note:** You must be logged into GitHub for the following instructions to work.
+
+You can download the build for the latest version starting from [the main page of the GitHub repo](https://github.com/IntersectMBO/cardano-api) by clicking on the green check of the newest commit and then clicking on `Details` for one of the `Haskell CI (WASM) / build (ubuntu-latest, bash)` jobs (either `push` or `merge_group`), but not the `Haskell CI (WASM) / wasm-builds-complete` job.
+
+![Illustration of where to click for showing the WASM build from the CI](imgs/step1.png "First step")
+
+Once in the build log, you can download the WASM build (ensuring you are in the `build (ubuntu-latest, bash)` job) by clicking on the `Upload built wasm library` step to unfold it, and then clicking the URL after the message `Artifact download URL:`.
+
+![Illustration of where to click in the build log to download WASM build](imgs/step2.png "Second step")

@@ -79,6 +79,7 @@ cardano-wasm/examples/*/cardano-wasm.wasm
 cardano-wasm/examples/*/cardano-wasm.js
 cardano-wasm/examples/*/*.d.ts
 cardano-wasm/examples/*/cardano-api.js
+cardano-wasm/examples/*/main.js
 cardano-wasm/examples/*/cardano_node_grpc_web_pb.js
 .ghc-wasm/
 

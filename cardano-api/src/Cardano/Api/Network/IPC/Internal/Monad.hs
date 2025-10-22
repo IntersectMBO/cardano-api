@@ -25,9 +25,6 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Trans.Cont
 
-{- HLINT ignore "Use const" -}
-{- HLINT ignore "Use let" -}
-
 -- | Monadic type for constructing local state query expressions.
 --
 -- Use 'queryExpr' in a do block to construct queries of this type and convert

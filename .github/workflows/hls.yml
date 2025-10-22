@@ -17,7 +17,7 @@ jobs:
       HLS_CACHE_VERSION: "2025-09-23"
 
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
