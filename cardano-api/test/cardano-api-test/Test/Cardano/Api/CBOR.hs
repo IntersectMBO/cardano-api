@@ -111,6 +111,15 @@ prop_roundtrip_tx_CBOR = H.property $ do
   x <- H.forAll $ genTx era
   shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) x
 
+-- | The CBOR representation for 'TxOut' does not store supplemental datums.
+-- This means we cannot provide a lossless serialisation instance for which
+-- a roundtrip property would hold.
+--
+-- Therefore, we only provide a deserialisation instance. The serialisation
+-- implementation is included for testing purposes only.
+--
+-- For the roundtrip test, we hash any supplemental datum before serialisation
+-- to ensure the property holds.
 prop_roundtrip_tx_out_CBOR :: Property
 prop_roundtrip_tx_out_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]

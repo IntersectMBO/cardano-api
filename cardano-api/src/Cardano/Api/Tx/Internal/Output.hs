@@ -129,6 +129,10 @@ instance (Typeable ctx, IsShelleyBasedEra era) => HTP.HasTypeProxy (TxOut ctx er
   proxyToAsType :: HTP.Proxy (TxOut ctx era) -> AsType (TxOut ctx era)
   proxyToAsType _ = AsTxOut (HTP.asType @era)
 
+-- | We do not provide a 'ToCBOR' instance for 'TxOut' because 'TxOut's can contain
+-- supplemental datums and the ledger's CBOR representation does not support this.
+-- For this reason, if we were to serialise a 'TxOut' with a supplemental datum,
+-- we would lose information and the roundtrip property would not hold.
 instance (Typeable ctx, IsShelleyBasedEra era) => FromCBOR (TxOut ctx era) where
   fromCBOR :: Ledger.Decoder s (TxOut ctx era)
   fromCBOR =
