@@ -44,7 +44,16 @@ module Cardano.Api.Era.Internal.Core
   , Inject (..)
 
     -- * Data family instances
-  , AsType (AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra, AsDijkstraEra)
+  , AsType
+    ( AsByronEra
+    , AsShelleyEra
+    , AsAllegraEra
+    , AsMaryEra
+    , AsAlonzoEra
+    , AsBabbageEra
+    , AsConwayEra
+    , AsDijkstraEra
+    )
   , CardanoEraConstraints
   , cardanoEraConstraints
   )
