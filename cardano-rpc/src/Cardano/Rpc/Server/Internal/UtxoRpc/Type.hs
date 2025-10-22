@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLabels #-}
@@ -267,6 +268,40 @@ referenceScriptToUtxoRpcScript (ReferenceScript _ (ScriptInAnyLang _ script)) =
     PlutusScript PlutusScriptV3 ps ->
       defMessage & #plutusV3 .~ serialiseToRawBytes ps
 
+scriptDataToUtxoRpcPlutusData :: ScriptData -> Proto UtxoRpc.PlutusData
+scriptDataToUtxoRpcPlutusData = \case
+  ScriptDataBytes bs ->
+    defMessage & #boundedBytes .~ bs
+  ScriptDataNumber int
+    | int <= fromIntegral (maxBound @Int64)
+        && int >= fromIntegral (minBound @Int64) ->
+        defMessage & #bigInt . #int .~ fromIntegral int
+    | int < 0 ->
+        -- https://www.rfc-editor.org/rfc/rfc8949.html#name-bignums see 3.4.3 for negative integers
+        defMessage & #bigInt . #bigNInt .~ serialiseToRawBytes (fromIntegral @_ @Natural (-1 - int))
+    | otherwise ->
+        defMessage & #bigInt . #bigUInt .~ serialiseToRawBytes (fromIntegral @_ @Natural int)
+  ScriptDataList sds ->
+    defMessage & #array . #items .~ map scriptDataToUtxoRpcPlutusData sds
+  ScriptDataMap elements -> do
+    let pairs =
+          elements <&> \(k, v) ->
+            defMessage
+              & #key .~ scriptDataToUtxoRpcPlutusData k
+              & #value .~ scriptDataToUtxoRpcPlutusData v
+    defMessage & #map . #pairs .~ pairs
+  ScriptDataConstructor tag args -> do
+    -- Details of plutus tag serialisation:
+    -- https://github.com/IntersectMBO/plutus/blob/fc78c36b545ee287ae8796a0c1a7d04cf31f4cee/plutus-core/plutus-core/src/PlutusCore/Data.hs#L72
+    let constr =
+          defMessage
+            & ( if tag <= fromIntegral (maxBound @Word32)
+                  then #tag .~ fromIntegral tag
+                  else (#tag .~ 102) . (#anyConstructor .~ fromIntegral @_ @Word64 tag)
+              )
+            & #fields .~ map scriptDataToUtxoRpcPlutusData args
+    defMessage & #constr .~ constr
+
 utxoToUtxoRpcAnyUtxoData :: forall era. IsCardanoEra era => UTxO era -> [Proto UtxoRpc.AnyUtxoData]
 utxoToUtxoRpcAnyUtxoData utxo =
   toList utxo <&> \(txIn, TxOut addressInEra txOutValue datum script) -> do
@@ -295,7 +330,7 @@ utxoToUtxoRpcAnyUtxoData utxo =
           TxOutDatumInline _ hashableScriptData ->
             defMessage
               & #hash .~ serialiseToRawBytes (hashScriptDataBytes hashableScriptData)
-              & #payload .~ inject (getScriptData hashableScriptData)
+              & #payload .~ scriptDataToUtxoRpcPlutusData (getScriptData hashableScriptData)
               & #originalCbor .~ getOriginalScriptDataBytes hashableScriptData
 
         protoTxOut =

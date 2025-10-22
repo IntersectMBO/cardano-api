@@ -78,40 +78,6 @@ instance Inject TxIn (Proto UtxoRpc.TxoRef) where
       & #hash .~ serialiseToRawBytes txId'
       & #index .~ fromIntegral txIx
 
-instance Inject ScriptData (Proto UtxoRpc.PlutusData) where
-  inject = \case
-    ScriptDataBytes bs ->
-      defMessage & #boundedBytes .~ bs
-    ScriptDataNumber int
-      | int <= fromIntegral (maxBound @Int64)
-          && int >= fromIntegral (minBound @Int64) ->
-          defMessage & #bigInt . #int .~ fromIntegral int
-      | int < 0 ->
-          -- https://www.rfc-editor.org/rfc/rfc8949.html#name-bignums see 3.4.3 for negative integers
-          defMessage & #bigInt . #bigNInt .~ serialiseToRawBytes (fromIntegral @_ @Natural (-1 - int))
-      | otherwise ->
-          defMessage & #bigInt . #bigUInt .~ serialiseToRawBytes (fromIntegral @_ @Natural int)
-    ScriptDataList sds ->
-      defMessage & #array . #items .~ map inject sds
-    ScriptDataMap elements -> do
-      let pairs =
-            elements <&> \(k, v) ->
-              defMessage
-                & #key .~ inject k
-                & #value .~ inject v
-      defMessage & #map . #pairs .~ pairs
-    ScriptDataConstructor tag args -> do
-      -- Details of plutus tag serialisation:
-      -- https://github.com/IntersectMBO/plutus/blob/fc78c36b545ee287ae8796a0c1a7d04cf31f4cee/plutus-core/plutus-core/src/PlutusCore/Data.hs#L72
-      let constr =
-            defMessage
-              & ( if tag <= fromIntegral (maxBound @Word32)
-                    then #tag .~ fromIntegral tag
-                    else (#tag .~ 102) . (#anyConstructor .~ fromIntegral @_ @Word64 tag)
-                )
-              & #fields .~ map inject args
-      defMessage & #constr .~ constr
-
 instance L.ConwayEraPParams lera => Inject (L.PParams lera) (Proto UtxoRpc.PParams) where
   inject pparams = do
     let pparamsCostModels :: Map L.Language [Int64] =
