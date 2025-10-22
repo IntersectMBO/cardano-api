@@ -104,6 +104,7 @@ import Data.Typeable (Typeable)
 import Data.Word
 import GHC.Exts (IsList (..))
 import GHC.Stack
+import GHC.TypeLits as TL
 import Lens.Micro hiding (ix)
 
 -- ----------------------------------------------------------------------------
@@ -133,6 +134,23 @@ instance (Typeable ctx, IsShelleyBasedEra era) => FromCBOR (TxOut ctx era) where
   fromCBOR =
     shelleyBasedEraConstraints (shelleyBasedEra @era) $
       pure (fromShelleyTxOut shelleyBasedEra) <*> L.fromEraCBOR @(ShelleyLedgerEra era)
+
+-- | We do not provide a 'ToCBOR' instance for 'TxOut' because 'TxOut's can
+-- contain supplemental datums and the CBOR representation does not support this.
+-- For this reason, if we were to serialise a 'TxOut' with a supplemental datum,
+-- we would lose information and the roundtrip property would not hold.
+instance
+  ( TypeError
+      ( TL.Text "Cannot serialise 'TxOut' to CBOR."
+          :$$: TL.Text
+                 "Serialisation for 'TxOut' type is not implemented because they may contain supplemental datums and the CBOR representation does not support this."
+      )
+  , Typeable ctx
+  , IsShelleyBasedEra era
+  )
+  => ToCBOR (TxOut ctx era)
+  where
+  toCBOR = error "This shouldn't happen"
 
 deriving instance Eq (TxOut ctx era)
 
