@@ -6,6 +6,7 @@
   Upgrade consensus: ouroboros-consensus-protocol-0.13.0.0, ouroboros-consensus-diffusion-0.24.0.0, ouroboros-consensus-0.28.0.0, ouroboros-consensus-cardano-0.26.0.0
   Upgrade network: ouroboros-network-protocols-0.12.0.0, ouroboros-network-framework-0.14.0.0, ouroboros-network-api-0.11.0.0, ouroboros-network-0.18.0.0
   Upgrade plutus-core-1.53, plutus-ledger-api-1.53
+  Add PlutusV4 and Dijkstra era initial support code - still not functional.
   (feature, breaking)
   [PR 954](https://github.com/IntersectMBO/cardano-api/pull/954)
 
