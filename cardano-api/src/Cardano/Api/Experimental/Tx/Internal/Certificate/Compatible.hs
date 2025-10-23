@@ -45,6 +45,7 @@ import Cardano.Api.Plutus.Internal.Script
 import Cardano.Ledger.Keys qualified as Ledger
 
 type family Delegatee era where
+  Delegatee DijkstraEra = Ledger.Delegatee
   Delegatee ConwayEra = Ledger.Delegatee
   Delegatee BabbageEra = Api.Hash Api.StakePoolKey
   Delegatee AlonzoEra = Api.Hash Api.StakePoolKey
@@ -68,6 +69,7 @@ makeStakeAddressDelegationCertificate sCred delegatee =
     e@ShelleyBasedEraMary -> cert e delegatee
     e@ShelleyBasedEraAllegra -> cert e delegatee
     e@ShelleyBasedEraShelley -> cert e delegatee
+    ShelleyBasedEraDijkstra -> error "TODO: makeStakeAddressDelegationCertificate DijkstraEra"
  where
   cert
     :: Delegatee era ~ Api.Hash Api.StakePoolKey

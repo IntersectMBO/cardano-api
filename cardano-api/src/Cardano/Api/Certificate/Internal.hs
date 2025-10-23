@@ -82,7 +82,6 @@ import Cardano.Api.Certificate.Internal.StakePoolMetadata
 import Cardano.Api.Era
 import Cardano.Api.Error (Error (..))
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
-import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.Governance.Internal.Action.VotingProcedure
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)
@@ -96,7 +95,6 @@ import Cardano.Api.Value.Internal
 
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Keys qualified as Ledger
 import Cardano.Ledger.State qualified as Ledger
 
 import Control.Monad
@@ -221,21 +219,6 @@ instance
     ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayRegDelegCert{}) -> "Stake address registration and delegation"
     ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RegPool{}) -> "Pool registration"
     ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RetirePool{}) -> "Pool retirement"
-
-certificateToTxCert :: Certificate era -> L.TxCert (ShelleyLedgerEra era)
-certificateToTxCert c =
-  case c of
-    ShelleyRelatedCertificate eon cert ->
-      case eon of
-        ShelleyToBabbageEraShelley -> cert
-        ShelleyToBabbageEraAllegra -> cert
-        ShelleyToBabbageEraMary -> cert
-        ShelleyToBabbageEraAlonzo -> cert
-        ShelleyToBabbageEraBabbage -> cert
-    ConwayCertificate eon cert ->
-      case eon of
-        ConwayEraOnwardsConway -> cert
-        ConwayEraOnwardsDijkstra -> error "certificateToTxCert: Dijkstra era is not yet supported"
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters

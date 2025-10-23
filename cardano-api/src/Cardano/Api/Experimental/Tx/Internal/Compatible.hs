@@ -52,8 +52,7 @@ mkTxCertificates certs =
     case era of
       ConwayEra -> do
         let Exp.Certificate c = cert
-            oldApiCert = Api.ConwayCertificate (convert era) c
-            mStakeCred = Api.selectStakeCredentialWitness oldApiCert
+            mStakeCred = Api.getTxCertWitness (convert era) c
             wit =
               case witness of
                 AnyKeyWitnessPlaceholder -> Api.KeyWitness Api.KeyWitnessForStakeAddr

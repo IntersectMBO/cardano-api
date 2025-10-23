@@ -1,10 +1,10 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -36,18 +36,6 @@ module Cardano.Api.Experimental.Tx.Internal.Certificate
 
     -- * Data family instances
   , AsType (..)
-  -- , Hash (..)
-  --
-
-  --
-  --   -- * DRep off-chain metadata
-  -- , DRepMetadata (..)
-  -- , hashDRepMetadata
-  --
-  --   -- * Stake pool off-chain metadata
-  -- , StakePoolMetadata (..)
-  -- , validateAndHashStakePoolMetadata
-  -- , StakePoolMetadataValidationError (..)
   )
 where
 
@@ -83,22 +71,24 @@ makeStakeAddressDelegationCertificate sCred delegatee =
       obtainCommonConstraints e $
         Certificate $
           Ledger.mkDelegTxCert (toShelleyStakeCredential sCred) delegatee
+    e@DijkstraEra ->
+      obtainCommonConstraints e $
+        Certificate $
+          Ledger.mkDelegTxCert (toShelleyStakeCredential sCred) delegatee
 
 makeStakeAddressRegistrationCertificate
   :: forall era. IsEra era => StakeCredential -> Ledger.Coin -> Certificate (LedgerEra era)
 makeStakeAddressRegistrationCertificate scred deposit =
-  case useEra @era of
-    ConwayEra ->
-      Certificate $
-        Ledger.mkRegDepositTxCert (toShelleyStakeCredential scred) deposit
+  obtainCommonConstraints (useEra @era) $
+    Certificate $
+      Ledger.mkRegDepositTxCert (toShelleyStakeCredential scred) deposit
 
 makeStakeAddressUnregistrationCertificate
   :: forall era. IsEra era => StakeCredential -> Ledger.Coin -> Certificate (LedgerEra era)
 makeStakeAddressUnregistrationCertificate scred deposit =
-  case useEra @era of
-    ConwayEra ->
-      Certificate $
-        Ledger.mkUnRegDepositTxCert (toShelleyStakeCredential scred) deposit
+  obtainCommonConstraints (useEra @era) $
+    Certificate $
+      Ledger.mkUnRegDepositTxCert (toShelleyStakeCredential scred) deposit
 
 makeStakePoolRegistrationCertificate
   :: forall era
