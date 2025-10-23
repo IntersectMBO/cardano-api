@@ -83,7 +83,7 @@ readUtxosMethod req = do
   pure $
     defMessage
       & #ledgerTip .~ mkChainPointMsg chainPoint blockNo
-      & #items .~ cardanoEraConstraints era (inject utxo)
+      & #items .~ cardanoEraConstraints era (utxoToUtxoRpcAnyUtxoData utxo)
  where
   txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
   txoRefToTxIn r = do
