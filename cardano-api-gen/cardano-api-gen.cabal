@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-api-gen
-version: 10.1.0.0
+version: 10.2.0.0
 synopsis: Generators for the cardano api
 description: Generators for the cardano api.
 category:
