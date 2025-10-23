@@ -1022,11 +1022,13 @@ toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Plutus.Language
 toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Plutus.PlutusV1
 toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV2) = Plutus.PlutusV2
 toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV3) = Plutus.PlutusV3
+toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV4) = Plutus.PlutusV4
 
 fromAlonzoScriptLanguage :: Plutus.Language -> AnyPlutusScriptVersion
 fromAlonzoScriptLanguage Plutus.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromAlonzoScriptLanguage Plutus.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 fromAlonzoScriptLanguage Plutus.PlutusV3 = AnyPlutusScriptVersion PlutusScriptV3
+fromAlonzoScriptLanguage Plutus.PlutusV4 = AnyPlutusScriptVersion PlutusScriptV4
 
 toAlonzoCostModel
   :: CostModel -> Plutus.Language -> Either ProtocolParametersConversionError Alonzo.CostModel
@@ -1109,6 +1111,7 @@ toLedgerPParamsUpdate ShelleyBasedEraMary = toShelleyPParamsUpdate
 toLedgerPParamsUpdate ShelleyBasedEraAlonzo = toAlonzoPParamsUpdate
 toLedgerPParamsUpdate ShelleyBasedEraBabbage = toBabbagePParamsUpdate
 toLedgerPParamsUpdate ShelleyBasedEraConway = toConwayPParamsUpdate
+toLedgerPParamsUpdate ShelleyBasedEraDijkstra = toConwayPParamsUpdate
 
 toShelleyCommonPParamsUpdate
   :: EraPParams ledgerera
@@ -1152,9 +1155,9 @@ toShelleyCommonPParamsUpdate
 
 toShelleyPParamsUpdate
   :: ( EraPParams ledgerera
-     , Ledger.AtMostEra Ledger.MaryEra ledgerera
-     , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
-     , Ledger.AtMostEra Ledger.BabbageEra ledgerera
+     , Ledger.AtMostEra "Mary" ledgerera
+     , Ledger.AtMostEra "Alonzo" ledgerera
+     , Ledger.AtMostEra "Babbage" ledgerera
      )
   => ProtocolParametersUpdate
   -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
@@ -1308,6 +1311,7 @@ fromLedgerPParamsUpdate ShelleyBasedEraMary = fromShelleyPParamsUpdate
 fromLedgerPParamsUpdate ShelleyBasedEraAlonzo = fromAlonzoPParamsUpdate
 fromLedgerPParamsUpdate ShelleyBasedEraBabbage = fromBabbagePParamsUpdate
 fromLedgerPParamsUpdate ShelleyBasedEraConway = fromConwayPParamsUpdate
+fromLedgerPParamsUpdate ShelleyBasedEraDijkstra = fromConwayPParamsUpdate
 
 fromShelleyCommonPParamsUpdate
   :: EraPParams ledgerera
@@ -1344,9 +1348,9 @@ fromShelleyCommonPParamsUpdate ppu =
 
 fromShelleyPParamsUpdate
   :: ( EraPParams ledgerera
-     , Ledger.AtMostEra Ledger.MaryEra ledgerera
-     , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
-     , Ledger.AtMostEra Ledger.BabbageEra ledgerera
+     , Ledger.AtMostEra "Mary" ledgerera
+     , Ledger.AtMostEra "Alonzo" ledgerera
+     , Ledger.AtMostEra "Babbage" ledgerera
      )
   => PParamsUpdate ledgerera
   -> ProtocolParametersUpdate

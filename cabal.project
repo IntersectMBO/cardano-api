@@ -13,16 +13,20 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-09-10T10:05:13Z
-  , cardano-haskell-packages 2025-06-20T09:11:51Z
+  , hackage.haskell.org 2025-09-11T01:58:40Z
+  , cardano-haskell-packages 2025-10-21T11:16:53Z
 
 packages:
     cardano-api
     cardano-api-gen
     cardano-wasm
-    cardano-rpc
+    -- TODO fix potential issues with build-type: Custom and protoc and reenable
+    -- cardano-rpc
 
-constraints: process >= 1.6.26.1
+extra-packages: Cabal, process
+
+if impl(ghc < 9.8)
+  constraints: interpolatedstring-perl6:setup.time source
 
 -- It may slow down build plan preparation, but without it cabal has problems
 -- with solving constraints. Remove this when not needed anymore.
@@ -56,18 +60,19 @@ if impl (ghc >= 9.12)
     -- https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
 
+
 -- WASM compilation specific
 
 if arch(wasm32)
   source-repository-package
     type: git
-    location: https://github.com/amesgen/plutus.git
-    tag: dc1edea4458d6fb794b245a26c730620265645f3
+    location: https://github.com/intersectmbo/plutus.git
+    tag: 5f3517c6937a24dc4d852cda079b2c3cdcaa5ef0
     subdir:
       plutus-core
       plutus-ledger-api
       plutus-tx
-    --sha256: sha256-QBtLmoS54b5QMAKIDOJIM6lmRC+1leBpuGKaFc7QQos=
+    --sha256: sha256-+GhWhzGQ94KfxHKS6Bycfxf+TWVkMyWDY/51EFipkZI=
 
   package plutus-core
     flags: +do-not-build-plutus-exec
@@ -81,11 +86,11 @@ if arch(wasm32)
   source-repository-package
     type: git
     location: https://github.com/palas/ouroboros-network.git
-    tag: ef3e30603e4e45dac336a085114ee22b7aa8c9ed
+    tag: 2fddbdb8ed23b63a43852bb98bd6ddc1a6d96d98
     subdir:
       ouroboros-network
       ouroboros-network-framework
-    --sha256: sha256-+IdAmWJqzRy+erKONywtk+5YLrm63q942nZavoEA4E4=
+    --sha256: sha256-OAPsul8TaOpNwd2BlTE0jwqWiRk83rNVSxtIA5Se9Kg=
 
   source-repository-package
     type: git
@@ -135,6 +140,22 @@ if arch(wasm32)
     tag: ab92e48e9fdf3abe214f85fdbe5301c1280e14e9
     --sha256: sha256-U+ln/gbXoQZpNjZHydNa0FG/9GdJFgL1+T3+7KTzDWo=
 
+  source-repository-package
+    type: git
+    location: https://github.com/palas/kes-agent
+    tag: a234ca2beede6fb557dfb4ce829b52874cc94613
+    --sha256: sha256-k6PJC2uYr4VP+erPrVCFHMAbJaGMqESRowSvoB/w0ss=
+    subdir:
+      kes-agent
+
+  source-repository-package
+    type: git
+    location: https://github.com/palas/fs-sim
+    tag: c39efe618cf63df909e8e0acab31684b10223550
+    --sha256: sha256-zHJfVFEzdeq9WhInEIRCJ1OQTYM06k++9gzfUaG//S8=
+    subdir:
+      fs-sim
+
   package cardano-crypto-praos
     flags: -external-libsodium-vrf
 
@@ -155,4 +176,3 @@ if arch(wasm32)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-

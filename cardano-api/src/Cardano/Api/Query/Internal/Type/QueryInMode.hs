@@ -42,7 +42,6 @@ module Cardano.Api.Query.Internal.Type.QueryInMode
   , SerialisedPoolState (..)
   , PoolState (..)
   , decodePoolState
-  , SerialisedPoolDistribution (..)
   , PoolDistribution (..)
   , decodePoolDistribution
   , SerialisedStakeSnapshots (..)
@@ -72,6 +71,7 @@ import Cardano.Api.Certificate.Internal
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
+import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Genesis.Internal.Parameters
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy)
@@ -93,12 +93,11 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.State.Query qualified as L
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Plain qualified as Plain
-import Cardano.Ledger.CertState qualified as L
 import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Conway.State qualified as L
 import Cardano.Ledger.Credential qualified as Shelley
 import Cardano.Ledger.Shelley.API qualified as Shelley
 import Cardano.Ledger.Shelley.Core qualified as Core
-import Cardano.Ledger.Shelley.LedgerState qualified as L
 import Cardano.Slotting.EpochInfo (hoistEpochInfo)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
@@ -115,10 +114,8 @@ import Ouroboros.Consensus.HardFork.History.Qry qualified as Qry
 import Ouroboros.Consensus.Ledger.Query qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
-import Ouroboros.Consensus.Shelley.Ledger.Query.Types qualified as Consensus
-import Ouroboros.Consensus.Shelley.Protocol.Abstract (ProtoCrypto)
 import Ouroboros.Network.Block (Serialised (..))
-import Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot)
+import Ouroboros.Network.PeerSelection.LedgerPeers.Type
 import Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
 import Codec.Serialise qualified as CBOR
@@ -275,10 +272,10 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era (SerialisedCurrentEpochState era)
   QueryPoolState
     :: Maybe (Set PoolId)
-    -> QueryInShelleyBasedEra era (SerialisedPoolState era)
+    -> QueryInShelleyBasedEra era SerialisedPoolState
   QueryPoolDistribution
     :: Maybe (Set PoolId)
-    -> QueryInShelleyBasedEra era (SerialisedPoolDistribution era)
+    -> QueryInShelleyBasedEra era (Serialised (PoolDistribution era))
   QueryStakeSnapshot
     :: Maybe (Set PoolId)
     -> QueryInShelleyBasedEra era (SerialisedStakeSnapshots era)
@@ -286,7 +283,7 @@ data QueryInShelleyBasedEra era result where
     :: Set StakeCredential
     -> QueryInShelleyBasedEra era (Map StakeCredential L.Coin)
   QueryAccountState
-    :: QueryInShelleyBasedEra era L.AccountState
+    :: QueryInShelleyBasedEra era L.ChainAccountState
   QueryConstitution
     :: QueryInShelleyBasedEra era (L.Constitution (ShelleyLedgerEra era))
   QueryGovState
@@ -389,35 +386,30 @@ decodeCurrentEpochState
 decodeCurrentEpochState sbe (SerialisedCurrentEpochState (Serialised ls)) =
   shelleyBasedEraConstraints sbe $ CurrentEpochState <$> Plain.decodeFull ls
 
-newtype SerialisedPoolState era
-  = SerialisedPoolState (Serialised (Shelley.PState (ShelleyLedgerEra era)))
+newtype SerialisedPoolState
+  = SerialisedPoolState (Serialised L.QueryPoolStateResult)
 
-newtype PoolState era = PoolState (Shelley.PState (ShelleyLedgerEra era))
+newtype PoolState era = PoolState L.QueryPoolStateResult
 
 decodePoolState
   :: forall era
-   . ()
-  => Core.Era (ShelleyLedgerEra era)
-  => DecCBOR (Shelley.PState (ShelleyLedgerEra era))
-  => SerialisedPoolState era
+   . ShelleyBasedEra era
+  -> SerialisedPoolState
   -> Either DecoderError (PoolState era)
-decodePoolState (SerialisedPoolState (Serialised ls)) =
-  PoolState <$> decodeFull (Core.eraProtVerLow @(ShelleyLedgerEra era)) ls
-
-newtype SerialisedPoolDistribution era
-  = SerialisedPoolDistribution
-      (Serialised (Consensus.PoolDistr StandardCrypto))
+decodePoolState sbe (SerialisedPoolState (Serialised ls)) =
+  shelleyBasedEraConstraints sbe $
+    PoolState <$> decodeFull (Core.eraProtVerLow @(ShelleyLedgerEra era)) ls
 
 newtype PoolDistribution era = PoolDistribution
-  { unPoolDistr :: Consensus.PoolDistr StandardCrypto
+  { unPoolDistr :: Shelley.PoolDistr
   }
 
 decodePoolDistribution
   :: forall era
    . ShelleyBasedEra era
-  -> SerialisedPoolDistribution era
+  -> Serialised (PoolDistribution era)
   -> Either DecoderError (PoolDistribution era)
-decodePoolDistribution sbe (SerialisedPoolDistribution (Serialised ls)) =
+decodePoolDistribution sbe (Serialised ls) =
   PoolDistribution <$> decodeFull (eraProtVerLow sbe) ls
 
 newtype SerialisedStakeSnapshots era
@@ -433,9 +425,16 @@ decodeStakeSnapshot
 decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <$> Plain.decodeFull ls
 
 decodeBigLedgerPeerSnapshot
-  :: Serialised LedgerPeerSnapshot
+  :: Consensus.ShelleyNodeToClientVersion
+  -> Serialised LedgerPeerSnapshot
   -> Either (LBS.ByteString, DecoderError) LedgerPeerSnapshot
-decodeBigLedgerPeerSnapshot (Serialised lps) = first (lps,) (Plain.decodeFull lps)
+decodeBigLedgerPeerSnapshot ntcV (Serialised lps) =
+  first
+    (lps,)
+    $ Plain.decodeFullDecoder
+      "LedgerPeerSnapshot"
+      (decodeLedgerPeerSnapshot $ Consensus.ledgerPeerSnapshotSupportsSRV ntcV)
+      lps
 
 toShelleyAddrSet
   :: CardanoEra era
@@ -477,15 +476,15 @@ fromLedgerUTxO sbe (Shelley.UTxO utxo) =
     $ utxo
 
 fromShelleyPoolDistr
-  :: Consensus.PoolDistr StandardCrypto
+  :: L.PoolDistr
   -> Map (Hash StakePoolKey) Rational
 fromShelleyPoolDistr =
   -- TODO: write an appropriate property to show it is safe to use
   -- Map.fromListAsc or to use Map.mapKeysMonotonic
   fromList
-    . map (bimap StakePoolKeyHash Consensus.individualPoolStake)
+    . map (bimap StakePoolKeyHash Shelley.individualPoolStake)
     . toList
-    . Consensus.unPoolDistr
+    . Shelley.unPoolDistr
 
 fromShelleyDelegations
   :: Map
@@ -564,7 +563,7 @@ toConsensusQueryShelleyBased sbe = \case
   QueryProtocolParameters ->
     Some (consensusQueryInEraInMode era Consensus.GetCurrentPParams)
   QueryStakeDistribution ->
-    Some (consensusQueryInEraInMode era Consensus.GetStakeDistribution)
+    Some (consensusQueryInEraInMode era Consensus.GetStakeDistribution2)
   QueryUTxO QueryUTxOWhole ->
     Some (consensusQueryInEraInMode era Consensus.GetUTxOWhole)
   QueryUTxO (QueryUTxOByAddress addrs) ->
@@ -613,7 +612,7 @@ toConsensusQueryShelleyBased sbe = \case
       )
   QueryPoolDistribution poolIds ->
     Some
-      (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetPoolDistr (getPoolIds <$> poolIds))))
+      (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetPoolDistr2 (getPoolIds <$> poolIds))))
    where
     getPoolIds :: Set PoolId -> Set (Shelley.KeyHash Shelley.StakePool)
     getPoolIds = Set.map (\(StakePoolKeyHash kh) -> kh)
@@ -640,7 +639,9 @@ toConsensusQueryShelleyBased sbe = \case
   QueryDRepState creds ->
     caseShelleyToBabbageOrConwayEraOnwards
       (const $ error "toConsensusQueryShelleyBased: QueryDRepState is only available in the Conway era")
-      (const $ Some (consensusQueryInEraInMode era (Consensus.GetDRepState creds)))
+      ( \w ->
+          Some (consensusQueryInEraInMode era (conwayEraOnwardsConstraints w $ Consensus.GetDRepState creds))
+      )
       sbe
   QueryDRepStakeDistr dreps ->
     caseShelleyToBabbageOrConwayEraOnwards
@@ -727,6 +728,7 @@ consensusQueryInEraInMode erainmode b =
       AlonzoEra -> Consensus.QueryIfCurrentAlonzo b
       BabbageEra -> Consensus.QueryIfCurrentBabbage b
       ConwayEra -> Consensus.QueryIfCurrentConway b
+      DijkstraEra -> Consensus.QueryIfCurrentDijkstra b
 
 -- ----------------------------------------------------------------------------
 -- Conversions of query results from the consensus types.
@@ -849,6 +851,18 @@ fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraConw
         )
         r'
     _ -> fromConsensusQueryResultMismatch
+fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraDijkstra q)) q' r' =
+  case q' of
+    Consensus.BlockQuery (Consensus.QueryIfCurrentDijkstra q'') ->
+      bimap
+        fromConsensusEraMismatch
+        ( fromConsensusQueryResultShelleyBased
+            ShelleyBasedEraDijkstra
+            q
+            q''
+        )
+        r'
+    _ -> fromConsensusQueryResultMismatch
 
 -- This function is written like this so that we have exhaustive pattern checking
 -- on the @QueryInShelleyBasedEra era result@ value. Don't change the top-level
@@ -858,7 +872,6 @@ fromConsensusQueryResultShelleyBased
    . HasCallStack
   => ShelleyLedgerEra era ~ ledgerera
   => ConsensusProtocol era ~ protocol
-  => ProtoCrypto protocol ~ StandardCrypto
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
   -> Consensus.BlockQuery (Consensus.ShelleyBlock protocol ledgerera) fp result'
@@ -884,7 +897,7 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         _ -> fromConsensusQueryResultMismatch
     QueryStakeDistribution ->
       case q' of
-        Consensus.GetStakeDistribution -> fromShelleyPoolDistr r'
+        Consensus.GetStakeDistribution2 -> fromShelleyPoolDistr r'
         _ -> fromConsensusQueryResultMismatch
     QueryUTxO QueryUTxOWhole ->
       case q' of
@@ -913,9 +926,8 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryStakePoolParameters{} ->
       case q' of
         Consensus.GetStakePoolParams{} ->
-          Map.map fromShelleyPoolParams
-            . Map.mapKeysMonotonic StakePoolKeyHash
-            $ r'
+          Map.mapKeysMonotonic StakePoolKeyHash $
+            Map.map fromShelleyPoolParams r'
         _ -> fromConsensusQueryResultMismatch
     QueryDebugLedgerState{} ->
       case q' of
@@ -939,8 +951,8 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         _ -> fromConsensusQueryResultMismatch
     QueryPoolDistribution{} ->
       case q' of
-        Consensus.GetCBOR Consensus.GetPoolDistr{} ->
-          SerialisedPoolDistribution r'
+        Consensus.GetCBOR Consensus.GetPoolDistr2{} ->
+          Serialised . unSerialised $ r'
         _ -> fromConsensusQueryResultMismatch
     QueryStakeSnapshot{} ->
       case q' of

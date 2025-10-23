@@ -24,16 +24,19 @@ import Cardano.Ledger.Address ()
 import Cardano.Ledger.Alonzo.PParams qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
-import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as Ledger
 import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.PParams
 import Cardano.Ledger.HKD (HKD, NoUpdate (..))
 import Cardano.Ledger.Keys (VRFVerKeyHash (..))
 import Cardano.Ledger.Mary.Value qualified as ConcreteValue
 import Cardano.Ledger.Mary.Value qualified as Ledger
+import Cardano.Ledger.Plutus.CostModels qualified as L
 import Cardano.Ledger.Plutus.CostModels qualified as Ledger
 import Cardano.Ledger.Plutus.Language qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Ledger
@@ -79,6 +82,7 @@ import Test.QuickCheck
   , scale
   , shrinkBoundedEnum
   , sublistOf
+  , suchThatMap
   , vectorOf
   )
 import Test.QuickCheck.Gen (Gen (MkGen))
@@ -392,7 +396,7 @@ multiAssetFromListBounded =
 instance Arbitrary L.GovActionId where
   arbitrary = L.GovActionId <$> arbitrary <*> arbitrary
 
-deriving instance Arbitrary (L.GovPurposeId p era)
+deriving instance Arbitrary (L.GovPurposeId p)
 
 instance Arbitrary L.DRep where
   arbitrary =
@@ -736,7 +740,7 @@ instance Arbitrary Alonzo.CostModels where
 
 genValidCostModel :: Ledger.Language -> Gen Ledger.CostModel
 genValidCostModel lang = do
-  newParamValues <- vectorOf (Ledger.costModelParamsCount lang) arbitrary
+  newParamValues <- vectorOf (L.costModelInitParamCount lang) arbitrary
   either (\err -> error $ "Corrupt cost model: " ++ show err) pure $
     Ledger.mkCostModel lang newParamValues
 
@@ -772,12 +776,12 @@ genCostModelValues lang = do
   Positive sub <- arbitrary
   (,) lang'
     <$> oneof
-      [ listAtLeast (Ledger.costModelParamsCount lang)
+      [ listAtLeast (L.costModelInitParamCount lang)
       , take (tooFew sub) <$> arbitrary
       ]
  where
   lang' = fromIntegral (fromEnum lang)
-  tooFew sub = Ledger.costModelParamsCount lang - sub
+  tooFew sub = L.costModelInitParamCount lang - sub
   listAtLeast :: Int -> Gen [Int64]
   listAtLeast x = do
     NonNegative y <- arbitrary
@@ -805,3 +809,25 @@ obtainArbitraryConstraints era f = case era of
   ShelleyBasedEraAlonzo -> f
   ShelleyBasedEraBabbage -> f
   ShelleyBasedEraConway -> f
+  ShelleyBasedEraDijkstra -> f
+
+instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary (DijkstraPParams StrictMaybe DijkstraEra) where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary PositiveInterval where
+  arbitrary = do
+    p <- chooseInt (0, maxDecimalsWord64)
+    let y = 10 ^ p :: Word64
+    x <- choose (1, 10 ^ (maxDecimalsWord64 :: Int))
+    pure $ unsafeBoundedRational $ promoteRatio (x % y)
+
+instance (Arbitrary a, HasZero a) => Arbitrary (NonZero a) where
+  arbitrary = arbitrary `suchThatMap` nonZero
+
+instance Arbitrary (L.CompactForm Coin) where
+  arbitrary =
+    L.CompactCoin <$> oneof [choose (0, 1000000), fromIntegral <$> (arbitrary :: Gen Word), arbitrary]
+  shrink (L.CompactCoin i) = L.CompactCoin <$> shrink i

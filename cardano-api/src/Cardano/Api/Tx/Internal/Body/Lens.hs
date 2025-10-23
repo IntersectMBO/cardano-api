@@ -1,5 +1,10 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
+
+{- HLINT ignore "Eta reduce" -}
+
+-- TODO: Deprecate all the lenses that use eons. Explore parameterizing them on `Era era` instead.
 
 module Cardano.Api.Tx.Internal.Body.Lens
   ( -- * Types
@@ -56,7 +61,6 @@ import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Mary.Value qualified as L
 import Cardano.Ledger.Shelley.PParams qualified as L
 import Cardano.Ledger.TxIn qualified as L
@@ -162,7 +166,10 @@ collateralInputsTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.collater
 
 reqSignerHashesTxBodyL
   :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set (L.KeyHash L.Witness))
-reqSignerHashesTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
+reqSignerHashesTxBodyL w@AlonzoEraOnwardsAlonzo = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
+reqSignerHashesTxBodyL w@AlonzoEraOnwardsBabbage = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
+reqSignerHashesTxBodyL w@AlonzoEraOnwardsConway = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
+reqSignerHashesTxBodyL AlonzoEraOnwardsDijkstra = error "reqSignerHashesTxBodyL: DijkstraEra not supported yet"
 
 referenceInputsTxBodyL
   :: BabbageEraOnwards era -> Lens' (LedgerTxBody era) (Set L.TxIn)

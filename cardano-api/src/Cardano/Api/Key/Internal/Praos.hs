@@ -228,10 +228,8 @@ instance SerialiseAsBech32 (SigningKey VrfKey) where
 
 newtype instance Hash VrfKey
   = VrfKeyHash
-      ( Crypto.Hash
-          HASH
-          (Crypto.VerKeyVRF (VRF StandardCrypto))
-      )
+  { unVrfKeyHash :: Crypto.Hash HASH (Crypto.VerKeyVRF (VRF StandardCrypto))
+  }
   deriving stock (Eq, Ord)
   deriving (Show, Pretty) via UsingRawBytesHex (Hash VrfKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash VrfKey)

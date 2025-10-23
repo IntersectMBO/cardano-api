@@ -219,6 +219,7 @@ module Cardano.Api.Network.IPC
     -- **** Query monad
   , LocalStateQueryExpr
   , executeLocalStateQueryExpr
+  , executeLocalStateQueryExprWithVersion
   , queryExpr
 
     -- *** Local tx monitoring

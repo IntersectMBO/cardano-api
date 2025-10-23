@@ -107,7 +107,7 @@ import Cardano.Api.Certificate.Internal
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Consensus.Internal.Mode qualified as Api
 import Cardano.Api.Era.Internal.Case
-import Cardano.Api.Era.Internal.Core (CardanoEra, forEraMaybeEon)
+import Cardano.Api.Era.Internal.Core (forEraMaybeEon)
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error as Api
 import Cardano.Api.Genesis.Internal
@@ -117,6 +117,7 @@ import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
 import Cardano.Api.LedgerState.Internal.ConvertLedgerEvent
 import Cardano.Api.LedgerState.Internal.LedgerEvent
 import Cardano.Api.Monad.Error
+import Cardano.Api.Network (Serialised (..))
 import Cardano.Api.Network.IPC.Internal
   ( LocalChainSyncClient (LocalChainSyncClientPipelined)
   , LocalNodeClientProtocols (..)
@@ -131,7 +132,6 @@ import Cardano.Api.Query.Internal.Type.QueryInMode
   , PoolDistribution (unPoolDistr)
   , ProtocolState
   , SerialisedCurrentEpochState (..)
-  , SerialisedPoolDistribution
   , decodeCurrentEpochState
   , decodePoolDistribution
   , decodeProtocolState
@@ -152,11 +152,19 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Api.Era qualified as Ledger
 import Cardano.Ledger.Api.Transition qualified as Ledger
 import Cardano.Ledger.BHeaderView qualified as Ledger
-import Cardano.Ledger.BaseTypes (Globals (..), Nonce, ProtVer (..), natVersion, (⭒))
+import Cardano.Ledger.BaseTypes
+  ( Globals (..)
+  , Nonce
+  , ProtVer (..)
+  , boundRational
+  , knownNonZeroBounded
+  , natVersion
+  , (⭒)
+  )
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.Coin qualified as SL
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
 import Cardano.Ledger.Keys qualified as SL
 import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
 import Cardano.Ledger.Shelley.Core qualified as Core
@@ -171,7 +179,7 @@ import Cardano.Slotting.EpochInfo.API qualified as Slot
 import Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import Cardano.Slotting.Slot qualified as Slot
 import Ouroboros.Consensus.Block.Abstract qualified as Consensus
-import Ouroboros.Consensus.Block.Forging (BlockForging)
+import Ouroboros.Consensus.Block.Forging (MkBlockForging (..))
 import Ouroboros.Consensus.Byron.ByronHFC qualified as Consensus
 import Ouroboros.Consensus.Byron.Ledger qualified as Byron
 import Ouroboros.Consensus.Cardano qualified as Consensus
@@ -191,14 +199,13 @@ import Ouroboros.Consensus.Ledger.Tables.Utils qualified as Ledger
 import Ouroboros.Consensus.Node.ProtocolInfo qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
 import Ouroboros.Consensus.Protocol.Praos qualified as Praos
+import Ouroboros.Consensus.Protocol.Praos.AgentClient
 import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
 import Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import Ouroboros.Consensus.Protocol.TPraos qualified as TPraos
 import Ouroboros.Consensus.Shelley.HFEras qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Block qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Ledger qualified as Shelley
-import Ouroboros.Consensus.Shelley.Ledger.Query.Types qualified as Consensus
-import Ouroboros.Consensus.Shelley.Ledger.Query.Types qualified as Shelley
 import Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import Ouroboros.Network.Block (blockNo)
 import Ouroboros.Network.Block qualified
@@ -212,6 +219,7 @@ import Control.Error.Util (note)
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.State.Strict
+import Control.Tracer qualified as Tracer
 import Data.Aeson as Aeson
   ( FromJSON (parseJSON)
   , Object
@@ -220,6 +228,7 @@ import Data.Aeson as Aeson
   , (.:)
   , (.:?)
   )
+import Data.Aeson qualified as A
 import Data.Aeson.Types (Parser)
 import Data.Bifunctor
 import Data.ByteArray (ByteArrayAccess)
@@ -345,7 +354,7 @@ initialLedgerState nodeConfigFile = do
   -- can remove the nodeConfigFile argument and much of the code in this
   -- module.
   config <- modifyError ILSEConfigFile (readNodeConfig nodeConfigFile)
-  genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig Nothing config)
+  genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig config)
   env <- modifyError ILSELedgerConsensusConfig (except (genesisConfigToEnv genesisConfig))
   let ledgerState = initLedgerStateVar genesisConfig
   return (env, ledgerState)
@@ -1143,7 +1152,7 @@ instance FromJSON NodeConfig where
         <*> parseAlonzoHardForkEpoch o
         <*> parseBabbageHardForkEpoch o
         <*> parseConwayHardForkEpoch o
-
+        <*> pure Consensus.CardanoTriggerHardForkAtDefaultVersion -- TODO: Dijkstra
     parseShelleyHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseShelleyHardForkEpoch o =
       asum
@@ -1284,6 +1293,11 @@ getNewEpochState era x = do
         ConwayLedgerState conwayCurrent ->
           pure $ Shelley.shelleyLedgerState $ unFlip $ currentState conwayCurrent
         _ -> Left err
+    ShelleyBasedEraDijkstra ->
+      case tip of
+        DijkstraLedgerState dijkstraCurrent ->
+          pure $ Shelley.shelleyLedgerState $ unFlip $ currentState dijkstraCurrent
+        _ -> Left err
 
 {-# COMPLETE
   ShelleyLedgerState
@@ -1354,12 +1368,22 @@ pattern ConwayLedgerState
   -> NS (Current (Flip Consensus.LedgerState mk)) (Consensus.CardanoEras Consensus.StandardCrypto)
 pattern ConwayLedgerState x = S (S (S (S (S (S (Z x))))))
 
+pattern DijkstraLedgerState
+  :: Current
+       (Flip Consensus.LedgerState mk)
+       ( Shelley.ShelleyBlock
+           (Praos.Praos Ledger.StandardCrypto)
+           Consensus.DijkstraEra
+       )
+  -> NS (Current (Flip Consensus.LedgerState mk)) (Consensus.CardanoEras Consensus.StandardCrypto)
+pattern DijkstraLedgerState x = S (S (S (S (S (S (S (Z x)))))))
+
 encodeLedgerState :: LedgerState -> CBOR.Encoding
 encodeLedgerState (LedgerState hst@(HFC.HardForkLedgerState st) tbs) =
   mconcat
     [ CBOR.encodeListLen 2
     , HFC.encodeTelescope
-        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
+        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
         st
     , Ledger.valuesMKEncoder hst tbs
     ]
@@ -1371,13 +1395,15 @@ encodeLedgerState (LedgerState hst@(HFC.HardForkLedgerState st) tbs) =
   alonzo = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
   babbage = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
   conway = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
+  dijkstra = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
 
 decodeLedgerState :: forall s. CBOR.Decoder s LedgerState
 decodeLedgerState = do
   2 <- CBOR.decodeListLen
   hst <-
     HFC.HardForkLedgerState
-      <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
+      <$> HFC.decodeTelescope
+        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
   tbs <- Ledger.valuesMKDecoder hst
   pure (LedgerState hst tbs)
  where
@@ -1388,6 +1414,7 @@ decodeLedgerState = do
   alonzo = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
   babbage = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
   conway = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
+  dijkstra = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
 
 type LedgerStateEvents = (LedgerState, [LedgerEvent])
 
@@ -1430,7 +1457,8 @@ mkProtocolInfoCardano
   :: GenesisConfig
   -> ( Consensus.ProtocolInfo
          (Consensus.CardanoBlock Consensus.StandardCrypto)
-     , IO [BlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
+     , Tracer.Tracer IO KESAgentClientTrace
+       -> IO [MkBlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
      )
 mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transCfg) =
   Consensus.protocolInfoCardano
@@ -1463,18 +1491,29 @@ shelleyPraosNonce genesisHash =
 
 readCardanoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
-  => Maybe (CardanoEra era)
-  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
-  -- 'Cardano.Api.Genesis.Internal.decodeAlonzGenesis' for more details)
-  -> NodeConfig
+  => NodeConfig
   -> t m GenesisConfig
-readCardanoGenesisConfig mEra enc = do
+readCardanoGenesisConfig enc = do
   byronGenesis <- readByronGenesisConfig enc
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
-  alonzoGenesis <- readAlonzoGenesisConfig mEra enc
+  alonzoGenesis <- readAlonzoGenesisConfig enc
   conwayGenesis <- readConwayGenesisConfig enc
-  let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis
+  -- TODO: Build dummy dijkstra genesis value
+  let dijkstraGenesis = exampleDijkstraGenesis -- TODO: Dijkstra - add plumbing to read Dijkstra genesis
+  let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
+
+exampleDijkstraGenesis :: Ledger.DijkstraGenesis
+exampleDijkstraGenesis =
+  Ledger.DijkstraGenesis
+    { Ledger.dgUpgradePParams =
+        Ledger.UpgradeDijkstraPParams
+          { Ledger.udppMaxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
+          , Ledger.udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
+          , Ledger.udppRefScriptCostStride = knownNonZeroBounded @25600 -- 25 KiB
+          , Ledger.udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          }
+    }
 
 data GenesisConfigError
   = NEError !Text
@@ -1549,15 +1588,12 @@ readShelleyGenesisConfig enc = do
 
 readAlonzoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
-  => Maybe (CardanoEra era)
-  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
-  -- 'Cardano.Api.Genesis.Internal.decodeAlonzGenesis' for more details)
-  -> NodeConfig
+  => NodeConfig
   -> t m AlonzoGenesis
-readAlonzoGenesisConfig mEra enc = do
+readAlonzoGenesisConfig enc = do
   let file = ncAlonzoGenesisFile enc
   modifyError (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError) $
-    readAlonzoGenesis mEra file (ncAlonzoGenesisHash enc)
+    readAlonzoGenesis file (ncAlonzoGenesisHash enc)
 
 -- | If the conway genesis file does not exist we simply put in a default.
 readConwayGenesisConfig
@@ -1630,21 +1666,18 @@ renderShelleyGenesisError sge =
         ]
 
 readAlonzoGenesis
-  :: forall m t era
+  :: forall m t
    . MonadIOTransError AlonzoGenesisError t m
-  => Maybe (CardanoEra era)
-  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
-  -- 'Cardano.Api.Genesis.Internal.decodeAlonzGenesis' for more details)
-  -> File AlonzoGenesis 'In
+  => File AlonzoGenesis 'In
   -> GenesisHashAlonzo
   -> t m AlonzoGenesis
-readAlonzoGenesis mEra (File file) expectedGenesisHash = do
+readAlonzoGenesis (File file) expectedGenesisHash = do
   content <-
     modifyError id $ handleIOExceptT (AlonzoGenesisReadError file . textShow) $ LBS.readFile file
   let genesisHash = GenesisHashAlonzo . Cardano.Crypto.Hash.Class.hashWith id $ LBS.toStrict content
   checkExpectedGenesisHash genesisHash
-  modifyError (AlonzoGenesisDecodeError file . Text.pack) $
-    decodeAlonzoGenesis mEra content
+  modifyError (AlonzoGenesisDecodeError file . Text.pack) . liftEither $
+    A.eitherDecode content
  where
   checkExpectedGenesisHash :: GenesisHashAlonzo -> t m ()
   checkExpectedGenesisHash actual =
@@ -1927,6 +1960,7 @@ data LeadershipError
   = LeaderErrDecodeLedgerStateFailure
   | LeaderErrDecodeProtocolStateFailure (LBS.ByteString, DecoderError)
   | LeaderErrDecodeProtocolEpochStateFailure DecoderError
+  | LeaderErrDecodePoolDistributionFailure DecoderError
   | LeaderErrGenesisSlot
   | LeaderErrStakePoolHasNoStake PoolId
   | LeaderErrStakeDistribUnstable
@@ -1955,6 +1989,8 @@ instance Api.Error LeadershipError where
       "Leadership schedule currently cannot be calculated from genesis"
     LeaderErrStakePoolHasNoStake poolId ->
       "The stake pool: " <> pshow poolId <> " has no stake"
+    LeaderErrDecodePoolDistributionFailure decoderError ->
+      "Failed to successfully decode the pool stake distribution: " <> pshow decoderError
     LeaderErrDecodeProtocolEpochStateFailure decoderError ->
       "Failed to successfully decode the current epoch state: " <> pshow decoderError
     LeaderErrStakeDistribUnstable curSlot stableAfterSlot stabWindow predictedLastSlot ->
@@ -2152,7 +2188,7 @@ currentEpochEligibleLeadershipSlots
   -> ProtocolState era
   -> PoolId
   -> SigningKey VrfKey
-  -> SerialisedPoolDistribution era
+  -> Serialised (PoolDistribution era)
   -> EpochNo
   -- ^ Current EpochInfo
   -> Either LeadershipError (Set SlotNo)
@@ -2171,9 +2207,10 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigni
       first LeaderErrSlotRangeCalculationFailure $
         Slot.epochInfoRange eInfo currentEpoch
 
+    -- FUCKED UP HERE:
     setSnapshotPoolDistr <-
-      first LeaderErrDecodeProtocolEpochStateFailure
-        . fmap (SL.unPoolDistr . fromConsensusPoolDistr . unPoolDistr)
+      first LeaderErrDecodePoolDistributionFailure
+        . fmap (SL.unPoolDistr . unPoolDistr)
         $ decodePoolDistribution sbe serPoolDistr
 
     let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
@@ -2257,6 +2294,7 @@ getLedgerTablesUTxOValues sbe tbs =
       ShelleyBasedEraAlonzo -> ejectTables (IS (IS (IS (IS IZ))))
       ShelleyBasedEraBabbage -> ejectTables (IS (IS (IS (IS (IS IZ)))))
       ShelleyBasedEraConway -> ejectTables (IS (IS (IS (IS (IS (IS IZ))))))
+      ShelleyBasedEraDijkstra -> ejectTables (IS (IS (IS (IS (IS (IS (IS IZ)))))))
 
 -- | Reconstructs the ledger's new epoch state and applies a supplied condition to it for every block. This
 -- function only terminates if the condition is met or we have reached the termination epoch. We need to
@@ -2511,22 +2549,3 @@ handleExceptions = liftEither <=< liftIO . runExceptT . flip catches handlers
     [ Handler $ throwError . FoldBlocksIOException
     , Handler $ throwError . FoldBlocksMuxError
     ]
-
--- WARNING: Do NOT use this function anywhere else except in its current call sites.
--- This is a temporary work around.
-fromConsensusPoolDistr :: Consensus.PoolDistr c -> SL.PoolDistr
-fromConsensusPoolDistr cpd =
-  SL.PoolDistr
-    { SL.unPoolDistr = Map.map toLedgerIndividualPoolStake $ Shelley.unPoolDistr cpd
-    , SL.pdTotalActiveStake = SL.CompactCoin 0
-    }
-
--- WARNING: Do NOT use this function anywhere else except in its current call sites.
--- This is a temporary work around.
-toLedgerIndividualPoolStake :: Consensus.IndividualPoolStake c -> SL.IndividualPoolStake
-toLedgerIndividualPoolStake ips =
-  SL.IndividualPoolStake
-    { SL.individualPoolStake = Shelley.individualPoolStake ips
-    , SL.individualPoolStakeVrf = SL.toVRFVerKeyHash $ Shelley.individualPoolStakeVrf ips
-    , SL.individualTotalPoolStake = SL.CompactCoin 0
-    }

@@ -19,6 +19,7 @@ module Cardano.Api.Era.Internal.Core
   , AlonzoEra
   , BabbageEra
   , ConwayEra
+  , DijkstraEra
 
     -- * CardanoEra
   , CardanoEra (..)
@@ -43,7 +44,16 @@ module Cardano.Api.Era.Internal.Core
   , Inject (..)
 
     -- * Data family instances
-  , AsType (AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
+  , AsType
+    ( AsByronEra
+    , AsShelleyEra
+    , AsAllegraEra
+    , AsMaryEra
+    , AsAlonzoEra
+    , AsBabbageEra
+    , AsConwayEra
+    , AsDijkstraEra
+    )
   , CardanoEraConstraints
   , cardanoEraConstraints
   )
@@ -87,6 +97,9 @@ data BabbageEra
 -- | A type used as a tag to distinguish the Conway era.
 data ConwayEra
 
+-- | A type used as a tag to distinguish the DijkstraEra era.
+data DijkstraEra
+
 instance HasTypeProxy ByronEra where
   data AsType ByronEra = AsByronEra
   proxyToAsType _ = AsByronEra
@@ -114,6 +127,10 @@ instance HasTypeProxy BabbageEra where
 instance HasTypeProxy ConwayEra where
   data AsType ConwayEra = AsConwayEra
   proxyToAsType _ = AsConwayEra
+
+instance HasTypeProxy DijkstraEra where
+  data AsType DijkstraEra = AsDijkstraEra
+  proxyToAsType _ = AsDijkstraEra
 
 -- ----------------------------------------------------------------------------
 -- Eon
@@ -263,6 +280,7 @@ data CardanoEra era where
   AlonzoEra :: CardanoEra AlonzoEra
   BabbageEra :: CardanoEra BabbageEra
   ConwayEra :: CardanoEra ConwayEra
+  DijkstraEra :: CardanoEra DijkstraEra
 
 -- when you add era here, change `instance Bounded AnyCardanoEra`
 
@@ -321,6 +339,9 @@ instance IsCardanoEra BabbageEra where
 instance IsCardanoEra ConwayEra where
   cardanoEra = ConwayEra
 
+instance IsCardanoEra DijkstraEra where
+  cardanoEra = DijkstraEra
+
 type CardanoEraConstraints era =
   ( Typeable era
   , IsCardanoEra era
@@ -339,6 +360,7 @@ cardanoEraConstraints = \case
   AlonzoEra -> id
   BabbageEra -> id
   ConwayEra -> id
+  DijkstraEra -> id
 
 data AnyCardanoEra where
   AnyCardanoEra
@@ -372,6 +394,7 @@ instance Enum AnyCardanoEra where
     AnyCardanoEra AlonzoEra -> 4
     AnyCardanoEra BabbageEra -> 5
     AnyCardanoEra ConwayEra -> 6
+    AnyCardanoEra DijkstraEra -> 7
 
   toEnum = \case
     0 -> AnyCardanoEra ByronEra
@@ -409,6 +432,7 @@ cardanoEraToStringLike = \case
   AlonzoEra -> "Alonzo"
   BabbageEra -> "Babbage"
   ConwayEra -> "Conway"
+  DijkstraEra -> "Dijkstra"
 
 anyCardanoEraFromStringLike :: (IsString a, Eq a) => a -> Either a AnyCardanoEra
 {-# INLINE anyCardanoEraFromStringLike #-}
@@ -433,6 +457,7 @@ anyCardanoEra = \case
   AlonzoEra -> AnyCardanoEra AlonzoEra
   BabbageEra -> AnyCardanoEra BabbageEra
   ConwayEra -> AnyCardanoEra ConwayEra
+  DijkstraEra -> AnyCardanoEra DijkstraEra
 
 -- | This pairs up some era-dependent type with a 'CardanoEra' value that tells
 -- us what era it is, but hides the era type. This is useful when the era is

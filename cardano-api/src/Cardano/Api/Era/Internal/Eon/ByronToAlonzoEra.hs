@@ -40,6 +40,7 @@ instance Eon ByronToAlonzoEra where
     AlonzoEra -> yes ByronToAlonzoEraAlonzo
     BabbageEra -> no
     ConwayEra -> no
+    DijkstraEra -> no
 
 instance ToCardanoEra ByronToAlonzoEra where
   toCardanoEra = \case

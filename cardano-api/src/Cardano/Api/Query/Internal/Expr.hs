@@ -59,12 +59,11 @@ import Cardano.Api.UTxO
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.State.Query qualified as L
-import Cardano.Ledger.CertState qualified as L
 import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Conway.State qualified as L
 import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Hashes hiding (Hash)
 import Cardano.Ledger.Keys qualified as L
-import Cardano.Ledger.Shelley.LedgerState qualified as L
 import Cardano.Slotting.Slot
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
@@ -191,7 +190,7 @@ queryPoolDistribution
        QueryInMode
        r
        IO
-       (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolDistribution era)))
+       (Either UnsupportedNtcVersionError (Either EraMismatch (Serialised (PoolDistribution era))))
 queryPoolDistribution eon = querySbe eon . QueryPoolDistribution
 
 queryPoolState
@@ -204,7 +203,7 @@ queryPoolState
        QueryInMode
        r
        IO
-       (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolState era)))
+       (Either UnsupportedNtcVersionError (Either EraMismatch SerialisedPoolState))
 queryPoolState eon = querySbe eon . QueryPoolState
 
 queryProtocolParameters
@@ -484,7 +483,7 @@ queryAccountState
        QueryInMode
        r
        IO
-       (Either UnsupportedNtcVersionError (Either EraMismatch L.AccountState))
+       (Either UnsupportedNtcVersionError (Either EraMismatch L.ChainAccountState))
 queryAccountState eon = querySbe eon QueryAccountState
 
 queryProposals

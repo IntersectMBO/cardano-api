@@ -129,6 +129,7 @@ data ShelleyBasedEra era where
   ShelleyBasedEraAlonzo :: ShelleyBasedEra AlonzoEra
   ShelleyBasedEraBabbage :: ShelleyBasedEra BabbageEra
   ShelleyBasedEraConway :: ShelleyBasedEra ConwayEra
+  ShelleyBasedEraDijkstra :: ShelleyBasedEra DijkstraEra
 
 instance NFData (ShelleyBasedEra era) where
   rnf = \case
@@ -138,6 +139,7 @@ instance NFData (ShelleyBasedEra era) where
     ShelleyBasedEraAlonzo -> ()
     ShelleyBasedEraBabbage -> ()
     ShelleyBasedEraConway -> ()
+    ShelleyBasedEraDijkstra -> ()
 
 deriving instance Eq (ShelleyBasedEra era)
 
@@ -169,6 +171,7 @@ instance Eon ShelleyBasedEra where
     AlonzoEra -> yes ShelleyBasedEraAlonzo
     BabbageEra -> yes ShelleyBasedEraBabbage
     ConwayEra -> yes ShelleyBasedEraConway
+    DijkstraEra -> yes ShelleyBasedEraDijkstra
 
 instance ToCardanoEra ShelleyBasedEra where
   toCardanoEra = \case
@@ -178,6 +181,7 @@ instance ToCardanoEra ShelleyBasedEra where
     ShelleyBasedEraAlonzo -> AlonzoEra
     ShelleyBasedEraBabbage -> BabbageEra
     ShelleyBasedEraConway -> ConwayEra
+    ShelleyBasedEraDijkstra -> DijkstraEra
 
 instance Convert ShelleyBasedEra CardanoEra where
   convert = toCardanoEra
@@ -206,6 +210,9 @@ instance IsShelleyBasedEra BabbageEra where
 instance IsShelleyBasedEra ConwayEra where
   shelleyBasedEra = ShelleyBasedEraConway
 
+instance IsShelleyBasedEra DijkstraEra where
+  shelleyBasedEra = ShelleyBasedEraDijkstra
+
 type ShelleyBasedEraConstraints era =
   ( C.HashAlgorithm L.HASH
   , C.Signable (L.VRF L.StandardCrypto) L.Seed
@@ -224,6 +231,8 @@ type ShelleyBasedEraConstraints era =
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.EraTxWits (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
+  , L.EraCertState (ShelleyLedgerEra era)
+  , L.EraAccounts (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (L.TxCert (ShelleyLedgerEra era))
@@ -248,6 +257,7 @@ shelleyBasedEraConstraints = \case
   ShelleyBasedEraAlonzo -> id
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway -> id
+  ShelleyBasedEraDijkstra -> const $ error "shelleyBasedEraConstraints: Dijkstra is not yet supported"
 
 data AnyShelleyBasedEra where
   AnyShelleyBasedEra
@@ -277,6 +287,7 @@ instance Enum AnyShelleyBasedEra where
     AnyShelleyBasedEra ShelleyBasedEraAlonzo -> 4
     AnyShelleyBasedEra ShelleyBasedEraBabbage -> 5
     AnyShelleyBasedEra ShelleyBasedEraConway -> 6
+    AnyShelleyBasedEra ShelleyBasedEraDijkstra -> 7
 
   toEnum = \case
     1 -> AnyShelleyBasedEra ShelleyBasedEraShelley
@@ -340,6 +351,7 @@ type family ShelleyLedgerEra era = ledgerera | ledgerera -> era where
   ShelleyLedgerEra AlonzoEra = L.AlonzoEra
   ShelleyLedgerEra BabbageEra = L.BabbageEra
   ShelleyLedgerEra ConwayEra = L.ConwayEra
+  ShelleyLedgerEra DijkstraEra = L.DijkstraEra
 
 -- | Lookup the lower major protocol version for the shelley based era. In other words
 -- this is the major protocol version that the era has started in.
@@ -351,6 +363,7 @@ eraProtVerLow = \case
   ShelleyBasedEraAlonzo -> L.eraProtVerLow @L.AlonzoEra
   ShelleyBasedEraBabbage -> L.eraProtVerLow @L.BabbageEra
   ShelleyBasedEraConway -> L.eraProtVerLow @L.ConwayEra
+  ShelleyBasedEraDijkstra -> L.eraProtVerLow @L.DijkstraEra
 
 requireShelleyBasedEra
   :: ()

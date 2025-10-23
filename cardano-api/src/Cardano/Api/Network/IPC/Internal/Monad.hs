@@ -5,6 +5,7 @@
 module Cardano.Api.Network.IPC.Internal.Monad
   ( LocalStateQueryExpr
   , executeLocalStateQueryExpr
+  , executeLocalStateQueryExprWithVersion
   , queryExpr
   )
 where
@@ -40,6 +41,31 @@ newtype LocalStateQueryExpr block point query r m a = LocalStateQueryExpr
       :: ReaderT NodeToClientVersion (ContT (Net.Query.ClientStAcquired block point query m r) m) a
   }
   deriving (Functor, Applicative, Monad, MonadReader NodeToClientVersion, MonadIO)
+
+-- | Execute a local state query expression.
+executeLocalStateQueryExprWithVersion
+  :: ()
+  => LocalNodeConnectInfo
+  -> Net.Query.Target ChainPoint
+  -> (NodeToClientVersion -> LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a)
+  -> IO (Either AcquiringFailure a)
+executeLocalStateQueryExprWithVersion connectInfo target f = do
+  tmvResultLocalState <- newEmptyTMVarIO
+  let waitResult = readTMVar tmvResultLocalState
+
+  connectToLocalNodeWithVersion
+    connectInfo
+    ( \ntcVersion ->
+        LocalNodeClientProtocols
+          { localChainSyncClient = NoLocalChainSyncClient
+          , localStateQueryClient =
+              Just $ setupLocalStateQueryExpr waitResult target tmvResultLocalState ntcVersion (f ntcVersion)
+          , localTxSubmissionClient = Nothing
+          , localTxMonitoringClient = Nothing
+          }
+    )
+
+  atomically waitResult
 
 -- | Execute a local state query expression.
 executeLocalStateQueryExpr

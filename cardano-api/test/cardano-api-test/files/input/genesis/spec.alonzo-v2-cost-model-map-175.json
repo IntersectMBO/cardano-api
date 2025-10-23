@@ -166,9 +166,6 @@
       "unListData-memory-arguments": 32,
       "unMapData-cpu-arguments": 38314,
       "unMapData-memory-arguments": 32,
-      "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
-      "verifyEd25519Signature-cpu-arguments-slope": 1021,
-      "verifyEd25519Signature-memory-arguments": 10,
       "verifySignature-cpu-arguments-intercept": 3345831,
       "verifySignature-cpu-arguments-slope": 1,
       "verifySignature-memory-arguments": 1
