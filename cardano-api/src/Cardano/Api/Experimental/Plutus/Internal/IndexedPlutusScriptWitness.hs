@@ -16,7 +16,7 @@ module Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
   , WitnessableItem (..)
 
     -- * Create the index for a witnessable thing.
-  , GetPlutusScriptPurpose (..)
+  , toPlutusScriptPurpose
   , createIndexedPlutusScriptWitnesses
   , getAnyWitnessRedeemerPointerMap
   , obtainAlonzoScriptPurposeConstraints
@@ -61,15 +61,13 @@ deriving instance Show (IndexedPlutusScriptWitness witnessable lang purpose era)
 
 data AnyIndexedPlutusScriptWitness era where
   AnyIndexedPlutusScriptWitness
-    :: GetPlutusScriptPurpose era
-    => IndexedPlutusScriptWitness witnessable lang purpose era
+    :: IndexedPlutusScriptWitness witnessable lang purpose era
     -> AnyIndexedPlutusScriptWitness era
 
 deriving instance Show (AnyIndexedPlutusScriptWitness era)
 
 -- | These are all of the "things" a plutus script can witness. We include the relevant
--- type class constraint to avoid boilerplate when creating the 'PlutusPurpose' in
--- the 'GetPlutusScriptPurpose' instances.
+-- type class constraint to avoid boilerplate when creating the 'PlutusPurpose' in the 'toPlutusScriptPurpose'.
 data Witnessable (thing :: WitnessableItem) era where
   WitTxIn
     :: L.AlonzoEraScript era
@@ -134,19 +132,16 @@ data WitnessableItem
 -- for every Plutus script, and this pointer corresponds to the one in the transaction's
 -- redeemer pointers map. For more details, refer to `collectPlutusScriptsWithContext`
 -- in `cardano-ledger`.
-class GetPlutusScriptPurpose era where
-  toPlutusScriptPurpose
-    :: Word32
-    -> Witnessable thing era
-    -> L.PlutusPurpose L.AsIx era
-
-instance GetPlutusScriptPurpose era where
-  toPlutusScriptPurpose index WitTxIn{} = L.mkSpendingPurpose (L.AsIx index)
-  toPlutusScriptPurpose index WitWithdrawal{} = L.mkRewardingPurpose (L.AsIx index)
-  toPlutusScriptPurpose index WitMint{} = L.mkMintingPurpose (L.AsIx index)
-  toPlutusScriptPurpose index WitTxCert{} = L.mkCertifyingPurpose (L.AsIx index)
-  toPlutusScriptPurpose index WitVote{} = L.mkVotingPurpose (L.AsIx index)
-  toPlutusScriptPurpose index WitProposal{} = L.mkProposingPurpose (L.AsIx index)
+toPlutusScriptPurpose
+  :: Word32
+  -> Witnessable thing era
+  -> L.PlutusPurpose L.AsIx era
+toPlutusScriptPurpose index WitTxIn{} = L.mkSpendingPurpose (L.AsIx index)
+toPlutusScriptPurpose index WitWithdrawal{} = L.mkRewardingPurpose (L.AsIx index)
+toPlutusScriptPurpose index WitMint{} = L.mkMintingPurpose (L.AsIx index)
+toPlutusScriptPurpose index WitTxCert{} = L.mkCertifyingPurpose (L.AsIx index)
+toPlutusScriptPurpose index WitVote{} = L.mkVotingPurpose (L.AsIx index)
+toPlutusScriptPurpose index WitProposal{} = L.mkProposingPurpose (L.AsIx index)
 
 createIndexedPlutusScriptWitness
   :: L.AlonzoEraScript era
@@ -204,7 +199,7 @@ constructRedeeemerPointerMap eon scriptWits =
 
 obtainAlonzoScriptPurposeConstraints
   :: AlonzoEraOnwards era
-  -> ((GetPlutusScriptPurpose era, L.AlonzoEraScript (ShelleyLedgerEra era)) => a)
+  -> (L.AlonzoEraScript (ShelleyLedgerEra era) => a)
   -> a
 obtainAlonzoScriptPurposeConstraints v =
   case v of
