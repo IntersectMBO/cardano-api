@@ -114,8 +114,8 @@ jobs:
 
     - name: Restore cached deps
       run: |
-        wget "https://agrius.feralhosting.com/palas/wasm-cache/b2db82f9f5a05c4d7712a1ec30b1d73d626738a52922d0c5ee9077563430763c.tar.xz"
-        tar -xf b2db82f9f5a05c4d7712a1ec30b1d73d626738a52922d0c5ee9077563430763c.tar.xz
+        wget "https://agrius.feralhosting.com/palas/wasm-cache/679206edf09804a8921df24d98147da457cd3dda35ee1a0642126d08f05bae0c.tar.xz"
+        tar -xf 679206edf09804a8921df24d98147da457cd3dda35ee1a0642126d08f05bae0c.tar.xz
         rm -fr ~/.ghc-wasm/.cabal/store/
         mv store ~/.ghc-wasm/.cabal/
 
@@ -184,6 +184,21 @@ jobs:
     - name: Build grpc bridge
       run: |
         nix build .#proto-js-bundle
+
+    - name: Prepare NPM package
+      run: |
+        cp cardano-wasm/lib-wrapper/* cardano-wasm/npm-wrapper/src/
+        rm cardano-wasm/npm-wrapper/src/cardano-api.js
+        cp result/cardano_node_grpc_web_pb.js cardano-wasm/npm-wrapper/src/
+        cp -r result/node cardano-wasm/npm-wrapper/src/
+        cd cardano-wasm/npm-wrapper
+        npm install
+        npm run build
+        npm test
+        npm pack
+
+    - name: Prepare wasm library
+      run: |
         cp result/cardano_node_grpc_web_pb.js cardano-wasm/lib-wrapper/
 
     - name: Upload built wasm library
@@ -192,6 +207,12 @@ jobs:
         name: cardano-wasm
         path: cardano-wasm/lib-wrapper/*
         compression-level: 9
+
+    - name: Upload built NPM package
+      uses: actions/upload-artifact@v4
+      with:
+        name: npm-package
+        path: cardano-wasm/npm-wrapper/*.tgz
 
   wasm-builds-complete:
     needs: [build]
