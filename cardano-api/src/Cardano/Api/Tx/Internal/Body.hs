@@ -232,6 +232,7 @@ where
 
 import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
+import Cardano.Api.Certificate
 import Cardano.Api.Certificate.Internal
 import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
@@ -251,6 +252,7 @@ import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
   , obtainAlonzoScriptPurposeConstraints
   )
 import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
+import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Governance.Internal.Action.ProposalProcedure
 import Cardano.Api.Governance.Internal.Action.VotingProcedure
@@ -573,7 +575,7 @@ data TxCertificates build era where
   TxCertificates
     :: ShelleyBasedEra era
     -> OMap
-         (Certificate era)
+         (Exp.Certificate (ShelleyLedgerEra era))
          ( BuildTxWith
              build
              (Maybe (StakeCredential, Witness WitCtxStake era))
@@ -592,29 +594,40 @@ deriving instance Show (TxCertificates build era)
 -- credential registration certificates without a deposit. Future eras will require a witness for
 -- registration certificates, because the one without a deposit will be removed.
 mkTxCertificates
-  :: Applicative (BuildTxWith build)
+  :: forall era build
+   . Applicative (BuildTxWith build)
   => ShelleyBasedEra era
-  -> [(Certificate era, Maybe (ScriptWitness WitCtxStake era))]
+  -> [(Exp.Certificate (ShelleyLedgerEra era), Maybe (ScriptWitness WitCtxStake era))]
   -> TxCertificates build era
 mkTxCertificates _ [] = TxCertificatesNone
 mkTxCertificates sbe certs = TxCertificates sbe . fromList $ map getStakeCred certs
  where
-  getStakeCred (cert, mWit) = do
+  getStakeCred
+    :: (Exp.Certificate (ShelleyLedgerEra era), Maybe (ScriptWitness WitCtxStake era))
+    -> ( Exp.Certificate (ShelleyLedgerEra era)
+       , BuildTxWith build (Maybe (StakeCredential, Witness WitCtxStake era))
+       )
+  getStakeCred (c@(Exp.Certificate cert), mWit) = do
     let wit =
           maybe
             (KeyWitness KeyWitnessForStakeAddr)
             (ScriptWitness ScriptWitnessForStakeAddr)
             mWit
-    ( cert
+    ( c
       , pure $
-          (,wit) <$> selectStakeCredentialWitness cert
+          (,wit) <$> getTxCertWitness sbe cert
       )
 
 -- | Index certificates with witnesses by the order they appear in the list (in the transaction).
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
 indexTxCertificates
   :: TxCertificates BuildTx era
-  -> [(ScriptWitnessIndex, Certificate era, StakeCredential, Witness WitCtxStake era)]
+  -> [ ( ScriptWitnessIndex
+       , Exp.Certificate (ShelleyLedgerEra era)
+       , StakeCredential
+       , Witness WitCtxStake era
+       )
+     ]
 indexTxCertificates TxCertificatesNone = []
 indexTxCertificates (TxCertificates _ certsWits) =
   [ (ScriptWitnessIndexCertificate ix, cert, stakeCred, witness)
@@ -1771,7 +1784,7 @@ fromLedgerTxCertificates sbe body =
      in if null certificates
           then TxCertificatesNone
           else
-            TxCertificates sbe . fromList $ map ((,ViewTx) . fromShelleyCertificate sbe) $ toList certificates
+            TxCertificates sbe . fromList $ map ((,ViewTx) . Exp.Certificate) $ toList certificates
 
 maybeFromLedgerTxUpdateProposal
   :: ()
@@ -1855,7 +1868,7 @@ convCertificates
   -> Seq.StrictSeq (Shelley.TxCert (ShelleyLedgerEra era))
 convCertificates _ = \case
   TxCertificatesNone -> Seq.empty
-  TxCertificates _ cs -> fromList . map (toShelleyCertificate . fst) $ toList cs
+  TxCertificates _ cs -> fromList . map (\(Exp.Certificate c, _) -> c) $ toList cs
 
 convWithdrawals :: TxWithdrawals build era -> L.Withdrawals
 convWithdrawals txWithdrawals =
@@ -3029,10 +3042,10 @@ extractWitnessableCertificates
 extractWitnessableCertificates aeon txCertificates =
   alonzoEraOnwardsConstraints aeon $
     List.nub
-      [ ( WitTxCert (certificateToTxCert cert) stakeCred
+      [ ( WitTxCert cert stakeCred
         , BuildTxWith wit
         )
-      | (cert, BuildTxWith (Just (stakeCred, wit))) <- getCertificates txCertificates
+      | (Exp.Certificate cert, BuildTxWith (Just (stakeCred, wit))) <- getCertificates txCertificates
       ]
  where
   getCertificates TxCertificatesNone = []

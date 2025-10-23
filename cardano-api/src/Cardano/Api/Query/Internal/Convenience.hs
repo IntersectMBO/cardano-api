@@ -25,6 +25,7 @@ import Cardano.Api.Certificate.Internal
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Era
 import Cardano.Api.Error
+import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.IO
 import Cardano.Api.Monad.Error
 import Cardano.Api.Network.IPC
@@ -98,7 +99,7 @@ queryStateForBalancedTx
   :: ()
   => CardanoEra era
   -> [TxIn]
-  -> [Certificate era]
+  -> [Exp.Certificate (ShelleyLedgerEra era)]
   -> LocalStateQueryExpr
        block
        point
@@ -122,8 +123,8 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     requireShelleyBasedEra era
       & onNothing (left ByronEraNotSupported)
 
-  let stakeCreds = fromList $ mapMaybe filterUnRegCreds certs
-      drepCreds = fromList $ mapMaybe filterUnRegDRepCreds certs
+  let stakeCreds = fromList $ mapMaybe (filterUnRegCreds sbe) certs
+      drepCreds = fromList $ mapMaybe (filterUnRegDRepCreds sbe) certs
 
   -- Query execution
   utxo <-

@@ -792,21 +792,33 @@ genTxCertificates =
         certs <- Gen.list (Range.constant 0 3) $ genCertificate w
         Gen.choice
           [ pure TxCertificatesNone
-          , pure (TxCertificates w $ fromList ((,BuildTxWith Nothing) <$> certs))
-          -- TODO: Generate certificates
+          , pure
+              ( TxCertificates w $
+                  fromList ((,BuildTxWith Nothing) <$> map extractCertificate certs)
+              )
+              -- TODO: Generate certificates
           ]
     )
+
+extractCertificate
+  :: Api.Certificate era
+  -> Exp.Certificate (ShelleyLedgerEra era)
+extractCertificate (Api.ShelleyRelatedCertificate w c) =
+  shelleyToBabbageEraConstraints w $ Exp.Certificate c
+extractCertificate (ConwayCertificate w c) =
+  conwayEraOnwardsConstraints w $ Exp.Certificate c
 
 genScriptWitnessedTxCertificates :: Typeable era => Exp.Era era -> Gen (TxCertificates BuildTx era)
 genScriptWitnessedTxCertificates era = do
   let w = convert era
   num <- Gen.integral (Range.linear 0 3)
   certs <- Gen.list (Range.singleton num) $ genCertificate w
-  plutusScriptWits <- Gen.list (Range.singleton num) $ genApiPlutusScriptWitness WitCtxStake era
+  plutusScriptWits <-
+    Gen.list (Range.singleton num) $ genApiPlutusScriptWitness WitCtxStake era
   let certsAndWits =
         zipWith
           (\c p -> (c, Just p))
-          certs
+          (map extractCertificate certs)
           plutusScriptWits
 
   pure $ mkTxCertificates (convert era) certsAndWits

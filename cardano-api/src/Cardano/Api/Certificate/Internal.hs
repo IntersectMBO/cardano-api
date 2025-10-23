@@ -76,6 +76,7 @@ module Cardano.Api.Certificate.Internal
   , certificateToTxCert
   , filterUnRegCreds
   , filterUnRegDRepCreds
+  , getTxCertWitness
   , isDRepRegOrUpdateCert
   )
 where
@@ -85,6 +86,7 @@ import Cardano.Api.Certificate.Internal.DRepMetadata
 import Cardano.Api.Certificate.Internal.StakePoolMetadata
 import Cardano.Api.Era
 import Cardano.Api.Error (Error (..))
+import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Governance.Internal.Action.VotingProcedure
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)
@@ -103,6 +105,7 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Keys qualified as Ledger
 import Cardano.Ledger.State qualified as Ledger
 
+import Control.Monad
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -119,6 +122,8 @@ import Network.Socket (PortNumber)
 -- ----------------------------------------------------------------------------
 -- Certificates embedded in transactions
 --
+
+{-# DEPRECATED Certificate "Use `Certificate` type from Cardano.Api.Experimental.Tx.Internal.Certificate instead" #-}
 
 data Certificate era where
   -- Pre-Conway
@@ -567,60 +572,21 @@ selectStakeCredentialWitness = \case
       getTxCertWitness (convert cEra) conwayCert
 
 filterUnRegCreds
-  :: Certificate era -> Maybe StakeCredential
-filterUnRegCreds =
-  fmap fromShelleyStakeCredential . \case
-    ShelleyRelatedCertificate stbEra shelleyCert -> shelleyToBabbageEraConstraints stbEra $
-      case shelleyCert of
-        Ledger.RegTxCert _ -> Nothing
-        Ledger.UnRegTxCert cred -> Just cred
-        Ledger.DelegStakeTxCert _ _ -> Nothing
-        Ledger.RegPoolTxCert _ -> Nothing
-        Ledger.RetirePoolTxCert _ _ -> Nothing
-        Ledger.MirTxCert _ -> Nothing
-        Ledger.GenesisDelegTxCert{} -> Nothing
-        _ -> error "dijkstra"
-    ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
-      case conwayCert of
-        Ledger.RegPoolTxCert _ -> Nothing
-        Ledger.RetirePoolTxCert _ _ -> Nothing
-        Ledger.RegDepositTxCert _ _ -> Nothing
-        Ledger.UnRegDepositTxCert cred _ -> Just cred
-        Ledger.DelegTxCert _ _ -> Nothing
-        Ledger.RegDepositDelegTxCert{} -> Nothing
-        Ledger.AuthCommitteeHotKeyTxCert{} -> Nothing
-        Ledger.ResignCommitteeColdTxCert{} -> Nothing
-        Ledger.RegDRepTxCert{} -> Nothing
-        Ledger.UnRegDRepTxCert{} -> Nothing
-        Ledger.UpdateDRepTxCert{} -> Nothing
-        -- those are old shelley patterns
-        Ledger.RegTxCert _ -> Nothing
-        -- stake cred deregistration w/o deposit
-        Ledger.UnRegTxCert cred -> Just cred
-        _ -> error "dijkstra"
+  :: ShelleyBasedEra era -> Exp.Certificate (ShelleyLedgerEra era) -> Maybe StakeCredential
+filterUnRegCreds sbe (Exp.Certificate cert) =
+  fmap fromShelleyStakeCredential $
+    shelleyBasedEraConstraints sbe $
+      Ledger.lookupUnRegStakeTxCert cert
 
 filterUnRegDRepCreds
-  :: Certificate era -> Maybe (Ledger.Credential Ledger.DRepRole)
-filterUnRegDRepCreds = \case
-  ShelleyRelatedCertificate _ _ -> Nothing
-  ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
-    case conwayCert of
-      Ledger.RegPoolTxCert _ -> Nothing
-      Ledger.RetirePoolTxCert _ _ -> Nothing
-      Ledger.RegDepositTxCert _ _ -> Nothing
-      Ledger.UnRegDepositTxCert _ _ -> Nothing
-      Ledger.DelegTxCert _ _ -> Nothing
-      Ledger.RegDepositDelegTxCert{} -> Nothing
-      Ledger.AuthCommitteeHotKeyTxCert{} -> Nothing
-      Ledger.ResignCommitteeColdTxCert{} -> Nothing
-      Ledger.RegDRepTxCert{} -> Nothing
-      Ledger.UnRegDRepTxCert cred _ -> Just cred
-      Ledger.UpdateDRepTxCert{} -> Nothing
-      -- those are old shelley patterns
-      Ledger.RegTxCert _ -> Nothing
-      -- stake cred deregistration w/o deposit
-      Ledger.UnRegTxCert _ -> Nothing
-      _ -> error "dijkstra"
+  :: ShelleyBasedEra era
+  -> Exp.Certificate (ShelleyLedgerEra era)
+  -> Maybe (Ledger.Credential Ledger.DRepRole)
+filterUnRegDRepCreds sbe (Exp.Certificate cert) =
+  join $ forEraInEonMaybe (toCardanoEra sbe) $ \w ->
+    conwayEraOnwardsConstraints w $
+      fst
+        <$> Ledger.getUnRegDRepTxCert cert
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
