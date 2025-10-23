@@ -70,6 +70,7 @@ module Cardano.Api.Experimental
   )
 where
 
+import Cardano.Api.Experimental.Certificate
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
 import Cardano.Api.Experimental.Plutus.Internal.Script
