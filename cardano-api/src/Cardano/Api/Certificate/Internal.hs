@@ -73,10 +73,8 @@ module Cardano.Api.Certificate.Internal
   , AsType (..)
 
     -- * Internal functions
-  , certificateToTxCert
   , filterUnRegCreds
   , filterUnRegDRepCreds
-  , getTxCertWitness
   , isDRepRegOrUpdateCert
   )
 where
@@ -87,19 +85,18 @@ import Cardano.Api.Certificate.Internal.StakePoolMetadata
 import Cardano.Api.Era
 import Cardano.Api.Error (Error (..))
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
+import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.Governance.Internal.Action.VotingProcedure
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)
 import Cardano.Api.Key.Internal
 import Cardano.Api.Key.Internal.Praos
 import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
-import Cardano.Api.Plutus.Internal.Script
 import Cardano.Api.Pretty (Doc)
 import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.TextEnvelope.Internal
 import Cardano.Api.Value.Internal
 
-import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Keys qualified as Ledger
@@ -288,7 +285,7 @@ data StakePoolMetadataReference
 -- ----------------------------------------------------------------------------
 -- DRep parameters
 --
-
+-- TODO: Remove me, its not in use anywhere
 data DRepMetadataReference
   = DRepMetadataReference
   { drepMetadataURL :: Text
@@ -299,6 +296,11 @@ data DRepMetadataReference
 -- ----------------------------------------------------------------------------
 -- Constructor functions
 --
+
+{-# DEPRECATED
+  StakeAddressRequirements
+  "Use Cardano.Api.Experimental's makeStakeAddressRegistrationCertificate instead"
+  #-}
 
 data StakeAddressRequirements era where
   StakeAddrRegistrationConway
@@ -311,6 +313,11 @@ data StakeAddressRequirements era where
     -> StakeCredential
     -> StakeAddressRequirements era
 
+{-# DEPRECATED
+  makeStakeAddressRegistrationCertificate
+  "If you need compatibility with all shelley based eras use Cardano.Api.Compatible.Certificate's \
+   \ makeStakeAddressRegistrationCertificate. Otherwise use Cardano.Api.Experimental.Certificate's makeStakeAddressRegistrationCertificate"
+  #-}
 makeStakeAddressRegistrationCertificate :: StakeAddressRequirements era -> Certificate era
 makeStakeAddressRegistrationCertificate = \case
   StakeAddrRegistrationPreConway w scred ->
@@ -323,6 +330,11 @@ makeStakeAddressRegistrationCertificate = \case
       ConwayCertificate cOnwards $
         Ledger.mkRegDepositTxCert (toShelleyStakeCredential scred) deposit
 
+{-# DEPRECATED
+  makeStakeAddressUnregistrationCertificate
+  "If you need compatibility with all shelley based eras use Cardano.Api.Compatible.Certificate's \
+   \ makeStakeAddressUnregistrationCertificate. Otherwise use Cardano.Api.Experimental.Certificate's makeStakeAddressUnregistrationCertificate"
+  #-}
 makeStakeAddressUnregistrationCertificate :: StakeAddressRequirements era -> Certificate era
 makeStakeAddressUnregistrationCertificate req =
   case req of
@@ -336,6 +348,12 @@ makeStakeAddressUnregistrationCertificate req =
           Ledger.mkUnRegTxCert $
             toShelleyStakeCredential scred
 
+{-# DEPRECATED
+  StakeDelegationRequirements
+  "If you need compatibility with all shelley based eras use Cardano.Api.Compatible.Certificate's \
+   \ makeStakeAddressDelegationCertificate. Otherwise use Cardano.Api.Experimental.Certificate's makeStakeAddressDelegationCertificate"
+  #-}
+
 data StakeDelegationRequirements era where
   StakeDelegationRequirementsConwayOnwards
     :: ConwayEraOnwards era
@@ -348,6 +366,11 @@ data StakeDelegationRequirements era where
     -> PoolId
     -> StakeDelegationRequirements era
 
+{-# DEPRECATED
+  makeStakeAddressDelegationCertificate
+  "If you need compatibility with all shelley based eras use Cardano.Api.Compatible.Certificate's \
+   \ makeStakeAddressDelegationCertificate. Otherwise use Cardano.Api.Experimental.Certificate's makeStakeAddressDelegationCertificate"
+  #-}
 makeStakeAddressDelegationCertificate :: StakeDelegationRequirements era -> Certificate era
 makeStakeAddressDelegationCertificate = \case
   StakeDelegationRequirementsConwayOnwards cOnwards scred delegatee ->
@@ -369,6 +392,11 @@ data StakePoolRegistrationRequirements era where
     -> Ledger.PoolParams
     -> StakePoolRegistrationRequirements era
 
+{-# DEPRECATED
+  makeStakePoolRegistrationCertificate
+  "If you need compatibility with all shelley based eras use Cardano.Api.Compatible.Certificate's \
+   \ makeStakePoolRegistrationCertificate. Otherwise use Cardano.Api.Experimental.Certificate's makeStakePoolRegistrationCertificate"
+  #-}
 makeStakePoolRegistrationCertificate
   :: ()
   => StakePoolRegistrationRequirements era
@@ -383,6 +411,12 @@ makeStakePoolRegistrationCertificate = \case
       ShelleyRelatedCertificate atMostBab $
         Ledger.mkRegPoolTxCert poolParams
 
+{-# DEPRECATED
+  StakePoolRetirementRequirements
+  "If you need compatibility with all shelley based eras use Cardano.Api.Compatible.Certificate's \
+   \ makeStakePoolRetirementCertificate. Otherwise use Cardano.Api.Experimental.Certificate's makeStakePoolRetirementCertificate"
+  #-}
+
 data StakePoolRetirementRequirements era where
   StakePoolRetirementRequirementsConwayOnwards
     :: ConwayEraOnwards era
@@ -395,6 +429,11 @@ data StakePoolRetirementRequirements era where
     -> Ledger.EpochNo
     -> StakePoolRetirementRequirements era
 
+{-# DEPRECATED
+  makeStakePoolRetirementCertificate
+  "If you need compatibility with all shelley based eras use Cardano.Api.Compatible.Certificate's \
+   \ makeStakePoolRetirementCertificate. Otherwise use Cardano.Api.Experimental.Certificate's makeStakePoolRetirementCertificate"
+  #-}
 makeStakePoolRetirementCertificate
   :: ()
   => StakePoolRetirementRequirements era
@@ -410,6 +449,11 @@ makeStakePoolRetirementCertificate req =
         ConwayCertificate atMostBab $
           Ledger.mkRetirePoolTxCert (unStakePoolKeyHash poolId) retirementEpoch
 
+{-# DEPRECATED
+  GenesisKeyDelegationRequirements
+  "Use Cardano.Api.Compatible.Certificate's makeGenesisKeyDelegationCertificate instead"
+  #-}
+
 data GenesisKeyDelegationRequirements era where
   GenesisKeyDelegationRequirements
     :: ShelleyToBabbageEra era
@@ -418,6 +462,10 @@ data GenesisKeyDelegationRequirements era where
     -> Hash VrfKey
     -> GenesisKeyDelegationRequirements era
 
+{-# DEPRECATED
+  makeGenesisKeyDelegationCertificate
+  "Use Cardano.Api.Compatible.Certificate's makeGenesisKeyDelegationCertificate instead"
+  #-}
 makeGenesisKeyDelegationCertificate
   :: Typeable era => GenesisKeyDelegationRequirements era -> Certificate era
 makeGenesisKeyDelegationCertificate
@@ -432,6 +480,11 @@ makeGenesisKeyDelegationCertificate
         Ledger.ShelleyTxCertGenesisDeleg $
           Ledger.GenesisDelegCert hGenKey hGenDelegKey (Ledger.toVRFVerKeyHash hVrfKey)
 
+{-# DEPRECATED
+  MirCertificateRequirements
+  "Use Cardano.Api.Compatible.Certificate's makeMIRCertificate instead"
+  #-}
+
 data MirCertificateRequirements era where
   MirCertificateRequirements
     :: ShelleyToBabbageEra era
@@ -439,6 +492,10 @@ data MirCertificateRequirements era where
     -> Ledger.MIRTarget
     -> MirCertificateRequirements era
 
+{-# DEPRECATED
+  makeMIRCertificate
+  "Use Cardano.Api.Compatible.Certificate's makeMIRCertificate instead"
+  #-}
 makeMIRCertificate
   :: Typeable era
   => MirCertificateRequirements era
@@ -448,6 +505,11 @@ makeMIRCertificate (MirCertificateRequirements atMostEra mirPot mirTarget) =
     Ledger.ShelleyTxCertMir $
       Ledger.MIRCert mirPot mirTarget
 
+{-# DEPRECATED
+  DRepRegistrationRequirements
+  "Use Cardano.Api.Experimental.Certificate's makeDrepRegistrationCertificate instead"
+  #-}
+
 data DRepRegistrationRequirements era where
   DRepRegistrationRequirements
     :: ConwayEraOnwards era
@@ -455,6 +517,10 @@ data DRepRegistrationRequirements era where
     -> L.Coin
     -> DRepRegistrationRequirements era
 
+{-# DEPRECATED
+  makeDrepRegistrationCertificate
+  "Use Cardano.Api.Experimental.Certificate's makeDrepRegistrationCertificate instead"
+  #-}
 makeDrepRegistrationCertificate
   :: Typeable era
   => DRepRegistrationRequirements era
@@ -472,6 +538,10 @@ data CommitteeHotKeyAuthorizationRequirements era where
     -> Ledger.Credential Ledger.HotCommitteeRole
     -> CommitteeHotKeyAuthorizationRequirements era
 
+{-# DEPRECATED
+  makeCommitteeHotKeyAuthorizationCertificate
+  "Use Cardano.Api.Experimental.Certificate's makeCommitteeHotKeyAuthorizationCertificate instead"
+  #-}
 makeCommitteeHotKeyAuthorizationCertificate
   :: Typeable era
   => CommitteeHotKeyAuthorizationRequirements era
@@ -481,6 +551,11 @@ makeCommitteeHotKeyAuthorizationCertificate (CommitteeHotKeyAuthorizationRequire
     . Ledger.ConwayTxCertGov
     $ Ledger.ConwayAuthCommitteeHotKey coldKeyCredential hotKeyCredential
 
+{-# DEPRECATED
+  CommitteeColdkeyResignationRequirements
+  "Use Cardano.Api.Experimental.Certificate's makeCommitteeColdkeyResignationCertificate instead"
+  #-}
+
 data CommitteeColdkeyResignationRequirements era where
   CommitteeColdkeyResignationRequirements
     :: ConwayEraOnwards era
@@ -488,6 +563,10 @@ data CommitteeColdkeyResignationRequirements era where
     -> Maybe Ledger.Anchor
     -> CommitteeColdkeyResignationRequirements era
 
+{-# DEPRECATED
+  makeCommitteeColdkeyResignationCertificate
+  "Use Cardano.Api.Experimental.Certificate's makeCommitteeColdkeyResignationCertificate instead"
+  #-}
 makeCommitteeColdkeyResignationCertificate
   :: Typeable era
   => CommitteeColdkeyResignationRequirements era
@@ -499,6 +578,11 @@ makeCommitteeColdkeyResignationCertificate (CommitteeColdkeyResignationRequireme
       coldKeyCred
       (noInlineMaybeToStrictMaybe anchor)
 
+{-# DEPRECATED
+  DRepUnregistrationRequirements
+  "Use Cardano.Api.Experimental.Certificate's makeDrepUnregistrationCertificate instead"
+  #-}
+
 data DRepUnregistrationRequirements era where
   DRepUnregistrationRequirements
     :: ConwayEraOnwards era
@@ -506,6 +590,10 @@ data DRepUnregistrationRequirements era where
     -> L.Coin
     -> DRepUnregistrationRequirements era
 
+{-# DEPRECATED
+  makeDrepUnregistrationCertificate
+  "Use Cardano.Api.Experimental.Certificate's makeDrepUnregistrationCertificate instead"
+  #-}
 makeDrepUnregistrationCertificate
   :: Typeable era
   => DRepUnregistrationRequirements era
@@ -515,6 +603,10 @@ makeDrepUnregistrationCertificate (DRepUnregistrationRequirements conwayOnwards 
     . Ledger.ConwayTxCertGov
     $ Ledger.ConwayUnRegDRep vcred deposit
 
+{-# DEPRECATED
+  makeStakeAddressAndDRepDelegationCertificate
+  "Use Cardano.Api.Experimental.Certificate's makeStakeAddressAndDRepDelegationCertificate instead"
+  #-}
 makeStakeAddressAndDRepDelegationCertificate
   :: ()
   => ConwayEraOnwards era
@@ -527,12 +619,21 @@ makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
     ConwayCertificate w $
       Ledger.mkRegDepositDelegTxCert (toShelleyStakeCredential cred) delegatee deposit
 
+{-# DEPRECATED
+  DRepUpdateRequirements
+  "Use Cardano.Api.Experimental.Certificate's makeDrepUpdateCertificate instead"
+  #-}
+
 data DRepUpdateRequirements era where
   DRepUpdateRequirements
     :: ConwayEraOnwards era
     -> Ledger.Credential Ledger.DRepRole
     -> DRepUpdateRequirements era
 
+{-# DEPRECATED
+  makeDrepUpdateCertificate
+  "Use Cardano.Api.Experimental.Certificate's makeDrepUpdateCertificate instead"
+  #-}
 makeDrepUpdateCertificate
   :: Typeable era
   => DRepUpdateRequirements era
@@ -547,19 +648,12 @@ makeDrepUpdateCertificate (DRepUpdateRequirements conwayOnwards vcred) mAnchor =
 -- Helper functions
 --
 
-getTxCertWitness
-  :: ShelleyBasedEra era
-  -> Ledger.TxCert (ShelleyLedgerEra era)
-  -> Maybe StakeCredential
-getTxCertWitness sbe ledgerCert = shelleyBasedEraConstraints sbe $
-  case Ledger.getVKeyWitnessTxCert ledgerCert of
-    Just keyHash -> Just $ StakeCredentialByKey $ StakeKeyHash $ Ledger.coerceKeyRole keyHash
-    Nothing ->
-      StakeCredentialByScript . fromShelleyScriptHash
-        <$> Ledger.getScriptWitnessTxCert ledgerCert
-
 -- | Get the stake credential witness for a certificate that requires it.
 -- Only stake address deregistration and delegation requires witnessing (witness can be script or key).
+{-# DEPRECATED
+  selectStakeCredentialWitness
+  "Use Cardano.Api.Certificate's selectStakeCredentialWitness instead"
+  #-}
 selectStakeCredentialWitness
   :: Certificate era
   -> Maybe StakeCredential

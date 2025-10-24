@@ -65,12 +65,14 @@ library
     Cardano.Api.Byron
     Cardano.Api.Certificate
     Cardano.Api.Compatible
+    Cardano.Api.Compatible.Certificate
     Cardano.Api.Compatible.Tx
     Cardano.Api.Consensus
     Cardano.Api.Crypto.Ed25519Bip32
     Cardano.Api.Era
     Cardano.Api.Error
     Cardano.Api.Experimental
+    Cardano.Api.Experimental.Certificate
     Cardano.Api.Experimental.Era
     Cardano.Api.Experimental.Plutus
     Cardano.Api.Experimental.Simple.Script
@@ -227,6 +229,8 @@ library
     Cardano.Api.Experimental.Tx.Internal.AnyWitness
     Cardano.Api.Experimental.Tx.Internal.Body
     Cardano.Api.Experimental.Tx.Internal.Certificate
+    Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible
+    Cardano.Api.Experimental.Tx.Internal.Certificate.Type
     Cardano.Api.Experimental.Tx.Internal.Compatible
     Cardano.Api.Experimental.Tx.Internal.Fee
     Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
