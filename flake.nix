@@ -16,6 +16,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
+    pre-commit-hooks.url = "github:cachix/git-hooks.nix";
     incl.url = "github:divnix/incl";
     # non-flake nix compatibility
     flake-compat = {
@@ -77,6 +78,30 @@
         proto-js-bundle-drv = import ./nix/proto-to-js.nix {pkgs = nixpkgs;};
         wasm-typedoc-drv = import ./nix/typedoc.nix {pkgs = nixpkgs;};
 
+        pre-commit-check = inputs.pre-commit-hooks.lib.${nixpkgs.system}.run {
+          src = ./.;
+          hooks = {
+            alejandra.enable = true;
+            cabal-gild = {
+              enable = true;
+              entry = let
+                script = nixpkgs.writeShellScript "precommit-cabal-gild" ''
+                  for file in "$@"; do
+                      cabal-gild --io="$file"
+                  done
+                '';
+              in
+                builtins.toString script;
+              files = "\\.cabal$";
+            };
+            prettify = {
+              enable = true;
+              entry = "scripts/githooks/haskell-style-lint";
+              types = ["haskell"];
+            };
+          };
+        };
+
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
@@ -104,6 +129,7 @@
               secure: True
             active-repositories: hackage.haskell.org, cardano-haskell-packages-local
           '';
+
           shell.packages = p: [
             # Packages in this repo
             p.cardano-api
@@ -133,6 +159,8 @@
           # Skip cross compilers for the shell
           shell.crossPlatforms = _: [];
           shell.shellHook = ''
+            export PATH="${nixpkgs.nix}/bin:$PATH"
+            ${pre-commit-check.shellHook}
             export LD_LIBRARY_PATH="${nixpkgs.snappy}/lib:$LD_LIBRARY_PATH"
             export PATH="$(git rev-parse --show-toplevel)/scripts/devshell:$PATH"
           '';
