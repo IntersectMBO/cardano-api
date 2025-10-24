@@ -84,7 +84,14 @@
             alejandra.enable = true;
             cabal-gild = {
               enable = true;
-              entry = "cabal-gild";
+              entry = let
+                script = nixpkgs.writeShellScript "precommit-cabal-gild" ''
+                  for file in "$@"; do
+                      cabal-gild --io="$file"
+                  done
+                '';
+              in
+                builtins.toString script;
               files = "\\.cabal$";
             };
             prettify = {
