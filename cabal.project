@@ -21,6 +21,8 @@ packages:
     cardano-api-gen
     cardano-wasm
     -- TODO fix potential issues with build-type: Custom and protoc and reenable
+    -- When uncommenting this line, remember to reenable in .github/workflows/hls.yml
+    -- by removing the line that moves it away before calling `haskell-language-server`.
     -- cardano-rpc
 
 extra-packages: Cabal, process
@@ -139,14 +141,6 @@ if arch(wasm32)
     location: https://github.com/haskell-wasm/network
     tag: ab92e48e9fdf3abe214f85fdbe5301c1280e14e9
     --sha256: sha256-U+ln/gbXoQZpNjZHydNa0FG/9GdJFgL1+T3+7KTzDWo=
-
-  source-repository-package
-    type: git
-    location: https://github.com/palas/kes-agent
-    tag: a234ca2beede6fb557dfb4ce829b52874cc94613
-    --sha256: sha256-k6PJC2uYr4VP+erPrVCFHMAbJaGMqESRowSvoB/w0ss=
-    subdir:
-      kes-agent
 
   source-repository-package
     type: git
