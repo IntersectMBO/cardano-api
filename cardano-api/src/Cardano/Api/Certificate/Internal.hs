@@ -82,6 +82,7 @@ import Cardano.Api.Certificate.Internal.StakePoolMetadata
 import Cardano.Api.Era
 import Cardano.Api.Error (Error (..))
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
+import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.Governance.Internal.Action.VotingProcedure
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)

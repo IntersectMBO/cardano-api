@@ -21,7 +21,6 @@ module Cardano.Api.Experimental
   , obtainCommonConstraints
   , hashTxBody
   , evaluateTransactionExecutionUnitsShelley
-  , Certificate (..)
   , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate
   , mkTxCertificates
@@ -60,6 +59,29 @@ module Cardano.Api.Experimental
   , PlutusScriptDatum (..)
   , NoScriptDatum (..)
 
+    -- ** Certificate related
+  , Certificate (..)
+
+    -- * Registering stake address and delegating
+  , makeStakeAddressDelegationCertificate
+  , makeStakeAddressRegistrationCertificate
+  , makeStakeAddressUnregistrationCertificate
+
+    -- * Registering stake pools
+  , makeStakePoolRegistrationCertificate
+  , makeStakePoolRetirementCertificate
+
+    -- * Governance related certificates
+  , makeCommitteeColdkeyResignationCertificate
+  , makeCommitteeHotKeyAuthorizationCertificate
+  , makeDrepRegistrationCertificate
+  , makeDrepUnregistrationCertificate
+  , makeDrepUpdateCertificate
+  , makeStakeAddressAndDRepDelegationCertificate
+
+    -- * Data family instances
+  , AsType (..)
+
     -- ** Internal
   , getAnyWitnessRedeemerPointerMap
   , toPlutusScriptPurpose
@@ -78,7 +100,6 @@ import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx
-import Cardano.Api.Experimental.Tx.Internal.Certificate
 import Cardano.Api.Experimental.Tx.Internal.Compatible
 import Cardano.Api.Experimental.Tx.Internal.Fee
 import Cardano.Api.Tx.Internal.Fee (evaluateTransactionExecutionUnitsShelley)

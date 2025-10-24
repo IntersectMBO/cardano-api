@@ -16,7 +16,6 @@ module Cardano.Api.Experimental.Tx.Internal.Certificate
   , makeStakeAddressDelegationCertificate
   , makeStakeAddressRegistrationCertificate
   , makeStakeAddressUnregistrationCertificate
-  -- , PoolId
 
     -- * Registering stake pools
   , makeStakePoolRegistrationCertificate
