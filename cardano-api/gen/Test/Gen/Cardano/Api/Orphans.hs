@@ -15,7 +15,7 @@
 
 module Test.Gen.Cardano.Api.Orphans (obtainArbitraryConstraints) where
 
-import Cardano.Api hiding (txIns)
+import Cardano.Api hiding (DijkstraEra, txIns)
 import Cardano.Api.Ledger qualified as L
 
 import Cardano.Crypto.Hash.Class (hashWith)
