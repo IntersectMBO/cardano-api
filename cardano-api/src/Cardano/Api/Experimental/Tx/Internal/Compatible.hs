@@ -9,7 +9,6 @@ module Cardano.Api.Experimental.Tx.Internal.Compatible
 where
 
 import Cardano.Api.Address qualified as Api
-import Cardano.Api.Certificate.Internal qualified as Api
 import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Experimental.Era
@@ -18,6 +17,7 @@ import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness qualified as Exp
 import Cardano.Api.Experimental.Simple.Script qualified as Exp
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
+import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible qualified as Api
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal.Script (fromAllegraTimelock, sbeToSimpleScriptLanguageInEra)
 import Cardano.Api.Plutus.Internal.Script qualified as Api

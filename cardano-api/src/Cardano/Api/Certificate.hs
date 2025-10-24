@@ -48,8 +48,6 @@ module Cardano.Api.Certificate
   , getAnchorDataFromCertificate
 
     -- * Internal conversion functions
-  , toShelleyCertificate
-  , fromShelleyCertificate
   , toShelleyPoolParams
   , fromShelleyPoolParams
 
