@@ -28,7 +28,7 @@ module Cardano.Api.Experimental.Plutus
   , WitnessableItem (..)
 
     -- ** Create the index for a witnessable thing.
-  , GetPlutusScriptPurpose (..)
+  , toPlutusScriptPurpose
   , createIndexedPlutusScriptWitnesses
   , getAnyWitnessRedeemerPointerMap
   , obtainAlonzoScriptPurposeConstraints
