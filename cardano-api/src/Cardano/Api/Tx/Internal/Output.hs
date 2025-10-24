@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,6 +13,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Api.Tx.Internal.Output
   ( -- * Transaction outputs
@@ -63,7 +65,7 @@ import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error (Error (..), displayError)
-import Cardano.Api.Hash
+import Cardano.Api.HasTypeProxy qualified as HTP
 import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
 import Cardano.Api.Monad.Error
 import Cardano.Api.Parser.Text qualified as P
@@ -82,7 +84,6 @@ import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Core ()
 import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Data qualified as Plutus
@@ -100,9 +101,11 @@ import Data.Sequence.Strict qualified as Seq
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import Data.Type.Equality
+import Data.Typeable (Typeable)
 import Data.Word
 import GHC.Exts (IsList (..))
 import GHC.Stack
+import GHC.TypeLits as TL
 import Lens.Micro hiding (ix)
 
 -- ----------------------------------------------------------------------------
@@ -121,6 +124,34 @@ data TxOut ctx era
       (TxOutValue era)
       (TxOutDatum ctx era)
       (ReferenceScript era)
+
+instance (Typeable ctx, IsShelleyBasedEra era) => HTP.HasTypeProxy (TxOut ctx era) where
+  data AsType (TxOut ctx era) = AsTxOut (AsType era)
+  proxyToAsType :: HTP.Proxy (TxOut ctx era) -> AsType (TxOut ctx era)
+  proxyToAsType _ = AsTxOut (HTP.asType @era)
+
+instance (Typeable ctx, IsShelleyBasedEra era) => FromCBOR (TxOut ctx era) where
+  fromCBOR :: Ledger.Decoder s (TxOut ctx era)
+  fromCBOR =
+    shelleyBasedEraConstraints (shelleyBasedEra @era) $
+      pure (fromShelleyTxOut shelleyBasedEra) <*> L.fromEraCBOR @(ShelleyLedgerEra era)
+
+-- | We do not provide a 'ToCBOR' instance for 'TxOut' because 'TxOut's can
+-- contain supplemental datums and the CBOR representation does not support this.
+-- For this reason, if we were to serialise a 'TxOut' with a supplemental datum,
+-- we would lose information and the roundtrip property would not hold.
+instance
+  ( TypeError
+      ( TL.Text "Cannot serialise 'TxOut' to CBOR."
+          :$$: TL.Text
+                 "Serialisation for 'TxOut' type is not implemented because they may contain supplemental datums and the CBOR representation does not support this."
+      )
+  , Typeable ctx
+  , IsShelleyBasedEra era
+  )
+  => ToCBOR (TxOut ctx era)
+  where
+  toCBOR = error "This shouldn't happen"
 
 deriving instance Eq (TxOut ctx era)
 
