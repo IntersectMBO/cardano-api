@@ -21,6 +21,8 @@ packages:
     cardano-api-gen
     cardano-wasm
     -- TODO fix potential issues with build-type: Custom and protoc and reenable
+    -- When uncommenting this line, remember to reenable in .github/workflows/hls.yml
+    -- by removing the line that moves it away before calling `haskell-language-server`.
     -- cardano-rpc
 
 extra-packages: Cabal, process
