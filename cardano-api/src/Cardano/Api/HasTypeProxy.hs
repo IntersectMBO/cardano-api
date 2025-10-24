@@ -9,6 +9,7 @@ module Cardano.Api.HasTypeProxy
   , AsType (..)
   , Proxy (..)
   , FromSomeType (..)
+  , asTypeFromValue
   )
 where
 
@@ -38,6 +39,9 @@ instance HasTypeProxy Word16 where
 instance HasTypeProxy BS.ByteString where
   data AsType BS.ByteString = AsByteString
   proxyToAsType _ = AsByteString
+
+asTypeFromValue :: HasTypeProxy t => t -> AsType t
+asTypeFromValue _ = proxyToAsType Proxy
 
 data FromSomeType (c :: Type -> Constraint) b where
   FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b
