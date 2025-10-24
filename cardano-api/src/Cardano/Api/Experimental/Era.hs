@@ -310,6 +310,7 @@ type EraCommonConstraints era =
   , L.EraTxOut (LedgerEra era)
   , L.EraUTxO (LedgerEra era)
   , FromCBOR (ChainDepState (ConsensusProtocol era))
+  , FromCBOR (L.TxCert (LedgerEra era))
   , L.NativeScript (LedgerEra era) ~ L.Timelock (LedgerEra era)
   , PraosProtocolSupportsNode (ConsensusProtocol era)
   , ShelleyLedgerEra era ~ LedgerEra era

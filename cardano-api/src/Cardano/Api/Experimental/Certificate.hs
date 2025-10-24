@@ -1,17 +1,13 @@
-module Cardano.Api.Certificate
+module Cardano.Api.Experimental.Certificate
   ( Certificate (..)
 
     -- * Registering stake address and delegating
-  , StakeAddressRequirements (..)
-  , StakeDelegationRequirements (..)
   , makeStakeAddressDelegationCertificate
   , makeStakeAddressRegistrationCertificate
   , makeStakeAddressUnregistrationCertificate
   , PoolId
 
     -- * Registering stake pools
-  , StakePoolRegistrationRequirements (..)
-  , StakePoolRetirementRequirements (..)
   , makeStakePoolRegistrationCertificate
   , makeStakePoolRetirementCertificate
   , StakePoolParameters (..)
@@ -19,26 +15,12 @@ module Cardano.Api.Certificate
   , StakePoolMetadataReference (..)
 
     -- * Conway specific certificates
-  , CommitteeColdkeyResignationRequirements (..)
-  , CommitteeHotKeyAuthorizationRequirements (..)
-  , DRepRegistrationRequirements (..)
-  , DRepUnregistrationRequirements (..)
-  , DRepUpdateRequirements (..)
   , makeCommitteeColdkeyResignationCertificate
   , makeCommitteeHotKeyAuthorizationCertificate
   , makeDrepRegistrationCertificate
   , makeDrepUnregistrationCertificate
   , makeDrepUpdateCertificate
   , makeStakeAddressAndDRepDelegationCertificate
-
-    -- * Special certificates
-  , GenesisKeyDelegationRequirements (..)
-  , MirCertificateRequirements (..)
-  , makeMIRCertificate
-  , makeGenesisKeyDelegationCertificate
-  , MIRTarget (..)
-  , MIRPot (..)
-  , selectStakeCredentialWitness
 
     -- * Anchor data
   , AnchorDataFromCertificateError (..)
@@ -74,6 +56,14 @@ module Cardano.Api.Certificate
 where
 
 import Cardano.Api.Certificate.Internal
+  ( PoolId
+  , StakePoolMetadataReference (..)
+  , StakePoolParameters (..)
+  , StakePoolRelay (..)
+  , fromShelleyPoolParams
+  , toShelleyPoolParams
+  )
 import Cardano.Api.Certificate.Internal.DRepMetadata
 import Cardano.Api.Certificate.Internal.OperationalCertificate
 import Cardano.Api.Certificate.Internal.StakePoolMetadata
+import Cardano.Api.Experimental.Tx.Internal.Certificate

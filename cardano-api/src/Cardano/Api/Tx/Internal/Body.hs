@@ -233,7 +233,6 @@ where
 import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
 import Cardano.Api.Certificate
-import Cardano.Api.Certificate.Internal
 import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
@@ -253,6 +252,7 @@ import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
   )
 import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
+import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Governance.Internal.Action.ProposalProcedure
 import Cardano.Api.Governance.Internal.Action.VotingProcedure

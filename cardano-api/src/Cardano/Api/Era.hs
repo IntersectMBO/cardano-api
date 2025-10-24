@@ -8,6 +8,7 @@ module Cardano.Api.Era
   , AlonzoEra
   , BabbageEra
   , ConwayEra
+  , DijkstraEra
 
     -- * Eons
   , module Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
