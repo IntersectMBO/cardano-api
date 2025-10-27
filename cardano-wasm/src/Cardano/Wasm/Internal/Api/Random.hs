@@ -1,14 +1,15 @@
 {-# LANGUAGE CApiFFI #-}
 {-# LANGUAGE CPP #-}
 
-module Cardano.Wasm.Internal.JavaScript.Random (getRandomBytes) where
+module Cardano.Wasm.Internal.Api.Random (getRandomBytes) where
 
 #if !defined(wasm32_HOST_ARCH)
 
 import Data.ByteString (ByteString)
+import Crypto.Random.Entropy (getEntropy)
 
 getRandomBytes :: Word -> IO ByteString
-getRandomBytes _ = error "getRandomBytes is not implemented for non-WASM targets"
+getRandomBytes n = getEntropy (fromIntegral n)
 
 #else
 

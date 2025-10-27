@@ -42,6 +42,7 @@ executable cardano-wasm
     Cardano.Wasm.Internal.Api.GRPC
     Cardano.Wasm.Internal.Api.Info
     Cardano.Wasm.Internal.Api.InfoToTypeScript
+    Cardano.Wasm.Internal.Api.Random
     Cardano.Wasm.Internal.Api.Tx
     Cardano.Wasm.Internal.Api.TypeScriptDefs
     Cardano.Wasm.Internal.Api.Wallet
@@ -49,7 +50,6 @@ executable cardano-wasm
     Cardano.Wasm.Internal.JavaScript.Bridge
     Cardano.Wasm.Internal.JavaScript.GRPC
     Cardano.Wasm.Internal.JavaScript.GRPCTypes
-    Cardano.Wasm.Internal.JavaScript.Random
 
   build-depends:
     aeson,
@@ -74,6 +74,9 @@ executable cardano-wasm
       base16-bytestring,
       ghc-experimental,
       utf8-string,
+  else
+    build-depends:
+      crypton
 
 test-suite cardano-wasm-golden
   type: exitcode-stdio-1.0
