@@ -1,7 +1,7 @@
-module Cardano.Wasm.Internal.Api.GRPC where
+module Cardano.Wasm.Api.GRPC where
 
-import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
-import Cardano.Wasm.Internal.ExceptionHandling (rightOrError, toMonadFail)
+import Cardano.Wasm.Api.Tx qualified as Wasm
+import Cardano.Wasm.ExceptionHandling (rightOrError, toMonadFail)
 
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Base64 qualified as Base64
