@@ -2,56 +2,54 @@ module Cardano.Wasm.Internal.Api.GRPC where
 
 import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
 import Cardano.Wasm.Internal.ExceptionHandling (rightOrError, toMonadFail)
-import Cardano.Wasm.Internal.JavaScript.GRPCTypes
-  ( JSGRPCClient
-  , JSUtxos
-  )
 
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Base64 qualified as Base64
 import Data.ByteString.Char8 qualified as BS
 
--- | Internal data for the GrpcConnection virtual object. Currently, it is just a wrapper around the JSGRPCClient,
+-- | Internal data for the GrpcConnection virtual object. Currently, it is just a wrapper around the grpcClient,
 -- which is a JavaScript object that allows us to interact with the Cardano Node via gRPC-web.
-newtype GrpcObject
-  = GrpcObject JSGRPCClient
+newtype GrpcObject grpcClient
+  = GrpcObject grpcClient
 
 -- | Create a new unsigned transaction object for making a Conway era transaction.
-newGrpcConnectionImpl :: (String -> IO JSGRPCClient) -> String -> IO GrpcObject
-newGrpcConnectionImpl createClientJsFunc host = GrpcObject <$> createClientJsFunc host
+newGrpcConnectionImpl :: (String -> IO grpcClient) -> String -> IO (GrpcObject grpcClient)
+newGrpcConnectionImpl createClientFunc host = GrpcObject <$> createClientFunc host
 
 -- | Get the era from the Cardano Node using GRPC-web.
-getEraImpl :: (JSGRPCClient -> IO Int) -> GrpcObject -> IO Int
-getEraImpl getEraJsFunc (GrpcObject client) = getEraJsFunc client
+getEraImpl :: (grpcClient -> IO Int) -> GrpcObject grpcClient -> IO Int
+getEraImpl getEraFunc (GrpcObject client) = getEraFunc client
 
 -- | Get the protocol parameters from the Cardano Node using GRPC-web.
 getProtocolParamsImpl
-  :: (JSGRPCClient -> IO Wasm.ProtocolParamsJSON) -> GrpcObject -> IO Wasm.ProtocolParamsJSON
-getProtocolParamsImpl getProtocolParamsJsFunc (GrpcObject client) = getProtocolParamsJsFunc client
+  :: (grpcClient -> IO Wasm.ProtocolParamsJSON)
+  -> GrpcObject grpcClient
+  -> IO Wasm.ProtocolParamsJSON
+getProtocolParamsImpl getProtocolParamsFunc (GrpcObject client) = getProtocolParamsFunc client
 
 -- | Get all UTXOs from the node using a GRPC-web client.
 getAllUtxosImpl
-  :: (JSGRPCClient -> IO JSUtxos)
-  -> GrpcObject
-  -> IO JSUtxos
-getAllUtxosImpl getUtxosJsFunc (GrpcObject client) = getUtxosJsFunc client
+  :: (grpcClient -> IO utxos)
+  -> GrpcObject grpcClient
+  -> IO utxos
+getAllUtxosImpl getUtxosFunc (GrpcObject client) = getUtxosFunc client
 
 -- | Get UTXOs for a given address using a GRPC-web client.
 getUtxosForAddressImpl
-  :: (JSGRPCClient -> String -> IO JSUtxos)
-  -> GrpcObject
+  :: (grpcClient -> String -> IO utxos)
+  -> GrpcObject grpcClient
   -> String
-  -> IO JSUtxos
-getUtxosForAddressImpl getUtxosForAddressJsFunc (GrpcObject client) = getUtxosForAddressJsFunc client
+  -> IO utxos
+getUtxosForAddressImpl getUtxosForAddressFunc (GrpcObject client) = getUtxosForAddressFunc client
 
 -- | Submit a transaction to the Cardano Node using GRPC-web.
 submitTxImpl
-  :: (JSGRPCClient -> String -> IO (Either String String))
-  -> GrpcObject
+  :: (grpcClient -> String -> IO (Either String String))
+  -> GrpcObject grpcClient
   -> String
   -> IO String
-submitTxImpl submitTxJsFunc (GrpcObject client) tx =
-  toMonadFail . rightOrError . (base64ToBase16 =<<) =<< submitTxJsFunc client tx
+submitTxImpl submitTxFunc (GrpcObject client) tx =
+  toMonadFail . rightOrError . (base64ToBase16 =<<) =<< submitTxFunc client tx
  where
   -- We reencode as Base16 because it is a more common format for txIds
   base64ToBase16 :: String -> Either String String

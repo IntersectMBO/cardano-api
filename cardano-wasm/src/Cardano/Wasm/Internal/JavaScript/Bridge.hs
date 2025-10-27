@@ -147,8 +147,8 @@ instance ToJSVal String JSString where
 instance ToJSVal Wasm.ProtocolParamsJSON JSProtocolParams where
   toJSVal (Wasm.ProtocolParamsJSON json) = js_parse $ toJSString json
 
-instance ToJSVal Wasm.GrpcObject JSGrpc where
-  toJSVal :: Wasm.GrpcObject -> IO JSGrpc
+instance ToJSVal (Wasm.GrpcObject JSGRPCClient) JSGrpc where
+  toJSVal :: (Wasm.GrpcObject JSGRPCClient) -> IO JSGrpc
   toJSVal (Wasm.GrpcObject client) = return client
 
 instance ToJSVal Ledger.Coin JSCoin where
@@ -192,8 +192,8 @@ instance FromJSVal JSTxIx Api.TxIx where
 instance FromJSVal JSProtocolParams Wasm.ProtocolParamsJSON where
   fromJSVal = fmap Wasm.ProtocolParamsJSON . jsValToJSONString
 
-instance FromJSVal JSGrpc Wasm.GrpcObject where
-  fromJSVal :: JSGrpc -> IO Wasm.GrpcObject
+instance FromJSVal JSGrpc (Wasm.GrpcObject JSGRPCClient) where
+  fromJSVal :: JSGrpc -> IO (Wasm.GrpcObject JSGRPCClient)
   fromJSVal jsVal = return $ Wasm.GrpcObject jsVal
 
 -- * WalletObject
