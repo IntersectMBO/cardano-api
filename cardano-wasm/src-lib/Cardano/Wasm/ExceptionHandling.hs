@@ -1,7 +1,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE InstanceSigs #-}
 
-module Cardano.Wasm.Internal.ExceptionHandling where
+module Cardano.Wasm.ExceptionHandling where
 
 import Control.Exception (Exception, displayException)
 import Control.Monad.Catch (MonadThrow (..))

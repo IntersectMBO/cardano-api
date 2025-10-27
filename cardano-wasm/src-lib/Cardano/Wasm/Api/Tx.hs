@@ -7,7 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Wasm.Internal.Api.Tx
+module Cardano.Wasm.Api.Tx
   ( UnsignedTxObject (..)
   , ProtocolParamsJSON (..)
   , newTxImpl
@@ -32,7 +32,7 @@ import Cardano.Api.Plutus qualified as Shelley
 import Cardano.Api.Tx qualified as TxBody
 
 import Cardano.Ledger.Api qualified as Ledger
-import Cardano.Wasm.Internal.ExceptionHandling (justOrError, rightOrError, throwError, toMonadFail)
+import Cardano.Wasm.ExceptionHandling (justOrError, rightOrError, throwError, toMonadFail)
 
 import Control.Monad.Catch (MonadThrow)
 import Data.Aeson (ToJSON (toJSON), (.=))

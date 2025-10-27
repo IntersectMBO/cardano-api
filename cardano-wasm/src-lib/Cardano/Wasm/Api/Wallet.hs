@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Cardano.Wasm.Internal.Api.Wallet
+module Cardano.Wasm.Api.Wallet
   ( WalletObject (..)
   , generatePaymentWalletImpl
   , restorePaymentWalletFromSigningKeyBech32Impl
@@ -39,7 +39,7 @@ import Cardano.Api
 
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Wasm.Internal.Api.Random (getRandomBytes)
-import Cardano.Wasm.Internal.ExceptionHandling (rightOrError, toMonadFail)
+import Cardano.Wasm.ExceptionHandling (rightOrError, toMonadFail)
 
 import Data.Aeson ((.=))
 import Data.Aeson qualified as Aeson

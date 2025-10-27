@@ -1,6 +1,6 @@
 {-# LANGUAGE InstanceSigs #-}
 
-module Cardano.Wasm.Internal.Api.Info
+module Cardano.Wasm.Api.Info
   ( apiInfo
   , ApiInfo (..)
   , VirtualObjectInfo (..)
@@ -14,7 +14,7 @@ where
 
 import Cardano.Api (pretty)
 
-import Cardano.Wasm.Internal.Api.Tx (UnsignedTxObject (..), newExperimentalEraTxImpl, newTxImpl)
+import Cardano.Wasm.Api.Tx (UnsignedTxObject (..), newExperimentalEraTxImpl, newTxImpl)
 
 import Data.Aeson qualified as Aeson
 import Data.Text qualified as Text

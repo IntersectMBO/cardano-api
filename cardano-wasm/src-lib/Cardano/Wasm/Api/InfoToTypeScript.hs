@@ -1,8 +1,8 @@
-module Cardano.Wasm.Internal.Api.InfoToTypeScript where
+module Cardano.Wasm.Api.InfoToTypeScript where
 
-import Cardano.Wasm.Internal.Api.Info (tsTypeAsString)
-import Cardano.Wasm.Internal.Api.Info qualified as Info
-import Cardano.Wasm.Internal.Api.TypeScriptDefs qualified as TypeScript
+import Cardano.Wasm.Api.Info (tsTypeAsString)
+import Cardano.Wasm.Api.Info qualified as Info
+import Cardano.Wasm.Api.TypeScriptDefs qualified as TypeScript
 
 import Data.List (nub)
 import Data.Map (Map)
