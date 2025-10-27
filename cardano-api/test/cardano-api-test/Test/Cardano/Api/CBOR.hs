@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 -- TODO remove when serialiseTxLedgerCddl is removed
 {-# OPTIONS_GHC -Wno-deprecations #-}
@@ -11,6 +12,7 @@ module Test.Cardano.Api.CBOR
 where
 
 import Cardano.Api
+import Cardano.Api.Ledger qualified as Ledger
 
 import Cardano.Binary qualified as CBOR
 
@@ -108,6 +110,39 @@ prop_roundtrip_tx_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ genTx era
   shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) x
+
+-- | The CBOR representation for 'TxOut' does not store supplemental datums.
+-- This means we cannot provide a lossless serialisation instance for which
+-- a roundtrip property would hold.
+--
+-- Therefore, we only provide a deserialisation instance. The serialisation
+-- implementation is included for testing purposes only.
+--
+-- For the roundtrip test, we hash any supplemental datum before serialisation
+-- to ensure the property holds.
+prop_roundtrip_tx_out_CBOR :: Property
+prop_roundtrip_tx_out_CBOR = H.property $ do
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
+  x <- H.forAll $ genTx era
+  txOut <- H.forAll $ Gen.element $ txOuts $ getTxBodyContent $ getTxBody x
+  let fixedTxOut = hashDatum txOut
+  shelleyBasedEraConstraints era $
+    H.tripping fixedTxOut lossyEncodingForTesting CBOR.decodeFull'
+ where
+  hashDatum :: TxOut CtxTx era -> TxOut CtxTx era
+  hashDatum txOut@(TxOut aie val datum rs) =
+    case datum of
+      (TxOutSupplementalDatum aeo d) ->
+        TxOut aie val (TxOutDatumHash aeo (hashScriptDataBytes d)) rs
+      _ -> txOut
+
+  lossyEncodingForTesting :: IsShelleyBasedEra era => TxOut CtxTx era -> ByteString
+  lossyEncodingForTesting txOut = LBS.toStrict $ CBOR.serialize $ toCBOR' txOut
+   where
+    toCBOR' :: forall ctx era. IsShelleyBasedEra era => TxOut ctx era -> CBOR.Encoding
+    toCBOR' txOut' =
+      shelleyBasedEraConstraints (shelleyBasedEra @era) $
+        Ledger.toEraCBOR @(ShelleyLedgerEra era) (toShelleyTxOutAny shelleyBasedEra txOut')
 
 prop_roundtrip_witness_CBOR :: Property
 prop_roundtrip_witness_CBOR = H.property $ do
@@ -520,6 +555,7 @@ tests =
     , testProperty "roundtrip ScriptData CBOR" prop_roundtrip_ScriptData_CBOR
     , testProperty "roundtrip TxWitness Cddl" prop_roundtrip_TxWitness_Cddl
     , testProperty "roundtrip tx CBOR" prop_roundtrip_tx_CBOR
+    , testProperty "roundtrip tx out CBOR" prop_roundtrip_tx_out_CBOR
     , testProperty
         "roundtrip GovernancePoll CBOR"
         prop_roundtrip_GovernancePoll_CBOR
