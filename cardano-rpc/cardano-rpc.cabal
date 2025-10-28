@@ -69,11 +69,11 @@ library
     base,
     bytestring,
     cardano-api >=10.17,
-    cardano-rpc:gen,
     cardano-ledger-api,
     cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core,
+    cardano-rpc:gen,
     containers,
     contra-tracer,
     data-default,
@@ -102,6 +102,7 @@ library gen
     Proto.Utxorpc.V1alpha.Query.Query_Fields
     Proto.Utxorpc.V1alpha.Submit.Submit
     Proto.Utxorpc.V1alpha.Submit.Submit_Fields
+
   build-depends:
     proto-lens,
     proto-lens-protobuf-types,
@@ -121,7 +122,7 @@ test-suite cardano-rpc-test
     cardano-rpc,
     cardano-rpc:gen,
     containers,
-    hedgehog ^>=1.5,
+    hedgehog,
     rio,
     tasty,
     tasty-hedgehog,
