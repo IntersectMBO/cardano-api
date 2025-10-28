@@ -38,8 +38,8 @@ import Cardano.Api
   )
 
 import Cardano.Crypto.Seed (mkSeedFromBytes)
+import Cardano.Wasm.Internal.Api.Random (getRandomBytes)
 import Cardano.Wasm.Internal.ExceptionHandling (rightOrError, toMonadFail)
-import Cardano.Wasm.Internal.JavaScript.Random (getRandomBytes)
 
 import Data.Aeson ((.=))
 import Data.Aeson qualified as Aeson
