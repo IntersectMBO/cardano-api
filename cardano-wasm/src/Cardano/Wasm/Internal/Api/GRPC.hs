@@ -8,7 +8,7 @@ import Data.ByteString.Base64 qualified as Base64
 import Data.ByteString.Char8 qualified as BS
 
 -- | Internal data for the GrpcConnection virtual object. Currently, it is just a wrapper around the grpcClient,
--- which is a JavaScript object that allows us to interact with the Cardano Node via gRPC-web.
+-- which is some object that allows us to interact with the Cardano Node via gRPC or GRPC-web.
 newtype GrpcObject grpcClient
   = GrpcObject grpcClient
 
@@ -16,25 +16,25 @@ newtype GrpcObject grpcClient
 newGrpcConnectionImpl :: (String -> IO grpcClient) -> String -> IO (GrpcObject grpcClient)
 newGrpcConnectionImpl createClientFunc host = GrpcObject <$> createClientFunc host
 
--- | Get the era from the Cardano Node using GRPC-web.
+-- | Get the era from the Cardano Node using gRPC or GRPC-web.
 getEraImpl :: (grpcClient -> IO Int) -> GrpcObject grpcClient -> IO Int
 getEraImpl getEraFunc (GrpcObject client) = getEraFunc client
 
--- | Get the protocol parameters from the Cardano Node using GRPC-web.
+-- | Get the protocol parameters from the Cardano Node using gRPC or GRPC-web.
 getProtocolParamsImpl
   :: (grpcClient -> IO Wasm.ProtocolParamsJSON)
   -> GrpcObject grpcClient
   -> IO Wasm.ProtocolParamsJSON
 getProtocolParamsImpl getProtocolParamsFunc (GrpcObject client) = getProtocolParamsFunc client
 
--- | Get all UTXOs from the node using a GRPC-web client.
+-- | Get all UTXOs from the node using a gRPC or GRPC-web client.
 getAllUtxosImpl
   :: (grpcClient -> IO utxos)
   -> GrpcObject grpcClient
   -> IO utxos
 getAllUtxosImpl getUtxosFunc (GrpcObject client) = getUtxosFunc client
 
--- | Get UTXOs for a given address using a GRPC-web client.
+-- | Get UTXOs for a given address using a gRPC or GRPC-web client.
 getUtxosForAddressImpl
   :: (grpcClient -> String -> IO utxos)
   -> GrpcObject grpcClient
@@ -42,7 +42,7 @@ getUtxosForAddressImpl
   -> IO utxos
 getUtxosForAddressImpl getUtxosForAddressFunc (GrpcObject client) = getUtxosForAddressFunc client
 
--- | Submit a transaction to the Cardano Node using GRPC-web.
+-- | Submit a transaction to the Cardano Node using gRPC or GRPC-web.
 submitTxImpl
   :: (grpcClient -> String -> IO (Either String String))
   -> GrpcObject grpcClient
