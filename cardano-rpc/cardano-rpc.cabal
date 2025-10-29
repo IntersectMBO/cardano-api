@@ -28,7 +28,6 @@ common project-config
     ImportQualifiedPost
     OverloadedStrings
 
-  build-depends: base >=4.14 && <5
   ghc-options:
     -Wall
     -Wcompat
@@ -83,7 +82,6 @@ library
     grpc-spec,
     proto-lens,
     proto-lens-protobuf-types,
-    proto-lens-runtime,
     rio,
     text,
 
@@ -104,7 +102,6 @@ library gen
     Proto.Utxorpc.V1alpha.Submit.Submit_Fields
 
   build-depends:
-    proto-lens,
     proto-lens-protobuf-types,
     proto-lens-runtime,
 
@@ -114,13 +111,13 @@ test-suite cardano-rpc-test
   main-is: cardano-rpc-test.hs
   type: exitcode-stdio-1.0
   build-depends:
+    base,
     cardano-api,
     cardano-api:gen,
     cardano-ledger-api,
     cardano-ledger-conway,
     cardano-ledger-core,
     cardano-rpc,
-    cardano-rpc:gen,
     containers,
     hedgehog,
     rio,

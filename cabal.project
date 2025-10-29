@@ -29,7 +29,7 @@ if impl(ghc < 9.8)
 
 -- It may slow down build plan preparation, but without it cabal has problems
 -- with solving constraints. Remove this when not needed anymore.
--- max-backjumps: 50000
+max-backjumps: 50000
 
 program-options
   ghc-options: -Werror
@@ -53,22 +53,6 @@ write-ghc-environment-files: always
 -- enable parallel builds
 jobs: $ncpus
 semaphore: True
-
-constraints:
-   , random ^>= 1.2
-   , microlens-th < 0.4.3.18
-   , microlens-mtl < 0.2.1.1
-   , mempack ^>= 0.1
-  , optparse-applicative==0.18.1.0
---   , hedgehog == 1.5
---   , lifted-async == 0.10.2.7
---   , tls == 2.1.6
---   , kes-agent == 0.1.0.1
-
--- allow-newer:
-  -- https://github.com/kapralVV/Unique/issues/11
-  -- , Unique:hashable
-  -- , kes-agent:filepath
 
 if impl (ghc >= 9.12)
   allow-newer:
@@ -183,11 +167,4 @@ if arch(wasm32)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
-source-repository-package
-    type: git
-    location: https://github.com/input-output-hk/hedgehog-extras
-    tag: f7f61fa7e83cfafe02f6c9148fc121af306b7662
-    --sha256: sha256-MBe8h2wtRYrIbEkNt/dIJFrDOPo57/0oVZ3mEBFtgq4=
-    subdir: .
 
