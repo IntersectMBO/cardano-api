@@ -17,6 +17,12 @@ See the [Contributing guide](CONTRIBUTING.md) for how to contribute to this proj
 
 ## Documentation
 
+Package-specific documentation:
+- [cardano-api](cardano-api/README.md) - Main library for constructing and submitting transactions
+- [cardano-api-gen](cardano-api-gen/README.md) - Test generators and property testing utilities
+- [cardano-rpc](cardano-rpc/README.md) - gRPC client and server implementing UTxO RPC protocol
+- [cardano-wasm](cardano-wasm/README.md) - WebAssembly compilation support
+
 Development documentation can be found in [Cardano Node Wiki](https://github.com/input-output-hk/cardano-node-wiki/wiki).
 
 Haddock documentation is available at: https://cardano-api.cardano.intersectmbo.org/
