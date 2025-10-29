@@ -186,6 +186,7 @@ legacyComparison (TextEnvelopeType expectedType) (TextEnvelopeType actualType) =
     ("Tx BabbageEra", "Unwitnessed Tx BabbageEra") -> True
     ("Tx ConwayEra", "Unwitnessed Tx ConwayEra") -> True
     ("Certificate", "CertificateConway") -> True
+    ("Certificate", "CertificateShelley") -> True
     (expectedOther, expectedActual) -> expectedOther == expectedActual
 
 -- ----------------------------------------------------------------------------

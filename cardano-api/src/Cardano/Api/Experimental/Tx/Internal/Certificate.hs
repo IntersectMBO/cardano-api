@@ -1,73 +1,191 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Api.Experimental.Tx.Internal.Certificate
   ( Certificate (..)
+
+    -- * Registering stake address and delegating
+  , makeStakeAddressDelegationCertificate
+  , makeStakeAddressRegistrationCertificate
+  , makeStakeAddressUnregistrationCertificate
+
+    -- * Registering stake pools
+  , makeStakePoolRegistrationCertificate
+  , makeStakePoolRetirementCertificate
+
+    -- * Governance related certificates
+  , makeCommitteeColdkeyResignationCertificate
+  , makeCommitteeHotKeyAuthorizationCertificate
+  , makeDrepRegistrationCertificate
+  , makeDrepUnregistrationCertificate
+  , makeDrepUpdateCertificate
+  , makeStakeAddressAndDRepDelegationCertificate
+
+    -- * Anchor data
   , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate
+
+    -- * Data family instances
+  , AsType (..)
   )
 where
 
+import Cardano.Api.Address
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error
 import Cardano.Api.Experimental.Era
+import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (Delegatee)
+import Cardano.Api.Experimental.Tx.Internal.Certificate.Type
 import Cardano.Api.HasTypeProxy
-import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Hash qualified as Api
+import Cardano.Api.Internal.Utils
+import Cardano.Api.Key.Internal qualified as Api
 import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
 import Cardano.Api.Pretty
-import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.TextEnvelope.Internal
 
-import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.BaseTypes (strictMaybe)
 
-import Control.Monad.Error.Class
+import Control.Monad.Except (MonadError (..))
 import Data.ByteString (ByteString)
-import Data.String
-import Data.Typeable
+import Data.String (IsString (fromString))
 
-data Certificate era where
-  Certificate :: L.EraTxCert era => L.TxCert era -> Certificate era
+makeStakeAddressDelegationCertificate
+  :: forall era
+   . IsEra era
+  => StakeCredential
+  -> Delegatee era
+  -> Certificate (LedgerEra era)
+makeStakeAddressDelegationCertificate sCred delegatee =
+  case useEra @era of
+    e@ConwayEra ->
+      obtainCommonConstraints e $
+        Certificate $
+          Ledger.mkDelegTxCert (toShelleyStakeCredential sCred) delegatee
+    e@DijkstraEra ->
+      obtainCommonConstraints e $
+        Certificate $
+          Ledger.mkDelegTxCert (toShelleyStakeCredential sCred) delegatee
 
-deriving instance Show (Certificate era)
+makeStakeAddressRegistrationCertificate
+  :: forall era. IsEra era => StakeCredential -> Ledger.Coin -> Certificate (LedgerEra era)
+makeStakeAddressRegistrationCertificate scred deposit =
+  obtainCommonConstraints (useEra @era) $
+    Certificate $
+      Ledger.mkRegDepositTxCert (toShelleyStakeCredential scred) deposit
 
-deriving instance Eq (Certificate era)
+makeStakeAddressUnregistrationCertificate
+  :: forall era. IsEra era => StakeCredential -> Ledger.Coin -> Certificate (LedgerEra era)
+makeStakeAddressUnregistrationCertificate scred deposit =
+  obtainCommonConstraints (useEra @era) $
+    Certificate $
+      Ledger.mkUnRegDepositTxCert (toShelleyStakeCredential scred) deposit
 
-deriving instance Ord (Certificate era)
+makeStakePoolRegistrationCertificate
+  :: forall era
+   . IsEra era
+  => Ledger.PoolParams
+  -> Certificate (LedgerEra era)
+makeStakePoolRegistrationCertificate poolParams =
+  obtainCommonConstraints (useEra @era) $
+    Certificate $
+      Ledger.mkRegPoolTxCert poolParams
 
-instance
-  ( Typeable ledgerera
-  , IsShelleyBasedEra era
-  , ShelleyLedgerEra era ~ ledgerera
-  )
-  => HasTextEnvelope (Certificate ledgerera)
-  where
-  textEnvelopeType _ = "Certificate"
+makeStakePoolRetirementCertificate
+  :: forall era
+   . IsShelleyBasedEra era
+  => Api.Hash Api.StakePoolKey
+  -> Ledger.EpochNo
+  -> Certificate (ShelleyLedgerEra era)
+makeStakePoolRetirementCertificate poolId retirementEpoch =
+  shelleyBasedEraConstraints (shelleyBasedEra @era) $
+    Certificate $
+      Ledger.mkRetirePoolTxCert (Api.unStakePoolKeyHash poolId) retirementEpoch
 
-instance Typeable era => HasTypeProxy (Certificate era) where
-  data AsType (Certificate era) = AsCertificate
-  proxyToAsType _ = AsCertificate
+makeCommitteeColdkeyResignationCertificate
+  :: forall era
+   . IsEra era
+  => Ledger.Credential Ledger.ColdCommitteeRole
+  -> Maybe Ledger.Anchor
+  -> Certificate (LedgerEra era)
+makeCommitteeColdkeyResignationCertificate coldKeyCred anchor =
+  obtainCommonConstraints (useEra @era) $
+    Certificate $
+      Ledger.mkResignCommitteeColdTxCert
+        coldKeyCred
+        (noInlineMaybeToStrictMaybe anchor)
 
-instance
-  ( Typeable ledgerera
-  , IsShelleyBasedEra era
-  , ShelleyLedgerEra era ~ ledgerera
-  )
-  => SerialiseAsCBOR (Certificate ledgerera)
-  where
-  serialiseToCBOR (Certificate cert) =
-    CBOR.serialize' cert
-  deserialiseFromCBOR _ bs =
-    shelleyBasedEraConstraints (shelleyBasedEra @era) $ Certificate <$> CBOR.decodeFull' bs
+makeCommitteeHotKeyAuthorizationCertificate
+  :: forall era
+   . IsEra era
+  => Ledger.Credential Ledger.ColdCommitteeRole
+  -> Ledger.Credential Ledger.HotCommitteeRole
+  -> Certificate (LedgerEra era)
+makeCommitteeHotKeyAuthorizationCertificate coldKeyCredential hotKeyCredential =
+  obtainCommonConstraints (useEra @era) $
+    Certificate $
+      Ledger.mkAuthCommitteeHotKeyTxCert coldKeyCredential hotKeyCredential
+
+makeDrepRegistrationCertificate
+  :: forall era
+   . IsEra era
+  => Ledger.Credential Ledger.DRepRole
+  -> Ledger.Coin
+  -> Maybe Ledger.Anchor
+  -> Certificate (LedgerEra era)
+makeDrepRegistrationCertificate vcred deposit anchor =
+  obtainCommonConstraints (useEra @era) $
+    Certificate $
+      Ledger.mkRegDRepTxCert vcred deposit (noInlineMaybeToStrictMaybe anchor)
+
+makeDrepUnregistrationCertificate
+  :: forall era
+   . IsEra era
+  => Ledger.Credential Ledger.DRepRole
+  -> Ledger.Coin
+  -> Certificate (LedgerEra era)
+makeDrepUnregistrationCertificate vcred deposit =
+  obtainCommonConstraints (useEra @era) $
+    Certificate $
+      Ledger.mkUnRegDRepTxCert
+        vcred
+        deposit
+
+makeDrepUpdateCertificate
+  :: forall era
+   . IsEra era
+  => Ledger.Credential Ledger.DRepRole
+  -> Maybe Ledger.Anchor
+  -> Certificate (LedgerEra era)
+makeDrepUpdateCertificate vcred mAnchor =
+  obtainCommonConstraints (useEra @era) $
+    Certificate $
+      Ledger.mkUpdateDRepTxCert vcred (noInlineMaybeToStrictMaybe mAnchor)
+
+makeStakeAddressAndDRepDelegationCertificate
+  :: forall era
+   . IsEra era
+  => StakeCredential
+  -> Ledger.Delegatee
+  -> Ledger.Coin
+  -> Certificate (LedgerEra era)
+makeStakeAddressAndDRepDelegationCertificate cred delegatee deposit =
+  obtainCommonConstraints (useEra @era) $
+    Certificate $
+      Ledger.mkRegDepositDelegTxCert
+        (toShelleyStakeCredential cred)
+        delegatee
+        deposit
+
+-- -------------------------------------
 
 getAnchorDataFromCertificate
   :: Era era
