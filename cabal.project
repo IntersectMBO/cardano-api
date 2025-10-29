@@ -13,17 +13,14 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-09-11T01:58:40Z
-  , cardano-haskell-packages 2025-10-21T11:16:53Z
+  , hackage.haskell.org 2025-10-24T09:48:28Z
+  , cardano-haskell-packages 2025-10-24T13:50:12Z
 
 packages:
     cardano-api
     cardano-api-gen
     cardano-wasm
-    -- TODO fix potential issues with build-type: Custom and protoc and reenable
-    -- When uncommenting this line, remember to reenable in .github/workflows/hls.yml
-    -- by removing the line that moves it away before calling `haskell-language-server`.
-    -- cardano-rpc
+    cardano-rpc
 
 extra-packages: Cabal, process
 

@@ -172,11 +172,10 @@
                 substituteInPlace crypton-x509-system.cabal --replace 'Crypt32' 'crypt32'
               '';
             }
-            # TODO uncomment when reenabling cardano-rpc
-            # ({pkgs, ...}: {
-            #   packages.proto-lens-protobuf-types.components.library.build-tools = [pkgs.buildPackages.protobuf];
-            #   packages.cardano-rpc.components.library.build-tools = [pkgs.buildPackages.protobuf];
-            # })
+            ({pkgs, ...}: {
+              packages.proto-lens-protobuf-types.components.library.build-tools = [pkgs.buildPackages.protobuf];
+              packages.cardano-rpc.components.library.build-tools = [pkgs.buildPackages.protobuf];
+            })
           ];
         });
         # ... and construct a flake from the cabal project
