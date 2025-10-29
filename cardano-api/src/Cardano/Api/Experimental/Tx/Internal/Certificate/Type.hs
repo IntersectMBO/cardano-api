@@ -4,17 +4,15 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Api.Experimental.Tx.Internal.Certificate.Type
   ( Certificate (..)
+  , AsType (AsCertificate)
   )
 where
 
-import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Serialise.Cbor
@@ -35,8 +33,7 @@ deriving instance Ord (Certificate era)
 
 instance
   ( Typeable ledgerera
-  , IsShelleyBasedEra era
-  , ShelleyLedgerEra era ~ ledgerera
+  , L.EraTxCert ledgerera
   )
   => HasTextEnvelope (Certificate ledgerera)
   where
@@ -48,12 +45,11 @@ instance Typeable era => HasTypeProxy (Certificate era) where
 
 instance
   ( Typeable ledgerera
-  , IsShelleyBasedEra era
-  , ShelleyLedgerEra era ~ ledgerera
+  , L.EraTxCert ledgerera
   )
   => SerialiseAsCBOR (Certificate ledgerera)
   where
   serialiseToCBOR (Certificate cert) =
     CBOR.serialize' cert
   deserialiseFromCBOR _ bs =
-    shelleyBasedEraConstraints (shelleyBasedEra @era) $ Certificate <$> CBOR.decodeFull' bs
+    Certificate <$> CBOR.decodeFull' bs

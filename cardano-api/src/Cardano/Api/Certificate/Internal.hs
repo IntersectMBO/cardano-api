@@ -67,7 +67,7 @@ module Cardano.Api.Certificate.Internal
   , fromShelleyStakePoolState
 
     -- * Data family instances
-  , AsType (..)
+  , AsType (AsCertificate, AsTxId)
 
     -- * Internal functions
   , filterUnRegCreds
@@ -82,7 +82,7 @@ import Cardano.Api.Certificate.Internal.StakePoolMetadata
 import Cardano.Api.Era
 import Cardano.Api.Error (Error (..))
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
-import Cardano.Api.Governance.Internal.Action.VotingProcedure
+import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)
 import Cardano.Api.Key.Internal
@@ -91,7 +91,6 @@ import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
 import Cardano.Api.Pretty (Doc)
 import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.TextEnvelope.Internal
-import Cardano.Api.Value.Internal
 
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
