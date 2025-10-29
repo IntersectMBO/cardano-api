@@ -6,6 +6,8 @@ module Cardano.Api.Compatible.Certificate
   , makeStakeAddressDelegationCertificate
   , makeStakeAddressRegistrationCertificate
   , makeStakeAddressUnregistrationCertificate
+  , StakeCredentialAndDeposit (..)
+  , StakeRegistrationRequirements
 
     -- * Registering stake pools
   , makeStakePoolRegistrationCertificate

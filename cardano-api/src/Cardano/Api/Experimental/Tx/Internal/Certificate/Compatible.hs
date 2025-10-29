@@ -15,6 +15,8 @@ module Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible
   , makeStakeAddressDelegationCertificate
   , makeStakeAddressRegistrationCertificate
   , makeStakeAddressUnregistrationCertificate
+  , StakeCredentialAndDeposit (..)
+  , StakeRegistrationRequirements
 
     -- * Registering stake pools
   , makeStakePoolRegistrationCertificate
@@ -79,16 +81,47 @@ makeStakeAddressDelegationCertificate sCred delegatee =
       Certificate $
         Ledger.mkDelegStakeTxCert (toShelleyStakeCredential sCred) (Api.unStakePoolKeyHash delegatee')
 
+data StakeCredentialAndDeposit = StakeCredentialAndDeposit StakeCredential Ledger.Coin
+
+type family StakeRegistrationRequirements era where
+  StakeRegistrationRequirements DijkstraEra = StakeCredentialAndDeposit
+  StakeRegistrationRequirements ConwayEra = StakeCredentialAndDeposit
+  StakeRegistrationRequirements BabbageEra = StakeCredential
+  StakeRegistrationRequirements AlonzoEra = StakeCredential
+  StakeRegistrationRequirements MaryEra = StakeCredential
+  StakeRegistrationRequirements AllegraEra = StakeCredential
+  StakeRegistrationRequirements ShelleyEra = StakeCredential
+
 makeStakeAddressRegistrationCertificate
   :: forall era
    . IsShelleyBasedEra era
-  => StakeCredential
+  => StakeRegistrationRequirements era
   -> Certificate (ShelleyLedgerEra era)
 makeStakeAddressRegistrationCertificate scred =
-  shelleyBasedEraConstraints (shelleyBasedEra @era) $
+  case shelleyBasedEra @era of
+    ShelleyBasedEraDijkstra ->
+      createRegCertWithDeposit scred
+    ShelleyBasedEraConway ->
+      createRegCertWithDeposit scred
+    ShelleyBasedEraBabbage ->
+      createRegCertNoDeposit scred
+    ShelleyBasedEraAlonzo ->
+      createRegCertNoDeposit scred
+    ShelleyBasedEraMary ->
+      createRegCertNoDeposit scred
+    ShelleyBasedEraAllegra ->
+      createRegCertNoDeposit scred
+    ShelleyBasedEraShelley ->
+      createRegCertNoDeposit scred
+ where
+  createRegCertWithDeposit stakeCredWithDeposit =
+    let StakeCredentialAndDeposit cred dep = stakeCredWithDeposit
+     in Certificate $
+          Ledger.mkRegDepositTxCert (toShelleyStakeCredential cred) dep
+  createRegCertNoDeposit stakeCredential =
     Certificate $
       Ledger.mkRegTxCert $
-        toShelleyStakeCredential scred
+        toShelleyStakeCredential stakeCredential
 
 makeStakeAddressUnregistrationCertificate
   :: forall era
