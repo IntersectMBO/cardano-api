@@ -1242,7 +1242,7 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript script)) =
     SimpleScriptInAlonzo -> Alonzo.NativeScript (toAllegraTimelock script)
     SimpleScriptInBabbage -> Alonzo.NativeScript (toAllegraTimelock script)
     SimpleScriptInConway -> Alonzo.NativeScript (toAllegraTimelock script)
-    SimpleScriptInDijkstra -> Alonzo.NativeScript (toAllegraTimelock script)
+    SimpleScriptInDijkstra -> Alonzo.NativeScript (Dijkstra.upgradeTimelock (toAllegraTimelock script))
 toShelleyScript
   ( ScriptInEra
       langInEra
