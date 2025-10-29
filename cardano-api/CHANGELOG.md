@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 10.19.1.0
+
+- Update `cardano-ledger-api` to fix bug in `queryPoolState`, where current Pool parameters were returned instead of the future ones.
+  (bugfix)
+  [PR 991](https://github.com/IntersectMBO/cardano-api/pull/991)
+
 ## 10.19.0.0
 
 - Upgrade ledger: cardano-protocol-tpraos-1.4.1.0, cardano-ledger-shelley-test-1.7.0.0, cardano-ledger-shelley-1.17.0.0, cardano-ledger-mary-1.9.0.0, cardano-ledger-dijkstra-0.1.0.0, cardano-ledger-core-1.18.0.0, cardano-ledger-conway-1.20.0.0, cardano-ledger-byron-1.2.0.0, cardano-ledger-binary-1.7.0.0, cardano-ledger-babbage-1.12.0.0, cardano-ledger-api-1.12.0.0, cardano-ledger-alonzo-1.14.0.0, cardano-data-1.2.4.1, cardano-crypto-wrapper-1.6.1.0
@@ -13,7 +19,6 @@
 - Add `Cardano.Api.Address.shelleyPayAddrToPaymentKeyHash`.
   (feature, compatible)
   [PR 976](https://github.com/IntersectMBO/cardano-api/pull/976)
-
 
 ## 10.18.0.0
 
