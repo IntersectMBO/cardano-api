@@ -75,6 +75,7 @@ library
     Cardano.Api.Experimental.Certificate
     Cardano.Api.Experimental.Era
     Cardano.Api.Experimental.Plutus
+    Cardano.Api.Experimental.Serialise.TextEnvelope
     Cardano.Api.Experimental.Simple.Script
     Cardano.Api.Experimental.Tx
     Cardano.Api.Genesis
@@ -226,6 +227,7 @@ library
     Cardano.Api.Experimental.Plutus.Internal.Script
     Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
     Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
+    Cardano.Api.Experimental.Serialise.TextEnvelope.Internal
     Cardano.Api.Experimental.Tx.Internal.AnyWitness
     Cardano.Api.Experimental.Tx.Internal.Body
     Cardano.Api.Experimental.Tx.Internal.Certificate
