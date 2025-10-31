@@ -1,8 +1,8 @@
 module Main where
 
-import Cardano.Wasm.Internal.Api.Info (apiInfo)
-import Cardano.Wasm.Internal.Api.InfoToTypeScript (apiInfoToTypeScriptFile)
-import Cardano.Wasm.Internal.Api.TypeScriptDefs (writeTypeScriptToDir)
+import Cardano.Wasm.Api.Info (apiInfo)
+import Cardano.Wasm.Api.InfoToTypeScript (apiInfoToTypeScriptFile)
+import Cardano.Wasm.Api.TypeScriptDefs (writeTypeScriptToDir)
 
 import Options.Applicative
 

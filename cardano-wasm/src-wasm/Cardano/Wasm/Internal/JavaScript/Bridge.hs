@@ -16,11 +16,11 @@ module Cardano.Wasm.Internal.JavaScript.Bridge where
 import Cardano.Api qualified as Api
 import Cardano.Api.Ledger qualified as Ledger
 
-import Cardano.Wasm.Internal.Api.GRPC qualified as Wasm
-import Cardano.Wasm.Internal.Api.Info (apiInfo)
-import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
-import Cardano.Wasm.Internal.Api.Wallet qualified as Wasm
-import Cardano.Wasm.Internal.ExceptionHandling (rightOrError)
+import Cardano.Wasm.Api.GRPC qualified as Wasm
+import Cardano.Wasm.Api.Info (apiInfo)
+import Cardano.Wasm.Api.Tx qualified as Wasm
+import Cardano.Wasm.Api.Wallet qualified as Wasm
+import Cardano.Wasm.ExceptionHandling (rightOrError)
 import Cardano.Wasm.Internal.JavaScript.GRPC
   ( js_getEra
   , js_getProtocolParams

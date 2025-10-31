@@ -7,7 +7,7 @@ module Cardano.Wasm.Internal.JavaScript.GRPC where
 module Cardano.Wasm.Internal.JavaScript.GRPC (js_newWebGrpcClient, js_getEra, js_submitTx, js_getProtocolParams, js_readAllUtxos, js_readUtxosForAddress) where
 
 import GHC.Wasm.Prim
-import Cardano.Wasm.Internal.Api.Tx (ProtocolParamsJSON(..))
+import Cardano.Wasm.Api.Tx (ProtocolParamsJSON(..))
 
 -- | Create a GRPC-web client for the Cardano API.
 foreign import javascript safe "globalThis.createClient($1)"
