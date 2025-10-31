@@ -362,17 +362,17 @@ signWithPaymentKey jsUnsignedTx jsSigningKey =
 -- * SignedTxObject
 
 foreign export javascript "alsoSignWithPaymentKey"
-  alsoSignWithPaymentKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
+  alsoSignWithPaymentKey :: JSSignedTx -> JSSigningKey -> IO JSSignedTx
 
 foreign export javascript "txToCbor"
   txToCbor :: JSSignedTx -> IO JSString
 
 -- | Sign an unsigned transaction with a payment key.
-alsoSignWithPaymentKey :: HasCallStack => JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
-alsoSignWithPaymentKey jsUnsignedTx jsSigningKey =
+alsoSignWithPaymentKey :: HasCallStack => JSSignedTx -> JSSigningKey -> IO JSSignedTx
+alsoSignWithPaymentKey jsSignedTx jsSigningKey =
   toJSVal
     =<< ( Wasm.alsoSignWithPaymentKeyImpl
-            <$> fromJSVal jsUnsignedTx
+            <$> fromJSVal jsSignedTx
             <*> fromJSVal jsSigningKey
         )
 
