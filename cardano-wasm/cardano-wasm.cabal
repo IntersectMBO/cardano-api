@@ -77,7 +77,7 @@ executable cardano-wasi
   if arch(wasm32)
     ghc-options:
       -no-hs-main
-      "-optl-Wl,--strip-all,--export=hs_init,--export=newTx,--export=newExperimentalEraTx,--export=newConwayTx,--export=addTxInput,--export=addSimpleTxOut,--export=setFee,--export=estimateMinFee,--export=signWithPaymentKey,--export=alsoSignWithPaymentKey,--export=toCbor,--export=generatePaymentWallet,--export=restorePaymentWalletFromSigningKeyBech32,--export=restoreTestnetPaymentWalletFromSigningKeyBech32,--export=getAddressBech32,--export=getBech32ForVerificationKey,--export=getBech32ForSigningKey,--export=getBase16ForVerificationKeyHash,--export=mallocNBytes,--export=getStrLen,--export=freeMemory"
+      "-optl-Wl,--strip-all,--allow-undefined,--export=hs_init,--export=newTx,--export=newExperimentalEraTx,--export=newConwayTx,--export=addTxInput,--export=addSimpleTxOut,--export=setFee,--export=estimateMinFee,--export=signWithPaymentKey,--export=alsoSignWithPaymentKey,--export=toCbor,--export=generatePaymentWallet,--export=restorePaymentWalletFromSigningKeyBech32,--export=restoreTestnetPaymentWalletFromSigningKeyBech32,--export=getAddressBech32,--export=getBech32ForVerificationKey,--export=getBech32ForSigningKey,--export=getBase16ForVerificationKeyHash,--export=newGrpcConnection,--export=getEra,--export=closeGrpcConnection,--export=mallocNBytes,--export=getStrLen,--export=freeMemory"
   other-modules:
     Cardano.Wasi.Internal.Api.GRPC
     Cardano.Wasi.Internal.Api.Memory
