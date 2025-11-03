@@ -24,32 +24,22 @@ common project-config
     -Wredundant-constraints
     -Wunused-packages
 
-executable cardano-wasm
+library cardano-wasi-lib
   import: project-config
-  main-is: Main.hs
   hs-source-dirs:
-    app
-    src
+    src-lib
 
-  default-language: Haskell2010
+  exposed-modules:
+    Cardano.Wasm.Api.GRPC
+    Cardano.Wasm.Api.Info
+    Cardano.Wasm.Api.InfoToTypeScript
+    Cardano.Wasm.Api.Tx
+    Cardano.Wasm.Api.TypeScriptDefs
+    Cardano.Wasm.Api.Wallet
+    Cardano.Wasm.ExceptionHandling
 
-  if arch(wasm32)
-    ghc-options:
-      -no-hs-main
-      -optl-mexec-model=reactor
-      "-optl-Wl,--strip-all"
   other-modules:
-    Cardano.Wasm.Internal.Api.GRPC
-    Cardano.Wasm.Internal.Api.Info
-    Cardano.Wasm.Internal.Api.InfoToTypeScript
     Cardano.Wasm.Internal.Api.Random
-    Cardano.Wasm.Internal.Api.Tx
-    Cardano.Wasm.Internal.Api.TypeScriptDefs
-    Cardano.Wasm.Internal.Api.Wallet
-    Cardano.Wasm.Internal.ExceptionHandling
-    Cardano.Wasm.Internal.JavaScript.Bridge
-    Cardano.Wasm.Internal.JavaScript.GRPC
-    Cardano.Wasm.Internal.JavaScript.GRPCTypes
 
   build-depends:
     aeson,
@@ -66,17 +56,66 @@ executable cardano-wasm
     exceptions,
     filepath,
     microlens,
-    optparse-applicative,
     text,
 
   if arch(wasm32)
     build-depends:
-      base16-bytestring,
-      ghc-experimental,
-      utf8-string,
+      base16-bytestring
   else
     build-depends:
       crypton
+
+executable cardano-wasi
+  import: project-config
+  main-is: Main.hs
+  hs-source-dirs:
+    app
+    src-wasi
+
+  default-language: Haskell2010
+
+  if arch(wasm32)
+    ghc-options:
+      -no-hs-main
+      -optl-mexec-model=reactor
+      "-optl-Wl,--strip-all"
+  other-modules:
+  build-depends:
+    base,
+    cardano-wasm:cardano-wasi-lib,
+    optparse-applicative,
+
+executable cardano-wasm
+  import: project-config
+  main-is: Main.hs
+  hs-source-dirs:
+    app
+    src-wasm
+
+  default-language: Haskell2010
+
+  if arch(wasm32)
+    ghc-options:
+      -no-hs-main
+      -optl-mexec-model=reactor
+      "-optl-Wl,--strip-all"
+  other-modules:
+    Cardano.Wasm.Internal.JavaScript.Bridge
+    Cardano.Wasm.Internal.JavaScript.GRPC
+    Cardano.Wasm.Internal.JavaScript.GRPCTypes
+
+  build-depends:
+    base,
+    cardano-wasm:cardano-wasi-lib,
+    optparse-applicative,
+
+  if arch(wasm32)
+    build-depends:
+      aeson,
+      cardano-api,
+      ghc-experimental,
+      text,
+      utf8-string,
 
 test-suite cardano-wasm-golden
   type: exitcode-stdio-1.0

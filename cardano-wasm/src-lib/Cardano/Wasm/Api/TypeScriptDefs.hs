@@ -11,7 +11,7 @@
 -- data types and servant HTTP APIs respectively. And other libraries
 -- that align with our needs, like `language-typescript`, are not
 -- actively maintained.
-module Cardano.Wasm.Internal.Api.TypeScriptDefs where
+module Cardano.Wasm.Api.TypeScriptDefs where
 
 import Data.List.NonEmpty qualified as LNE
 import Data.Text.Lazy qualified as TL
