@@ -119,6 +119,5 @@ jobs:
           cradle:
             cabal:
           EOF
-          # Remove the following line after `cardano-rpc` project is enabled in `cabal.project`
-          mv cardano-rpc ../
+          rm -rf cardano-rpc/gen/*
           haskell-language-server

@@ -1,0 +1,26 @@
+version: v1
+
+managed:
+  enabled: true
+
+plugins:
+  # node
+  # - plugin: es
+  #   out: gen/node/src
+  #   opt:
+  #     - target=ts
+  #
+  # - plugin: connect-es
+  #   out: gen/node/src
+  #   opt:
+  #     - target=ts
+  #
+  # - plugin: buf.build/bufbuild/protoschema-jsonschema
+  #   out: gen/jsonschema/schema
+
+  # haskell
+
+  - plugin: haskell-protolens
+    path: proto-lens-protoc
+    out: gen
+

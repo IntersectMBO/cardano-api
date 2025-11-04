@@ -153,7 +153,7 @@
               hlint = "3.10";
             };
           # and from nixpkgs or other inputs
-          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go actionlint shellcheck snappy protobuf];
+          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go actionlint shellcheck snappy protobuf buf ];
           # disable Hoogle until someone request it
           shell.withHoogle = false;
           # Skip cross compilers for the shell
@@ -200,11 +200,11 @@
                 substituteInPlace crypton-x509-system.cabal --replace 'Crypt32' 'crypt32'
               '';
             }
-            # TODO uncomment when reenabling cardano-rpc
-            # ({pkgs, ...}: {
-            #   packages.proto-lens-protobuf-types.components.library.build-tools = [pkgs.buildPackages.protobuf];
+            ({pkgs, ...}: {
+              packages.proto-lens-protobuf-types.components.library.build-tools = [pkgs.buildPackages.protobuf];
+            # This is only needed when doing codegen in cardano-rpc itself
             #   packages.cardano-rpc.components.library.build-tools = [pkgs.buildPackages.protobuf];
-            # })
+            })
           ];
         });
         # ... and construct a flake from the cabal project
