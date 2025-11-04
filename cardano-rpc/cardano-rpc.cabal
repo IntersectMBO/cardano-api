@@ -17,18 +17,10 @@ license-files:
   LICENSE
   NOTICE
 
-build-type: Custom
+build-type: Simple
 extra-doc-files:
   CHANGELOG.md
   README.md
-
-extra-source-files: proto/**/*.proto
-
-custom-setup
-  setup-depends:
-    Cabal >=3.0 && <3.13,
-    base >=4.14 && <5,
-    proto-lens-setup >=0.4 && <0.5,
 
 common project-config
   default-language: Haskell2010
@@ -36,7 +28,6 @@ common project-config
     ImportQualifiedPost
     OverloadedStrings
 
-  build-depends: base >=4.14 && <5
   ghc-options:
     -Wall
     -Wcompat
@@ -50,7 +41,6 @@ common project-config
 library
   import: project-config
   hs-source-dirs: src
-  build-tool-depends: proto-lens-protoc:proto-lens-protoc
   exposed-modules:
     Cardano.Rpc.Client
     Cardano.Rpc.Proto.Api.Node
@@ -65,14 +55,6 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
     Cardano.Rpc.Server.Internal.UtxoRpc.Submit
     Cardano.Rpc.Server.Internal.UtxoRpc.Type
-    Proto.Cardano.Rpc.Node
-    Proto.Cardano.Rpc.Node_Fields
-    Proto.Utxorpc.V1alpha.Cardano.Cardano
-    Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields
-    Proto.Utxorpc.V1alpha.Query.Query
-    Proto.Utxorpc.V1alpha.Query.Query_Fields
-    Proto.Utxorpc.V1alpha.Submit.Submit
-    Proto.Utxorpc.V1alpha.Submit.Submit_Fields
 
   other-modules:
     Cardano.Rpc.Server.Internal.Orphans
@@ -80,14 +62,6 @@ library
 
   autogen-modules:
     Paths_cardano_rpc
-    Proto.Cardano.Rpc.Node
-    Proto.Cardano.Rpc.Node_Fields
-    Proto.Utxorpc.V1alpha.Cardano.Cardano
-    Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields
-    Proto.Utxorpc.V1alpha.Query.Query
-    Proto.Utxorpc.V1alpha.Query.Query_Fields
-    Proto.Utxorpc.V1alpha.Submit.Submit
-    Proto.Utxorpc.V1alpha.Submit.Submit_Fields
 
   build-depends:
     aeson,
@@ -98,6 +72,7 @@ library
     cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core,
+    cardano-rpc:gen,
     containers,
     contra-tracer,
     data-default,
@@ -107,9 +82,28 @@ library
     grpc-spec,
     proto-lens,
     proto-lens-protobuf-types,
-    proto-lens-runtime,
     rio,
     text,
+
+-- this should be replaced by utxorpc pacakge from hackage
+-- ideally we should upstream whatever is implemented in Proto.Cardano.Rpc.Node
+-- into utxorpc
+library gen
+  import: project-config
+  hs-source-dirs: gen
+  exposed-modules:
+    Proto.Cardano.Rpc.Node
+    Proto.Cardano.Rpc.Node_Fields
+    Proto.Utxorpc.V1alpha.Cardano.Cardano
+    Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields
+    Proto.Utxorpc.V1alpha.Query.Query
+    Proto.Utxorpc.V1alpha.Query.Query_Fields
+    Proto.Utxorpc.V1alpha.Submit.Submit
+    Proto.Utxorpc.V1alpha.Submit.Submit_Fields
+
+  build-depends:
+    proto-lens-protobuf-types,
+    proto-lens-runtime,
 
 test-suite cardano-rpc-test
   import: project-config
@@ -117,6 +111,7 @@ test-suite cardano-rpc-test
   main-is: cardano-rpc-test.hs
   type: exitcode-stdio-1.0
   build-depends:
+    base,
     cardano-api,
     cardano-api:gen,
     cardano-ledger-api,
@@ -124,7 +119,7 @@ test-suite cardano-rpc-test
     cardano-ledger-core,
     cardano-rpc,
     containers,
-    hedgehog >=1.1,
+    hedgehog,
     rio,
     tasty,
     tasty-hedgehog,

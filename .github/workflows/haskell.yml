@@ -86,7 +86,12 @@ jobs:
 
     - name: "[Windows] Install grpc dependencies"
       if: runner.os == 'Windows'
-      run: /usr/bin/pacman --noconfirm -S mingw-w64-x86_64-snappy mingw-w64-x86_64-protobuf
+      run: |
+        /usr/bin/pacman --noconfirm -S mingw-w64-x86_64-snappy mingw-w64-x86_64-protobuf
+        cat <<EOF >> $GITHUB_ENV
+        LIBRARY_PATH=/mingw64/lib
+        CPATH=/mingw64/include
+        EOF
 
     - name: "[macOS] Install grpc dependencies"
       if: runner.os == 'macOS'
@@ -106,6 +111,34 @@ jobs:
       with:
         cabal-store: ${{ steps.setup-haskell.outputs.cabal-store }}
         cache-version: ${{ env.CABAL_CACHE_VERSION }}
+
+
+    - name: '[Linux] [cardano-rpc] Install buf'
+      if: runner.os == 'Linux'
+      run: |
+        curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-Linux-x86_64" -o "/usr/local/bin/buf"
+        chmod +x /usr/local/bin/buf
+
+    - name: '[Linux] [cardano-rpc] Install proto-lens-protoc'
+      if: runner.os == 'Linux'
+      run: |
+        cabal install proto-lens-protoc --installdir=$HOME/.local/bin
+
+    - name: '[Linux] [cardano-rpc] Generate protobuf code'
+      if: runner.os == 'Linux'
+      working-directory: cardano-rpc
+      run: buf generate proto
+
+    - name: '[Linux] [cardano-rpc] Check that generated files from proto definitions are up to date'
+      if: runner.os == 'Linux'
+      run: |
+        git add cardano-rpc/gen
+        if ! git diff --staged --quiet -- cardano-rpc/gen; then
+          echo "Generated files differ from repository files:"
+          git diff --staged --name-status -- cardano-rpc/gen
+          exit 1
+        fi
+        echo "All generated files match repository files"
 
     # Now we build.
     - name: Build all

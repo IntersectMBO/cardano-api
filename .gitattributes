@@ -1,0 +1,3 @@
+cardano-rpc/gen/** linguist-generated=true
+cardano-rpc/gen/** no-prettify
+
