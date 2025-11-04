@@ -1,12 +1,17 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Api.Experimental.Tx.Internal.AnyWitness
   ( -- * Any witness (key, simple script, plutus script).
     AnyWitness (..)
   , getAnyWitnessScript
+  , getAnyWitnessSimpleScript
   , getAnyWitnessPlutusLanguage
   , getAnyWitnessScriptData
+  , getPlutusDatum
   )
 where
 
@@ -22,6 +27,7 @@ import Cardano.Api.Experimental.Simple.Script
   ( SimpleScript (SimpleScript)
   , SimpleScriptOrReferenceInput (..)
   )
+import Cardano.Api.Internal.Orphans.Misc ()
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus.Internal.ScriptData
 
@@ -50,6 +56,34 @@ data AnyWitness era where
   AnyPlutusScriptWitness :: PlutusScriptWitness lang purpose era -> AnyWitness era
 
 deriving instance Show (AnyWitness era)
+
+instance Eq (AnyWitness era) where
+  AnyKeyWitnessPlaceholder == AnyKeyWitnessPlaceholder = True
+  (AnySimpleScriptWitness s1) == (AnySimpleScriptWitness s2) = s1 == s2
+  (AnyPlutusScriptWitness (PlutusScriptWitness l1 s1 d1 r1 e1)) == (AnyPlutusScriptWitness (PlutusScriptWitness l2 s2 d2 r2 e2)) =
+    case (l1, l2) of
+      (L.SPlutusV1, L.SPlutusV1) -> case (d1, d2) of
+        (InlineDatum, InlineDatum) -> s1 == s2 && r1 == r2 && e1 == e2
+        (NoScriptDatum, NoScriptDatum) -> s1 == s2 && r1 == r2 && e1 == e2
+        (SpendingScriptDatum d1', SpendingScriptDatum d2') -> s1 == s2 && r1 == r2 && e1 == e2 && d1' == d2'
+        (_, _) -> False
+      (L.SPlutusV2, L.SPlutusV2) -> case (d1, d2) of
+        (InlineDatum, InlineDatum) -> s1 == s2 && r1 == r2 && e1 == e2
+        (NoScriptDatum, NoScriptDatum) -> s1 == s2 && r1 == r2 && e1 == e2
+        (SpendingScriptDatum d1', SpendingScriptDatum d2') -> s1 == s2 && r1 == r2 && e1 == e2 && d1' == d2'
+        (_, _) -> False
+      (L.SPlutusV3, L.SPlutusV3) -> case (d1, d2) of
+        (InlineDatum, InlineDatum) -> s1 == s2 && r1 == r2 && e1 == e2
+        (NoScriptDatum, NoScriptDatum) -> s1 == s2 && r1 == r2 && e1 == e2
+        (SpendingScriptDatum d1', SpendingScriptDatum d2') -> s1 == s2 && r1 == r2 && e1 == e2 && d1' == d2'
+        (_, _) -> False
+      (L.SPlutusV4, L.SPlutusV4) -> case (d1, d2) of
+        (InlineDatum, InlineDatum) -> s1 == s2 && r1 == r2 && e1 == e2
+        (NoScriptDatum, NoScriptDatum) -> s1 == s2 && r1 == r2 && e1 == e2
+        (SpendingScriptDatum d1', SpendingScriptDatum d2') -> s1 == s2 && r1 == r2 && e1 == e2 && d1' == d2'
+        (_, _) -> False
+      (_, _) -> False
+  _ == _ = False
 
 getAnyWitnessPlutusLanguage :: AnyWitness era -> Maybe L.Language
 getAnyWitnessPlutusLanguage AnyKeyWitnessPlaceholder = Nothing
