@@ -1,0 +1,104 @@
+name: 'Cabal Cache'
+description: 'Cache and restore Cabal dependencies'
+
+inputs:
+  cabal-store:
+    description: 'Path to the Cabal store'
+    required: true
+  cache-version:
+    description: 'Cache version to use for cache invalidation'
+    required: false
+    default: '1'
+  working-directory:
+    description: 'Directory where the cabal-cache action is executed'
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    # Convert runner.temp to a Unix-style path for MSYS2 bash on Windows
+    - name: Set temp directory path
+      shell: ${{ runner.os == 'Windows' && 'C:/msys64/usr/bin/bash.exe -e {0}' || 'bash' }}
+      run: |
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          TEMP_PATH=$(cygpath -u "${{ runner.temp }}")
+        else
+          TEMP_PATH="${{ runner.temp }}"
+        fi
+        echo "TEMP_PATH=$TEMP_PATH" >> $GITHUB_ENV
+
+    - name: Cabal update
+      shell: ${{ runner.os == 'Windows' && 'C:/msys64/usr/bin/bash.exe -e {0}' || 'bash' }}
+      working-directory: ${{ inputs.working-directory }}
+      run: cabal update
+
+    # A dry run `build all` operation does *NOT* download anything, it just looks at the package
+    # indices to generate an install plan.
+    - name: Build dry run
+      shell: ${{ runner.os == 'Windows' && 'C:/msys64/usr/bin/bash.exe -e {0}' || 'bash' }}
+      working-directory: ${{ inputs.working-directory }}
+      run: cabal build all --enable-tests --dry-run --minimize-conflict-set
+
+    # From the install plan we generate a dependency list.
+    # Store it in runner.temp to avoid polluting the source tree.
+    - name: Record dependencies
+      id: record-deps
+      shell: ${{ runner.os == 'Windows' && 'C:/msys64/usr/bin/bash.exe -e {0}' || 'bash' }}
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style != "local") | .id' | sort | uniq > ${{ env.TEMP_PATH }}/cabal-dependencies.txt
+
+    # Use a fresh cache each month
+    - name: Store month number as environment variable used in cache version
+      shell: ${{ runner.os == 'Windows' && 'C:/msys64/usr/bin/bash.exe -e {0}' || 'bash' }}
+      run: |
+        cat <<EOF >> $GITHUB_ENV
+        MONTHNUM=$(date -u '+%m')
+        GHC=$(ghc --numeric-version)
+        EOF
+
+    # Compute the hash of cabal-dependencies.txt for the cache key
+    - name: Compute dependencies hash
+      id: deps-hash
+      shell: ${{ runner.os == 'Windows' && 'C:/msys64/usr/bin/bash.exe -e {0}' || 'bash' }}
+      run: |
+        if [ -f ${{ env.TEMP_PATH }}/cabal-dependencies.txt ]; then
+          DEPS_HASH=$(sha256sum ${{ env.TEMP_PATH }}/cabal-dependencies.txt | cut -d' ' -f1)
+          echo "hash=$DEPS_HASH" >> $GITHUB_OUTPUT
+        else
+          echo "hash=" >> $GITHUB_OUTPUT
+        fi
+
+    # From the dependency list we restore the cached dependencies.
+    # We use the hash of `cabal-dependencies.txt` as part of the cache key because that will be stable
+    # until the `index-state` values in the `cabal.project` file changes.
+    - name: Restore cached dependencies
+      uses: actions/cache/restore@v4
+      id: cache
+      with:
+        path: |
+          ${{ inputs.cabal-store }}
+          ${{ inputs.working-directory }}/dist-newstyle
+        key: cache-${{ inputs.cache-version }}-${{ runner.os }}-${{ env.GHC }}-${{ env.MONTHNUM }}-${{ steps.deps-hash.outputs.hash }}
+        # try to restore previous cache from this month if there's no cache for the dependencies set
+        restore-keys: |
+          cache-${{ inputs.cache-version }}-${{ runner.os }}-${{ env.GHC }}-${{ env.MONTHNUM }}-
+
+    # Now we install the dependencies. If the cache was found and restored in the previous step,
+    # this should be a no-op, but if the cache key was not found we need to build stuff so we can
+    # cache it for the next step.
+    - name: Install dependencies
+      shell: ${{ runner.os == 'Windows' && 'C:/msys64/usr/bin/bash.exe -e {0}' || 'bash' }}
+      working-directory: ${{ inputs.working-directory }}
+      run: cabal build all --enable-tests --only-dependencies
+
+    # Always store the cabal cache.
+    - name: Cache Cabal store
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ${{ inputs.cabal-store }}
+          ${{ inputs.working-directory }}/dist-newstyle
+        key: ${{ steps.cache.outputs.cache-primary-key }}
+
