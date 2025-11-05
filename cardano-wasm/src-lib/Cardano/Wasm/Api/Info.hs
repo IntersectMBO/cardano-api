@@ -178,27 +178,51 @@ apiInfo =
                   , methodReturnDoc = "The Bech32 representation of the address."
                   }
               , MethodInfo
-                  { methodName = "getBech32ForVerificationKey"
+                  { methodName = "getBech32ForPaymentVerificationKey"
                   , methodDoc =
-                      "Get the Bech32 representation of the verification key of the wallet. (Can be shared for verification.)"
+                      "Get the Bech32 representation of the payment verification key of the wallet. (Can be shared for verification.)"
                   , methodParams = []
                   , methodReturnType = OtherType TSString
-                  , methodReturnDoc = "The Bech32 representation of the verification key."
+                  , methodReturnDoc = "The Bech32 representation of the payment verification key."
                   }
               , MethodInfo
-                  { methodName = "getBech32ForSigningKey"
+                  { methodName = "getBech32ForPaymentSigningKey"
                   , methodDoc =
-                      "Get the Bech32 representation of the signing key of the wallet. (Must be kept secret.)"
+                      "Get the Bech32 representation of the payment signing key of the wallet. (Must be kept secret.)"
                   , methodParams = []
                   , methodReturnType = OtherType TSString
-                  , methodReturnDoc = "The Bech32 representation of the signing key."
+                  , methodReturnDoc = "The Bech32 representation of the payment signing key."
                   }
               , MethodInfo
-                  { methodName = "getBase16ForVerificationKeyHash"
-                  , methodDoc = "Get the base16 representation of the hash of the verification key of the wallet."
+                  { methodName = "getBech32ForStakeVerificationKey"
+                  , methodDoc =
+                      "Get the Bech32 representation of the stake verification key of the wallet. (Can be shared for verification.)"
                   , methodParams = []
                   , methodReturnType = OtherType TSString
-                  , methodReturnDoc = "The base16 representation of the verification key hash."
+                  , methodReturnDoc = "The Bech32 representation of the stake verification key."
+                  }
+              , MethodInfo
+                  { methodName = "getBech32ForStakeSigningKey"
+                  , methodDoc =
+                      "Get the Bech32 representation of the stake signing key of the wallet. (Must be kept secret.)"
+                  , methodParams = []
+                  , methodReturnType = OtherType TSString
+                  , methodReturnDoc = "The Bech32 representation of the stake signing key."
+                  }
+              , MethodInfo
+                  { methodName = "getBase16ForPaymentVerificationKeyHash"
+                  , methodDoc =
+                      "Get the base16 representation of the hash of the payment verification key of the wallet."
+                  , methodParams = []
+                  , methodReturnType = OtherType TSString
+                  , methodReturnDoc = "The base16 representation of the payment verification key hash."
+                  }
+              , MethodInfo
+                  { methodName = "getBase16ForStakeVerificationKeyHash"
+                  , methodDoc = "Get the base16 representation of the hash of the stake verification key of the wallet."
+                  , methodParams = []
+                  , methodReturnType = OtherType TSString
+                  , methodReturnDoc = "The base16 representation of the stake verification key hash."
                   }
               ]
           }
@@ -379,9 +403,26 @@ apiInfo =
                       , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
                   , MethodInfo
+                      { methodName = "generateStakeWallet"
+                      , methodDoc = "Generate a stake wallet for mainnet."
+                      , methodParams = []
+                      , methodReturnType = NewObject (virtualObjectName walletObj)
+                      , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                      }
+                  , MethodInfo
                       { methodName = "restorePaymentWalletFromSigningKeyBech32"
                       , methodDoc = "Restore a mainnet payment wallet from a Bech32 encoded signing key."
                       , methodParams = [ParamInfo "signingKeyBech32" TSString "The Bech32 encoded signing key."]
+                      , methodReturnType = NewObject (virtualObjectName walletObj)
+                      , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                      }
+                  , MethodInfo
+                      { methodName = "restoreStakeWalletFromSigningKeyBech32"
+                      , methodDoc = "Restore a mainnet stake wallet from Bech32 encoded signing keys."
+                      , methodParams =
+                          [ ParamInfo "paymentSigningKeyBech32" TSString "The Bech32 encoded payment signing key."
+                          , ParamInfo "stakeSigningKeyBech32" TSString "The Bech32 encoded stake signing key."
+                          ]
                       , methodReturnType = NewObject (virtualObjectName walletObj)
                       , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
@@ -393,11 +434,29 @@ apiInfo =
                       , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
                   , MethodInfo
+                      { methodName = "generateTestnetStakeWallet"
+                      , methodDoc = "Generate a stake wallet for testnet, given the testnet's network magic."
+                      , methodParams = [ParamInfo "networkMagic" TSNumber "The network magic for the testnet."]
+                      , methodReturnType = NewObject (virtualObjectName walletObj)
+                      , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                      }
+                  , MethodInfo
                       { methodName = "restoreTestnetPaymentWalletFromSigningKeyBech32"
                       , methodDoc = "Restore a testnet payment wallet from a Bech32 encoded signing key."
                       , methodParams =
                           [ ParamInfo "networkMagic" TSNumber "The network magic for the testnet."
                           , ParamInfo "signingKeyBech32" TSString "The Bech32 encoded signing key."
+                          ]
+                      , methodReturnType = NewObject (virtualObjectName walletObj)
+                      , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                      }
+                  , MethodInfo
+                      { methodName = "restoreTestnetStakeWalletFromSigningKeyBech32"
+                      , methodDoc = "Restore a testnet stake wallet from Bech32 encoded signing keys."
+                      , methodParams =
+                          [ ParamInfo "networkMagic" TSNumber "The network magic for the testnet."
+                          , ParamInfo "paymentSigningKeyBech32" TSString "The Bech32 encoded payment signing key."
+                          , ParamInfo "stakeSigningKeyBech32" TSString "The Bech32 encoded stake signing key."
                           ]
                       , methodReturnType = NewObject (virtualObjectName walletObj)
                       , methodReturnDoc = "A promise that resolves to a new `Wallet` object."

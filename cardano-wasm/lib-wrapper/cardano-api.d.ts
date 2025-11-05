@@ -47,11 +47,25 @@ declare interface CardanoApi {
     generatePaymentWallet(): Promise<Wallet>;
 
     /**
+     * Generate a stake wallet for mainnet.
+     * @returns A promise that resolves to a new `Wallet` object.
+     */
+    generateStakeWallet(): Promise<Wallet>;
+
+    /**
      * Restore a mainnet payment wallet from a Bech32 encoded signing key.
      * @param signingKeyBech32 The Bech32 encoded signing key.
      * @returns A promise that resolves to a new `Wallet` object.
      */
     restorePaymentWalletFromSigningKeyBech32(signingKeyBech32: string): Promise<Wallet>;
+
+    /**
+     * Restore a mainnet stake wallet from Bech32 encoded signing keys.
+     * @param paymentSigningKeyBech32 The Bech32 encoded payment signing key.
+     * @param stakeSigningKeyBech32 The Bech32 encoded stake signing key.
+     * @returns A promise that resolves to a new `Wallet` object.
+     */
+    restoreStakeWalletFromSigningKeyBech32(paymentSigningKeyBech32: string, stakeSigningKeyBech32: string): Promise<Wallet>;
 
     /**
      * Generate a simple payment wallet for testnet, given the testnet's network magic.
@@ -61,12 +75,28 @@ declare interface CardanoApi {
     generateTestnetPaymentWallet(networkMagic: number): Promise<Wallet>;
 
     /**
+     * Generate a stake wallet for testnet, given the testnet's network magic.
+     * @param networkMagic The network magic for the testnet.
+     * @returns A promise that resolves to a new `Wallet` object.
+     */
+    generateTestnetStakeWallet(networkMagic: number): Promise<Wallet>;
+
+    /**
      * Restore a testnet payment wallet from a Bech32 encoded signing key.
      * @param networkMagic The network magic for the testnet.
      * @param signingKeyBech32 The Bech32 encoded signing key.
      * @returns A promise that resolves to a new `Wallet` object.
      */
     restoreTestnetPaymentWalletFromSigningKeyBech32(networkMagic: number, signingKeyBech32: string): Promise<Wallet>;
+
+    /**
+     * Restore a testnet stake wallet from Bech32 encoded signing keys.
+     * @param networkMagic The network magic for the testnet.
+     * @param paymentSigningKeyBech32 The Bech32 encoded payment signing key.
+     * @param stakeSigningKeyBech32 The Bech32 encoded stake signing key.
+     * @returns A promise that resolves to a new `Wallet` object.
+     */
+    restoreTestnetStakeWalletFromSigningKeyBech32(networkMagic: number, paymentSigningKeyBech32: string, stakeSigningKeyBech32: string): Promise<Wallet>;
 }
 
 /**
