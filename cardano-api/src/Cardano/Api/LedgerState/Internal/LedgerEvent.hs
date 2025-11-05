@@ -115,5 +115,4 @@ convertRetiredPoolsMap
   -> Map StakeCredential (Map (Hash StakePoolKey) L.Coin)
 convertRetiredPoolsMap =
   Map.mapKeys fromShelleyStakeCredential
-    . fmap (Map.mapKeys StakePoolKeyHash)
-    . (fmap . fmap) Ledger.fromCompact
+    . fmap (Map.mapKeys StakePoolKeyHash . fmap Ledger.fromCompact)

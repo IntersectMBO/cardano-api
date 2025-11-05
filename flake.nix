@@ -149,7 +149,7 @@
               ghcid = "0.8.9";
               cabal-gild = "1.3.1.2";
               fourmolu = "0.18.0.0";
-              haskell-language-server = "latest";
+              haskell-language-server = "2.11.0.0";
               hlint = "3.10";
             };
           # and from nixpkgs or other inputs
