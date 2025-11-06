@@ -201,30 +201,55 @@ instance FromJSVal JSGrpc (Wasm.GrpcObject JSGRPCClient) where
 foreign export javascript "generatePaymentWallet"
   generatePaymentWallet :: IO JSWallet
 
+foreign export javascript "generateStakeWallet"
+  generateStakeWallet :: IO JSWallet
+
 foreign export javascript "restorePaymentWalletFromSigningKeyBech32"
   restorePaymentWalletFromSigningKeyBech32 :: JSString -> IO JSWallet
+
+foreign export javascript "restoreStakeWalletFromSigningKeyBech32"
+  restoreStakeWalletFromSigningKeyBech32 :: JSString -> JSString -> IO JSWallet
 
 foreign export javascript "generateTestnetPaymentWallet"
   generateTestnetPaymentWallet :: Int -> IO JSWallet
 
+foreign export javascript "generateTestnetStakeWallet"
+  generateTestnetStakeWallet :: Int -> IO JSWallet
+
 foreign export javascript "restoreTestnetPaymentWalletFromSigningKeyBech32"
   restoreTestnetPaymentWalletFromSigningKeyBech32 :: Int -> JSString -> IO JSWallet
+
+foreign export javascript "restoreTestnetStakeWalletFromSigningKeyBech32"
+  restoreTestnetStakeWalletFromSigningKeyBech32 :: Int -> JSString -> JSString -> IO JSWallet
 
 foreign export javascript "getAddressBech32"
   getAddressBech32 :: JSWallet -> IO JSString
 
-foreign export javascript "getBech32ForVerificationKey"
-  getBech32ForVerificationKey :: JSWallet -> IO JSString
+foreign export javascript "getBech32ForPaymentVerificationKey"
+  getBech32ForPaymentVerificationKey :: JSWallet -> IO JSString
 
-foreign export javascript "getBech32ForSigningKey"
-  getBech32ForSigningKey :: JSWallet -> IO JSString
+foreign export javascript "getBech32ForPaymentSigningKey"
+  getBech32ForPaymentSigningKey :: JSWallet -> IO JSString
 
-foreign export javascript "getBase16ForVerificationKeyHash"
-  getBase16ForVerificationKeyHash :: JSWallet -> IO JSString
+foreign export javascript "getBech32ForStakeVerificationKey"
+  getBech32ForStakeVerificationKey :: JSWallet -> IO JSString
+
+foreign export javascript "getBech32ForStakeSigningKey"
+  getBech32ForStakeSigningKey :: JSWallet -> IO JSString
+
+foreign export javascript "getBase16ForPaymentVerificationKeyHash"
+  getBase16ForPaymentVerificationKeyHash :: JSWallet -> IO JSString
+
+foreign export javascript "getBase16ForStakeVerificationKeyHash"
+  getBase16ForStakeVerificationKeyHash :: JSWallet -> IO JSString
 
 -- | Generate a simple payment wallet for mainnet.
 generatePaymentWallet :: HasCallStack => IO JSWallet
 generatePaymentWallet = toJSVal =<< Wasm.generatePaymentWalletImpl
+
+-- | Generate a stake wallet for mainnet.
+generateStakeWallet :: HasCallStack => IO JSWallet
+generateStakeWallet = toJSVal =<< Wasm.generateStakeWalletImpl
 
 -- | Restore a mainnet payment wallet from a Bech32 encoded signing key.
 restorePaymentWalletFromSigningKeyBech32 :: HasCallStack => JSString -> IO JSWallet
@@ -235,11 +260,27 @@ restorePaymentWalletFromSigningKeyBech32 jsSigningKeyBech32 =
           <$> fromJSVal jsSigningKeyBech32
       )
 
+-- | Restore a mainnet stake wallet from Bech32 encoded signing keys.
+restoreStakeWalletFromSigningKeyBech32 :: HasCallStack => JSString -> JSString -> IO JSWallet
+restoreStakeWalletFromSigningKeyBech32 jsPaymentSigningKeyBech32 jsStakeSigningKeyBech32 =
+  toJSVal
+    =<< join
+      ( Wasm.restoreStakeWalletFromSigningKeyBech32Impl
+          <$> fromJSVal jsPaymentSigningKeyBech32
+          <*> fromJSVal jsStakeSigningKeyBech32
+      )
+
 -- | Generate a simple payment wallet for testnet, given the testnet's network magic.
 generateTestnetPaymentWallet :: HasCallStack => Int -> IO JSWallet
 generateTestnetPaymentWallet networkMagic =
   toJSVal
     =<< Wasm.generateTestnetPaymentWalletImpl networkMagic
+
+-- | Generate a stake wallet for testnet, given the testnet's network magic.
+generateTestnetStakeWallet :: HasCallStack => Int -> IO JSWallet
+generateTestnetStakeWallet networkMagic =
+  toJSVal
+    =<< Wasm.generateTestnetStakeWalletImpl networkMagic
 
 -- | Restore a testnet payment wallet from a Bech32 encoded signing key.
 restoreTestnetPaymentWalletFromSigningKeyBech32 :: HasCallStack => Int -> JSString -> IO JSWallet
@@ -250,25 +291,50 @@ restoreTestnetPaymentWalletFromSigningKeyBech32 networkMagic jsSigningKeyBech32 
           <$> fromJSVal jsSigningKeyBech32
       )
 
+-- | Restore a testnet stake wallet from Bech32 encoded signing keys.
+restoreTestnetStakeWalletFromSigningKeyBech32 :: HasCallStack => Int -> JSString -> JSString -> IO JSWallet
+restoreTestnetStakeWalletFromSigningKeyBech32 networkMagic jsPaymentSigningKeyBech32 jsStakeSigningKeyBech32 =
+  toJSVal
+    =<< join
+      ( Wasm.restoreTestnetStakeWalletFromSigningKeyBech32Impl networkMagic
+          <$> fromJSVal jsPaymentSigningKeyBech32
+          <*> fromJSVal jsStakeSigningKeyBech32
+      )
+
 -- | Get the Bech32 representation of the address. (Can be shared for receiving funds.)
 getAddressBech32 :: HasCallStack => JSWallet -> IO JSString
 getAddressBech32 jsWallet =
-  toJSVal . Wasm.getAddressBech32 =<< fromJSVal jsWallet
+  toJSVal . Wasm.getAddressBech32Impl =<< fromJSVal jsWallet
 
--- | Get the Bech32 representation of the verification key of the wallet. (Can be shared for verification.)
-getBech32ForVerificationKey :: HasCallStack => JSWallet -> IO JSString
-getBech32ForVerificationKey jsWallet =
-  toJSVal . Wasm.getBech32ForVerificationKeyImpl =<< fromJSVal jsWallet
+-- | Get the Bech32 representation of the payment verification key of the wallet. (Can be shared for verification.)
+getBech32ForPaymentVerificationKey :: HasCallStack => JSWallet -> IO JSString
+getBech32ForPaymentVerificationKey jsWallet =
+  toJSVal . Wasm.getBech32ForPaymentVerificationKeyImpl =<< fromJSVal jsWallet
 
--- | Get the Bech32 representation of the signing key of the wallet. (Must be kept secret.)
-getBech32ForSigningKey :: HasCallStack => JSWallet -> IO JSString
-getBech32ForSigningKey jsWallet =
-  toJSVal . Wasm.getBech32ForSigningKeyImpl =<< fromJSVal jsWallet
+-- | Get the Bech32 representation of the payment signing key of the wallet. (Must be kept secret.)
+getBech32ForPaymentSigningKey :: HasCallStack => JSWallet -> IO JSString
+getBech32ForPaymentSigningKey jsWallet =
+  toJSVal . Wasm.getBech32ForPaymentSigningKeyImpl =<< fromJSVal jsWallet
 
--- | Get the base16 representation of the hash of the verification key of the wallet.
-getBase16ForVerificationKeyHash :: HasCallStack => JSWallet -> IO JSString
-getBase16ForVerificationKeyHash jsWallet =
-  toJSVal . Wasm.getBase16ForVerificationKeyHashImpl =<< fromJSVal jsWallet
+-- | Get the Bech32 representation of the stake verification key of the wallet. (Can be shared for verification.)
+getBech32ForStakeVerificationKey :: HasCallStack => JSWallet -> IO JSString
+getBech32ForStakeVerificationKey jsWallet =
+  toJSVal . Wasm.getBech32ForStakeVerificationKeyImpl =<< fromJSVal jsWallet
+
+-- | Get the Bech32 representation of the stake signing key of the wallet. (Must be kept secret.)
+getBech32ForStakeSigningKey :: HasCallStack => JSWallet -> IO JSString
+getBech32ForStakeSigningKey jsWallet =
+  toJSVal . Wasm.getBech32ForStakeSigningKeyImpl =<< fromJSVal jsWallet
+
+-- | Get the base16 representation of the hash of the payment verification key of the wallet.
+getBase16ForPaymentVerificationKeyHash :: HasCallStack => JSWallet -> IO JSString
+getBase16ForPaymentVerificationKeyHash jsWallet =
+  toJSVal . Wasm.getBase16ForPaymentVerificationKeyHashImpl =<< fromJSVal jsWallet
+
+-- | Get the base16 representation of the hash of the stake verification key of the wallet.
+getBase16ForStakeVerificationKeyHash :: HasCallStack => JSWallet -> IO JSString
+getBase16ForStakeVerificationKeyHash jsWallet =
+  toJSVal . Wasm.getBase16ForStakeVerificationKeyHashImpl =<< fromJSVal jsWallet
 
 -- * UnsignedTxObject
 
