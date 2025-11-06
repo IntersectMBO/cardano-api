@@ -85,7 +85,7 @@ library
     rio,
     text,
 
--- this should be replaced by utxorpc pacakge from hackage
+-- this should be replaced by utxorpc package from hackage
 -- ideally we should upstream whatever is implemented in Proto.Cardano.Rpc.Node
 -- into utxorpc
 library gen
