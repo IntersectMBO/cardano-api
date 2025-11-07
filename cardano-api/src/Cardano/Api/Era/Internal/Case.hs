@@ -13,6 +13,8 @@ module Cardano.Api.Era.Internal.Case
   , caseShelleyToMaryOrAlonzoEraOnwards
   , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
+  -- Case on BabbageEraOnwards
+  , caseBabbageOnlyOrConwayEraOnwards
   -- Conversions
   , shelleyToAlonzoEraToShelleyToBabbageEra
   , alonzoEraOnwardsToMaryEraOnwards
@@ -156,6 +158,19 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway -> r ConwayEraOnwardsConway
   ShelleyBasedEraDijkstra -> error "caseShelleyToBabbageOrConwayEraOnwards: DijkstraEra is not supported"
+
+-- | @caseBabbageOnlyOrConwayEraOnwards f g era@ applies @f@ to babbage era only;
+-- and applies @g@ to conway and later eras.
+caseBabbageOnlyOrConwayEraOnwards
+  :: ()
+  => a
+  -> (ConwayEraOnwardsConstraints era => ConwayEraOnwards era -> a)
+  -> BabbageEraOnwards era
+  -> a
+caseBabbageOnlyOrConwayEraOnwards l r = \case
+  BabbageEraOnwardsBabbage -> l
+  BabbageEraOnwardsConway -> r ConwayEraOnwardsConway
+  BabbageEraOnwardsDijkstra -> error "caseBabbageOnlyOrConwayEraOnwards: DijkstraEra is not supported"
 
 {-# DEPRECATED shelleyToAlonzoEraToShelleyToBabbageEra "Use convert instead" #-}
 shelleyToAlonzoEraToShelleyToBabbageEra
