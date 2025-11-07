@@ -459,8 +459,21 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
       ShelleyBasedEraConway -> parseBabbageOnwardsTxOut BabbageEraOnwardsConway o
       ShelleyBasedEraDijkstra -> parseBabbageOnwardsTxOut BabbageEraOnwardsDijkstra o
    where
-    -- Parse TxOut for Babbage+ eras
-    -- Handles both Alonzo-style (datumhash/datum) and Babbage-style (inlineDatumhash/inlineDatum) fields
+    -- Parse TxOut for Babbage+ eras (Babbage, Conway, Dijkstra)
+    --
+    -- MOTIVATION: This unified helper eliminates ~100 lines of duplication that previously
+    -- existed across the three Babbage+ era cases.
+    --
+    -- DESIGN: Uses a two-phase parsing strategy:
+    -- 1. Parse Alonzo-style fields (datumhash/datum) via alonzoTxOutParser
+    -- 2. Parse Babbage-style fields (inlineDatumhash/inlineDatum) via parseInlineDatum
+    -- 3. Reconcile both via reconcileDatums, which validates no conflicting datums exist
+    --
+    -- This approach maintains backwards compatibility - old JSON with only Alonzo fields
+    -- still parses correctly, while new JSON can use inline datums.
+    --
+    -- ASSUMPTION: BabbageEraOnwards will always cover exactly these three eras. If a new
+    -- era is added, this code must be updated.
     parseBabbageOnwardsTxOut
       :: BabbageEraOnwards era
       -> Aeson.Object
@@ -517,7 +530,22 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
             "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
     -- Reconcile Alonzo-style and Babbage-style datums and reference scripts
-    -- This handles the two-phase parsing where both old and new style fields may be present
+    --
+    -- This handles the two-phase parsing where both old and new style fields may be present.
+    --
+    -- BACKWARDS COMPATIBILITY: Accepts JSON with either:
+    -- - Only Alonzo fields (datumhash/datum) - common in older transactions
+    -- - Only Babbage fields (inlineDatumhash/inlineDatum) - modern format
+    -- - Neither (TxOutDatumNone) - simple payment outputs
+    --
+    -- ERROR HANDLING: If *both* Alonzo and Babbage style datums are present, this is a
+    -- malformed JSON and we fail with a detailed error message showing both datums.
+    -- This should never happen in correctly formed JSON but protects against corruption.
+    --
+    -- EXHAUSTIVENESS: The eraName helper now matches directly on BabbageEraOnwards GADT
+    -- constructors instead of converting to ShelleyBasedEra. This allows the compiler to
+    -- verify exhaustiveness - if a new era is added to BabbageEraOnwards, this will fail
+    -- to compile, forcing developers to update the code.
     reconcileDatums
       :: BabbageEraOnwards era
       -> TxOut CtxTx era
@@ -550,6 +578,9 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
         Just anyScript -> return $ ReferenceScript w anyScript
       return $ TxOut addr v finalDat finalRefScript
      where
+      -- Pattern match directly on GADT instead of converting to ShelleyBasedEra.
+      -- This enables exhaustiveness checking - adding a new era to BabbageEraOnwards
+      -- will cause a compile error here, preventing bugs from incomplete updates.
       eraName = case w of
         BabbageEraOnwardsBabbage -> "Babbage"
         BabbageEraOnwardsConway -> "Conway"
