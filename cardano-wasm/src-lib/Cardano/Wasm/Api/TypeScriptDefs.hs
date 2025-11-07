@@ -89,7 +89,7 @@ data DeclarationType
     InterfaceDec
       String
       -- ^ Name of the interface.
-      [InterfaceContent]
+      [GroupedInterfaceContent]
       -- ^ Definitions of the interface.
   | -- | Reference to import another TypeScript declaration file.
     ImportDec
@@ -111,10 +111,44 @@ buildDeclarationType (InterfaceDec name properties) =
   "declare interface "
     <> TLB.fromString name
     <> " {"
-    <> mconcat (map (\prop -> "\n" <> buildInterfaceContent prop <> "\n") properties)
+    <> mconcat
+      ( map
+          (\content -> "\n" <> buildGroupedInterfaceContent 4 content)
+          properties
+      )
     <> "}"
 buildDeclarationType (ImportDec symbolName path) =
   "import " <> TLB.fromString symbolName <> " from './" <> TLB.fromString path <> "';"
+
+data GroupedInterfaceContent
+  = -- | A group of interface contents (potentially with subgroups).
+    GroupedInterfaceContent InterfaceContentGroup
+  | -- | A single interface content.
+    SingleInterfaceContent InterfaceContent
+
+buildGroupedInterfaceContent :: Int -> GroupedInterfaceContent -> TLB.Builder
+buildGroupedInterfaceContent indentationAmount (SingleInterfaceContent content) =
+  buildInterfaceContent indentationAmount content
+buildGroupedInterfaceContent indentationAmount (GroupedInterfaceContent group) =
+  let indentation = TLB.fromLazyText $ TL.replicate (fromIntegral indentationAmount) " "
+      comment = buildMultilineComment indentationAmount (groupedInterfaceContentComment group)
+      groupHeader = indentation <> TLB.fromString (groupedInterfaceContentName group) <> ": {"
+      groupContents =
+        mconcat $
+          map
+            (\content -> "\n" <> buildGroupedInterfaceContent (indentationAmount + 4) content)
+            (groupedInterfaceContentValues group)
+      groupFooter = indentation <> "}\n"
+   in comment <> "\n" <> groupHeader <> groupContents <> groupFooter
+
+data InterfaceContentGroup = InterfaceContentGroup
+  { groupedInterfaceContentComment :: [String]
+  -- ^ Comments for the grouped interface content.
+  , groupedInterfaceContentName :: String
+  -- ^ The name of the group.
+  , groupedInterfaceContentValues :: [GroupedInterfaceContent]
+  -- ^ The list of grouped interface contents in the group.
+  }
 
 -- | Represents a function parameter in TypeScript.
 data FunctionParam = FunctionParam
@@ -158,13 +192,12 @@ data InterfaceContent = InterfaceContent
   }
 
 -- | Creates a builder for a TypeScript interface content.
-buildInterfaceContent :: InterfaceContent -> TLB.Builder
-buildInterfaceContent (InterfaceContent [] interfaceType) = buildInterfaceContentType interfaceType
-buildInterfaceContent (InterfaceContent comments interfaceType) =
-  let indentationAmount = 4
-      indentation = TLB.fromLazyText $ TL.replicate (fromIntegral indentationAmount) " "
+buildInterfaceContent :: Int -> InterfaceContent -> TLB.Builder
+buildInterfaceContent _indentationAmount (InterfaceContent [] interfaceType) = buildInterfaceContentType interfaceType
+buildInterfaceContent indentationAmount (InterfaceContent comments interfaceType) =
+  let indentation = TLB.fromLazyText $ TL.replicate (fromIntegral indentationAmount) " "
       comment = buildMultilineComment indentationAmount comments
-   in comment <> "\n" <> indentation <> buildInterfaceContentType interfaceType
+   in comment <> "\n" <> indentation <> buildInterfaceContentType interfaceType <> "\n"
 
 -- | Represents a TypeScript interface type and content.
 data InterfaceContentType

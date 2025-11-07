@@ -22,7 +22,7 @@ export function createInitializer(getWasi, loadWasmModule, createClient) {
     /**
      * Convert Base64 to Base16 encoding
      */
-    base64ToHex: function(base64) {
+    base64ToHex: function (base64) {
       if (typeof atob === 'function') {
         const binary = atob(base64);
         return [...binary].reduce((hex, char) => {
@@ -88,19 +88,32 @@ export function createInitializer(getWasi, loadWasmModule, createClient) {
     const apiInfo = await instance.exports.getApiInfo();
     let makers = {};
     let cardanoApi = { objectType: "cardano-api" };
+
     // Create maker functions for each virtual object type
+
+    function populateMethodOrGroup(methodPopulator, methodOrGroup, target) {
+      if (methodOrGroup.type === "method") {
+        methodPopulator(methodOrGroup.method, target);
+      } else if (methodOrGroup.type === "group") {
+        let group = methodOrGroup.group;
+        target = target[group.name] = {};
+        group.methods.forEach(methodOrGroup =>
+          populateMethodOrGroup(methodPopulator, methodOrGroup, target)
+        );
+      }
+    }
+
     apiInfo.virtualObjects.forEach(vo => {
-      makers[vo.objectName] = function(initialHaskellValuePromise) {
+      makers[vo.objectName] = function (initialHaskellValuePromise) {
         // currentHaskellValueProvider is a function that returns a Promise for the Haskell value
         // It starts with the initial value promise and fluent methods accumulate transformations
         let currentHaskellValueProvider = () => initialHaskellValuePromise;
-        let jsObject = { objectType: vo.objectName };
 
-        vo.methods.forEach(method => {
+        function populateDynamicMethod(method, target) {
           if (method.return.type === "fluent") {
             // Fluent methods are synchronous and update the provider
             // A fluent method is one that returns the same object type
-            jsObject[method.name] = fixateArgs(method.params, function(...args) {
+            target[method.name] = fixateArgs(method.params, function (...args) {
               const previousProvider = currentHaskellValueProvider;
               // We update the provider so that it resolves the previous provider and chains the next call
               currentHaskellValueProvider = async () => {
@@ -111,7 +124,7 @@ export function createInitializer(getWasi, loadWasmModule, createClient) {
             });
           } else {
             // Non-fluent methods (newObject or other) are async and apply the accumulated method calls
-            jsObject[method.name] = fixateArgs(method.params, async function(...args) {
+            target[method.name] = fixateArgs(method.params, async function (...args) {
               const haskellValue = await currentHaskellValueProvider(); // Resolve accumulated method calls
               const resultPromise = instance.exports[method.name](haskellValue, ...args); // Call the non-fluent method
 
@@ -122,14 +135,27 @@ export function createInitializer(getWasi, loadWasmModule, createClient) {
               }
             });
           }
+        }
+
+        let jsObject = { objectType: vo.objectName };
+
+        vo.methods.forEach(method => {
+          populateMethodOrGroup(populateDynamicMethod, method, jsObject);
         });
         return jsObject;
       };
     });
 
     // Populate the main API object with static methods
-    apiInfo.mainObject.methods.forEach(method => {
-      cardanoApi[method.name] = async function(...args) {
+
+    function populateStaticMethod(method, target) {
+      target[method.name] = async function (...args) {
+        if (method.group) {
+          if (!target[method.group]) {
+            target[method.group] = {};
+          }
+          target = target[method.group];
+        }
         const resultPromise = instance.exports[method.name](...args);
 
         if (method.return.type === "newObject") { // Create a new object
@@ -138,6 +164,10 @@ export function createInitializer(getWasi, loadWasmModule, createClient) {
           return resultPromise;
         }
       };
+    }
+
+    apiInfo.mainObject.methods.forEach(methodOrGroup => {
+      populateMethodOrGroup(populateStaticMethod, methodOrGroup, cardanoApi);
     });
 
     return cardanoApi;
