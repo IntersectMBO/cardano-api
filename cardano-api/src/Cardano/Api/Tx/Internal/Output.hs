@@ -455,22 +455,22 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
           <*> return TxOutDatumNone
           <*> return ReferenceScriptNone
       ShelleyBasedEraAlonzo -> alonzoTxOutParser AlonzoEraOnwardsAlonzo o
-      ShelleyBasedEraBabbage -> do
-        alonzoTxOutInBabbage <- alonzoTxOutParser AlonzoEraOnwardsBabbage o
-        mInlineDatum <- parseInlineDatum BabbageEraOnwardsBabbage o
-        mReferenceScript <- o .:? "referenceScript"
-        reconcileDatums BabbageEraOnwardsBabbage alonzoTxOutInBabbage mInlineDatum mReferenceScript
-      ShelleyBasedEraConway -> do
-        alonzoTxOutInConway <- alonzoTxOutParser AlonzoEraOnwardsConway o
-        mInlineDatum <- parseInlineDatum BabbageEraOnwardsConway o
-        mReferenceScript <- o .:? "referenceScript"
-        reconcileDatums BabbageEraOnwardsConway alonzoTxOutInConway mInlineDatum mReferenceScript
-      ShelleyBasedEraDijkstra -> do
-        alonzoTxOutInConway <- alonzoTxOutParser AlonzoEraOnwardsDijkstra o
-        mInlineDatum <- parseInlineDatum BabbageEraOnwardsDijkstra o
-        mReferenceScript <- o .:? "referenceScript"
-        reconcileDatums BabbageEraOnwardsDijkstra alonzoTxOutInConway mInlineDatum mReferenceScript
+      ShelleyBasedEraBabbage -> parseBabbageOnwardsTxOut BabbageEraOnwardsBabbage o
+      ShelleyBasedEraConway -> parseBabbageOnwardsTxOut BabbageEraOnwardsConway o
+      ShelleyBasedEraDijkstra -> parseBabbageOnwardsTxOut BabbageEraOnwardsDijkstra o
    where
+    -- Parse TxOut for Babbage+ eras
+    -- Handles both Alonzo-style (datumhash/datum) and Babbage-style (inlineDatumhash/inlineDatum) fields
+    parseBabbageOnwardsTxOut
+      :: BabbageEraOnwards era
+      -> Aeson.Object
+      -> Aeson.Parser (TxOut CtxTx era)
+    parseBabbageOnwardsTxOut w o = do
+      alonzoTxOut <- alonzoTxOutParser (convert w) o
+      inlineDatum <- parseInlineDatum w o
+      mReferenceScript <- o .:? "referenceScript"
+      reconcileDatums w alonzoTxOut inlineDatum mReferenceScript
+
     -- Parse inline datum fields from JSON object
     --
     -- Handles both inlineDatumhash and inlineDatum fields, validating they match.
