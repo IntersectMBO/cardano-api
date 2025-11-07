@@ -11,7 +11,7 @@ async function do_async_work() {
 
   // State
   let showPrivateKey = false;
-  let wallet = await api.generateTestnetPaymentWallet(42);
+  let wallet = await api.wallet.testnet.generateTestnetPaymentWallet(42);
   let transactionInputs = [];
   let transactionOutputs = [];
 
@@ -34,7 +34,7 @@ async function do_async_work() {
   }
 
   async function makeTransaction() {
-    let tx = await api.newTx();
+    let tx = await api.tx.newTx();
     for (let input of transactionInputs) {
       tx = tx.addTxInput(input.txId, input.txIndex);
     }
@@ -55,7 +55,7 @@ async function do_async_work() {
     let pki = document.getElementById("private-key-input")
     if (showPrivateKey) {
       // @ts-ignore
-      pki.value = await wallet.getBech32ForSigningKey();
+      pki.value = await wallet.getBech32ForPaymentSigningKey();
       // @ts-ignore
       pki.disabled = false;
       // @ts-ignore
@@ -188,7 +188,7 @@ async function do_async_work() {
 
   // Callbacks
   async function generateAddress() {
-    wallet = await api.generateTestnetPaymentWallet(TESTNET_MAGIC);
+    wallet = await api.wallet.testnet.generateTestnetPaymentWallet(TESTNET_MAGIC);
     await refresh();
   }
 
@@ -239,7 +239,7 @@ async function do_async_work() {
 
   async function submitTransaction() {
     let tx = await makeTransaction();
-    let signingKey = await wallet.getBech32ForSigningKey();
+    let signingKey = await wallet.getBech32ForPaymentSigningKey();
     let signedTx = await tx.signWithPaymentKey(signingKey);
 
     await grpcApi.submitTx(await signedTx.txToCbor()).then((txId) => {

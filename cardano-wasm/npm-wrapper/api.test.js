@@ -28,7 +28,7 @@ describe('Cardano API', () => {
         expect(bech32Address).toBe(expectedAddress);
 
         // Create a new transaction
-        const emptyTx = await api.newTx();
+        const emptyTx = await api.tx.newTx();
         expect(emptyTx).toBeDefined();
 
         // Add inputs and outputs

@@ -39,7 +39,7 @@ Create an `index.js` file:
 
     // 3. Now you can use the API to perform Cardano operations.
     //    For example, let's create a new transaction body.
-    const tx = await api.newTx();
+    const tx = await api.tx.newTx();
     console.log("New Transaction Body Created:", tx);
 
     // You can now build upon the 'tx' object to add inputs, outputs, etc.

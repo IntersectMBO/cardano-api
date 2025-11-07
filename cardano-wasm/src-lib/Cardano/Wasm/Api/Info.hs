@@ -421,35 +421,42 @@ apiInfo =
               { virtualObjectName = "CardanoApi"
               , virtualObjectDoc = "The main Cardano API object with static methods."
               , virtualObjectMethods =
-                  [ MethodInfoEntry $
-                      MethodInfo
-                        { methodName = "newTx"
-                        , methodDoc =
-                            "Create a new unsigned transaction in the current era "
-                              ++ getEraCommentForUnsignedTx (Just newTxImpl)
-                              ++ "."
-                        , methodParams = []
-                        , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
-                        , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
-                        }
-                  , MethodInfoEntry $
-                      MethodInfo
-                        { methodName = "newExperimentalEraTx"
-                        , methodDoc =
-                            "Create a new unsigned transaction in the current experimental era "
-                              ++ getEraCommentForUnsignedTx newExperimentalEraTxImpl
-                              ++ "."
-                        , methodParams = []
-                        , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
-                        , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
-                        }
-                  , MethodInfoEntry $
-                      MethodInfo
-                        { methodName = "newConwayTx"
-                        , methodDoc = "Create a new unsigned transaction in the Conway era."
-                        , methodParams = []
-                        , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
-                        , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
+                  [ MethodGroupEntry $
+                      MethodGroup
+                        { groupName = "tx"
+                        , groupDoc = ["Methods for creating unsigned transactions."]
+                        , groupMethods =
+                            [ MethodInfoEntry $
+                                MethodInfo
+                                  { methodName = "newTx"
+                                  , methodDoc =
+                                      "Create a new unsigned transaction in the current era "
+                                        ++ getEraCommentForUnsignedTx (Just newTxImpl)
+                                        ++ "."
+                                  , methodParams = []
+                                  , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
+                                  , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
+                                  }
+                            , MethodInfoEntry $
+                                MethodInfo
+                                  { methodName = "newExperimentalEraTx"
+                                  , methodDoc =
+                                      "Create a new unsigned transaction in the current experimental era "
+                                        ++ getEraCommentForUnsignedTx newExperimentalEraTxImpl
+                                        ++ "."
+                                  , methodParams = []
+                                  , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
+                                  , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
+                                  }
+                            , MethodInfoEntry $
+                                MethodInfo
+                                  { methodName = "newConwayTx"
+                                  , methodDoc = "Create a new unsigned transaction in the Conway era."
+                                  , methodParams = []
+                                  , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
+                                  , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
+                                  }
+                            ]
                         }
                   , MethodInfoEntry $
                       MethodInfo
@@ -459,79 +466,100 @@ apiInfo =
                         , methodReturnType = NewObject (virtualObjectName grpcConnection)
                         , methodReturnDoc = "A promise that resolves to a new `GrpcConnection`."
                         }
-                  , MethodInfoEntry $
-                      MethodInfo
-                        { methodName = "generatePaymentWallet"
-                        , methodDoc = "Generate a simple payment wallet for mainnet."
-                        , methodParams = []
-                        , methodReturnType = NewObject (virtualObjectName walletObj)
-                        , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
-                        }
-                  , MethodInfoEntry $
-                      MethodInfo
-                        { methodName = "generateStakeWallet"
-                        , methodDoc = "Generate a stake wallet for mainnet."
-                        , methodParams = []
-                        , methodReturnType = NewObject (virtualObjectName walletObj)
-                        , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
-                        }
-                  , MethodInfoEntry $
-                      MethodInfo
-                        { methodName = "restorePaymentWalletFromSigningKeyBech32"
-                        , methodDoc = "Restore a mainnet payment wallet from a Bech32 encoded signing key."
-                        , methodParams = [ParamInfo "signingKeyBech32" TSString "The Bech32 encoded signing key."]
-                        , methodReturnType = NewObject (virtualObjectName walletObj)
-                        , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
-                        }
-                  , MethodInfoEntry $
-                      MethodInfo
-                        { methodName = "restoreStakeWalletFromSigningKeyBech32"
-                        , methodDoc = "Restore a mainnet stake wallet from Bech32 encoded signing keys."
-                        , methodParams =
-                            [ ParamInfo "paymentSigningKeyBech32" TSString "The Bech32 encoded payment signing key."
-                            , ParamInfo "stakeSigningKeyBech32" TSString "The Bech32 encoded stake signing key."
+                  , MethodGroupEntry $
+                      MethodGroup
+                        { groupName = "wallet"
+                        , groupDoc = ["Methods for generating and restoring wallets."]
+                        , groupMethods =
+                            [ MethodGroupEntry $
+                                MethodGroup
+                                  { groupName = "mainnet"
+                                  , groupDoc = ["Methods for mainnet wallets."]
+                                  , groupMethods =
+                                      [ MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "generatePaymentWallet"
+                                            , methodDoc = "Generate a simple payment wallet for mainnet."
+                                            , methodParams = []
+                                            , methodReturnType = NewObject (virtualObjectName walletObj)
+                                            , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "generateStakeWallet"
+                                            , methodDoc = "Generate a stake wallet for mainnet."
+                                            , methodParams = []
+                                            , methodReturnType = NewObject (virtualObjectName walletObj)
+                                            , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "restorePaymentWalletFromSigningKeyBech32"
+                                            , methodDoc = "Restore a mainnet payment wallet from a Bech32 encoded signing key."
+                                            , methodParams = [ParamInfo "signingKeyBech32" TSString "The Bech32 encoded signing key."]
+                                            , methodReturnType = NewObject (virtualObjectName walletObj)
+                                            , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "restoreStakeWalletFromSigningKeyBech32"
+                                            , methodDoc = "Restore a mainnet stake wallet from Bech32 encoded signing keys."
+                                            , methodParams =
+                                                [ ParamInfo "paymentSigningKeyBech32" TSString "The Bech32 encoded payment signing key."
+                                                , ParamInfo "stakeSigningKeyBech32" TSString "The Bech32 encoded stake signing key."
+                                                ]
+                                            , methodReturnType = NewObject (virtualObjectName walletObj)
+                                            , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                                            }
+                                      ]
+                                  }
+                            , MethodGroupEntry $
+                                MethodGroup
+                                  { groupName = "testnet"
+                                  , groupDoc = ["Methods for wallets in other networks."]
+                                  , groupMethods =
+                                      [ MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "generateTestnetPaymentWallet"
+                                            , methodDoc = "Generate a simple payment wallet for testnet, given the testnet's network magic."
+                                            , methodParams = [ParamInfo "networkMagic" TSNumber "The network magic for the testnet."]
+                                            , methodReturnType = NewObject (virtualObjectName walletObj)
+                                            , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "generateTestnetStakeWallet"
+                                            , methodDoc = "Generate a stake wallet for testnet, given the testnet's network magic."
+                                            , methodParams = [ParamInfo "networkMagic" TSNumber "The network magic for the testnet."]
+                                            , methodReturnType = NewObject (virtualObjectName walletObj)
+                                            , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "restoreTestnetPaymentWalletFromSigningKeyBech32"
+                                            , methodDoc = "Restore a testnet payment wallet from a Bech32 encoded signing key."
+                                            , methodParams =
+                                                [ ParamInfo "networkMagic" TSNumber "The network magic for the testnet."
+                                                , ParamInfo "signingKeyBech32" TSString "The Bech32 encoded signing key."
+                                                ]
+                                            , methodReturnType = NewObject (virtualObjectName walletObj)
+                                            , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "restoreTestnetStakeWalletFromSigningKeyBech32"
+                                            , methodDoc = "Restore a testnet stake wallet from Bech32 encoded signing keys."
+                                            , methodParams =
+                                                [ ParamInfo "networkMagic" TSNumber "The network magic for the testnet."
+                                                , ParamInfo "paymentSigningKeyBech32" TSString "The Bech32 encoded payment signing key."
+                                                , ParamInfo "stakeSigningKeyBech32" TSString "The Bech32 encoded stake signing key."
+                                                ]
+                                            , methodReturnType = NewObject (virtualObjectName walletObj)
+                                            , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
+                                            }
+                                      ]
+                                  }
                             ]
-                        , methodReturnType = NewObject (virtualObjectName walletObj)
-                        , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
-                        }
-                  , MethodInfoEntry $
-                      MethodInfo
-                        { methodName = "generateTestnetPaymentWallet"
-                        , methodDoc = "Generate a simple payment wallet for testnet, given the testnet's network magic."
-                        , methodParams = [ParamInfo "networkMagic" TSNumber "The network magic for the testnet."]
-                        , methodReturnType = NewObject (virtualObjectName walletObj)
-                        , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
-                        }
-                  , MethodInfoEntry $
-                      MethodInfo
-                        { methodName = "generateTestnetStakeWallet"
-                        , methodDoc = "Generate a stake wallet for testnet, given the testnet's network magic."
-                        , methodParams = [ParamInfo "networkMagic" TSNumber "The network magic for the testnet."]
-                        , methodReturnType = NewObject (virtualObjectName walletObj)
-                        , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
-                        }
-                  , MethodInfoEntry $
-                      MethodInfo
-                        { methodName = "restoreTestnetPaymentWalletFromSigningKeyBech32"
-                        , methodDoc = "Restore a testnet payment wallet from a Bech32 encoded signing key."
-                        , methodParams =
-                            [ ParamInfo "networkMagic" TSNumber "The network magic for the testnet."
-                            , ParamInfo "signingKeyBech32" TSString "The Bech32 encoded signing key."
-                            ]
-                        , methodReturnType = NewObject (virtualObjectName walletObj)
-                        , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
-                        }
-                  , MethodInfoEntry $
-                      MethodInfo
-                        { methodName = "restoreTestnetStakeWalletFromSigningKeyBech32"
-                        , methodDoc = "Restore a testnet stake wallet from Bech32 encoded signing keys."
-                        , methodParams =
-                            [ ParamInfo "networkMagic" TSNumber "The network magic for the testnet."
-                            , ParamInfo "paymentSigningKeyBech32" TSString "The Bech32 encoded payment signing key."
-                            , ParamInfo "stakeSigningKeyBech32" TSString "The Bech32 encoded stake signing key."
-                            ]
-                        , methodReturnType = NewObject (virtualObjectName walletObj)
-                        , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                         }
                   ]
               }
