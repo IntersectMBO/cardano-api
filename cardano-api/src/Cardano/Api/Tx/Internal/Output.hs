@@ -459,17 +459,17 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
         alonzoTxOutInBabbage <- alonzoTxOutParser AlonzoEraOnwardsBabbage o
         mInlineDatum <- parseInlineDatum BabbageEraOnwardsBabbage o
         mReferenceScript <- o .:? "referenceScript"
-        reconcileBabbage alonzoTxOutInBabbage mInlineDatum mReferenceScript
+        reconcileDatums BabbageEraOnwardsBabbage alonzoTxOutInBabbage mInlineDatum mReferenceScript
       ShelleyBasedEraConway -> do
         alonzoTxOutInConway <- alonzoTxOutParser AlonzoEraOnwardsConway o
         mInlineDatum <- parseInlineDatum BabbageEraOnwardsConway o
         mReferenceScript <- o .:? "referenceScript"
-        reconcileConway ConwayEraOnwardsConway alonzoTxOutInConway mInlineDatum mReferenceScript
+        reconcileDatums BabbageEraOnwardsConway alonzoTxOutInConway mInlineDatum mReferenceScript
       ShelleyBasedEraDijkstra -> do
         alonzoTxOutInConway <- alonzoTxOutParser AlonzoEraOnwardsDijkstra o
         mInlineDatum <- parseInlineDatum BabbageEraOnwardsDijkstra o
         mReferenceScript <- o .:? "referenceScript"
-        reconcileConway ConwayEraOnwardsDijkstra alonzoTxOutInConway mInlineDatum mReferenceScript
+        reconcileDatums BabbageEraOnwardsDijkstra alonzoTxOutInConway mInlineDatum mReferenceScript
    where
     -- Parse inline datum fields from JSON object
     --
@@ -516,60 +516,44 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
           fail
             "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
-    reconcileBabbage
-      :: TxOut CtxTx BabbageEra
-      -- \^ Alonzo era datum in Babbage era
-      -> TxOutDatum CtxTx BabbageEra
-      -- \^ Babbage inline datum
-      -> Maybe ScriptInAnyLang
-      -> Aeson.Parser (TxOut CtxTx BabbageEra)
-    reconcileBabbage top@(TxOut addr v dat r) babbageDatum mBabRefScript = do
-      -- We check for conflicting datums
-      finalDat <- case (dat, babbageDatum) of
-        (TxOutDatumNone, bDatum) -> return bDatum
-        (anyDat, TxOutDatumNone) -> return anyDat
-        (alonzoDat, babbageDat) ->
-          fail $
-            "Parsed an Alonzo era datum and a Babbage era datum "
-              <> "TxOut: "
-              <> show top
-              <> "Alonzo datum: "
-              <> show alonzoDat
-              <> "Babbage dat: "
-              <> show babbageDat
-      finalRefScript <- case mBabRefScript of
-        Nothing -> return r
-        Just anyScript ->
-          return $ ReferenceScript BabbageEraOnwardsBabbage anyScript
-      return $ TxOut addr v finalDat finalRefScript
-
-    reconcileConway
-      :: ConwayEraOnwards era
+    -- Reconcile Alonzo-style and Babbage-style datums and reference scripts
+    -- This handles the two-phase parsing where both old and new style fields may be present
+    reconcileDatums
+      :: BabbageEraOnwards era
       -> TxOut CtxTx era
-      -- \^ Alonzo era datum in Conway era
+      -- \^ TxOut with Alonzo-style datum
       -> TxOutDatum CtxTx era
-      -- \^ Babbage inline datum
+      -- \^ Babbage-style inline datum
       -> Maybe ScriptInAnyLang
+      -- \^ Optional reference script
       -> Aeson.Parser (TxOut CtxTx era)
-    reconcileConway w top@(TxOut addr v dat r) babbageDatum mBabRefScript = do
-      -- We check for conflicting datums
-      finalDat <- case (dat, babbageDatum) of
+    reconcileDatums w top@(TxOut addr v dat r) inlineDatum mRefScript = do
+      -- Check for conflicting datums
+      finalDat <- case (dat, inlineDatum) of
         (TxOutDatumNone, bDatum) -> return bDatum
         (anyDat, TxOutDatumNone) -> return anyDat
         (alonzoDat, babbageDat) ->
           fail $
-            "Parsed an Alonzo era datum and a Conway era datum "
+            "Parsed an Alonzo era datum and a "
+              <> eraName
+              <> " era datum. "
               <> "TxOut: "
               <> show top
-              <> "Alonzo datum: "
+              <> " Alonzo datum: "
               <> show alonzoDat
-              <> "Conway dat: "
+              <> " "
+              <> eraName
+              <> " datum: "
               <> show babbageDat
-      finalRefScript <- case mBabRefScript of
+      finalRefScript <- case mRefScript of
         Nothing -> return r
-        Just anyScript ->
-          return $ ReferenceScript (convert w) anyScript
+        Just anyScript -> return $ ReferenceScript w anyScript
       return $ TxOut addr v finalDat finalRefScript
+     where
+      eraName = case w of
+        BabbageEraOnwardsBabbage -> "Babbage"
+        BabbageEraOnwardsConway -> "Conway"
+        BabbageEraOnwardsDijkstra -> "Dijkstra"
 
     alonzoTxOutParser
       :: AlonzoEraOnwards era -> Aeson.Object -> Aeson.Parser (TxOut CtxTx era)
