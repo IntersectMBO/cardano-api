@@ -457,77 +457,65 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
       ShelleyBasedEraAlonzo -> alonzoTxOutParser AlonzoEraOnwardsAlonzo o
       ShelleyBasedEraBabbage -> do
         alonzoTxOutInBabbage <- alonzoTxOutParser AlonzoEraOnwardsBabbage o
-
-        -- We check for the existence of inline datums
-        inlineDatumHash <- o .:? "inlineDatumhash"
-        inlineDatum <- o .:? "inlineDatum"
-        mInlineDatum <-
-          case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) -> do
-              case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right hashableData -> do
-                  if hashScriptDataBytes hashableData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
-            (Nothing, Nothing) -> return TxOutDatumNone
-            (_, _) ->
-              fail
-                "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
-
+        mInlineDatum <- parseInlineDatum BabbageEraOnwardsBabbage o
         mReferenceScript <- o .:? "referenceScript"
-
         reconcileBabbage alonzoTxOutInBabbage mInlineDatum mReferenceScript
       ShelleyBasedEraConway -> do
         alonzoTxOutInConway <- alonzoTxOutParser AlonzoEraOnwardsConway o
-
-        -- We check for the existence of inline datums
-        inlineDatumHash <- o .:? "inlineDatumhash"
-        inlineDatum <- o .:? "inlineDatum"
-        mInlineDatum <-
-          case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsConway sData
-            (Nothing, Nothing) -> return TxOutDatumNone
-            (_, _) ->
-              fail
-                "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
-
+        mInlineDatum <- parseInlineDatum BabbageEraOnwardsConway o
         mReferenceScript <- o .:? "referenceScript"
-
         reconcileConway ConwayEraOnwardsConway alonzoTxOutInConway mInlineDatum mReferenceScript
       ShelleyBasedEraDijkstra -> do
         alonzoTxOutInConway <- alonzoTxOutParser AlonzoEraOnwardsDijkstra o
-
-        -- We check for the existence of inline datums
-        inlineDatumHash <- o .:? "inlineDatumhash"
-        inlineDatum <- o .:? "inlineDatum"
-        mInlineDatum <-
-          case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsDijkstra sData
-            (Nothing, Nothing) -> return TxOutDatumNone
-            (_, _) ->
-              fail
-                "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
-
+        mInlineDatum <- parseInlineDatum BabbageEraOnwardsDijkstra o
         mReferenceScript <- o .:? "referenceScript"
-
         reconcileConway ConwayEraOnwardsDijkstra alonzoTxOutInConway mInlineDatum mReferenceScript
    where
+    -- Parse inline datum fields from JSON object
+    --
+    -- Handles both inlineDatumhash and inlineDatum fields, validating they match.
+    --
+    -- CRITICAL DISTINCTION: Babbage era uses scriptDataJsonToHashable (returns HashableScriptData)
+    -- while Conway+ uses scriptDataFromJson (returns ScriptData). This difference exists because
+    -- Babbage required preserving the original CBOR encoding for hash validation, while Conway+
+    -- can reconstruct it.
+    --
+    -- VALIDATION: When both hash and datum are present, we verify the datum hashes to the
+    -- provided hash. This catches malformed JSON where they don't match.
+    --
+    -- DESIGN: Uses caseBabbageOnlyOrConwayEraOnwards to distinguish between Babbage (first function)
+    -- and Conway/Dijkstra (second function). This provides exhaustiveness checking - if a new era
+    -- is added to BabbageEraOnwards, the compiler will ensure it's handled.
+    parseInlineDatum
+      :: BabbageEraOnwards era
+      -> Aeson.Object
+      -> Aeson.Parser (TxOutDatum CtxTx era)
+    parseInlineDatum w o = do
+      inlineDatumHash <- o .:? "inlineDatumhash"
+      inlineDatum <- o .:? "inlineDatum"
+      case (inlineDatum, inlineDatumHash) of
+        (Just dVal, Just h) -> do
+          sData <-
+            caseBabbageOnlyOrConwayEraOnwards
+              -- Babbage case: use scriptDataJsonToHashable
+              ( case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
+                  Left err -> fail $ "Error parsing TxOut JSON: " <> displayError err
+                  Right hashableData -> return hashableData
+              )
+              -- Conway+ case: use scriptDataFromJson
+              ( \_ -> case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
+                  Left err -> fail $ "Error parsing TxOut JSON: " <> displayError err
+                  Right scriptData -> return scriptData
+              )
+              w
+          if hashScriptDataBytes sData /= h
+            then fail "Inline datum not equivalent to inline datum hash"
+            else return $ TxOutDatumInline w sData
+        (Nothing, Nothing) -> return TxOutDatumNone
+        (_, _) ->
+          fail
+            "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
+
     reconcileBabbage
       :: TxOut CtxTx BabbageEra
       -- \^ Alonzo era datum in Babbage era
