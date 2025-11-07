@@ -615,6 +615,19 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
             <*> return ReferenceScriptNone
         (Just _dVal, Nothing) -> fail "Only datum JSON was found, this should not be possible."
 
+-- NOTE: The CtxUTxO instance below still contains significant duplication in the
+-- Babbage/Conway/Dijkstra cases (lines ~592-666). Each case has nearly identical
+-- inline datum parsing logic that could be extracted into a helper similar to the
+-- parseInlineDatum function in the CtxTx instance above.
+--
+-- POTENTIAL REFACTORING: The inline datum parsing at lines 596-611 (Babbage),
+-- 621-636 (Conway), and 646-661 (Dijkstra) could be unified using a helper that
+-- takes a BabbageEraOnwards witness, similar to how parseInlineDatum works in CtxTx.
+-- This would eliminate ~60 more lines of duplication.
+--
+-- BLOCKER: The CtxUTxO alonzoTxOutParser differs from CtxTx - it doesn't handle
+-- supplemental datums (only datum hash, no datum value). This difference would need
+-- to be carefully preserved in any refactoring.
 instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
   parseJSON = withObject "TxOut" $ \o -> do
     case shelleyBasedEra :: ShelleyBasedEra era of
