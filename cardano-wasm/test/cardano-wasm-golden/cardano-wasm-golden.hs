@@ -5,4 +5,3 @@
 #else
 main = return ()
 #endif
-
