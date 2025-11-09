@@ -586,26 +586,35 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
     alonzoTxOutParser
       :: AlonzoEraOnwards era -> Aeson.Object -> Aeson.Parser (TxOut CtxTx era)
     alonzoTxOutParser w o = do
+      -- Parse optional datum fields (both hash and JSON value may be present)
       mDatumHash <- o .:? "datumhash"
-      mDatumVal <- o .:? "datum"
-      address <- o .: "address"
-      value <- o .: "value"
+      mDatumJson <- o .:? "datum"
 
-      (txOutDatum, referenceScript) <-
-        case (mDatumVal, mDatumHash) of
+      -- Parse required fields common to all TxOuts
+      parsedAddress <- o .: "address"
+      parsedValue <- o .: "value"
+
+      -- Parse datum based on which fields are present
+      txOutDatum <-
+        case (mDatumJson, mDatumHash) of
+          -- No datum information provided
           (Nothing, Nothing) ->
-            pure (TxOutDatumNone, ReferenceScriptNone)
+            pure TxOutDatumNone
+          -- Only datum hash provided (datum not included in tx)
           (Nothing, Just dHash) ->
-            pure (TxOutDatumHash w dHash, ReferenceScriptNone)
-          (Just dVal, Just{}) -> do
-            case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
+            pure (TxOutDatumHash w dHash)
+          -- Both hash and JSON provided (supplemental datum in tx body)
+          (Just datumJson, Just{}) -> do
+            case scriptDataJsonToHashable ScriptDataJsonDetailedSchema datumJson of
               Left e -> fail $ "Error parsing ScriptData: " <> show e
               Right hashableData ->
-                pure (TxOutSupplementalDatum w hashableData, ReferenceScriptNone)
-          (Just _dVal, Nothing) ->
+                pure (TxOutSupplementalDatum w hashableData)
+          -- Only JSON provided without hash (invalid state)
+          (Just _datumJson, Nothing) ->
             fail "Only datum JSON was found, this should not be possible."
 
-      pure $ TxOut address value txOutDatum referenceScript
+      -- Note: ReferenceScript is always None for Alonzo-era parsing
+      pure $ TxOut parsedAddress parsedValue txOutDatum ReferenceScriptNone
 
 instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
   parseJSON = withObject "TxOut" $ \o -> do
