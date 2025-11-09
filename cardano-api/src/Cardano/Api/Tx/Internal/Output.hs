@@ -590,17 +590,22 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
       mDatumVal <- o .:? "datum"
       address <- o .: "address"
       value <- o .: "value"
-      case (mDatumVal, mDatumHash) of
-        (Nothing, Nothing) ->
-          pure $ TxOut address value TxOutDatumNone ReferenceScriptNone
-        (Just dVal, Just{}) -> do
-          case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
-            Left e -> fail $ "Error parsing ScriptData: " <> show e
-            Right hashableData ->
-              pure $ TxOut address value (TxOutSupplementalDatum w hashableData) ReferenceScriptNone
-        (Nothing, Just dHash) ->
-          pure $ TxOut address value (TxOutDatumHash w dHash) ReferenceScriptNone
-        (Just _dVal, Nothing) -> fail "Only datum JSON was found, this should not be possible."
+
+      (txOutDatum, referenceScript) <-
+        case (mDatumVal, mDatumHash) of
+          (Nothing, Nothing) ->
+            pure (TxOutDatumNone, ReferenceScriptNone)
+          (Nothing, Just dHash) ->
+            pure (TxOutDatumHash w dHash, ReferenceScriptNone)
+          (Just dVal, Just{}) -> do
+            case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
+              Left e -> fail $ "Error parsing ScriptData: " <> show e
+              Right hashableData ->
+                pure (TxOutSupplementalDatum w hashableData, ReferenceScriptNone)
+          (Just _dVal, Nothing) ->
+            fail "Only datum JSON was found, this should not be possible."
+
+      pure $ TxOut address value txOutDatum referenceScript
 
 instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
   parseJSON = withObject "TxOut" $ \o -> do
