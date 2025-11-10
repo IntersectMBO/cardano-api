@@ -30,6 +30,7 @@ library cardano-wasi-lib
     src-lib
 
   exposed-modules:
+    Cardano.Wasm.Api.Certificate.StakeCertificate
     Cardano.Wasm.Api.GRPC
     Cardano.Wasm.Api.Info
     Cardano.Wasm.Api.InfoToTypeScript
