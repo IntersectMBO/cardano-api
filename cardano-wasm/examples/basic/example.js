@@ -48,13 +48,13 @@ async function do_async_work() {
 
     let PREVIEW_MAGIC_NUMBER = 2;
     let secretKey = "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms";
-    let wallet = await api.restoreTestnetPaymentWalletFromSigningKeyBech32(PREVIEW_MAGIC_NUMBER, secretKey);
+    let wallet = await api.wallet.testnet.restoreTestnetPaymentWalletFromSigningKeyBech32(PREVIEW_MAGIC_NUMBER, secretKey);
     let bech32Address = await wallet.getAddressBech32();
 
     log("Bech32 of address:");
     log(bech32Address);
 
-    let emptyTx = await api.newTx();
+    let emptyTx = await api.tx.newTx();
     log("UnsignedTx object:");
     log(emptyTx);
 

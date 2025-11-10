@@ -56,9 +56,16 @@ importDeclarations voMap (Info.VirtualObjectInfo{Info.virtualObjectMethods = met
     importDeclaration
     $ nub
       [ vo
-      | Info.MethodInfo{Info.methodReturnType = Info.NewObject returnType} <- methods
+      | Info.MethodInfo{Info.methodReturnType = Info.NewObject returnType} <- flattenMethods methods
       , Just vo <- [Map.lookup returnType voMap]
       ]
+
+flattenMethods :: [Info.MethodHierarchy] -> [Info.MethodInfo]
+flattenMethods = concatMap flattenMethods'
+ where
+  flattenMethods' :: Info.MethodHierarchy -> [Info.MethodInfo]
+  flattenMethods' (Info.MethodInfoEntry mi) = [mi]
+  flattenMethods' (Info.MethodGroupEntry (Info.MethodGroup{Info.groupMethods = methods})) = flattenMethods methods
 
 virtualObjectInfoToTypeScriptFile
   :: Map String Info.VirtualObjectInfo -> Info.VirtualObjectInfo -> TypeScript.TypeScriptFile
@@ -76,19 +83,36 @@ virtualObjectInfoToInterfaceDecs isDefaultExport voMap vo =
            [Info.virtualObjectDoc vo]
            ( TypeScript.InterfaceDec
                (Info.virtualObjectName vo)
-               ( [ TypeScript.InterfaceContent
-                     [ "The type of the object, used for identification (the \""
-                         <> Info.virtualObjectName vo
-                         <> "\" string)."
-                     ]
-                     (TypeScript.InterfaceProperty "objectType" "string")
+               ( [ TypeScript.SingleInterfaceContent $
+                     TypeScript.InterfaceContent
+                       [ "The type of the object, used for identification (the \""
+                           <> Info.virtualObjectName vo
+                           <> "\" string)."
+                       ]
+                       (TypeScript.InterfaceProperty "objectType" "string")
                  ]
-                   <> map (methodInfoToInterfaceContent (Info.virtualObjectName vo)) (Info.virtualObjectMethods vo)
+                   <> map
+                     (methodHierarchyToGroupedInterfaceContents (Info.virtualObjectName vo))
+                     (Info.virtualObjectMethods vo)
                )
            )
        ]
     ++ [ TypeScript.Declaration [] (TypeScript.ExportDec True $ Info.virtualObjectName vo) | isDefaultExport
        ]
+
+methodHierarchyToGroupedInterfaceContents
+  :: String -> Info.MethodHierarchy -> TypeScript.GroupedInterfaceContent
+methodHierarchyToGroupedInterfaceContents selfTypeName (Info.MethodInfoEntry method) =
+  TypeScript.SingleInterfaceContent $ methodInfoToInterfaceContent selfTypeName method
+methodHierarchyToGroupedInterfaceContents selfTypeName (Info.MethodGroupEntry group) =
+  TypeScript.GroupedInterfaceContent $
+    TypeScript.InterfaceContentGroup
+      (Info.groupDoc group)
+      (Info.groupName group)
+      ( map
+          (methodHierarchyToGroupedInterfaceContents selfTypeName)
+          (Info.groupMethods group)
+      )
 
 methodInfoToInterfaceContent :: String -> Info.MethodInfo -> TypeScript.InterfaceContent
 methodInfoToInterfaceContent selfTypeName method =

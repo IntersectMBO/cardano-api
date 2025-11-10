@@ -253,6 +253,16 @@ To work around that, disable build concurrency:
 wasm32-wasi-cabal build cardano-wasm -j1 --ghc-options="-j1" --no-semaphore
 ```
 
+# Documentation
+
+You can find the generated typedoc documentation for the version of `cardano-wasm` in `master` branch [here](https://cardano-api.cardano.intersectmbo.org/cardano-wasm/typedoc/).
+
+Or you can generate it using nix by writing:
+
+```bash
+nix build .#wasm-typedoc
+```
+
 # Examples
 
 You can find examples of how to use the `cardano-wasm` library in the [examples](./examples) subfolder.
