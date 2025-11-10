@@ -23,7 +23,8 @@ describe('Cardano API', () => {
         const outputAddress = "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v";
 
         // Restore wallet and verify the address
-        const wallet = await api.restoreTestnetPaymentWalletFromSigningKeyBech32(PREVIEW_MAGIC_NUMBER, secretKey);
+        const wallet = await api.wallet.testnet.restoreTestnetPaymentWalletFromSigningKeyBech32(PREVIEW_MAGIC_NUMBER, secretKey);
+        
         const bech32Address = await wallet.getAddressBech32();
         expect(bech32Address).toBe(expectedAddress);
 
