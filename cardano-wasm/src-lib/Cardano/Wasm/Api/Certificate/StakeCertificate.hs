@@ -121,18 +121,23 @@ instance FromJSON StakeCertificateObject where
           , delegateStake
           }
 
--- | Creates an empty stake certificate object for the given stake key hash.
+-- | Creates an empty stake certificate object for the given stake key base16 hash.
 -- For the certificate to be valid must be either a registration, an unregistration or
 -- a delegation certificate. But it can be both registration and delegation.
-createStakeKeyCertificateImpl :: Hash StakeKey -> StakeCertificateObject
-createStakeKeyCertificateImpl skHash =
-  StakeCertificateObject
-    { era = ConwayEra
-    , stakeCredential = skHash
-    , deposit = Nothing
-    , action = DelegateOnly
-    , delegateStake = Nothing
-    }
+createStakeKeyCertificateImpl :: MonadThrow m => String -> m StakeCertificateObject
+createStakeKeyCertificateImpl skHashStr = do
+  skHash <- readHash skHashStr
+  return $
+    StakeCertificateObject
+      { era = ConwayEra
+      , stakeCredential = skHash
+      , deposit = Nothing
+      , action = DelegateOnly
+      , delegateStake = Nothing
+      }
+ where
+  readHash :: MonadThrow m => String -> m (Hash StakeKey)
+  readHash = rightOrError . Api.deserialiseFromRawBytesHex . Text.encodeUtf8 . Text.pack
 
 -- | Marks the certificate as a stake registration certificate.
 asStakeRegistrationImpl :: StakeCertificateObject -> StakeCertificateObject
