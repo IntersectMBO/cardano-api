@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -36,14 +37,19 @@ import Cardano.Api.Experimental (Era (..), obtainCommonConstraints)
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Certificate (Certificate (..))
 import Cardano.Api.Ledger
-  ( ConwayDelegCert (..)
-  , ConwayTxCert (..)
-  , Credential (..)
-  , maybeToStrictMaybe
+  ( Credential (..)
+  , KeyRole (Staking)
+  , ShelleyEraTxCert (mkUnRegTxCert)
+  , mkDelegTxCert
+  , mkRegDepositDelegTxCert
+  , mkRegDepositTxCert
+  , mkRegTxCert
+  , mkUnRegDepositTxCert
+  , mkUnRegTxCert
   )
 import Cardano.Api.Serialise.Raw qualified as Api
 
-import Cardano.Ledger.Api (Delegatee (..))
+import Cardano.Ledger.Api (ConwayEraTxCert, Delegatee (..), EraTxCert (..))
 import Cardano.Wasm.ExceptionHandling (rightOrError, throwError, toMonadFail)
 
 import Control.Monad.Catch (MonadThrow)
@@ -205,30 +211,52 @@ toCardanoApiCertificate
   -> StakeCertificateAction
   -> Maybe PoolId
   -> m (Certificate (Exp.LedgerEra era))
-toCardanoApiCertificate era stakeCredential deposit action delegateStake =
+toCardanoApiCertificate era stakeCredential mDeposit action delegateStake =
   Exp.obtainCommonConstraints era $
     conwayEraOnwardsConstraints (convert era) $
-      Certificate . ConwayTxCertDeleg
+      Certificate
         <$> ( case (action, delegateStake) of
                 (DelegateOnly, Nothing) ->
                   throwError
                     "Certificate must at least either: register, unregister, or delegate"
-                (RegisterStake, Nothing) ->
-                  return $ ConwayRegCert (KeyHashObj $ unStakeKeyHash stakeCredential) (maybeToStrictMaybe deposit)
-                (UnregisterStake, Nothing) ->
-                  return $ ConwayUnRegCert (KeyHashObj $ unStakeKeyHash stakeCredential) (maybeToStrictMaybe deposit)
+                (RegisterStake, Nothing) -> makeRegUnregCertWithMaybeDeposit era mkRegDepositTxCert mkRegTxCert stakeCredential mDeposit
+                (UnregisterStake, Nothing) -> makeRegUnregCertWithMaybeDeposit era mkUnRegDepositTxCert mkUnRegTxCert stakeCredential mDeposit
                 (DelegateOnly, Just poolId) ->
                   return $
-                    ConwayDelegCert
+                    mkDelegTxCert
                       (KeyHashObj $ unStakeKeyHash stakeCredential)
                       (DelegStake $ unStakePoolKeyHash poolId)
                 (RegisterStake, Just poolId) ->
-                  ConwayRegDelegCert
+                  mkRegDepositDelegTxCert
                     (KeyHashObj $ unStakeKeyHash stakeCredential)
                     (DelegStake $ unStakePoolKeyHash poolId)
-                    <$> case deposit of
+                    <$> case mDeposit of
                       Just dep -> return dep
                       Nothing -> throwError "Deposit must be specified for stake registration and delegation certificate"
                 (UnregisterStake, Just _) ->
                   throwError "Cannot unregister and delegate in the same certificate"
             )
+ where
+  makeRegUnregCertWithMaybeDeposit
+    :: (Exp.EraCommonConstraints era, MonadThrow m)
+    => Era era
+    -> ( forall era2
+          . ConwayEraTxCert era2
+         => Credential Staking -> Coin -> TxCert era2
+       )
+    -> ( forall era2
+          . ShelleyEraTxCert era2
+         => Credential Staking -> TxCert era2
+       )
+    -> Hash StakeKey
+    -> Maybe Coin
+    -> m (TxCert (Exp.LedgerEra era))
+  makeRegUnregCertWithMaybeDeposit _era' makeRegUnregDeposit _makeRegUnregNoDeposit stakeCredential' (Just deposit) =
+    return $
+      makeRegUnregDeposit (KeyHashObj $ unStakeKeyHash stakeCredential') deposit
+  makeRegUnregCertWithMaybeDeposit era' _makeRegUnregDeposit makeRegUnregNoDeposit stakeCredential' Nothing =
+    case era' of
+      Exp.ConwayEra ->
+        return $
+          makeRegUnregNoDeposit (KeyHashObj $ unStakeKeyHash stakeCredential')
+      Exp.DijkstraEra -> throwError "Deposit must be specified for stake registration/unregistration in Dijkstra era"
