@@ -70,26 +70,26 @@ data StakeCertificateObject
   = forall era. StakeCertificateObject
   { era :: !(Exp.Era era)
   , stakeCredential :: !(Hash StakeKey) -- ToDo: Generalize to support scripts as well
-  , deposit :: !(Maybe Coin)
+  , mDeposit :: !(Maybe Coin)
   , action :: !StakeCertificateAction
-  , delegateStake :: Maybe PoolId
+  , mDelegatee :: Maybe Delegatee
   -- ToDo: Add DRep delegation
   }
 
 deriving instance Show StakeCertificateObject
 
 instance ToJSON StakeCertificateObject where
-  toJSON (StakeCertificateObject{era, stakeCredential, deposit, action, delegateStake}) =
+  toJSON (StakeCertificateObject{era, stakeCredential, mDeposit, action, mDelegatee}) =
     obtainCommonConstraints era $
       Aeson.object
         [ "era" .= Exp.Some era
         , "stakeCredential" .= Text.decodeUtf8 (Api.serialiseToRawBytesHex stakeCredential)
-        , "deposit" .= deposit
+        , "deposit" .= mDeposit
         , "action" .= case action of
             RegisterStake -> Aeson.String "RegisterStake"
             UnregisterStake -> Aeson.String "UnregisterStake"
             DelegateOnly -> Aeson.String "DelegateOnly"
-        , "delegateStake" .= fmap (Text.decodeUtf8 . Api.serialiseToRawBytesHex) delegateStake
+        , "delegateStake" .= mDelegatee
         ]
 
 instance FromJSON StakeCertificateObject where
@@ -100,7 +100,7 @@ instance FromJSON StakeCertificateObject where
       toMonadFail $
         rightOrError $
           Api.deserialiseFromRawBytesHex (Text.encodeUtf8 skHashText)
-    deposit :: Maybe Coin <- o .:? "deposit"
+    mDeposit :: Maybe Coin <- o .:? "deposit"
     actionStr :: Text <- o .: "action"
     action <-
       case actionStr of
@@ -108,23 +108,15 @@ instance FromJSON StakeCertificateObject where
         "UnregisterStake" -> return UnregisterStake
         "DelegateOnly" -> return DelegateOnly
         _ -> toMonadFail $ throwError ("Invalid action for StakeCertificateObject: " ++ show actionStr)
-    delegateStakeText :: Maybe Text <- o .:? "delegateStake"
-    delegateStake :: Maybe PoolId <-
-      traverse
-        ( toMonadFail
-            . rightOrError
-            . Api.deserialiseFromRawBytesHex
-            . Text.encodeUtf8
-        )
-        delegateStakeText
+    mDelegatee :: Maybe Delegatee <- o .:? "delegateStake"
     obtainCommonConstraints era $
       return $
         StakeCertificateObject
           { era
           , stakeCredential
-          , deposit
+          , mDeposit
           , action
-          , delegateStake
+          , mDelegatee
           }
 
 -- | Creates an empty stake certificate object for the given stake key base16 hash.
@@ -137,9 +129,9 @@ createStakeKeyCertificateImpl skHashStr = do
     StakeCertificateObject
       { era = ConwayEra
       , stakeCredential = skHash
-      , deposit = Nothing
+      , mDeposit = Nothing
       , action = DelegateOnly
-      , delegateStake = Nothing
+      , mDelegatee = Nothing
       }
  where
   readHash :: MonadThrow m => String -> m (Hash StakeKey)
@@ -166,22 +158,22 @@ asDelegateOnlyImpl certObj =
 -- depositted for unregistration certificates.
 withDepositImpl :: Coin -> StakeCertificateObject -> StakeCertificateObject
 withDepositImpl dep certObj =
-  certObj{deposit = Just dep}
+  certObj{mDeposit = Just dep}
 
 -- | Resets the deposit for the stake certificate.
 withoutDepositImpl :: StakeCertificateObject -> StakeCertificateObject
 withoutDepositImpl certObj =
-  certObj{deposit = Nothing}
+  certObj{mDeposit = Nothing}
 
 -- | Sets the pool to which the stake key will be delegated.
 withDelegationImpl :: PoolId -> StakeCertificateObject -> StakeCertificateObject
 withDelegationImpl poolId certObj =
-  certObj{delegateStake = Just poolId}
+  certObj{mDelegatee = Just (DelegStake $ unStakePoolKeyHash poolId)}
 
 -- | Resets the delegation for the stake certificate.
 withoutDelegationImpl :: StakeCertificateObject -> StakeCertificateObject
 withoutDelegationImpl certObj =
-  certObj{delegateStake = Nothing}
+  certObj{mDelegatee = Nothing}
 
 -- | Convert a StakeCertificateObject to the base16 encoding of its CBOR representation.
 toCborImpl :: MonadThrow m => StakeCertificateObject -> m String
@@ -189,12 +181,12 @@ toCborImpl
   ( StakeCertificateObject
       { era
       , stakeCredential
-      , deposit
+      , mDeposit
       , action
-      , delegateStake
+      , mDelegatee
       }
     ) = do
-    stakeCert <- toCardanoApiCertificate era stakeCredential deposit action delegateStake
+    stakeCert <- toCardanoApiCertificate era stakeCredential mDeposit action mDelegatee
     return $
       obtainCommonConstraints era $
         Text.unpack $
@@ -209,27 +201,27 @@ toCardanoApiCertificate
   -> Hash StakeKey
   -> Maybe Coin
   -> StakeCertificateAction
-  -> Maybe PoolId
+  -> Maybe Delegatee
   -> m (Certificate (Exp.LedgerEra era))
-toCardanoApiCertificate era stakeCredential mDeposit action delegateStake =
+toCardanoApiCertificate era stakeCredential mDeposit action mDelegatee =
   Exp.obtainCommonConstraints era $
     conwayEraOnwardsConstraints (convert era) $
       Certificate
-        <$> ( case (action, delegateStake) of
+        <$> ( case (action, mDelegatee) of
                 (DelegateOnly, Nothing) ->
                   throwError
                     "Certificate must at least either: register, unregister, or delegate"
                 (RegisterStake, Nothing) -> makeRegUnregCertWithMaybeDeposit era mkRegDepositTxCert mkRegTxCert stakeCredential mDeposit
                 (UnregisterStake, Nothing) -> makeRegUnregCertWithMaybeDeposit era mkUnRegDepositTxCert mkUnRegTxCert stakeCredential mDeposit
-                (DelegateOnly, Just poolId) ->
+                (DelegateOnly, Just delegatee) ->
                   return $
                     mkDelegTxCert
                       (KeyHashObj $ unStakeKeyHash stakeCredential)
-                      (DelegStake $ unStakePoolKeyHash poolId)
-                (RegisterStake, Just poolId) ->
+                      delegatee
+                (RegisterStake, Just delegatee) ->
                   mkRegDepositDelegTxCert
                     (KeyHashObj $ unStakeKeyHash stakeCredential)
-                    (DelegStake $ unStakePoolKeyHash poolId)
+                    delegatee
                     <$> case mDeposit of
                       Just dep -> return dep
                       Nothing -> throwError "Deposit must be specified for stake registration and delegation certificate"
