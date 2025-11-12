@@ -1,5 +1,21 @@
 # Changelog for cardano-api
 
+## 10.20.0.0
+
+- Deprecate "old" certificate api helper functions and introduce equivalent functions exposed by:
+    `Cardano.Api.Compatible.Certificate`
+    `Cardano.Api.Experimental.Certificate`
+  (feature, breaking, refactoring)
+  [PR 983](https://github.com/IntersectMBO/cardano-api/pull/983)
+
+- Added `HasTypeProxy` `FromCBOR`, `ToCBOR`, and `SerialiseAsCBOR ` instances to `TxOut`.
+  (feature)
+  [PR 960](https://github.com/IntersectMBO/cardano-api/pull/960)
+
+- Replace `Certificate` in `TxCertificates` with new api's `Certificate` type.
+  (breaking)
+  [PR 962](https://github.com/IntersectMBO/cardano-api/pull/962)
+
 ## 10.19.1.0
 
 - Update `cardano-ledger-api` to fix bug in `queryPoolState`, where current Pool parameters were returned instead of the future ones.
