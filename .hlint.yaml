@@ -60,6 +60,9 @@
 # Allow snake_case naming in test modules (following Haskell test property convention)
 - ignore: {name: Use camelCase, within: [Test.Cardano.Api.**, Test.Golden.Cardano.Api.**]}
 
+# Ignore all files in cardano-rpc/gen (generated code)
+- ignore: {within: [Proto.Cardano, Proto.Utxorpc]}
+
 - ignore: {name: Eta reduce}
 - ignore: {name: Use + directly}
 - ignore: {name: Use fmap}
