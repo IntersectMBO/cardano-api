@@ -5,11 +5,21 @@
 {-# OPTIONS_GHC -Wno-dodgy-exports#-}
 module Proto.Utxorpc.V1alpha.Cardano.Cardano (
         AddressArray(), Asset(), Asset'Quantity(..), _Asset'OutputCoin,
-        _Asset'MintCoin, CostModel(), CostModels(), Datum(), ExPrices(),
-        ExUnits(), MultiAsset(), PParams(), ProtocolVersion(),
-        RationalNumber(), Script(), Script'Script(..), _Script'Native,
-        _Script'PlutusV1, _Script'PlutusV2, _Script'PlutusV3,
-        _Script'PlutusV4, TxOutput(), VotingThresholds()
+        _Asset'MintCoin, BigInt(), BigInt'BigInt(..), _BigInt'Int,
+        _BigInt'BigUInt, _BigInt'BigNInt, Constr(), CostModel(),
+        CostModels(), Datum(), ExPrices(), ExUnits(), MultiAsset(),
+        NativeScript(), NativeScript'NativeScript(..),
+        _NativeScript'ScriptPubkey, _NativeScript'ScriptAll,
+        _NativeScript'ScriptAny, _NativeScript'ScriptNOfK,
+        _NativeScript'InvalidBefore, _NativeScript'InvalidHereafter,
+        NativeScriptList(), PParams(), PlutusData(),
+        PlutusData'PlutusData(..), _PlutusData'Constr, _PlutusData'Map,
+        _PlutusData'BigInt, _PlutusData'BoundedBytes, _PlutusData'Array,
+        PlutusDataArray(), PlutusDataMap(), PlutusDataPair(),
+        ProtocolVersion(), RationalNumber(), Script(), Script'Script(..),
+        _Script'Native, _Script'PlutusV1, _Script'PlutusV2,
+        _Script'PlutusV3, _Script'PlutusV4, ScriptNOfK(), TxOutput(),
+        VotingThresholds()
     ) where
 import qualified Data.ProtoLens.Runtime.Control.DeepSeq as Control.DeepSeq
 import qualified Data.ProtoLens.Runtime.Data.ProtoLens.Prism as Data.ProtoLens.Prism
@@ -409,6 +419,487 @@ _Asset'MintCoin
          -> case p__ of
               (Asset'MintCoin p__val) -> Prelude.Just p__val
               _otherwise -> Prelude.Nothing)
+{- | Fields :
+     
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'bigInt' @:: Lens' BigInt (Prelude.Maybe BigInt'BigInt)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'int' @:: Lens' BigInt (Prelude.Maybe Data.Int.Int64)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.int' @:: Lens' BigInt Data.Int.Int64@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'bigUInt' @:: Lens' BigInt (Prelude.Maybe Data.ByteString.ByteString)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.bigUInt' @:: Lens' BigInt Data.ByteString.ByteString@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'bigNInt' @:: Lens' BigInt (Prelude.Maybe Data.ByteString.ByteString)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.bigNInt' @:: Lens' BigInt Data.ByteString.ByteString@ -}
+data BigInt
+  = BigInt'_constructor {_BigInt'bigInt :: !(Prelude.Maybe BigInt'BigInt),
+                         _BigInt'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show BigInt where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+data BigInt'BigInt
+  = BigInt'Int !Data.Int.Int64 |
+    BigInt'BigUInt !Data.ByteString.ByteString |
+    BigInt'BigNInt !Data.ByteString.ByteString
+  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord)
+instance Data.ProtoLens.Field.HasField BigInt "maybe'bigInt" (Prelude.Maybe BigInt'BigInt) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _BigInt'bigInt (\ x__ y__ -> x__ {_BigInt'bigInt = y__}))
+        Prelude.id
+instance Data.ProtoLens.Field.HasField BigInt "maybe'int" (Prelude.Maybe Data.Int.Int64) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _BigInt'bigInt (\ x__ y__ -> x__ {_BigInt'bigInt = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (BigInt'Int x__val)) -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap BigInt'Int y__))
+instance Data.ProtoLens.Field.HasField BigInt "int" Data.Int.Int64 where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _BigInt'bigInt (\ x__ y__ -> x__ {_BigInt'bigInt = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (BigInt'Int x__val)) -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap BigInt'Int y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault))
+instance Data.ProtoLens.Field.HasField BigInt "maybe'bigUInt" (Prelude.Maybe Data.ByteString.ByteString) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _BigInt'bigInt (\ x__ y__ -> x__ {_BigInt'bigInt = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (BigInt'BigUInt x__val)) -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap BigInt'BigUInt y__))
+instance Data.ProtoLens.Field.HasField BigInt "bigUInt" Data.ByteString.ByteString where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _BigInt'bigInt (\ x__ y__ -> x__ {_BigInt'bigInt = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (BigInt'BigUInt x__val)) -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap BigInt'BigUInt y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault))
+instance Data.ProtoLens.Field.HasField BigInt "maybe'bigNInt" (Prelude.Maybe Data.ByteString.ByteString) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _BigInt'bigInt (\ x__ y__ -> x__ {_BigInt'bigInt = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (BigInt'BigNInt x__val)) -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap BigInt'BigNInt y__))
+instance Data.ProtoLens.Field.HasField BigInt "bigNInt" Data.ByteString.ByteString where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _BigInt'bigInt (\ x__ y__ -> x__ {_BigInt'bigInt = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (BigInt'BigNInt x__val)) -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap BigInt'BigNInt y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault))
+instance Data.ProtoLens.Message BigInt where
+  messageName _ = Data.Text.pack "utxorpc.v1alpha.cardano.BigInt"
+  packedMessageDescriptor _
+    = "\n\
+      \\ACKBigInt\DC2\SYN\n\
+      \\ETXint\CAN\SOH \SOH(\ETXH\NULR\ETXintB\STX0\SOH\DC2\FS\n\
+      \\tbig_u_int\CAN\STX \SOH(\fH\NULR\abigUInt\DC2\FS\n\
+      \\tbig_n_int\CAN\ETX \SOH(\fH\NULR\abigNIntB\t\n\
+      \\abig_int"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        int__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "int"
+              (Data.ProtoLens.ScalarField Data.ProtoLens.Int64Field ::
+                 Data.ProtoLens.FieldTypeDescriptor Data.Int.Int64)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'int")) ::
+              Data.ProtoLens.FieldDescriptor BigInt
+        bigUInt__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "big_u_int"
+              (Data.ProtoLens.ScalarField Data.ProtoLens.BytesField ::
+                 Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'bigUInt")) ::
+              Data.ProtoLens.FieldDescriptor BigInt
+        bigNInt__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "big_n_int"
+              (Data.ProtoLens.ScalarField Data.ProtoLens.BytesField ::
+                 Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'bigNInt")) ::
+              Data.ProtoLens.FieldDescriptor BigInt
+      in
+        Data.Map.fromList
+          [(Data.ProtoLens.Tag 1, int__field_descriptor),
+           (Data.ProtoLens.Tag 2, bigUInt__field_descriptor),
+           (Data.ProtoLens.Tag 3, bigNInt__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _BigInt'_unknownFields
+        (\ x__ y__ -> x__ {_BigInt'_unknownFields = y__})
+  defMessage
+    = BigInt'_constructor
+        {_BigInt'bigInt = Prelude.Nothing, _BigInt'_unknownFields = []}
+  parseMessage
+    = let
+        loop :: BigInt -> Data.ProtoLens.Encoding.Bytes.Parser BigInt
+        loop x
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t) x)
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        8 -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (Prelude.fmap
+                                          Prelude.fromIntegral
+                                          Data.ProtoLens.Encoding.Bytes.getVarInt)
+                                       "int"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"int") y x)
+                        18
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.getBytes
+                                             (Prelude.fromIntegral len))
+                                       "big_u_int"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"bigUInt") y x)
+                        26
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.getBytes
+                                             (Prelude.fromIntegral len))
+                                       "big_n_int"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"bigNInt") y x)
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do loop Data.ProtoLens.defMessage) "BigInt"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (case
+                  Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'bigInt") _x
+              of
+                Prelude.Nothing -> Data.Monoid.mempty
+                (Prelude.Just (BigInt'Int v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 8)
+                       ((Prelude..)
+                          Data.ProtoLens.Encoding.Bytes.putVarInt Prelude.fromIntegral v)
+                (Prelude.Just (BigInt'BigUInt v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
+                       ((\ bs
+                           -> (Data.Monoid.<>)
+                                (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                   (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          v)
+                (Prelude.Just (BigInt'BigNInt v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
+                       ((\ bs
+                           -> (Data.Monoid.<>)
+                                (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                   (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          v))
+             (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                (Lens.Family2.view Data.ProtoLens.unknownFields _x))
+instance Control.DeepSeq.NFData BigInt where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_BigInt'_unknownFields x__)
+             (Control.DeepSeq.deepseq (_BigInt'bigInt x__) ())
+instance Control.DeepSeq.NFData BigInt'BigInt where
+  rnf (BigInt'Int x__) = Control.DeepSeq.rnf x__
+  rnf (BigInt'BigUInt x__) = Control.DeepSeq.rnf x__
+  rnf (BigInt'BigNInt x__) = Control.DeepSeq.rnf x__
+_BigInt'Int ::
+  Data.ProtoLens.Prism.Prism' BigInt'BigInt Data.Int.Int64
+_BigInt'Int
+  = Data.ProtoLens.Prism.prism'
+      BigInt'Int
+      (\ p__
+         -> case p__ of
+              (BigInt'Int p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+_BigInt'BigUInt ::
+  Data.ProtoLens.Prism.Prism' BigInt'BigInt Data.ByteString.ByteString
+_BigInt'BigUInt
+  = Data.ProtoLens.Prism.prism'
+      BigInt'BigUInt
+      (\ p__
+         -> case p__ of
+              (BigInt'BigUInt p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+_BigInt'BigNInt ::
+  Data.ProtoLens.Prism.Prism' BigInt'BigInt Data.ByteString.ByteString
+_BigInt'BigNInt
+  = Data.ProtoLens.Prism.prism'
+      BigInt'BigNInt
+      (\ p__
+         -> case p__ of
+              (BigInt'BigNInt p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+{- | Fields :
+     
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.tag' @:: Lens' Constr Data.Word.Word32@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.anyConstructor' @:: Lens' Constr Data.Word.Word64@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.fields' @:: Lens' Constr [PlutusData]@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.vec'fields' @:: Lens' Constr (Data.Vector.Vector PlutusData)@ -}
+data Constr
+  = Constr'_constructor {_Constr'tag :: !Data.Word.Word32,
+                         _Constr'anyConstructor :: !Data.Word.Word64,
+                         _Constr'fields :: !(Data.Vector.Vector PlutusData),
+                         _Constr'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show Constr where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+instance Data.ProtoLens.Field.HasField Constr "tag" Data.Word.Word32 where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _Constr'tag (\ x__ y__ -> x__ {_Constr'tag = y__}))
+        Prelude.id
+instance Data.ProtoLens.Field.HasField Constr "anyConstructor" Data.Word.Word64 where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _Constr'anyConstructor
+           (\ x__ y__ -> x__ {_Constr'anyConstructor = y__}))
+        Prelude.id
+instance Data.ProtoLens.Field.HasField Constr "fields" [PlutusData] where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _Constr'fields (\ x__ y__ -> x__ {_Constr'fields = y__}))
+        (Lens.Family2.Unchecked.lens
+           Data.Vector.Generic.toList
+           (\ _ y__ -> Data.Vector.Generic.fromList y__))
+instance Data.ProtoLens.Field.HasField Constr "vec'fields" (Data.Vector.Vector PlutusData) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _Constr'fields (\ x__ y__ -> x__ {_Constr'fields = y__}))
+        Prelude.id
+instance Data.ProtoLens.Message Constr where
+  messageName _ = Data.Text.pack "utxorpc.v1alpha.cardano.Constr"
+  packedMessageDescriptor _
+    = "\n\
+      \\ACKConstr\DC2\DLE\n\
+      \\ETXtag\CAN\SOH \SOH(\rR\ETXtag\DC2'\n\
+      \\SIany_constructor\CAN\STX \SOH(\EOTR\SOanyConstructor\DC2;\n\
+      \\ACKfields\CAN\ETX \ETX(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\ACKfields"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        tag__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "tag"
+              (Data.ProtoLens.ScalarField Data.ProtoLens.UInt32Field ::
+                 Data.ProtoLens.FieldTypeDescriptor Data.Word.Word32)
+              (Data.ProtoLens.PlainField
+                 Data.ProtoLens.Optional (Data.ProtoLens.Field.field @"tag")) ::
+              Data.ProtoLens.FieldDescriptor Constr
+        anyConstructor__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "any_constructor"
+              (Data.ProtoLens.ScalarField Data.ProtoLens.UInt64Field ::
+                 Data.ProtoLens.FieldTypeDescriptor Data.Word.Word64)
+              (Data.ProtoLens.PlainField
+                 Data.ProtoLens.Optional
+                 (Data.ProtoLens.Field.field @"anyConstructor")) ::
+              Data.ProtoLens.FieldDescriptor Constr
+        fields__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "fields"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor PlutusData)
+              (Data.ProtoLens.RepeatedField
+                 Data.ProtoLens.Unpacked (Data.ProtoLens.Field.field @"fields")) ::
+              Data.ProtoLens.FieldDescriptor Constr
+      in
+        Data.Map.fromList
+          [(Data.ProtoLens.Tag 1, tag__field_descriptor),
+           (Data.ProtoLens.Tag 2, anyConstructor__field_descriptor),
+           (Data.ProtoLens.Tag 3, fields__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _Constr'_unknownFields
+        (\ x__ y__ -> x__ {_Constr'_unknownFields = y__})
+  defMessage
+    = Constr'_constructor
+        {_Constr'tag = Data.ProtoLens.fieldDefault,
+         _Constr'anyConstructor = Data.ProtoLens.fieldDefault,
+         _Constr'fields = Data.Vector.Generic.empty,
+         _Constr'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          Constr
+          -> Data.ProtoLens.Encoding.Growing.Growing Data.Vector.Vector Data.ProtoLens.Encoding.Growing.RealWorld PlutusData
+             -> Data.ProtoLens.Encoding.Bytes.Parser Constr
+        loop x mutable'fields
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do frozen'fields <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                         (Data.ProtoLens.Encoding.Growing.unsafeFreeze
+                                            mutable'fields)
+                      (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t)
+                           (Lens.Family2.set
+                              (Data.ProtoLens.Field.field @"vec'fields") frozen'fields x))
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        8 -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (Prelude.fmap
+                                          Prelude.fromIntegral
+                                          Data.ProtoLens.Encoding.Bytes.getVarInt)
+                                       "tag"
+                                loop
+                                  (Lens.Family2.set (Data.ProtoLens.Field.field @"tag") y x)
+                                  mutable'fields
+                        16
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       Data.ProtoLens.Encoding.Bytes.getVarInt "any_constructor"
+                                loop
+                                  (Lens.Family2.set
+                                     (Data.ProtoLens.Field.field @"anyConstructor") y x)
+                                  mutable'fields
+                        26
+                          -> do !y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                        (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                            Data.ProtoLens.Encoding.Bytes.isolate
+                                              (Prelude.fromIntegral len)
+                                              Data.ProtoLens.parseMessage)
+                                        "fields"
+                                v <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                       (Data.ProtoLens.Encoding.Growing.append mutable'fields y)
+                                loop x v
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+                                  mutable'fields
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do mutable'fields <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                  Data.ProtoLens.Encoding.Growing.new
+              loop Data.ProtoLens.defMessage mutable'fields)
+          "Constr"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (let _v = Lens.Family2.view (Data.ProtoLens.Field.field @"tag") _x
+              in
+                if (Prelude.==) _v Data.ProtoLens.fieldDefault then
+                    Data.Monoid.mempty
+                else
+                    (Data.Monoid.<>)
+                      (Data.ProtoLens.Encoding.Bytes.putVarInt 8)
+                      ((Prelude..)
+                         Data.ProtoLens.Encoding.Bytes.putVarInt Prelude.fromIntegral _v))
+             ((Data.Monoid.<>)
+                (let
+                   _v
+                     = Lens.Family2.view
+                         (Data.ProtoLens.Field.field @"anyConstructor") _x
+                 in
+                   if (Prelude.==) _v Data.ProtoLens.fieldDefault then
+                       Data.Monoid.mempty
+                   else
+                       (Data.Monoid.<>)
+                         (Data.ProtoLens.Encoding.Bytes.putVarInt 16)
+                         (Data.ProtoLens.Encoding.Bytes.putVarInt _v))
+                ((Data.Monoid.<>)
+                   (Data.ProtoLens.Encoding.Bytes.foldMapBuilder
+                      (\ _v
+                         -> (Data.Monoid.<>)
+                              (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
+                              ((Prelude..)
+                                 (\ bs
+                                    -> (Data.Monoid.<>)
+                                         (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                            (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                         (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                                 Data.ProtoLens.encodeMessage _v))
+                      (Lens.Family2.view (Data.ProtoLens.Field.field @"vec'fields") _x))
+                   (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                      (Lens.Family2.view Data.ProtoLens.unknownFields _x))))
+instance Control.DeepSeq.NFData Constr where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_Constr'_unknownFields x__)
+             (Control.DeepSeq.deepseq
+                (_Constr'tag x__)
+                (Control.DeepSeq.deepseq
+                   (_Constr'anyConstructor x__)
+                   (Control.DeepSeq.deepseq (_Constr'fields x__) ())))
 {- | Fields :
      
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.values' @:: Lens' CostModel [Data.Int.Int64]@
@@ -849,9 +1340,12 @@ instance Control.DeepSeq.NFData CostModels where
 {- | Fields :
      
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.hash' @:: Lens' Datum Data.ByteString.ByteString@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.payload' @:: Lens' Datum PlutusData@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'payload' @:: Lens' Datum (Prelude.Maybe PlutusData)@
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.originalCbor' @:: Lens' Datum Data.ByteString.ByteString@ -}
 data Datum
   = Datum'_constructor {_Datum'hash :: !Data.ByteString.ByteString,
+                        _Datum'payload :: !(Prelude.Maybe PlutusData),
                         _Datum'originalCbor :: !Data.ByteString.ByteString,
                         _Datum'_unknownFields :: !Data.ProtoLens.FieldSet}
   deriving stock (Prelude.Eq, Prelude.Ord)
@@ -867,6 +1361,18 @@ instance Data.ProtoLens.Field.HasField Datum "hash" Data.ByteString.ByteString w
         (Lens.Family2.Unchecked.lens
            _Datum'hash (\ x__ y__ -> x__ {_Datum'hash = y__}))
         Prelude.id
+instance Data.ProtoLens.Field.HasField Datum "payload" PlutusData where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _Datum'payload (\ x__ y__ -> x__ {_Datum'payload = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage)
+instance Data.ProtoLens.Field.HasField Datum "maybe'payload" (Prelude.Maybe PlutusData) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _Datum'payload (\ x__ y__ -> x__ {_Datum'payload = y__}))
+        Prelude.id
 instance Data.ProtoLens.Field.HasField Datum "originalCbor" Data.ByteString.ByteString where
   fieldOf _
     = (Prelude..)
@@ -878,7 +1384,8 @@ instance Data.ProtoLens.Message Datum where
   packedMessageDescriptor _
     = "\n\
       \\ENQDatum\DC2\DC2\n\
-      \\EOThash\CAN\SOH \SOH(\fR\EOThash\DC2#\n\
+      \\EOThash\CAN\SOH \SOH(\fR\EOThash\DC2=\n\
+      \\apayload\CAN\STX \SOH(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\apayload\DC2#\n\
       \\roriginal_cbor\CAN\ETX \SOH(\fR\foriginalCbor"
   packedFileDescriptor _ = packedFileDescriptor
   fieldsByTag
@@ -890,6 +1397,14 @@ instance Data.ProtoLens.Message Datum where
                  Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
               (Data.ProtoLens.PlainField
                  Data.ProtoLens.Optional (Data.ProtoLens.Field.field @"hash")) ::
+              Data.ProtoLens.FieldDescriptor Datum
+        payload__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "payload"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor PlutusData)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'payload")) ::
               Data.ProtoLens.FieldDescriptor Datum
         originalCbor__field_descriptor
           = Data.ProtoLens.FieldDescriptor
@@ -903,6 +1418,7 @@ instance Data.ProtoLens.Message Datum where
       in
         Data.Map.fromList
           [(Data.ProtoLens.Tag 1, hash__field_descriptor),
+           (Data.ProtoLens.Tag 2, payload__field_descriptor),
            (Data.ProtoLens.Tag 3, originalCbor__field_descriptor)]
   unknownFields
     = Lens.Family2.Unchecked.lens
@@ -911,6 +1427,7 @@ instance Data.ProtoLens.Message Datum where
   defMessage
     = Datum'_constructor
         {_Datum'hash = Data.ProtoLens.fieldDefault,
+         _Datum'payload = Prelude.Nothing,
          _Datum'originalCbor = Data.ProtoLens.fieldDefault,
          _Datum'_unknownFields = []}
   parseMessage
@@ -941,6 +1458,13 @@ instance Data.ProtoLens.Message Datum where
                                              (Prelude.fromIntegral len))
                                        "hash"
                                 loop (Lens.Family2.set (Data.ProtoLens.Field.field @"hash") y x)
+                        18
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "payload"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"payload") y x)
                         26
                           -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
                                        (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
@@ -976,23 +1500,38 @@ instance Data.ProtoLens.Message Datum where
                                (Data.ProtoLens.Encoding.Bytes.putBytes bs))
                          _v))
              ((Data.Monoid.<>)
-                (let
-                   _v
-                     = Lens.Family2.view (Data.ProtoLens.Field.field @"originalCbor") _x
-                 in
-                   if (Prelude.==) _v Data.ProtoLens.fieldDefault then
-                       Data.Monoid.mempty
-                   else
-                       (Data.Monoid.<>)
-                         (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
-                         ((\ bs
-                             -> (Data.Monoid.<>)
-                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
-                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                            _v))
-                (Data.ProtoLens.Encoding.Wire.buildFieldSet
-                   (Lens.Family2.view Data.ProtoLens.unknownFields _x)))
+                (case
+                     Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'payload") _x
+                 of
+                   Prelude.Nothing -> Data.Monoid.mempty
+                   (Prelude.Just _v)
+                     -> (Data.Monoid.<>)
+                          (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
+                          ((Prelude..)
+                             (\ bs
+                                -> (Data.Monoid.<>)
+                                     (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                        (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                     (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                             Data.ProtoLens.encodeMessage _v))
+                ((Data.Monoid.<>)
+                   (let
+                      _v
+                        = Lens.Family2.view (Data.ProtoLens.Field.field @"originalCbor") _x
+                    in
+                      if (Prelude.==) _v Data.ProtoLens.fieldDefault then
+                          Data.Monoid.mempty
+                      else
+                          (Data.Monoid.<>)
+                            (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
+                            ((\ bs
+                                -> (Data.Monoid.<>)
+                                     (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                        (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                     (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                               _v))
+                   (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                      (Lens.Family2.view Data.ProtoLens.unknownFields _x))))
 instance Control.DeepSeq.NFData Datum where
   rnf
     = \ x__
@@ -1000,7 +1539,9 @@ instance Control.DeepSeq.NFData Datum where
              (_Datum'_unknownFields x__)
              (Control.DeepSeq.deepseq
                 (_Datum'hash x__)
-                (Control.DeepSeq.deepseq (_Datum'originalCbor x__) ()))
+                (Control.DeepSeq.deepseq
+                   (_Datum'payload x__)
+                   (Control.DeepSeq.deepseq (_Datum'originalCbor x__) ())))
 {- | Fields :
      
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.steps' @:: Lens' ExPrices RationalNumber@
@@ -1480,6 +2021,629 @@ instance Control.DeepSeq.NFData MultiAsset where
              (Control.DeepSeq.deepseq
                 (_MultiAsset'policyId x__)
                 (Control.DeepSeq.deepseq (_MultiAsset'assets x__) ()))
+{- | Fields :
+     
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'nativeScript' @:: Lens' NativeScript (Prelude.Maybe NativeScript'NativeScript)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'scriptPubkey' @:: Lens' NativeScript (Prelude.Maybe Data.ByteString.ByteString)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.scriptPubkey' @:: Lens' NativeScript Data.ByteString.ByteString@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'scriptAll' @:: Lens' NativeScript (Prelude.Maybe NativeScriptList)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.scriptAll' @:: Lens' NativeScript NativeScriptList@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'scriptAny' @:: Lens' NativeScript (Prelude.Maybe NativeScriptList)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.scriptAny' @:: Lens' NativeScript NativeScriptList@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'scriptNOfK' @:: Lens' NativeScript (Prelude.Maybe ScriptNOfK)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.scriptNOfK' @:: Lens' NativeScript ScriptNOfK@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'invalidBefore' @:: Lens' NativeScript (Prelude.Maybe Data.Word.Word64)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.invalidBefore' @:: Lens' NativeScript Data.Word.Word64@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'invalidHereafter' @:: Lens' NativeScript (Prelude.Maybe Data.Word.Word64)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.invalidHereafter' @:: Lens' NativeScript Data.Word.Word64@ -}
+data NativeScript
+  = NativeScript'_constructor {_NativeScript'nativeScript :: !(Prelude.Maybe NativeScript'NativeScript),
+                               _NativeScript'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show NativeScript where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+data NativeScript'NativeScript
+  = NativeScript'ScriptPubkey !Data.ByteString.ByteString |
+    NativeScript'ScriptAll !NativeScriptList |
+    NativeScript'ScriptAny !NativeScriptList |
+    NativeScript'ScriptNOfK !ScriptNOfK |
+    NativeScript'InvalidBefore !Data.Word.Word64 |
+    NativeScript'InvalidHereafter !Data.Word.Word64
+  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord)
+instance Data.ProtoLens.Field.HasField NativeScript "maybe'nativeScript" (Prelude.Maybe NativeScript'NativeScript) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        Prelude.id
+instance Data.ProtoLens.Field.HasField NativeScript "maybe'scriptPubkey" (Prelude.Maybe Data.ByteString.ByteString) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (NativeScript'ScriptPubkey x__val))
+                     -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap NativeScript'ScriptPubkey y__))
+instance Data.ProtoLens.Field.HasField NativeScript "scriptPubkey" Data.ByteString.ByteString where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (NativeScript'ScriptPubkey x__val))
+                        -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap NativeScript'ScriptPubkey y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault))
+instance Data.ProtoLens.Field.HasField NativeScript "maybe'scriptAll" (Prelude.Maybe NativeScriptList) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (NativeScript'ScriptAll x__val))
+                     -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap NativeScript'ScriptAll y__))
+instance Data.ProtoLens.Field.HasField NativeScript "scriptAll" NativeScriptList where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (NativeScript'ScriptAll x__val))
+                        -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap NativeScript'ScriptAll y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage))
+instance Data.ProtoLens.Field.HasField NativeScript "maybe'scriptAny" (Prelude.Maybe NativeScriptList) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (NativeScript'ScriptAny x__val))
+                     -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap NativeScript'ScriptAny y__))
+instance Data.ProtoLens.Field.HasField NativeScript "scriptAny" NativeScriptList where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (NativeScript'ScriptAny x__val))
+                        -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap NativeScript'ScriptAny y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage))
+instance Data.ProtoLens.Field.HasField NativeScript "maybe'scriptNOfK" (Prelude.Maybe ScriptNOfK) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (NativeScript'ScriptNOfK x__val))
+                     -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap NativeScript'ScriptNOfK y__))
+instance Data.ProtoLens.Field.HasField NativeScript "scriptNOfK" ScriptNOfK where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (NativeScript'ScriptNOfK x__val))
+                        -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap NativeScript'ScriptNOfK y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage))
+instance Data.ProtoLens.Field.HasField NativeScript "maybe'invalidBefore" (Prelude.Maybe Data.Word.Word64) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (NativeScript'InvalidBefore x__val))
+                     -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap NativeScript'InvalidBefore y__))
+instance Data.ProtoLens.Field.HasField NativeScript "invalidBefore" Data.Word.Word64 where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (NativeScript'InvalidBefore x__val))
+                        -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap NativeScript'InvalidBefore y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault))
+instance Data.ProtoLens.Field.HasField NativeScript "maybe'invalidHereafter" (Prelude.Maybe Data.Word.Word64) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (NativeScript'InvalidHereafter x__val))
+                     -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap NativeScript'InvalidHereafter y__))
+instance Data.ProtoLens.Field.HasField NativeScript "invalidHereafter" Data.Word.Word64 where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScript'nativeScript
+           (\ x__ y__ -> x__ {_NativeScript'nativeScript = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (NativeScript'InvalidHereafter x__val))
+                        -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap NativeScript'InvalidHereafter y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault))
+instance Data.ProtoLens.Message NativeScript where
+  messageName _
+    = Data.Text.pack "utxorpc.v1alpha.cardano.NativeScript"
+  packedMessageDescriptor _
+    = "\n\
+      \\fNativeScript\DC2%\n\
+      \\rscript_pubkey\CAN\SOH \SOH(\fH\NULR\fscriptPubkey\DC2J\n\
+      \\n\
+      \script_all\CAN\STX \SOH(\v2).utxorpc.v1alpha.cardano.NativeScriptListH\NULR\tscriptAll\DC2J\n\
+      \\n\
+      \script_any\CAN\ETX \SOH(\v2).utxorpc.v1alpha.cardano.NativeScriptListH\NULR\tscriptAny\DC2H\n\
+      \\rscript_n_of_k\CAN\EOT \SOH(\v2#.utxorpc.v1alpha.cardano.ScriptNOfKH\NULR\n\
+      \scriptNOfK\DC2'\n\
+      \\SOinvalid_before\CAN\ENQ \SOH(\EOTH\NULR\rinvalidBefore\DC2-\n\
+      \\DC1invalid_hereafter\CAN\ACK \SOH(\EOTH\NULR\DLEinvalidHereafterB\SI\n\
+      \\rnative_script"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        scriptPubkey__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "script_pubkey"
+              (Data.ProtoLens.ScalarField Data.ProtoLens.BytesField ::
+                 Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'scriptPubkey")) ::
+              Data.ProtoLens.FieldDescriptor NativeScript
+        scriptAll__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "script_all"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor NativeScriptList)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'scriptAll")) ::
+              Data.ProtoLens.FieldDescriptor NativeScript
+        scriptAny__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "script_any"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor NativeScriptList)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'scriptAny")) ::
+              Data.ProtoLens.FieldDescriptor NativeScript
+        scriptNOfK__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "script_n_of_k"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor ScriptNOfK)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'scriptNOfK")) ::
+              Data.ProtoLens.FieldDescriptor NativeScript
+        invalidBefore__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "invalid_before"
+              (Data.ProtoLens.ScalarField Data.ProtoLens.UInt64Field ::
+                 Data.ProtoLens.FieldTypeDescriptor Data.Word.Word64)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'invalidBefore")) ::
+              Data.ProtoLens.FieldDescriptor NativeScript
+        invalidHereafter__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "invalid_hereafter"
+              (Data.ProtoLens.ScalarField Data.ProtoLens.UInt64Field ::
+                 Data.ProtoLens.FieldTypeDescriptor Data.Word.Word64)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'invalidHereafter")) ::
+              Data.ProtoLens.FieldDescriptor NativeScript
+      in
+        Data.Map.fromList
+          [(Data.ProtoLens.Tag 1, scriptPubkey__field_descriptor),
+           (Data.ProtoLens.Tag 2, scriptAll__field_descriptor),
+           (Data.ProtoLens.Tag 3, scriptAny__field_descriptor),
+           (Data.ProtoLens.Tag 4, scriptNOfK__field_descriptor),
+           (Data.ProtoLens.Tag 5, invalidBefore__field_descriptor),
+           (Data.ProtoLens.Tag 6, invalidHereafter__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _NativeScript'_unknownFields
+        (\ x__ y__ -> x__ {_NativeScript'_unknownFields = y__})
+  defMessage
+    = NativeScript'_constructor
+        {_NativeScript'nativeScript = Prelude.Nothing,
+         _NativeScript'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          NativeScript -> Data.ProtoLens.Encoding.Bytes.Parser NativeScript
+        loop x
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t) x)
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        10
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.getBytes
+                                             (Prelude.fromIntegral len))
+                                       "script_pubkey"
+                                loop
+                                  (Lens.Family2.set
+                                     (Data.ProtoLens.Field.field @"scriptPubkey") y x)
+                        18
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "script_all"
+                                loop
+                                  (Lens.Family2.set (Data.ProtoLens.Field.field @"scriptAll") y x)
+                        26
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "script_any"
+                                loop
+                                  (Lens.Family2.set (Data.ProtoLens.Field.field @"scriptAny") y x)
+                        34
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "script_n_of_k"
+                                loop
+                                  (Lens.Family2.set (Data.ProtoLens.Field.field @"scriptNOfK") y x)
+                        40
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       Data.ProtoLens.Encoding.Bytes.getVarInt "invalid_before"
+                                loop
+                                  (Lens.Family2.set
+                                     (Data.ProtoLens.Field.field @"invalidBefore") y x)
+                        48
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       Data.ProtoLens.Encoding.Bytes.getVarInt "invalid_hereafter"
+                                loop
+                                  (Lens.Family2.set
+                                     (Data.ProtoLens.Field.field @"invalidHereafter") y x)
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do loop Data.ProtoLens.defMessage) "NativeScript"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (case
+                  Lens.Family2.view
+                    (Data.ProtoLens.Field.field @"maybe'nativeScript") _x
+              of
+                Prelude.Nothing -> Data.Monoid.mempty
+                (Prelude.Just (NativeScript'ScriptPubkey v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                       ((\ bs
+                           -> (Data.Monoid.<>)
+                                (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                   (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          v)
+                (Prelude.Just (NativeScript'ScriptAll v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage v)
+                (Prelude.Just (NativeScript'ScriptAny v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage v)
+                (Prelude.Just (NativeScript'ScriptNOfK v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 34)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage v)
+                (Prelude.Just (NativeScript'InvalidBefore v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 40)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt v)
+                (Prelude.Just (NativeScript'InvalidHereafter v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 48)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt v))
+             (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                (Lens.Family2.view Data.ProtoLens.unknownFields _x))
+instance Control.DeepSeq.NFData NativeScript where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_NativeScript'_unknownFields x__)
+             (Control.DeepSeq.deepseq (_NativeScript'nativeScript x__) ())
+instance Control.DeepSeq.NFData NativeScript'NativeScript where
+  rnf (NativeScript'ScriptPubkey x__) = Control.DeepSeq.rnf x__
+  rnf (NativeScript'ScriptAll x__) = Control.DeepSeq.rnf x__
+  rnf (NativeScript'ScriptAny x__) = Control.DeepSeq.rnf x__
+  rnf (NativeScript'ScriptNOfK x__) = Control.DeepSeq.rnf x__
+  rnf (NativeScript'InvalidBefore x__) = Control.DeepSeq.rnf x__
+  rnf (NativeScript'InvalidHereafter x__) = Control.DeepSeq.rnf x__
+_NativeScript'ScriptPubkey ::
+  Data.ProtoLens.Prism.Prism' NativeScript'NativeScript Data.ByteString.ByteString
+_NativeScript'ScriptPubkey
+  = Data.ProtoLens.Prism.prism'
+      NativeScript'ScriptPubkey
+      (\ p__
+         -> case p__ of
+              (NativeScript'ScriptPubkey p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+_NativeScript'ScriptAll ::
+  Data.ProtoLens.Prism.Prism' NativeScript'NativeScript NativeScriptList
+_NativeScript'ScriptAll
+  = Data.ProtoLens.Prism.prism'
+      NativeScript'ScriptAll
+      (\ p__
+         -> case p__ of
+              (NativeScript'ScriptAll p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+_NativeScript'ScriptAny ::
+  Data.ProtoLens.Prism.Prism' NativeScript'NativeScript NativeScriptList
+_NativeScript'ScriptAny
+  = Data.ProtoLens.Prism.prism'
+      NativeScript'ScriptAny
+      (\ p__
+         -> case p__ of
+              (NativeScript'ScriptAny p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+_NativeScript'ScriptNOfK ::
+  Data.ProtoLens.Prism.Prism' NativeScript'NativeScript ScriptNOfK
+_NativeScript'ScriptNOfK
+  = Data.ProtoLens.Prism.prism'
+      NativeScript'ScriptNOfK
+      (\ p__
+         -> case p__ of
+              (NativeScript'ScriptNOfK p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+_NativeScript'InvalidBefore ::
+  Data.ProtoLens.Prism.Prism' NativeScript'NativeScript Data.Word.Word64
+_NativeScript'InvalidBefore
+  = Data.ProtoLens.Prism.prism'
+      NativeScript'InvalidBefore
+      (\ p__
+         -> case p__ of
+              (NativeScript'InvalidBefore p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+_NativeScript'InvalidHereafter ::
+  Data.ProtoLens.Prism.Prism' NativeScript'NativeScript Data.Word.Word64
+_NativeScript'InvalidHereafter
+  = Data.ProtoLens.Prism.prism'
+      NativeScript'InvalidHereafter
+      (\ p__
+         -> case p__ of
+              (NativeScript'InvalidHereafter p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+{- | Fields :
+     
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.items' @:: Lens' NativeScriptList [NativeScript]@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.vec'items' @:: Lens' NativeScriptList (Data.Vector.Vector NativeScript)@ -}
+data NativeScriptList
+  = NativeScriptList'_constructor {_NativeScriptList'items :: !(Data.Vector.Vector NativeScript),
+                                   _NativeScriptList'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show NativeScriptList where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+instance Data.ProtoLens.Field.HasField NativeScriptList "items" [NativeScript] where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScriptList'items
+           (\ x__ y__ -> x__ {_NativeScriptList'items = y__}))
+        (Lens.Family2.Unchecked.lens
+           Data.Vector.Generic.toList
+           (\ _ y__ -> Data.Vector.Generic.fromList y__))
+instance Data.ProtoLens.Field.HasField NativeScriptList "vec'items" (Data.Vector.Vector NativeScript) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _NativeScriptList'items
+           (\ x__ y__ -> x__ {_NativeScriptList'items = y__}))
+        Prelude.id
+instance Data.ProtoLens.Message NativeScriptList where
+  messageName _
+    = Data.Text.pack "utxorpc.v1alpha.cardano.NativeScriptList"
+  packedMessageDescriptor _
+    = "\n\
+      \\DLENativeScriptList\DC2;\n\
+      \\ENQitems\CAN\SOH \ETX(\v2%.utxorpc.v1alpha.cardano.NativeScriptR\ENQitems"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        items__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "items"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor NativeScript)
+              (Data.ProtoLens.RepeatedField
+                 Data.ProtoLens.Unpacked (Data.ProtoLens.Field.field @"items")) ::
+              Data.ProtoLens.FieldDescriptor NativeScriptList
+      in
+        Data.Map.fromList [(Data.ProtoLens.Tag 1, items__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _NativeScriptList'_unknownFields
+        (\ x__ y__ -> x__ {_NativeScriptList'_unknownFields = y__})
+  defMessage
+    = NativeScriptList'_constructor
+        {_NativeScriptList'items = Data.Vector.Generic.empty,
+         _NativeScriptList'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          NativeScriptList
+          -> Data.ProtoLens.Encoding.Growing.Growing Data.Vector.Vector Data.ProtoLens.Encoding.Growing.RealWorld NativeScript
+             -> Data.ProtoLens.Encoding.Bytes.Parser NativeScriptList
+        loop x mutable'items
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do frozen'items <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                        (Data.ProtoLens.Encoding.Growing.unsafeFreeze mutable'items)
+                      (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t)
+                           (Lens.Family2.set
+                              (Data.ProtoLens.Field.field @"vec'items") frozen'items x))
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        10
+                          -> do !y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                        (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                            Data.ProtoLens.Encoding.Bytes.isolate
+                                              (Prelude.fromIntegral len)
+                                              Data.ProtoLens.parseMessage)
+                                        "items"
+                                v <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                       (Data.ProtoLens.Encoding.Growing.append mutable'items y)
+                                loop x v
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+                                  mutable'items
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do mutable'items <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                 Data.ProtoLens.Encoding.Growing.new
+              loop Data.ProtoLens.defMessage mutable'items)
+          "NativeScriptList"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (Data.ProtoLens.Encoding.Bytes.foldMapBuilder
+                (\ _v
+                   -> (Data.Monoid.<>)
+                        (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                        ((Prelude..)
+                           (\ bs
+                              -> (Data.Monoid.<>)
+                                   (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                      (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                   (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                           Data.ProtoLens.encodeMessage _v))
+                (Lens.Family2.view (Data.ProtoLens.Field.field @"vec'items") _x))
+             (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                (Lens.Family2.view Data.ProtoLens.unknownFields _x))
+instance Control.DeepSeq.NFData NativeScriptList where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_NativeScriptList'_unknownFields x__)
+             (Control.DeepSeq.deepseq (_NativeScriptList'items x__) ())
 {- | Fields :
      
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.coinsPerUtxoByte' @:: Lens' PParams Data.Word.Word64@
@@ -3141,6 +4305,864 @@ instance Control.DeepSeq.NFData PParams where
                                                                                                           ())))))))))))))))))))))))))))))))
 {- | Fields :
      
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'plutusData' @:: Lens' PlutusData (Prelude.Maybe PlutusData'PlutusData)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'constr' @:: Lens' PlutusData (Prelude.Maybe Constr)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.constr' @:: Lens' PlutusData Constr@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'map' @:: Lens' PlutusData (Prelude.Maybe PlutusDataMap)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.map' @:: Lens' PlutusData PlutusDataMap@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'bigInt' @:: Lens' PlutusData (Prelude.Maybe BigInt)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.bigInt' @:: Lens' PlutusData BigInt@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'boundedBytes' @:: Lens' PlutusData (Prelude.Maybe Data.ByteString.ByteString)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.boundedBytes' @:: Lens' PlutusData Data.ByteString.ByteString@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'array' @:: Lens' PlutusData (Prelude.Maybe PlutusDataArray)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.array' @:: Lens' PlutusData PlutusDataArray@ -}
+data PlutusData
+  = PlutusData'_constructor {_PlutusData'plutusData :: !(Prelude.Maybe PlutusData'PlutusData),
+                             _PlutusData'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show PlutusData where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+data PlutusData'PlutusData
+  = PlutusData'Constr !Constr |
+    PlutusData'Map !PlutusDataMap |
+    PlutusData'BigInt !BigInt |
+    PlutusData'BoundedBytes !Data.ByteString.ByteString |
+    PlutusData'Array !PlutusDataArray
+  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord)
+instance Data.ProtoLens.Field.HasField PlutusData "maybe'plutusData" (Prelude.Maybe PlutusData'PlutusData) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusData'plutusData
+           (\ x__ y__ -> x__ {_PlutusData'plutusData = y__}))
+        Prelude.id
+instance Data.ProtoLens.Field.HasField PlutusData "maybe'constr" (Prelude.Maybe Constr) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusData'plutusData
+           (\ x__ y__ -> x__ {_PlutusData'plutusData = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (PlutusData'Constr x__val)) -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap PlutusData'Constr y__))
+instance Data.ProtoLens.Field.HasField PlutusData "constr" Constr where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusData'plutusData
+           (\ x__ y__ -> x__ {_PlutusData'plutusData = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (PlutusData'Constr x__val)) -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap PlutusData'Constr y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage))
+instance Data.ProtoLens.Field.HasField PlutusData "maybe'map" (Prelude.Maybe PlutusDataMap) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusData'plutusData
+           (\ x__ y__ -> x__ {_PlutusData'plutusData = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (PlutusData'Map x__val)) -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap PlutusData'Map y__))
+instance Data.ProtoLens.Field.HasField PlutusData "map" PlutusDataMap where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusData'plutusData
+           (\ x__ y__ -> x__ {_PlutusData'plutusData = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (PlutusData'Map x__val)) -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap PlutusData'Map y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage))
+instance Data.ProtoLens.Field.HasField PlutusData "maybe'bigInt" (Prelude.Maybe BigInt) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusData'plutusData
+           (\ x__ y__ -> x__ {_PlutusData'plutusData = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (PlutusData'BigInt x__val)) -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap PlutusData'BigInt y__))
+instance Data.ProtoLens.Field.HasField PlutusData "bigInt" BigInt where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusData'plutusData
+           (\ x__ y__ -> x__ {_PlutusData'plutusData = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (PlutusData'BigInt x__val)) -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap PlutusData'BigInt y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage))
+instance Data.ProtoLens.Field.HasField PlutusData "maybe'boundedBytes" (Prelude.Maybe Data.ByteString.ByteString) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusData'plutusData
+           (\ x__ y__ -> x__ {_PlutusData'plutusData = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (PlutusData'BoundedBytes x__val))
+                     -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap PlutusData'BoundedBytes y__))
+instance Data.ProtoLens.Field.HasField PlutusData "boundedBytes" Data.ByteString.ByteString where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusData'plutusData
+           (\ x__ y__ -> x__ {_PlutusData'plutusData = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (PlutusData'BoundedBytes x__val))
+                        -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap PlutusData'BoundedBytes y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault))
+instance Data.ProtoLens.Field.HasField PlutusData "maybe'array" (Prelude.Maybe PlutusDataArray) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusData'plutusData
+           (\ x__ y__ -> x__ {_PlutusData'plutusData = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (PlutusData'Array x__val)) -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap PlutusData'Array y__))
+instance Data.ProtoLens.Field.HasField PlutusData "array" PlutusDataArray where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusData'plutusData
+           (\ x__ y__ -> x__ {_PlutusData'plutusData = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (PlutusData'Array x__val)) -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap PlutusData'Array y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage))
+instance Data.ProtoLens.Message PlutusData where
+  messageName _ = Data.Text.pack "utxorpc.v1alpha.cardano.PlutusData"
+  packedMessageDescriptor _
+    = "\n\
+      \\n\
+      \PlutusData\DC29\n\
+      \\ACKconstr\CAN\STX \SOH(\v2\US.utxorpc.v1alpha.cardano.ConstrH\NULR\ACKconstr\DC2:\n\
+      \\ETXmap\CAN\ETX \SOH(\v2&.utxorpc.v1alpha.cardano.PlutusDataMapH\NULR\ETXmap\DC2:\n\
+      \\abig_int\CAN\EOT \SOH(\v2\US.utxorpc.v1alpha.cardano.BigIntH\NULR\ACKbigInt\DC2%\n\
+      \\rbounded_bytes\CAN\ENQ \SOH(\fH\NULR\fboundedBytes\DC2@\n\
+      \\ENQarray\CAN\ACK \SOH(\v2(.utxorpc.v1alpha.cardano.PlutusDataArrayH\NULR\ENQarrayB\r\n\
+      \\vplutus_data"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        constr__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "constr"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor Constr)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'constr")) ::
+              Data.ProtoLens.FieldDescriptor PlutusData
+        map__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "map"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor PlutusDataMap)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'map")) ::
+              Data.ProtoLens.FieldDescriptor PlutusData
+        bigInt__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "big_int"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor BigInt)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'bigInt")) ::
+              Data.ProtoLens.FieldDescriptor PlutusData
+        boundedBytes__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "bounded_bytes"
+              (Data.ProtoLens.ScalarField Data.ProtoLens.BytesField ::
+                 Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'boundedBytes")) ::
+              Data.ProtoLens.FieldDescriptor PlutusData
+        array__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "array"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor PlutusDataArray)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'array")) ::
+              Data.ProtoLens.FieldDescriptor PlutusData
+      in
+        Data.Map.fromList
+          [(Data.ProtoLens.Tag 2, constr__field_descriptor),
+           (Data.ProtoLens.Tag 3, map__field_descriptor),
+           (Data.ProtoLens.Tag 4, bigInt__field_descriptor),
+           (Data.ProtoLens.Tag 5, boundedBytes__field_descriptor),
+           (Data.ProtoLens.Tag 6, array__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _PlutusData'_unknownFields
+        (\ x__ y__ -> x__ {_PlutusData'_unknownFields = y__})
+  defMessage
+    = PlutusData'_constructor
+        {_PlutusData'plutusData = Prelude.Nothing,
+         _PlutusData'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          PlutusData -> Data.ProtoLens.Encoding.Bytes.Parser PlutusData
+        loop x
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t) x)
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        18
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "constr"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"constr") y x)
+                        26
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "map"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"map") y x)
+                        34
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "big_int"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"bigInt") y x)
+                        42
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.getBytes
+                                             (Prelude.fromIntegral len))
+                                       "bounded_bytes"
+                                loop
+                                  (Lens.Family2.set
+                                     (Data.ProtoLens.Field.field @"boundedBytes") y x)
+                        50
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "array"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"array") y x)
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do loop Data.ProtoLens.defMessage) "PlutusData"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (case
+                  Lens.Family2.view
+                    (Data.ProtoLens.Field.field @"maybe'plutusData") _x
+              of
+                Prelude.Nothing -> Data.Monoid.mempty
+                (Prelude.Just (PlutusData'Constr v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage v)
+                (Prelude.Just (PlutusData'Map v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage v)
+                (Prelude.Just (PlutusData'BigInt v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 34)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage v)
+                (Prelude.Just (PlutusData'BoundedBytes v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 42)
+                       ((\ bs
+                           -> (Data.Monoid.<>)
+                                (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                   (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          v)
+                (Prelude.Just (PlutusData'Array v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 50)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage v))
+             (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                (Lens.Family2.view Data.ProtoLens.unknownFields _x))
+instance Control.DeepSeq.NFData PlutusData where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_PlutusData'_unknownFields x__)
+             (Control.DeepSeq.deepseq (_PlutusData'plutusData x__) ())
+instance Control.DeepSeq.NFData PlutusData'PlutusData where
+  rnf (PlutusData'Constr x__) = Control.DeepSeq.rnf x__
+  rnf (PlutusData'Map x__) = Control.DeepSeq.rnf x__
+  rnf (PlutusData'BigInt x__) = Control.DeepSeq.rnf x__
+  rnf (PlutusData'BoundedBytes x__) = Control.DeepSeq.rnf x__
+  rnf (PlutusData'Array x__) = Control.DeepSeq.rnf x__
+_PlutusData'Constr ::
+  Data.ProtoLens.Prism.Prism' PlutusData'PlutusData Constr
+_PlutusData'Constr
+  = Data.ProtoLens.Prism.prism'
+      PlutusData'Constr
+      (\ p__
+         -> case p__ of
+              (PlutusData'Constr p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+_PlutusData'Map ::
+  Data.ProtoLens.Prism.Prism' PlutusData'PlutusData PlutusDataMap
+_PlutusData'Map
+  = Data.ProtoLens.Prism.prism'
+      PlutusData'Map
+      (\ p__
+         -> case p__ of
+              (PlutusData'Map p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+_PlutusData'BigInt ::
+  Data.ProtoLens.Prism.Prism' PlutusData'PlutusData BigInt
+_PlutusData'BigInt
+  = Data.ProtoLens.Prism.prism'
+      PlutusData'BigInt
+      (\ p__
+         -> case p__ of
+              (PlutusData'BigInt p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+_PlutusData'BoundedBytes ::
+  Data.ProtoLens.Prism.Prism' PlutusData'PlutusData Data.ByteString.ByteString
+_PlutusData'BoundedBytes
+  = Data.ProtoLens.Prism.prism'
+      PlutusData'BoundedBytes
+      (\ p__
+         -> case p__ of
+              (PlutusData'BoundedBytes p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+_PlutusData'Array ::
+  Data.ProtoLens.Prism.Prism' PlutusData'PlutusData PlutusDataArray
+_PlutusData'Array
+  = Data.ProtoLens.Prism.prism'
+      PlutusData'Array
+      (\ p__
+         -> case p__ of
+              (PlutusData'Array p__val) -> Prelude.Just p__val
+              _otherwise -> Prelude.Nothing)
+{- | Fields :
+     
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.items' @:: Lens' PlutusDataArray [PlutusData]@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.vec'items' @:: Lens' PlutusDataArray (Data.Vector.Vector PlutusData)@ -}
+data PlutusDataArray
+  = PlutusDataArray'_constructor {_PlutusDataArray'items :: !(Data.Vector.Vector PlutusData),
+                                  _PlutusDataArray'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show PlutusDataArray where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+instance Data.ProtoLens.Field.HasField PlutusDataArray "items" [PlutusData] where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusDataArray'items
+           (\ x__ y__ -> x__ {_PlutusDataArray'items = y__}))
+        (Lens.Family2.Unchecked.lens
+           Data.Vector.Generic.toList
+           (\ _ y__ -> Data.Vector.Generic.fromList y__))
+instance Data.ProtoLens.Field.HasField PlutusDataArray "vec'items" (Data.Vector.Vector PlutusData) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusDataArray'items
+           (\ x__ y__ -> x__ {_PlutusDataArray'items = y__}))
+        Prelude.id
+instance Data.ProtoLens.Message PlutusDataArray where
+  messageName _
+    = Data.Text.pack "utxorpc.v1alpha.cardano.PlutusDataArray"
+  packedMessageDescriptor _
+    = "\n\
+      \\SIPlutusDataArray\DC29\n\
+      \\ENQitems\CAN\SOH \ETX(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\ENQitems"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        items__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "items"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor PlutusData)
+              (Data.ProtoLens.RepeatedField
+                 Data.ProtoLens.Unpacked (Data.ProtoLens.Field.field @"items")) ::
+              Data.ProtoLens.FieldDescriptor PlutusDataArray
+      in
+        Data.Map.fromList [(Data.ProtoLens.Tag 1, items__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _PlutusDataArray'_unknownFields
+        (\ x__ y__ -> x__ {_PlutusDataArray'_unknownFields = y__})
+  defMessage
+    = PlutusDataArray'_constructor
+        {_PlutusDataArray'items = Data.Vector.Generic.empty,
+         _PlutusDataArray'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          PlutusDataArray
+          -> Data.ProtoLens.Encoding.Growing.Growing Data.Vector.Vector Data.ProtoLens.Encoding.Growing.RealWorld PlutusData
+             -> Data.ProtoLens.Encoding.Bytes.Parser PlutusDataArray
+        loop x mutable'items
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do frozen'items <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                        (Data.ProtoLens.Encoding.Growing.unsafeFreeze mutable'items)
+                      (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t)
+                           (Lens.Family2.set
+                              (Data.ProtoLens.Field.field @"vec'items") frozen'items x))
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        10
+                          -> do !y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                        (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                            Data.ProtoLens.Encoding.Bytes.isolate
+                                              (Prelude.fromIntegral len)
+                                              Data.ProtoLens.parseMessage)
+                                        "items"
+                                v <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                       (Data.ProtoLens.Encoding.Growing.append mutable'items y)
+                                loop x v
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+                                  mutable'items
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do mutable'items <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                 Data.ProtoLens.Encoding.Growing.new
+              loop Data.ProtoLens.defMessage mutable'items)
+          "PlutusDataArray"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (Data.ProtoLens.Encoding.Bytes.foldMapBuilder
+                (\ _v
+                   -> (Data.Monoid.<>)
+                        (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                        ((Prelude..)
+                           (\ bs
+                              -> (Data.Monoid.<>)
+                                   (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                      (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                   (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                           Data.ProtoLens.encodeMessage _v))
+                (Lens.Family2.view (Data.ProtoLens.Field.field @"vec'items") _x))
+             (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                (Lens.Family2.view Data.ProtoLens.unknownFields _x))
+instance Control.DeepSeq.NFData PlutusDataArray where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_PlutusDataArray'_unknownFields x__)
+             (Control.DeepSeq.deepseq (_PlutusDataArray'items x__) ())
+{- | Fields :
+     
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.pairs' @:: Lens' PlutusDataMap [PlutusDataPair]@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.vec'pairs' @:: Lens' PlutusDataMap (Data.Vector.Vector PlutusDataPair)@ -}
+data PlutusDataMap
+  = PlutusDataMap'_constructor {_PlutusDataMap'pairs :: !(Data.Vector.Vector PlutusDataPair),
+                                _PlutusDataMap'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show PlutusDataMap where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+instance Data.ProtoLens.Field.HasField PlutusDataMap "pairs" [PlutusDataPair] where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusDataMap'pairs
+           (\ x__ y__ -> x__ {_PlutusDataMap'pairs = y__}))
+        (Lens.Family2.Unchecked.lens
+           Data.Vector.Generic.toList
+           (\ _ y__ -> Data.Vector.Generic.fromList y__))
+instance Data.ProtoLens.Field.HasField PlutusDataMap "vec'pairs" (Data.Vector.Vector PlutusDataPair) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusDataMap'pairs
+           (\ x__ y__ -> x__ {_PlutusDataMap'pairs = y__}))
+        Prelude.id
+instance Data.ProtoLens.Message PlutusDataMap where
+  messageName _
+    = Data.Text.pack "utxorpc.v1alpha.cardano.PlutusDataMap"
+  packedMessageDescriptor _
+    = "\n\
+      \\rPlutusDataMap\DC2=\n\
+      \\ENQpairs\CAN\SOH \ETX(\v2'.utxorpc.v1alpha.cardano.PlutusDataPairR\ENQpairs"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        pairs__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "pairs"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor PlutusDataPair)
+              (Data.ProtoLens.RepeatedField
+                 Data.ProtoLens.Unpacked (Data.ProtoLens.Field.field @"pairs")) ::
+              Data.ProtoLens.FieldDescriptor PlutusDataMap
+      in
+        Data.Map.fromList [(Data.ProtoLens.Tag 1, pairs__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _PlutusDataMap'_unknownFields
+        (\ x__ y__ -> x__ {_PlutusDataMap'_unknownFields = y__})
+  defMessage
+    = PlutusDataMap'_constructor
+        {_PlutusDataMap'pairs = Data.Vector.Generic.empty,
+         _PlutusDataMap'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          PlutusDataMap
+          -> Data.ProtoLens.Encoding.Growing.Growing Data.Vector.Vector Data.ProtoLens.Encoding.Growing.RealWorld PlutusDataPair
+             -> Data.ProtoLens.Encoding.Bytes.Parser PlutusDataMap
+        loop x mutable'pairs
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do frozen'pairs <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                        (Data.ProtoLens.Encoding.Growing.unsafeFreeze mutable'pairs)
+                      (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t)
+                           (Lens.Family2.set
+                              (Data.ProtoLens.Field.field @"vec'pairs") frozen'pairs x))
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        10
+                          -> do !y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                        (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                            Data.ProtoLens.Encoding.Bytes.isolate
+                                              (Prelude.fromIntegral len)
+                                              Data.ProtoLens.parseMessage)
+                                        "pairs"
+                                v <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                       (Data.ProtoLens.Encoding.Growing.append mutable'pairs y)
+                                loop x v
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+                                  mutable'pairs
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do mutable'pairs <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                 Data.ProtoLens.Encoding.Growing.new
+              loop Data.ProtoLens.defMessage mutable'pairs)
+          "PlutusDataMap"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (Data.ProtoLens.Encoding.Bytes.foldMapBuilder
+                (\ _v
+                   -> (Data.Monoid.<>)
+                        (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                        ((Prelude..)
+                           (\ bs
+                              -> (Data.Monoid.<>)
+                                   (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                      (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                   (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                           Data.ProtoLens.encodeMessage _v))
+                (Lens.Family2.view (Data.ProtoLens.Field.field @"vec'pairs") _x))
+             (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                (Lens.Family2.view Data.ProtoLens.unknownFields _x))
+instance Control.DeepSeq.NFData PlutusDataMap where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_PlutusDataMap'_unknownFields x__)
+             (Control.DeepSeq.deepseq (_PlutusDataMap'pairs x__) ())
+{- | Fields :
+     
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.key' @:: Lens' PlutusDataPair PlutusData@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'key' @:: Lens' PlutusDataPair (Prelude.Maybe PlutusData)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.value' @:: Lens' PlutusDataPair PlutusData@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'value' @:: Lens' PlutusDataPair (Prelude.Maybe PlutusData)@ -}
+data PlutusDataPair
+  = PlutusDataPair'_constructor {_PlutusDataPair'key :: !(Prelude.Maybe PlutusData),
+                                 _PlutusDataPair'value :: !(Prelude.Maybe PlutusData),
+                                 _PlutusDataPair'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show PlutusDataPair where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+instance Data.ProtoLens.Field.HasField PlutusDataPair "key" PlutusData where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusDataPair'key (\ x__ y__ -> x__ {_PlutusDataPair'key = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage)
+instance Data.ProtoLens.Field.HasField PlutusDataPair "maybe'key" (Prelude.Maybe PlutusData) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusDataPair'key (\ x__ y__ -> x__ {_PlutusDataPair'key = y__}))
+        Prelude.id
+instance Data.ProtoLens.Field.HasField PlutusDataPair "value" PlutusData where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusDataPair'value
+           (\ x__ y__ -> x__ {_PlutusDataPair'value = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage)
+instance Data.ProtoLens.Field.HasField PlutusDataPair "maybe'value" (Prelude.Maybe PlutusData) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _PlutusDataPair'value
+           (\ x__ y__ -> x__ {_PlutusDataPair'value = y__}))
+        Prelude.id
+instance Data.ProtoLens.Message PlutusDataPair where
+  messageName _
+    = Data.Text.pack "utxorpc.v1alpha.cardano.PlutusDataPair"
+  packedMessageDescriptor _
+    = "\n\
+      \\SOPlutusDataPair\DC25\n\
+      \\ETXkey\CAN\SOH \SOH(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\ETXkey\DC29\n\
+      \\ENQvalue\CAN\STX \SOH(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\ENQvalue"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        key__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "key"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor PlutusData)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'key")) ::
+              Data.ProtoLens.FieldDescriptor PlutusDataPair
+        value__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "value"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor PlutusData)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'value")) ::
+              Data.ProtoLens.FieldDescriptor PlutusDataPair
+      in
+        Data.Map.fromList
+          [(Data.ProtoLens.Tag 1, key__field_descriptor),
+           (Data.ProtoLens.Tag 2, value__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _PlutusDataPair'_unknownFields
+        (\ x__ y__ -> x__ {_PlutusDataPair'_unknownFields = y__})
+  defMessage
+    = PlutusDataPair'_constructor
+        {_PlutusDataPair'key = Prelude.Nothing,
+         _PlutusDataPair'value = Prelude.Nothing,
+         _PlutusDataPair'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          PlutusDataPair
+          -> Data.ProtoLens.Encoding.Bytes.Parser PlutusDataPair
+        loop x
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t) x)
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        10
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "key"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"key") y x)
+                        18
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "value"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"value") y x)
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do loop Data.ProtoLens.defMessage) "PlutusDataPair"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (case
+                  Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'key") _x
+              of
+                Prelude.Nothing -> Data.Monoid.mempty
+                (Prelude.Just _v)
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage _v))
+             ((Data.Monoid.<>)
+                (case
+                     Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'value") _x
+                 of
+                   Prelude.Nothing -> Data.Monoid.mempty
+                   (Prelude.Just _v)
+                     -> (Data.Monoid.<>)
+                          (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
+                          ((Prelude..)
+                             (\ bs
+                                -> (Data.Monoid.<>)
+                                     (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                        (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                     (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                             Data.ProtoLens.encodeMessage _v))
+                (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                   (Lens.Family2.view Data.ProtoLens.unknownFields _x)))
+instance Control.DeepSeq.NFData PlutusDataPair where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_PlutusDataPair'_unknownFields x__)
+             (Control.DeepSeq.deepseq
+                (_PlutusDataPair'key x__)
+                (Control.DeepSeq.deepseq (_PlutusDataPair'value x__) ()))
+{- | Fields :
+     
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.major' @:: Lens' ProtocolVersion Data.Word.Word32@
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.minor' @:: Lens' ProtocolVersion Data.Word.Word32@ -}
 data ProtocolVersion
@@ -3439,8 +5461,8 @@ instance Control.DeepSeq.NFData RationalNumber where
 {- | Fields :
      
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'script' @:: Lens' Script (Prelude.Maybe Script'Script)@
-         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'native' @:: Lens' Script (Prelude.Maybe Data.ByteString.ByteString)@
-         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.native' @:: Lens' Script Data.ByteString.ByteString@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'native' @:: Lens' Script (Prelude.Maybe NativeScript)@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.native' @:: Lens' Script NativeScript@
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'plutusV1' @:: Lens' Script (Prelude.Maybe Data.ByteString.ByteString)@
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.plutusV1' @:: Lens' Script Data.ByteString.ByteString@
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'plutusV2' @:: Lens' Script (Prelude.Maybe Data.ByteString.ByteString)@
@@ -3460,7 +5482,7 @@ instance Prelude.Show Script where
         (Prelude.showString
            (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
 data Script'Script
-  = Script'Native !Data.ByteString.ByteString |
+  = Script'Native !NativeScript |
     Script'PlutusV1 !Data.ByteString.ByteString |
     Script'PlutusV2 !Data.ByteString.ByteString |
     Script'PlutusV3 !Data.ByteString.ByteString |
@@ -3472,7 +5494,7 @@ instance Data.ProtoLens.Field.HasField Script "maybe'script" (Prelude.Maybe Scri
         (Lens.Family2.Unchecked.lens
            _Script'script (\ x__ y__ -> x__ {_Script'script = y__}))
         Prelude.id
-instance Data.ProtoLens.Field.HasField Script "maybe'native" (Prelude.Maybe Data.ByteString.ByteString) where
+instance Data.ProtoLens.Field.HasField Script "maybe'native" (Prelude.Maybe NativeScript) where
   fieldOf _
     = (Prelude..)
         (Lens.Family2.Unchecked.lens
@@ -3483,7 +5505,7 @@ instance Data.ProtoLens.Field.HasField Script "maybe'native" (Prelude.Maybe Data
                    (Prelude.Just (Script'Native x__val)) -> Prelude.Just x__val
                    _otherwise -> Prelude.Nothing)
            (\ _ y__ -> Prelude.fmap Script'Native y__))
-instance Data.ProtoLens.Field.HasField Script "native" Data.ByteString.ByteString where
+instance Data.ProtoLens.Field.HasField Script "native" NativeScript where
   fieldOf _
     = (Prelude..)
         (Lens.Family2.Unchecked.lens
@@ -3495,7 +5517,7 @@ instance Data.ProtoLens.Field.HasField Script "native" Data.ByteString.ByteStrin
                       (Prelude.Just (Script'Native x__val)) -> Prelude.Just x__val
                       _otherwise -> Prelude.Nothing)
               (\ _ y__ -> Prelude.fmap Script'Native y__))
-           (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage))
 instance Data.ProtoLens.Field.HasField Script "maybe'plutusV1" (Prelude.Maybe Data.ByteString.ByteString) where
   fieldOf _
     = (Prelude..)
@@ -3596,8 +5618,8 @@ instance Data.ProtoLens.Message Script where
   messageName _ = Data.Text.pack "utxorpc.v1alpha.cardano.Script"
   packedMessageDescriptor _
     = "\n\
-      \\ACKScript\DC2\CAN\n\
-      \\ACKnative\CAN\SOH \SOH(\fH\NULR\ACKnative\DC2\GS\n\
+      \\ACKScript\DC2?\n\
+      \\ACKnative\CAN\SOH \SOH(\v2%.utxorpc.v1alpha.cardano.NativeScriptH\NULR\ACKnative\DC2\GS\n\
       \\tplutus_v1\CAN\STX \SOH(\fH\NULR\bplutusV1\DC2\GS\n\
       \\tplutus_v2\CAN\ETX \SOH(\fH\NULR\bplutusV2\DC2\GS\n\
       \\tplutus_v3\CAN\EOT \SOH(\fH\NULR\bplutusV3\DC2\GS\n\
@@ -3609,8 +5631,8 @@ instance Data.ProtoLens.Message Script where
         native__field_descriptor
           = Data.ProtoLens.FieldDescriptor
               "native"
-              (Data.ProtoLens.ScalarField Data.ProtoLens.BytesField ::
-                 Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor NativeScript)
               (Data.ProtoLens.OptionalField
                  (Data.ProtoLens.Field.field @"maybe'native")) ::
               Data.ProtoLens.FieldDescriptor Script
@@ -3684,8 +5706,8 @@ instance Data.ProtoLens.Message Script where
                         10
                           -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
                                        (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
-                                           Data.ProtoLens.Encoding.Bytes.getBytes
-                                             (Prelude.fromIntegral len))
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
                                        "native"
                                 loop (Lens.Family2.set (Data.ProtoLens.Field.field @"native") y x)
                         18
@@ -3739,12 +5761,13 @@ instance Data.ProtoLens.Message Script where
                 (Prelude.Just (Script'Native v))
                   -> (Data.Monoid.<>)
                        (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
-                       ((\ bs
-                           -> (Data.Monoid.<>)
-                                (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                   (Prelude.fromIntegral (Data.ByteString.length bs)))
-                                (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                          v)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage v)
                 (Prelude.Just (Script'PlutusV1 v))
                   -> (Data.Monoid.<>)
                        (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
@@ -3796,7 +5819,7 @@ instance Control.DeepSeq.NFData Script'Script where
   rnf (Script'PlutusV3 x__) = Control.DeepSeq.rnf x__
   rnf (Script'PlutusV4 x__) = Control.DeepSeq.rnf x__
 _Script'Native ::
-  Data.ProtoLens.Prism.Prism' Script'Script Data.ByteString.ByteString
+  Data.ProtoLens.Prism.Prism' Script'Script NativeScript
 _Script'Native
   = Data.ProtoLens.Prism.prism'
       Script'Native
@@ -3840,6 +5863,177 @@ _Script'PlutusV4
          -> case p__ of
               (Script'PlutusV4 p__val) -> Prelude.Just p__val
               _otherwise -> Prelude.Nothing)
+{- | Fields :
+     
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.k' @:: Lens' ScriptNOfK Data.Word.Word32@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.scripts' @:: Lens' ScriptNOfK [NativeScript]@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.vec'scripts' @:: Lens' ScriptNOfK (Data.Vector.Vector NativeScript)@ -}
+data ScriptNOfK
+  = ScriptNOfK'_constructor {_ScriptNOfK'k :: !Data.Word.Word32,
+                             _ScriptNOfK'scripts :: !(Data.Vector.Vector NativeScript),
+                             _ScriptNOfK'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show ScriptNOfK where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+instance Data.ProtoLens.Field.HasField ScriptNOfK "k" Data.Word.Word32 where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _ScriptNOfK'k (\ x__ y__ -> x__ {_ScriptNOfK'k = y__}))
+        Prelude.id
+instance Data.ProtoLens.Field.HasField ScriptNOfK "scripts" [NativeScript] where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _ScriptNOfK'scripts (\ x__ y__ -> x__ {_ScriptNOfK'scripts = y__}))
+        (Lens.Family2.Unchecked.lens
+           Data.Vector.Generic.toList
+           (\ _ y__ -> Data.Vector.Generic.fromList y__))
+instance Data.ProtoLens.Field.HasField ScriptNOfK "vec'scripts" (Data.Vector.Vector NativeScript) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _ScriptNOfK'scripts (\ x__ y__ -> x__ {_ScriptNOfK'scripts = y__}))
+        Prelude.id
+instance Data.ProtoLens.Message ScriptNOfK where
+  messageName _ = Data.Text.pack "utxorpc.v1alpha.cardano.ScriptNOfK"
+  packedMessageDescriptor _
+    = "\n\
+      \\n\
+      \ScriptNOfK\DC2\f\n\
+      \\SOHk\CAN\SOH \SOH(\rR\SOHk\DC2?\n\
+      \\ascripts\CAN\STX \ETX(\v2%.utxorpc.v1alpha.cardano.NativeScriptR\ascripts"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        k__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "k"
+              (Data.ProtoLens.ScalarField Data.ProtoLens.UInt32Field ::
+                 Data.ProtoLens.FieldTypeDescriptor Data.Word.Word32)
+              (Data.ProtoLens.PlainField
+                 Data.ProtoLens.Optional (Data.ProtoLens.Field.field @"k")) ::
+              Data.ProtoLens.FieldDescriptor ScriptNOfK
+        scripts__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "scripts"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor NativeScript)
+              (Data.ProtoLens.RepeatedField
+                 Data.ProtoLens.Unpacked (Data.ProtoLens.Field.field @"scripts")) ::
+              Data.ProtoLens.FieldDescriptor ScriptNOfK
+      in
+        Data.Map.fromList
+          [(Data.ProtoLens.Tag 1, k__field_descriptor),
+           (Data.ProtoLens.Tag 2, scripts__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _ScriptNOfK'_unknownFields
+        (\ x__ y__ -> x__ {_ScriptNOfK'_unknownFields = y__})
+  defMessage
+    = ScriptNOfK'_constructor
+        {_ScriptNOfK'k = Data.ProtoLens.fieldDefault,
+         _ScriptNOfK'scripts = Data.Vector.Generic.empty,
+         _ScriptNOfK'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          ScriptNOfK
+          -> Data.ProtoLens.Encoding.Growing.Growing Data.Vector.Vector Data.ProtoLens.Encoding.Growing.RealWorld NativeScript
+             -> Data.ProtoLens.Encoding.Bytes.Parser ScriptNOfK
+        loop x mutable'scripts
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do frozen'scripts <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                          (Data.ProtoLens.Encoding.Growing.unsafeFreeze
+                                             mutable'scripts)
+                      (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t)
+                           (Lens.Family2.set
+                              (Data.ProtoLens.Field.field @"vec'scripts") frozen'scripts x))
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        8 -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (Prelude.fmap
+                                          Prelude.fromIntegral
+                                          Data.ProtoLens.Encoding.Bytes.getVarInt)
+                                       "k"
+                                loop
+                                  (Lens.Family2.set (Data.ProtoLens.Field.field @"k") y x)
+                                  mutable'scripts
+                        18
+                          -> do !y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                        (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                            Data.ProtoLens.Encoding.Bytes.isolate
+                                              (Prelude.fromIntegral len)
+                                              Data.ProtoLens.parseMessage)
+                                        "scripts"
+                                v <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                       (Data.ProtoLens.Encoding.Growing.append mutable'scripts y)
+                                loop x v
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+                                  mutable'scripts
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do mutable'scripts <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                   Data.ProtoLens.Encoding.Growing.new
+              loop Data.ProtoLens.defMessage mutable'scripts)
+          "ScriptNOfK"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (let _v = Lens.Family2.view (Data.ProtoLens.Field.field @"k") _x
+              in
+                if (Prelude.==) _v Data.ProtoLens.fieldDefault then
+                    Data.Monoid.mempty
+                else
+                    (Data.Monoid.<>)
+                      (Data.ProtoLens.Encoding.Bytes.putVarInt 8)
+                      ((Prelude..)
+                         Data.ProtoLens.Encoding.Bytes.putVarInt Prelude.fromIntegral _v))
+             ((Data.Monoid.<>)
+                (Data.ProtoLens.Encoding.Bytes.foldMapBuilder
+                   (\ _v
+                      -> (Data.Monoid.<>)
+                           (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
+                           ((Prelude..)
+                              (\ bs
+                                 -> (Data.Monoid.<>)
+                                      (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                         (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                      (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                              Data.ProtoLens.encodeMessage _v))
+                   (Lens.Family2.view (Data.ProtoLens.Field.field @"vec'scripts") _x))
+                (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                   (Lens.Family2.view Data.ProtoLens.unknownFields _x)))
+instance Control.DeepSeq.NFData ScriptNOfK where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_ScriptNOfK'_unknownFields x__)
+             (Control.DeepSeq.deepseq
+                (_ScriptNOfK'k x__)
+                (Control.DeepSeq.deepseq (_ScriptNOfK'scripts x__) ()))
 {- | Fields :
      
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.address' @:: Lens' TxOutput Data.ByteString.ByteString@
@@ -4305,9 +6499,10 @@ packedFileDescriptor
     \\ENQdatum\CAN\EOT \SOH(\v2\RS.utxorpc.v1alpha.cardano.DatumR\ENQdatum\DC27\n\
     \\ACKscript\CAN\ENQ \SOH(\v2\US.utxorpc.v1alpha.cardano.ScriptR\ACKscript\"$\n\
     \\fAddressArray\DC2\DC4\n\
-    \\ENQitems\CAN\SOH \ETX(\fR\ENQitems\"@\n\
+    \\ENQitems\CAN\SOH \ETX(\fR\ENQitems\"\DEL\n\
     \\ENQDatum\DC2\DC2\n\
-    \\EOThash\CAN\SOH \SOH(\fR\EOThash\DC2#\n\
+    \\EOThash\CAN\SOH \SOH(\fR\EOThash\DC2=\n\
+    \\apayload\CAN\STX \SOH(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\apayload\DC2#\n\
     \\roriginal_cbor\CAN\ETX \SOH(\fR\foriginalCbor\"q\n\
     \\ENQAsset\DC2\DC2\n\
     \\EOTname\CAN\SOH \SOH(\fR\EOTname\DC2%\n\
@@ -4319,9 +6514,50 @@ packedFileDescriptor
     \\n\
     \MultiAsset\DC2\ESC\n\
     \\tpolicy_id\CAN\SOH \SOH(\fR\bpolicyId\DC26\n\
-    \\ACKassets\CAN\STX \ETX(\v2\RS.utxorpc.v1alpha.cardano.AssetR\ACKassets\"\168\SOH\n\
-    \\ACKScript\DC2\CAN\n\
-    \\ACKnative\CAN\SOH \SOH(\fH\NULR\ACKnative\DC2\GS\n\
+    \\ACKassets\CAN\STX \ETX(\v2\RS.utxorpc.v1alpha.cardano.AssetR\ACKassets\"\128\ETX\n\
+    \\fNativeScript\DC2%\n\
+    \\rscript_pubkey\CAN\SOH \SOH(\fH\NULR\fscriptPubkey\DC2J\n\
+    \\n\
+    \script_all\CAN\STX \SOH(\v2).utxorpc.v1alpha.cardano.NativeScriptListH\NULR\tscriptAll\DC2J\n\
+    \\n\
+    \script_any\CAN\ETX \SOH(\v2).utxorpc.v1alpha.cardano.NativeScriptListH\NULR\tscriptAny\DC2H\n\
+    \\rscript_n_of_k\CAN\EOT \SOH(\v2#.utxorpc.v1alpha.cardano.ScriptNOfKH\NULR\n\
+    \scriptNOfK\DC2'\n\
+    \\SOinvalid_before\CAN\ENQ \SOH(\EOTH\NULR\rinvalidBefore\DC2-\n\
+    \\DC1invalid_hereafter\CAN\ACK \SOH(\EOTH\NULR\DLEinvalidHereafterB\SI\n\
+    \\rnative_script\"O\n\
+    \\DLENativeScriptList\DC2;\n\
+    \\ENQitems\CAN\SOH \ETX(\v2%.utxorpc.v1alpha.cardano.NativeScriptR\ENQitems\"[\n\
+    \\n\
+    \ScriptNOfK\DC2\f\n\
+    \\SOHk\CAN\SOH \SOH(\rR\SOHk\DC2?\n\
+    \\ascripts\CAN\STX \ETX(\v2%.utxorpc.v1alpha.cardano.NativeScriptR\ascripts\"\128\SOH\n\
+    \\ACKConstr\DC2\DLE\n\
+    \\ETXtag\CAN\SOH \SOH(\rR\ETXtag\DC2'\n\
+    \\SIany_constructor\CAN\STX \SOH(\EOTR\SOanyConstructor\DC2;\n\
+    \\ACKfields\CAN\ETX \ETX(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\ACKfields\"g\n\
+    \\ACKBigInt\DC2\SYN\n\
+    \\ETXint\CAN\SOH \SOH(\ETXH\NULR\ETXintB\STX0\SOH\DC2\FS\n\
+    \\tbig_u_int\CAN\STX \SOH(\fH\NULR\abigUInt\DC2\FS\n\
+    \\tbig_n_int\CAN\ETX \SOH(\fH\NULR\abigNIntB\t\n\
+    \\abig_int\"\130\SOH\n\
+    \\SOPlutusDataPair\DC25\n\
+    \\ETXkey\CAN\SOH \SOH(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\ETXkey\DC29\n\
+    \\ENQvalue\CAN\STX \SOH(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\ENQvalue\"\183\STX\n\
+    \\n\
+    \PlutusData\DC29\n\
+    \\ACKconstr\CAN\STX \SOH(\v2\US.utxorpc.v1alpha.cardano.ConstrH\NULR\ACKconstr\DC2:\n\
+    \\ETXmap\CAN\ETX \SOH(\v2&.utxorpc.v1alpha.cardano.PlutusDataMapH\NULR\ETXmap\DC2:\n\
+    \\abig_int\CAN\EOT \SOH(\v2\US.utxorpc.v1alpha.cardano.BigIntH\NULR\ACKbigInt\DC2%\n\
+    \\rbounded_bytes\CAN\ENQ \SOH(\fH\NULR\fboundedBytes\DC2@\n\
+    \\ENQarray\CAN\ACK \SOH(\v2(.utxorpc.v1alpha.cardano.PlutusDataArrayH\NULR\ENQarrayB\r\n\
+    \\vplutus_data\"N\n\
+    \\rPlutusDataMap\DC2=\n\
+    \\ENQpairs\CAN\SOH \ETX(\v2'.utxorpc.v1alpha.cardano.PlutusDataPairR\ENQpairs\"L\n\
+    \\SIPlutusDataArray\DC29\n\
+    \\ENQitems\CAN\SOH \ETX(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\ENQitems\"\207\SOH\n\
+    \\ACKScript\DC2?\n\
+    \\ACKnative\CAN\SOH \SOH(\v2%.utxorpc.v1alpha.cardano.NativeScriptH\NULR\ACKnative\DC2\GS\n\
     \\tplutus_v1\CAN\STX \SOH(\fH\NULR\bplutusV1\DC2\GS\n\
     \\tplutus_v2\CAN\ETX \SOH(\fH\NULR\bplutusV2\DC2\GS\n\
     \\tplutus_v3\CAN\EOT \SOH(\fH\NULR\bplutusV3\DC2\GS\n\
@@ -4385,8 +6621,8 @@ packedFileDescriptor
     \\EMgovernance_action_deposit\CAN\GS \SOH(\EOTR\ETBgovernanceActionDepositB\STX0\SOH\DC2%\n\
     \\fdrep_deposit\CAN\RS \SOH(\EOTR\vdrepDepositB\STX0\SOH\DC24\n\
     \\SYNdrep_inactivity_period\CAN\US \SOH(\EOTR\DC4drepInactivityPeriodB\169\SOH\n\
-    \\ESCcom.utxorpc.v1alpha.cardanoB\fCardanoProtoP\SOH\162\STX\ETXUVC\170\STX\ETBUtxorpc.V1alpha.Cardano\202\STX\ETBUtxorpc\\V1alpha\\Cardano\226\STX#Utxorpc\\V1alpha\\Cardano\\GPBMetadata\234\STX\EMUtxorpc::V1alpha::CardanoJ\180\&3\n\
-    \\ACK\DC2\EOT\NUL\NUL|\SOH\n\
+    \\ESCcom.utxorpc.v1alpha.cardanoB\fCardanoProtoP\SOH\162\STX\ETXUVC\170\STX\ETBUtxorpc.V1alpha.Cardano\202\STX\ETBUtxorpc\\V1alpha\\Cardano\226\STX#Utxorpc\\V1alpha\\Cardano\\GPBMetadata\234\STX\EMUtxorpc::V1alpha::CardanoJ\157K\n\
+    \\a\DC2\ENQ\NUL\NUL\192\SOH\SOH\n\
     \\b\n\
     \\SOH\f\DC2\ETX\NUL\NUL\DC2\n\
     \\b\n\
@@ -4470,30 +6706,39 @@ packedFileDescriptor
     \\ENQ\EOT\SOH\STX\NUL\SOH\DC2\ETX\SI\DC1\SYN\n\
     \\f\n\
     \\ENQ\EOT\SOH\STX\NUL\ETX\DC2\ETX\SI\EM\SUB\n\
-    \<\n\
-    \\STX\EOT\STX\DC2\EOT\DC3\NUL\SYN\SOH\SUB0 TODO u5c: replaced plutus_data with just bytes\n\
     \\n\
     \\n\
+    \\STX\EOT\STX\DC2\EOT\DC2\NUL\SYN\SOH\n\
     \\n\
-    \\ETX\EOT\STX\SOH\DC2\ETX\DC3\b\r\n\
+    \\n\
+    \\ETX\EOT\STX\SOH\DC2\ETX\DC2\b\r\n\
     \2\n\
-    \\EOT\EOT\STX\STX\NUL\DC2\ETX\DC4\STX\DC1\"% Hash of this datum as seen on-chain\n\
+    \\EOT\EOT\STX\STX\NUL\DC2\ETX\DC3\STX\DC1\"% Hash of this datum as seen on-chain\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\NUL\ENQ\DC2\ETX\DC4\STX\a\n\
+    \\ENQ\EOT\STX\STX\NUL\ENQ\DC2\ETX\DC3\STX\a\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\NUL\SOH\DC2\ETX\DC4\b\f\n\
+    \\ENQ\EOT\STX\STX\NUL\SOH\DC2\ETX\DC3\b\f\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\NUL\ETX\DC2\ETX\DC4\SI\DLE\n\
+    \\ENQ\EOT\STX\STX\NUL\ETX\DC2\ETX\DC3\SI\DLE\n\
+    \)\n\
+    \\EOT\EOT\STX\STX\SOH\DC2\ETX\DC4\STX\EM\"\FS Parsed Plutus data payload\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\STX\STX\SOH\ACK\DC2\ETX\DC4\STX\f\n\
+    \\f\n\
+    \\ENQ\EOT\STX\STX\SOH\SOH\DC2\ETX\DC4\r\DC4\n\
+    \\f\n\
+    \\ENQ\EOT\STX\STX\SOH\ETX\DC2\ETX\DC4\ETB\CAN\n\
     \:\n\
-    \\EOT\EOT\STX\STX\SOH\DC2\ETX\NAK\STX\SUB\"- Original cbor-encoded data as seen on-chain\n\
+    \\EOT\EOT\STX\STX\STX\DC2\ETX\NAK\STX\SUB\"- Original cbor-encoded data as seen on-chain\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\SOH\ENQ\DC2\ETX\NAK\STX\a\n\
+    \\ENQ\EOT\STX\STX\STX\ENQ\DC2\ETX\NAK\STX\a\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\SOH\SOH\DC2\ETX\NAK\b\NAK\n\
+    \\ENQ\EOT\STX\STX\STX\SOH\DC2\ETX\NAK\b\NAK\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\SOH\ETX\DC2\ETX\NAK\CAN\EM\n\
+    \\ENQ\EOT\STX\STX\STX\ETX\DC2\ETX\NAK\CAN\EM\n\
     \B\n\
     \\STX\EOT\ETX\DC2\EOT\EM\NUL\US\SOH\SUB6 Represents a custom asset in the Cardano blockchain.\n\
     \\n\
@@ -4569,589 +6814,883 @@ packedFileDescriptor
     \\ENQ\EOT\EOT\STX\SOH\SOH\DC2\ETX%\DC1\ETB\n\
     \\f\n\
     \\ENQ\EOT\EOT\STX\SOH\ETX\DC2\ETX%\SUB\ESC\n\
+    \4\n\
+    \\STX\EOT\ENQ\DC2\EOT)\NUL2\SOH\SUB( Represents a native script in Cardano.\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\ENQ\SOH\DC2\ETX)\b\DC4\n\
+    \\f\n\
+    \\EOT\EOT\ENQ\b\NUL\DC2\EOT*\STX1\ETX\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\b\NUL\SOH\DC2\ETX*\b\NAK\n\
+    \3\n\
+    \\EOT\EOT\ENQ\STX\NUL\DC2\ETX+\EOT\FS\"& Script based on an address key hash.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\NUL\ENQ\DC2\ETX+\EOT\t\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\NUL\SOH\DC2\ETX+\n\
+    \\ETB\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\NUL\ETX\DC2\ETX+\SUB\ESC\n\
+    \G\n\
+    \\EOT\EOT\ENQ\STX\SOH\DC2\ETX,\EOT$\": Script that requires all nested scripts to be satisfied.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\SOH\ACK\DC2\ETX,\EOT\DC4\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\SOH\SOH\DC2\ETX,\NAK\US\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\SOH\ETX\DC2\ETX,\"#\n\
+    \N\n\
+    \\EOT\EOT\ENQ\STX\STX\DC2\ETX-\EOT$\"A Script that requires any of the nested scripts to be satisfied.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\STX\ACK\DC2\ETX-\EOT\DC4\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\STX\SOH\DC2\ETX-\NAK\US\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\STX\ETX\DC2\ETX-\"#\n\
+    \N\n\
+    \\EOT\EOT\ENQ\STX\ETX\DC2\ETX.\EOT!\"A Script that requires k out of n nested scripts to be satisfied.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\ETX\ACK\DC2\ETX.\EOT\SO\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\ETX\SOH\DC2\ETX.\SI\FS\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\ETX\ETX\DC2\ETX.\US \n\
+    \>\n\
+    \\EOT\EOT\ENQ\STX\EOT\DC2\ETX/\EOT\RS\"1 Slot number before which the script is invalid.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\EOT\ENQ\DC2\ETX/\EOT\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\EOT\SOH\DC2\ETX/\v\EM\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\EOT\ETX\DC2\ETX/\FS\GS\n\
+    \=\n\
+    \\EOT\EOT\ENQ\STX\ENQ\DC2\ETX0\EOT!\"0 Slot number after which the script is invalid.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\ENQ\ENQ\DC2\ETX0\EOT\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\ENQ\SOH\DC2\ETX0\v\FS\n\
+    \\f\n\
+    \\ENQ\EOT\ENQ\STX\ENQ\ETX\DC2\ETX0\US \n\
+    \2\n\
+    \\STX\EOT\ACK\DC2\EOT5\NUL7\SOH\SUB& Represents a list of native scripts.\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\ACK\SOH\DC2\ETX5\b\CAN\n\
+    \&\n\
+    \\EOT\EOT\ACK\STX\NUL\DC2\ETX6\STX\"\"\EM List of native scripts.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\ACK\STX\NUL\EOT\DC2\ETX6\STX\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\ACK\STX\NUL\ACK\DC2\ETX6\v\ETB\n\
+    \\f\n\
+    \\ENQ\EOT\ACK\STX\NUL\SOH\DC2\ETX6\CAN\GS\n\
+    \\f\n\
+    \\ENQ\EOT\ACK\STX\NUL\ETX\DC2\ETX6 !\n\
+    \6\n\
+    \\STX\EOT\a\DC2\EOT:\NUL=\SOH\SUB* Represents a \"k out of n\" native script.\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\a\SOH\DC2\ETX:\b\DC2\n\
+    \8\n\
+    \\EOT\EOT\a\STX\NUL\DC2\ETX;\STX\SI\"+ The number of required satisfied scripts.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\a\STX\NUL\ENQ\DC2\ETX;\STX\b\n\
+    \\f\n\
+    \\ENQ\EOT\a\STX\NUL\SOH\DC2\ETX;\t\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\a\STX\NUL\ETX\DC2\ETX;\r\SO\n\
+    \&\n\
+    \\EOT\EOT\a\STX\SOH\DC2\ETX<\STX$\"\EM List of native scripts.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\a\STX\SOH\EOT\DC2\ETX<\STX\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\a\STX\SOH\ACK\DC2\ETX<\v\ETB\n\
+    \\f\n\
+    \\ENQ\EOT\a\STX\SOH\SOH\DC2\ETX<\CAN\US\n\
+    \\f\n\
+    \\ENQ\EOT\a\STX\SOH\ETX\DC2\ETX<\"#\n\
+    \B\n\
+    \\STX\EOT\b\DC2\EOT@\NULD\SOH\SUB6 Represents a constructor for Plutus data in Cardano.\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\b\SOH\DC2\ETX@\b\SO\n\
+    \\v\n\
+    \\EOT\EOT\b\STX\NUL\DC2\ETXA\STX\DC1\n\
+    \\f\n\
+    \\ENQ\EOT\b\STX\NUL\ENQ\DC2\ETXA\STX\b\n\
+    \\f\n\
+    \\ENQ\EOT\b\STX\NUL\SOH\DC2\ETXA\t\f\n\
+    \\f\n\
+    \\ENQ\EOT\b\STX\NUL\ETX\DC2\ETXA\SI\DLE\n\
+    \\v\n\
+    \\EOT\EOT\b\STX\SOH\DC2\ETXB\STX\GS\n\
+    \\f\n\
+    \\ENQ\EOT\b\STX\SOH\ENQ\DC2\ETXB\STX\b\n\
+    \\f\n\
+    \\ENQ\EOT\b\STX\SOH\SOH\DC2\ETXB\t\CAN\n\
+    \\f\n\
+    \\ENQ\EOT\b\STX\SOH\ETX\DC2\ETXB\ESC\FS\n\
+    \\v\n\
+    \\EOT\EOT\b\STX\STX\DC2\ETXC\STX!\n\
+    \\f\n\
+    \\ENQ\EOT\b\STX\STX\EOT\DC2\ETXC\STX\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\b\STX\STX\ACK\DC2\ETXC\v\NAK\n\
+    \\f\n\
+    \\ENQ\EOT\b\STX\STX\SOH\DC2\ETXC\SYN\FS\n\
+    \\f\n\
+    \\ENQ\EOT\b\STX\STX\ETX\DC2\ETXC\US \n\
+    \B\n\
+    \\STX\EOT\t\DC2\EOTG\NULM\SOH\SUB6 Represents a big integer for Plutus data in Cardano.\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\t\SOH\DC2\ETXG\b\SO\n\
+    \\f\n\
+    \\EOT\EOT\t\b\NUL\DC2\EOTH\STXL\ETX\n\
+    \\f\n\
+    \\ENQ\EOT\t\b\NUL\SOH\DC2\ETXH\b\SI\n\
+    \\v\n\
+    \\EOT\EOT\t\STX\NUL\DC2\ETXI\EOT'\n\
+    \\f\n\
+    \\ENQ\EOT\t\STX\NUL\ENQ\DC2\ETXI\EOT\t\n\
+    \\f\n\
+    \\ENQ\EOT\t\STX\NUL\SOH\DC2\ETXI\n\
+    \\r\n\
+    \\f\n\
+    \\ENQ\EOT\t\STX\NUL\ETX\DC2\ETXI\DLE\DC1\n\
+    \\f\n\
+    \\ENQ\EOT\t\STX\NUL\b\DC2\ETXI\DC2&\n\
+    \\r\n\
+    \\ACK\EOT\t\STX\NUL\b\ACK\DC2\ETXI\DC3%\n\
+    \\v\n\
+    \\EOT\EOT\t\STX\SOH\DC2\ETXJ\EOT\CAN\n\
+    \\f\n\
+    \\ENQ\EOT\t\STX\SOH\ENQ\DC2\ETXJ\EOT\t\n\
+    \\f\n\
+    \\ENQ\EOT\t\STX\SOH\SOH\DC2\ETXJ\n\
+    \\DC3\n\
+    \\f\n\
+    \\ENQ\EOT\t\STX\SOH\ETX\DC2\ETXJ\SYN\ETB\n\
+    \\v\n\
+    \\EOT\EOT\t\STX\STX\DC2\ETXK\EOT\CAN\n\
+    \\f\n\
+    \\ENQ\EOT\t\STX\STX\ENQ\DC2\ETXK\EOT\t\n\
+    \\f\n\
+    \\ENQ\EOT\t\STX\STX\SOH\DC2\ETXK\n\
+    \\DC3\n\
+    \\f\n\
+    \\ENQ\EOT\t\STX\STX\ETX\DC2\ETXK\SYN\ETB\n\
+    \E\n\
+    \\STX\EOT\n\
+    \\DC2\EOTQ\NULT\SOH\SUB9 Represents a key-value pair for Plutus data in Cardano.\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\n\
+    \\SOH\DC2\ETXQ\b\SYN\n\
+    \\US\n\
+    \\EOT\EOT\n\
+    \\STX\NUL\DC2\ETXR\STX\NAK\"\DC2 Key of the pair.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\n\
+    \\STX\NUL\ACK\DC2\ETXR\STX\f\n\
+    \\f\n\
+    \\ENQ\EOT\n\
+    \\STX\NUL\SOH\DC2\ETXR\r\DLE\n\
+    \\f\n\
+    \\ENQ\EOT\n\
+    \\STX\NUL\ETX\DC2\ETXR\DC3\DC4\n\
+    \!\n\
+    \\EOT\EOT\n\
+    \\STX\SOH\DC2\ETXS\STX\ETB\"\DC4 Value of the pair.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\n\
+    \\STX\SOH\ACK\DC2\ETXS\STX\f\n\
+    \\f\n\
+    \\ENQ\EOT\n\
+    \\STX\SOH\SOH\DC2\ETXS\r\DC2\n\
+    \\f\n\
+    \\ENQ\EOT\n\
+    \\STX\SOH\ETX\DC2\ETXS\NAK\SYN\n\
+    \7\n\
+    \\STX\EOT\v\DC2\EOTW\NUL_\SOH\SUB+ Represents a Plutus data item in Cardano.\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\v\SOH\DC2\ETXW\b\DC2\n\
+    \\f\n\
+    \\EOT\EOT\v\b\NUL\DC2\EOTX\STX^\ETX\n\
+    \\f\n\
+    \\ENQ\EOT\v\b\NUL\SOH\DC2\ETXX\b\DC3\n\
+    \\ESC\n\
+    \\EOT\EOT\v\STX\NUL\DC2\ETXY\EOT\SYN\"\SO Constructor.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\NUL\ACK\DC2\ETXY\EOT\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\NUL\SOH\DC2\ETXY\v\DC1\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\NUL\ETX\DC2\ETXY\DC4\NAK\n\
+    \\"\n\
+    \\EOT\EOT\v\STX\SOH\DC2\ETXZ\EOT\SUB\"\NAK Map of Plutus data.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\SOH\ACK\DC2\ETXZ\EOT\DC1\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\SOH\SOH\DC2\ETXZ\DC2\NAK\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\SOH\ETX\DC2\ETXZ\CAN\EM\n\
+    \\ESC\n\
+    \\EOT\EOT\v\STX\STX\DC2\ETX[\EOT\ETB\"\SO Big integer.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\STX\ACK\DC2\ETX[\EOT\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\STX\SOH\DC2\ETX[\v\DC2\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\STX\ETX\DC2\ETX[\NAK\SYN\n\
+    \\GS\n\
+    \\EOT\EOT\v\STX\ETX\DC2\ETX\\\EOT\FS\"\DLE Bounded bytes.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\ETX\ENQ\DC2\ETX\\\EOT\t\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\ETX\SOH\DC2\ETX\\\n\
+    \\ETB\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\ETX\ETX\DC2\ETX\\\SUB\ESC\n\
+    \$\n\
+    \\EOT\EOT\v\STX\EOT\DC2\ETX]\EOT\RS\"\ETB Array of Plutus data.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\EOT\ACK\DC2\ETX]\EOT\DC3\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\EOT\SOH\DC2\ETX]\DC4\EM\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\EOT\ETX\DC2\ETX]\FS\GS\n\
+    \9\n\
+    \\STX\EOT\f\DC2\EOTb\NULd\SOH\SUB- Represents a map of Plutus data in Cardano.\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\f\SOH\DC2\ETXb\b\NAK\n\
+    \'\n\
+    \\EOT\EOT\f\STX\NUL\DC2\ETXc\STX$\"\SUB List of key-value pairs.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\f\STX\NUL\EOT\DC2\ETXc\STX\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\f\STX\NUL\ACK\DC2\ETXc\v\EM\n\
+    \\f\n\
+    \\ENQ\EOT\f\STX\NUL\SOH\DC2\ETXc\SUB\US\n\
+    \\f\n\
+    \\ENQ\EOT\f\STX\NUL\ETX\DC2\ETXc\"#\n\
+    \<\n\
+    \\STX\EOT\r\DC2\EOTg\NULi\SOH\SUB0 Represents an array of Plutus data in Cardano.\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\r\SOH\DC2\ETXg\b\ETB\n\
+    \)\n\
+    \\EOT\EOT\r\STX\NUL\DC2\ETXh\STX \"\FS List of Plutus data items.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\r\STX\NUL\EOT\DC2\ETXh\STX\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\r\STX\NUL\ACK\DC2\ETXh\v\NAK\n\
+    \\f\n\
+    \\ENQ\EOT\r\STX\NUL\SOH\DC2\ETXh\SYN\ESC\n\
+    \\f\n\
+    \\ENQ\EOT\r\STX\NUL\ETX\DC2\ETXh\RS\US\n\
     \n\n\
-    \\STX\EOT\ENQ\DC2\EOT*\NUL2\SOH\SUBb Represents a script in Cardano.\n\
+    \\STX\EOT\SO\DC2\EOTn\NULv\SOH\SUBb Represents a script in Cardano.\n\
     \ TODO u5c: removed native script representation, added plutus_v4\n\
     \\n\
     \\n\
     \\n\
-    \\ETX\EOT\ENQ\SOH\DC2\ETX*\b\SO\n\
+    \\ETX\EOT\SO\SOH\DC2\ETXn\b\SO\n\
     \\f\n\
-    \\EOT\EOT\ENQ\b\NUL\DC2\EOT+\STX1\ETX\n\
+    \\EOT\EOT\SO\b\NUL\DC2\EOTo\STXu\ETX\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\b\NUL\SOH\DC2\ETX+\b\SO\n\
+    \\ENQ\EOT\SO\b\NUL\SOH\DC2\ETXo\b\SO\n\
     \\GS\n\
-    \\EOT\EOT\ENQ\STX\NUL\DC2\ETX,\EOT\NAK\"\DLE Native script.\n\
+    \\EOT\EOT\SO\STX\NUL\DC2\ETXp\EOT\FS\"\DLE Native script.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\NUL\ENQ\DC2\ETX,\EOT\t\n\
+    \\ENQ\EOT\SO\STX\NUL\ACK\DC2\ETXp\EOT\DLE\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\NUL\SOH\DC2\ETX,\n\
-    \\DLE\n\
+    \\ENQ\EOT\SO\STX\NUL\SOH\DC2\ETXp\DC1\ETB\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\NUL\ETX\DC2\ETX,\DC3\DC4\n\
+    \\ENQ\EOT\SO\STX\NUL\ETX\DC2\ETXp\SUB\ESC\n\
     \ \n\
-    \\EOT\EOT\ENQ\STX\SOH\DC2\ETX-\EOT\CAN\"\DC3 Plutus V1 script.\n\
+    \\EOT\EOT\SO\STX\SOH\DC2\ETXq\EOT\CAN\"\DC3 Plutus V1 script.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\SOH\ENQ\DC2\ETX-\EOT\t\n\
+    \\ENQ\EOT\SO\STX\SOH\ENQ\DC2\ETXq\EOT\t\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\SOH\SOH\DC2\ETX-\n\
+    \\ENQ\EOT\SO\STX\SOH\SOH\DC2\ETXq\n\
     \\DC3\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\SOH\ETX\DC2\ETX-\SYN\ETB\n\
+    \\ENQ\EOT\SO\STX\SOH\ETX\DC2\ETXq\SYN\ETB\n\
     \ \n\
-    \\EOT\EOT\ENQ\STX\STX\DC2\ETX.\EOT\CAN\"\DC3 Plutus V2 script.\n\
+    \\EOT\EOT\SO\STX\STX\DC2\ETXr\EOT\CAN\"\DC3 Plutus V2 script.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\STX\ENQ\DC2\ETX.\EOT\t\n\
+    \\ENQ\EOT\SO\STX\STX\ENQ\DC2\ETXr\EOT\t\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\STX\SOH\DC2\ETX.\n\
+    \\ENQ\EOT\SO\STX\STX\SOH\DC2\ETXr\n\
     \\DC3\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\STX\ETX\DC2\ETX.\SYN\ETB\n\
+    \\ENQ\EOT\SO\STX\STX\ETX\DC2\ETXr\SYN\ETB\n\
     \ \n\
-    \\EOT\EOT\ENQ\STX\ETX\DC2\ETX/\EOT\CAN\"\DC3 Plutus V3 script.\n\
+    \\EOT\EOT\SO\STX\ETX\DC2\ETXs\EOT\CAN\"\DC3 Plutus V3 script.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\ETX\ENQ\DC2\ETX/\EOT\t\n\
+    \\ENQ\EOT\SO\STX\ETX\ENQ\DC2\ETXs\EOT\t\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\ETX\SOH\DC2\ETX/\n\
+    \\ENQ\EOT\SO\STX\ETX\SOH\DC2\ETXs\n\
     \\DC3\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\ETX\ETX\DC2\ETX/\SYN\ETB\n\
+    \\ENQ\EOT\SO\STX\ETX\ETX\DC2\ETXs\SYN\ETB\n\
     \ \n\
-    \\EOT\EOT\ENQ\STX\EOT\DC2\ETX0\EOT\CAN\"\DC3 Plutus V4 script.\n\
+    \\EOT\EOT\SO\STX\EOT\DC2\ETXt\EOT\CAN\"\DC3 Plutus V4 script.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\EOT\ENQ\DC2\ETX0\EOT\t\n\
+    \\ENQ\EOT\SO\STX\EOT\ENQ\DC2\ETXt\EOT\t\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\EOT\SOH\DC2\ETX0\n\
+    \\ENQ\EOT\SO\STX\EOT\SOH\DC2\ETXt\n\
     \\DC3\n\
     \\f\n\
-    \\ENQ\EOT\ENQ\STX\EOT\ETX\DC2\ETX0\SYN\ETB\n\
+    \\ENQ\EOT\SO\STX\EOT\ETX\DC2\ETXt\SYN\ETB\n\
     \b\n\
-    \\STX\EOT\ACK\DC2\EOT6\NUL9\SOH\SUBV Represents a rational number as a fraction.\n\
+    \\STX\EOT\SI\DC2\EOTz\NUL}\SOH\SUBV Represents a rational number as a fraction.\n\
     \ TODO u5c increased precision to 64 bits\n\
     \\n\
     \\n\
     \\n\
-    \\ETX\EOT\ACK\SOH\DC2\ETX6\b\SYN\n\
+    \\ETX\EOT\SI\SOH\DC2\ETXz\b\SYN\n\
     \\v\n\
-    \\EOT\EOT\ACK\STX\NUL\DC2\ETX7\STX+\n\
+    \\EOT\EOT\SI\STX\NUL\DC2\ETX{\STX+\n\
     \\f\n\
-    \\ENQ\EOT\ACK\STX\NUL\ENQ\DC2\ETX7\STX\a\n\
+    \\ENQ\EOT\SI\STX\NUL\ENQ\DC2\ETX{\STX\a\n\
     \\f\n\
-    \\ENQ\EOT\ACK\STX\NUL\SOH\DC2\ETX7\b\DC1\n\
+    \\ENQ\EOT\SI\STX\NUL\SOH\DC2\ETX{\b\DC1\n\
     \\f\n\
-    \\ENQ\EOT\ACK\STX\NUL\ETX\DC2\ETX7\DC4\NAK\n\
+    \\ENQ\EOT\SI\STX\NUL\ETX\DC2\ETX{\DC4\NAK\n\
     \\f\n\
-    \\ENQ\EOT\ACK\STX\NUL\b\DC2\ETX7\SYN*\n\
+    \\ENQ\EOT\SI\STX\NUL\b\DC2\ETX{\SYN*\n\
     \\r\n\
-    \\ACK\EOT\ACK\STX\NUL\b\ACK\DC2\ETX7\ETB)\n\
+    \\ACK\EOT\SI\STX\NUL\b\ACK\DC2\ETX{\ETB)\n\
     \\v\n\
-    \\EOT\EOT\ACK\STX\SOH\DC2\ETX8\STX.\n\
+    \\EOT\EOT\SI\STX\SOH\DC2\ETX|\STX.\n\
     \\f\n\
-    \\ENQ\EOT\ACK\STX\SOH\ENQ\DC2\ETX8\STX\b\n\
+    \\ENQ\EOT\SI\STX\SOH\ENQ\DC2\ETX|\STX\b\n\
     \\f\n\
-    \\ENQ\EOT\ACK\STX\SOH\SOH\DC2\ETX8\t\DC4\n\
+    \\ENQ\EOT\SI\STX\SOH\SOH\DC2\ETX|\t\DC4\n\
     \\f\n\
-    \\ENQ\EOT\ACK\STX\SOH\ETX\DC2\ETX8\ETB\CAN\n\
+    \\ENQ\EOT\SI\STX\SOH\ETX\DC2\ETX|\ETB\CAN\n\
     \\f\n\
-    \\ENQ\EOT\ACK\STX\SOH\b\DC2\ETX8\EM-\n\
+    \\ENQ\EOT\SI\STX\SOH\b\DC2\ETX|\EM-\n\
     \\r\n\
-    \\ACK\EOT\ACK\STX\SOH\b\ACK\DC2\ETX8\SUB,\n\
-    \\FS\n\
-    \\STX\EOT\a\DC2\EOT>\NULA\SOH2\DLE PARAMS\n\
+    \\ACK\EOT\SI\STX\SOH\b\ACK\DC2\ETX|\SUB,\n\
+    \\RS\n\
+    \\STX\EOT\DLE\DC2\ACK\130\SOH\NUL\133\SOH\SOH2\DLE PARAMS\n\
     \ ======\n\
     \\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\a\SOH\DC2\ETX>\b\SI\n\
     \\v\n\
-    \\EOT\EOT\a\STX\NUL\DC2\ETX?\STX\DC3\n\
+    \\ETX\EOT\DLE\SOH\DC2\EOT\130\SOH\b\SI\n\
     \\f\n\
-    \\ENQ\EOT\a\STX\NUL\ENQ\DC2\ETX?\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\a\STX\NUL\SOH\DC2\ETX?\t\SO\n\
-    \\f\n\
-    \\ENQ\EOT\a\STX\NUL\ETX\DC2\ETX?\DC1\DC2\n\
-    \\v\n\
-    \\EOT\EOT\a\STX\SOH\DC2\ETX@\STX\DC4\n\
-    \\f\n\
-    \\ENQ\EOT\a\STX\SOH\ENQ\DC2\ETX@\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\a\STX\SOH\SOH\DC2\ETX@\t\SI\n\
-    \\f\n\
-    \\ENQ\EOT\a\STX\SOH\ETX\DC2\ETX@\DC2\DC3\n\
-    \\n\
-    \\n\
-    \\STX\EOT\b\DC2\EOTC\NULF\SOH\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\b\SOH\DC2\ETXC\b\DLE\n\
-    \\v\n\
-    \\EOT\EOT\b\STX\NUL\DC2\ETXD\STX\ESC\n\
-    \\f\n\
-    \\ENQ\EOT\b\STX\NUL\ACK\DC2\ETXD\STX\DLE\n\
-    \\f\n\
-    \\ENQ\EOT\b\STX\NUL\SOH\DC2\ETXD\DC1\SYN\n\
-    \\f\n\
-    \\ENQ\EOT\b\STX\NUL\ETX\DC2\ETXD\EM\SUB\n\
-    \\v\n\
-    \\EOT\EOT\b\STX\SOH\DC2\ETXE\STX\FS\n\
-    \\f\n\
-    \\ENQ\EOT\b\STX\SOH\ACK\DC2\ETXE\STX\DLE\n\
-    \\f\n\
-    \\ENQ\EOT\b\STX\SOH\SOH\DC2\ETXE\DC1\ETB\n\
-    \\f\n\
-    \\ENQ\EOT\b\STX\SOH\ETX\DC2\ETXE\SUB\ESC\n\
-    \\n\
-    \\n\
-    \\STX\EOT\t\DC2\EOTH\NULK\SOH\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\t\SOH\DC2\ETXH\b\ETB\n\
-    \\v\n\
-    \\EOT\EOT\t\STX\NUL\DC2\ETXI\STX\DC3\n\
-    \\f\n\
-    \\ENQ\EOT\t\STX\NUL\ENQ\DC2\ETXI\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\t\STX\NUL\SOH\DC2\ETXI\t\SO\n\
-    \\f\n\
-    \\ENQ\EOT\t\STX\NUL\ETX\DC2\ETXI\DC1\DC2\n\
-    \\v\n\
-    \\EOT\EOT\t\STX\SOH\DC2\ETXJ\STX\DC3\n\
-    \\f\n\
-    \\ENQ\EOT\t\STX\SOH\ENQ\DC2\ETXJ\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\t\STX\SOH\SOH\DC2\ETXJ\t\SO\n\
-    \\f\n\
-    \\ENQ\EOT\t\STX\SOH\ETX\DC2\ETXJ\DC1\DC2\n\
-    \\n\
-    \\n\
-    \\STX\EOT\n\
-    \\DC2\EOTM\NULO\SOH\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\n\
-    \\SOH\DC2\ETXM\b\DC1\n\
-    \\v\n\
-    \\EOT\EOT\n\
-    \\STX\NUL\DC2\ETXN\STX\FS\n\
-    \\f\n\
-    \\ENQ\EOT\n\
-    \\STX\NUL\EOT\DC2\ETXN\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\n\
-    \\STX\NUL\ENQ\DC2\ETXN\v\DLE\n\
-    \\f\n\
-    \\ENQ\EOT\n\
-    \\STX\NUL\SOH\DC2\ETXN\DC1\ETB\n\
-    \\f\n\
-    \\ENQ\EOT\n\
-    \\STX\NUL\ETX\DC2\ETXN\SUB\ESC\n\
-    \\n\
-    \\n\
-    \\STX\EOT\v\DC2\EOTQ\NULV\SOH\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\v\SOH\DC2\ETXQ\b\DC2\n\
-    \\v\n\
-    \\EOT\EOT\v\STX\NUL\DC2\ETXR\STX\SUB\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\NUL\ACK\DC2\ETXR\STX\v\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\NUL\SOH\DC2\ETXR\f\NAK\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\NUL\ETX\DC2\ETXR\CAN\EM\n\
-    \\v\n\
-    \\EOT\EOT\v\STX\SOH\DC2\ETXS\STX\SUB\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\SOH\ACK\DC2\ETXS\STX\v\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\SOH\SOH\DC2\ETXS\f\NAK\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\SOH\ETX\DC2\ETXS\CAN\EM\n\
-    \\v\n\
-    \\EOT\EOT\v\STX\STX\DC2\ETXT\STX\SUB\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\STX\ACK\DC2\ETXT\STX\v\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\STX\SOH\DC2\ETXT\f\NAK\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\STX\ETX\DC2\ETXT\CAN\EM\n\
-    \\v\n\
-    \\EOT\EOT\v\STX\ETX\DC2\ETXU\STX\SUB\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\ETX\ACK\DC2\ETXU\STX\v\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\ETX\SOH\DC2\ETXU\f\NAK\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\ETX\ETX\DC2\ETXU\CAN\EM\n\
-    \\n\
-    \\n\
-    \\STX\EOT\f\DC2\EOTX\NULZ\SOH\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\f\SOH\DC2\ETXX\b\CAN\n\
-    \\v\n\
-    \\EOT\EOT\f\STX\NUL\DC2\ETXY\STX)\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\NUL\EOT\DC2\ETXY\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\NUL\ACK\DC2\ETXY\v\EM\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\NUL\SOH\DC2\ETXY\SUB$\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\NUL\ETX\DC2\ETXY'(\n\
-    \\n\
-    \\n\
-    \\STX\EOT\r\DC2\EOT\\\NUL|\SOH\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\r\SOH\DC2\ETX\\\b\SI\n\
-    \1\n\
-    \\EOT\EOT\r\STX\NUL\DC2\ETX]\STX6\"$ The number of coins per UTXO byte.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\NUL\ENQ\DC2\ETX]\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\NUL\SOH\DC2\ETX]\t\FS\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\NUL\ETX\DC2\ETX]\US \n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\NUL\b\DC2\ETX]!5\n\
+    \\EOT\EOT\DLE\STX\NUL\DC2\EOT\131\SOH\STX\DC3\n\
     \\r\n\
-    \\ACK\EOT\r\STX\NUL\b\ACK\DC2\ETX]\"4\n\
+    \\ENQ\EOT\DLE\STX\NUL\ENQ\DC2\EOT\131\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\DLE\STX\NUL\SOH\DC2\EOT\131\SOH\t\SO\n\
+    \\r\n\
+    \\ENQ\EOT\DLE\STX\NUL\ETX\DC2\EOT\131\SOH\DC1\DC2\n\
+    \\f\n\
+    \\EOT\EOT\DLE\STX\SOH\DC2\EOT\132\SOH\STX\DC4\n\
+    \\r\n\
+    \\ENQ\EOT\DLE\STX\SOH\ENQ\DC2\EOT\132\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\DLE\STX\SOH\SOH\DC2\EOT\132\SOH\t\SI\n\
+    \\r\n\
+    \\ENQ\EOT\DLE\STX\SOH\ETX\DC2\EOT\132\SOH\DC2\DC3\n\
+    \\f\n\
+    \\STX\EOT\DC1\DC2\ACK\135\SOH\NUL\138\SOH\SOH\n\
+    \\v\n\
+    \\ETX\EOT\DC1\SOH\DC2\EOT\135\SOH\b\DLE\n\
+    \\f\n\
+    \\EOT\EOT\DC1\STX\NUL\DC2\EOT\136\SOH\STX\ESC\n\
+    \\r\n\
+    \\ENQ\EOT\DC1\STX\NUL\ACK\DC2\EOT\136\SOH\STX\DLE\n\
+    \\r\n\
+    \\ENQ\EOT\DC1\STX\NUL\SOH\DC2\EOT\136\SOH\DC1\SYN\n\
+    \\r\n\
+    \\ENQ\EOT\DC1\STX\NUL\ETX\DC2\EOT\136\SOH\EM\SUB\n\
+    \\f\n\
+    \\EOT\EOT\DC1\STX\SOH\DC2\EOT\137\SOH\STX\FS\n\
+    \\r\n\
+    \\ENQ\EOT\DC1\STX\SOH\ACK\DC2\EOT\137\SOH\STX\DLE\n\
+    \\r\n\
+    \\ENQ\EOT\DC1\STX\SOH\SOH\DC2\EOT\137\SOH\DC1\ETB\n\
+    \\r\n\
+    \\ENQ\EOT\DC1\STX\SOH\ETX\DC2\EOT\137\SOH\SUB\ESC\n\
+    \\f\n\
+    \\STX\EOT\DC2\DC2\ACK\140\SOH\NUL\143\SOH\SOH\n\
+    \\v\n\
+    \\ETX\EOT\DC2\SOH\DC2\EOT\140\SOH\b\ETB\n\
+    \\f\n\
+    \\EOT\EOT\DC2\STX\NUL\DC2\EOT\141\SOH\STX\DC3\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\NUL\ENQ\DC2\EOT\141\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\NUL\SOH\DC2\EOT\141\SOH\t\SO\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\NUL\ETX\DC2\EOT\141\SOH\DC1\DC2\n\
+    \\f\n\
+    \\EOT\EOT\DC2\STX\SOH\DC2\EOT\142\SOH\STX\DC3\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\SOH\ENQ\DC2\EOT\142\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\SOH\SOH\DC2\EOT\142\SOH\t\SO\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\SOH\ETX\DC2\EOT\142\SOH\DC1\DC2\n\
+    \\f\n\
+    \\STX\EOT\DC3\DC2\ACK\145\SOH\NUL\147\SOH\SOH\n\
+    \\v\n\
+    \\ETX\EOT\DC3\SOH\DC2\EOT\145\SOH\b\DC1\n\
+    \\f\n\
+    \\EOT\EOT\DC3\STX\NUL\DC2\EOT\146\SOH\STX\FS\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\NUL\EOT\DC2\EOT\146\SOH\STX\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\NUL\ENQ\DC2\EOT\146\SOH\v\DLE\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\NUL\SOH\DC2\EOT\146\SOH\DC1\ETB\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\NUL\ETX\DC2\EOT\146\SOH\SUB\ESC\n\
+    \\f\n\
+    \\STX\EOT\DC4\DC2\ACK\149\SOH\NUL\154\SOH\SOH\n\
+    \\v\n\
+    \\ETX\EOT\DC4\SOH\DC2\EOT\149\SOH\b\DC2\n\
+    \\f\n\
+    \\EOT\EOT\DC4\STX\NUL\DC2\EOT\150\SOH\STX\SUB\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\NUL\ACK\DC2\EOT\150\SOH\STX\v\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\NUL\SOH\DC2\EOT\150\SOH\f\NAK\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\NUL\ETX\DC2\EOT\150\SOH\CAN\EM\n\
+    \\f\n\
+    \\EOT\EOT\DC4\STX\SOH\DC2\EOT\151\SOH\STX\SUB\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\SOH\ACK\DC2\EOT\151\SOH\STX\v\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\SOH\SOH\DC2\EOT\151\SOH\f\NAK\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\SOH\ETX\DC2\EOT\151\SOH\CAN\EM\n\
+    \\f\n\
+    \\EOT\EOT\DC4\STX\STX\DC2\EOT\152\SOH\STX\SUB\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\STX\ACK\DC2\EOT\152\SOH\STX\v\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\STX\SOH\DC2\EOT\152\SOH\f\NAK\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\STX\ETX\DC2\EOT\152\SOH\CAN\EM\n\
+    \\f\n\
+    \\EOT\EOT\DC4\STX\ETX\DC2\EOT\153\SOH\STX\SUB\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\ETX\ACK\DC2\EOT\153\SOH\STX\v\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\ETX\SOH\DC2\EOT\153\SOH\f\NAK\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\ETX\ETX\DC2\EOT\153\SOH\CAN\EM\n\
+    \\f\n\
+    \\STX\EOT\NAK\DC2\ACK\156\SOH\NUL\158\SOH\SOH\n\
+    \\v\n\
+    \\ETX\EOT\NAK\SOH\DC2\EOT\156\SOH\b\CAN\n\
+    \\f\n\
+    \\EOT\EOT\NAK\STX\NUL\DC2\EOT\157\SOH\STX)\n\
+    \\r\n\
+    \\ENQ\EOT\NAK\STX\NUL\EOT\DC2\EOT\157\SOH\STX\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\NAK\STX\NUL\ACK\DC2\EOT\157\SOH\v\EM\n\
+    \\r\n\
+    \\ENQ\EOT\NAK\STX\NUL\SOH\DC2\EOT\157\SOH\SUB$\n\
+    \\r\n\
+    \\ENQ\EOT\NAK\STX\NUL\ETX\DC2\EOT\157\SOH'(\n\
+    \\f\n\
+    \\STX\EOT\SYN\DC2\ACK\160\SOH\NUL\192\SOH\SOH\n\
+    \\v\n\
+    \\ETX\EOT\SYN\SOH\DC2\EOT\160\SOH\b\SI\n\
+    \2\n\
+    \\EOT\EOT\SYN\STX\NUL\DC2\EOT\161\SOH\STX6\"$ The number of coins per UTXO byte.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\NUL\ENQ\DC2\EOT\161\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\NUL\SOH\DC2\EOT\161\SOH\t\FS\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\NUL\ETX\DC2\EOT\161\SOH\US \n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\NUL\b\DC2\EOT\161\SOH!5\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\NUL\b\ACK\DC2\EOT\161\SOH\"4\n\
+    \-\n\
+    \\EOT\EOT\SYN\STX\SOH\DC2\EOT\162\SOH\STX.\"\US The maximum transaction size.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SOH\ENQ\DC2\EOT\162\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SOH\SOH\DC2\EOT\162\SOH\t\DC4\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SOH\ETX\DC2\EOT\162\SOH\ETB\CAN\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SOH\b\DC2\EOT\162\SOH\EM-\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\SOH\b\ACK\DC2\EOT\162\SOH\SUB,\n\
     \,\n\
-    \\EOT\EOT\r\STX\SOH\DC2\ETX^\STX.\"\US The maximum transaction size.\n\
+    \\EOT\EOT\SYN\STX\STX\DC2\EOT\163\SOH\STX6\"\RS The minimum fee coefficient.\n\
     \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SOH\ENQ\DC2\ETX^\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SOH\SOH\DC2\ETX^\t\DC4\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SOH\ETX\DC2\ETX^\ETB\CAN\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SOH\b\DC2\ETX^\EM-\n\
     \\r\n\
-    \\ACK\EOT\r\STX\SOH\b\ACK\DC2\ETX^\SUB,\n\
-    \+\n\
-    \\EOT\EOT\r\STX\STX\DC2\ETX_\STX6\"\RS The minimum fee coefficient.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\STX\ENQ\DC2\ETX_\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\STX\SOH\DC2\ETX_\t\FS\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\STX\ETX\DC2\ETX_\US \n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\STX\b\DC2\ETX_!5\n\
+    \\ENQ\EOT\SYN\STX\STX\ENQ\DC2\EOT\163\SOH\STX\b\n\
     \\r\n\
-    \\ACK\EOT\r\STX\STX\b\ACK\DC2\ETX_\"4\n\
-    \(\n\
-    \\EOT\EOT\r\STX\ETX\DC2\ETX`\STX3\"\ESC The minimum fee constant.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ETX\ENQ\DC2\ETX`\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ETX\SOH\DC2\ETX`\t\EM\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ETX\ETX\DC2\ETX`\FS\GS\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ETX\b\DC2\ETX`\RS2\n\
+    \\ENQ\EOT\SYN\STX\STX\SOH\DC2\EOT\163\SOH\t\FS\n\
     \\r\n\
-    \\ACK\EOT\r\STX\ETX\b\ACK\DC2\ETX`\US1\n\
-    \+\n\
-    \\EOT\EOT\r\STX\EOT\DC2\ETXa\STX6\"\RS The maximum block body size.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\EOT\ENQ\DC2\ETXa\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\EOT\SOH\DC2\ETXa\t\FS\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\EOT\ETX\DC2\ETXa\US \n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\EOT\b\DC2\ETXa!5\n\
+    \\ENQ\EOT\SYN\STX\STX\ETX\DC2\EOT\163\SOH\US \n\
     \\r\n\
-    \\ACK\EOT\r\STX\EOT\b\ACK\DC2\ETXa\"4\n\
-    \-\n\
-    \\EOT\EOT\r\STX\ENQ\DC2\ETXb\STX8\"  The maximum block header size.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ENQ\ENQ\DC2\ETXb\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ENQ\SOH\DC2\ETXb\t\RS\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ENQ\ETX\DC2\ETXb!\"\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ENQ\b\DC2\ETXb#7\n\
-    \\r\n\
-    \\ACK\EOT\r\STX\ENQ\b\ACK\DC2\ETXb$6\n\
-    \%\n\
-    \\EOT\EOT\r\STX\ACK\DC2\ETXc\STX4\"\CAN The stake key deposit.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ACK\ENQ\DC2\ETXc\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ACK\SOH\DC2\ETXc\t\SUB\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ACK\ETX\DC2\ETXc\GS\RS\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ACK\b\DC2\ETXc\US3\n\
-    \\r\n\
-    \\ACK\EOT\r\STX\ACK\b\ACK\DC2\ETXc 2\n\
-    \ \n\
-    \\EOT\EOT\r\STX\a\DC2\ETXd\STX/\"\DC3 The pool deposit.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\a\ENQ\DC2\ETXd\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\a\SOH\DC2\ETXd\t\NAK\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\a\ETX\DC2\ETXd\CAN\EM\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\a\b\DC2\ETXd\SUB.\n\
-    \\r\n\
-    \\ACK\EOT\r\STX\a\b\ACK\DC2\ETXd\ESC-\n\
-    \/\n\
-    \\EOT\EOT\r\STX\b\DC2\ETXe\STX)\"\" The pool retirement epoch bound.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\b\ENQ\DC2\ETXe\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\b\SOH\DC2\ETXe\t$\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\b\ETX\DC2\ETXe'(\n\
-    \+\n\
-    \\EOT\EOT\r\STX\t\DC2\ETXf\STX&\"\RS The desired number of pools.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\t\ENQ\DC2\ETXf\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\t\SOH\DC2\ETXf\t \n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\t\ETX\DC2\ETXf#%\n\
-    \\"\n\
-    \\EOT\EOT\r\STX\n\
-    \\DC2\ETXg\STX%\"\NAK The pool influence.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\n\
-    \\ACK\DC2\ETXg\STX\DLE\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\n\
-    \\SOH\DC2\ETXg\DC1\US\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\n\
-    \\ETX\DC2\ETXg\"$\n\
-    \&\n\
-    \\EOT\EOT\r\STX\v\DC2\ETXh\STX)\"\EM The monetary expansion.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\v\ACK\DC2\ETXh\STX\DLE\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\v\SOH\DC2\ETXh\DC1#\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\v\ETX\DC2\ETXh&(\n\
-    \&\n\
-    \\EOT\EOT\r\STX\f\DC2\ETXi\STX)\"\EM The treasury expansion.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\f\ACK\DC2\ETXi\STX\DLE\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\f\SOH\DC2\ETXi\DC1#\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\f\ETX\DC2\ETXi&(\n\
-    \%\n\
-    \\EOT\EOT\r\STX\r\DC2\ETXj\STX1\"\CAN The minimum pool cost.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\r\ENQ\DC2\ETXj\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\r\SOH\DC2\ETXj\t\SYN\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\r\ETX\DC2\ETXj\EM\ESC\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\r\b\DC2\ETXj\FS0\n\
-    \\r\n\
-    \\ACK\EOT\r\STX\r\b\ACK\DC2\ETXj\GS/\n\
-    \$\n\
-    \\EOT\EOT\r\STX\SO\DC2\ETXk\STX(\"\ETB The protocol version.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SO\ACK\DC2\ETXk\STX\DC1\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SO\SOH\DC2\ETXk\DC2\"\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SO\ETX\DC2\ETXk%'\n\
-    \&\n\
-    \\EOT\EOT\r\STX\SI\DC2\ETXl\STX2\"\EM The maximum value size.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SI\ENQ\DC2\ETXl\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SI\SOH\DC2\ETXl\t\ETB\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SI\ETX\DC2\ETXl\SUB\FS\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SI\b\DC2\ETXl\GS1\n\
-    \\r\n\
-    \\ACK\EOT\r\STX\SI\b\ACK\DC2\ETXl\RS0\n\
+    \\ENQ\EOT\SYN\STX\STX\b\DC2\EOT\163\SOH!5\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\STX\b\ACK\DC2\EOT\163\SOH\"4\n\
     \)\n\
-    \\EOT\EOT\r\STX\DLE\DC2\ETXm\STX9\"\FS The collateral percentage.\n\
+    \\EOT\EOT\SYN\STX\ETX\DC2\EOT\164\SOH\STX3\"\ESC The minimum fee constant.\n\
     \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DLE\ENQ\DC2\ETXm\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DLE\SOH\DC2\ETXm\t\RS\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DLE\ETX\DC2\ETXm!#\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DLE\b\DC2\ETXm$8\n\
     \\r\n\
-    \\ACK\EOT\r\STX\DLE\b\ACK\DC2\ETXm%7\n\
-    \-\n\
-    \\EOT\EOT\r\STX\DC1\DC2\ETXn\STX9\"  The maximum collateral inputs.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC1\ENQ\DC2\ETXn\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC1\SOH\DC2\ETXn\t\RS\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC1\ETX\DC2\ETXn!#\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC1\b\DC2\ETXn$8\n\
+    \\ENQ\EOT\SYN\STX\ETX\ENQ\DC2\EOT\164\SOH\STX\b\n\
     \\r\n\
-    \\ACK\EOT\r\STX\DC1\b\ACK\DC2\ETXn%7\n\
-    \\US\n\
-    \\EOT\EOT\r\STX\DC2\DC2\ETXo\STX\RS\"\DC2 The cost models.\n\
+    \\ENQ\EOT\SYN\STX\ETX\SOH\DC2\EOT\164\SOH\t\EM\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ETX\ETX\DC2\EOT\164\SOH\FS\GS\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ETX\b\DC2\EOT\164\SOH\RS2\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\ETX\b\ACK\DC2\EOT\164\SOH\US1\n\
+    \,\n\
+    \\EOT\EOT\SYN\STX\EOT\DC2\EOT\165\SOH\STX6\"\RS The maximum block body size.\n\
     \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC2\ACK\DC2\ETXo\STX\f\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC2\SOH\DC2\ETXo\r\CAN\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC2\ETX\DC2\ETXo\ESC\GS\n\
-    \\SUB\n\
-    \\EOT\EOT\r\STX\DC3\DC2\ETXp\STX\ETB\"\r The prices.\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\EOT\ENQ\DC2\EOT\165\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\EOT\SOH\DC2\EOT\165\SOH\t\FS\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\EOT\ETX\DC2\EOT\165\SOH\US \n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\EOT\b\DC2\EOT\165\SOH!5\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\EOT\b\ACK\DC2\EOT\165\SOH\"4\n\
+    \.\n\
+    \\EOT\EOT\SYN\STX\ENQ\DC2\EOT\166\SOH\STX8\"  The maximum block header size.\n\
     \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC3\ACK\DC2\ETXp\STX\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ENQ\ENQ\DC2\EOT\166\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ENQ\SOH\DC2\EOT\166\SOH\t\RS\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ENQ\ETX\DC2\EOT\166\SOH!\"\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ENQ\b\DC2\EOT\166\SOH#7\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\ENQ\b\ACK\DC2\EOT\166\SOH$6\n\
+    \&\n\
+    \\EOT\EOT\SYN\STX\ACK\DC2\EOT\167\SOH\STX4\"\CAN The stake key deposit.\n\
     \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC3\SOH\DC2\ETXp\v\DC1\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC3\ETX\DC2\ETXp\DC4\SYN\n\
-    \;\n\
-    \\EOT\EOT\r\STX\DC4\DC2\ETXq\STX3\". The maximum execution units per transaction.\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ACK\ENQ\DC2\EOT\167\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ACK\SOH\DC2\EOT\167\SOH\t\SUB\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ACK\ETX\DC2\EOT\167\SOH\GS\RS\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ACK\b\DC2\EOT\167\SOH\US3\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\ACK\b\ACK\DC2\EOT\167\SOH 2\n\
+    \!\n\
+    \\EOT\EOT\SYN\STX\a\DC2\EOT\168\SOH\STX/\"\DC3 The pool deposit.\n\
     \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC4\ACK\DC2\ETXq\STX\t\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC4\SOH\DC2\ETXq\n\
-    \-\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\DC4\ETX\DC2\ETXq02\n\
-    \5\n\
-    \\EOT\EOT\r\STX\NAK\DC2\ETXr\STX-\"( The maximum execution units per block.\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\a\ENQ\DC2\EOT\168\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\a\SOH\DC2\EOT\168\SOH\t\NAK\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\a\ETX\DC2\EOT\168\SOH\CAN\EM\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\a\b\DC2\EOT\168\SOH\SUB.\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\a\b\ACK\DC2\EOT\168\SOH\ESC-\n\
+    \0\n\
+    \\EOT\EOT\SYN\STX\b\DC2\EOT\169\SOH\STX)\"\" The pool retirement epoch bound.\n\
     \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\NAK\ACK\DC2\ETXr\STX\t\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\NAK\SOH\DC2\ETXr\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\b\ENQ\DC2\EOT\169\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\b\SOH\DC2\EOT\169\SOH\t$\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\b\ETX\DC2\EOT\169\SOH'(\n\
+    \,\n\
+    \\EOT\EOT\SYN\STX\t\DC2\EOT\170\SOH\STX&\"\RS The desired number of pools.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\t\ENQ\DC2\EOT\170\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\t\SOH\DC2\EOT\170\SOH\t \n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\t\ETX\DC2\EOT\170\SOH#%\n\
+    \#\n\
+    \\EOT\EOT\SYN\STX\n\
+    \\DC2\EOT\171\SOH\STX%\"\NAK The pool influence.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\n\
+    \\ACK\DC2\EOT\171\SOH\STX\DLE\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\n\
+    \\SOH\DC2\EOT\171\SOH\DC1\US\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\n\
+    \\ETX\DC2\EOT\171\SOH\"$\n\
     \'\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\NAK\ETX\DC2\ETXr*,\n\
-    \9\n\
-    \\EOT\EOT\r\STX\SYN\DC2\ETXs\STX7\", The minimum fee per script reference byte.\n\
+    \\EOT\EOT\SYN\STX\v\DC2\EOT\172\SOH\STX)\"\EM The monetary expansion.\n\
     \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SYN\ACK\DC2\ETXs\STX\DLE\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SYN\SOH\DC2\ETXs\DC11\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SYN\ETX\DC2\ETXs46\n\
-    \*\n\
-    \\EOT\EOT\r\STX\ETB\DC2\ETXt\STX/\"\GS The pool voting thresholds.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ETB\ACK\DC2\ETXt\STX\DC2\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ETB\SOH\DC2\ETXt\DC3)\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ETB\ETX\DC2\ETXt,.\n\
-    \*\n\
-    \\EOT\EOT\r\STX\CAN\DC2\ETXu\STX/\"\GS The drep voting thresholds.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\CAN\ACK\DC2\ETXu\STX\DC2\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\CAN\SOH\DC2\ETXu\DC3)\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\CAN\ETX\DC2\ETXu,.\n\
-    \*\n\
-    \\EOT\EOT\r\STX\EM\DC2\ETXv\STX!\"\GS The minimum committee size.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\EM\ENQ\DC2\ETXv\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\EM\SOH\DC2\ETXv\t\ESC\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\EM\ETX\DC2\ETXv\RS \n\
-    \(\n\
-    \\EOT\EOT\r\STX\SUB\DC2\ETXw\STX#\"\ESC The committee term limit.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SUB\ENQ\DC2\ETXw\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SUB\SOH\DC2\ETXw\t\GS\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SUB\ETX\DC2\ETXw \"\n\
-    \5\n\
-    \\EOT\EOT\r\STX\ESC\DC2\ETXx\STX0\"( The governance action validity period.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ESC\ENQ\DC2\ETXx\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ESC\SOH\DC2\ETXx\t*\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\ESC\ETX\DC2\ETXx-/\n\
-    \-\n\
-    \\EOT\EOT\r\STX\FS\DC2\ETXy\STX=\"  The governance action deposit.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\FS\ENQ\DC2\ETXy\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\FS\SOH\DC2\ETXy\t\"\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\FS\ETX\DC2\ETXy%'\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\FS\b\DC2\ETXy(<\n\
     \\r\n\
-    \\ACK\EOT\r\STX\FS\b\ACK\DC2\ETXy);\n\
+    \\ENQ\EOT\SYN\STX\v\ACK\DC2\EOT\172\SOH\STX\DLE\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\v\SOH\DC2\EOT\172\SOH\DC1#\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\v\ETX\DC2\EOT\172\SOH&(\n\
+    \'\n\
+    \\EOT\EOT\SYN\STX\f\DC2\EOT\173\SOH\STX)\"\EM The treasury expansion.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\f\ACK\DC2\EOT\173\SOH\STX\DLE\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\f\SOH\DC2\EOT\173\SOH\DC1#\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\f\ETX\DC2\EOT\173\SOH&(\n\
+    \&\n\
+    \\EOT\EOT\SYN\STX\r\DC2\EOT\174\SOH\STX1\"\CAN The minimum pool cost.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\r\ENQ\DC2\EOT\174\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\r\SOH\DC2\EOT\174\SOH\t\SYN\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\r\ETX\DC2\EOT\174\SOH\EM\ESC\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\r\b\DC2\EOT\174\SOH\FS0\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\r\b\ACK\DC2\EOT\174\SOH\GS/\n\
+    \%\n\
+    \\EOT\EOT\SYN\STX\SO\DC2\EOT\175\SOH\STX(\"\ETB The protocol version.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SO\ACK\DC2\EOT\175\SOH\STX\DC1\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SO\SOH\DC2\EOT\175\SOH\DC2\"\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SO\ETX\DC2\EOT\175\SOH%'\n\
+    \'\n\
+    \\EOT\EOT\SYN\STX\SI\DC2\EOT\176\SOH\STX2\"\EM The maximum value size.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SI\ENQ\DC2\EOT\176\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SI\SOH\DC2\EOT\176\SOH\t\ETB\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SI\ETX\DC2\EOT\176\SOH\SUB\FS\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SI\b\DC2\EOT\176\SOH\GS1\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\SI\b\ACK\DC2\EOT\176\SOH\RS0\n\
+    \*\n\
+    \\EOT\EOT\SYN\STX\DLE\DC2\EOT\177\SOH\STX9\"\FS The collateral percentage.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DLE\ENQ\DC2\EOT\177\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DLE\SOH\DC2\EOT\177\SOH\t\RS\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DLE\ETX\DC2\EOT\177\SOH!#\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DLE\b\DC2\EOT\177\SOH$8\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\DLE\b\ACK\DC2\EOT\177\SOH%7\n\
+    \.\n\
+    \\EOT\EOT\SYN\STX\DC1\DC2\EOT\178\SOH\STX9\"  The maximum collateral inputs.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC1\ENQ\DC2\EOT\178\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC1\SOH\DC2\EOT\178\SOH\t\RS\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC1\ETX\DC2\EOT\178\SOH!#\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC1\b\DC2\EOT\178\SOH$8\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\DC1\b\ACK\DC2\EOT\178\SOH%7\n\
     \ \n\
-    \\EOT\EOT\r\STX\GS\DC2\ETXz\STX0\"\DC3 The drep deposit.\n\
+    \\EOT\EOT\SYN\STX\DC2\DC2\EOT\179\SOH\STX\RS\"\DC2 The cost models.\n\
     \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\GS\ENQ\DC2\ETXz\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\GS\SOH\DC2\ETXz\t\NAK\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\GS\ETX\DC2\ETXz\CAN\SUB\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\GS\b\DC2\ETXz\ESC/\n\
     \\r\n\
-    \\ACK\EOT\r\STX\GS\b\ACK\DC2\ETXz\FS.\n\
-    \*\n\
-    \\EOT\EOT\r\STX\RS\DC2\ETX{\STX%\"\GS The drep inactivity period.\n\
+    \\ENQ\EOT\SYN\STX\DC2\ACK\DC2\EOT\179\SOH\STX\f\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC2\SOH\DC2\EOT\179\SOH\r\CAN\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC2\ETX\DC2\EOT\179\SOH\ESC\GS\n\
+    \\ESC\n\
+    \\EOT\EOT\SYN\STX\DC3\DC2\EOT\180\SOH\STX\ETB\"\r The prices.\n\
     \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\RS\ENQ\DC2\ETX{\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\RS\SOH\DC2\ETX{\t\US\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\RS\ETX\DC2\ETX{\"$b\ACKproto3"
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC3\ACK\DC2\EOT\180\SOH\STX\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC3\SOH\DC2\EOT\180\SOH\v\DC1\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC3\ETX\DC2\EOT\180\SOH\DC4\SYN\n\
+    \<\n\
+    \\EOT\EOT\SYN\STX\DC4\DC2\EOT\181\SOH\STX3\". The maximum execution units per transaction.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC4\ACK\DC2\EOT\181\SOH\STX\t\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC4\SOH\DC2\EOT\181\SOH\n\
+    \-\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\DC4\ETX\DC2\EOT\181\SOH02\n\
+    \6\n\
+    \\EOT\EOT\SYN\STX\NAK\DC2\EOT\182\SOH\STX-\"( The maximum execution units per block.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\NAK\ACK\DC2\EOT\182\SOH\STX\t\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\NAK\SOH\DC2\EOT\182\SOH\n\
+    \'\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\NAK\ETX\DC2\EOT\182\SOH*,\n\
+    \:\n\
+    \\EOT\EOT\SYN\STX\SYN\DC2\EOT\183\SOH\STX7\", The minimum fee per script reference byte.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SYN\ACK\DC2\EOT\183\SOH\STX\DLE\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SYN\SOH\DC2\EOT\183\SOH\DC11\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SYN\ETX\DC2\EOT\183\SOH46\n\
+    \+\n\
+    \\EOT\EOT\SYN\STX\ETB\DC2\EOT\184\SOH\STX/\"\GS The pool voting thresholds.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ETB\ACK\DC2\EOT\184\SOH\STX\DC2\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ETB\SOH\DC2\EOT\184\SOH\DC3)\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ETB\ETX\DC2\EOT\184\SOH,.\n\
+    \+\n\
+    \\EOT\EOT\SYN\STX\CAN\DC2\EOT\185\SOH\STX/\"\GS The drep voting thresholds.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\CAN\ACK\DC2\EOT\185\SOH\STX\DC2\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\CAN\SOH\DC2\EOT\185\SOH\DC3)\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\CAN\ETX\DC2\EOT\185\SOH,.\n\
+    \+\n\
+    \\EOT\EOT\SYN\STX\EM\DC2\EOT\186\SOH\STX!\"\GS The minimum committee size.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\EM\ENQ\DC2\EOT\186\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\EM\SOH\DC2\EOT\186\SOH\t\ESC\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\EM\ETX\DC2\EOT\186\SOH\RS \n\
+    \)\n\
+    \\EOT\EOT\SYN\STX\SUB\DC2\EOT\187\SOH\STX#\"\ESC The committee term limit.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SUB\ENQ\DC2\EOT\187\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SUB\SOH\DC2\EOT\187\SOH\t\GS\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SUB\ETX\DC2\EOT\187\SOH \"\n\
+    \6\n\
+    \\EOT\EOT\SYN\STX\ESC\DC2\EOT\188\SOH\STX0\"( The governance action validity period.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ESC\ENQ\DC2\EOT\188\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ESC\SOH\DC2\EOT\188\SOH\t*\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\ESC\ETX\DC2\EOT\188\SOH-/\n\
+    \.\n\
+    \\EOT\EOT\SYN\STX\FS\DC2\EOT\189\SOH\STX=\"  The governance action deposit.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\FS\ENQ\DC2\EOT\189\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\FS\SOH\DC2\EOT\189\SOH\t\"\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\FS\ETX\DC2\EOT\189\SOH%'\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\FS\b\DC2\EOT\189\SOH(<\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\FS\b\ACK\DC2\EOT\189\SOH);\n\
+    \!\n\
+    \\EOT\EOT\SYN\STX\GS\DC2\EOT\190\SOH\STX0\"\DC3 The drep deposit.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\GS\ENQ\DC2\EOT\190\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\GS\SOH\DC2\EOT\190\SOH\t\NAK\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\GS\ETX\DC2\EOT\190\SOH\CAN\SUB\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\GS\b\DC2\EOT\190\SOH\ESC/\n\
+    \\SO\n\
+    \\ACK\EOT\SYN\STX\GS\b\ACK\DC2\EOT\190\SOH\FS.\n\
+    \+\n\
+    \\EOT\EOT\SYN\STX\RS\DC2\EOT\191\SOH\STX%\"\GS The drep inactivity period.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\RS\ENQ\DC2\EOT\191\SOH\STX\b\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\RS\SOH\DC2\EOT\191\SOH\t\US\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\RS\ETX\DC2\EOT\191\SOH\"$b\ACKproto3"
