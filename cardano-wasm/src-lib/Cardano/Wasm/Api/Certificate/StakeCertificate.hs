@@ -47,7 +47,7 @@ import Cardano.Ledger.Api (Delegatee (..))
 import Cardano.Wasm.ExceptionHandling (rightOrError, throwError, toMonadFail)
 
 import Control.Monad.Catch (MonadThrow)
-import Data.Aeson (FromJSON, (.:), (.=))
+import Data.Aeson (FromJSON, (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Base16 qualified as Base16
 import Data.Text (Text)
@@ -94,7 +94,7 @@ instance FromJSON StakeCertificateObject where
       toMonadFail $
         rightOrError $
           Api.deserialiseFromRawBytesHex (Text.encodeUtf8 skHashText)
-    deposit :: Maybe Coin <- o .: "deposit"
+    deposit :: Maybe Coin <- o .:? "deposit"
     actionStr :: Text <- o .: "action"
     action <-
       case actionStr of
@@ -102,7 +102,7 @@ instance FromJSON StakeCertificateObject where
         "UnregisterStake" -> return UnregisterStake
         "DelegateOnly" -> return DelegateOnly
         _ -> toMonadFail $ throwError ("Invalid action for StakeCertificateObject: " ++ show actionStr)
-    delegateStakeText :: Maybe Text <- o .: "delegateStake"
+    delegateStakeText :: Maybe Text <- o .:? "delegateStake"
     delegateStake :: Maybe PoolId <-
       traverse
         ( toMonadFail
