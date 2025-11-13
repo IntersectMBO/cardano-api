@@ -11,7 +11,7 @@ async function do_async_work() {
 
   // State
   let showPrivateKey = false;
-  let wallet = await api.wallet.testnet.generateTestnetPaymentWallet(42);
+  let wallet = await api.wallet.testnet.generatePaymentWallet(42);
   let transactionInputs = [];
   let transactionOutputs = [];
 
@@ -188,7 +188,7 @@ async function do_async_work() {
 
   // Callbacks
   async function generateAddress() {
-    wallet = await api.wallet.testnet.generateTestnetPaymentWallet(TESTNET_MAGIC);
+    wallet = await api.wallet.testnet.generatePaymentWallet(TESTNET_MAGIC);
     await refresh();
   }
 
@@ -205,7 +205,7 @@ async function do_async_work() {
   async function loadPrivateKey() {
     let pki = document.getElementById("private-key-input");
     // @ts-ignore
-    wallet = await api.restoreTestnetPaymentWalletFromSigningKeyBech32(TESTNET_MAGIC, pki.value);
+    wallet = await api.wallet.testnet.restorePaymentWalletFromSigningKeyBech32(TESTNET_MAGIC, pki.value);
     await refresh();
   };
 

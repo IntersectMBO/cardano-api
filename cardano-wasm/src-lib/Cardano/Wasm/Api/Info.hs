@@ -561,7 +561,7 @@ apiInfo =
                                       [ MethodInfoEntry $
                                           MethodInfo
                                             { methodName = "generateTestnetPaymentWallet"
-                                            , methodSimpleName = "generateTestnetPaymentWallet"
+                                            , methodSimpleName = "generatePaymentWallet"
                                             , methodDoc = "Generate a simple payment wallet for testnet, given the testnet's network magic."
                                             , methodParams = [ParamInfo "networkMagic" TSNumber "The network magic for the testnet."]
                                             , methodReturnType = NewObject (virtualObjectName walletObj)
@@ -570,7 +570,7 @@ apiInfo =
                                       , MethodInfoEntry $
                                           MethodInfo
                                             { methodName = "generateTestnetStakeWallet"
-                                            , methodSimpleName = "generateTestnetStakeWallet"
+                                            , methodSimpleName = "generateStakeWallet"
                                             , methodDoc = "Generate a stake wallet for testnet, given the testnet's network magic."
                                             , methodParams = [ParamInfo "networkMagic" TSNumber "The network magic for the testnet."]
                                             , methodReturnType = NewObject (virtualObjectName walletObj)
@@ -579,7 +579,7 @@ apiInfo =
                                       , MethodInfoEntry $
                                           MethodInfo
                                             { methodName = "restoreTestnetPaymentWalletFromSigningKeyBech32"
-                                            , methodSimpleName = "restoreTestnetPaymentWalletFromSigningKeyBech32"
+                                            , methodSimpleName = "restorePaymentWalletFromSigningKeyBech32"
                                             , methodDoc = "Restore a testnet payment wallet from a Bech32 encoded signing key."
                                             , methodParams =
                                                 [ ParamInfo "networkMagic" TSNumber "The network magic for the testnet."
@@ -591,7 +591,7 @@ apiInfo =
                                       , MethodInfoEntry $
                                           MethodInfo
                                             { methodName = "restoreTestnetStakeWalletFromSigningKeyBech32"
-                                            , methodSimpleName = "restoreTestnetStakeWalletFromSigningKeyBech32"
+                                            , methodSimpleName = "restoreStakeWalletFromSigningKeyBech32"
                                             , methodDoc = "Restore a testnet stake wallet from Bech32 encoded signing keys."
                                             , methodParams =
                                                 [ ParamInfo "networkMagic" TSNumber "The network magic for the testnet."
