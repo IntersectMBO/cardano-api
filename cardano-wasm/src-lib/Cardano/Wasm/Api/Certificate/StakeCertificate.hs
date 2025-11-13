@@ -10,14 +10,14 @@
 module Cardano.Wasm.Api.Certificate.StakeCertificate
   ( StakeCertificateObject (..)
   , createStakeKeyCertificateImpl
-  , asStakeRegistrationImpl
-  , asStakeUnregistrationImpl
-  , asDelegateOnlyImpl
-  , withDepositImpl
-  , withoutDepositImpl
-  , withDelegationImpl
-  , withoutDelegationImpl
-  , toCborImpl
+  , stakeCertAsStakeRegistrationImpl
+  , stakeCertAsStakeUnregistrationImpl
+  , stakeCertAsDelegateOnlyImpl
+  , stakeCertWithDepositImpl
+  , stakeCertWithoutDepositImpl
+  , stakeCertWithDelegationImpl
+  , stakeCertWithoutDelegationImpl
+  , stakeCertToCborImpl
   )
 where
 
@@ -138,46 +138,46 @@ createStakeKeyCertificateImpl skHashStr = do
   readHash = rightOrError . Api.deserialiseFromRawBytesHex . Text.encodeUtf8 . Text.pack
 
 -- | Marks the certificate as a stake registration certificate.
-asStakeRegistrationImpl :: StakeCertificateObject -> StakeCertificateObject
-asStakeRegistrationImpl certObj =
+stakeCertAsStakeRegistrationImpl :: StakeCertificateObject -> StakeCertificateObject
+stakeCertAsStakeRegistrationImpl certObj =
   certObj{action = RegisterStake}
 
 -- | Marks the certificate as a stake un-registration certificate.
-asStakeUnregistrationImpl :: StakeCertificateObject -> StakeCertificateObject
-asStakeUnregistrationImpl certObj =
+stakeCertAsStakeUnregistrationImpl :: StakeCertificateObject -> StakeCertificateObject
+stakeCertAsStakeUnregistrationImpl certObj =
   certObj{action = UnregisterStake}
 
 -- | Marks the certificate as a delegation-only certificate (not registration nor un-registration).
-asDelegateOnlyImpl :: StakeCertificateObject -> StakeCertificateObject
-asDelegateOnlyImpl certObj =
+stakeCertAsDelegateOnlyImpl :: StakeCertificateObject -> StakeCertificateObject
+stakeCertAsDelegateOnlyImpl certObj =
   certObj{action = DelegateOnly}
 
 -- | Sets the deposit for the stake certificate. This only has effect for stake registration
 -- and unregistration certificates. The amount must match the expected deposit amount specified by
 -- 'ppKeyDepositL' in the protocol parameters for registration certificates and the amount
 -- depositted for unregistration certificates.
-withDepositImpl :: Coin -> StakeCertificateObject -> StakeCertificateObject
-withDepositImpl dep certObj =
+stakeCertWithDepositImpl :: Coin -> StakeCertificateObject -> StakeCertificateObject
+stakeCertWithDepositImpl dep certObj =
   certObj{mDeposit = Just dep}
 
 -- | Resets the deposit for the stake certificate.
-withoutDepositImpl :: StakeCertificateObject -> StakeCertificateObject
-withoutDepositImpl certObj =
+stakeCertWithoutDepositImpl :: StakeCertificateObject -> StakeCertificateObject
+stakeCertWithoutDepositImpl certObj =
   certObj{mDeposit = Nothing}
 
 -- | Sets the pool to which the stake key will be delegated.
-withDelegationImpl :: PoolId -> StakeCertificateObject -> StakeCertificateObject
-withDelegationImpl poolId certObj =
+stakeCertWithDelegationImpl :: PoolId -> StakeCertificateObject -> StakeCertificateObject
+stakeCertWithDelegationImpl poolId certObj =
   certObj{mDelegatee = Just (DelegStake $ unStakePoolKeyHash poolId)}
 
 -- | Resets the delegation for the stake certificate.
-withoutDelegationImpl :: StakeCertificateObject -> StakeCertificateObject
-withoutDelegationImpl certObj =
+stakeCertWithoutDelegationImpl :: StakeCertificateObject -> StakeCertificateObject
+stakeCertWithoutDelegationImpl certObj =
   certObj{mDelegatee = Nothing}
 
 -- | Convert a StakeCertificateObject to the base16 encoding of its CBOR representation.
-toCborImpl :: MonadThrow m => StakeCertificateObject -> m String
-toCborImpl
+stakeCertToCborImpl :: MonadThrow m => StakeCertificateObject -> m String
+stakeCertToCborImpl
   ( StakeCertificateObject
       { era
       , stakeCredential
