@@ -28,6 +28,13 @@ declare interface UnsignedTx {
     addSimpleTxOut(destAddr: string, lovelaceAmount: bigint): UnsignedTx;
 
     /**
+     * Appends a certificate (in CBOR hex string format) to the transaction.
+     * @param certCbor The certificate in CBOR hex string format.
+     * @returns The `UnsignedTx` object with the added certificate.
+     */
+    appendCertificateToTx(certCbor: string): UnsignedTx;
+
+    /**
      * Sets the fee for the transaction.
      * @param lovelaceAmount The fee amount in lovelaces.
      * @returns The `UnsignedTx` object with the set fee.
