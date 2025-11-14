@@ -626,8 +626,8 @@ getAnyWitnessScript
 getAnyWitnessScript AnyKeyWitnessPlaceholder = Nothing
 getAnyWitnessScript ss@(AnySimpleScriptWitness{}) =
   case useEra @era of
-    ConwayEra -> L.NativeScript <$> obtainCommonConstraints (useEra @era) (getAnyWitnessSimpleScript ss)
-    DijkstraEra -> L.NativeScript <$> obtainCommonConstraints (useEra @era) (getAnyWitnessSimpleScript ss)
+    ConwayEra -> obtainCommonConstraints (useEra @era) (getAnyWitnessSimpleScript ss)
+    DijkstraEra -> obtainCommonConstraints (useEra @era) (getAnyWitnessSimpleScript ss)
 getAnyWitnessScript ps@(AnyPlutusScriptWitness{}) =
   case useEra @era of
     ConwayEra -> L.PlutusScript <$> getAnyWitnessPlutusScript ps

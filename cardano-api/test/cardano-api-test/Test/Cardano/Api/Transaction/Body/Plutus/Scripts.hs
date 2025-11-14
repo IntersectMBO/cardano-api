@@ -67,7 +67,6 @@ import Test.Tasty.Hedgehog (testProperty)
 -- in the redeemer pointer map.
 prop_getAnyWitnessRedeemerPointerMap :: Property
 prop_getAnyWitnessRedeemerPointerMap = property $ do
-  let eon = AlonzoEraOnwardsConway
   l <- forAll $ Gen.int (Range.linear 2 5)
   witnessables <- forAll $ Gen.list (Range.singleton l) $ genWitnessable @L.ConwayEra
   wits <-
@@ -83,7 +82,7 @@ prop_getAnyWitnessRedeemerPointerMap = property $ do
       expectedRedeemerPointerMapLength = length zipped
       finalWits = take expectedRedeemerPointerMapLength wits
 
-      L.Redeemers constructedRedeemerPointerMap = getAnyWitnessRedeemerPointerMap eon zipped
+      L.Redeemers constructedRedeemerPointerMap = getAnyWitnessRedeemerPointerMap zipped
 
   annotate "Constructed redeemer pointer map"
   annotateShow constructedRedeemerPointerMap

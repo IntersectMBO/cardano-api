@@ -15,12 +15,6 @@ module Cardano.Api.Experimental.Tx.Internal.AnyWitness
   )
 where
 
-import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
-import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
-  ( ShelleyBasedEra (..)
-  , ShelleyLedgerEra
-  , forShelleyBasedEraInEon
-  )
 import Cardano.Api.Experimental.Plutus.Internal.Script
 import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Simple.Script
@@ -28,14 +22,10 @@ import Cardano.Api.Experimental.Simple.Script
   , SimpleScriptOrReferenceInput (..)
   )
 import Cardano.Api.Internal.Orphans.Misc ()
-import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal.ScriptData
 
-import Cardano.Ledger.Alonzo.Scripts qualified as L
-import Cardano.Ledger.Babbage.Scripts qualified as L
-import Cardano.Ledger.Conway.Scripts qualified as L
 import Cardano.Ledger.Core qualified as L
-import Cardano.Ledger.Dijkstra.Scripts qualified as Dijkstra
 import Cardano.Ledger.Plutus.Data qualified as L
 import Cardano.Ledger.Plutus.Language qualified as L
 
@@ -91,124 +81,70 @@ getAnyWitnessPlutusLanguage (AnySimpleScriptWitness _) = Nothing
 getAnyWitnessPlutusLanguage (AnyPlutusScriptWitness swit) = Just $ getPlutusScriptWitnessLanguage swit
 
 getAnyWitnessSimpleScript
-  :: AnyWitness (ShelleyLedgerEra era) -> Maybe (L.NativeScript (ShelleyLedgerEra era))
+  :: AnyWitness era -> Maybe (L.Script era)
 getAnyWitnessSimpleScript AnyKeyWitnessPlaceholder = Nothing
 getAnyWitnessSimpleScript (AnySimpleScriptWitness simpleScriptOrRefInput) =
   case simpleScriptOrRefInput of
-    SScript (SimpleScript simpleScript) -> Just simpleScript
+    SScript (SimpleScript simpleScript) -> Just $ L.fromNativeScript simpleScript
     SReferenceScript{} -> Nothing
 getAnyWitnessSimpleScript (AnyPlutusScriptWitness _) = Nothing
 
 getAnyWitnessPlutusScript
-  :: AlonzoEraOnwards era
-  -> AnyWitness (ShelleyLedgerEra era)
-  -> Maybe (L.PlutusScript (ShelleyLedgerEra era))
-getAnyWitnessPlutusScript _ AnyKeyWitnessPlaceholder = Nothing
-getAnyWitnessPlutusScript _ (AnySimpleScriptWitness _) = Nothing
+  :: L.AlonzoEraScript era
+  => AnyWitness era
+  -> Maybe (L.Script era)
+getAnyWitnessPlutusScript AnyKeyWitnessPlaceholder = Nothing
+getAnyWitnessPlutusScript (AnySimpleScriptWitness _) = Nothing
 getAnyWitnessPlutusScript
-  eon
   ( AnyPlutusScriptWitness
       (PlutusScriptWitness l (PScript (PlutusScriptInEra plutusScriptRunnable)) _ _ _)
-    ) = fromPlutusRunnable l eon plutusScriptRunnable
-getAnyWitnessPlutusScript _ (AnyPlutusScriptWitness (PlutusScriptWitness _ (PReferenceScript{}) _ _ _)) =
+    ) = L.fromPlutusScript <$> fromPlutusRunnable l plutusScriptRunnable
+getAnyWitnessPlutusScript (AnyPlutusScriptWitness (PlutusScriptWitness _ (PReferenceScript{}) _ _ _)) =
   Nothing
 
 -- | NB this does not include datums from inline datums existing at tx outputs!
 getAnyWitnessScriptData
-  :: AlonzoEraOnwards era -> AnyWitness (ShelleyLedgerEra era) -> L.TxDats (ShelleyLedgerEra era)
-getAnyWitnessScriptData eon AnyKeyWitnessPlaceholder = alonzoEraOnwardsConstraints eon mempty
-getAnyWitnessScriptData eon AnySimpleScriptWitness{} = alonzoEraOnwardsConstraints eon mempty
-getAnyWitnessScriptData eon (AnyPlutusScriptWitness (PlutusScriptWitness l _ scriptDatum _ _)) =
-  let alonzoSdat = toAlonzoDatum eon l scriptDatum
-   in alonzoEraOnwardsConstraints eon $
-        case alonzoSdat of
-          Nothing -> alonzoEraOnwardsConstraints eon mempty
-          Just d -> alonzoEraOnwardsConstraints eon $ L.TxDats $ fromList [(L.hashData d, d)]
+  :: L.Era era => AnyWitness era -> L.TxDats era
+getAnyWitnessScriptData AnyKeyWitnessPlaceholder = mempty
+getAnyWitnessScriptData AnySimpleScriptWitness{} = mempty
+getAnyWitnessScriptData (AnyPlutusScriptWitness (PlutusScriptWitness l _ scriptDatum _ _)) =
+  let alonzoSdat = toAlonzoDatum l scriptDatum
+   in case alonzoSdat of
+        Nothing -> mempty
+        Just d -> L.TxDats $ fromList [(L.hashData d, d)]
 
 getAnyWitnessScript
-  :: ShelleyBasedEra era -> AnyWitness (ShelleyLedgerEra era) -> Maybe (L.Script (ShelleyLedgerEra era))
-getAnyWitnessScript _ AnyKeyWitnessPlaceholder = Nothing
-getAnyWitnessScript era ss@(AnySimpleScriptWitness{}) =
-  case era of
-    ShelleyBasedEraShelley -> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraAllegra -> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraMary -> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraAlonzo -> L.NativeScript <$> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraBabbage -> L.NativeScript <$> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraConway -> L.NativeScript <$> getAnyWitnessSimpleScript ss
-    ShelleyBasedEraDijkstra -> L.NativeScript <$> getAnyWitnessSimpleScript ss
-getAnyWitnessScript era ps@(AnyPlutusScriptWitness{}) =
-  forShelleyBasedEraInEon era Nothing $ \aEon ->
-    case aEon of
-      AlonzoEraOnwardsAlonzo -> L.PlutusScript <$> getAnyWitnessPlutusScript aEon ps
-      AlonzoEraOnwardsBabbage -> L.PlutusScript <$> getAnyWitnessPlutusScript aEon ps
-      AlonzoEraOnwardsConway -> L.PlutusScript <$> getAnyWitnessPlutusScript aEon ps
-      AlonzoEraOnwardsDijkstra -> L.PlutusScript <$> getAnyWitnessPlutusScript aEon ps
+  :: L.AlonzoEraScript era => AnyWitness era -> Maybe (L.Script era)
+getAnyWitnessScript AnyKeyWitnessPlaceholder = Nothing
+getAnyWitnessScript ss@(AnySimpleScriptWitness{}) = getAnyWitnessSimpleScript ss
+getAnyWitnessScript ps@(AnyPlutusScriptWitness{}) = getAnyWitnessPlutusScript ps
 
 -- It should be noted that 'PlutusRunnable' is constructed via deserialization. The deserialization
 -- instance lives in ledger and will fail for an invalid script language/era pairing. Therefore
 -- this function should never return 'Nothing'.
 fromPlutusRunnable
-  :: L.SLanguage lang
-  -> AlonzoEraOnwards era
+  :: L.AlonzoEraScript era
+  => L.SLanguage lang
   -> L.PlutusRunnable lang
-  -> Maybe (L.PlutusScript (ShelleyLedgerEra era))
-fromPlutusRunnable L.SPlutusV1 eon runnable =
-  case eon of
-    AlonzoEraOnwardsAlonzo ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Just $ L.AlonzoPlutusV1 plutusScript
-    AlonzoEraOnwardsBabbage ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Just $ L.BabbagePlutusV1 plutusScript
-    AlonzoEraOnwardsConway ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Just $ L.ConwayPlutusV1 plutusScript
-    AlonzoEraOnwardsDijkstra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Just $ Dijkstra.DijkstraPlutusV1 plutusScript
-fromPlutusRunnable L.SPlutusV2 eon runnable =
-  case eon of
-    AlonzoEraOnwardsAlonzo -> Nothing
-    AlonzoEraOnwardsBabbage ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Just $ L.BabbagePlutusV2 plutusScript
-    AlonzoEraOnwardsConway ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Just $ L.ConwayPlutusV2 plutusScript
-    AlonzoEraOnwardsDijkstra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Just $ Dijkstra.DijkstraPlutusV2 plutusScript
-fromPlutusRunnable L.SPlutusV3 eon runnable =
-  case eon of
-    AlonzoEraOnwardsAlonzo -> Nothing
-    AlonzoEraOnwardsBabbage -> Nothing
-    AlonzoEraOnwardsConway ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Just $ L.ConwayPlutusV3 plutusScript
-    AlonzoEraOnwardsDijkstra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Just $ Dijkstra.DijkstraPlutusV3 plutusScript
-fromPlutusRunnable L.SPlutusV4 eon runnable =
-  case eon of
-    AlonzoEraOnwardsAlonzo -> Nothing
-    AlonzoEraOnwardsBabbage -> Nothing
-    AlonzoEraOnwardsConway ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Just $ error "fromPlutusRunnable: ConwayPlutusV4" plutusScript
-    AlonzoEraOnwardsDijkstra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Just $ Dijkstra.DijkstraPlutusV4 plutusScript
+  -> Maybe (L.PlutusScript era)
+fromPlutusRunnable L.SPlutusV1 runnable =
+  L.mkPlutusScript $ L.plutusFromRunnable runnable
+fromPlutusRunnable L.SPlutusV2 runnable =
+  L.mkPlutusScript $ L.plutusFromRunnable runnable
+fromPlutusRunnable L.SPlutusV3 runnable =
+  L.mkPlutusScript $ L.plutusFromRunnable runnable
+fromPlutusRunnable L.SPlutusV4 runnable =
+  L.mkPlutusScript $ L.plutusFromRunnable runnable
 
 toAlonzoDatum
-  :: AlonzoEraOnwards era
-  -> L.SLanguage lang
+  :: L.Era era
+  => L.SLanguage lang
   -> PlutusScriptDatum lang purpose
-  -> Maybe (L.Data (ShelleyLedgerEra era))
-toAlonzoDatum eon l d =
+  -> Maybe (L.Data era)
+toAlonzoDatum l d =
   let mHashableData = getPlutusDatum l d
    in case mHashableData of
-        Just h -> Just $ alonzoEraOnwardsConstraints eon $ toAlonzoData h
+        Just h -> Just $ toAlonzoData h
         Nothing -> Nothing
 
 getPlutusDatum
