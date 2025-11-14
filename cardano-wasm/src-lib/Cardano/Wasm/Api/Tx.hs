@@ -35,7 +35,7 @@ import Cardano.Api.Plutus qualified as Shelley
 import Cardano.Api.Tx qualified as TxBody
 
 import Cardano.Ledger.Api qualified as Ledger
-import Cardano.Wasm.ExceptionHandling (justOrError, rightOrError, throwError, toMonadFail)
+import Cardano.Wasm.ExceptionHandling (justOrError, rightOrError, toMonadFail)
 
 import Control.Monad.Catch (MonadThrow)
 import Data.Aeson (ToJSON (toJSON), (.=))
@@ -85,8 +85,9 @@ newTxImpl :: UnsignedTxObject
 newTxImpl = newConwayTxImpl
 
 -- | Create a new unsigned transaction object for making a transaction in the current experimental era.
-newExperimentalEraTxImpl :: (HasCallStack, MonadThrow m) => m UnsignedTxObject
-newExperimentalEraTxImpl = throwError "newExperimentalEraTxImpl: No experimental era available"
+newExperimentalEraTxImpl :: MonadThrow m => m UnsignedTxObject
+newExperimentalEraTxImpl =
+  return $ UnsignedTxObject Exp.DijkstraEra (Exp.UnsignedTx (Ledger.mkBasicTx Ledger.mkBasicTxBody))
 
 -- | Create a new unsigned transaction object for making a Conway era transaction.
 newConwayTxImpl :: UnsignedTxObject
