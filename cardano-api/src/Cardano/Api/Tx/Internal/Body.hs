@@ -207,6 +207,7 @@ module Cardano.Api.Tx.Internal.Body
   , toShelleyTxIn
   , toShelleyTxOut
   , toShelleyTxOutAny
+  , toShelleyWithdrawal
   , fromShelleyTxId
   , fromShelleyTxIn
   , fromShelleyTxOut
