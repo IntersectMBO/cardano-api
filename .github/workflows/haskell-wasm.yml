@@ -201,6 +201,16 @@ jobs:
       run: |
         cp result/cardano_node_grpc_web_pb.js cardano-wasm/lib-wrapper/
 
+    - name: Test NPM package with node.js
+      run: |
+        export TMPDIR=$(mktemp -d)
+        cp cardano-wasm/node.test.js $TMPDIR/
+        cp cardano-wasm/npm-wrapper/*.tgz $TMPDIR/
+        cd $TMPDIR
+        npm install ./*.tgz
+        node node.test.js
+        cd -
+
     - name: Upload built wasm library
       uses: actions/upload-artifact@v4
       with:
