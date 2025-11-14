@@ -59,6 +59,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , TxId (..)
   , TxIn (..)
   , Value
+  , MaryValue (..)
   , MultiAsset (..)
   , addDeltaCoin
   , castSafeHash
@@ -343,7 +344,7 @@ import Cardano.Ledger.Keys
   , hashWithSerialiser
   , toVRFVerKeyHash
   )
-import Cardano.Ledger.Mary.Value (MultiAsset (..))
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), unData)
 import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
 import Cardano.Ledger.Shelley.API

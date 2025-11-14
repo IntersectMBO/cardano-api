@@ -64,6 +64,7 @@ instance SerialiseAsRawBytes Word16 where
       throwError . SerialiseAsRawBytesError $
         "Cannot decode Word16 from (hex): " <> BSC.unpack (Base16.encode bs)
 
+-- | Convert the number into binary value
 instance SerialiseAsRawBytes Natural where
   serialiseToRawBytes 0 = BS.singleton 0x00
   serialiseToRawBytes n = BS.toStrict . BSB.toLazyByteString $ go n mempty
