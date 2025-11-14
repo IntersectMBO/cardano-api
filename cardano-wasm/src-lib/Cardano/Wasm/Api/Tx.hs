@@ -10,6 +10,7 @@
 
 module Cardano.Wasm.Api.Tx
   ( UnsignedTxObject (..)
+  , SignedTxObject (..)
   , ProtocolParamsJSON (..)
   , newTxImpl
   , newExperimentalEraTxImpl
