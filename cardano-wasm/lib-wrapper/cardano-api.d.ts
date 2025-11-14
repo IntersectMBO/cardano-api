@@ -26,7 +26,7 @@ declare interface CardanoApi {
         newTx(): Promise<UnsignedTx>;
 
         /**
-         * Create a new unsigned transaction in the current experimental era (currently unavailable).
+         * Create a new unsigned transaction in the current experimental era (currently Dijkstra).
          * @returns A promise that resolves to a new `UnsignedTx` object.
          */
         newExperimentalEraTx(): Promise<UnsignedTx>;
@@ -44,6 +44,69 @@ declare interface CardanoApi {
      * @returns A promise that resolves to a new `GrpcConnection`.
      */
     newGrpcConnection(webGrpcUrl: string): Promise<GrpcConnection>;
+
+    /**
+     * Methods for creating certificates.
+     */
+    certificate: {
+        /**
+         * Methods for creating certificates in Conway era.
+         */
+        conway: {
+            /**
+             * Make a certificate that delegates a stake address to a stake pool in Conway era.
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param poolId The pool ID in base16 format.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressStakeDelegationCertificate(stakeKeyHash: string, poolId: string): Promise<string>;
+
+            /**
+             * Make a stake address registration certificate in Conway era.
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param deposit The deposit amount in lovelaces.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressRegistrationCertificate(stakeKeyHash: string, deposit: bigint): Promise<string>;
+
+            /**
+             * Make a stake address unregistration certificate in Conway era.
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param deposit The deposit amount in lovelaces.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressUnregistrationCertificate(stakeKeyHash: string, deposit: bigint): Promise<string>;
+        }
+
+        /**
+         * Methods for creating certificates in the current experimental era.
+         */
+        experimentalEra: {
+            /**
+             * Make a certificate that delegates a stake address to a stake pool in the current experimental era.
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param poolId The pool ID in base16 format.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressStakeDelegationCertificateExperimentalEra(stakeKeyHash: string, poolId: string): Promise<string>;
+
+            /**
+             * Make a stake address registration certificate in the current experimental era.
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param deposit The deposit amount in lovelaces.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressRegistrationCertificateExperimentalEra(stakeKeyHash: string, deposit: bigint): Promise<string>;
+
+            /**
+             * Make a stake address unregistration certificate in the current experimental era.
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param deposit The deposit amount in lovelaces.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressUnregistrationCertificateExperimentalEra(stakeKeyHash: string, deposit: bigint): Promise<string>;
+        }
+    }
 
     /**
      * Methods for generating and restoring wallets.

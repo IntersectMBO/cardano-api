@@ -16,6 +16,7 @@ module Cardano.Wasm.Internal.JavaScript.Bridge where
 import Cardano.Api qualified as Api
 import Cardano.Api.Ledger qualified as Ledger
 
+import Cardano.Wasm.Api.Certificate.StakeCertificate qualified as Wasm
 import Cardano.Wasm.Api.GRPC qualified as Wasm
 import Cardano.Wasm.Api.Info (apiInfo)
 import Cardano.Wasm.Api.Tx qualified as Wasm
@@ -356,6 +357,24 @@ foreign export javascript "addSimpleTxOut"
 foreign export javascript "appendCertificateToTx"
   appendCertificateToTx :: JSUnsignedTx -> JSString -> IO JSUnsignedTx
 
+foreign export javascript "makeStakeAddressStakeDelegationCertificate"
+  makeStakeAddressStakeDelegationCertificate :: JSString -> JSString -> IO JSString
+
+foreign export javascript "makeStakeAddressStakeDelegationCertificateExperimentalEra"
+  makeStakeAddressStakeDelegationCertificateExperimentalEra :: JSString -> JSString -> IO JSString
+
+foreign export javascript "makeStakeAddressRegistrationCertificate"
+  makeStakeAddressRegistrationCertificate :: JSString -> JSCoin -> IO JSString
+
+foreign export javascript "makeStakeAddressRegistrationCertificateExperimentalEra"
+  makeStakeAddressRegistrationCertificateExperimentalEra :: JSString -> JSCoin -> IO JSString
+
+foreign export javascript "makeStakeAddressUnregistrationCertificate"
+  makeStakeAddressUnregistrationCertificate :: JSString -> JSCoin -> IO JSString
+
+foreign export javascript "makeStakeAddressUnregistrationCertificateExperimentalEra"
+  makeStakeAddressUnregistrationCertificateExperimentalEra :: JSString -> JSCoin -> IO JSString
+
 foreign export javascript "setFee"
   setFee :: JSUnsignedTx -> JSCoin -> IO JSUnsignedTx
 
@@ -405,6 +424,66 @@ appendCertificateToTx jsUnsignedTx jsCertCbor =
       ( Wasm.appendCertificateToTxImpl
           <$> fromJSVal jsUnsignedTx
           <*> fromJSVal jsCertCbor
+      )
+
+-- | Make a certificate that delegates a stake address to a stake pool in Conway era.
+makeStakeAddressStakeDelegationCertificate :: HasCallStack => JSString -> JSString -> IO JSString
+makeStakeAddressStakeDelegationCertificate jsStakeKeyHash jsPoolId =
+  toJSVal
+    =<< join
+      ( Wasm.makeStakeAddressStakeDelegationCertificateImpl
+          <$> fromJSVal jsStakeKeyHash
+          <*> fromJSVal jsPoolId
+      )
+
+-- | Make a certificate that delegates a stake address to a stake pool in the current experimental era.
+makeStakeAddressStakeDelegationCertificateExperimentalEra :: HasCallStack => JSString -> JSString -> IO JSString
+makeStakeAddressStakeDelegationCertificateExperimentalEra jsStakeKeyHash jsPoolId =
+  toJSVal
+    =<< join
+      ( Wasm.makeStakeAddressStakeDelegationCertificateExperimentalEraImpl
+          <$> fromJSVal jsStakeKeyHash
+          <*> fromJSVal jsPoolId
+      )
+
+-- | Make a stake address registration certificate in Conway era.
+makeStakeAddressRegistrationCertificate :: HasCallStack => JSString -> JSCoin -> IO JSString
+makeStakeAddressRegistrationCertificate jsStakeKeyHash jsDeposit =
+  toJSVal
+    =<< join
+      ( Wasm.makeStakeAddressRegistrationCertificateImpl
+          <$> fromJSVal jsStakeKeyHash
+          <*> (fromInteger <$> fromJSBigInt jsDeposit)
+      )
+
+-- | Make a stake address registration certificate in the current experimental era.
+makeStakeAddressRegistrationCertificateExperimentalEra :: HasCallStack => JSString -> JSCoin -> IO JSString
+makeStakeAddressRegistrationCertificateExperimentalEra jsStakeKeyHash jsDeposit =
+  toJSVal
+    =<< join
+      ( Wasm.makeStakeAddressRegistrationCertificateExperimentalEraImpl
+          <$> fromJSVal jsStakeKeyHash
+          <*> (fromInteger <$> fromJSBigInt jsDeposit)
+      )
+
+-- | Make a stake address unregistration certificate in Conway era.
+makeStakeAddressUnregistrationCertificate :: HasCallStack => JSString -> JSCoin -> IO JSString
+makeStakeAddressUnregistrationCertificate jsStakeKeyHash jsDeposit =
+  toJSVal
+    =<< join
+      ( Wasm.makeStakeAddressUnregistrationCertificateImpl
+          <$> fromJSVal jsStakeKeyHash
+          <*> (fromInteger <$> fromJSBigInt jsDeposit)
+      )
+
+-- | Make a stake address unregistration certificate in the current experimental era.
+makeStakeAddressUnregistrationCertificateExperimentalEra :: HasCallStack => JSString -> JSCoin -> IO JSString
+makeStakeAddressUnregistrationCertificateExperimentalEra jsStakeKeyHash jsDeposit =
+  toJSVal
+    =<< join
+      ( Wasm.makeStakeAddressUnregistrationCertificateExperimentalEraImpl
+          <$> fromJSVal jsStakeKeyHash
+          <*> (fromInteger <$> fromJSBigInt jsDeposit)
       )
 
 -- | Set the transaction fee for an unsigned transaction.
