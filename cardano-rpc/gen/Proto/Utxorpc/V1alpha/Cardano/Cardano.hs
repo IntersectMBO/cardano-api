@@ -1342,11 +1342,12 @@ instance Control.DeepSeq.NFData CostModels where
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.hash' @:: Lens' Datum Data.ByteString.ByteString@
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.payload' @:: Lens' Datum PlutusData@
          * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'payload' @:: Lens' Datum (Prelude.Maybe PlutusData)@
-         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.originalCbor' @:: Lens' Datum Data.ByteString.ByteString@ -}
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.originalCbor' @:: Lens' Datum Data.ByteString.ByteString@
+         * 'Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields.maybe'originalCbor' @:: Lens' Datum (Prelude.Maybe Data.ByteString.ByteString)@ -}
 data Datum
   = Datum'_constructor {_Datum'hash :: !Data.ByteString.ByteString,
                         _Datum'payload :: !(Prelude.Maybe PlutusData),
-                        _Datum'originalCbor :: !Data.ByteString.ByteString,
+                        _Datum'originalCbor :: !(Prelude.Maybe Data.ByteString.ByteString),
                         _Datum'_unknownFields :: !Data.ProtoLens.FieldSet}
   deriving stock (Prelude.Eq, Prelude.Ord)
 instance Prelude.Show Datum where
@@ -1378,15 +1379,24 @@ instance Data.ProtoLens.Field.HasField Datum "originalCbor" Data.ByteString.Byte
     = (Prelude..)
         (Lens.Family2.Unchecked.lens
            _Datum'originalCbor (\ x__ y__ -> x__ {_Datum'originalCbor = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault)
+instance Data.ProtoLens.Field.HasField Datum "maybe'originalCbor" (Prelude.Maybe Data.ByteString.ByteString) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _Datum'originalCbor (\ x__ y__ -> x__ {_Datum'originalCbor = y__}))
         Prelude.id
 instance Data.ProtoLens.Message Datum where
   messageName _ = Data.Text.pack "utxorpc.v1alpha.cardano.Datum"
   packedMessageDescriptor _
     = "\n\
       \\ENQDatum\DC2\DC2\n\
-      \\EOThash\CAN\SOH \SOH(\fR\EOThash\DC2=\n\
-      \\apayload\CAN\STX \SOH(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\apayload\DC2#\n\
-      \\roriginal_cbor\CAN\ETX \SOH(\fR\foriginalCbor"
+      \\EOThash\CAN\SOH \SOH(\fR\EOThash\DC2B\n\
+      \\apayload\CAN\STX \SOH(\v2#.utxorpc.v1alpha.cardano.PlutusDataH\NULR\apayload\136\SOH\SOH\DC2(\n\
+      \\roriginal_cbor\CAN\ETX \SOH(\fH\SOHR\foriginalCbor\136\SOH\SOHB\n\
+      \\n\
+      \\b_payloadB\DLE\n\
+      \\SO_original_cbor"
   packedFileDescriptor _ = packedFileDescriptor
   fieldsByTag
     = let
@@ -1411,9 +1421,8 @@ instance Data.ProtoLens.Message Datum where
               "original_cbor"
               (Data.ProtoLens.ScalarField Data.ProtoLens.BytesField ::
                  Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
-              (Data.ProtoLens.PlainField
-                 Data.ProtoLens.Optional
-                 (Data.ProtoLens.Field.field @"originalCbor")) ::
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'originalCbor")) ::
               Data.ProtoLens.FieldDescriptor Datum
       in
         Data.Map.fromList
@@ -1428,8 +1437,7 @@ instance Data.ProtoLens.Message Datum where
     = Datum'_constructor
         {_Datum'hash = Data.ProtoLens.fieldDefault,
          _Datum'payload = Prelude.Nothing,
-         _Datum'originalCbor = Data.ProtoLens.fieldDefault,
-         _Datum'_unknownFields = []}
+         _Datum'originalCbor = Prelude.Nothing, _Datum'_unknownFields = []}
   parseMessage
     = let
         loop :: Datum -> Data.ProtoLens.Encoding.Bytes.Parser Datum
@@ -1515,21 +1523,20 @@ instance Data.ProtoLens.Message Datum where
                                      (Data.ProtoLens.Encoding.Bytes.putBytes bs))
                              Data.ProtoLens.encodeMessage _v))
                 ((Data.Monoid.<>)
-                   (let
-                      _v
-                        = Lens.Family2.view (Data.ProtoLens.Field.field @"originalCbor") _x
-                    in
-                      if (Prelude.==) _v Data.ProtoLens.fieldDefault then
-                          Data.Monoid.mempty
-                      else
-                          (Data.Monoid.<>)
-                            (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
-                            ((\ bs
-                                -> (Data.Monoid.<>)
-                                     (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                        (Prelude.fromIntegral (Data.ByteString.length bs)))
-                                     (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                               _v))
+                   (case
+                        Lens.Family2.view
+                          (Data.ProtoLens.Field.field @"maybe'originalCbor") _x
+                    of
+                      Prelude.Nothing -> Data.Monoid.mempty
+                      (Prelude.Just _v)
+                        -> (Data.Monoid.<>)
+                             (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
+                             ((\ bs
+                                 -> (Data.Monoid.<>)
+                                      (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                         (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                      (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                                _v))
                    (Data.ProtoLens.Encoding.Wire.buildFieldSet
                       (Lens.Family2.view Data.ProtoLens.unknownFields _x))))
 instance Control.DeepSeq.NFData Datum where
@@ -6499,11 +6506,14 @@ packedFileDescriptor
     \\ENQdatum\CAN\EOT \SOH(\v2\RS.utxorpc.v1alpha.cardano.DatumR\ENQdatum\DC27\n\
     \\ACKscript\CAN\ENQ \SOH(\v2\US.utxorpc.v1alpha.cardano.ScriptR\ACKscript\"$\n\
     \\fAddressArray\DC2\DC4\n\
-    \\ENQitems\CAN\SOH \ETX(\fR\ENQitems\"\DEL\n\
+    \\ENQitems\CAN\SOH \ETX(\fR\ENQitems\"\167\SOH\n\
     \\ENQDatum\DC2\DC2\n\
-    \\EOThash\CAN\SOH \SOH(\fR\EOThash\DC2=\n\
-    \\apayload\CAN\STX \SOH(\v2#.utxorpc.v1alpha.cardano.PlutusDataR\apayload\DC2#\n\
-    \\roriginal_cbor\CAN\ETX \SOH(\fR\foriginalCbor\"q\n\
+    \\EOThash\CAN\SOH \SOH(\fR\EOThash\DC2B\n\
+    \\apayload\CAN\STX \SOH(\v2#.utxorpc.v1alpha.cardano.PlutusDataH\NULR\apayload\136\SOH\SOH\DC2(\n\
+    \\roriginal_cbor\CAN\ETX \SOH(\fH\SOHR\foriginalCbor\136\SOH\SOHB\n\
+    \\n\
+    \\b_payloadB\DLE\n\
+    \\SO_original_cbor\"q\n\
     \\ENQAsset\DC2\DC2\n\
     \\EOTname\CAN\SOH \SOH(\fR\EOTname\DC2%\n\
     \\voutput_coin\CAN\STX \SOH(\EOTH\NULR\n\
@@ -6621,7 +6631,7 @@ packedFileDescriptor
     \\EMgovernance_action_deposit\CAN\GS \SOH(\EOTR\ETBgovernanceActionDepositB\STX0\SOH\DC2%\n\
     \\fdrep_deposit\CAN\RS \SOH(\EOTR\vdrepDepositB\STX0\SOH\DC24\n\
     \\SYNdrep_inactivity_period\CAN\US \SOH(\EOTR\DC4drepInactivityPeriodB\169\SOH\n\
-    \\ESCcom.utxorpc.v1alpha.cardanoB\fCardanoProtoP\SOH\162\STX\ETXUVC\170\STX\ETBUtxorpc.V1alpha.Cardano\202\STX\ETBUtxorpc\\V1alpha\\Cardano\226\STX#Utxorpc\\V1alpha\\Cardano\\GPBMetadata\234\STX\EMUtxorpc::V1alpha::CardanoJ\157K\n\
+    \\ESCcom.utxorpc.v1alpha.cardanoB\fCardanoProtoP\SOH\162\STX\ETXUVC\170\STX\ETBUtxorpc.V1alpha.Cardano\202\STX\ETBUtxorpc\\V1alpha\\Cardano\226\STX#Utxorpc\\V1alpha\\Cardano\\GPBMetadata\234\STX\EMUtxorpc::V1alpha::CardanoJ\185K\n\
     \\a\DC2\ENQ\NUL\NUL\192\SOH\SOH\n\
     \\b\n\
     \\SOH\f\DC2\ETX\NUL\NUL\DC2\n\
@@ -6722,23 +6732,29 @@ packedFileDescriptor
     \\f\n\
     \\ENQ\EOT\STX\STX\NUL\ETX\DC2\ETX\DC3\SI\DLE\n\
     \)\n\
-    \\EOT\EOT\STX\STX\SOH\DC2\ETX\DC4\STX\EM\"\FS Parsed Plutus data payload\n\
+    \\EOT\EOT\STX\STX\SOH\DC2\ETX\DC4\STX\"\"\FS Parsed Plutus data payload\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\SOH\ACK\DC2\ETX\DC4\STX\f\n\
+    \\ENQ\EOT\STX\STX\SOH\EOT\DC2\ETX\DC4\STX\n\
+    \\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\SOH\SOH\DC2\ETX\DC4\r\DC4\n\
+    \\ENQ\EOT\STX\STX\SOH\ACK\DC2\ETX\DC4\v\NAK\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\SOH\ETX\DC2\ETX\DC4\ETB\CAN\n\
+    \\ENQ\EOT\STX\STX\SOH\SOH\DC2\ETX\DC4\SYN\GS\n\
+    \\f\n\
+    \\ENQ\EOT\STX\STX\SOH\ETX\DC2\ETX\DC4 !\n\
     \:\n\
-    \\EOT\EOT\STX\STX\STX\DC2\ETX\NAK\STX\SUB\"- Original cbor-encoded data as seen on-chain\n\
+    \\EOT\EOT\STX\STX\STX\DC2\ETX\NAK\STX#\"- Original cbor-encoded data as seen on-chain\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\STX\ENQ\DC2\ETX\NAK\STX\a\n\
+    \\ENQ\EOT\STX\STX\STX\EOT\DC2\ETX\NAK\STX\n\
+    \\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\STX\SOH\DC2\ETX\NAK\b\NAK\n\
+    \\ENQ\EOT\STX\STX\STX\ENQ\DC2\ETX\NAK\v\DLE\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\STX\ETX\DC2\ETX\NAK\CAN\EM\n\
+    \\ENQ\EOT\STX\STX\STX\SOH\DC2\ETX\NAK\DC1\RS\n\
+    \\f\n\
+    \\ENQ\EOT\STX\STX\STX\ETX\DC2\ETX\NAK!\"\n\
     \B\n\
     \\STX\EOT\ETX\DC2\EOT\EM\NUL\US\SOH\SUB6 Represents a custom asset in the Cardano blockchain.\n\
     \\n\

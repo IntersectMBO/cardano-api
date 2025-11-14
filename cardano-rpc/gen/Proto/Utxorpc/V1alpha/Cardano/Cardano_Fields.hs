@@ -397,6 +397,13 @@ maybe'nativeScript ::
   Lens.Family2.LensLike' f s a
 maybe'nativeScript
   = Data.ProtoLens.Field.field @"maybe'nativeScript"
+maybe'originalCbor ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'originalCbor" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'originalCbor
+  = Data.ProtoLens.Field.field @"maybe'originalCbor"
 maybe'outputCoin ::
   forall f s a.
   (Prelude.Functor f,
