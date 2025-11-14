@@ -353,6 +353,9 @@ foreign export javascript "addTxInput"
 foreign export javascript "addSimpleTxOut"
   addSimpleTxOut :: JSUnsignedTx -> JSString -> JSCoin -> IO JSUnsignedTx
 
+foreign export javascript "appendCertificateToTx"
+  appendCertificateToTx :: JSUnsignedTx -> JSString -> IO JSUnsignedTx
+
 foreign export javascript "setFee"
   setFee :: JSUnsignedTx -> JSCoin -> IO JSUnsignedTx
 
@@ -392,6 +395,16 @@ addSimpleTxOut jsUnsignedTx jsDestAddr jsCoin =
           <$> fromJSVal jsUnsignedTx
           <*> fromJSVal jsDestAddr
           <*> fromJSVal jsCoin
+      )
+
+-- | Append a certificate (in CBOR hex string format) to an unsigned transaction.
+appendCertificateToTx :: HasCallStack => JSUnsignedTx -> JSString -> IO JSUnsignedTx
+appendCertificateToTx jsUnsignedTx jsCertCbor =
+  toJSVal
+    =<< join
+      ( Wasm.appendCertificateToTxImpl
+          <$> fromJSVal jsUnsignedTx
+          <*> fromJSVal jsCertCbor
       )
 
 -- | Set the transaction fee for an unsigned transaction.

@@ -304,6 +304,16 @@ apiInfo =
                     }
               , MethodInfoEntry $
                   MethodInfo
+                    { methodName = "appendCertificateToTx"
+                    , methodDoc = "Appends a certificate (in CBOR hex string format) to the transaction."
+                    , methodParams =
+                        [ ParamInfo "certCbor" TSString "The certificate in CBOR hex string format."
+                        ]
+                    , methodReturnType = Fluent
+                    , methodReturnDoc = "The `UnsignedTx` object with the added certificate."
+                    }
+              , MethodInfoEntry $
+                  MethodInfo
                     { methodName = "setFee"
                     , methodDoc = "Sets the fee for the transaction."
                     , methodParams = [ParamInfo "lovelaceAmount" TSBigInt "The fee amount in lovelaces."]

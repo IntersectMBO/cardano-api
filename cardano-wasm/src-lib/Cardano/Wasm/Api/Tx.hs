@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,6 +16,7 @@ module Cardano.Wasm.Api.Tx
   , newConwayTxImpl
   , addTxInputImpl
   , addSimpleTxOutImpl
+  , appendCertificateToTxImpl
   , estimateMinFeeImpl
   , setFeeImpl
   , signWithPaymentKeyImpl
@@ -124,6 +126,21 @@ addSimpleTxOutImpl (UnsignedTxObject era (Exp.UnsignedTx tx)) destAddr lovelaceA
       $ Api.deserialiseAddress
         (Api.AsAddressInEra Api.asType)
         (Text.pack destAddrStr)
+
+-- | Append a certificate (in CBOR hex string format) to an unsigned transaction object.
+appendCertificateToTxImpl
+  :: (HasCallStack, MonadThrow m) => UnsignedTxObject -> String -> m UnsignedTxObject
+appendCertificateToTxImpl (UnsignedTxObject era (Exp.UnsignedTx tx)) certCbor = do
+  Exp.Certificate cert <- deserialiseCertificate era certCbor
+  let tx' = tx & Ledger.bodyTxL . Ledger.certsTxBodyL %~ (<> StrictSeq.fromList [cert])
+  return $ UnsignedTxObject era $ Exp.UnsignedTx tx'
+ where
+  deserialiseCertificate
+    :: (HasCallStack, MonadThrow m) => Exp.Era era -> String -> m (Exp.Certificate (Exp.LedgerEra era))
+  deserialiseCertificate era' certCbor' =
+    obtainCommonConstraints era' $
+      rightOrError $
+        Api.deserialiseFromCBOR Exp.AsCertificate (Text.encodeUtf8 $ Text.pack certCbor')
 
 -- | Set the fee for an unsigned transaction object.
 setFeeImpl :: UnsignedTxObject -> Ledger.Coin -> UnsignedTxObject
