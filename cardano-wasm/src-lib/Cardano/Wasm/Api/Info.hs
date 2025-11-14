@@ -478,6 +478,94 @@ apiInfo =
                         }
                   , MethodGroupEntry $
                       MethodGroup
+                        { groupName = "certificate"
+                        , groupDoc = ["Methods for creating certificates."]
+                        , groupMethods =
+                            [ MethodGroupEntry $
+                                MethodGroup
+                                  { groupName = "conway"
+                                  , groupDoc = ["Methods for creating certificates in Conway era."]
+                                  , groupMethods =
+                                      [ MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressStakeDelegationCertificate"
+                                            , methodDoc = "Make a certificate that delegates a stake address to a stake pool in Conway era."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "poolId" TSString "The pool ID in base16 format."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressRegistrationCertificate"
+                                            , methodDoc = "Make a stake address registration certificate in Conway era."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressUnregistrationCertificate"
+                                            , methodDoc = "Make a stake address unregistration certificate in Conway era."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      ]
+                                  }
+                            , MethodGroupEntry $
+                                MethodGroup
+                                  { groupName = "experimentalEra"
+                                  , groupDoc = ["Methods for creating certificates in the current experimental era."]
+                                  , groupMethods =
+                                      [ MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressStakeDelegationCertificateExperimentalEra"
+                                            , methodDoc =
+                                                "Make a certificate that delegates a stake address to a stake pool in the current experimental era."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "poolId" TSString "The pool ID in base16 format."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressRegistrationCertificateExperimentalEra"
+                                            , methodDoc = "Make a stake address registration certificate in the current experimental era."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressUnregistrationCertificateExperimentalEra"
+                                            , methodDoc = "Make a stake address unregistration certificate in the current experimental era."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      ]
+                                  }
+                            ]
+                        }
+                  , MethodGroupEntry $
+                      MethodGroup
                         { groupName = "wallet"
                         , groupDoc = ["Methods for generating and restoring wallets."]
                         , groupMethods =
