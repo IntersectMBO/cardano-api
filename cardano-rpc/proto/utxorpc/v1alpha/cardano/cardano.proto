@@ -18,8 +18,8 @@ message AddressArray {
 
 message Datum {
   bytes hash = 1; // Hash of this datum as seen on-chain
-  PlutusData payload = 2; // Parsed Plutus data payload
-  bytes original_cbor = 3; // Original cbor-encoded data as seen on-chain
+  optional PlutusData payload = 2; // Parsed Plutus data payload
+  optional bytes original_cbor = 3; // Original cbor-encoded data as seen on-chain
 }
 
 // Represents a custom asset in the Cardano blockchain.
