@@ -48,6 +48,7 @@ import Cardano.Api.Experimental.Tx.Internal.AnyWitness
   )
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   ( TxScriptWitnessRequirements (..)
+  , getTxScriptWitnessesRequirements
   )
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.Key.Internal
@@ -540,12 +541,24 @@ collectTxBodyScriptWitnessRequirements
             (getDatums txInsReference txOuts)
             mempty
 
-    let txInWits = getTxScriptWitnessRequirements $ extractWitnessableTxIns txIns
-        txWithdrawalWits = getTxScriptWitnessRequirements $ extractWitnessableWithdrawals txWithdrawals
-        txCertWits = getTxScriptWitnessRequirements $ extractWitnessableCertificates txCertificates
-        txMintWits = getTxScriptWitnessRequirements $ extractWitnessableMints txMintValue
-        txVotingWits = getTxScriptWitnessRequirements $ extractWitnessableVotes txVotingProcedures
-        txProposalWits = getTxScriptWitnessRequirements $ extractWitnessableProposals txProposalProcedures
+    let txInWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            extractWitnessableTxIns txIns
+        txWithdrawalWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            extractWitnessableWithdrawals txWithdrawals
+        txCertWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            extractWitnessableCertificates txCertificates
+        txMintWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            extractWitnessableMints txMintValue
+        txVotingWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            extractWitnessableVotes txVotingProcedures
+        txProposalWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            extractWitnessableProposals txProposalProcedures
 
     return $
       obtainMonoidConstraint (useEra @era) $
@@ -559,57 +572,6 @@ collectTxBodyScriptWitnessRequirements
           , txProposalWits
           ]
 
-getTxScriptWitnessRequirements
-  :: forall era witnessable
-   . IsEra era
-  => [(Witnessable witnessable (LedgerEra era), AnyWitness (LedgerEra era))]
-  -> TxScriptWitnessRequirements (LedgerEra era)
-getTxScriptWitnessRequirements wits =
-  let era = useEra @era
-      TxScriptWitnessRequirements l s d _ =
-        obtainMonoidConstraint era $
-          mconcat
-            [ TxScriptWitnessRequirements
-                (maybe mempty Set.singleton $ getAnyWitnessPlutusLanguage anyWit)
-                (maybe mempty return $ getAnyWitnessScript anyWit)
-                (getAnyWitnessScriptData anyWit)
-                (obtainCommonConstraints era mempty)
-            | (_, anyWit) <- wits
-            ]
-   in TxScriptWitnessRequirements l s d (getAnyWitnessRedeemerPointerMap wits)
-
--- | The transaction's redeemer pointer map allows the ledger to connect a redeemer and execution unit pairing to the relevant
--- script. The ledger basically reconstructs the indicies (redeemer pointers) of this map can then look up the relevant
--- execution units/redeemer pairing. NB: the redeemer pointer has been renamed to 'PlutusPurpose AsIndex' in the ledger.
-getAnyWitnessRedeemerPointerMap
-  :: forall era witnessable
-   . IsEra era
-  => [(Witnessable witnessable (LedgerEra era), AnyWitness (LedgerEra era))]
-  -> L.Redeemers (LedgerEra era)
-getAnyWitnessRedeemerPointerMap anyWit =
-  constructRedeeemerPointerMap $
-    obtainCommonConstraints (useEra @era) $
-      createIndexedPlutusScriptWitnesses anyWit
-
-constructRedeeemerPointerMap
-  :: forall era
-   . IsEra era
-  => [AnyIndexedPlutusScriptWitness (LedgerEra era)]
-  -> L.Redeemers (LedgerEra era)
-constructRedeeemerPointerMap scriptWits =
-  let redeemerPointers = map constructRedeemerPointer scriptWits
-   in obtainCommonConstraints (useEra @era) $ mconcat redeemerPointers
-
--- | An 'IndexedPlutusScriptWitness' contains everything we need to construct a single
--- entry in the redeemer pointer map.
-constructRedeemerPointer
-  :: AnyIndexedPlutusScriptWitness (LedgerEra era)
-  -> L.Redeemers (LedgerEra era)
-constructRedeemerPointer (AnyIndexedPlutusScriptWitness (IndexedPlutusScriptWitness _ purpose scriptWit)) =
-  let PlutusScriptWitness _ _ _ redeemer execUnits = scriptWit
-   in L.Redeemers $
-        fromList [(purpose, (toAlonzoData redeemer, toAlonzoExUnits execUnits))]
-
 obtainMonoidConstraint
   :: Era era
   -> (Monoid (TxScriptWitnessRequirements (LedgerEra era)) => a)
@@ -617,99 +579,6 @@ obtainMonoidConstraint
 obtainMonoidConstraint eon = case eon of
   ConwayEra -> id
   DijkstraEra -> id
-
-getAnyWitnessScript
-  :: forall era
-   . IsEra era
-  => AnyWitness (LedgerEra era)
-  -> Maybe (L.Script (LedgerEra era))
-getAnyWitnessScript AnyKeyWitnessPlaceholder = Nothing
-getAnyWitnessScript ss@(AnySimpleScriptWitness{}) =
-  case useEra @era of
-    ConwayEra -> obtainCommonConstraints (useEra @era) (getAnyWitnessSimpleScript ss)
-    DijkstraEra -> obtainCommonConstraints (useEra @era) (getAnyWitnessSimpleScript ss)
-getAnyWitnessScript ps@(AnyPlutusScriptWitness{}) =
-  case useEra @era of
-    ConwayEra -> L.PlutusScript <$> getAnyWitnessPlutusScript ps
-    DijkstraEra -> L.PlutusScript <$> getAnyWitnessPlutusScript ps
-
-getAnyWitnessPlutusScript
-  :: forall era
-   . IsEra era
-  => AnyWitness (LedgerEra era)
-  -> Maybe (L.PlutusScript (LedgerEra era))
-getAnyWitnessPlutusScript AnyKeyWitnessPlaceholder = Nothing
-getAnyWitnessPlutusScript (AnySimpleScriptWitness _) = Nothing
-getAnyWitnessPlutusScript
-  ( AnyPlutusScriptWitness
-      (PlutusScriptWitness l (PScript (PlutusScriptInEra plutusScriptRunnable)) _ _ _)
-    ) = return $ fromPlutusRunnable l plutusScriptRunnable
-getAnyWitnessPlutusScript (AnyPlutusScriptWitness (PlutusScriptWitness _ (PReferenceScript{}) _ _ _)) =
-  Nothing
-
--- It should be noted that 'PlutusRunnable' is constructed via deserialization. The deserialization
--- instance lives in ledger and will fail for an invalid script language/era pairing.
-fromPlutusRunnable
-  :: forall era lang
-   . IsEra era
-  => L.SLanguage lang
-  -> L.PlutusRunnable lang
-  -> L.PlutusScript (LedgerEra era)
-fromPlutusRunnable L.SPlutusV1 runnable =
-  case useEra @era of
-    ConwayEra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in L.ConwayPlutusV1 plutusScript
-    DijkstraEra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Dijkstra.DijkstraPlutusV1 plutusScript
-fromPlutusRunnable L.SPlutusV2 runnable =
-  case useEra @era of
-    ConwayEra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in L.ConwayPlutusV2 plutusScript
-    DijkstraEra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Dijkstra.DijkstraPlutusV2 plutusScript
-fromPlutusRunnable L.SPlutusV3 runnable =
-  case useEra @era of
-    ConwayEra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in L.ConwayPlutusV3 plutusScript
-    DijkstraEra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Dijkstra.DijkstraPlutusV3 plutusScript
-fromPlutusRunnable L.SPlutusV4 runnable =
-  case useEra @era of
-    ConwayEra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in error "fromPlutusRunnable: ConwayPlutusV4" plutusScript
-    DijkstraEra ->
-      let plutusScript = L.plutusFromRunnable runnable
-       in Dijkstra.DijkstraPlutusV4 plutusScript
-
--- | NB this does not include datums from inline datums existing at tx outputs!
-getAnyWitnessScriptData
-  :: forall era. IsEra era => AnyWitness (LedgerEra era) -> L.TxDats (LedgerEra era)
-getAnyWitnessScriptData AnyKeyWitnessPlaceholder = obtainCommonConstraints (useEra @era) mempty
-getAnyWitnessScriptData AnySimpleScriptWitness{} = obtainCommonConstraints (useEra @era) mempty
-getAnyWitnessScriptData (AnyPlutusScriptWitness (PlutusScriptWitness l _ scriptDatum _ _)) =
-  let alonzoSdat = toAlonzoDatum l scriptDatum
-   in case alonzoSdat of
-        Nothing -> obtainCommonConstraints (useEra @era) mempty
-        Just (d :: L.Data (LedgerEra era)) -> obtainCommonConstraints (useEra @era) $ L.TxDats $ fromList [(L.hashData d, d)]
-
-toAlonzoDatum
-  :: forall era lang purpose
-   . IsEra era
-  => L.SLanguage lang
-  -> PlutusScriptDatum lang purpose
-  -> Maybe (L.Data (LedgerEra era))
-toAlonzoDatum l d =
-  let mHashableData = getPlutusDatum l d
-   in case mHashableData of
-        Just h -> Just $ obtainCommonConstraints (useEra @era) $ toAlonzoData h
-        Nothing -> Nothing
 
 -- | Extract datum:
 -- 1. supplemental datums from transaction outputs
