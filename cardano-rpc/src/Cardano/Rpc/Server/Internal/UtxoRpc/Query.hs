@@ -8,6 +8,7 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   ( readParamsMethod
@@ -16,6 +17,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Query
 where
 
 import Cardano.Api
+import Cardano.Api.Experimental.Era
 import Cardano.Api.Parser.Text qualified as P
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
@@ -41,7 +43,7 @@ readParamsMethod _req = do
   -- let fieldMask :: [Text] = req ^. #fieldMask . #paths
   nodeConnInfo <- grab
   AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-  eon <- forEraInEon era (error "Minimum Conway era required") pure
+  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
   let sbe = convert eon
 
   let target = VolatileTip
@@ -54,7 +56,7 @@ readParamsMethod _req = do
   pure $
     def
       & #ledgerTip .~ mkChainPointMsg chainPoint blockNo
-      & #values . #cardano .~ conwayEraOnwardsConstraints eon (inject pparams)
+      & #values . #cardano .~ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
 
 readUtxosMethod
   :: MonadRpc e m
@@ -71,11 +73,11 @@ readUtxosMethod req = do
 
   nodeConnInfo <- grab
   AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-  eon <- forEraInEon era (error "Minimum Shelley era required") pure
+  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
 
   let target = VolatileTip
   (utxo, chainPoint, blockNo) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-    utxo <- throwEither =<< throwEither =<< queryUtxo eon utxoFilter
+    utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
     chainPoint <- throwEither =<< queryChainPoint
     blockNo <- throwEither =<< queryChainBlockNo
     pure (utxo, chainPoint, blockNo)
@@ -83,7 +85,7 @@ readUtxosMethod req = do
   pure $
     defMessage
       & #ledgerTip .~ mkChainPointMsg chainPoint blockNo
-      & #items .~ cardanoEraConstraints era (inject utxo)
+      & #items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
  where
   txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
   txoRefToTxIn r = do

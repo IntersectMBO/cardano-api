@@ -8,6 +8,7 @@
 module Cardano.Api.Error
   ( Error (..)
   , throwErrorAsException
+  , liftEitherError
   , failEitherError
   , ErrorAsException (..)
   , FileError (..)
@@ -20,7 +21,8 @@ where
 import Cardano.Api.Monad.Error
 import Cardano.Api.Pretty
 
-import Control.Exception (Exception (..), IOException, throwIO)
+import Control.Exception.Safe
+import GHC.Stack
 import System.Directory (doesFileExist)
 import System.IO (Handle)
 
@@ -32,26 +34,49 @@ instance Error () where
 
 -- | The preferred approach is to use 'Except' or 'ExceptT', but you can if
 -- necessary use IO exceptions.
-throwErrorAsException :: Error e => e -> IO a
-throwErrorAsException e = throwIO (ErrorAsException e)
+throwErrorAsException
+  :: HasCallStack
+  => MonadThrow m
+  => Typeable e
+  => Error e
+  => e
+  -> m a
+throwErrorAsException e = withFrozenCallStack $ throwM $ ErrorAsException e
 
-failEitherError :: MonadFail m => Error e => Either e a -> m a
+-- | Pretty print 'Error e' and 'fail' if 'Left'.
+failEitherError
+  :: MonadFail m
+  => Error e
+  => Either e a
+  -> m a
 failEitherError = failEitherWith displayError
 
-data ErrorAsException where
-  ErrorAsException :: Error e => e -> ErrorAsException
+-- | Pretty print 'Error e' and 'throwM' it wrapped in 'ErrorAsException' when 'Left'.
+liftEitherError
+  :: HasCallStack
+  => MonadThrow m
+  => Typeable e
+  => Error e
+  => Either e a
+  -> m a
+liftEitherError = withFrozenCallStack $ either throwErrorAsException pure
 
+-- | An exception wrapping any 'Error e', attaching a call stack from the construction place to it.
+data ErrorAsException where
+  ErrorAsException :: (HasCallStack, Typeable e, Error e) => e -> ErrorAsException
+
+instance Exception ErrorAsException
+
+-- | Pretty print the error inside the exception
 instance Error ErrorAsException where
   prettyError (ErrorAsException e) =
     prettyError e
 
+-- | Pretty print the error inside the exception followed by the call stack pointing to the place where 'Error e' was
+-- wrapped in 'ErrorAsException'
 instance Show ErrorAsException where
   show (ErrorAsException e) =
-    docToString $ prettyError e
-
-instance Exception ErrorAsException where
-  displayException (ErrorAsException e) =
-    docToString $ prettyError e
+    docToString (prettyError e) <> "\n" <> prettyCallStack callStack
 
 displayError :: Error a => a -> String
 displayError = docToString . prettyError

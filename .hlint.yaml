@@ -61,7 +61,7 @@
 - ignore: {name: Use camelCase, within: [Test.Cardano.Api.**, Test.Golden.Cardano.Api.**]}
 
 # Ignore all files in cardano-rpc/gen (generated code)
-- ignore: {within: [Proto.Cardano, Proto.Utxorpc]}
+- ignore: {within: [Proto.Cardano.**, Proto.Utxorpc.**]}
 
 - ignore: {name: Eta reduce}
 - ignore: {name: Use + directly}
