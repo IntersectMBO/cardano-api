@@ -40,6 +40,7 @@ library cardano-wasi-lib
     Cardano.Wasm.ExceptionHandling
 
   other-modules:
+    Cardano.Wasm.Internal.Api.Era
     Cardano.Wasm.Internal.Api.Random
 
   build-depends:

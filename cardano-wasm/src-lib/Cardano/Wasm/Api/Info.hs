@@ -15,8 +15,9 @@ module Cardano.Wasm.Api.Info
 where
 
 import Cardano.Api (pretty)
+import Cardano.Api.Experimental.Era qualified as Exp
 
-import Cardano.Wasm.Api.Tx (UnsignedTxObject (..), newExperimentalEraTxImpl, newTxImpl)
+import Cardano.Wasm.Internal.Api.Era (currentEra, experimentalEra)
 
 import Data.Aeson qualified as Aeson
 import Data.Maybe (fromMaybe)
@@ -202,10 +203,10 @@ instance Aeson.ToJSON ApiInfo where
       ]
 
 -- | Get a comment about the era for unsigned transaction creation methods.
-getEraCommentForUnsignedTx :: Maybe UnsignedTxObject -> String
-getEraCommentForUnsignedTx utxMonad =
-  case utxMonad of
-    Just (UnsignedTxObject era _) -> "(currently " ++ show (pretty era) ++ ")"
+getEraCommentFor :: Maybe (Exp.Era era) -> String
+getEraCommentFor era =
+  case era of
+    Just era' -> "(currently " ++ show (pretty era') ++ ")"
     Nothing -> "(currently unavailable)"
 
 -- | Provides metadata about the "virtual objects" and their methods.
@@ -468,7 +469,7 @@ apiInfo =
                                   , methodSimpleName = Nothing
                                   , methodDoc =
                                       "Create a new unsigned transaction in the current era "
-                                        ++ getEraCommentForUnsignedTx (Just newTxImpl)
+                                        ++ getEraCommentFor (Just currentEra)
                                         ++ "."
                                   , methodParams = []
                                   , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
@@ -480,7 +481,7 @@ apiInfo =
                                   , methodSimpleName = Nothing
                                   , methodDoc =
                                       "Create a new unsigned transaction in the current experimental era "
-                                        ++ getEraCommentForUnsignedTx newExperimentalEraTxImpl
+                                        ++ getEraCommentFor experimentalEra
                                         ++ "."
                                   , methodParams = []
                                   , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
@@ -513,14 +514,19 @@ apiInfo =
                         , groupMethods =
                             [ MethodGroupEntry $
                                 MethodGroup
-                                  { groupName = "conway"
-                                  , groupDoc = ["Methods for creating certificates in Conway era."]
+                                  { groupName = "currentEra"
+                                  , groupDoc =
+                                      [ "Methods for creating certificates in the current era " ++ getEraCommentFor (Just currentEra) ++ "."
+                                      ]
                                   , groupMethods =
                                       [ MethodInfoEntry $
                                           MethodInfo
                                             { methodName = "makeStakeAddressStakeDelegationCertificate"
                                             , methodSimpleName = Nothing
-                                            , methodDoc = "Make a certificate that delegates a stake address to a stake pool in Conway era."
+                                            , methodDoc =
+                                                "Make a certificate that delegates a stake address to a stake pool in the current era "
+                                                  ++ getEraCommentFor (Just currentEra)
+                                                  ++ "."
                                             , methodParams =
                                                 [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
                                                 , ParamInfo "poolId" TSString "The pool ID in base16 format."
@@ -532,7 +538,10 @@ apiInfo =
                                           MethodInfo
                                             { methodName = "makeStakeAddressRegistrationCertificate"
                                             , methodSimpleName = Nothing
-                                            , methodDoc = "Make a stake address registration certificate in Conway era."
+                                            , methodDoc =
+                                                "Make a stake address registration certificate in the current era "
+                                                  ++ getEraCommentFor (Just currentEra)
+                                                  ++ "."
                                             , methodParams =
                                                 [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
                                                 , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
@@ -544,7 +553,10 @@ apiInfo =
                                           MethodInfo
                                             { methodName = "makeStakeAddressUnregistrationCertificate"
                                             , methodSimpleName = Nothing
-                                            , methodDoc = "Make a stake address unregistration certificate in Conway era."
+                                            , methodDoc =
+                                                "Make a stake address unregistration certificate in the current era "
+                                                  ++ getEraCommentFor (Just currentEra)
+                                                  ++ "."
                                             , methodParams =
                                                 [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
                                                 , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
@@ -557,14 +569,20 @@ apiInfo =
                             , MethodGroupEntry $
                                 MethodGroup
                                   { groupName = "experimentalEra"
-                                  , groupDoc = ["Methods for creating certificates in the current experimental era."]
+                                  , groupDoc =
+                                      [ "Methods for creating certificates in the current experimental era "
+                                          ++ getEraCommentFor experimentalEra
+                                          ++ "."
+                                      ]
                                   , groupMethods =
                                       [ MethodInfoEntry $
                                           MethodInfo
                                             { methodName = "makeStakeAddressStakeDelegationCertificateUpcomingEra"
                                             , methodSimpleName = Nothing
                                             , methodDoc =
-                                                "Make a certificate that delegates a stake address to a stake pool in the current experimental era."
+                                                "Make a certificate that delegates a stake address to a stake pool in the current experimental era "
+                                                  ++ getEraCommentFor experimentalEra
+                                                  ++ "."
                                             , methodParams =
                                                 [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
                                                 , ParamInfo "poolId" TSString "The pool ID in base16 format."
@@ -576,7 +594,10 @@ apiInfo =
                                           MethodInfo
                                             { methodName = "makeStakeAddressRegistrationCertificateUpcomingEra"
                                             , methodSimpleName = Nothing
-                                            , methodDoc = "Make a stake address registration certificate in the current experimental era."
+                                            , methodDoc =
+                                                "Make a stake address registration certificate in the current experimental era "
+                                                  ++ getEraCommentFor experimentalEra
+                                                  ++ "."
                                             , methodParams =
                                                 [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
                                                 , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
@@ -588,7 +609,10 @@ apiInfo =
                                           MethodInfo
                                             { methodName = "makeStakeAddressUnregistrationCertificateUpcomingEra"
                                             , methodSimpleName = Nothing
-                                            , methodDoc = "Make a stake address unregistration certificate in the current experimental era."
+                                            , methodDoc =
+                                                "Make a stake address unregistration certificate in the current experimental era "
+                                                  ++ getEraCommentFor experimentalEra
+                                                  ++ "."
                                             , methodParams =
                                                 [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
                                                 , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
