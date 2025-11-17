@@ -204,7 +204,7 @@ jobs:
     - name: Test NPM package with node.js
       run: |
         export TMPDIR=$(mktemp -d)
-        cp cardano-wasm/node.test.js $TMPDIR/
+        cp cardano-wasm/npm-test/node.test.js $TMPDIR/
         cp cardano-wasm/npm-wrapper/*.tgz $TMPDIR/
         cd $TMPDIR
         npm install ./*.tgz
