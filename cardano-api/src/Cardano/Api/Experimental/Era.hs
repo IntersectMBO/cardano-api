@@ -126,10 +126,11 @@ instance Eq (Some Era) where
 
 instance Bounded (Some Era) where
   minBound = Some ConwayEra
-  maxBound = Some ConwayEra
+  maxBound = Some DijkstraEra
 
 instance Enum (Some Era) where
   toEnum 0 = Some ConwayEra
+  toEnum 1 = Some DijkstraEra
   toEnum i = error $ "Enum.toEnum: invalid argument " <> show i <> " - does not correspond to any era"
   fromEnum (Some ConwayEra) = 0
   fromEnum (Some DijkstraEra) = 1
@@ -156,6 +157,7 @@ instance FromJSON (Some Era) where
 instance Eon Era where
   inEonForEra v f = \case
     Api.ConwayEra -> f ConwayEra
+    Api.DijkstraEra -> f DijkstraEra
     _ -> v
 
 -- | A temporary compatibility instance for easier conversion between the experimental and old APIs.
