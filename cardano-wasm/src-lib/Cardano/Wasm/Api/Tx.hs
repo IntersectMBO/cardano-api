@@ -14,7 +14,6 @@ module Cardano.Wasm.Api.Tx
   , ProtocolParamsJSON (..)
   , newTxImpl
   , newExperimentalEraTxImpl
-  , newConwayTxImpl
   , addTxInputImpl
   , addSimpleTxOutImpl
   , appendCertificateToTxImpl
@@ -36,6 +35,7 @@ import Cardano.Api.Tx qualified as TxBody
 
 import Cardano.Ledger.Api qualified as Ledger
 import Cardano.Wasm.ExceptionHandling (justOrError, rightOrError, toMonadFail)
+import Cardano.Wasm.Internal.Api.Era (currentEra, experimentalEra)
 
 import Control.Monad.Catch (MonadThrow)
 import Data.Aeson (ToJSON (toJSON), (.=))
@@ -82,16 +82,13 @@ instance FromJSON UnsignedTxObject where
 
 -- | Create a new unsigned transaction object for making a transaction in the current era.
 newTxImpl :: UnsignedTxObject
-newTxImpl = newConwayTxImpl
+newTxImpl = UnsignedTxObject currentEra (Exp.UnsignedTx (Ledger.mkBasicTx Ledger.mkBasicTxBody))
 
 -- | Create a new unsigned transaction object for making a transaction in the current experimental era.
 newExperimentalEraTxImpl :: MonadThrow m => m UnsignedTxObject
-newExperimentalEraTxImpl =
-  return $ UnsignedTxObject Exp.DijkstraEra (Exp.UnsignedTx (Ledger.mkBasicTx Ledger.mkBasicTxBody))
-
--- | Create a new unsigned transaction object for making a Conway era transaction.
-newConwayTxImpl :: UnsignedTxObject
-newConwayTxImpl = UnsignedTxObject Exp.ConwayEra (Exp.UnsignedTx (Ledger.mkBasicTx Ledger.mkBasicTxBody))
+newExperimentalEraTxImpl = do
+  era <- justOrError "No experimental era available" experimentalEra
+  return $ UnsignedTxObject era (Exp.UnsignedTx (Ledger.mkBasicTx Ledger.mkBasicTxBody))
 
 -- | Add a simple transaction input to an unsigned transaction object.
 addTxInputImpl :: UnsignedTxObject -> Api.TxId -> Api.TxIx -> UnsignedTxObject

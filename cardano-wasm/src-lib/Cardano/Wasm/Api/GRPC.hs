@@ -12,7 +12,7 @@ import Data.ByteString.Char8 qualified as BS
 newtype GrpcObject grpcClient
   = GrpcObject grpcClient
 
--- | Create a new unsigned transaction object for making a Conway era transaction.
+-- | Create a new gRPC or GRPC-web connection to the Cardano Node.
 newGrpcConnectionImpl :: (String -> IO grpcClient) -> String -> IO (GrpcObject grpcClient)
 newGrpcConnectionImpl createClientFunc host = GrpcObject <$> createClientFunc host
 

@@ -345,9 +345,6 @@ foreign export javascript "newTx"
 foreign export javascript "newExperimentalEraTx"
   newExperimentalEraTx :: IO JSUnsignedTx
 
-foreign export javascript "newConwayTx"
-  newConwayTx :: IO JSUnsignedTx
-
 foreign export javascript "addTxInput"
   addTxInput :: JSUnsignedTx -> JSTxId -> JSTxIx -> IO JSUnsignedTx
 
@@ -384,17 +381,13 @@ foreign export javascript "estimateMinFee"
 foreign export javascript "signWithPaymentKey"
   signWithPaymentKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
 
--- | Create a new unsigned transaction.
+-- | Create a new unsigned transaction in the current era.
 newTx :: HasCallStack => IO JSUnsignedTx
 newTx = toJSVal Wasm.newTxImpl
 
 -- | Create a new experimental era unsigned transaction.
 newExperimentalEraTx :: HasCallStack => IO JSUnsignedTx
 newExperimentalEraTx = toJSVal =<< Wasm.newExperimentalEraTxImpl
-
--- | Create a new Conway era unsigned transaction.
-newConwayTx :: HasCallStack => IO JSUnsignedTx
-newConwayTx = toJSVal Wasm.newConwayTxImpl
 
 -- | Add a transaction input to an unsigned transaction.
 addTxInput :: HasCallStack => JSUnsignedTx -> JSTxId -> JSTxIx -> IO JSUnsignedTx
@@ -426,7 +419,7 @@ appendCertificateToTx jsUnsignedTx jsCertCbor =
           <*> fromJSVal jsCertCbor
       )
 
--- | Make a certificate that delegates a stake address to a stake pool in Conway era.
+-- | Make a certificate that delegates a stake address to a stake pool in the current era.
 makeStakeAddressStakeDelegationCertificate :: HasCallStack => JSString -> JSString -> IO JSString
 makeStakeAddressStakeDelegationCertificate jsStakeKeyHash jsPoolId =
   toJSVal
@@ -446,7 +439,7 @@ makeStakeAddressStakeDelegationCertificateExperimentalEra jsStakeKeyHash jsPoolI
           <*> fromJSVal jsPoolId
       )
 
--- | Make a stake address registration certificate in Conway era.
+-- | Make a stake address registration certificate in the current era.
 makeStakeAddressRegistrationCertificate :: HasCallStack => JSString -> JSCoin -> IO JSString
 makeStakeAddressRegistrationCertificate jsStakeKeyHash jsDeposit =
   toJSVal
@@ -466,7 +459,7 @@ makeStakeAddressRegistrationCertificateExperimentalEra jsStakeKeyHash jsDeposit 
           <*> (fromInteger <$> fromJSBigInt jsDeposit)
       )
 
--- | Make a stake address unregistration certificate in Conway era.
+-- | Make a stake address unregistration certificate in the current era.
 makeStakeAddressUnregistrationCertificate :: HasCallStack => JSString -> JSCoin -> IO JSString
 makeStakeAddressUnregistrationCertificate jsStakeKeyHash jsDeposit =
   toJSVal
@@ -559,7 +552,7 @@ foreign export javascript "getUtxosForAddress"
 foreign export javascript "submitTx"
   submitTx :: JSGrpc -> JSString -> IO JSString
 
--- | Create a new gRPC object for making Conway era transactions.
+-- | Create a new gRPC object.
 newGrpcConnection :: HasCallStack => JSString -> IO JSGrpc
 newGrpcConnection webGrpcUrl = toJSVal =<< join (Wasm.newGrpcConnectionImpl js_newWebGrpcClient <$> fromJSVal webGrpcUrl)
 

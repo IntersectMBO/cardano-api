@@ -30,19 +30,20 @@ import Cardano.Api.Experimental.Certificate (Certificate (..))
 import Cardano.Api.Serialise.Raw qualified as Api
 
 import Cardano.Ledger.Api (Delegatee (DelegStake))
-import Cardano.Wasm.ExceptionHandling (rightOrError)
+import Cardano.Wasm.ExceptionHandling (justOrError, rightOrError)
+import Cardano.Wasm.Internal.Api.Era (currentEra, experimentalEra)
 
 import Control.Monad.Catch (MonadThrow)
 import Data.ByteString.Base16 qualified as Base16
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 
--- | Make a certificate that delegates a stake address to a stake pool in Conway era.
+-- | Make a certificate that delegates a stake address to a stake pool in the current era.
 makeStakeAddressStakeDelegationCertificateImpl :: MonadThrow m => String -> String -> m String
 makeStakeAddressStakeDelegationCertificateImpl skHashStr poolIdStr = do
   stakeCertHash <- readHash skHashStr
   poolId <- readPoolId poolIdStr
-  makeStakeAddressStakeDelegationCertificate Exp.ConwayEra stakeCertHash poolId
+  makeStakeAddressStakeDelegationCertificate currentEra stakeCertHash poolId
 
 -- | Make a certificate that delegates a stake address to a stake pool in the current experimental era.
 makeStakeAddressStakeDelegationCertificateExperimentalEraImpl
@@ -50,7 +51,8 @@ makeStakeAddressStakeDelegationCertificateExperimentalEraImpl
 makeStakeAddressStakeDelegationCertificateExperimentalEraImpl skHashStr poolIdStr = do
   stakeCertHash <- readHash skHashStr
   poolId <- readPoolId poolIdStr
-  makeStakeAddressStakeDelegationCertificate Exp.DijkstraEra stakeCertHash poolId
+  era <- justOrError "No experimental era available" experimentalEra
+  makeStakeAddressStakeDelegationCertificate era stakeCertHash poolId
 
 makeStakeAddressStakeDelegationCertificate
   :: forall era m. MonadThrow m => Exp.Era era -> Hash StakeKey -> PoolId -> m String
@@ -65,18 +67,19 @@ makeStakeAddressStakeDelegationCertificate era stakeCertHash poolId =
             )
     return $ serialiseCertificateToCBOR era cert
 
--- | Make a stake address registration certificate in Conway era.
+-- | Make a stake address registration certificate in the current era.
 makeStakeAddressRegistrationCertificateImpl :: MonadThrow m => String -> Integer -> m String
 makeStakeAddressRegistrationCertificateImpl skHashStr deposit = do
   skHash <- readHash skHashStr
-  makeStakeAddressRegistrationCertificateWrapper Exp.ConwayEra skHash deposit
+  makeStakeAddressRegistrationCertificateWrapper currentEra skHash deposit
 
 --  | Make a stake address registration certificate in the current experimental era.
 makeStakeAddressRegistrationCertificateExperimentalEraImpl
   :: MonadThrow m => String -> Integer -> m String
 makeStakeAddressRegistrationCertificateExperimentalEraImpl skHashStr deposit = do
   skHash <- readHash skHashStr
-  makeStakeAddressRegistrationCertificateWrapper Exp.DijkstraEra skHash deposit
+  era <- justOrError "No experimental era available" experimentalEra
+  makeStakeAddressRegistrationCertificateWrapper era skHash deposit
 
 makeStakeAddressRegistrationCertificateWrapper
   :: forall era m. MonadThrow m => Era era -> Hash StakeKey -> Integer -> m String
@@ -88,18 +91,19 @@ makeStakeAddressRegistrationCertificateWrapper era skHash deposit =
             (Coin deposit)
     return $ serialiseCertificateToCBOR era cert
 
--- | Make a stake address unregistration certificate in Conway era.
+-- | Make a stake address unregistration certificate in the current era.
 makeStakeAddressUnregistrationCertificateImpl :: MonadThrow m => String -> Integer -> m String
 makeStakeAddressUnregistrationCertificateImpl skHashStr deposit = do
   skHash <- readHash skHashStr
-  makeStakeAddressUnregistrationCertificateWrapper Exp.ConwayEra skHash deposit
+  makeStakeAddressUnregistrationCertificateWrapper currentEra skHash deposit
 
 -- | Make a stake address unregistration certificate in the current experimental era.
 makeStakeAddressUnregistrationCertificateExperimentalEraImpl
   :: MonadThrow m => String -> Integer -> m String
 makeStakeAddressUnregistrationCertificateExperimentalEraImpl skHashStr deposit = do
   skHash <- readHash skHashStr
-  makeStakeAddressUnregistrationCertificateWrapper Exp.DijkstraEra skHash deposit
+  era <- justOrError "No experimental era available" experimentalEra
+  makeStakeAddressUnregistrationCertificateWrapper era skHash deposit
 
 makeStakeAddressUnregistrationCertificateWrapper
   :: forall era m. MonadThrow m => Era era -> Hash StakeKey -> Integer -> m String
