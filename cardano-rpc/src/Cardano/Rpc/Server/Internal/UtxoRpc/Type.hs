@@ -13,6 +13,7 @@
 module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   ( utxoRpcPParamsToProtocolParams
   , utxoToUtxoRpcAnyUtxoData
+  , anyUtxoDataUtxoRpcToUtxo
   , txOutToUtxoRpcTxOutput
   , utxoRpcTxOutputToTxOut
   , protocolParamsToUtxoRpcPParams
@@ -37,6 +38,7 @@ import Cardano.Api.Value
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Orphans ()
 
+import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (WithOrigin (..))
 import Cardano.Ledger.BaseTypes qualified as L
@@ -430,13 +432,52 @@ scriptDataToUtxoRpcPlutusData = \case
 utxoToUtxoRpcAnyUtxoData :: forall era. IsEra era => UTxO era -> [Proto UtxoRpc.AnyUtxoData]
 utxoToUtxoRpcAnyUtxoData utxo =
   toList utxo <&> \(txIn, txOut) -> do
+    let era = useEra @era
+        txOutCbor =
+          obtainCommonConstraints era $
+            CBOR.serialize' $
+              toShelleyTxOut (convert era) txOut
     defMessage
-      & #nativeBytes .~ "" -- TODO where to get that from? run cbor serialisation of utxos list?
+      & #nativeBytes .~ txOutCbor
       & #txoRef .~ inject txIn
       & #cardano .~ txOutToUtxoRpcTxOutput txOut
 
+anyUtxoDataUtxoRpcToUtxo
+  :: forall era m
+   . HasCallStack
+  => MonadThrow m
+  => Era era
+  -> [Proto UtxoRpc.AnyUtxoData]
+  -> m (UTxO era)
+anyUtxoDataUtxoRpcToUtxo era = fmap fromList . foldM f mempty
+ where
+  f
+    :: [(TxIn, TxOut CtxUTxO era)]
+    -> Proto UtxoRpc.AnyUtxoData
+    -> m [(TxIn, TxOut CtxUTxO era)]
+  f acc e = do
+    txOut <- obtainCommonConstraints era $ utxoRpcTxOutputToTxOut $ e ^. #cardano
+    txIn <- txoRefUtxoRpcToTxIn $ e ^. #txoRef
+    pure $ (txIn, txOut) : acc
+
+txoRefUtxoRpcToTxIn
+  :: forall m
+   . HasCallStack
+  => MonadThrow m
+  => Proto UtxoRpc.TxoRef
+  -> m TxIn
+txoRefUtxoRpcToTxIn txoRef = do
+  txId' <-
+    liftEitherError $
+      deserialiseFromRawBytes asType $
+        txoRef ^. #hash
+  pure $ TxIn txId' (TxIx . fromIntegral $ txoRef ^. #index)
+
 txOutToUtxoRpcTxOutput
-  :: forall era. IsEra era => TxOut CtxUTxO era -> Proto UtxoRpc.TxOutput
+  :: forall era
+   . IsEra era
+  => TxOut CtxUTxO era
+  -> Proto UtxoRpc.TxOutput
 txOutToUtxoRpcTxOutput (TxOut addressInEra txOutValue datum script) = do
   let multiAsset =
         fromList $
@@ -487,7 +528,8 @@ utxoRpcTxOutputToTxOut txOutput = do
   addrUtf8 <- liftEitherError $ T.decodeUtf8' (txOutput ^. #address)
   address <-
     maybe (throwM . stringException $ "Cannot decode address: " <> T.unpack addrUtf8) pure $
-      deserialiseAddress (AsAddress AsShelleyAddr) addrUtf8
+      obtainCommonConstraints era $
+        deserialiseAddress asType addrUtf8
   datum <-
     case txOutput ^. #maybe'datum of
       Just datumRpc ->
@@ -515,7 +557,7 @@ utxoRpcTxOutputToTxOut txOutput = do
       pure (AssetId pId assetName, outCoin <> mintCoin)
   pure $
     TxOut
-      (AddressInEra (ShelleyAddressInEra (convert era)) address)
+      address
       ( obtainCommonConstraints era $
           TxOutValueShelleyBased (convert era) (toMaryValue $ coinValue <> multiAssetValue)
       )
