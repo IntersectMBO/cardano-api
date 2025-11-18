@@ -69,7 +69,6 @@ library
     bytestring,
     cardano-api >=10.17,
     cardano-ledger-api,
-    cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core,
     cardano-rpc:gen,
@@ -132,3 +131,4 @@ test-suite cardano-rpc-test
   build-tool-depends: tasty-discover:tasty-discover
   other-modules:
     Test.Cardano.Rpc.ProtocolParameters
+    Test.Cardano.Rpc.TxOutput
