@@ -38,8 +38,25 @@ import Data.ByteString.Base16 qualified as Base16
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 
+-- * Type aliases for clarity
+
+-- | A stake key hash represented as a base16-encoded string.
+type StakeKeyHashBase16 = String
+
+-- | A pool ID represented as a base16-encoded string.
+type PoolIdBase16 = String
+
+-- | Deposit amount in lovelace.
+type DepositLovelace = Integer
+
+-- | Certificate serialized to CBOR as a base16-encoded string.
+type CertificateCBORBase16 = String
+
+-- * Stake Certificate function implementation
+
 -- | Make a certificate that delegates a stake address to a stake pool in the current era.
-makeStakeAddressStakeDelegationCertificateImpl :: MonadThrow m => String -> String -> m String
+makeStakeAddressStakeDelegationCertificateImpl
+  :: MonadThrow m => StakeKeyHashBase16 -> PoolIdBase16 -> m CertificateCBORBase16
 makeStakeAddressStakeDelegationCertificateImpl skHashStr poolIdStr = do
   stakeCertHash <- readHash skHashStr
   poolId <- readPoolId poolIdStr
@@ -47,7 +64,7 @@ makeStakeAddressStakeDelegationCertificateImpl skHashStr poolIdStr = do
 
 -- | Make a certificate that delegates a stake address to a stake pool in the current experimental era.
 makeStakeAddressStakeDelegationCertificateExperimentalEraImpl
-  :: MonadThrow m => String -> String -> m String
+  :: MonadThrow m => StakeKeyHashBase16 -> PoolIdBase16 -> m CertificateCBORBase16
 makeStakeAddressStakeDelegationCertificateExperimentalEraImpl skHashStr poolIdStr = do
   stakeCertHash <- readHash skHashStr
   poolId <- readPoolId poolIdStr
@@ -55,7 +72,7 @@ makeStakeAddressStakeDelegationCertificateExperimentalEraImpl skHashStr poolIdSt
   makeStakeAddressStakeDelegationCertificate era stakeCertHash poolId
 
 makeStakeAddressStakeDelegationCertificate
-  :: forall era m. MonadThrow m => Exp.Era era -> Hash StakeKey -> PoolId -> m String
+  :: forall era m. MonadThrow m => Exp.Era era -> Hash StakeKey -> PoolId -> m CertificateCBORBase16
 makeStakeAddressStakeDelegationCertificate era stakeCertHash poolId =
   obtainCommonConstraints era $ do
     let cert :: Certificate (Exp.LedgerEra era) =
@@ -68,21 +85,22 @@ makeStakeAddressStakeDelegationCertificate era stakeCertHash poolId =
     return $ serialiseCertificateToCBOR era cert
 
 -- | Make a stake address registration certificate in the current era.
-makeStakeAddressRegistrationCertificateImpl :: MonadThrow m => String -> Integer -> m String
+makeStakeAddressRegistrationCertificateImpl
+  :: MonadThrow m => StakeKeyHashBase16 -> DepositLovelace -> m CertificateCBORBase16
 makeStakeAddressRegistrationCertificateImpl skHashStr deposit = do
   skHash <- readHash skHashStr
   makeStakeAddressRegistrationCertificateWrapper currentEra skHash deposit
 
 --  | Make a stake address registration certificate in the current experimental era.
 makeStakeAddressRegistrationCertificateExperimentalEraImpl
-  :: MonadThrow m => String -> Integer -> m String
+  :: MonadThrow m => StakeKeyHashBase16 -> DepositLovelace -> m CertificateCBORBase16
 makeStakeAddressRegistrationCertificateExperimentalEraImpl skHashStr deposit = do
   skHash <- readHash skHashStr
   era <- justOrError "No experimental era available" experimentalEra
   makeStakeAddressRegistrationCertificateWrapper era skHash deposit
 
 makeStakeAddressRegistrationCertificateWrapper
-  :: forall era m. MonadThrow m => Era era -> Hash StakeKey -> Integer -> m String
+  :: forall era m. MonadThrow m => Era era -> Hash StakeKey -> DepositLovelace -> m CertificateCBORBase16
 makeStakeAddressRegistrationCertificateWrapper era skHash deposit =
   obtainCommonConstraints era $ do
     let cert :: Certificate (Exp.LedgerEra era) =
@@ -92,21 +110,22 @@ makeStakeAddressRegistrationCertificateWrapper era skHash deposit =
     return $ serialiseCertificateToCBOR era cert
 
 -- | Make a stake address unregistration certificate in the current era.
-makeStakeAddressUnregistrationCertificateImpl :: MonadThrow m => String -> Integer -> m String
+makeStakeAddressUnregistrationCertificateImpl
+  :: MonadThrow m => StakeKeyHashBase16 -> DepositLovelace -> m CertificateCBORBase16
 makeStakeAddressUnregistrationCertificateImpl skHashStr deposit = do
   skHash <- readHash skHashStr
   makeStakeAddressUnregistrationCertificateWrapper currentEra skHash deposit
 
 -- | Make a stake address unregistration certificate in the current experimental era.
 makeStakeAddressUnregistrationCertificateExperimentalEraImpl
-  :: MonadThrow m => String -> Integer -> m String
+  :: MonadThrow m => StakeKeyHashBase16 -> DepositLovelace -> m CertificateCBORBase16
 makeStakeAddressUnregistrationCertificateExperimentalEraImpl skHashStr deposit = do
   skHash <- readHash skHashStr
   era <- justOrError "No experimental era available" experimentalEra
   makeStakeAddressUnregistrationCertificateWrapper era skHash deposit
 
 makeStakeAddressUnregistrationCertificateWrapper
-  :: forall era m. MonadThrow m => Era era -> Hash StakeKey -> Integer -> m String
+  :: forall era m. MonadThrow m => Era era -> Hash StakeKey -> DepositLovelace -> m CertificateCBORBase16
 makeStakeAddressUnregistrationCertificateWrapper era skHash deposit =
   obtainCommonConstraints era $ do
     let cert :: Certificate (Exp.LedgerEra era) =
@@ -115,7 +134,8 @@ makeStakeAddressUnregistrationCertificateWrapper era skHash deposit =
             (Coin deposit)
     return $ serialiseCertificateToCBOR era cert
 
-serialiseCertificateToCBOR :: Exp.Era era -> Certificate (Exp.LedgerEra era) -> String
+serialiseCertificateToCBOR
+  :: Exp.Era era -> Certificate (Exp.LedgerEra era) -> CertificateCBORBase16
 serialiseCertificateToCBOR era cert =
   obtainCommonConstraints era $ do
     Text.unpack $
@@ -124,8 +144,8 @@ serialiseCertificateToCBOR era cert =
           serialiseToCBOR
             cert
 
-readHash :: MonadThrow m => String -> m (Hash StakeKey)
+readHash :: MonadThrow m => StakeKeyHashBase16 -> m (Hash StakeKey)
 readHash = rightOrError . Api.deserialiseFromRawBytesHex . Text.encodeUtf8 . Text.pack
 
-readPoolId :: MonadThrow m => String -> m PoolId
+readPoolId :: MonadThrow m => PoolIdBase16 -> m PoolId
 readPoolId = rightOrError . Api.deserialiseFromRawBytesHex . Text.encodeUtf8 . Text.pack
