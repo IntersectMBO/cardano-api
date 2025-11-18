@@ -148,14 +148,39 @@ jobs:
         $(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i "$(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1)" -o cardano-wasm/lib-wrapper/cardano-wasm.js
         cp cardano-wasm/lib-wrapper/* cardano-wasm/examples/basic/
 
+    - name: Build grpc bridge
+      run: |
+        nix build .#proto-js-bundle
+
+    - name: Prepare NPM package
+      run: |
+        cp cardano-wasm/lib-wrapper/* cardano-wasm/npm-wrapper/src/
+        rm cardano-wasm/npm-wrapper/src/cardano-api.js
+        cp result/cardano_node_grpc_web_pb.js cardano-wasm/npm-wrapper/src/
+        cp -r result/node cardano-wasm/npm-wrapper/src/
+        cd cardano-wasm/npm-wrapper
+        npm install
+        npm run build
+        npm test
+        npm pack
+
+    - name: Prepare webpack test
+      run: |
+        cp cardano-wasm/npm-wrapper/*.tgz cardano-wasm/npm-test/webpack/
+        cd cardano-wasm/npm-test/webpack
+        npm install ./*.tgz
+        npx webpack serve --port 8081 &
+        cd ../../..
+
     - uses: rrbutani/use-nix-shell-action@v1
       with:
         devShell: .#playwright
 
-    - name: Run playwright test in example
+    - name: Run playwright test in example and webpack test
       run: |
        httpserver -h localhost -a 127.0.0.1 -p 8080 cardano-wasm/examples/basic &
        playwright test cardano-wasm/js-test/basic-test.spec.ts
+       playwright test cardano-wasm/npm-test/webpack-test.spec.ts
 
     # - name: Run tests
     #   env:
@@ -180,22 +205,6 @@ jobs:
     #  uses: mxschmitt/action-tmate@v3
     #  with:
     #     limit-access-to-actor: true
-
-    - name: Build grpc bridge
-      run: |
-        nix build .#proto-js-bundle
-
-    - name: Prepare NPM package
-      run: |
-        cp cardano-wasm/lib-wrapper/* cardano-wasm/npm-wrapper/src/
-        rm cardano-wasm/npm-wrapper/src/cardano-api.js
-        cp result/cardano_node_grpc_web_pb.js cardano-wasm/npm-wrapper/src/
-        cp -r result/node cardano-wasm/npm-wrapper/src/
-        cd cardano-wasm/npm-wrapper
-        npm install
-        npm run build
-        npm test
-        npm pack
 
     - name: Prepare wasm library
       run: |
