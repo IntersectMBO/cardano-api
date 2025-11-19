@@ -201,7 +201,8 @@ getEraCommentFor :: Maybe (Exp.Era era) -> String
 getEraCommentFor era =
   case era of
     Just era' -> "(currently " ++ show (pretty era') ++ ")"
-    Nothing -> "(currently unavailable)"
+    Nothing ->
+      "(currently unavailable, upcoming era will only be available during late development and testing phases)"
 
 -- | Provides metadata about the "virtual objects" and their methods.
 -- This is intended to help generate JavaScript wrappers.
