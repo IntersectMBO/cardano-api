@@ -49,7 +49,7 @@ foreign import javascript safe
 -- | Get UTXOs for a given address using a GRPC-web client.
 foreign import javascript safe
   "{ let req = new cardano_node.query.ReadUtxosRequest(); \
-     let addresses = new proto.AddressArray(); \
+     let addresses = new proto.utxorpc.v1alpha.cardano.AddressArray(); \
      addresses.addItems(btoa($2)); \
      req.setCardanoAddresses(addresses); \
      let pres = await ($1).query.readUtxos(req, {}); \
