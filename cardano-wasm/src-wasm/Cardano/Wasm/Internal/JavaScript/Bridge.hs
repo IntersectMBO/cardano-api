@@ -342,8 +342,8 @@ getBase16ForStakeVerificationKeyHash jsWallet =
 foreign export javascript "newTx"
   newTx :: IO JSUnsignedTx
 
-foreign export javascript "newExperimentalEraTx"
-  newExperimentalEraTx :: IO JSUnsignedTx
+foreign export javascript "newUpcomingEraTx"
+  newUpcomingEraTx :: IO JSUnsignedTx
 
 foreign export javascript "addTxInput"
   addTxInput :: JSUnsignedTx -> JSTxId -> JSTxIx -> IO JSUnsignedTx
@@ -357,20 +357,20 @@ foreign export javascript "appendCertificateToTx"
 foreign export javascript "makeStakeAddressStakeDelegationCertificate"
   makeStakeAddressStakeDelegationCertificate :: JSString -> JSString -> IO JSString
 
-foreign export javascript "makeStakeAddressStakeDelegationCertificateExperimentalEra"
-  makeStakeAddressStakeDelegationCertificateExperimentalEra :: JSString -> JSString -> IO JSString
+foreign export javascript "makeStakeAddressStakeDelegationCertificateUpcomingEra"
+  makeStakeAddressStakeDelegationCertificateUpcomingEra :: JSString -> JSString -> IO JSString
 
 foreign export javascript "makeStakeAddressRegistrationCertificate"
   makeStakeAddressRegistrationCertificate :: JSString -> JSCoin -> IO JSString
 
-foreign export javascript "makeStakeAddressRegistrationCertificateExperimentalEra"
-  makeStakeAddressRegistrationCertificateExperimentalEra :: JSString -> JSCoin -> IO JSString
+foreign export javascript "makeStakeAddressRegistrationCertificateUpcomingEra"
+  makeStakeAddressRegistrationCertificateUpcomingEra :: JSString -> JSCoin -> IO JSString
 
 foreign export javascript "makeStakeAddressUnregistrationCertificate"
   makeStakeAddressUnregistrationCertificate :: JSString -> JSCoin -> IO JSString
 
-foreign export javascript "makeStakeAddressUnregistrationCertificateExperimentalEra"
-  makeStakeAddressUnregistrationCertificateExperimentalEra :: JSString -> JSCoin -> IO JSString
+foreign export javascript "makeStakeAddressUnregistrationCertificateUpcomingEra"
+  makeStakeAddressUnregistrationCertificateUpcomingEra :: JSString -> JSCoin -> IO JSString
 
 foreign export javascript "setFee"
   setFee :: JSUnsignedTx -> JSCoin -> IO JSUnsignedTx
@@ -385,9 +385,9 @@ foreign export javascript "signWithPaymentKey"
 newTx :: HasCallStack => IO JSUnsignedTx
 newTx = toJSVal Wasm.newTxImpl
 
--- | Create a new experimental era unsigned transaction.
-newExperimentalEraTx :: HasCallStack => IO JSUnsignedTx
-newExperimentalEraTx = toJSVal =<< Wasm.newExperimentalEraTxImpl
+-- | Create a new upcoming era unsigned transaction.
+newUpcomingEraTx :: HasCallStack => IO JSUnsignedTx
+newUpcomingEraTx = toJSVal =<< Wasm.newUpcomingEraTxImpl
 
 -- | Add a transaction input to an unsigned transaction.
 addTxInput :: HasCallStack => JSUnsignedTx -> JSTxId -> JSTxIx -> IO JSUnsignedTx
@@ -429,12 +429,12 @@ makeStakeAddressStakeDelegationCertificate jsStakeKeyHash jsPoolId =
           <*> fromJSVal jsPoolId
       )
 
--- | Make a certificate that delegates a stake address to a stake pool in the current experimental era.
-makeStakeAddressStakeDelegationCertificateExperimentalEra :: HasCallStack => JSString -> JSString -> IO JSString
-makeStakeAddressStakeDelegationCertificateExperimentalEra jsStakeKeyHash jsPoolId =
+-- | Make a certificate that delegates a stake address to a stake pool in the upcoming era.
+makeStakeAddressStakeDelegationCertificateUpcomingEra :: HasCallStack => JSString -> JSString -> IO JSString
+makeStakeAddressStakeDelegationCertificateUpcomingEra jsStakeKeyHash jsPoolId =
   toJSVal
     =<< join
-      ( Wasm.makeStakeAddressStakeDelegationCertificateExperimentalEraImpl
+      ( Wasm.makeStakeAddressStakeDelegationCertificateUpcomingEraImpl
           <$> fromJSVal jsStakeKeyHash
           <*> fromJSVal jsPoolId
       )
@@ -449,12 +449,12 @@ makeStakeAddressRegistrationCertificate jsStakeKeyHash jsDeposit =
           <*> (fromInteger <$> fromJSBigInt jsDeposit)
       )
 
--- | Make a stake address registration certificate in the current experimental era.
-makeStakeAddressRegistrationCertificateExperimentalEra :: HasCallStack => JSString -> JSCoin -> IO JSString
-makeStakeAddressRegistrationCertificateExperimentalEra jsStakeKeyHash jsDeposit =
+-- | Make a stake address registration certificate in the upcoming era.
+makeStakeAddressRegistrationCertificateUpcomingEra :: HasCallStack => JSString -> JSCoin -> IO JSString
+makeStakeAddressRegistrationCertificateUpcomingEra jsStakeKeyHash jsDeposit =
   toJSVal
     =<< join
-      ( Wasm.makeStakeAddressRegistrationCertificateExperimentalEraImpl
+      ( Wasm.makeStakeAddressRegistrationCertificateUpcomingEraImpl
           <$> fromJSVal jsStakeKeyHash
           <*> (fromInteger <$> fromJSBigInt jsDeposit)
       )
@@ -469,12 +469,12 @@ makeStakeAddressUnregistrationCertificate jsStakeKeyHash jsDeposit =
           <*> (fromInteger <$> fromJSBigInt jsDeposit)
       )
 
--- | Make a stake address unregistration certificate in the current experimental era.
-makeStakeAddressUnregistrationCertificateExperimentalEra :: HasCallStack => JSString -> JSCoin -> IO JSString
-makeStakeAddressUnregistrationCertificateExperimentalEra jsStakeKeyHash jsDeposit =
+-- | Make a stake address unregistration certificate in the upcoming era.
+makeStakeAddressUnregistrationCertificateUpcomingEra :: HasCallStack => JSString -> JSCoin -> IO JSString
+makeStakeAddressUnregistrationCertificateUpcomingEra jsStakeKeyHash jsDeposit =
   toJSVal
     =<< join
-      ( Wasm.makeStakeAddressUnregistrationCertificateExperimentalEraImpl
+      ( Wasm.makeStakeAddressUnregistrationCertificateUpcomingEraImpl
           <$> fromJSVal jsStakeKeyHash
           <*> (fromInteger <$> fromJSBigInt jsDeposit)
       )
