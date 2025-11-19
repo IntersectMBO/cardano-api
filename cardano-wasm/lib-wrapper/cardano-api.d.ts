@@ -26,10 +26,10 @@ declare interface CardanoApi {
         newTx(): Promise<UnsignedTx>;
 
         /**
-         * Create a new unsigned transaction in the current experimental era (currently Dijkstra).
+         * Create a new unsigned transaction in the current upcoming era (currently Dijkstra).
          * @returns A promise that resolves to a new `UnsignedTx` object.
          */
-        newExperimentalEraTx(): Promise<UnsignedTx>;
+        newUpcomingEraTx(): Promise<UnsignedTx>;
     }
 
     /**
@@ -73,32 +73,32 @@ declare interface CardanoApi {
         }
 
         /**
-         * Methods for creating certificates in the current experimental era (currently Dijkstra).
+         * Methods for creating certificates in the current upcoming era (currently Dijkstra).
          */
-        experimentalEra: {
+        upcomingEra: {
             /**
-             * Make a certificate that delegates a stake address to a stake pool in the current experimental era (currently Dijkstra).
+             * Make a certificate that delegates a stake address to a stake pool in the current upcoming era (currently Dijkstra).
              * @param stakeKeyHash The stake key hash in base16 format.
              * @param poolId The pool ID in base16 format.
              * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
              */
-            makeStakeAddressStakeDelegationCertificateExperimentalEra(stakeKeyHash: string, poolId: string): Promise<string>;
+            makeStakeAddressStakeDelegationCertificateUpcomingEra(stakeKeyHash: string, poolId: string): Promise<string>;
 
             /**
-             * Make a stake address registration certificate in the current experimental era (currently Dijkstra).
+             * Make a stake address registration certificate in the current upcoming era (currently Dijkstra).
              * @param stakeKeyHash The stake key hash in base16 format.
              * @param deposit The deposit amount in lovelaces.
              * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
              */
-            makeStakeAddressRegistrationCertificateExperimentalEra(stakeKeyHash: string, deposit: bigint): Promise<string>;
+            makeStakeAddressRegistrationCertificateUpcomingEra(stakeKeyHash: string, deposit: bigint): Promise<string>;
 
             /**
-             * Make a stake address unregistration certificate in the current experimental era (currently Dijkstra).
+             * Make a stake address unregistration certificate in the current upcoming era (currently Dijkstra).
              * @param stakeKeyHash The stake key hash in base16 format.
              * @param deposit The deposit amount in lovelaces.
              * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
              */
-            makeStakeAddressUnregistrationCertificateExperimentalEra(stakeKeyHash: string, deposit: bigint): Promise<string>;
+            makeStakeAddressUnregistrationCertificateUpcomingEra(stakeKeyHash: string, deposit: bigint): Promise<string>;
         }
     }
 

@@ -7,11 +7,11 @@
 
 module Cardano.Wasm.Api.Certificate.StakeCertificate
   ( makeStakeAddressStakeDelegationCertificateImpl
-  , makeStakeAddressStakeDelegationCertificateExperimentalEraImpl
+  , makeStakeAddressStakeDelegationCertificateUpcomingEraImpl
   , makeStakeAddressRegistrationCertificateImpl
-  , makeStakeAddressRegistrationCertificateExperimentalEraImpl
+  , makeStakeAddressRegistrationCertificateUpcomingEraImpl
   , makeStakeAddressUnregistrationCertificateImpl
-  , makeStakeAddressUnregistrationCertificateExperimentalEraImpl
+  , makeStakeAddressUnregistrationCertificateUpcomingEraImpl
   )
 where
 
@@ -31,7 +31,7 @@ import Cardano.Api.Serialise.Raw qualified as Api
 
 import Cardano.Ledger.Api (Delegatee (DelegStake))
 import Cardano.Wasm.ExceptionHandling (justOrError, rightOrError)
-import Cardano.Wasm.Internal.Api.Era (currentEra, experimentalEra)
+import Cardano.Wasm.Internal.Api.Era (currentEra, upcomingEra)
 
 import Control.Monad.Catch (MonadThrow)
 import Data.ByteString.Base16 qualified as Base16
@@ -62,13 +62,13 @@ makeStakeAddressStakeDelegationCertificateImpl skHashStr poolIdStr = do
   poolId <- readPoolId poolIdStr
   makeStakeAddressStakeDelegationCertificate currentEra stakeCertHash poolId
 
--- | Make a certificate that delegates a stake address to a stake pool in the current experimental era.
-makeStakeAddressStakeDelegationCertificateExperimentalEraImpl
+-- | Make a certificate that delegates a stake address to a stake pool in the current upcoming era.
+makeStakeAddressStakeDelegationCertificateUpcomingEraImpl
   :: MonadThrow m => StakeKeyHashBase16 -> PoolIdBase16 -> m CertificateCBORBase16
-makeStakeAddressStakeDelegationCertificateExperimentalEraImpl skHashStr poolIdStr = do
+makeStakeAddressStakeDelegationCertificateUpcomingEraImpl skHashStr poolIdStr = do
   stakeCertHash <- readHash skHashStr
   poolId <- readPoolId poolIdStr
-  era <- justOrError "No experimental era available" experimentalEra
+  era <- justOrError "No upcoming era available" upcomingEra
   makeStakeAddressStakeDelegationCertificate era stakeCertHash poolId
 
 makeStakeAddressStakeDelegationCertificate
@@ -91,12 +91,12 @@ makeStakeAddressRegistrationCertificateImpl skHashStr deposit = do
   skHash <- readHash skHashStr
   makeStakeAddressRegistrationCertificateWrapper currentEra skHash deposit
 
---  | Make a stake address registration certificate in the current experimental era.
-makeStakeAddressRegistrationCertificateExperimentalEraImpl
+--  | Make a stake address registration certificate in the upcoming era.
+makeStakeAddressRegistrationCertificateUpcomingEraImpl
   :: MonadThrow m => StakeKeyHashBase16 -> DepositLovelace -> m CertificateCBORBase16
-makeStakeAddressRegistrationCertificateExperimentalEraImpl skHashStr deposit = do
+makeStakeAddressRegistrationCertificateUpcomingEraImpl skHashStr deposit = do
   skHash <- readHash skHashStr
-  era <- justOrError "No experimental era available" experimentalEra
+  era <- justOrError "No upcoming era available" upcomingEra
   makeStakeAddressRegistrationCertificateWrapper era skHash deposit
 
 makeStakeAddressRegistrationCertificateWrapper
@@ -116,12 +116,12 @@ makeStakeAddressUnregistrationCertificateImpl skHashStr deposit = do
   skHash <- readHash skHashStr
   makeStakeAddressUnregistrationCertificateWrapper currentEra skHash deposit
 
--- | Make a stake address unregistration certificate in the current experimental era.
-makeStakeAddressUnregistrationCertificateExperimentalEraImpl
+-- | Make a stake address unregistration certificate in the upcoming era.
+makeStakeAddressUnregistrationCertificateUpcomingEraImpl
   :: MonadThrow m => StakeKeyHashBase16 -> DepositLovelace -> m CertificateCBORBase16
-makeStakeAddressUnregistrationCertificateExperimentalEraImpl skHashStr deposit = do
+makeStakeAddressUnregistrationCertificateUpcomingEraImpl skHashStr deposit = do
   skHash <- readHash skHashStr
-  era <- justOrError "No experimental era available" experimentalEra
+  era <- justOrError "No upcoming era available" upcomingEra
   makeStakeAddressUnregistrationCertificateWrapper era skHash deposit
 
 makeStakeAddressUnregistrationCertificateWrapper
