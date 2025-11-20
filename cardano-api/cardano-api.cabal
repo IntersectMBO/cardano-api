@@ -235,7 +235,9 @@ library
     Cardano.Api.Experimental.Tx.Internal.Certificate.Type
     Cardano.Api.Experimental.Tx.Internal.Compatible
     Cardano.Api.Experimental.Tx.Internal.Fee
+    Cardano.Api.Experimental.Tx.Internal.Serialise
     Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
+    Cardano.Api.Experimental.Tx.Internal.Type
     Cardano.Api.Genesis.Internal
     Cardano.Api.Genesis.Internal.Parameters
     Cardano.Api.Governance.Internal.Action.ProposalProcedure
