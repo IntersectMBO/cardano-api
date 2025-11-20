@@ -27,6 +27,7 @@ import Test.Cardano.Api.RawBytes qualified
 import Test.Cardano.Api.Transaction.Autobalance qualified
 import Test.Cardano.Api.Transaction.Body.Plutus.Scripts qualified
 import Test.Cardano.Api.TxBody qualified
+import Test.Cardano.Api.TxOut.Json qualified
 import Test.Cardano.Api.Value qualified
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -65,5 +66,6 @@ tests =
     , Test.Cardano.Api.Transaction.Body.Plutus.Scripts.tests
     , Test.Cardano.Api.Transaction.Autobalance.tests
     , Test.Cardano.Api.TxBody.tests
+    , Test.Cardano.Api.TxOut.Json.tests
     , Test.Cardano.Api.Value.tests
     ]
