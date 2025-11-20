@@ -15,8 +15,7 @@ where
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
 import Data.Kind (Constraint, Type)
-import Data.Proxy (Proxy (..))
-import Data.Typeable (Typeable)
+import Data.Typeable
 import Data.Word (Word16, Word8)
 import Numeric.Natural (Natural)
 
@@ -28,6 +27,10 @@ class Typeable t => HasTypeProxy t where
   data AsType t
 
   proxyToAsType :: Proxy t -> AsType t
+
+-- | Generalised show instance for all singletons of 'AsType' displaying the type.
+instance Typeable t => Show (AsType t) where
+  show = show . typeOf
 
 instance HasTypeProxy Word8 where
   data AsType Word8 = AsWord8
