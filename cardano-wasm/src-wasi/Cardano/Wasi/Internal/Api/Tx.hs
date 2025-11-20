@@ -6,6 +6,7 @@ module Cardano.Wasi.Internal.Api.Tx
   , newConwayTx
   , addTxInput
   , addSimpleTxOut
+  , appendCertificateToTx
   , setFee
   , estimateMinFee
   , signWithPaymentKey
@@ -20,7 +21,7 @@ import Cardano.Wasi.Internal.Conversion
   ( cstrToInt
   , fromCJSON
   , intToCStr
-  , stringTosigningKey
+  , stringToSigningKey
   , toCJSON
   , txIdToString
   )
@@ -49,6 +50,9 @@ foreign export ccall "addTxInput"
 
 foreign export ccall "addSimpleTxOut"
   addSimpleTxOut :: UnsignedTxObjectJSON -> CString -> CString -> IO UnsignedTxObjectJSON
+
+foreign export ccall "appendCertificateToTx"
+  appendCertificateToTx :: UnsignedTxObjectJSON -> CString -> IO UnsignedTxObjectJSON
 
 foreign export ccall "setFee"
   setFee :: UnsignedTxObjectJSON -> CString -> IO UnsignedTxObjectJSON
@@ -91,6 +95,15 @@ addSimpleTxOut unsignedTxObject destAddr lovelaceAmountStr =
           <*> (Api.Coin <$> cstrToInt "Lovelace amount" lovelaceAmountStr)
       )
 
+appendCertificateToTx :: UnsignedTxObjectJSON -> CString -> IO UnsignedTxObjectJSON
+appendCertificateToTx unsignedTxObject certCborStr =
+  toCJSON
+    =<< join
+      ( appendCertificateToTxImpl
+          <$> fromCJSON True "UnsignedTx" unsignedTxObject
+          <*> peekCString certCborStr
+      )
+
 setFee :: UnsignedTxObjectJSON -> CString -> IO UnsignedTxObjectJSON
 setFee unsignedTxObject feeStr =
   toCJSON
@@ -116,7 +129,7 @@ signWithPaymentKey unsignedTxObject signingKeyBech32 =
   toCJSON
     =<< ( signWithPaymentKeyImpl
             <$> fromCJSON True "UnsignedTx" unsignedTxObject
-            <*> stringTosigningKey signingKeyBech32
+            <*> stringToSigningKey signingKeyBech32
         )
 
 -- * SignedTxObject
@@ -138,7 +151,7 @@ alsoSignWithPaymentKey signedTxObject signingKeyBech32 =
   toCJSON
     =<< ( alsoSignWithPaymentKeyImpl
             <$> fromCJSON True "SignedTx" signedTxObject
-            <*> stringTosigningKey signingKeyBech32
+            <*> stringToSigningKey signingKeyBech32
         )
 
 toCbor :: SignedTxObjectJSON -> IO CString
