@@ -7,7 +7,7 @@
 -- | Class of errors used in the Api.
 module Cardano.Api.Error
   ( Error (..)
-  , throwErrorAsException
+  , throwErrorM
   , liftEitherError
   , failEitherError
   , ErrorAsException (..)
@@ -32,24 +32,15 @@ class Error e where
 instance Error () where
   prettyError () = ""
 
--- | The preferred approach is to use 'Except' or 'ExceptT', but you can if
--- necessary use IO exceptions.
-throwErrorAsException
+-- | Throw an 'Error e' as  'ErrorAsException'. 'throwErrorM' will attach a call stack to the exception.
+throwErrorM
   :: HasCallStack
   => MonadThrow m
   => Typeable e
   => Error e
   => e
   -> m a
-throwErrorAsException e = withFrozenCallStack $ throwM $ ErrorAsException e
-
--- | Pretty print 'Error e' and 'fail' if 'Left'.
-failEitherError
-  :: MonadFail m
-  => Error e
-  => Either e a
-  -> m a
-failEitherError = failEitherWith displayError
+throwErrorM e = withFrozenCallStack $ throwM $ ErrorAsException e
 
 -- | Pretty print 'Error e' and 'throwM' it wrapped in 'ErrorAsException' when 'Left'.
 liftEitherError
@@ -59,7 +50,15 @@ liftEitherError
   => Error e
   => Either e a
   -> m a
-liftEitherError = withFrozenCallStack $ either throwErrorAsException pure
+liftEitherError = withFrozenCallStack $ either throwErrorM pure
+
+-- | Pretty print 'Error e' and 'fail' if 'Left'.
+failEitherError
+  :: MonadFail m
+  => Error e
+  => Either e a
+  -> m a
+failEitherError = failEitherWith displayError
 
 -- | An exception wrapping any 'Error e', attaching a call stack from the construction place to it.
 data ErrorAsException where
