@@ -169,33 +169,31 @@ createIndexedPlutusScriptWitnesses witnessableThings =
 -- script. The ledger basically reconstructs the indicies (redeemer pointers) of this map can then look up the relevant
 -- execution units/redeemer pairing. NB: the redeemer pointer has been renamed to 'PlutusPurpose AsIndex' in the ledger.
 getAnyWitnessRedeemerPointerMap
-  :: AlonzoEraOnwards era
-  -> [(Witnessable witnessable (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
-  -> L.Redeemers (ShelleyLedgerEra era)
-getAnyWitnessRedeemerPointerMap eon anyWit =
-  constructRedeeemerPointerMap eon $
-    alonzoEraOnwardsConstraints eon $
-      createIndexedPlutusScriptWitnesses anyWit
+  :: L.AlonzoEraScript era
+  => [(Witnessable witnessable era, AnyWitness era)]
+  -> L.Redeemers era
+getAnyWitnessRedeemerPointerMap anyWit =
+  constructRedeeemerPointerMap $
+    createIndexedPlutusScriptWitnesses anyWit
 
 -- | An 'IndexedPlutusScriptWitness' contains everything we need to construct a single
 -- entry in the redeemer pointer map.
 constructRedeemerPointer
-  :: AlonzoEraOnwards era
-  -> AnyIndexedPlutusScriptWitness (ShelleyLedgerEra era)
-  -> L.Redeemers (ShelleyLedgerEra era)
-constructRedeemerPointer eon (AnyIndexedPlutusScriptWitness (IndexedPlutusScriptWitness _ purpose scriptWit)) =
+  :: L.Era era
+  => AnyIndexedPlutusScriptWitness era
+  -> L.Redeemers era
+constructRedeemerPointer (AnyIndexedPlutusScriptWitness (IndexedPlutusScriptWitness _ purpose scriptWit)) =
   let PlutusScriptWitness _ _ _ redeemer execUnits = scriptWit
-   in alonzoEraOnwardsConstraints eon $
-        L.Redeemers $
-          fromList [(purpose, (toAlonzoData redeemer, toAlonzoExUnits execUnits))]
+   in L.Redeemers $
+        fromList [(purpose, (toAlonzoData redeemer, toAlonzoExUnits execUnits))]
 
 constructRedeeemerPointerMap
-  :: AlonzoEraOnwards era
-  -> [AnyIndexedPlutusScriptWitness (ShelleyLedgerEra era)]
-  -> L.Redeemers (ShelleyLedgerEra era)
-constructRedeeemerPointerMap eon scriptWits =
-  let redeemerPointers = map (constructRedeemerPointer eon) scriptWits
-   in alonzoEraOnwardsConstraints eon $ mconcat redeemerPointers
+  :: L.AlonzoEraScript era
+  => [AnyIndexedPlutusScriptWitness era]
+  -> L.Redeemers era
+constructRedeeemerPointerMap scriptWits =
+  let redeemerPointers = map constructRedeemerPointer scriptWits
+   in mconcat redeemerPointers
 
 obtainAlonzoScriptPurposeConstraints
   :: AlonzoEraOnwards era

@@ -18,7 +18,6 @@ module Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 where
 
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
-import Cardano.Api.Era.Internal.Eon.Convert (Convert (convert))
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
@@ -69,28 +68,28 @@ instance Monoid (TxScriptWitnessRequirements L.DijkstraEra) where
   mempty = TxScriptWitnessRequirements mempty mempty mempty mempty
 
 getTxScriptWitnessRequirements
-  :: AlonzoEraOnwards era
-  -> [(Witnessable witnessable (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
-  -> TxScriptWitnessRequirements (ShelleyLedgerEra era)
-getTxScriptWitnessRequirements era wits =
+  :: L.AlonzoEraScript era
+  => Monoid (TxScriptWitnessRequirements era)
+  => (Witnessable witnessable era, AnyWitness era)
+  -> TxScriptWitnessRequirements era
+getTxScriptWitnessRequirements wit@(_, anyWit) =
   let TxScriptWitnessRequirements l s d _ =
-        obtainMonoidConstraint era $
-          mconcat
-            [ TxScriptWitnessRequirements
-                (maybe mempty Set.singleton $ getAnyWitnessPlutusLanguage anyWit)
-                (maybe mempty return $ getAnyWitnessScript (convert era) anyWit)
-                (getAnyWitnessScriptData era anyWit)
-                (alonzoEraOnwardsConstraints era mempty)
-            | (_, anyWit) <- wits
-            ]
-   in TxScriptWitnessRequirements l s d (getAnyWitnessRedeemerPointerMap era wits)
+        mconcat
+          [ TxScriptWitnessRequirements
+              (maybe mempty Set.singleton $ getAnyWitnessPlutusLanguage anyWit)
+              (maybe mempty return $ getAnyWitnessScript anyWit)
+              (getAnyWitnessScriptData anyWit)
+              mempty
+          ]
+   in TxScriptWitnessRequirements l s d (getAnyWitnessRedeemerPointerMap [wit])
 
 getTxScriptWitnessesRequirements
-  :: AlonzoEraOnwards era
-  -> [(Witnessable witnessable (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
-  -> TxScriptWitnessRequirements (ShelleyLedgerEra era)
-getTxScriptWitnessesRequirements eon wits =
-  obtainMonoidConstraint eon $ getTxScriptWitnessRequirements eon wits
+  :: L.AlonzoEraScript era
+  => Monoid (TxScriptWitnessRequirements era)
+  => [(Witnessable witnessable era, AnyWitness era)]
+  -> TxScriptWitnessRequirements era
+getTxScriptWitnessesRequirements wits =
+  mconcat $ map getTxScriptWitnessRequirements wits
 
 obtainMonoidConstraint
   :: AlonzoEraOnwards era
