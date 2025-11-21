@@ -229,7 +229,7 @@ library
     Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
     Cardano.Api.Experimental.Serialise.TextEnvelope.Internal
     Cardano.Api.Experimental.Tx.Internal.AnyWitness
-    Cardano.Api.Experimental.Tx.Internal.Body
+    Cardano.Api.Experimental.Tx.Internal.BodyContent.New
     Cardano.Api.Experimental.Tx.Internal.Certificate
     Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible
     Cardano.Api.Experimental.Tx.Internal.Certificate.Type
