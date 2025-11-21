@@ -227,15 +227,18 @@ library
     Cardano.Api.Experimental.Plutus.Internal.Script
     Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
     Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
+    Cardano.Api.Experimental.Script
     Cardano.Api.Experimental.Serialise.TextEnvelope.Internal
     Cardano.Api.Experimental.Tx.Internal.AnyWitness
-    Cardano.Api.Experimental.Tx.Internal.Body
+    Cardano.Api.Experimental.Tx.Internal.BodyContent.New
+    Cardano.Api.Experimental.Tx.Internal.BodyContent.Old
     Cardano.Api.Experimental.Tx.Internal.Certificate
     Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible
     Cardano.Api.Experimental.Tx.Internal.Certificate.Type
     Cardano.Api.Experimental.Tx.Internal.Compatible
     Cardano.Api.Experimental.Tx.Internal.Fee
     Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
+    Cardano.Api.Experimental.Tx.Internal.Type
     Cardano.Api.Genesis.Internal
     Cardano.Api.Genesis.Internal.Parameters
     Cardano.Api.Governance.Internal.Action.ProposalProcedure

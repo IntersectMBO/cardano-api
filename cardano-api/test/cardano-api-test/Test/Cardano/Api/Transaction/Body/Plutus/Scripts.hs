@@ -12,7 +12,7 @@ import Cardano.Api (AlonzoEraOnwards (..))
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental
 import Cardano.Api.Experimental.Plutus
-import Cardano.Api.Experimental.Tx
+import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Tx
   ( extractWitnessableCertificates
@@ -67,7 +67,6 @@ import Test.Tasty.Hedgehog (testProperty)
 -- in the redeemer pointer map.
 prop_getAnyWitnessRedeemerPointerMap :: Property
 prop_getAnyWitnessRedeemerPointerMap = property $ do
-  let eon = AlonzoEraOnwardsConway
   l <- forAll $ Gen.int (Range.linear 2 5)
   witnessables <- forAll $ Gen.list (Range.singleton l) $ genWitnessable @L.ConwayEra
   wits <-
@@ -83,7 +82,7 @@ prop_getAnyWitnessRedeemerPointerMap = property $ do
       expectedRedeemerPointerMapLength = length zipped
       finalWits = take expectedRedeemerPointerMapLength wits
 
-      L.Redeemers constructedRedeemerPointerMap = getAnyWitnessRedeemerPointerMap eon zipped
+      L.Redeemers constructedRedeemerPointerMap = getAnyWitnessRedeemerPointerMap zipped
 
   annotate "Constructed redeemer pointer map"
   annotateShow constructedRedeemerPointerMap
@@ -171,7 +170,7 @@ prop_extractAllIndexedPlutusScriptWitnesses =
             & setTxProposalProcedures plutusScriptWitnessedTxProposalProcedures
 
     extractedPlutusScriptWitnesses <-
-      evalEither $ extractAllIndexedPlutusScriptWitnesses era txBodyContentWithPlutusWitnesses
+      evalEither $ Exp.extractAllIndexedPlutusScriptWitnesses era txBodyContentWithPlutusWitnesses
 
     -- This type transformation is not needed however this property test will be
     -- improved when we define an Eq instance for `AnyIndexedPlutusScriptWitness`.
