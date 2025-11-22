@@ -5,7 +5,7 @@
     version = "1.0.0";
     name = "proto-js-dependencies";
     src = ../nix/proto-to-js-npm-deps;
-    npmDepsHash = "sha256-f8iFtXtN5GhryspgWWZi7rPR6uVq2tJOCEH6mmkLX84=";
+    npmDepsHash = "sha256-tPX2C6M0ePsZhtJq7wNJ8RD+IFzKUhx87M42fL4/Wn4=";
     dontNpmBuild = true;
     dontNpmInstall = true;
     installPhase = ''
@@ -35,11 +35,9 @@ in
 
       PROTO_INCLUDE_PATH=$src/proto
       GEN_JS_PATH=./generated-js
-      GEN_TS_PATH=./node-ts
       BUNDLE_PATH=./bundled-js
 
       mkdir -p "$GEN_JS_PATH"
-      mkdir -p "$GEN_TS_PATH"
       mkdir -p "$BUNDLE_PATH"
 
       echo "--- Compiling .proto files (Pass 1: JavaScript Generation) ---"
@@ -55,20 +53,9 @@ in
           "$PROTO_FILE"
       done
 
-      echo "--- Compiling .proto files (Pass 2: TypeScript Declaration Generation) ---"
-      for PROTO_FILE in `find "$PROTO_INCLUDE_PATH" -type f -name "*.proto"`
-      do
-        protoc \
-          -I="$PROTO_INCLUDE_PATH" \
-          -I="${pkgs.protobuf}/include" \
-          --plugin=protoc-gen-ts=${node-deps}/node_modules/ts-protoc-gen/bin/protoc-gen-ts \
-          --ts_out=service=grpc-web:"$GEN_TS_PATH" \
-          "$PROTO_FILE"
-      done
+      echo "--- Compiling .proto files (Pass 2: JSON Generation) ---"
 
-      echo "--- Copying .d.ts files to final generated directory ---"
-      (cd "$GEN_TS_PATH" && find . -name "*.d.ts" -exec cp --parents -t "../$GEN_JS_PATH" {} +)
-
+      ${node-deps}/node_modules/.bin/pbjs -t json -p "$PROTO_INCLUDE_PATH" -o "$GEN_JS_PATH/bundle.json" $(find $PROTO_INCLUDE_PATH | grep \\.proto$)
 
       echo "--- Final generated files are in $GEN_JS_PATH ---"
       ls -R "$GEN_JS_PATH"
@@ -125,11 +112,6 @@ in
       echo "--- Installing Node.js modules to \$out/node/ ---"
       mkdir -p $out/node
       (cd ./generated-js && find . -name "*.js" -not -name "*_grpc_web_pb.js" -not -name "browser-index.js" | xargs cp --parents -t $out/node)
-
-      echo "--- Installing TypeScript declarations to \$out/node-ts/ ---"
-      mkdir -p $out/node-ts
-      (cd ./generated-js && find . -name "*.d.ts" | xargs cp --parents -t $out/node-ts)
-
 
       echo "--- Installation complete. Final output structure in \$out: ---"
       ls -R $out
