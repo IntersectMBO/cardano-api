@@ -5,7 +5,7 @@
     version = "1.0.0";
     name = "proto-js-dependencies";
     src = ../nix/proto-to-js-npm-deps;
-    npmDepsHash = "sha256-f8iFtXtN5GhryspgWWZi7rPR6uVq2tJOCEH6mmkLX84=";
+    npmDepsHash = "sha256-s0qG33GOJORk2fzlOH1xJkzRsVYAKrZmNL5nX3dLJZ0=";
     dontNpmBuild = true;
     dontNpmInstall = true;
     installPhase = ''
@@ -56,18 +56,24 @@ in
       done
 
       echo "--- Compiling .proto files (Pass 2: TypeScript Declaration Generation) ---"
+
       for PROTO_FILE in `find "$PROTO_INCLUDE_PATH" -type f -name "*.proto"`
       do
         protoc \
           -I="$PROTO_INCLUDE_PATH" \
           -I="${pkgs.protobuf}/include" \
-          --plugin=protoc-gen-ts=${node-deps}/node_modules/ts-protoc-gen/bin/protoc-gen-ts \
-          --ts_out=service=grpc-web:"$GEN_TS_PATH" \
+          --plugin=protoc-gen-ts_proto=${node-deps}/node_modules/ts-proto/protoc-gen-ts_proto \
+          --ts_proto_out="$GEN_TS_PATH" \
+          --ts_proto_opt=outputServices=false \
+          --ts_proto_opt=esModuleInterop=true \
+          --ts_proto_opt=oneof=unions \
+          --ts_proto_opt=onlyTypes=true \
+          --ts_proto_opt=forceLong=string \
           "$PROTO_FILE"
       done
 
-      echo "--- Copying .d.ts files to final generated directory ---"
-      (cd "$GEN_TS_PATH" && find . -name "*.d.ts" -exec cp --parents -t "../$GEN_JS_PATH" {} +)
+      echo "--- Copying .ts files to final generated directory ---"
+      (cd "$GEN_TS_PATH" && find . -name "*.ts" -exec cp --parents -t "../$GEN_JS_PATH" {} +)
 
 
       echo "--- Final generated files are in $GEN_JS_PATH ---"
@@ -128,7 +134,7 @@ in
 
       echo "--- Installing TypeScript declarations to \$out/node-ts/ ---"
       mkdir -p $out/node-ts
-      (cd ./generated-js && find . -name "*.d.ts" | xargs cp --parents -t $out/node-ts)
+      (cd ./generated-js && find . -name "*.ts" | xargs cp --parents -t $out/node-ts)
 
 
       echo "--- Installation complete. Final output structure in \$out: ---"
