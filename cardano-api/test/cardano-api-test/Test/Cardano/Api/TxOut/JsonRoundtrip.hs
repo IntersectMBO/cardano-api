@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Comprehensive roundtrip tests for TxOut JSON instances across all eras
@@ -11,6 +12,7 @@ import Cardano.Api
 
 import Data.Aeson (eitherDecode, encode)
 
+import Test.Gen.Cardano.Api.Era
 import Test.Gen.Cardano.Api.TxOut
 import Test.Gen.Cardano.Api.Typed
 
@@ -32,27 +34,13 @@ tests =
 -- | Roundtrip tests for TxOut CtxTx across all eras
 testsCtxTx :: [TestTree]
 testsCtxTx =
-  [ testProperty "shelley" prop_json_roundtrip_txout_ctx_tx_shelley
-  , testProperty "allegra" prop_json_roundtrip_txout_ctx_tx_allegra
-  , testProperty "mary" prop_json_roundtrip_txout_ctx_tx_mary
-  , testProperty "alonzo" prop_json_roundtrip_txout_ctx_tx_alonzo
-  , testProperty "babbage" prop_json_roundtrip_txout_ctx_tx_babbage
-  , testProperty "conway" prop_json_roundtrip_txout_ctx_tx_conway
-  -- Dijkstra era not yet supported in shelleyBasedEraConstraints
-  -- , testProperty "dijkstra" prop_json_roundtrip_txout_ctx_tx_dijkstra
+  [ testProperty "all eras" prop_json_roundtrip_txout_ctx_tx
   ]
 
 -- | Roundtrip tests for TxOut CtxUTxO across all eras
 testsCtxUTxO :: [TestTree]
 testsCtxUTxO =
-  [ testProperty "shelley" prop_json_roundtrip_txout_ctx_utxo_shelley
-  , testProperty "allegra" prop_json_roundtrip_txout_ctx_utxo_allegra
-  , testProperty "mary" prop_json_roundtrip_txout_ctx_utxo_mary
-  , testProperty "alonzo" prop_json_roundtrip_txout_ctx_utxo_alonzo
-  , testProperty "babbage" prop_json_roundtrip_txout_ctx_utxo_babbage
-  , testProperty "conway" prop_json_roundtrip_txout_ctx_utxo_conway
-  -- Dijkstra era not yet supported in shelleyBasedEraConstraints
-  -- , testProperty "dijkstra" prop_json_roundtrip_txout_ctx_utxo_dijkstra
+  [ testProperty "all eras" prop_json_roundtrip_txout_ctx_utxo
   ]
 
 -- | Datum-specific roundtrip tests
@@ -68,81 +56,23 @@ testsDatumSpecific =
 -- CtxTx Roundtrip Properties
 -- -----------------------------------------------------------------------------
 
-prop_json_roundtrip_txout_ctx_tx_shelley :: Property
-prop_json_roundtrip_txout_ctx_tx_shelley = H.property $ do
-  txOut <- forAll $ genTxOutTxContext ShelleyBasedEraShelley
-  tripping txOut encode eitherDecode
-
-prop_json_roundtrip_txout_ctx_tx_allegra :: Property
-prop_json_roundtrip_txout_ctx_tx_allegra = H.property $ do
-  txOut <- forAll $ genTxOutTxContext ShelleyBasedEraAllegra
-  tripping txOut encode eitherDecode
-
-prop_json_roundtrip_txout_ctx_tx_mary :: Property
-prop_json_roundtrip_txout_ctx_tx_mary = H.property $ do
-  txOut <- forAll $ genTxOutTxContext ShelleyBasedEraMary
-  tripping txOut encode eitherDecode
-
-prop_json_roundtrip_txout_ctx_tx_alonzo :: Property
-prop_json_roundtrip_txout_ctx_tx_alonzo = H.property $ do
-  txOut <- forAll $ genTxOutTxContext ShelleyBasedEraAlonzo
-  tripping txOut encode eitherDecode
-
-prop_json_roundtrip_txout_ctx_tx_babbage :: Property
-prop_json_roundtrip_txout_ctx_tx_babbage = H.property $ do
-  txOut <- forAll $ genTxOutTxContext ShelleyBasedEraBabbage
-  tripping txOut encode eitherDecode
-
-prop_json_roundtrip_txout_ctx_tx_conway :: Property
-prop_json_roundtrip_txout_ctx_tx_conway = H.property $ do
-  txOut <- forAll $ genTxOutTxContext ShelleyBasedEraConway
-  tripping txOut encode eitherDecode
-
--- Dijkstra era not yet supported in shelleyBasedEraConstraints
--- prop_json_roundtrip_txout_ctx_tx_dijkstra :: Property
--- prop_json_roundtrip_txout_ctx_tx_dijkstra = H.property $ do
---   txOut <- forAll $ genTxOutTxContext ShelleyBasedEraDijkstra
---   tripping txOut encode eitherDecode
+prop_json_roundtrip_txout_ctx_tx :: Property
+prop_json_roundtrip_txout_ctx_tx = H.property $ do
+  AnyShelleyBasedEra sbe <- forAll genAnyShelleyBasedEra
+  shelleyBasedEraConstraints sbe $ do
+    txOut <- forAll $ genTxOutTxContext sbe
+    tripping txOut encode eitherDecode
 
 -- -----------------------------------------------------------------------------
 -- CtxUTxO Roundtrip Properties
 -- -----------------------------------------------------------------------------
 
-prop_json_roundtrip_txout_ctx_utxo_shelley :: Property
-prop_json_roundtrip_txout_ctx_utxo_shelley = H.property $ do
-  txOut <- forAll $ genTxOutUTxOContext ShelleyBasedEraShelley
-  tripping txOut encode eitherDecode
-
-prop_json_roundtrip_txout_ctx_utxo_allegra :: Property
-prop_json_roundtrip_txout_ctx_utxo_allegra = H.property $ do
-  txOut <- forAll $ genTxOutUTxOContext ShelleyBasedEraAllegra
-  tripping txOut encode eitherDecode
-
-prop_json_roundtrip_txout_ctx_utxo_mary :: Property
-prop_json_roundtrip_txout_ctx_utxo_mary = H.property $ do
-  txOut <- forAll $ genTxOutUTxOContext ShelleyBasedEraMary
-  tripping txOut encode eitherDecode
-
-prop_json_roundtrip_txout_ctx_utxo_alonzo :: Property
-prop_json_roundtrip_txout_ctx_utxo_alonzo = H.property $ do
-  txOut <- forAll $ genTxOutUTxOContext ShelleyBasedEraAlonzo
-  tripping txOut encode eitherDecode
-
-prop_json_roundtrip_txout_ctx_utxo_babbage :: Property
-prop_json_roundtrip_txout_ctx_utxo_babbage = H.property $ do
-  txOut <- forAll $ genTxOutUTxOContext ShelleyBasedEraBabbage
-  tripping txOut encode eitherDecode
-
-prop_json_roundtrip_txout_ctx_utxo_conway :: Property
-prop_json_roundtrip_txout_ctx_utxo_conway = H.property $ do
-  txOut <- forAll $ genTxOutUTxOContext ShelleyBasedEraConway
-  tripping txOut encode eitherDecode
-
--- Dijkstra era not yet supported in shelleyBasedEraConstraints
--- prop_json_roundtrip_txout_ctx_utxo_dijkstra :: Property
--- prop_json_roundtrip_txout_ctx_utxo_dijkstra = H.property $ do
---   txOut <- forAll $ genTxOutUTxOContext ShelleyBasedEraDijkstra
---   tripping txOut encode eitherDecode
+prop_json_roundtrip_txout_ctx_utxo :: Property
+prop_json_roundtrip_txout_ctx_utxo = H.property $ do
+  AnyShelleyBasedEra sbe <- forAll genAnyShelleyBasedEra
+  shelleyBasedEraConstraints sbe $ do
+    txOut <- forAll $ genTxOutUTxOContext sbe
+    tripping txOut encode eitherDecode
 
 -- -----------------------------------------------------------------------------
 -- Datum-Specific Roundtrip Properties
