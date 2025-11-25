@@ -49,7 +49,6 @@ library cardano-wasi-lib
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.AddressArray
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.Asset
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.BigInt
-    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.Constr
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.CostModel
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.CostModels
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.Datum
@@ -57,16 +56,11 @@ library cardano-wasi-lib
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.ExUnits
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.MultiAsset
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.NativeScript
-    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.NativeScriptList
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.PParams
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.PlutusData
-    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.PlutusDataArray
-    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.PlutusDataMap
-    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.PlutusDataPair
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.ProtocolVersion
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.RationalNumber
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.Script
-    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.ScriptNOfK
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.TxOutput
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.VotingThresholds
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Query.AnyChainParams
