@@ -11,25 +11,11 @@ where
 import Cardano.Api (AlonzoEraOnwards (..))
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental
+import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Plutus
-import Cardano.Api.Experimental.Tx
+import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Tx
-  ( extractWitnessableCertificates
-  , extractWitnessableMints
-  , extractWitnessableProposals
-  , extractWitnessableTxIns
-  , extractWitnessableVotes
-  , extractWitnessableWithdrawals
-  , setTxCertificates
-  , setTxIns
-  , setTxMintValue
-  , setTxProposalProcedures
-  , setTxVotingProcedures
-  , setTxWithdrawals
-  )
 
-import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Conway qualified as L
 
@@ -37,19 +23,14 @@ import Prelude
 
 import Data.Function
 import Data.List qualified as List
+import Data.Map.Ordered qualified as OMap
 import Data.Map.Strict qualified as Map
 
+import Test.Gen.Cardano.Api.Experimental qualified as Exp
 import Test.Gen.Cardano.Api.Typed
   ( genIndexedPlutusScriptWitness
   , genMintWitnessable
-  , genScriptWitnessedTxCertificates
-  , genScriptWitnessedTxIn
-  , genScriptWitnessedTxMintValue
-  , genScriptWitnessedTxProposals
-  , genScriptWitnessedTxWithdrawals
-  , genScriptWitnesssedTxVotingProcedures
   , genSimpleScriptMintWitness
-  , genTxBodyContent
   , genWitnessable
   )
 
@@ -67,7 +48,6 @@ import Test.Tasty.Hedgehog (testProperty)
 -- in the redeemer pointer map.
 prop_getAnyWitnessRedeemerPointerMap :: Property
 prop_getAnyWitnessRedeemerPointerMap = property $ do
-  let eon = AlonzoEraOnwardsConway
   l <- forAll $ Gen.int (Range.linear 2 5)
   witnessables <- forAll $ Gen.list (Range.singleton l) $ genWitnessable @L.ConwayEra
   wits <-
@@ -83,7 +63,7 @@ prop_getAnyWitnessRedeemerPointerMap = property $ do
       expectedRedeemerPointerMapLength = length zipped
       finalWits = take expectedRedeemerPointerMapLength wits
 
-      L.Redeemers constructedRedeemerPointerMap = getAnyWitnessRedeemerPointerMap eon zipped
+      L.Redeemers constructedRedeemerPointerMap = getAnyWitnessRedeemerPointerMap zipped
 
   annotate "Constructed redeemer pointer map"
   annotateShow constructedRedeemerPointerMap
@@ -147,63 +127,66 @@ prop_toAnyWitness =
 prop_extractAllIndexedPlutusScriptWitnesses :: Property
 prop_extractAllIndexedPlutusScriptWitnesses =
   property $ do
-    let era = ConwayEra
+    let era :: Era ConwayEra = ConwayEra
     -- Generate plutus script witnesses for each possible plutus purpose
-    plutusScriptwitnessedTxIns <- forAll $ genScriptWitnessedTxIn era
-    plutusScriptWitnessedMint <- forAll $ genScriptWitnessedTxMintValue era
-    plutusScriptWitnessedTxCerts <- forAll $ genScriptWitnessedTxCertificates era
-    plutusScriptWitnessesTxWithdrawals <- forAll $ genScriptWitnessedTxWithdrawals era
+    plutusScriptwitnessedTxIns <-
+      forAll $ Gen.list (Range.linear 0 3) $ Exp.genScriptWitnessedTxIn @(LedgerEra ConwayEra)
+    plutusScriptWitnessedMint <- forAll $ Exp.genScriptWitnessedTxMintValue @(LedgerEra ConwayEra)
+    plutusScriptWitnessedTxCerts <- forAll $ Exp.genScriptWitnessedTxCertificates @(LedgerEra ConwayEra)
+    plutusScriptWitnessesTxWithdrawals <-
+      forAll $ Exp.genScriptWitnessedTxWithdrawals @(LedgerEra ConwayEra)
     plutusScriptWitnesssedTxVotingProcedures <-
-      Api.mkFeatured <$> forAll (genScriptWitnesssedTxVotingProcedures era)
+      forAll $ Exp.genScriptWitnesssedTxVotingProcedures @(LedgerEra ConwayEra)
     plutusScriptWitnessedTxProposalProcedures <-
-      Api.mkFeatured <$> forAll (genScriptWitnessedTxProposals era)
-    txBodyContent <- forAll $ genTxBodyContent (Api.convert era)
+      forAll $ Exp.genScriptWitnessedTxProposals @(LedgerEra ConwayEra)
 
     -- Populate the stripped `TxBodyContent` value with our generated plutus script
     -- witnesses
     let txBodyContentWithPlutusWitnesses =
-          txBodyContent
-            & setTxIns plutusScriptwitnessedTxIns
-            & setTxMintValue plutusScriptWitnessedMint
-            & setTxCertificates plutusScriptWitnessedTxCerts
-            & setTxWithdrawals plutusScriptWitnessesTxWithdrawals
-            & setTxVotingProcedures plutusScriptWitnesssedTxVotingProcedures
-            & setTxProposalProcedures plutusScriptWitnessedTxProposalProcedures
+          Exp.defaultTxBodyContent
+            & Exp.setTxIns plutusScriptwitnessedTxIns
+            & Exp.setTxMintValue plutusScriptWitnessedMint
+            & Exp.setTxCertificates plutusScriptWitnessedTxCerts
+            & Exp.setTxWithdrawals plutusScriptWitnessesTxWithdrawals
+            & Exp.setTxVotingProcedures plutusScriptWitnesssedTxVotingProcedures
+            & Exp.setTxProposalProcedures plutusScriptWitnessedTxProposalProcedures
 
     extractedPlutusScriptWitnesses <-
-      evalEither $ extractAllIndexedPlutusScriptWitnesses era txBodyContentWithPlutusWitnesses
+      evalEither $ Exp.extractAllIndexedPlutusScriptWitnesses era txBodyContentWithPlutusWitnesses
 
-    -- This type transformation is not needed however this property test will be
-    -- improved when we define an Eq instance for `AnyIndexedPlutusScriptWitness`.
-    -- This necessitates changes to the experimental api so for now we settle for comparing the number
-    -- of plutus script witnesses present in the `TxBodyContent`.
-    generatedTxInWits <-
-      evalEither $ fromLegacyTxInWitness Api.AlonzoEraOnwardsConway plutusScriptwitnessedTxIns
-    generatedTxMintWits <-
-      evalEither $ fromLegacyMintWitness Api.AlonzoEraOnwardsConway plutusScriptWitnessedMint
-
-    generatedTxCertWits <-
-      evalEither $ fromLegacyTxCertificates Api.AlonzoEraOnwardsConway plutusScriptWitnessedTxCerts
-
-    generatedTxWithdrawals <-
-      evalEither $ fromLegacyTxWithdrawals Api.AlonzoEraOnwardsConway plutusScriptWitnessesTxWithdrawals
-
-    generatedTxVotingprocedures <-
-      evalEither $
-        fromLegacyTxVotingProcedures Api.ConwayEraOnwardsConway plutusScriptWitnesssedTxVotingProcedures
-
-    generatedTxProposalProcedures <-
-      evalEither $
-        fromLegacyTxProposalProcedures Api.ConwayEraOnwardsConway plutusScriptWitnessedTxProposalProcedures
+    let generatedTxInWits = plutusScriptwitnessedTxIns
+        generatedTxMintWits = plutusScriptWitnessedMint
+        generatedTxCertWits = plutusScriptWitnessedTxCerts
+        generatedTxWithdrawals = plutusScriptWitnessesTxWithdrawals
+        generatedTxVotingprocedures = plutusScriptWitnesssedTxVotingProcedures
+        generatedTxProposalProcedures = plutusScriptWitnessedTxProposalProcedures
 
     let allGeneratedPlutusScriptWitnesses =
           mconcat
-            [ createIndexedPlutusScriptWitnesses generatedTxInWits
-            , createIndexedPlutusScriptWitnesses generatedTxMintWits
-            , createIndexedPlutusScriptWitnesses generatedTxCertWits
-            , createIndexedPlutusScriptWitnesses generatedTxWithdrawals
-            , createIndexedPlutusScriptWitnesses generatedTxVotingprocedures
-            , createIndexedPlutusScriptWitnesses generatedTxProposalProcedures
+            [ createIndexedPlutusScriptWitnesses $ [(Exp.WitTxIn tIn, sWit) | (tIn, sWit) <- generatedTxInWits]
+            , createIndexedPlutusScriptWitnesses $
+                [ (Exp.WitMint pid pAssets, sWit)
+                | (pid, (pAssets, sWit)) <- Map.toList $ Exp.unTxMintValue generatedTxMintWits
+                ]
+            , createIndexedPlutusScriptWitnesses
+                [ (Exp.WitTxCert c scred, wit)
+                | (Certificate c, Just (scred, wit)) <-
+                    OMap.toAscList $ Exp.unTxCertificates generatedTxCertWits
+                ]
+            , createIndexedPlutusScriptWitnesses
+                [ (Exp.WitWithdrawal sAddr deposit, wit)
+                | (sAddr, deposit, wit) <- Exp.unTxWithdrawals generatedTxWithdrawals
+                ]
+            , createIndexedPlutusScriptWitnesses
+                [ (Exp.WitVote v, wit)
+                | let Exp.TxVotingProcedures _ vMap = generatedTxVotingprocedures
+                , (v, wit) <- Map.toList vMap
+                ]
+            , createIndexedPlutusScriptWitnesses
+                [ (Exp.WitProposal p, wit)
+                | let Exp.TxProposalProcedures pMap = generatedTxProposalProcedures
+                , (p, Just wit) <- OMap.toAscList pMap
+                ]
             ]
 
     H.note_ "All generated script witnesses"
@@ -212,101 +195,6 @@ prop_extractAllIndexedPlutusScriptWitnesses =
     H.noteShow_ extractedPlutusScriptWitnesses
 
     length allGeneratedPlutusScriptWitnesses === length extractedPlutusScriptWitnesses
-
-fromLegacyMintWitness
-  :: Api.AlonzoEraOnwards era
-  -> Api.TxMintValue Api.BuildTx era
-  -> Either
-       CBOR.DecoderError
-       [ ( Witnessable MintItem (Api.ShelleyLedgerEra era)
-         , AnyWitness (Api.ShelleyLedgerEra era)
-         )
-       ]
-fromLegacyMintWitness aeon = do
-  legacyWitnessConversion
-    aeon
-    . extractWitnessableMints aeon
-
-fromLegacyTxCertificates
-  :: forall era
-   . Api.AlonzoEraOnwards era
-  -> Api.TxCertificates Api.BuildTx era
-  -> Either
-       CBOR.DecoderError
-       [ ( Witnessable CertItem (Api.ShelleyLedgerEra era)
-         , AnyWitness (Api.ShelleyLedgerEra era)
-         )
-       ]
-fromLegacyTxCertificates aeon = do
-  legacyWitnessConversion
-    aeon
-    . extractWitnessableCertificates aeon
-
-fromLegacyTxWithdrawals
-  :: Api.AlonzoEraOnwards era
-  -> Api.TxWithdrawals Api.BuildTx era
-  -> Either
-       CBOR.DecoderError
-       [ ( Witnessable WithdrawalItem (Api.ShelleyLedgerEra era)
-         , AnyWitness (Api.ShelleyLedgerEra era)
-         )
-       ]
-fromLegacyTxWithdrawals aeon =
-  legacyWitnessConversion
-    aeon
-    . extractWitnessableWithdrawals aeon
-
-fromLegacyTxVotingProcedures
-  :: Api.ConwayEraOnwards era
-  -> Maybe
-       ( Api.Featured
-           eon
-           era
-           (Api.TxVotingProcedures Api.BuildTx era)
-       )
-  -> Either
-       CBOR.DecoderError
-       [ ( Witnessable VoterItem (Api.ShelleyLedgerEra era)
-         , AnyWitness (Api.ShelleyLedgerEra era)
-         )
-       ]
-fromLegacyTxVotingProcedures aeon = do
-  legacyWitnessConversion
-    (Api.convert aeon)
-    . extractWitnessableVotes aeon
-
-fromLegacyTxProposalProcedures
-  :: Api.ConwayEraOnwards era
-  -> Maybe
-       ( Api.Featured
-           eon
-           era
-           (Api.TxProposalProcedures Api.BuildTx era)
-       )
-  -> Either
-       CBOR.DecoderError
-       [ ( Witnessable ProposalItem (Api.ShelleyLedgerEra era)
-         , AnyWitness (Api.ShelleyLedgerEra era)
-         )
-       ]
-fromLegacyTxProposalProcedures aeon = do
-  legacyWitnessConversion
-    (Api.convert aeon)
-    . extractWitnessableProposals aeon
-
-fromLegacyTxInWitness
-  :: Api.AlonzoEraOnwards era
-  -> [(Api.TxIn, Api.BuildTxWith Api.BuildTx (Api.Witness Api.WitCtxTxIn era))]
-  -> Either
-       CBOR.DecoderError
-       [ ( Witnessable TxInItem (Api.ShelleyLedgerEra era)
-         , AnyWitness (Api.ShelleyLedgerEra era)
-         )
-       ]
-fromLegacyTxInWitness aeon = do
-  legacyWitnessConversion
-    (Api.convert aeon)
-    . extractWitnessableTxIns aeon
 
 -- | We exclude reference scripts because they do not end up in the resulting transaction.
 isReferenceScript :: Api.Witness witctx era -> Bool

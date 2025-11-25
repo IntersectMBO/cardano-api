@@ -2,6 +2,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Api.Experimental
@@ -12,6 +13,7 @@ where
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Era (convert)
+import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Genesis qualified as Genesis
 import Cardano.Api.Ledger qualified as Ledger
 import Cardano.Api.Plutus qualified as Script
@@ -73,7 +75,7 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
   let sbe = Api.convert era
 
   signedTxTraditional <- exampleTransactionTraditionalWay sbe
-  signedTxExperimental <- exampleTransactionExperimentalWay era sbe
+  signedTxExperimental <- exampleTransactionExperimentalWay era
 
   let oldStyleTx :: Api.Tx Api.ConwayEra = ShelleyTx sbe signedTxExperimental
 
@@ -84,7 +86,7 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
     => Api.ShelleyBasedEra Exp.ConwayEra
     -> m (Tx Exp.ConwayEra)
   exampleTransactionTraditionalWay sbe = do
-    txBodyContent <- exampleTxBodyContent Api.AsConwayEra sbe
+    txBodyContent <- exampleTxBodyContent sbe
     signingKey <- exampleSigningKey
 
     txBody <- H.evalEither $ Api.createTransactionBody sbe txBodyContent
@@ -96,10 +98,9 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
   exampleTransactionExperimentalWay
     :: H.MonadTest m
     => Exp.Era Exp.ConwayEra
-    -> Api.ShelleyBasedEra Exp.ConwayEra
     -> m (Ledger.Tx (Exp.LedgerEra Exp.ConwayEra))
-  exampleTransactionExperimentalWay era sbe = do
-    txBodyContent <- exampleTxBodyContent Api.AsConwayEra sbe
+  exampleTransactionExperimentalWay era = do
+    txBodyContent <- exampleTxBodyContentExperimental era
     signingKey <- exampleSigningKey
 
     unsignedTx <- H.evalEither $ Exp.makeUnsignedTx era txBodyContent
@@ -119,7 +120,7 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
 
   changeAddress <- getExampleChangeAddress sbe
 
-  txBodyContent <- exampleTxBodyContent Api.AsConwayEra sbe
+  txBodyContent <- exampleTxBodyContent sbe
   txBody <- H.evalEither $ Api.createTransactionBody sbe txBodyContent
 
   -- Simple way (fee calculation)
@@ -244,12 +245,22 @@ getExampleSrcTxId = do
   return $ Api.TxIn srcTxId srcTxIx
 
 getExampleDestAddress
-  :: (H.MonadTest m, Api.IsCardanoEra era) => Script.AsType era -> m (Api.AddressInEra era)
-getExampleDestAddress eraAsType = do
+  :: forall m era. (H.MonadTest m, Api.IsCardanoEra era) => m (Api.AddressInEra era)
+getExampleDestAddress = do
   H.evalMaybe $
     Api.deserialiseAddress
-      (Api.AsAddressInEra eraAsType)
+      (Api.AsAddressInEra (Api.proxyToAsType (Api.Proxy @era)))
       "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
+
+getExampleDestAddressExp
+  :: H.MonadTest m => m Ledger.Addr
+getExampleDestAddressExp = do
+  Api.toShelleyAddr
+    <$> H.evalMaybe
+      ( Api.deserialiseAddress
+          (Api.AsAddressInEra (Api.proxyToAsType (Api.Proxy @Api.ConwayEra)))
+          "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
+      )
 
 getExampleChangeAddress :: H.MonadTest m => Api.ShelleyBasedEra era -> m (Api.AddressInEra era)
 getExampleChangeAddress sbe = do
@@ -261,14 +272,40 @@ getExampleChangeAddress sbe = do
         (Api.PaymentCredentialByKey $ Api.verificationKeyHash $ Api.getVerificationKey signingKey)
         Api.NoStakeAddress
 
-exampleTxBodyContent
-  :: (Api.ShelleyBasedEraConstraints era, H.MonadTest m)
-  => Api.AsType era
-  -> Api.ShelleyBasedEra era
-  -> m (Api.TxBodyContent Api.BuildTx era)
-exampleTxBodyContent eraAsType sbe = do
+exampleTxBodyContentExperimental
+  :: forall m era
+   . H.MonadTest m
+  => Exp.Era era
+  -> m (Exp.TxBodyContent (Exp.LedgerEra era))
+exampleTxBodyContentExperimental era = do
   srcTxIn <- getExampleSrcTxId
-  destAddress <- getExampleDestAddress eraAsType
+  addr <- getExampleDestAddressExp
+  let value = Ledger.valueFromList 10_000_000 []
+      out :: Ledger.TxOut (Exp.LedgerEra era)
+      out = Exp.obtainCommonConstraints era $ Ledger.mkBasicTxOut addr value
+  let txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns
+            [
+              ( srcTxIn
+              , Exp.AnyKeyWitnessPlaceholder
+              )
+            ]
+          & Exp.setTxOuts
+            [ Exp.obtainCommonConstraints era $ Exp.TxOut out Nothing
+            ]
+          & Exp.setTxFee 2_000_000
+  return txBodyContent
+
+exampleTxBodyContent
+  :: forall m era
+   . H.MonadTest m
+  => Api.IsCardanoEra era
+  => Api.ShelleyBasedEra era
+  -> m (Api.TxBodyContent Api.BuildTx era)
+exampleTxBodyContent sbe = do
+  srcTxIn <- getExampleSrcTxId
+  destAddress <- getExampleDestAddress @_ @era
   let txBodyContent =
         Api.defaultTxBodyContent sbe
           & Api.setTxIns
