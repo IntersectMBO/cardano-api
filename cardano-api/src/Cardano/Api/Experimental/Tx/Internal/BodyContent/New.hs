@@ -388,7 +388,7 @@ data TxBodyContent era
   }
 
 defaultTxBodyContent
-  :: TxBodyContent (LedgerEra era)
+  :: TxBodyContent era
 defaultTxBodyContent =
   TxBodyContent
     { txIns = []
