@@ -5,7 +5,7 @@
     version = "1.0.0";
     name = "proto-js-dependencies";
     src = ../nix/proto-to-js-npm-deps;
-    npmDepsHash = "sha256-tPX2C6M0ePsZhtJq7wNJ8RD+IFzKUhx87M42fL4/Wn4=";
+    npmDepsHash = "sha256-3uvSQQ9+bWYAyHi6aCjfDhutY5pg4TKvIZFwOPfuqmg=";
     dontNpmBuild = true;
     dontNpmInstall = true;
     installPhase = ''
@@ -23,11 +23,8 @@ in
     src = cardano-rpc-src;
 
     nativeBuildInputs = [
-      pkgs.grpc-tools
-      pkgs.protobuf
-      pkgs.protoc-gen-js
-      pkgs.protoc-gen-grpc-web
       pkgs.nodePackages.browserify
+      pkgs.protobuf # For include paths if needed
     ];
 
     buildPhase = ''
@@ -40,61 +37,104 @@ in
       mkdir -p "$GEN_JS_PATH"
       mkdir -p "$BUNDLE_PATH"
 
-      echo "--- Compiling .proto files (Pass 1: JavaScript Generation) ---"
-      for PROTO_FILE in `find "$PROTO_INCLUDE_PATH" -type f -name "*.proto"`
-      do
-        protoc \
-          -I="$PROTO_INCLUDE_PATH" \
-          -I="${pkgs.protobuf}/include" \
-          --plugin=protoc-gen-grpc=${pkgs.grpc-tools}/bin/grpc_node_plugin \
-          --js_out=import_style=commonjs,binary:"$GEN_JS_PATH" \
-          --grpc-web_out=import_style=commonjs,mode=grpcwebtext:"$GEN_JS_PATH" \
-          --grpc_out=grpc_js,import_style=commonjs:"$GEN_JS_PATH" \
-          "$PROTO_FILE"
-      done
+      echo "--- Generating JSON Schema Bundle (bundle.json) ---"
 
-      echo "--- Compiling .proto files (Pass 2: JSON Generation) ---"
+      # We use pbjs to generate the single JSON bundle that drives the logic
+      ${node-deps}/node_modules/.bin/pbjs \
+        -t json \
+        -p "$PROTO_INCLUDE_PATH" \
+        -o "$GEN_JS_PATH/bundle.json" \
+        $(find $PROTO_INCLUDE_PATH | grep \\.proto$)
 
-      ${node-deps}/node_modules/.bin/pbjs -t json -p "$PROTO_INCLUDE_PATH" -o "$GEN_JS_PATH/bundle.json" $(find $PROTO_INCLUDE_PATH | grep \\.proto$)
+      echo "--- Creating Universal Bridge Entrypoint ---"
 
-      echo "--- Final generated files are in $GEN_JS_PATH ---"
-      ls -R "$GEN_JS_PATH"
-
-      echo "--- Creating node.js entrypoint: $NODE_ENTRYPOINT_FILE ---"
-      NODE_ENTRYPOINT_FILE=$GEN_JS_PATH/node-index.js
-      rm -f $NODE_ENTRYPOINT_FILE
-      touch "$NODE_ENTRYPOINT_FILE"
-      for JS_FULLPATH in `find "$GEN_JS_PATH" -type f -name "*_grpc_pb.js"`
-      do
-        JS_FILENAME=$(basename "$JS_FULLPATH")
-        MODULE_NAME=''${JS_FILENAME%_grpc_pb.js}
-        RELATIVE_PATH=''${JS_FULLPATH#$GEN_JS_PATH/}
-
-        echo "exports.$MODULE_NAME = require('./$RELATIVE_PATH');" >> "$NODE_ENTRYPOINT_FILE"
-
-        MESSAGE_RELATIVE_PATH=''${RELATIVE_PATH%_grpc_pb.js}_pb.js
-        echo "exports.''${MODULE_NAME}_messages = require('./$MESSAGE_RELATIVE_PATH');" >> "$NODE_ENTRYPOINT_FILE"
-      done
-
-      echo "--- Creating browserify entrypoint: $BROWSER_ENTRYPOINT_FILE ---"
       BROWSER_ENTRYPOINT_FILE=$GEN_JS_PATH/browser-index.js
-      rm -f $BROWSER_ENTRYPOINT_FILE
-      touch "$BROWSER_ENTRYPOINT_FILE"
-      for JS_FULLPATH in `find "$GEN_JS_PATH" -type f -name "*_grpc_web_pb.js"`
-      do
-        JS_FILENAME=$(basename "$JS_FULLPATH")
-        MODULE_NAME=''${JS_FILENAME%_grpc_web_pb.js}
-        RELATIVE_PATH=''${JS_FULLPATH#$GEN_JS_PATH/}
 
-        echo "Adding module '$MODULE_NAME' from './$RELATIVE_PATH' to browser bundle."
-        echo "exports.$MODULE_NAME = require('./$RELATIVE_PATH');" >> "$BROWSER_ENTRYPOINT_FILE"
-      done
+      cat <<EOF > "$BROWSER_ENTRYPOINT_FILE"
+      const { GrpcWebClientBase, MethodDescriptor } = require('grpc-web');
+      const protobuf = require('protobufjs');
+      const bundle = require('./bundle.json');
+
+      const root = protobuf.Root.fromJSON(bundle);
+
+      // Identity Wrapper for grpc-web compatibility
+      // We pass raw bytes, but grpc-web expects a class with serialize/deserialize
+      class IdentityMessage {
+        constructor(bytes) { this.bytes = bytes || new Uint8Array(0); }
+        serializeBinary() { return this.bytes; }
+        static deserializeBinary(bytes) { return new IdentityMessage(bytes); }
+      }
+
+      /**
+       * The Universal Bridge Function
+       * @param {string} hostUrl - The Envoy Proxy URL (e.g. "http://localhost:8080")
+       * @param {string} serviceName - Full service name (e.g. "cardano.rpc.Node")
+       * @param {string} methodName - Method name (e.g. "GetEra")
+       * @param {string} payloadJson - JSON string payload
+       */
+      async function executeGrpcCall(hostUrl, serviceName, methodName, payloadJson) {
+        // 1. Setup Client
+        // format: 'text' ensures application/grpc-web-text (Base64)
+        const client = new GrpcWebClientBase({ format: 'text' });
+
+        const path = "/" + serviceName + "/" + methodName;
+
+        // 2. Lookup Schema
+        const serviceDef = root.lookupService(serviceName);
+        if (!serviceDef) throw new Error("Service not found in bundle: " + serviceName);
+
+        const methodDef = serviceDef.methods[methodName];
+        if (!methodDef) throw new Error("Method not found: " + methodName);
+
+        const RequestType = root.lookupType(methodDef.requestType);
+        const ResponseType = root.lookupType(methodDef.responseType);
+
+        // 3. JSON -> Bytes
+        const payloadObj = JSON.parse(payloadJson);
+        const err = RequestType.verify(payloadObj);
+        if (err) throw new Error("Invalid JSON: " + err);
+
+        const rawRequestBytes = RequestType.encode(RequestType.create(payloadObj)).finish();
+
+        // 4. Execute gRPC-Web Call
+        return new Promise((resolve, reject) => {
+          client.rpcCall(
+            hostUrl + path,
+            new IdentityMessage(rawRequestBytes),
+            {},
+            new MethodDescriptor(
+              path, "POST", IdentityMessage, IdentityMessage,
+              (m) => m.serializeBinary(),
+              (b) => IdentityMessage.deserializeBinary(b)
+            ),
+            (err, responseMsg) => {
+              if (err) {
+                console.error("[JS-Bridge] Error:", err);
+                reject(err.message);
+              } else {
+                // 5. Bytes -> JSON
+                const decoded = ResponseType.decode(responseMsg.bytes);
+                const responseJson = ResponseType.toObject(decoded, {
+                  longs: String, enums: String, bytes: String, defaults: true
+                });
+                resolve(JSON.stringify(responseJson));
+              }
+            }
+          );
+        });
+      }
+
+      // EXPOSE GLOBAL
+      globalThis.executeGrpcCall = executeGrpcCall;
+      EOF
 
       echo "--- Setting up node_modules for browserify ---"
       ln -s ${node-deps}/node_modules ./node_modules
 
-      echo "--- Bundling all generated JS gRPC modules with browserify ---"
+      echo "--- Bundling JS Bridge with browserify ---"
+      # We bundle the bridge and all deps (protobufjs, grpc-web) into one file
       browserify "$BROWSER_ENTRYPOINT_FILE" --standalone cardano_node > "$BUNDLE_PATH/cardano_node_grpc_web_pb.js"
+
       echo "--- Bundling complete. Final files are in $BUNDLE_PATH ---"
       ls -l "$BUNDLE_PATH"
 
@@ -108,13 +148,8 @@ in
       echo "--- Installing browser bundle to \$out/ ---"
       cp ./bundled-js/cardano_node_grpc_web_pb.js $out/
 
-
-      echo "--- Installing Node.js modules to \$out/node/ ---"
-      mkdir -p $out/node
-      (cd ./generated-js && find . -name "*.js" -not -name "*_grpc_web_pb.js" -not -name "browser-index.js" | xargs cp --parents -t $out/node)
-
-      echo "--- Installation complete. Final output structure in \$out: ---"
-      ls -R $out
+      echo "--- Installing bundle.json to \$out/ ---"
+      cp ./generated-js/bundle.json $out/
 
       runHook postInstall
     '';
