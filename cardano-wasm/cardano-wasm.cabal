@@ -39,6 +39,51 @@ library cardano-wasi-lib
     Cardano.Wasm.ExceptionHandling
 
   other-modules:
+    Cardano.Wasm.Gen.Cardano.Rpc.CurrentEra
+    Cardano.Wasm.Gen.Cardano.Rpc.Era
+    Cardano.Wasm.Gen.Cardano.Rpc.Node
+    Cardano.Wasm.Gen.Cardano.Rpc.ProtocolParamsJson
+    Cardano.Wasm.Gen.Google.Protobuf.Empty
+    Cardano.Wasm.Gen.Google.Protobuf.FieldMask
+    Cardano.Wasm.Gen.GrpcClient
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.AddressArray
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.Asset
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.BigInt
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.Constr
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.CostModel
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.CostModels
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.Datum
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.ExPrices
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.ExUnits
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.MultiAsset
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.NativeScript
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.NativeScriptList
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.PParams
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.PlutusData
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.PlutusDataArray
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.PlutusDataMap
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.PlutusDataPair
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.ProtocolVersion
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.RationalNumber
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.Script
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.ScriptNOfK
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.TxOutput
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.VotingThresholds
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Query.AnyChainParams
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Query.AnyUtxoData
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Query.ChainPoint
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Query.QueryService
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Query.ReadParamsRequest
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Query.ReadParamsResponse
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Query.ReadUtxosRequest
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Query.ReadUtxosResponse
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Query.TxoRef
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Query.TxoRefArray
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Submit.AnyChainTx
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Submit.SubmitService
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Submit.SubmitTxRequest
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Submit.SubmitTxResponse
+    Cardano.Wasm.Gen.Utxorpc.V1alpha.Submit.TxSubmitResult
     Cardano.Wasm.Internal.Api.Random
 
   build-depends:
@@ -64,6 +109,22 @@ library cardano-wasi-lib
   else
     build-depends:
       crypton
+
+executable cardano-wasm-grpc-gen
+  import: project-config
+  main-is: Main.hs
+  hs-source-dirs:
+    app-wasm-grpc-gen
+
+  default-language: Haskell2010
+  build-depends:
+    aeson,
+    bytestring,
+    casing,
+    directory,
+    filepath,
+    text,
+    unordered-containers,
 
 executable cardano-wasi
   import: project-config
