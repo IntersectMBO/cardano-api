@@ -11,7 +11,8 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 
 module Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
-  ( legacyWitnessToScriptRequirements
+  ( convertToNewScriptWitness
+  , legacyWitnessToScriptRequirements
   , legacyWitnessConversion
   , toPlutusSLanguage
   )
