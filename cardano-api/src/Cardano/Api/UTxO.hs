@@ -81,12 +81,12 @@ module Cardano.Api.UTxO
   )
 where
 
-import Cardano.Api.Era.Internal.Core (IsCardanoEra)
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
   ( IsShelleyBasedEra
   , ShelleyBasedEra
   , ShelleyLedgerEra
   )
+import Cardano.Api.Experimental.Era qualified as Exp
 import Cardano.Api.Tx.Internal.Output
   ( CtxUTxO
   , TxOut (..)
@@ -133,7 +133,7 @@ instance GHC.IsList (UTxO era) where
   fromList = UTxO . GHC.fromList
   toList = GHC.toList . unUTxO
 
-instance IsCardanoEra era => ToJSON (UTxO era) where
+instance Exp.IsEra era => ToJSON (UTxO era) where
   toJSON (UTxO m) = toJSON m
   toEncoding (UTxO m) = toEncoding m
 
