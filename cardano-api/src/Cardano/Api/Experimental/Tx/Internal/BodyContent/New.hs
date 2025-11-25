@@ -27,11 +27,17 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
 
     -- * Getters and Setters
   , setTxCertificates
-  , setTxIns
+  , setTxCollateral
   , setTxFee
-  , setTxOuts
+  , setTxIns
+  , setTxInsCollateral
+  , setTxInsReference
+  , setTxMetadata
   , setTxMintValue
+  , setTxOuts
   , setTxProposalProcedures
+  , setTxValidityLowerBound
+  , setTxValidityUpperBound
   , setTxVotingProcedures
   , setTxWithdrawals
   )
@@ -637,6 +643,24 @@ getDatums txInsRef txOutsFromTx = do
 
 setTxIns :: [(TxIn, AnyWitness era)] -> TxBodyContent era -> TxBodyContent era
 setTxIns v txBodyContent = txBodyContent{txIns = v}
+
+setTxInsCollateral :: [TxIn] -> TxBodyContent era -> TxBodyContent era
+setTxInsCollateral v txBodyContent = txBodyContent{txInsCollateral = v}
+
+setTxInsReference :: TxInsReference era -> TxBodyContent era -> TxBodyContent era
+setTxInsReference v txBodyContent = txBodyContent{txInsReference = v}
+
+setTxCollateral :: TxCollateral era -> TxBodyContent era -> TxBodyContent era
+setTxCollateral v txBodyContent = txBodyContent{txCollateral = Just v}
+
+setTxValidityLowerBound :: L.SlotNo -> TxBodyContent era -> TxBodyContent era
+setTxValidityLowerBound v txBodyContent = txBodyContent{txValidityLowerBound = Just v}
+
+setTxValidityUpperBound :: L.SlotNo -> TxBodyContent era -> TxBodyContent era
+setTxValidityUpperBound v txBodyContent = txBodyContent{txValidityUpperBound = Just v}
+
+setTxMetadata :: TxMetadata -> TxBodyContent era -> TxBodyContent era
+setTxMetadata v txBodyContent = txBodyContent{txMetadata = v}
 
 setTxFee :: L.Coin -> TxBodyContent era -> TxBodyContent era
 setTxFee v txBodyContent = txBodyContent{txFee = v}

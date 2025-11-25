@@ -128,13 +128,19 @@ module Cardano.Api.Experimental.Tx
   , TxBodyContent (..)
   , defaultTxBodyContent
   , setTxCertificates
+  , setTxCollateral
+  , setTxFee
   , setTxIns
-  , setTxOuts
+  , setTxInsCollateral
+  , setTxInsReference
+  , setTxMetadata
   , setTxMintValue
+  , setTxOuts
   , setTxProposalProcedures
+  , setTxValidityLowerBound
+  , setTxValidityUpperBound
   , setTxVotingProcedures
   , setTxWithdrawals
-  , setTxFee
 
     -- * TxBodyContent sub type
   , TxCertificates (..)
@@ -143,6 +149,9 @@ module Cardano.Api.Experimental.Tx
   , TxProposalProcedures (..)
   , TxVotingProcedures (..)
   , TxWithdrawals (..)
+  , TxCollateral (..)
+  , TxExtraKeyWitnesses (..)
+  , TxInsReference (..)
 
     -- * Witness
 
