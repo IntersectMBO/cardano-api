@@ -92,7 +92,7 @@ data PlutusScriptPurpose
   | -- | Witnesses a vote
     VotingScript
 
-data NoScriptDatum = NoScriptDatumAllowed deriving Show
+data NoScriptDatum = NoScriptDatumAllowed deriving (Eq, Show)
 
 -- | The PlutusScriptDatum type family is used to determine if a script datum is allowed
 -- for a given plutus script purpose and version. This change was proposed in CIP-69
@@ -129,6 +129,55 @@ data PlutusScriptDatum (lang :: L.Language) (purpose :: PlutusScriptPurpose) whe
   InlineDatum :: PlutusScriptDatum lang purpose
   NoScriptDatum
     :: PlutusScriptDatum lang purpose
+
+instance Eq (PlutusScriptDatum L.PlutusV1 SpendingScript) where
+  (==) (SpendingScriptDatum d1) (SpendingScriptDatum d2) = d1 == d2
+  (==) InlineDatum InlineDatum = True
+  (==) NoScriptDatum NoScriptDatum = True
+  (==) _ _ = False
+
+instance Eq (PlutusScriptDatum L.PlutusV2 SpendingScript) where
+  (==) (SpendingScriptDatum d1) (SpendingScriptDatum d2) = d1 == d2
+  (==) InlineDatum InlineDatum = True
+  (==) NoScriptDatum NoScriptDatum = True
+  (==) _ _ = False
+
+instance Eq (PlutusScriptDatum L.PlutusV3 SpendingScript) where
+  (==) (SpendingScriptDatum d1) (SpendingScriptDatum d2) = d1 == d2
+  (==) InlineDatum InlineDatum = True
+  (==) NoScriptDatum NoScriptDatum = True
+  (==) _ _ = False
+
+instance Eq (PlutusScriptDatum L.PlutusV4 SpendingScript) where
+  (==) (SpendingScriptDatum d1) (SpendingScriptDatum d2) = d1 == d2
+  (==) InlineDatum InlineDatum = True
+  (==) NoScriptDatum NoScriptDatum = True
+  (==) _ _ = False
+
+instance Eq (PlutusScriptDatum lang MintingScript) where
+  (==) InlineDatum InlineDatum = True
+  (==) NoScriptDatum NoScriptDatum = True
+  (==) _ _ = False
+
+instance Eq (PlutusScriptDatum lang WithdrawingScript) where
+  (==) InlineDatum InlineDatum = True
+  (==) NoScriptDatum NoScriptDatum = True
+  (==) _ _ = False
+
+instance Eq (PlutusScriptDatum lang CertifyingScript) where
+  (==) InlineDatum InlineDatum = True
+  (==) NoScriptDatum NoScriptDatum = True
+  (==) _ _ = False
+
+instance Eq (PlutusScriptDatum lang ProposingScript) where
+  (==) InlineDatum InlineDatum = True
+  (==) NoScriptDatum NoScriptDatum = True
+  (==) _ _ = False
+
+instance Eq (PlutusScriptDatum lang VotingScript) where
+  (==) InlineDatum InlineDatum = True
+  (==) NoScriptDatum NoScriptDatum = True
+  (==) _ _ = False
 
 instance Show (PlutusScriptDatum lang purpose) where
   show = \case

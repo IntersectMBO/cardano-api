@@ -56,6 +56,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , PoolCert (..)
   , PParams (..)
   , PParamsUpdate
+  , SlotNo (..)
   , TxId (..)
   , TxIn (..)
   , Value
@@ -374,4 +375,4 @@ import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Protocol.Crypto (Crypto, StandardCrypto)
-import Cardano.Slotting.Slot (EpochNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
