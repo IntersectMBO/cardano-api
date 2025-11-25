@@ -124,6 +124,26 @@ module Cardano.Api.Experimental.Tx
   , convertTxBodyToUnsignedTx
   , hashTxBody
 
+    -- * TxBodyContent
+  , TxBodyContent (..)
+  , defaultTxBodyContent
+  , setTxCertificates
+  , setTxIns
+  , setTxOuts
+  , setTxMintValue
+  , setTxProposalProcedures
+  , setTxVotingProcedures
+  , setTxWithdrawals
+  , setTxFee
+
+    -- * TxBodyContent sub type
+  , TxCertificates (..)
+  , TxMintValue (..)
+  , TxOut (..)
+  , TxProposalProcedures (..)
+  , TxVotingProcedures (..)
+  , TxWithdrawals (..)
+
     -- * Witness
 
     -- ** Any witness (key, simple script, plutus script).
@@ -150,10 +170,7 @@ import Cardano.Api.Era.Internal.Core qualified as Api
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
-import Cardano.Api.Experimental.Tx.Internal.BodyContent.Old
-  ( extractAllIndexedPlutusScriptWitnesses
-  , makeUnsignedTx
-  )
+import Cardano.Api.Experimental.Tx.Internal.BodyContent.New
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)
