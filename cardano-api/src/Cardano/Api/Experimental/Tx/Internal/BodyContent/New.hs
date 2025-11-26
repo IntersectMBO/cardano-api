@@ -5,6 +5,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
@@ -24,6 +25,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , makeUnsignedTx
   , extractAllIndexedPlutusScriptWitnesses
   , txMintValueToValue
+  , mkTxCertificates
 
     -- * Getters and Setters
   , setTxAuxScripts
@@ -66,6 +68,7 @@ import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
   ( AnyWitness (..)
   )
+import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   ( TxScriptWitnessRequirements (..)
   , getTxScriptWitnessesRequirements
@@ -364,6 +367,28 @@ newtype TxCertificates era
   = TxCertificates
   {unTxCertificates :: OMap (Exp.Certificate era) (Maybe (StakeCredential, AnyWitness era))}
   deriving (Show, Eq)
+
+-- | Create 'TxCertificates'. Note that 'Certificate era' will be deduplicated. Only Certificates with a
+-- stake credential will be in the result.
+--
+-- Note that, when building a transaction in Conway era, a witness is not required for staking credential
+-- registration, but this is only the case during the transitional period of Conway era and only for staking
+-- credential registration certificates without a deposit. Future eras will require a witness for
+-- registration certificates, because the one without a deposit will be removed.
+mkTxCertificates
+  :: forall era
+   . Era era
+  -> [(Exp.Certificate (LedgerEra era), AnyWitness (LedgerEra era))]
+  -> TxCertificates (LedgerEra era)
+mkTxCertificates era certs = TxCertificates . OMap.fromList $ map getStakeCred certs
+ where
+  getStakeCred
+    :: (Exp.Certificate (LedgerEra era), AnyWitness (LedgerEra era))
+    -> ( Exp.Certificate (LedgerEra era)
+       , Maybe (StakeCredential, AnyWitness (LedgerEra era))
+       )
+  getStakeCred (c@(Exp.Certificate cert), wit) =
+    (c, (,wit) <$> getTxCertWitness (convert era) (obtainCommonConstraints era cert))
 
 -- This is incorrect. Only scripts can witness minting!
 newtype TxMintValue era

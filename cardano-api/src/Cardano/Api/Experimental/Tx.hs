@@ -127,6 +127,7 @@ module Cardano.Api.Experimental.Tx
     -- * TxBodyContent
   , TxBodyContent (..)
   , defaultTxBodyContent
+  , mkTxCertificates
   , setTxAuxScripts
   , setTxCertificates
   , setTxCollateral
