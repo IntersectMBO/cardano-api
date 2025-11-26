@@ -3,6 +3,7 @@
   fetchFromGitHub,
   autoreconfHook,
   wasi-sdk,
+  version,
 }:
 stdenvNoCC.mkDerivation (finalAttrs: {
   name = "blst";
@@ -44,9 +45,9 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     includedir=''\\''${prefix}/include
 
     Name: libblst
-    Description: bogus
-    URL: bogus
-    Version: 0.0
+    Description: blst (pronounced 'blast') is a BLS12-381 signature library focused on performance and security. It is written in C and assembly.
+    URL: https://github.com/supranational/blst
+    Version: ${version}
 
     Cflags: -I''\\''${includedir}
     Libs: -L''\\''${libdir} -lblst

@@ -153,7 +153,7 @@
               hlint = "3.10";
             };
           # and from nixpkgs or other inputs
-          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go actionlint shellcheck snappy protobuf buf ];
+          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go actionlint shellcheck snappy protobuf buf];
           # disable Hoogle until someone request it
           shell.withHoogle = false;
           # Skip cross compilers for the shell
@@ -202,8 +202,8 @@
             }
             ({pkgs, ...}: {
               packages.proto-lens-protobuf-types.components.library.build-tools = [pkgs.buildPackages.protobuf];
-            # This is only needed when doing codegen in cardano-rpc itself
-            #   packages.cardano-rpc.components.library.build-tools = [pkgs.buildPackages.protobuf];
+              # This is only needed when doing codegen in cardano-rpc itself
+              #   packages.cardano-rpc.components.library.build-tools = [pkgs.buildPackages.protobuf];
             })
           ];
         });
@@ -224,11 +224,15 @@
             libsodium =
               wasm-pkgs.callPackage ./nix/libsodium.nix {inherit wasi-sdk;};
             secp256k1 = (wasm-pkgs.callPackage ./nix/secp256k1.nix {inherit wasi-sdk;}).overrideAttrs (_: {
-              src = inputs.iohkNix.inputs.secp256k1;
+              src = nixpkgs.secp256k1.src;
             });
-            blst = (wasm-pkgs.callPackage ./nix/blst.nix {inherit wasi-sdk;}).overrideAttrs (_: {
-              src = inputs.iohkNix.inputs.blst;
-            });
+            blst =
+              (wasm-pkgs.callPackage ./nix/blst.nix {
+                inherit wasi-sdk;
+                version = nixpkgs.blst.version;
+              }).overrideAttrs (_: {
+                src = nixpkgs.blst.src;
+              });
           };
         in
           lib.optionalAttrs (system != "x86_64-darwin") {
