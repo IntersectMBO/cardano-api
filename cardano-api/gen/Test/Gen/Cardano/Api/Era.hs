@@ -7,6 +7,8 @@
 module Test.Gen.Cardano.Api.Era
   ( shelleyBasedEraTestConstraints
   , conwayEraOnwardsTestConstraints
+  , genAnyShelleyBasedEra
+  , genAnyCardanoEra
   )
 where
 
@@ -18,7 +20,9 @@ import Data.Maybe.Strict
 
 import Test.Gen.Cardano.Api.Orphans ()
 
-import Test.QuickCheck
+import Hedgehog (Gen)
+import Hedgehog.Gen qualified as Gen
+import Test.QuickCheck hiding (Gen)
 
 shelleyBasedEraTestConstraints
   :: ()
@@ -50,3 +54,11 @@ conwayEraOnwardsTestConstraints
 conwayEraOnwardsTestConstraints = \case
   ConwayEraOnwardsConway -> id
   ConwayEraOnwardsDijkstra -> id
+
+-- | Generator for any Shelley-based era
+genAnyShelleyBasedEra :: Gen AnyShelleyBasedEra
+genAnyShelleyBasedEra = Gen.element [minBound .. maxBound]
+
+-- | Generator for any Cardano era
+genAnyCardanoEra :: Gen AnyCardanoEra
+genAnyCardanoEra = Gen.element [minBound .. maxBound]
