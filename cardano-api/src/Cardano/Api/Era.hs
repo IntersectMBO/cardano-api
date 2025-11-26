@@ -74,6 +74,9 @@ module Cardano.Api.Era
   , caseShelleyToMaryOrAlonzoEraOnwards
   , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
+
+    -- ** Case on BabbageEraOnwards
+  , caseBabbageOnlyOrConwayEraOnwards
   )
 where
 
