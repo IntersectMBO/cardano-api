@@ -26,8 +26,11 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , txMintValueToValue
 
     -- * Getters and Setters
+  , setTxAuxScripts
   , setTxCertificates
   , setTxCollateral
+  , setTxCurrentTreasuryValue
+  , setTxExtraKeyWits
   , setTxFee
   , setTxIns
   , setTxInsCollateral
@@ -36,10 +39,17 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , setTxMintValue
   , setTxOuts
   , setTxProposalProcedures
+  , setTxProtocolParams
+  , setTxScriptValidity
+  , setTxTreasuryDonation
   , setTxValidityLowerBound
   , setTxValidityUpperBound
   , setTxVotingProcedures
   , setTxWithdrawals
+
+    -- * Legacy conversions
+  , legacyDatumToDatum
+  , fromLegacyTxOut
   )
 where
 
@@ -64,12 +74,14 @@ import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.Key.Internal
 import Cardano.Api.Ledger.Internal.Reexport (StrictMaybe (..))
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
+import Cardano.Api.Plutus.Internal.ScriptData qualified as Api
 import Cardano.Api.Tx.Internal.Body
   ( CtxTx
   , TxIn
   , toShelleyTxIn
   , toShelleyWithdrawal
   )
+import Cardano.Api.Tx.Internal.Output qualified as OldApi
 import Cardano.Api.Tx.Internal.Sign
 import Cardano.Api.Tx.Internal.TxMetadata
 import Cardano.Api.Value.Internal (PolicyAssets, PolicyId, Value, policyAssetsToValue, toMaryValue)
@@ -312,6 +324,26 @@ extractDatumsAndHashes :: Datum ctx era -> Maybe (L.DataHash, L.Data era)
 extractDatumsAndHashes TxOutDatumHash{} = Nothing
 extractDatumsAndHashes (TxOutSupplementalDatum h d) = Just (h, d)
 extractDatumsAndHashes (TxOutDatumInline h d) = Just (h, d)
+
+hashableScriptDatumToDatumAndHash :: L.Era era => Api.HashableScriptData -> (L.DataHash, L.Data era)
+hashableScriptDatumToDatumAndHash sd =
+  (Api.unScriptDataHash $ Api.hashScriptDataBytes sd, Api.toAlonzoData sd)
+
+legacyDatumToDatum
+  :: forall era. IsEra era => OldApi.TxOutDatum CtxTx era -> Maybe (Datum CtxTx (LedgerEra era))
+legacyDatumToDatum (OldApi.TxOutDatumHash _ h) = Just (TxOutDatumHash $ Api.unScriptDataHash h)
+legacyDatumToDatum (OldApi.TxOutSupplementalDatum _ hd) = do
+  let (hash, d) = obtainCommonConstraints (useEra @era) $ hashableScriptDatumToDatumAndHash hd
+  Just (TxOutSupplementalDatum hash d)
+legacyDatumToDatum (OldApi.TxOutDatumInline _ hd) = do
+  let (hash, d) = obtainCommonConstraints (useEra @era) $ hashableScriptDatumToDatumAndHash hd
+  Just (TxOutDatumInline hash d)
+legacyDatumToDatum OldApi.TxOutDatumNone = Nothing
+
+fromLegacyTxOut :: forall era. IsEra era => OldApi.TxOut CtxTx era -> TxOut CtxTx (LedgerEra era)
+fromLegacyTxOut tOut@(OldApi.TxOut _ _ d _) =
+  let o = OldApi.toShelleyTxOutAny (convert $ useEra @era) tOut
+   in obtainCommonConstraints (useEra @era) $ TxOut o (legacyDatumToDatum d)
 
 data TxInsReference era = TxInsReference [TxIn] (Set (Datum CtxTx era))
 
@@ -641,6 +673,12 @@ getDatums txInsRef txOutsFromTx = do
 
 -- Getters and Setters
 
+setTxAuxScripts :: [SimpleScript era] -> TxBodyContent era -> TxBodyContent era
+setTxAuxScripts v txBodyContent = txBodyContent{txAuxScripts = v}
+
+setTxExtraKeyWits :: TxExtraKeyWitnesses -> TxBodyContent era -> TxBodyContent era
+setTxExtraKeyWits v txBodyContent = txBodyContent{txExtraKeyWits = v}
+
 setTxIns :: [(TxIn, AnyWitness era)] -> TxBodyContent era -> TxBodyContent era
 setTxIns v txBodyContent = txBodyContent{txIns = v}
 
@@ -649,6 +687,9 @@ setTxInsCollateral v txBodyContent = txBodyContent{txInsCollateral = v}
 
 setTxInsReference :: TxInsReference era -> TxBodyContent era -> TxBodyContent era
 setTxInsReference v txBodyContent = txBodyContent{txInsReference = v}
+
+setTxProtocolParams :: L.PParams era -> TxBodyContent era -> TxBodyContent era
+setTxProtocolParams v txBodyContent = txBodyContent{txProtocolParams = Just v}
 
 setTxCollateral :: TxCollateral era -> TxBodyContent era -> TxBodyContent era
 setTxCollateral v txBodyContent = txBodyContent{txCollateral = Just v}
@@ -671,6 +712,9 @@ setTxOuts v txBodyContent = txBodyContent{txOuts = v}
 setTxMintValue :: TxMintValue era -> TxBodyContent era -> TxBodyContent era
 setTxMintValue v txBodyContent = txBodyContent{txMintValue = v}
 
+setTxScriptValidity :: ScriptValidity -> TxBodyContent era -> TxBodyContent era
+setTxScriptValidity v txBodyContent = txBodyContent{txScriptValidity = v}
+
 setTxCertificates :: TxCertificates era -> TxBodyContent era -> TxBodyContent era
 setTxCertificates v txBodyContent = txBodyContent{txCertificates = v}
 
@@ -682,3 +726,9 @@ setTxVotingProcedures v txBodyContent = txBodyContent{txVotingProcedures = Just 
 
 setTxProposalProcedures :: TxProposalProcedures era -> TxBodyContent era -> TxBodyContent era
 setTxProposalProcedures v txBodyContent = txBodyContent{txProposalProcedures = Just v}
+
+setTxCurrentTreasuryValue :: L.Coin -> TxBodyContent era -> TxBodyContent era
+setTxCurrentTreasuryValue v txBodyContent = txBodyContent{txCurrentTreasuryValue = Just v}
+
+setTxTreasuryDonation :: L.Coin -> TxBodyContent era -> TxBodyContent era
+setTxTreasuryDonation v txBodyContent = txBodyContent{txTreasuryDonation = Just v}

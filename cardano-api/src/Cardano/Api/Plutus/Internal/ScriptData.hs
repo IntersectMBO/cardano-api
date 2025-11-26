@@ -155,7 +155,7 @@ instance HasTypeProxy ScriptData where
 --
 
 newtype instance Hash ScriptData
-  = ScriptDataHash Plutus.DataHash
+  = ScriptDataHash {unScriptDataHash :: Plutus.DataHash}
   deriving stock (Eq, Ord)
   deriving (Show, Pretty) via UsingRawBytesHex (Hash ScriptData)
   deriving (ToJSON, FromJSON) via UsingRawBytesHex (Hash ScriptData)

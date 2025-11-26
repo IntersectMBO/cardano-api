@@ -127,8 +127,11 @@ module Cardano.Api.Experimental.Tx
     -- * TxBodyContent
   , TxBodyContent (..)
   , defaultTxBodyContent
+  , setTxAuxScripts
   , setTxCertificates
   , setTxCollateral
+  , setTxCurrentTreasuryValue
+  , setTxExtraKeyWits
   , setTxFee
   , setTxIns
   , setTxInsCollateral
@@ -137,10 +140,16 @@ module Cardano.Api.Experimental.Tx
   , setTxMintValue
   , setTxOuts
   , setTxProposalProcedures
+  , setTxProtocolParams
+  , setTxScriptValidity
   , setTxValidityLowerBound
   , setTxValidityUpperBound
   , setTxVotingProcedures
   , setTxWithdrawals
+
+    -- * Legacy Conversions
+  , legacyDatumToDatum
+  , fromLegacyTxOut
 
     -- * TxBodyContent sub type
   , TxCertificates (..)
