@@ -15,6 +15,19 @@
   };
 
   cardano-rpc-src = ../cardano-rpc;
+
+  protoc-gen-js-fixed = pkgs.protoc-gen-js.overrideAttrs (old: {
+    postPatch =
+      (old.postPatch or "")
+      + ''
+        echo "build --copt=-Dfdopen=fdopen" >> .bazelrc
+        echo "build --copt=-Wno-deprecated-non-prototype" >> .bazelrc
+        echo "build --copt=-Wno-macro-redefined" >> .bazelrc
+        echo "build --host_copt=-Dfdopen=fdopen" >> .bazelrc
+        echo "build --host_copt=-Wno-deprecated-non-prototype" >> .bazelrc
+        echo "build --host_copt=-Wno-macro-redefined" >> .bazelrc
+      '';
+  });
 in
   pkgs.stdenv.mkDerivation {
     pname = "cardano-rpc-proto-js-bundle";
@@ -25,7 +38,7 @@ in
     nativeBuildInputs = [
       pkgs.grpc-tools
       pkgs.protobuf
-      pkgs.protoc-gen-js
+      protoc-gen-js-fixed
       pkgs.protoc-gen-grpc-web
       pkgs.nodePackages.browserify
     ];
