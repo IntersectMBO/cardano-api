@@ -37,6 +37,7 @@ library cardano-wasi-lib
     Cardano.Wasm.Api.TypeScriptDefs
     Cardano.Wasm.Api.Wallet
     Cardano.Wasm.ExceptionHandling
+    Cardano.Wasm.Gen.GrpcClient
 
   other-modules:
     Cardano.Wasm.Gen.Cardano.Rpc.CurrentEra
@@ -45,7 +46,6 @@ library cardano-wasi-lib
     Cardano.Wasm.Gen.Cardano.Rpc.ProtocolParamsJson
     Cardano.Wasm.Gen.Google.Protobuf.Empty
     Cardano.Wasm.Gen.Google.Protobuf.FieldMask
-    Cardano.Wasm.Gen.GrpcClient
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.AddressArray
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.Asset
     Cardano.Wasm.Gen.Utxorpc.V1alpha.Cardano.BigInt
