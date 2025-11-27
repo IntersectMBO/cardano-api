@@ -153,17 +153,17 @@ instance Error (VotesMergingConflict era) where
 -- or fails if the votes are incompatible.
 mergeVotingProcedures
   :: ()
-  => VotingProcedures era
+  => L.VotingProcedures era
   -- ^ Votes to merge
-  -> VotingProcedures era
+  -> L.VotingProcedures era
   -- ^ Votes to merge
-  -> Either (VotesMergingConflict era) (VotingProcedures era)
+  -> Either (VotesMergingConflict era) (L.VotingProcedures era)
   -- ^ Either the conflict found, or the merged votes
 mergeVotingProcedures vpsa vpsb =
-  VotingProcedures . L.VotingProcedures <$> foldM mergeVotesOfOneVoter Map.empty allVoters
+  L.VotingProcedures <$> foldM mergeVotesOfOneVoter Map.empty allVoters
  where
-  mapa = L.unVotingProcedures (unVotingProcedures vpsa)
-  mapb = L.unVotingProcedures (unVotingProcedures vpsb)
+  mapa = L.unVotingProcedures vpsa
+  mapb = L.unVotingProcedures vpsb
   allVoters = Set.union (Map.keysSet mapa) (Map.keysSet mapb)
   mergeVotesOfOneVoter acc voter =
     Map.union acc <$> case (Map.lookup voter mapa, Map.lookup voter mapb) of

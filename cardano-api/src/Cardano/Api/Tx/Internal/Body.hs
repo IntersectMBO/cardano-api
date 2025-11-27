@@ -734,10 +734,10 @@ deriving instance Show (TxVotingProcedures build era)
 mkTxVotingProcedures
   :: Applicative (BuildTxWith build)
   => [(VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))]
-  -> Either (VotesMergingConflict era) (TxVotingProcedures build era)
+  -> Either (VotesMergingConflict (ShelleyLedgerEra era)) (TxVotingProcedures build era)
 mkTxVotingProcedures votingProcedures = do
-  VotingProcedures procedure <-
-    foldM f emptyVotingProcedures votingProcedures
+  procedure <-
+    foldM f (L.VotingProcedures Map.empty) votingProcedures
   pure $ TxVotingProcedures procedure (pure votingScriptWitnessMap)
  where
   votingScriptWitnessMap =
@@ -745,7 +745,8 @@ mkTxVotingProcedures votingProcedures = do
       (\acc next -> acc `Map.union` uncurry votingScriptWitnessSingleton next)
       Map.empty
       votingProcedures
-  f acc (procedure, _witness) = mergeVotingProcedures acc procedure
+
+  f acc (VotingProcedures procedure, _witness) = mergeVotingProcedures acc procedure
 
   votingScriptWitnessSingleton
     :: VotingProcedures era

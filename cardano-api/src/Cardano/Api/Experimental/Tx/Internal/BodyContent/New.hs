@@ -26,6 +26,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , extractAllIndexedPlutusScriptWitnesses
   , txMintValueToValue
   , mkTxCertificates
+  , mkTxVotingProcedures
 
     -- * Getters and Setters
   , setTxAuxScripts
@@ -74,6 +75,10 @@ import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   , getTxScriptWitnessesRequirements
   )
 import Cardano.Api.Experimental.Tx.Internal.Type
+import Cardano.Api.Governance.Internal.Action.VotingProcedure
+  ( VotesMergingConflict (..)
+  , mergeVotingProcedures
+  )
 import Cardano.Api.Key.Internal
 import Cardano.Api.Ledger.Internal.Reexport (StrictMaybe (..))
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
@@ -423,6 +428,45 @@ data TxVotingProcedures era
       (L.VotingProcedures era)
       (Map L.Voter (AnyWitness era))
   deriving (Eq, Show)
+
+-- | Create voting procedures from map of voting procedures and optional witnesses.
+-- Validates the function argument, to make sure the list of votes is legal.
+-- See 'mergeVotingProcedures' for validation rules.
+mkTxVotingProcedures
+  :: forall era
+   . [(L.VotingProcedures (LedgerEra era), AnyWitness (LedgerEra era))]
+  -> Either (VotesMergingConflict (LedgerEra era)) (TxVotingProcedures (LedgerEra era))
+mkTxVotingProcedures votingProcedures = do
+  procedure <-
+    foldM f (L.VotingProcedures Map.empty) votingProcedures
+  pure $ TxVotingProcedures procedure votingScriptWitnessMap
+ where
+  votingScriptWitnessMap :: Map L.Voter (AnyWitness (LedgerEra era))
+  votingScriptWitnessMap =
+    foldl
+      (\acc next -> acc `Map.union` uncurry votingScriptWitnessSingleton next)
+      Map.empty
+      votingProcedures
+
+  f
+    :: L.VotingProcedures (LedgerEra era)
+    -> (L.VotingProcedures (LedgerEra era), AnyWitness (LedgerEra era))
+    -> Either (VotesMergingConflict (LedgerEra era)) (L.VotingProcedures (LedgerEra era))
+  f acc (procedure, _witness) = mergeVotingProcedures acc procedure
+
+  votingScriptWitnessSingleton
+    :: L.VotingProcedures (LedgerEra era)
+    -> AnyWitness (LedgerEra era)
+    -> Map L.Voter (AnyWitness (LedgerEra era))
+  votingScriptWitnessSingleton votingProcedures' scriptWitness = do
+    let voter = fromJust $ getVotingScriptCredentials votingProcedures'
+    Map.singleton voter scriptWitness
+
+  getVotingScriptCredentials
+    :: L.VotingProcedures (LedgerEra era)
+    -> Maybe L.Voter
+  getVotingScriptCredentials (L.VotingProcedures m) =
+    listToMaybe $ Map.keys m
 
 data TxBodyContent era
   = TxBodyContent
