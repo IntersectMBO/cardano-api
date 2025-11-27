@@ -31,6 +31,7 @@ module Cardano.Api.Tx.Internal.Output
   , toShelleyTxOutAny
   , convTxOuts
   , fromLedgerTxOuts
+  , toBabbageTxOutDatum
   , toByronTxOut
   --  ** An Output Value
   , TxOutValue (..)
