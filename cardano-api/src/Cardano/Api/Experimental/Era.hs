@@ -55,6 +55,7 @@ import Cardano.Ledger.Conway qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Hashes qualified as L
 import Cardano.Ledger.State qualified as L
+import Cardano.Ledger.Val qualified as L
 
 import Control.Monad.Error.Class
 import Data.Aeson (FromJSON (..), ToJSON, withText)
@@ -309,6 +310,7 @@ type EraCommonConstraints era =
   , L.EraTxCert (LedgerEra era)
   , L.EraTxOut (LedgerEra era)
   , L.EraUTxO (LedgerEra era)
+  , L.Val (L.Value (LedgerEra era))
   , L.Value (LedgerEra era) ~ L.MaryValue
   , FromCBOR (ChainDepState (ConsensusProtocol era))
   , L.NativeScript (LedgerEra era) ~ L.Timelock (LedgerEra era)

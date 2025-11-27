@@ -27,6 +27,7 @@ module Cardano.Api.Experimental
 
     -- ** Transaction fee related
   , estimateBalancedTxBody
+  , evaluateTransactionFee
 
     -- ** Era-related
   , BabbageEra

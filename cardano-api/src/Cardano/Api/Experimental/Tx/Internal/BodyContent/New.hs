@@ -20,6 +20,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , TxVotingProcedures (..)
   , TxWithdrawals (..)
   , TxBodyContent (..)
+  , Datum (..)
   , defaultTxBodyContent
   , collectTxBodyScriptWitnessRequirements
   , makeUnsignedTx
@@ -50,6 +51,9 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , setTxValidityUpperBound
   , setTxVotingProcedures
   , setTxWithdrawals
+
+    -- * Internal conversions
+  , convProposalProcedures
 
     -- * Legacy conversions
   , legacyDatumToDatum
