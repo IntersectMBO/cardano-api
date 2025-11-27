@@ -202,6 +202,10 @@
             }
             ({pkgs, ...}: {
               packages.proto-lens-protobuf-types.components.library.build-tools = [pkgs.buildPackages.protobuf];
+              # on GCC > 14 a conversion warning became an error and needs to be silenced
+              packages.basement.components.library.configureFlags = [
+                "--hsc2hs-option=--cflag=-Wno-int-conversion"
+              ];
               # This is only needed when doing codegen in cardano-rpc itself
               #   packages.cardano-rpc.components.library.build-tools = [pkgs.buildPackages.protobuf];
             })
