@@ -27,6 +27,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , txMintValueToValue
   , mkTxCertificates
   , mkTxVotingProcedures
+  , mkTxProposalProcedures
 
     -- * Getters and Setters
   , setTxAuxScripts
@@ -419,9 +420,21 @@ newtype TxProposalProcedures era
   = TxProposalProcedures
       ( OMap
           (L.ProposalProcedure era)
-          (Maybe (AnyWitness era))
+          (AnyWitness era)
       )
   deriving (Show, Eq)
+
+-- | A smart constructor for 'TxProposalProcedures'. It makes sure that the value produced is consistent - the
+-- witnessed proposals are also present in the first constructor parameter.
+mkTxProposalProcedures
+  :: forall era
+   . IsEra era
+  => [(L.ProposalProcedure (LedgerEra era), AnyWitness (LedgerEra era))]
+  -> TxProposalProcedures (LedgerEra era)
+mkTxProposalProcedures proposals = do
+  TxProposalProcedures $
+    obtainCommonConstraints (useEra @era) $
+      OMap.fromList proposals
 
 data TxVotingProcedures era
   = TxVotingProcedures
@@ -646,10 +659,7 @@ extractWitnessableProposals (Just txPropProcedures) =
     :: TxProposalProcedures (LedgerEra era)
     -> [(L.ProposalProcedure (LedgerEra era), AnyWitness (LedgerEra era))]
   getProposals (TxProposalProcedures txps) =
-    [ (p, wit)
-    | (p, mScriptWit) <- obtainCommonConstraints (useEra @era) (toList txps)
-    , wit <- maybe [] return mScriptWit
-    ]
+    obtainCommonConstraints (useEra @era) (toList txps)
 
 collectTxBodyScriptWitnessRequirements
   :: forall era

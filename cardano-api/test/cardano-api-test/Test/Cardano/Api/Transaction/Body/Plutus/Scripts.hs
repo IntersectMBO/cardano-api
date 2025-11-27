@@ -185,7 +185,7 @@ prop_extractAllIndexedPlutusScriptWitnesses =
             , createIndexedPlutusScriptWitnesses
                 [ (Exp.WitProposal p, wit)
                 | let Exp.TxProposalProcedures pMap = generatedTxProposalProcedures
-                , (p, Just wit) <- OMap.toAscList pMap
+                , (p, wit) <- OMap.toAscList pMap
                 ]
             ]
 

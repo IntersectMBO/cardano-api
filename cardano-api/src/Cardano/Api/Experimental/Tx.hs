@@ -129,6 +129,7 @@ module Cardano.Api.Experimental.Tx
   , defaultTxBodyContent
   , mkTxCertificates
   , mkTxVotingProcedures
+  , mkTxProposalProcedures
   , setTxAuxScripts
   , setTxCertificates
   , setTxCollateral
