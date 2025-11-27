@@ -125,11 +125,10 @@ makeUnsignedTx
   :: forall era
    . Era era
   -> TxBodyContent (LedgerEra era)
-  -> Either String (UnsignedTx era)
+  -> UnsignedTx era
 makeUnsignedTx DijkstraEra _ = error "makeUnsignedTx: Dijkstra era not supported yet"
 makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
-  TxScriptWitnessRequirements languages scripts datums redeemers <-
-    collectTxBodyScriptWitnessRequirements bc
+  let TxScriptWitnessRequirements languages scripts datums redeemers = collectTxBodyScriptWitnessRequirements bc
 
   -- cardano-api types
   let apiMintValue = txMintValue bc
@@ -187,7 +186,7 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
           & L.rdmrsTxWitsL .~ redeemers
 
   let eraSpecificTxBody = eraSpecificLedgerTxBody era ledgerTxBody bc
-  return . UnsignedTx $
+  UnsignedTx $
     L.mkBasicTx eraSpecificTxBody
       & L.witsTxL .~ scriptWitnesses
       & L.auxDataTxL .~ L.maybeToStrictMaybe (toAuxiliaryData (txMetadata bc) (txAuxScripts bc))
@@ -665,9 +664,7 @@ collectTxBodyScriptWitnessRequirements
   :: forall era
    . IsEra era
   => TxBodyContent (LedgerEra era)
-  -> Either
-       String
-       (TxScriptWitnessRequirements (LedgerEra era))
+  -> TxScriptWitnessRequirements (LedgerEra era)
 collectTxBodyScriptWitnessRequirements
   TxBodyContent
     { txIns
@@ -705,17 +702,16 @@ collectTxBodyScriptWitnessRequirements
           obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
             extractWitnessableProposals txProposalProcedures
 
-    return $
-      obtainMonoidConstraint (useEra @era) $
-        mconcat
-          [ supplementaldatums
-          , txInWits
-          , txWithdrawalWits
-          , txCertWits
-          , txMintWits
-          , txVotingWits
-          , txProposalWits
-          ]
+    obtainMonoidConstraint (useEra @era) $
+      mconcat
+        [ supplementaldatums
+        , txInWits
+        , txWithdrawalWits
+        , txCertWits
+        , txMintWits
+        , txVotingWits
+        , txProposalWits
+        ]
 
 obtainMonoidConstraint
   :: Era era

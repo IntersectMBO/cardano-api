@@ -17,8 +17,7 @@ module Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   )
 where
 
-import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
-import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Experimental.Era qualified as Exp
 import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Ledger qualified as L
@@ -92,14 +91,12 @@ getTxScriptWitnessesRequirements wits =
   mconcat $ map getTxScriptWitnessRequirements wits
 
 obtainMonoidConstraint
-  :: AlonzoEraOnwards era
-  -> (Monoid (TxScriptWitnessRequirements (ShelleyLedgerEra era)) => a)
+  :: Exp.Era era
+  -> (Monoid (TxScriptWitnessRequirements (Exp.LedgerEra era)) => a)
   -> a
 obtainMonoidConstraint eon = case eon of
-  AlonzoEraOnwardsAlonzo -> id
-  AlonzoEraOnwardsBabbage -> id
-  AlonzoEraOnwardsConway -> id
-  AlonzoEraOnwardsDijkstra -> id
+  Exp.ConwayEra -> id
+  Exp.DijkstraEra -> id
 
 extractExecutionUnits :: TxScriptWitnessRequirements era -> [ExecutionUnits]
 extractExecutionUnits (TxScriptWitnessRequirements _ _ _ redeemers) =
