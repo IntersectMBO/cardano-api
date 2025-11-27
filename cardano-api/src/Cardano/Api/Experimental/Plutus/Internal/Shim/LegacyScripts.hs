@@ -14,6 +14,7 @@ module Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
   ( convertToNewScriptWitness
   , legacyWitnessToScriptRequirements
   , legacyWitnessConversion
+  , obtainMonoidConstraint
   , toPlutusSLanguage
   )
 where
@@ -25,7 +26,9 @@ import Cardano.Api.Experimental.Plutus.Internal.Script
 import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
-import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
+import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements hiding
+  ( obtainMonoidConstraint
+  )
 import Cardano.Api.Plutus.Internal.Script
   ( ExecutionUnits
   , Witness
@@ -213,6 +216,16 @@ obtainConstraints v =
     Old.PlutusScriptV2 -> id
     Old.PlutusScriptV3 -> id
     Old.PlutusScriptV4 -> id
+
+obtainMonoidConstraint
+  :: AlonzoEraOnwards era
+  -> (Monoid (TxScriptWitnessRequirements (ShelleyLedgerEra era)) => a)
+  -> a
+obtainMonoidConstraint eon = case eon of
+  AlonzoEraOnwardsAlonzo -> id
+  AlonzoEraOnwardsBabbage -> id
+  AlonzoEraOnwardsConway -> id
+  AlonzoEraOnwardsDijkstra -> id
 
 toPlutusSLanguage
   :: Old.PlutusScriptVersion lang -> L.SLanguage (Old.ToLedgerPlutusLanguage lang)

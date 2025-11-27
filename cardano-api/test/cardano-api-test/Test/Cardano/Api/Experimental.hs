@@ -103,8 +103,8 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
     txBodyContent <- exampleTxBodyContentExperimental era
     signingKey <- exampleSigningKey
 
-    unsignedTx <- H.evalEither $ Exp.makeUnsignedTx era txBodyContent
-    let witness = Exp.makeKeyWitness era unsignedTx (Api.WitnessPaymentKey signingKey)
+    let unsignedTx = Exp.makeUnsignedTx era txBodyContent
+        witness = Exp.makeKeyWitness era unsignedTx (Api.WitnessPaymentKey signingKey)
 
     let bootstrapWitnesses = []
         keyWitnesses = [witness]
