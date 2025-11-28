@@ -4,6 +4,7 @@
 module Cardano.Wasm.Gen.Cardano.Rpc.Era where
 
 import Data.Aeson
+import Data.Char (toLower)
 import GHC.Generics
 
 data Era
@@ -16,6 +17,16 @@ data Era
   | Conway
   deriving (Show, Eq, Enum, Bounded, Generic)
 
-instance FromJSON Era
+instance FromJSON Era where
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { constructorTagModifier = map toLower
+        }
 
-instance ToJSON Era
+instance ToJSON Era where
+  toJSON =
+    genericToJSON
+      defaultOptions
+        { constructorTagModifier = map toLower
+        }

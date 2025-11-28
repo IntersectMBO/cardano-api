@@ -40,13 +40,10 @@ getEraImpl caller = do
 getProtocolParamsImpl
   :: GrpcExecutor
   -> IO Wasm.ProtocolParamsJSON
-getProtocolParamsImpl caller =
-  Wasm.ProtocolParamsJSON
-    . Text.unpack
-    . protocolParamsJsonJson
-    <$> ( rightOrError
-            =<< getProtocolParamsJson caller Empty
-        )
+getProtocolParamsImpl caller = do
+  ppjson <- rightOrError =<< getProtocolParamsJson caller Empty
+  bs <- rightOrError . Base64.decode . BS.pack . Text.unpack . protocolParamsJsonJson $ ppjson
+  return $ Wasm.ProtocolParamsJSON $ BS.unpack bs
 
 -- | Get all UTXOs from the node using a gRPC or GRPC-web client.
 getAllUtxosImpl :: GrpcExecutor -> IO [(String, Int, String, String)]

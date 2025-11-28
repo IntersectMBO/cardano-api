@@ -21,7 +21,7 @@ getEra exec req = do
   resp <- exec service method (T.unpack jsonReq)
   return $ eitherDecode (BSL.fromStrict $ T.encodeUtf8 $ T.pack resp)
  where
-  service = "Cardano.Rpc.Node"
+  service = "cardano.rpc.Node"
   method = "GetEra"
 
 -- | Call GetProtocolParamsJson
@@ -32,5 +32,5 @@ getProtocolParamsJson exec req = do
   resp <- exec service method (T.unpack jsonReq)
   return $ eitherDecode (BSL.fromStrict $ T.encodeUtf8 $ T.pack resp)
  where
-  service = "Cardano.Rpc.Node"
+  service = "cardano.rpc.Node"
   method = "GetProtocolParamsJson"
