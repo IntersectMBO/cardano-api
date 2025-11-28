@@ -21,15 +21,12 @@ import Cardano.Wasm.Api.Info (apiInfo)
 import Cardano.Wasm.Api.Tx qualified as Wasm
 import Cardano.Wasm.Api.Wallet qualified as Wasm
 import Cardano.Wasm.ExceptionHandling (rightOrError)
+import Cardano.Wasm.Gen.GrpcClient (GrpcExecutor)
 import Cardano.Wasm.Internal.JavaScript.GRPC
-  ( js_getEra
-  , js_getProtocolParams
-  , js_newWebGrpcClient
-  , js_readAllUtxos
-  , js_readUtxosForAddress
-  , js_submitTx
+  ( js_createExecutor
+  , js_haskellizeExecutor
   )
-import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient, JSUtxos)
+import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSUtxos)
 
 import Control.Exception (evaluate)
 import Control.Monad
@@ -128,7 +125,7 @@ type JSSigningKey = JSString
 
 type JSProtocolParams = JSVal
 
-type JSGrpc = JSGRPCClient
+type JSGrpc = JSVal
 
 -- * High-level definitions for conversion between Haskell and JS
 
@@ -146,10 +143,6 @@ instance ToJSVal String JSString where
 
 instance ToJSVal Wasm.ProtocolParamsJSON JSProtocolParams where
   toJSVal (Wasm.ProtocolParamsJSON json) = js_parse $ toJSString json
-
-instance ToJSVal (Wasm.GrpcObject JSGRPCClient) JSGrpc where
-  toJSVal :: (Wasm.GrpcObject JSGRPCClient) -> IO JSGrpc
-  toJSVal (Wasm.GrpcObject client) = return client
 
 instance ToJSVal Ledger.Coin JSCoin where
   toJSVal :: Ledger.Coin -> IO JSCoin
@@ -192,9 +185,9 @@ instance FromJSVal JSTxIx Api.TxIx where
 instance FromJSVal JSProtocolParams Wasm.ProtocolParamsJSON where
   fromJSVal = fmap Wasm.ProtocolParamsJSON . jsValToJSONString
 
-instance FromJSVal JSGrpc (Wasm.GrpcObject JSGRPCClient) where
-  fromJSVal :: JSGrpc -> IO (Wasm.GrpcObject JSGRPCClient)
-  fromJSVal jsVal = return $ Wasm.GrpcObject jsVal
+instance FromJSVal JSGrpc GrpcExecutor where
+  fromJSVal :: JSGrpc -> IO GrpcExecutor
+  fromJSVal = return . js_haskellizeExecutor
 
 -- * WalletObject
 
@@ -466,7 +459,7 @@ foreign export javascript "newGrpcConnection"
   newGrpcConnection :: JSString -> IO JSGrpc
 
 foreign export javascript "getEra"
-  getEra :: JSGrpc -> IO Int
+  getEra :: JSGrpc -> IO JSString
 
 foreign export javascript "getProtocolParams"
   getProtocolParams :: JSGrpc -> IO JSVal
@@ -482,29 +475,29 @@ foreign export javascript "submitTx"
 
 -- | Create a new gRPC object for making Conway era transactions.
 newGrpcConnection :: HasCallStack => JSString -> IO JSGrpc
-newGrpcConnection webGrpcUrl = toJSVal =<< join (Wasm.newGrpcConnectionImpl js_newWebGrpcClient <$> fromJSVal webGrpcUrl)
+newGrpcConnection webGrpcUrl = join (Wasm.newGrpcConnectionImpl js_createExecutor <$> fromJSVal webGrpcUrl)
 
 -- | Get the era from the Cardano Node using GRPC-web.
-getEra :: HasCallStack => JSGrpc -> IO Int
-getEra grpcObject = Wasm.getEraImpl js_getEra =<< fromJSVal grpcObject
+getEra :: HasCallStack => JSGrpc -> IO JSString
+getEra grpcObject = toJSVal =<< Wasm.getEraImpl =<< fromJSVal grpcObject
 
 -- | Get the protocol parameters from the Cardano Node using GRPC-web.
 getProtocolParams :: HasCallStack => JSGrpc -> IO JSProtocolParams
-getProtocolParams = toJSVal <=< Wasm.getProtocolParamsImpl js_getProtocolParams <=< fromJSVal
+getProtocolParams = toJSVal <=< Wasm.getProtocolParamsImpl <=< fromJSVal
 
 -- | Get all UTXOs from the node using a GRPC-web client.
 getAllUtxos :: HasCallStack => JSGrpc -> IO JSUtxos
 getAllUtxos grpcObject =
-  Wasm.getAllUtxosImpl js_readAllUtxos =<< fromJSVal grpcObject
+  toJSVal =<< Wasm.getAllUtxosImpl =<< fromJSVal grpcObject
 
 -- | Get UTXOs for a given address using a GRPC-web client.
 getUtxosForAddress :: HasCallStack => JSGrpc -> JSString -> IO JSUtxos
 getUtxosForAddress grpcObject address =
-  join $ Wasm.getUtxosForAddressImpl js_readUtxosForAddress <$> fromJSVal grpcObject <*> fromJSVal address
+  toJSVal =<< join (Wasm.getUtxosForAddressImpl <$> fromJSVal grpcObject <*> fromJSVal address)
 
 -- | Submit a transaction to the Cardano Node using GRPC-web.
 submitTx :: HasCallStack => JSGrpc -> JSString -> IO JSString
-submitTx grpcObject tx = toJSVal =<< join (Wasm.submitTxImpl js_submitTx <$> fromJSVal grpcObject <*> fromJSVal tx)
+submitTx grpcObject tx = toJSVal =<< join (Wasm.submitTxImpl <$> fromJSVal grpcObject <*> fromJSVal tx)
 
 -- * API Information
 

@@ -26,7 +26,7 @@ import Data.ByteString.Char8 qualified as BS
 import Data.Text qualified as Text
 
 -- | Create a new unsigned transaction object for making a Conway era transaction.
-newGrpcConnectionImpl :: (String -> IO GrpcExecutor) -> String -> IO GrpcExecutor
+newGrpcConnectionImpl :: (String -> IO executor) -> String -> IO executor
 newGrpcConnectionImpl createClientFunc host = createClientFunc host
 
 -- | Get the era from the Cardano Node using gRPC or GRPC-web.

@@ -4,10 +4,26 @@
 module Cardano.Wasm.Internal.JavaScript.GRPC where
 #else
 
-module Cardano.Wasm.Internal.JavaScript.GRPC (js_newWebGrpcClient, js_getEra, js_submitTx, js_getProtocolParams, js_readAllUtxos, js_readUtxosForAddress) where
+module Cardano.Wasm.Internal.JavaScript.GRPC (js_createExecutor, js_haskellizeExecutor, js_newWebGrpcClient, js_getEra, js_submitTx, js_getProtocolParams, js_readAllUtxos, js_readUtxosForAddress) where
 
 import GHC.Wasm.Prim
 import Cardano.Wasm.Api.Tx (ProtocolParamsJSON(..))
+import Cardano.Wasm.Gen.GrpcClient (GrpcExecutor)
+
+-- | Set host for the GRPC-web client executor.
+foreign import javascript safe "async function (serviceName, methodName, payloadJson) { return (await globalThis.executeGrpcCall($1, serviceName, methodName, payloadJson)); }"
+  createExecutor :: JSString -> IO JSVal
+
+js_createExecutor :: String -> IO JSVal
+js_createExecutor host = createExecutor (toJSString host)
+
+-- | Haskellize the GRPC-web executor to a GrpcExecutor type.
+foreign import javascript safe "await ($1)($2, $3, $4)"
+  haskellizeExecutor :: JSVal -> JSString -> JSString -> JSString -> IO JSString
+
+js_haskellizeExecutor :: JSVal -> GrpcExecutor
+js_haskellizeExecutor jsExecutor serviceName methodName payloadJson =
+  fromJSString <$> haskellizeExecutor jsExecutor (toJSString serviceName) (toJSString methodName) (toJSString payloadJson)
 
 -- | Create a GRPC-web client for the Cardano API.
 foreign import javascript safe "globalThis.createClient($1)"
