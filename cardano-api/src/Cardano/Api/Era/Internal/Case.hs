@@ -3,6 +3,15 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 
+-- | Era case functions for branching on era types
+--
+-- DEPRECATION NOTICE: The @case*@ functions in this module are deprecated and will be
+-- removed in a future release. They were used for era-based conditional logic but are
+-- being phased out in favor of direct pattern matching or other approaches.
+--
+-- DO NOT add new @case*@ functions to this module. If you need era-based branching,
+-- prefer direct pattern matching on era witnesses or use the conversion functions
+-- provided by the era system.
 module Cardano.Api.Era.Internal.Case
   ( -- Case on CardanoEra
     caseByronOrShelleyBasedEra
