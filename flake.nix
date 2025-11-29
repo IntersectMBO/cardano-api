@@ -282,16 +282,14 @@
                 // {
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
-                  wasm-typedoc = wasm-typedoc-drv;
-                }
-                // lib.optionalAttrs (system != "aarch64-darwin" && system != "x86_64-darwin") {
                   proto-js-bundle = proto-js-bundle-drv;
+                  wasm-typedoc = wasm-typedoc-drv;
                 };
             }
             // {
               packages =
                 {wasm-typedoc = wasm-typedoc-drv;}
-                // lib.optionalAttrs (system != "aarch64-darwin" && system != "x86_64-darwin") {
+                // lib.optionalAttrs (system != "aarch64-darwin") {
                   proto-js-bundle = proto-js-bundle-drv;
                 };
             };
@@ -301,7 +299,7 @@
             inherit hydraJobs;
           };
           packages =
-            lib.optionalAttrs (system != "aarch64-darwin" && system != "x86_64-darwin") {
+            lib.optionalAttrs (system != "aarch64-darwin") {
               proto-js-bundle = proto-js-bundle-drv;
             }
             // {
