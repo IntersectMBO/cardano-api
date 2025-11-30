@@ -125,6 +125,7 @@ import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error
+import Cardano.Api.Experimental.Era qualified as Exp
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Hash
 import Cardano.Api.Key.Internal
@@ -1647,16 +1648,14 @@ deriving instance Eq (ReferenceScript era)
 
 deriving instance Show (ReferenceScript era)
 
-instance IsCardanoEra era => ToJSON (ReferenceScript era) where
+instance Exp.IsEra era => ToJSON (ReferenceScript era) where
   toJSON (ReferenceScript _ s) = object ["referenceScript" .= s]
   toJSON ReferenceScriptNone = Aeson.Null
 
-instance IsCardanoEra era => FromJSON (ReferenceScript era) where
+instance Exp.IsEra era => FromJSON (ReferenceScript era) where
   parseJSON = Aeson.withObject "ReferenceScript" $ \o ->
-    caseByronToAlonzoOrBabbageEraOnwards
-      (const (pure ReferenceScriptNone))
-      (\w -> ReferenceScript w <$> o .: "referenceScript")
-      (cardanoEra :: CardanoEra era)
+    let w = Exp.convert (Exp.useEra @era)
+     in ReferenceScript w <$> o .: "referenceScript"
 
 refScriptToShelleyScript
   :: ShelleyBasedEra era
