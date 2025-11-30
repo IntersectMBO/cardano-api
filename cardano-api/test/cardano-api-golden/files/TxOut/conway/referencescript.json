@@ -1,0 +1,10 @@
+{
+    "referenceScript": {
+        "script": {
+            "cborHex": "8201818200581c1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5",
+            "description": "",
+            "type": "SimpleScript"
+        },
+        "scriptLanguage": "SimpleScriptLanguage"
+    }
+}
