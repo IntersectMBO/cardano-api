@@ -90,6 +90,7 @@ where
 
 import Cardano.Api.Byron.Internal.Key
 import Cardano.Api.Era
+import Cardano.Api.Experimental.Era qualified as Exp
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Key.Internal
 import Cardano.Api.Monad.Error
@@ -370,12 +371,14 @@ data AddressInEra era where
 instance NFData (AddressInEra era) where
   rnf (AddressInEra t a) = deepseq (deepseq t a) ()
 
-instance IsCardanoEra era => ToJSON (AddressInEra era) where
-  toJSON = Aeson.String . serialiseAddress
+instance Exp.IsEra era => ToJSON (AddressInEra era) where
+  toJSON =
+    Exp.obtainCommonConstraints (Exp.useEra @era) $
+      Aeson.String . serialiseAddress
 
-instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
+instance Exp.IsEra era => FromJSON (AddressInEra era) where
   parseJSON =
-    let sbe = shelleyBasedEra @era
+    let sbe = convert (Exp.useEra @era)
      in withText "AddressInEra" $ \txt -> do
           addressAny <- P.runParserFail parseAddressAny txt
           pure $ anyAddressInShelleyBasedEra sbe addressAny
