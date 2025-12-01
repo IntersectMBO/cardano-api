@@ -153,7 +153,7 @@
               hlint = "3.10";
             };
           # and from nixpkgs or other inputs
-          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go actionlint shellcheck snappy protobuf buf];
+          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go actionlint shellcheck snappy protobuf buf blst];
           # disable Hoogle until someone request it
           shell.withHoogle = false;
           # Skip cross compilers for the shell
