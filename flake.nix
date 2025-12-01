@@ -13,7 +13,7 @@
     };
     # blst fails to build for x86_64-darwin
     # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
-    nixpkgs.url = "github:NixOS/nixpkgs/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb";
+    nixpkgs.url = "github:NixOS/nixpkgs/11cb3517b3af6af300dd6c055aeda73c9bf52c48";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
