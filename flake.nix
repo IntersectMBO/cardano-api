@@ -252,7 +252,7 @@
                   wasm.secp256k1
                   wasm.blst
                 ]
-                ++ lib.optional (system == "x86_64-linux" || system == "aarch64-linux") wasm-pkgs.envoy;
+                ++ lib.optional (system == "x86_64-linux" || system == "aarch64-linux") wasm-pkgs.envoy-bin;
             };
           };
         playwrightShell = let
