@@ -11,6 +11,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-x-ord-preserving-coercions #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-top-binds -Wno-unused-local-binds -Wno-unused-matches #-}
 
 module Cardano.Api.LedgerState
   ( -- * Initialization / Accumulation
@@ -25,15 +28,15 @@ module Cardano.Api.LedgerState
     , LedgerStateBabbage
     , LedgerStateConway
     )
-  , encodeLedgerState
-  , decodeLedgerState
+--   , encodeLedgerState
+--   , decodeLedgerState
   , initialLedgerState
   , applyBlock
   , ValidationMode (..)
   , applyBlockWithEvents
   , AnyNewEpochState (..)
   , getAnyNewEpochState
-  , getLedgerTablesUTxOValues
+--  , getLedgerTablesUTxOValues
 
     -- * Traversing the block chain
   , foldBlocks
@@ -1244,10 +1247,11 @@ data LedgerState = LedgerState
   { clsState :: Consensus.CardanoLedgerState Consensus.StandardCrypto Ledger.EmptyMK
   , clsTables
       :: Ledger.LedgerTables
-           (Ledger.LedgerState (Consensus.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto)))
+           (Consensus.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
            Ledger.ValuesMK
   }
-  deriving Show
+
+deriving instance Show (Consensus.CardanoLedgerState Consensus.StandardCrypto Ledger.EmptyMK) => Show LedgerState
 
 -- | Retrieve new epoch state from the ledger state, or an error on failure
 getAnyNewEpochState
@@ -1380,43 +1384,43 @@ pattern DijkstraLedgerState
   -> NS (Current (Flip Consensus.LedgerState mk)) (Consensus.CardanoEras Consensus.StandardCrypto)
 pattern DijkstraLedgerState x = S (S (S (S (S (S (S (Z x)))))))
 
-encodeLedgerState :: LedgerState -> CBOR.Encoding
-encodeLedgerState (LedgerState hst@(HFC.HardForkLedgerState st) tbs) =
-  mconcat
-    [ CBOR.encodeListLen 2
-    , HFC.encodeTelescope
-        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
-        st
-    , Ledger.valuesMKEncoder hst tbs
-    ]
- where
-  byron = fn (K . Byron.encodeByronLedgerState . unFlip)
-  shelley = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
-  allegra = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
-  mary = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
-  alonzo = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
-  babbage = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
-  conway = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
-  dijkstra = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
+-- encodeLedgerState :: LedgerState -> CBOR.Encoding
+-- encodeLedgerState (LedgerState hst@(HFC.HardForkLedgerState st) tbs) =
+--   mconcat
+--     [ CBOR.encodeListLen 2
+--     , HFC.encodeTelescope
+--         (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
+--         st
+--     , Ledger.valuesMKEncoder hst tbs
+--     ]
+--  where
+--   byron = fn (K . Byron.encodeByronLedgerState . unFlip)
+--   shelley = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
+--   allegra = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
+--   mary = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
+--   alonzo = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
+--   babbage = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
+--   conway = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
+--   dijkstra = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
 
-decodeLedgerState :: forall s. CBOR.Decoder s LedgerState
-decodeLedgerState = do
-  2 <- CBOR.decodeListLen
-  hst <-
-    HFC.HardForkLedgerState
-      <$> HFC.decodeTelescope
-        (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
-  tbs <- Ledger.valuesMKDecoder hst
-  pure (LedgerState hst tbs)
- where
-  byron = Comp $ Flip <$> Byron.decodeByronLedgerState
-  shelley = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
-  allegra = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
-  mary = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
-  alonzo = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
-  babbage = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
-  conway = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
-  dijkstra = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
+-- decodeLedgerState :: forall s. CBOR.Decoder s LedgerState
+-- decodeLedgerState = do
+--   2 <- CBOR.decodeListLen
+--   hst <-
+--     HFC.HardForkLedgerState
+--       <$> HFC.decodeTelescope
+--         (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* dijkstra :* Nil)
+--   tbs <- Ledger.valuesMKDecoder hst
+--   pure (LedgerState hst tbs)
+--  where
+--   byron = Comp $ Flip <$> Byron.decodeByronLedgerState
+--   shelley = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
+--   allegra = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
+--   mary = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
+--   alonzo = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
+--   babbage = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
+--   conway = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
+--   dijkstra = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
 
 type LedgerStateEvents = (LedgerState, [LedgerEvent])
 
@@ -1827,8 +1831,8 @@ applyBlock'
 applyBlock' env oldState validationMode block = do
   let config = envLedgerConfig env
   case validationMode of
-    FullValidation -> tickThenApply config block oldState
-    QuickValidation -> tickThenReapplyCheckHash config block oldState
+    FullValidation -> undefined -- tickThenApply config block oldState
+    QuickValidation -> undefined -- tickThenReapplyCheckHash config block oldState
 
 applyBlockWithEvents
   :: Env
@@ -1840,113 +1844,113 @@ applyBlockWithEvents
 applyBlockWithEvents env oldState enableValidation block = do
   let config = envLedgerConfig env
   if enableValidation
-    then tickThenApply config block oldState
-    else tickThenReapplyCheckHash config block oldState
+    then undefined -- tickThenApply config block oldState
+    else undefined -- tickThenReapplyCheckHash config block oldState
 
--- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
--- the block matches the head hash of the ledger state.
-tickThenReapplyCheckHash
-  :: Consensus.CardanoLedgerConfig Consensus.StandardCrypto
-  -> Consensus.CardanoBlock Consensus.StandardCrypto
-  -> LedgerState
-  -> Either LedgerStateError LedgerStateEvents
-tickThenReapplyCheckHash cfg block (LedgerState st tbs) =
-  if Consensus.blockPrevHash block == Ledger.ledgerTipHash st
-    then
-      let
-        keys
-          :: Consensus.LedgerTables
-               (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
-               Ledger.KeysMK
-        keys = Ledger.getBlockKeySets block
+-- -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
+-- -- the block matches the head hash of the ledger state.
+-- tickThenReapplyCheckHash
+--   :: Consensus.CardanoLedgerConfig Consensus.StandardCrypto
+--   -> Consensus.CardanoBlock Consensus.StandardCrypto
+--   -> LedgerState
+--   -> Either LedgerStateError LedgerStateEvents
+-- tickThenReapplyCheckHash cfg block (LedgerState st tbs) =
+--   if Consensus.blockPrevHash block == Ledger.ledgerTipHash st
+--     then
+--       let
+--         keys
+--           :: Consensus.LedgerTables
+--                (Consensus.CardanoBlock Consensus.StandardCrypto)
+--                Ledger.KeysMK
+--         keys = Ledger.getBlockKeySets block
 
-        restrictedTables =
-          Consensus.LedgerTables
-            (Ledger.restrictValuesMK (Ledger.getLedgerTables tbs) (Ledger.getLedgerTables keys))
+--         restrictedTables =
+--           Consensus.LedgerTables
+--             (Ledger.restrictValuesMK (Ledger.getLedgerTables tbs) (Ledger.getLedgerTables keys))
 
-        ledgerResult =
-          Ledger.tickThenReapplyLedgerResult Ledger.ComputeLedgerEvents cfg block $
-            st `Ledger.withLedgerTables` restrictedTables
-       in
-        Right
-          . toLedgerStateEvents
-          . fmap
-            ( \stt ->
-                LedgerState
-                  (Ledger.forgetLedgerTables stt)
-                  ( Consensus.LedgerTables
-                      . Ledger.applyDiffsMK (Ledger.getLedgerTables tbs)
-                      . Ledger.getLedgerTables
-                      . Ledger.projectLedgerTables
-                      $ stt
-                  )
-            )
-          $ ledgerResult
-    else
-      Left $
-        ApplyBlockHashMismatch $
-          mconcat
-            [ "Ledger state hash mismatch. Ledger head is slot "
-            , textShow $
-                Slot.unSlotNo $
-                  Slot.fromWithOrigin
-                    (Slot.SlotNo 0)
-                    (Ledger.ledgerTipSlot st)
-            , " hash "
-            , renderByteArray $
-                unChainHash $
-                  Ledger.ledgerTipHash st
-            , " but block previous hash is "
-            , renderByteArray (unChainHash $ Consensus.blockPrevHash block)
-            , " and block current hash is "
-            , renderByteArray $
-                BSS.fromShort $
-                  HFC.getOneEraHash $
-                    Ouroboros.Network.Block.blockHash block
-            , "."
-            ]
+--         ledgerResult =
+--           Ledger.tickThenReapplyLedgerResult Ledger.ComputeLedgerEvents cfg block $
+--             st `Ledger.withLedgerTables` restrictedTables
+--        in
+--         Right
+--           . toLedgerStateEvents
+--           . fmap
+--             ( \stt ->
+--                 LedgerState
+--                   (Ledger.forgetLedgerTables stt)
+--                   ( Consensus.LedgerTables
+--                       . Ledger.applyDiffsMK (Ledger.getLedgerTables tbs)
+--                       . Ledger.getLedgerTables
+--                       . Ledger.projectLedgerTables
+--                       $ stt
+--                   )
+--             )
+--           $ ledgerResult
+--     else
+--       Left $
+--         ApplyBlockHashMismatch $
+--           mconcat
+--             [ "Ledger state hash mismatch. Ledger head is slot "
+--             , textShow $
+--                 Slot.unSlotNo $
+--                   Slot.fromWithOrigin
+--                     (Slot.SlotNo 0)
+--                     (Ledger.ledgerTipSlot st)
+--             , " hash "
+--             , renderByteArray $
+--                 unChainHash $
+--                   Ledger.ledgerTipHash st
+--             , " but block previous hash is "
+--             , renderByteArray (unChainHash $ Consensus.blockPrevHash block)
+--             , " and block current hash is "
+--             , renderByteArray $
+--                 BSS.fromShort $
+--                   HFC.getOneEraHash $
+--                     Ouroboros.Network.Block.blockHash block
+--             , "."
+--             ]
 
--- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
--- the block matches the head hash of the ledger state.
-tickThenApply
-  :: Consensus.CardanoLedgerConfig Consensus.StandardCrypto
-  -> Consensus.CardanoBlock Consensus.StandardCrypto
-  -> LedgerState
-  -> Either LedgerStateError LedgerStateEvents
-tickThenApply cfg block (LedgerState st tbs) =
-  let
-    keys
-      :: Consensus.LedgerTables
-           (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
-           Ledger.KeysMK
-    keys = Ledger.getBlockKeySets block
+-- -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
+-- -- the block matches the head hash of the ledger state.
+-- tickThenApply
+--   :: Consensus.CardanoLedgerConfig Consensus.StandardCrypto
+--   -> Consensus.CardanoBlock Consensus.StandardCrypto
+--   -> LedgerState
+--   -> Either LedgerStateError LedgerStateEvents
+-- tickThenApply cfg block (LedgerState st tbs) =
+--   let
+--     keys
+--       :: Consensus.LedgerTables
+--            (Consensus.CardanoBlock Consensus.StandardCrypto)
+--            Ledger.KeysMK
+--     keys = Ledger.getBlockKeySets block
 
-    restrictedTables =
-      Consensus.LedgerTables
-        (Ledger.restrictValuesMK (Ledger.getLedgerTables tbs) (Ledger.getLedgerTables keys))
+--     restrictedTables =
+--       Consensus.LedgerTables
+--         (Ledger.restrictValuesMK (Ledger.getLedgerTables tbs) (Ledger.getLedgerTables keys))
 
-    eLedgerResult =
-      runExcept $
-        Ledger.tickThenApplyLedgerResult Ledger.ComputeLedgerEvents cfg block $
-          st `Ledger.withLedgerTables` restrictedTables
-   in
-    either
-      (Left . ApplyBlockError)
-      ( Right
-          . toLedgerStateEvents
-          . fmap
-            ( \stt ->
-                LedgerState
-                  (Ledger.forgetLedgerTables stt)
-                  ( Consensus.LedgerTables
-                      . Ledger.applyDiffsMK (Ledger.getLedgerTables tbs)
-                      . Ledger.getLedgerTables
-                      . Ledger.projectLedgerTables
-                      $ stt
-                  )
-            )
-      )
-      eLedgerResult
+--     eLedgerResult =
+--       runExcept $
+--         Ledger.tickThenApplyLedgerResult Ledger.ComputeLedgerEvents cfg block $
+--           st `Ledger.withLedgerTables` restrictedTables
+--    in
+--     either
+--       (Left . ApplyBlockError)
+--       ( Right
+--           . toLedgerStateEvents
+--           . fmap
+--             ( \stt ->
+--                 LedgerState
+--                   (Ledger.forgetLedgerTables stt)
+--                   ( Consensus.LedgerTables
+--                       . Ledger.applyDiffsMK (Ledger.getLedgerTables tbs)
+--                       . Ledger.getLedgerTables
+--                       . Ledger.projectLedgerTables
+--                       $ stt
+--                   )
+--             )
+--       )
+--       eLedgerResult
 
 renderByteArray :: ByteArrayAccess bin => bin -> Text
 renderByteArray =
@@ -2263,7 +2267,7 @@ data AnyNewEpochState where
     :: ShelleyBasedEra era
     -> ShelleyAPI.NewEpochState (ShelleyLedgerEra era)
     -> Ledger.LedgerTables
-         (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
+         (Consensus.CardanoBlock Consensus.StandardCrypto)
          Ledger.ValuesMK
     -> AnyNewEpochState
 
@@ -2271,32 +2275,32 @@ instance Show AnyNewEpochState where
   showsPrec p (AnyNewEpochState sbe ledgerNewEpochState _) =
     shelleyBasedEraConstraints sbe $ showsPrec p ledgerNewEpochState
 
-getLedgerTablesUTxOValues
-  :: forall era
-   . ShelleyBasedEra era
-  -> Ledger.LedgerTables
-       (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
-       Ledger.ValuesMK
-  -> Map TxIn (TxOut CtxUTxO era)
-getLedgerTablesUTxOValues sbe tbs =
-  let
-    ejectTables
-      :: Index
-           (Consensus.CardanoEras Consensus.StandardCrypto)
-           (Shelley.ShelleyBlock proto (ShelleyLedgerEra era))
-      -> Map TxIn (TxOut CtxUTxO era)
-    ejectTables idx =
-      let Consensus.LedgerTables (Ledger.ValuesMK values) = HFC.ejectLedgerTables idx tbs
-       in Map.mapKeys fromShelleyTxIn $ coerceMapKeys $ Map.map (fromShelleyTxOut sbe) values
-   in
-    case sbe of
-      ShelleyBasedEraShelley -> ejectTables (IS IZ)
-      ShelleyBasedEraAllegra -> ejectTables (IS (IS IZ))
-      ShelleyBasedEraMary -> ejectTables (IS (IS (IS IZ)))
-      ShelleyBasedEraAlonzo -> ejectTables (IS (IS (IS (IS IZ))))
-      ShelleyBasedEraBabbage -> ejectTables (IS (IS (IS (IS (IS IZ)))))
-      ShelleyBasedEraConway -> ejectTables (IS (IS (IS (IS (IS (IS IZ))))))
-      ShelleyBasedEraDijkstra -> ejectTables (IS (IS (IS (IS (IS (IS (IS IZ)))))))
+-- getLedgerTablesUTxOValues
+--   :: forall era
+--    . ShelleyBasedEra era
+--   -> Ledger.LedgerTables
+--        (Consensus.CardanoBlock Consensus.StandardCrypto)
+--        Ledger.ValuesMK
+--   -> Map TxIn (TxOut CtxUTxO era)
+-- getLedgerTablesUTxOValues sbe tbs =
+--   let
+--     ejectTables
+--       :: Index
+--            (Consensus.CardanoEras Consensus.StandardCrypto)
+--            (Shelley.ShelleyBlock proto (ShelleyLedgerEra era))
+--       -> Map TxIn (TxOut CtxUTxO era)
+--     ejectTables idx =
+--       let Consensus.LedgerTables (Ledger.ValuesMK values) = HFC.ejectLedgerTables idx tbs
+--        in Map.mapKeys fromShelleyTxIn $ coerceMapKeys $ Map.map (fromShelleyTxOut sbe) values
+--    in
+--     case sbe of
+--       ShelleyBasedEraShelley -> ejectTables (IS IZ)
+--       ShelleyBasedEraAllegra -> ejectTables (IS (IS IZ))
+--       ShelleyBasedEraMary -> ejectTables (IS (IS (IS IZ)))
+--       ShelleyBasedEraAlonzo -> ejectTables (IS (IS (IS (IS IZ))))
+--       ShelleyBasedEraBabbage -> ejectTables (IS (IS (IS (IS (IS IZ)))))
+--       ShelleyBasedEraConway -> ejectTables (IS (IS (IS (IS (IS (IS IZ))))))
+--       ShelleyBasedEraDijkstra -> ejectTables (IS (IS (IS (IS (IS (IS (IS IZ)))))))
 
 -- | Reconstructs the ledger's new epoch state and applies a supplied condition to it for every block. This
 -- function only terminates if the condition is met or we have reached the termination epoch. We need to
