@@ -159,7 +159,7 @@ jobs:
         cp cardano-wasm/lib-wrapper/* cardano-wasm/npm-wrapper/src/
         rm cardano-wasm/npm-wrapper/src/cardano-api.js
         cp result/cardano_node_grpc_web_pb.js cardano-wasm/npm-wrapper/src/
-        cp -r result/node cardano-wasm/npm-wrapper/src/
+        cp result/bundle.json cardano-wasm/npm-wrapper/src/
         cd cardano-wasm/npm-wrapper
         npm install
         npm run build

@@ -3,9 +3,64 @@ import { readFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { WASI } from '@bjorn3/browser_wasi_shim';
-import * as grpc_js from '@grpc/grpc-js';
-import * as Clients from './node/node-index.js';
-import { promisify } from 'node:util';
+import * as grpc from '@grpc/grpc-js';
+import protobuf from 'protobufjs';
+import bundle from './bundle.json';
+
+const root = protobuf.Root.fromJSON(bundle);
+const clientCache = new Map();
+
+async function executeGrpcCall(hostUrl, serviceName, methodName, payloadJson) {
+
+  let client = clientCache.get(hostUrl);
+  if (!client) {
+    const GenericClient = grpc.makeGenericClientConstructor({}, 'GenericService');
+    client = new GenericClient(hostUrl, grpc.credentials.createInsecure());
+    clientCache.set(hostUrl, client);
+  }
+  const serviceDef = root.lookupService(serviceName);
+  if (!serviceDef) throw new Error(`Service ${serviceName} not found in bundle`);
+
+  const methodDef = serviceDef.methods[methodName];
+  if (!methodDef) throw new Error(`Method ${methodName} not found`);
+
+  const RequestType = root.lookupType(methodDef.requestType);
+  const ResponseType = root.lookupType(methodDef.responseType);
+
+  const payloadObj = JSON.parse(payloadJson);
+  const err = RequestType.verify(payloadObj);
+  if (err) throw new Error(`Invalid JSON for ${methodName}: ${err}`);
+
+  const reqMsg = RequestType.create(payloadObj);
+  const reqBuffer = Buffer.from(RequestType.encode(reqMsg).finish());
+
+  const path = `/${serviceName}/${methodName}`;
+
+  return new Promise((resolve, reject) => {
+    client.makeUnaryRequest(
+      path,
+      (x) => x, // Serializer: Pass-through
+      (x) => x, // Deserializer: Pass-through
+      reqBuffer,
+      (err, responseBuffer) => {
+        if (err) {
+          reject(new Error(`gRPC Error: ${err.message}`));
+        } else {
+          const decoded = ResponseType.decode(responseBuffer);
+          const responseJson = ResponseType.toObject(decoded, {
+            longs: String,
+            enums: String,
+            bytes: String,
+            defaults: true
+          });
+          resolve(JSON.stringify(responseJson));
+        }
+      }
+    );
+  });
+}
+
+globalThis.executeGrpcCall = executeGrpcCall;
 
 const getWasi = async () => {
   return new WASI([], [], []);
@@ -19,34 +74,9 @@ const loadWasmModule = async (importObject) => {
   return { instance: new WebAssembly.Instance(module, importObject), module };
 };
 
-function promisifyClient(client) {
-  const promisedClient = {};
-
-  for (const key of Object.keys(Object.getPrototypeOf(client))) {
-    // Ensure it is an API method
-    if (key[0] !== '_' && typeof client[key] === 'function') {
-      // We use .bind(client) to ensure the method is called
-      // in the correct context of the client instance.
-      promisedClient[key] = promisify(client[key].bind(client));
-    }
-  }
-  return promisedClient;
-}
-
 const createClient = (address) => {
-  const credentials = grpc_js.credentials.createInsecure();
-  globalThis.cardano_node = {
-    node: Clients.node_messages,
-    query: Clients.query_messages,
-    submit: Clients.submit_messages
-  };
-  return {
-    node: promisifyClient(new Clients.default.node.NodeClient(address, credentials)),
-    query: promisifyClient(new Clients.default.query.QueryServiceClient(address, credentials)),
-    submit: promisifyClient(new Clients.default.submit.SubmitServiceClient(address, credentials))
-  };
+  return {};
 };
 
 const initialise = createInitializer(getWasi, loadWasmModule, createClient);
 export default initialise;
-

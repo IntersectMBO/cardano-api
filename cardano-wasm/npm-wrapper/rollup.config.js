@@ -35,6 +35,7 @@ export default [
       }
     ],
     plugins: [
+      json(),
       resolve({ preferBuiltins: true }),
       commonjs(),
       copy({
