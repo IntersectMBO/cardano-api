@@ -13,7 +13,7 @@
     };
     # blst fails to build for x86_64-darwin
     # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
-    nixpkgs.url = "github:NixOS/nixpkgs/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb";
+    nixpkgs.url = "github:NixOS/nixpkgs/11cb3517b3af6af300dd6c055aeda73c9bf52c48";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
@@ -153,7 +153,7 @@
               hlint = "3.10";
             };
           # and from nixpkgs or other inputs
-          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go actionlint shellcheck snappy protobuf buf ];
+          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go actionlint shellcheck snappy protobuf buf blst];
           # disable Hoogle until someone request it
           shell.withHoogle = false;
           # Skip cross compilers for the shell
@@ -202,8 +202,12 @@
             }
             ({pkgs, ...}: {
               packages.proto-lens-protobuf-types.components.library.build-tools = [pkgs.buildPackages.protobuf];
-            # This is only needed when doing codegen in cardano-rpc itself
-            #   packages.cardano-rpc.components.library.build-tools = [pkgs.buildPackages.protobuf];
+              # on GCC > 14 a conversion warning became an error and needs to be silenced
+              packages.basement.components.library.configureFlags = [
+                "--hsc2hs-option=--cflag=-Wno-int-conversion"
+              ];
+              # This is only needed when doing codegen in cardano-rpc itself
+              #   packages.cardano-rpc.components.library.build-tools = [pkgs.buildPackages.protobuf];
             })
           ];
         });
@@ -224,11 +228,15 @@
             libsodium =
               wasm-pkgs.callPackage ./nix/libsodium.nix {inherit wasi-sdk;};
             secp256k1 = (wasm-pkgs.callPackage ./nix/secp256k1.nix {inherit wasi-sdk;}).overrideAttrs (_: {
-              src = inputs.iohkNix.inputs.secp256k1;
+              src = nixpkgs.secp256k1.src;
             });
-            blst = (wasm-pkgs.callPackage ./nix/blst.nix {inherit wasi-sdk;}).overrideAttrs (_: {
-              src = inputs.iohkNix.inputs.blst;
-            });
+            blst =
+              (wasm-pkgs.callPackage ./nix/blst.nix {
+                inherit wasi-sdk;
+                version = nixpkgs.blst.version;
+              }).overrideAttrs (_: {
+                src = nixpkgs.blst.src;
+              });
           };
         in
           lib.optionalAttrs (system != "x86_64-darwin") {
@@ -283,24 +291,20 @@
                 };
             }
             // {
-              packages =
-                {wasm-typedoc = wasm-typedoc-drv;}
-                // lib.optionalAttrs (system != "aarch64-darwin") {
-                  proto-js-bundle = proto-js-bundle-drv;
-                };
+              packages = {
+                wasm-typedoc = wasm-typedoc-drv;
+                proto-js-bundle = proto-js-bundle-drv;
+              };
             };
           legacyPackages = {
             inherit cabalProject nixpkgs;
             # also provide hydraJobs through legacyPackages to allow building without system prefix:
             inherit hydraJobs;
           };
-          packages =
-            lib.optionalAttrs (system != "aarch64-darwin") {
-              proto-js-bundle = proto-js-bundle-drv;
-            }
-            // {
-              wasm-typedoc = wasm-typedoc-drv;
-            };
+          packages = {
+            proto-js-bundle = proto-js-bundle-drv;
+            wasm-typedoc = wasm-typedoc-drv;
+          };
           devShells = let
             # profiling shell
             profilingShell = p: {
