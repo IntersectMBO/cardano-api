@@ -291,24 +291,20 @@
                 };
             }
             // {
-              packages =
-                {wasm-typedoc = wasm-typedoc-drv;}
-                // lib.optionalAttrs (system != "aarch64-darwin") {
-                  proto-js-bundle = proto-js-bundle-drv;
-                };
+              packages = {
+                wasm-typedoc = wasm-typedoc-drv;
+                proto-js-bundle = proto-js-bundle-drv;
+              };
             };
           legacyPackages = {
             inherit cabalProject nixpkgs;
             # also provide hydraJobs through legacyPackages to allow building without system prefix:
             inherit hydraJobs;
           };
-          packages =
-            lib.optionalAttrs (system != "aarch64-darwin") {
-              proto-js-bundle = proto-js-bundle-drv;
-            }
-            // {
-              wasm-typedoc = wasm-typedoc-drv;
-            };
+          packages = {
+            proto-js-bundle = proto-js-bundle-drv;
+            wasm-typedoc = wasm-typedoc-drv;
+          };
           devShells = let
             # profiling shell
             profilingShell = p: {
