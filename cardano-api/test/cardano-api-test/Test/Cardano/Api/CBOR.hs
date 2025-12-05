@@ -30,6 +30,7 @@ import Data.List (sortOn)
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import Data.Text qualified as T
+import GHC.Stack (callStack)
 
 import Test.Gen.Cardano.Api.Hardcoded
 import Test.Gen.Cardano.Api.Typed
@@ -368,15 +369,27 @@ prop_canonicalise_cbor = property $ do
           , (TBytes "bb", TString "h")
           , (TBytes "ba", TListI [TString "i", TString "j"])
           ]
-      inputMapBs = CBOR.serialize' inputMap
-  inputMapTerm <- decodeExampleTerm inputMapBs
+      inputMapInIndefiniteList = TListI [inputMap]
+      inputMapInDefiniteList = TList [inputMap]
 
-  inputMapCanonicalisedBs <- H.leftFail $ canonicaliseCborBs inputMapBs
+  input <- forAll $ Gen.element [inputMap, inputMapInIndefiniteList, inputMapInDefiniteList]
+  let inputBs = CBOR.serialize' input
 
-  inputMapCanonicalisedTerm@(TMap elemTerms) <- decodeExampleTerm inputMapCanonicalisedBs
+  inputTerm <- decodeExampleTerm inputBs
+
+  inputCanonicalisedBs <- H.leftFail $ canonicaliseCborBs inputBs
+
+  decodedTerm <- decodeExampleTerm inputCanonicalisedBs
+  inputMapCanonicalisedTerm@(TMap elemTerms) <-
+    case decodedTerm of
+      TMap elemTerms -> pure $ TMap elemTerms
+      TList [TMap elemTerms] -> pure $ TMap elemTerms
+      t ->
+        H.failMessage callStack $
+          "Expected canonicalised term to be a map or a list with a single map: " <> show t
 
   H.annotate "sanity check that cbor round trip does not change the order"
-  inputMap === inputMapTerm
+  input === inputTerm
 
   H.annotate "Print bytes hex representation of the keys in the map"
   H.annotateShow
