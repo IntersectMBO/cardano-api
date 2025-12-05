@@ -2,8 +2,7 @@
 
 module Cardano.Wasi.Internal.Api.Tx
   ( newTx
-  , newExperimentalEraTx
-  , newConwayTx
+  , newUpcomingEraTx
   , addTxInput
   , addSimpleTxOut
   , appendCertificateToTx
@@ -39,11 +38,8 @@ import Foreign.C.String (newCString, peekCString)
 foreign export ccall "newTx"
   newTx :: IO UnsignedTxObjectJSON
 
-foreign export ccall "newExperimentalEraTx"
-  newExperimentalEraTx :: IO UnsignedTxObjectJSON
-
-foreign export ccall "newConwayTx"
-  newConwayTx :: IO UnsignedTxObjectJSON
+foreign export ccall "newUpcomingEraTx"
+  newUpcomingEraTx :: IO UnsignedTxObjectJSON
 
 foreign export ccall "addTxInput"
   addTxInput :: UnsignedTxObjectJSON -> CString -> Int -> IO UnsignedTxObjectJSON
@@ -70,11 +66,8 @@ type UnsignedTxObjectJSON = CString
 newTx :: IO UnsignedTxObjectJSON
 newTx = toCJSON newTxImpl
 
-newExperimentalEraTx :: IO UnsignedTxObjectJSON
-newExperimentalEraTx = toCJSON =<< newExperimentalEraTxImpl
-
-newConwayTx :: IO UnsignedTxObjectJSON
-newConwayTx = toCJSON newConwayTxImpl
+newUpcomingEraTx :: IO UnsignedTxObjectJSON
+newUpcomingEraTx = toCJSON =<< newUpcomingEraTxImpl
 
 addTxInput :: UnsignedTxObjectJSON -> CString -> Int -> IO UnsignedTxObjectJSON
 addTxInput unsignedTxObject txId txIx =
@@ -113,15 +106,15 @@ setFee unsignedTxObject feeStr =
         )
 
 estimateMinFee :: UnsignedTxObjectJSON -> CString -> Int -> Int -> Int -> IO CString
-estimateMinFee ptrUnsignedTxObject pparams numInputs numOutputs numShelleyKeyWitnesses = do
+estimateMinFee ptrUnsignedTxObject pparams numExtraKeyWitnesses numExtraByronKeyWitnesses totalRefScriptSize = do
   (intToCStr . Api.unCoin)
     =<< join
       ( estimateMinFeeImpl
           <$> fromCJSON False "UnsignedTx" ptrUnsignedTxObject
           <*> (ProtocolParamsJSON <$> fromCJSON False "ProtocolParameters" pparams)
-          <*> pure (fromIntegral numInputs)
-          <*> pure (fromIntegral numOutputs)
-          <*> pure (fromIntegral numShelleyKeyWitnesses)
+          <*> pure (fromIntegral numExtraKeyWitnesses)
+          <*> pure (fromIntegral numExtraByronKeyWitnesses)
+          <*> pure (fromIntegral totalRefScriptSize)
       )
 
 signWithPaymentKey :: UnsignedTxObjectJSON -> CString -> IO SignedTxObjectJSON
