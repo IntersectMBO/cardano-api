@@ -45,6 +45,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , pattern GenesisDelegTxCert
   , pattern UpdateDRepTxCert
   -- Core
+  , Addr
   , Coin (..)
   , Compactible (..)
   , partialCompactFL
@@ -56,18 +57,23 @@ module Cardano.Api.Ledger.Internal.Reexport
   , PoolCert (..)
   , PParams (..)
   , PParamsUpdate
+  , SLanguage (..)
+  , SlotNo (..)
   , TxId (..)
   , TxIn (..)
+  , TxOut
   , Value
   , MaryValue (..)
   , MultiAsset (..)
   , addDeltaCoin
   , castSafeHash
+  , mkBasicTxOut
   , toDeltaCoin
   , toEraCBOR
   , fromEraCBOR
   , ppMinFeeAL
   , ppMinUTxOValueL
+  , valueFromList
   -- Dijkstra
   , DijkstraPlutusPurpose (..)
   -- Conway
@@ -195,7 +201,7 @@ module Cardano.Api.Ledger.Internal.Reexport
 where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (showTimelock)
 import Cardano.Ledger.Alonzo.Core
   ( AlonzoEraScript (..)
@@ -319,8 +325,10 @@ import Cardano.Ledger.Core
   , EraTxOut
   , PParams (..)
   , PoolCert (..)
+  , TxOut
   , Value
   , fromEraCBOR
+  , mkBasicTxOut
   , ppMinFeeAL
   , ppMinUTxOValueL
   , toEraCBOR
@@ -344,9 +352,15 @@ import Cardano.Ledger.Keys
   , hashWithSerialiser
   , toVRFVerKeyHash
   )
-import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..), valueFromList)
 import Cardano.Ledger.Plutus.Data (Data (..), unData)
-import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
+import Cardano.Ledger.Plutus.Language
+  ( Language
+  , Plutus
+  , SLanguage (..)
+  , languageToText
+  , plutusBinary
+  )
 import Cardano.Ledger.Shelley.API
   ( ChainAccountState (..)
   , GenDelegPair (..)
@@ -374,4 +388,4 @@ import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Protocol.Crypto (Crypto, StandardCrypto)
-import Cardano.Slotting.Slot (EpochNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))

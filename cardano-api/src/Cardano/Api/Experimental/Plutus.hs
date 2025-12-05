@@ -3,6 +3,7 @@ module Cardano.Api.Experimental.Plutus
     PlutusScriptInEra (..)
 
     -- * Legacy Scripts
+  , convertToNewScriptWitness
   , legacyWitnessToScriptRequirements
   , legacyWitnessConversion
   , toPlutusSLanguage

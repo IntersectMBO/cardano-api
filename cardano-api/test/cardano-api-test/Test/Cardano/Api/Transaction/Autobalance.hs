@@ -14,10 +14,10 @@ where
 
 import Cardano.Api
 import Cardano.Api.Experimental qualified as Exp
-import Cardano.Api.Experimental.Tx
+import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Parser.Text qualified as P
-import Cardano.Api.Tx qualified as L
+import Cardano.Api.Tx qualified as Api
 
 import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Coin qualified as L
@@ -296,7 +296,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
       , executionMemory = 325_610
       }
     ]
-    === extractExecutionUnits scriptWitReqsWithAsset
+    === Exp.extractExecutionUnits scriptWitReqsWithAsset
 
   -- the correct amount with manual balancing of assets
   335_299 === feeWithTxoutAsset
@@ -326,7 +326,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
       , executionMemory = 325_610
       }
     ]
-    === extractExecutionUnits scriptWitReqsBalanced
+    === Exp.extractExecutionUnits scriptWitReqsBalanced
 
   H.noteShow_ feeWithTxoutAsset
   H.noteShow_ fee
@@ -465,7 +465,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
       , executionMemory = 325_610
       }
     ]
-    === extractExecutionUnits scriptWitReqsBalanced
+    === Exp.extractExecutionUnits scriptWitReqsBalanced
 
   335_299 === fee
   TxReturnCollateral _ (TxOut _ txOutValue _ _) <- H.noteShow $ txReturnCollateral balancedContent
@@ -484,7 +484,7 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
       era = convert beo
   feeCoin@(L.Coin fee) <- forAll genLovelace
   totalCollateral <- forAll $ genLedgerValueForTxOut sbe
-  let totalCollateralAda = totalCollateral ^. L.adaAssetL sbe
+  let totalCollateralAda = totalCollateral ^. Api.adaAssetL sbe
   pparams <-
     H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
   requiredCollateralPct <- H.noteShow . fromIntegral $ pparams ^. L.ppCollateralPercentageL
@@ -518,7 +518,7 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
       collBalance = totalCollateral <-> resRetCollValue
 
   resTotCollValue <-
-    H.noteShow $ mconcat [L.mkAdaValue sbe lovelace | TxTotalCollateral _ lovelace <- pure resTotColl]
+    H.noteShow $ mconcat [Api.mkAdaValue sbe lovelace | TxTotalCollateral _ lovelace <- pure resTotColl]
 
   if
     | txInsColl == TxInsCollateralNone -> do

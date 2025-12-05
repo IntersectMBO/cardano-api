@@ -27,6 +27,7 @@ module Cardano.Api.Experimental
 
     -- ** Transaction fee related
   , estimateBalancedTxBody
+  , evaluateTransactionFee
 
     -- ** Era-related
   , BabbageEra
@@ -100,6 +101,5 @@ import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx
-import Cardano.Api.Experimental.Tx.Internal.Compatible
 import Cardano.Api.Experimental.Tx.Internal.Fee
 import Cardano.Api.Tx.Internal.Fee (evaluateTransactionExecutionUnitsShelley)
