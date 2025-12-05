@@ -1,0 +1,11 @@
+{
+    "address": "addr1vywpfm5wtrauh4ydcum8e9dx8lgajda6nzvzqq2ak94v0eg88t7u2",
+    "datum": null,
+    "datumhash": null,
+    "inlineDatum": null,
+    "inlineDatumRaw": null,
+    "referenceScript": null,
+    "value": {
+        "lovelace": 1000000
+    }
+}

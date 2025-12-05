@@ -437,6 +437,7 @@ test-suite cardano-api-golden
     buildable: False
   build-depends:
     aeson,
+    aeson-pretty,
     base64-bytestring,
     bech32 >=1.1.0,
     bytestring,
@@ -475,5 +476,6 @@ test-suite cardano-api-golden
     Test.Golden.Cardano.Api.Genesis
     Test.Golden.Cardano.Api.Ledger
     Test.Golden.Cardano.Api.Script
+    Test.Golden.Cardano.Api.TxOut
     Test.Golden.Cardano.Api.Value
     Test.Golden.ErrorsSpec
