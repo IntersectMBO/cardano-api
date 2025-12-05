@@ -65,7 +65,6 @@ import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error (Error (..), displayError)
-import Cardano.Api.Experimental.Era qualified as Exp
 import Cardano.Api.HasTypeProxy qualified as HTP
 import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
 import Cardano.Api.Monad.Error
@@ -339,13 +338,24 @@ fromBabbageTxOut w txdatums txout =
           (fromAlonzoData d)
     | otherwise = TxOutDatumHash (convert w) (ScriptDataHash dh)
 
-instance Exp.IsEra era => ToJSON (TxOut ctx era) where
-  toJSON = txOutToJsonValue Exp.useEra
+instance IsCardanoEra era => ToJSON (TxOut ctx era) where
+  toJSON = txOutToJsonValue cardanoEra
 
-txOutToJsonValue :: Exp.Era era -> TxOut ctx era -> Aeson.Value
+txOutToJsonValue :: CardanoEra era -> TxOut ctx era -> Aeson.Value
 txOutToJsonValue era (TxOut addr val dat refScript) =
   case era of
-    Exp.ConwayEra ->
+    ByronEra -> object ["address" .= addr, "value" .= val]
+    ShelleyEra -> object ["address" .= addr, "value" .= val]
+    AllegraEra -> object ["address" .= addr, "value" .= val]
+    MaryEra -> object ["address" .= addr, "value" .= val]
+    AlonzoEra ->
+      object
+        [ "address" .= addr
+        , "value" .= val
+        , datHashJsonVal dat
+        , "datum" .= datJsonVal dat
+        ]
+    BabbageEra ->
       object
         [ "address" .= addr
         , "value" .= val
@@ -355,7 +365,17 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
         , "inlineDatumRaw" .= inlineDatumRawJsonCbor dat
         , "referenceScript" .= refScriptJsonVal refScript
         ]
-    Exp.DijkstraEra ->
+    ConwayEra ->
+      object
+        [ "address" .= addr
+        , "value" .= val
+        , datHashJsonVal dat
+        , "datum" .= datJsonVal dat
+        , "inlineDatum" .= inlineDatumJsonVal dat
+        , "inlineDatumRaw" .= inlineDatumRawJsonCbor dat
+        , "referenceScript" .= refScriptJsonVal refScript
+        ]
+    DijkstraEra ->
       object
         [ "address" .= addr
         , "value" .= val
