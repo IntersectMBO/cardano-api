@@ -1,0 +1,18 @@
+{
+    "address": "addr1vywpfm5wtrauh4ydcum8e9dx8lgajda6nzvzqq2ak94v0eg88t7u2",
+    "datum": null,
+    "datumhash": null,
+    "inlineDatum": null,
+    "inlineDatumRaw": null,
+    "referenceScript": {
+        "script": {
+            "cborHex": "8201818200581c1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5",
+            "description": "",
+            "type": "SimpleScript"
+        },
+        "scriptLanguage": "SimpleScriptLanguage"
+    },
+    "value": {
+        "lovelace": 4000000
+    }
+}
