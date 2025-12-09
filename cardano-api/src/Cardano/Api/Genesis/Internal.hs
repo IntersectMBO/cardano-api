@@ -42,7 +42,7 @@ import Cardano.Api.IO
 import Cardano.Chain.Genesis qualified
 import Cardano.Crypto.Hash.Blake2b qualified
 import Cardano.Crypto.Hash.Class qualified
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..), AlonzoExtraConfig(..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices (..))
 import Cardano.Ledger.Api (CoinPerWord (..))
 import Cardano.Ledger.BaseTypes as Ledger
@@ -358,9 +358,10 @@ alonzoGenesisDefaults =
           { exUnitsMem = 62000000
           , exUnitsSteps = 20000000000
           }
-    , agCostModels = errorFail apiCostModels
+    , agPlutusV1CostModel = either (error . show) id (L.mkCostModel PlutusV1 defaultV1CostModel)
     , agCollateralPercentage = 150
     , agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
+    , agExtraConfig = Just . AlonzoExtraConfig . Just $ errorFail apiCostModels
     }
  where
   apiCostModels =
@@ -369,8 +370,7 @@ alonzoGenesisDefaults =
         [ (fromIntegral $ fromEnum PlutusV1, defaultV1CostModel)
         , (fromIntegral $ fromEnum PlutusV2, defaultV2CostModel)
         ]
-   where
-    defaultV1CostModel =
+  defaultV1CostModel =
       [ 205665
       , 812
       , 1
@@ -538,7 +538,7 @@ alonzoGenesisDefaults =
       , 18975
       , 10
       ]
-    defaultV2CostModel =
+  defaultV2CostModel =
       [ 205665
       , 812
       , 1
