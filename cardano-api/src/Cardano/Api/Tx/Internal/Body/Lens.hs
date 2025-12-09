@@ -87,7 +87,7 @@ strictMaybeL = lens g s
 txBodyL :: Lens' (LedgerTxBody era) (L.TxBody L.TopTx (ShelleyLedgerEra era))
 txBodyL = lens unTxBody (\_ x -> LedgerTxBody x)
 
-invalidBeforeTxBodyL :: AllegraEraOnwards era -> Lens' (LedgerTxBody era) (Maybe SlotNo)
+invalidBeforeTxBodyL :: AllegraEraOnwards era -> Lens' (LedgerTxBody era) (StrictMaybe SlotNo)
 invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ txBodyL . L.vldtTxBodyL . L.invalidBeforeL
 
 -- | Compatibility lens that provides a consistent interface over 'ttlTxBodyL' and
@@ -105,27 +105,27 @@ invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ txBodyL . L.vldtTxBody
 --
 -- 'invalidHereAfterTxBodyL' lens over both with a 'Maybe SlotNo' type representation.  Withing the
 -- Shelley era, setting Nothing will set the ttl to 'maxBound' in the underlying ledger type.
-invalidHereAfterTxBodyL :: ShelleyBasedEra era -> Lens' (LedgerTxBody era) (Maybe SlotNo)
+invalidHereAfterTxBodyL :: ShelleyBasedEra era -> Lens' (LedgerTxBody era) (StrictMaybe SlotNo)
 invalidHereAfterTxBodyL =
   caseShelleyEraOnlyOrAllegraEraOnwards
     ttlAsInvalidHereAfterTxBodyL
     (const $ txBodyL . L.vldtTxBodyL . L.invalidHereAfterL)
 
 -- | Compatibility lens over 'ttlTxBodyL' which represents 'maxBound' as Nothing and all other values as 'Just'.
-ttlAsInvalidHereAfterTxBodyL :: ShelleyEraOnly era -> Lens' (LedgerTxBody era) (Maybe SlotNo)
+ttlAsInvalidHereAfterTxBodyL :: ShelleyEraOnly era -> Lens' (LedgerTxBody era) (StrictMaybe SlotNo)
 ttlAsInvalidHereAfterTxBodyL w = lens (g w) (s w)
  where
-  g :: ShelleyEraOnly era -> LedgerTxBody era -> Maybe SlotNo
+  g :: ShelleyEraOnly era -> LedgerTxBody era -> StrictMaybe SlotNo
   g w' txBody =
     shelleyEraOnlyConstraints w' $
-      let ttl = txBody ^. txBodyL . L.ttlTxBodyL in if ttl == maxBound then Nothing else Just ttl
+      let ttl = txBody ^. txBodyL . L.ttlTxBodyL in if ttl == maxBound then SNothing else SJust ttl
 
-  s :: ShelleyEraOnly era -> LedgerTxBody era -> Maybe SlotNo -> LedgerTxBody era
+  s :: ShelleyEraOnly era -> LedgerTxBody era -> StrictMaybe SlotNo -> LedgerTxBody era
   s w' txBody mSlotNo =
     shelleyEraOnlyConstraints w' $
       case mSlotNo of
-        Nothing -> txBody & txBodyL . L.ttlTxBodyL .~ maxBound
-        Just ttl -> txBody & txBodyL . L.ttlTxBodyL .~ ttl
+        SNothing -> txBody & txBodyL . L.ttlTxBodyL .~ maxBound
+        SJust ttl -> txBody & txBodyL . L.ttlTxBodyL .~ ttl
 
 -- | Lens to access the 'invalidBefore' field of a 'ValidityInterval' as a 'StrictMaybe SlotNo'.
 -- Ideally this should be defined in cardano-ledger
