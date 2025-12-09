@@ -162,14 +162,10 @@ import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Tx qualified as A
 
 import Cardano.Binary qualified as CBOR
-import Cardano.Chain.UTxO qualified as Byron
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as CRYPTO
-import Cardano.Crypto.Hashing qualified as ByronCrypto
-import Cardano.Crypto.ProtocolMagic qualified as Byron
 import Cardano.Crypto.Seed qualified as Crypto
-import Cardano.Crypto.Signing qualified as Crypto
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
@@ -187,7 +183,6 @@ import Data.Int (Int64)
 import Data.Maybe
 import Data.Ratio (Ratio, (%))
 import Data.String
-import Data.Text (Text)
 import Data.Typeable
 import Data.Word (Word16, Word32, Word64)
 import GHC.Exts (IsList (..))
@@ -197,9 +192,11 @@ import Numeric.Natural (Natural)
 import Test.Gen.Cardano.Api.Era (conwayEraOnwardsTestConstraints, shelleyBasedEraTestConstraints)
 import Test.Gen.Cardano.Api.Hardcoded
 import Test.Gen.Cardano.Api.Metadata (genTxMetadata)
-import Test.Gen.Cardano.Api.Orphans (obtainArbitraryConstraints)
 
+import Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
+import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary ()
 
 import Hedgehog (Gen, MonadGen, Range)
 import Hedgehog.Gen qualified as Gen
@@ -1188,47 +1185,6 @@ genVerificationKeyHash
 genVerificationKeyHash roletoken =
   verificationKeyHash <$> genVerificationKey roletoken
 
-genVKWitness :: Byron.ProtocolMagicId -> Gen Byron.TxInWitness
-genVKWitness pm = Byron.VKWitness <$> genByronVerificationKey <*> genTxSig pm
-
-genTxSig :: Byron.ProtocolMagicId -> Gen Byron.TxSig
-genTxSig pm = Crypto.sign pm <$> genSignTag <*> genByronSigningKey <*> genTxSigData
-
-genTxSigData :: Gen Byron.TxSigData
-genTxSigData = Byron.TxSigData <$> genTxHash
-
-genTxHash :: Gen (ByronCrypto.Hash Byron.Tx)
-genTxHash = coerce <$> genTextHash
-
-genTextHash :: Gen (ByronCrypto.Hash Text)
-genTextHash = ByronCrypto.serializeCborHash <$> Gen.text (Range.linear 0 10) Gen.alphaNum
-
-genSignTag :: Gen Crypto.SignTag
-genSignTag =
-  Gen.choice
-    [ pure Crypto.SignForTestingOnly
-    , pure Crypto.SignTx
-    , pure Crypto.SignRedeemTx
-    , pure Crypto.SignVssCert
-    , pure Crypto.SignUSProposal
-    , pure Crypto.SignCommitment
-    , pure Crypto.SignUSVote
-    , Crypto.SignBlock <$> genByronVerificationKey
-    , pure Crypto.SignCertificate
-    ]
-
-genByronVerificationKey :: Gen Crypto.VerificationKey
-genByronVerificationKey = fst <$> genKeypair
-
-genByronSigningKey :: Gen Crypto.SigningKey
-genByronSigningKey = snd <$> genKeypair
-
-genKeypair :: Gen (Crypto.VerificationKey, Crypto.SigningKey)
-genKeypair = Crypto.deterministicKeyGen <$> gen32Bytes
-
-gen32Bytes :: Gen ByteString
-gen32Bytes = Gen.bytes (Range.singleton 32)
-
 genByronKeyWitness :: Gen (KeyWitness ByronEra)
 genByronKeyWitness = do
   pmId <- genProtocolMagicId
@@ -1340,8 +1296,7 @@ genValidProtocolParameters
   :: ShelleyBasedEra era -> Gen (LedgerProtocolParameters era)
 genValidProtocolParameters sbe =
   shelleyBasedEraTestConstraints sbe $
-    obtainArbitraryConstraints sbe $
-      LedgerProtocolParameters <$> Q.arbitrary
+    LedgerProtocolParameters <$> Q.arbitrary
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
 genProtocolParametersUpdate era = do

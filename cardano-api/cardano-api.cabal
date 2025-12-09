@@ -301,7 +301,6 @@ library gen
     Test.Gen.Cardano.Api.Era
     Test.Gen.Cardano.Api.Hardcoded
     Test.Gen.Cardano.Api.Metadata
-    Test.Gen.Cardano.Api.Orphans
     Test.Gen.Cardano.Api.ProtocolParameters
     Test.Gen.Cardano.Api.Typed
     Test.Gen.Cardano.Crypto.Seed
@@ -310,7 +309,6 @@ library gen
     Test.Hedgehog.Roundtrip.CBOR
 
   build-depends:
-    FailT,
     QuickCheck <2.16,
     aeson >=1.5.6.0,
     base16-bytestring,
@@ -319,25 +317,18 @@ library gen
     cardano-binary >=1.6 && <1.8,
     cardano-crypto-class ^>=2.2.1,
     cardano-crypto-test ^>=1.6,
-    cardano-crypto-wrapper,
-    cardano-ledger-alonzo >=1.8.1,
-    cardano-ledger-babbage,
-    cardano-ledger-byron,
-    cardano-ledger-conway,
-    cardano-ledger-core >=1.14,
-    cardano-ledger-dijkstra >=0.1,
-    cardano-ledger-mary,
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.8.1,
+    cardano-ledger-byron:testlib,
+    cardano-ledger-conway:testlib,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
+    cardano-ledger-dijkstra:testlib >=0.1,
     cardano-ledger-shelley >=1.13,
     cardano-strict-containers,
     containers,
     filepath,
-    generic-random,
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,
-    iproute,
-    quickcheck-instances,
-    random,
     tasty,
     tasty-hedgehog,
     text,
@@ -362,7 +353,7 @@ test-suite cardano-api-test
     cardano-crypto,
     cardano-crypto-class ^>=2.2.1,
     cardano-crypto-tests ^>=2.2,
-    cardano-crypto-wrapper,
+    cardano-crypto-wrapper:testlib,
     cardano-ledger-alonzo,
     cardano-ledger-api ^>=1.12.1,
     cardano-ledger-binary,
