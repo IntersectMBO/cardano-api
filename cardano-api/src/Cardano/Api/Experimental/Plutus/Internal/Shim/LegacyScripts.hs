@@ -48,7 +48,7 @@ import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Alonzo.Scripts qualified as L
 import Cardano.Ledger.BaseTypes (Version)
 import Cardano.Ledger.Core qualified as L
-import Cardano.Ledger.Mary.Value qualified as L
+import Cardano.Ledger.Dijkstra.Scripts qualified as Dijkstra
 import Cardano.Ledger.Plutus.Language qualified as L
 
 import Data.Text qualified as Text
@@ -110,7 +110,11 @@ convertToNewScriptWitness eon (Old.SimpleScriptWitness _ scriptOrRefInput) witne
 
 convertTotimelock
   :: AlonzoEraOnwards era -> Old.SimpleScript -> L.NativeScript (ShelleyLedgerEra era)
-convertTotimelock eon s = alonzoEraOnwardsConstraints eon $ Old.toAllegraTimelock s
+convertTotimelock eon s = alonzoEraOnwardsConstraints eon $ case eon of
+  AlonzoEraOnwardsAlonzo -> Old.toAllegraTimelock s
+  AlonzoEraOnwardsBabbage -> Old.toAllegraTimelock s
+  AlonzoEraOnwardsConway -> Old.toAllegraTimelock s
+  AlonzoEraOnwardsDijkstra -> Dijkstra.upgradeTimelock (Old.toAllegraTimelock s)
 
 createPlutusScriptDatum
   :: Witnessable thing era
