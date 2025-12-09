@@ -165,7 +165,7 @@ collateralInputsTxBodyL
 collateralInputsTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.collateralInputsTxBodyL
 
 reqSignerHashesTxBodyL
-  :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set (L.KeyHash L.Witness))
+  :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set (L.KeyHash L.Guard))
 reqSignerHashesTxBodyL w@AlonzoEraOnwardsAlonzo = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
 reqSignerHashesTxBodyL w@AlonzoEraOnwardsBabbage = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
 reqSignerHashesTxBodyL w@AlonzoEraOnwardsConway = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
