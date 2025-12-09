@@ -47,9 +47,9 @@ hprop_roundtrip_protocol_parameters = H.property $ do
       pp' =
         obtainCommonConstraints era $
           pp
-            & L.ppCoinsPerUTxOByteL %~ L.CoinPerByte . clipI 64 . L.unCoinPerByte
-            & L.ppMinFeeBL %~ clipI 64
-            & L.ppMinFeeAL %~ clipI 64
+            & L.ppCoinsPerUTxOByteL %~ id -- This is already Word64 so no clipping needed (https://github.com/IntersectMBO/cardano-ledger/blob/master/libs/cardano-ledger-core/src/Cardano/Ledger/Coin.hs#L143)
+            & L.ppTxFeeFixedL %~ clipI 64
+            & L.ppTxFeePerByteL %~ id -- This is already Word64 so no clipping needed (https://github.com/IntersectMBO/cardano-ledger/blob/master/libs/cardano-ledger-core/src/Cardano/Ledger/Coin.hs#L143)
             & L.ppA0L %~ clipIBr
             & L.ppRhoL %~ clipIBr
             & L.ppTauL %~ clipIBr
