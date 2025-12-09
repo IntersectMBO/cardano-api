@@ -175,6 +175,8 @@ getShelleyBlockTxs
 getShelleyBlockTxs era (Ledger.Block _header txs) =
   [ ShelleyTx era txinblock
   | txinblock <- toList (Ledger.fromTxSeq txs)
+  -- TODO: Need to Ledger.fromTxSeq -> txSeqBlockBodyL,
+  --       but the latter causes a blow-up of constraints
   ]
 
 -- ----------------------------------------------------------------------------
