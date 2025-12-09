@@ -71,7 +71,7 @@ import Data.Set (Set)
 import Lens.Micro
 
 newtype LedgerTxBody era = LedgerTxBody
-  { unTxBody :: L.TxBody (ShelleyLedgerEra era)
+  { unTxBody :: L.TxBody L.TopTx (ShelleyLedgerEra era)
   }
 
 strictMaybeL :: Lens' (StrictMaybe a) (Maybe a)
@@ -84,7 +84,7 @@ strictMaybeL = lens g s
   s :: StrictMaybe a -> Maybe a -> StrictMaybe a
   s _ = maybe SNothing SJust
 
-txBodyL :: Lens' (LedgerTxBody era) (L.TxBody (ShelleyLedgerEra era))
+txBodyL :: Lens' (LedgerTxBody era) (L.TxBody L.TopTx (ShelleyLedgerEra era))
 txBodyL = lens unTxBody (\_ x -> LedgerTxBody x)
 
 invalidBeforeTxBodyL :: AllegraEraOnwards era -> Lens' (LedgerTxBody era) (Maybe SlotNo)

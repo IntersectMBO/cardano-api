@@ -717,7 +717,7 @@ evaluateTransactionExecutionUnitsShelley
   -> LedgerEpochInfo
   -> LedgerProtocolParameters era
   -> UTxO era
-  -> L.Tx (ShelleyLedgerEra era)
+  -> L.Tx L.TopTx (ShelleyLedgerEra era)
   -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
   caseShelleyToMaryOrAlonzoEraOnwards

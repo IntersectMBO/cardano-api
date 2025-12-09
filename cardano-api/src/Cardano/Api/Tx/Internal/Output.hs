@@ -192,7 +192,7 @@ convTxOuts sbe txOuts = fromList $ map (toShelleyTxOutAny sbe) txOuts
 fromLedgerTxOuts
   :: forall era
    . ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxBodyScriptData era
   -> [TxOut CtxTx era]
 fromLedgerTxOuts sbe body scriptdata =
