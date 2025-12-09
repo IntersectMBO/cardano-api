@@ -101,6 +101,7 @@ import Cardano.Api.Pretty
 import Cardano.Api.Tx.Internal.Body
   ( CtxTx
   , TxIn
+  , asGuard
   , toShelleyTxIn
   , toShelleyWithdrawal
   )
@@ -115,8 +116,8 @@ import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Core qualified as Ledger
-import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Control.Monad
@@ -181,8 +182,8 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
           & L.totalCollateralTxBodyL .~ L.maybeToStrictMaybe totCollateral
           & L.collateralReturnTxBodyL .~ L.maybeToStrictMaybe retCollateral
           & L.feeTxBodyL .~ fee
-          & L.vldtTxBodyL . L.invalidBeforeL .~ txValidityLowerBound bc
-          & L.vldtTxBodyL . L.invalidHereAfterL .~ txValidityUpperBound bc
+          & L.vldtTxBodyL . L.invalidBeforeL .~ L.maybeToStrictMaybe (txValidityLowerBound bc)
+          & L.vldtTxBodyL . L.invalidHereAfterL .~ L.maybeToStrictMaybe (txValidityUpperBound bc)
           & L.reqSignerHashesTxBodyL .~ setReqSignerHashes
           & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
           & L.withdrawalsTxBodyL .~ withdrawals
@@ -229,10 +230,10 @@ convMintValue v = do
   multiAsset
 
 convExtraKeyWitnesses
-  :: TxExtraKeyWitnesses -> Set (L.KeyHash L.Witness)
+  :: TxExtraKeyWitnesses -> Set (L.KeyHash L.Guard)
 convExtraKeyWitnesses (TxExtraKeyWitnesses khs) =
   fromList
-    [ L.asWitness kh
+    [ asGuard kh
     | PaymentKeyHash kh <- khs
     ]
 
@@ -296,9 +297,9 @@ toAuxiliaryData txMData ss' =
 
 eraSpecificLedgerTxBody
   :: Era era
-  -> L.TxBody (LedgerEra era)
+  -> L.TxBody L.TopTx (LedgerEra era)
   -> TxBodyContent (LedgerEra era)
-  -> L.TxBody (LedgerEra era)
+  -> L.TxBody L.TopTx (LedgerEra era)
 eraSpecificLedgerTxBody era ledgerbody bc =
   body era
  where

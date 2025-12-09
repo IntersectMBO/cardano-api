@@ -4,6 +4,7 @@ module Cardano.Api.Genesis
   , alonzoGenesisDefaults
   , conwayGenesisDefaults
   , dijkstraGenesisDefaults
+  , defaultV1CostModel
 
     -- ** Configuration
   , ByronGenesisConfig

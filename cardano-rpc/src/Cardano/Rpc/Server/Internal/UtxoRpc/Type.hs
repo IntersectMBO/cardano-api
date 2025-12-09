@@ -49,6 +49,7 @@ import Cardano.Ledger.Plutus qualified as L
 
 import RIO hiding (toList)
 
+import Control.Error.Util (note)
 import Data.ByteString.Short qualified as SBS
 import Data.Default
 import Data.Map.Strict qualified as M
@@ -71,10 +72,12 @@ protocolParamsToUtxoRpcPParams era pparams = obtainCommonConstraints era $ do
       drepVotingThresholds :: L.DRepVotingThresholds =
         pparams ^. L.ppDRepVotingThresholdsL
   def
-    & U5c.coinsPerUtxoByte .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to inject
+    & U5c.coinsPerUtxoByte
+      .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.fromCompact . to inject
     & U5c.maxTxSize .~ pparams ^. L.ppMaxTxSizeL . to fromIntegral
-    & U5c.minFeeCoefficient .~ pparams ^. L.ppMinFeeBL . to inject
-    & U5c.minFeeConstant .~ pparams ^. L.ppMinFeeAL . to inject
+    & U5c.minFeeCoefficient .~ pparams ^. L.ppTxFeeFixedL . to inject
+    & U5c.minFeeConstant
+      .~ pparams ^. L.ppTxFeePerByteL . to L.unCoinPerByte . to L.fromCompact . to inject
     & U5c.maxBlockBodySize .~ pparams ^. L.ppMaxBBSizeL . to fromIntegral
     & U5c.maxBlockHeaderSize .~ pparams ^. L.ppMaxBHSizeL . to fromIntegral
     & U5c.stakeKeyDeposit .~ pparams ^. L.ppKeyDepositL . to inject
@@ -148,15 +151,19 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
       [ \r -> do
           coinsPerUtxoByte <-
             pp ^. U5c.coinsPerUtxoByte . to utxoRpcBigIntToInteger ?! "Invalid coinsPerUtxoByte"
-          pure $ set L.ppCoinsPerUTxOByteL (L.CoinPerByte $ L.Coin coinsPerUtxoByte) r
+          compactCoinsPerUtxO <-
+            note "Could not convert coinsPerUtxoByte to compact form." $ L.toCompact (L.Coin coinsPerUtxoByte)
+          pure $ set L.ppCoinsPerUTxOByteL (L.CoinPerByte compactCoinsPerUtxO) r
       , pure . (L.ppMaxTxSizeL .~ pp ^. U5c.maxTxSize . to fromIntegral)
       , \r -> do
           minFeeCoeff <-
             pp ^. U5c.minFeeCoefficient . to utxoRpcBigIntToInteger ?! "Invalid minFeeCoefficient"
-          pure $ set L.ppMinFeeBL (L.Coin minFeeCoeff) r
+          pure $ set L.ppTxFeeFixedL (L.Coin minFeeCoeff) r
       , \r -> do
           minFeeConst <- pp ^. U5c.minFeeConstant . to utxoRpcBigIntToInteger ?! "Invalid minFeeConstant"
-          pure $ set L.ppMinFeeAL (L.Coin minFeeConst) r
+          minFeeConstCompact <-
+            note "Could not convert minFeeConstant to compact form." $ L.toCompact (L.Coin minFeeConst)
+          pure $ set L.ppTxFeePerByteL (L.CoinPerByte minFeeConstCompact) r
       , pure . (L.ppMaxBBSizeL .~ pp ^. U5c.maxBlockBodySize . to fromIntegral)
       , pure . (L.ppMaxBHSizeL .~ pp ^. U5c.maxBlockHeaderSize . to fromIntegral)
       , \r -> do
