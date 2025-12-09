@@ -460,7 +460,7 @@ defaultTxFee w = TxFeeExplicit w mempty
 data TxValidityUpperBound era where
   TxValidityUpperBound
     :: ShelleyBasedEra era
-    -> Maybe SlotNo
+    -> StrictMaybe SlotNo
     -> TxValidityUpperBound era
 
 deriving instance Eq (TxValidityUpperBound era)
@@ -471,7 +471,7 @@ defaultTxValidityUpperBound
   :: ()
   => ShelleyBasedEra era
   -> TxValidityUpperBound era
-defaultTxValidityUpperBound sbe = TxValidityUpperBound sbe Nothing
+defaultTxValidityUpperBound sbe = TxValidityUpperBound sbe SNothing
 
 data TxValidityLowerBound era where
   TxValidityNoLowerBound
@@ -1679,8 +1679,8 @@ fromLedgerTxValidityLowerBound sbe body =
     ( \w ->
         let mInvalidBefore = body ^. A.invalidBeforeTxBodyL w
          in case mInvalidBefore of
-              Nothing -> TxValidityNoLowerBound
-              Just s -> TxValidityLowerBound w s
+              SNothing -> TxValidityNoLowerBound
+              SJust s -> TxValidityLowerBound w s
     )
     sbe
 
@@ -1887,16 +1887,16 @@ convTransactionFee _ (TxFeeExplicit _ fee) = fee
 convValidityLowerBound
   :: ()
   => TxValidityLowerBound era
-  -> Maybe SlotNo
+  -> StrictMaybe SlotNo
 convValidityLowerBound = \case
-  TxValidityNoLowerBound -> Nothing
-  TxValidityLowerBound _ s -> Just s
+  TxValidityNoLowerBound -> SNothing
+  TxValidityLowerBound _ s -> SJust s
 
 convValidityUpperBound
   :: ()
   => ShelleyBasedEra era
   -> TxValidityUpperBound era
-  -> Maybe SlotNo
+  -> StrictMaybe SlotNo
 convValidityUpperBound _ = \case
   TxValidityUpperBound _ ms -> ms
 
