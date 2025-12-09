@@ -3,8 +3,10 @@ module Test.Gen.Cardano.Api.ProtocolParameters where
 import Cardano.Api
 import Cardano.Api.Ledger
 
-import Test.Gen.Cardano.Api.Orphans ()
 import Test.Gen.Cardano.Api.Typed (genCostModels)
+
+import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 
 import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
