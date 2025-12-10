@@ -63,6 +63,7 @@ import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error (Error (..), displayError)
 import Cardano.Api.HasTypeProxy qualified as HTP
@@ -433,109 +434,46 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
       ReferenceScript _ s -> toJSON s
       ReferenceScriptNone -> Aeson.Null
 
-instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
+instance Exp.IsEra era => FromJSON (TxOut CtxTx era) where
   parseJSON = withObject "TxOut" $ \o -> do
-    case shelleyBasedEra :: ShelleyBasedEra era of
-      ShelleyBasedEraShelley ->
-        TxOut
-          <$> o .: "address"
-          <*> o .: "value"
-          <*> return TxOutDatumNone
-          <*> return ReferenceScriptNone
-      ShelleyBasedEraMary ->
-        TxOut
-          <$> o .: "address"
-          <*> o .: "value"
-          <*> return TxOutDatumNone
-          <*> return ReferenceScriptNone
-      ShelleyBasedEraAllegra ->
-        TxOut
-          <$> o .: "address"
-          <*> o .: "value"
-          <*> return TxOutDatumNone
-          <*> return ReferenceScriptNone
-      ShelleyBasedEraAlonzo -> alonzoTxOutParser AlonzoEraOnwardsAlonzo o
-      ShelleyBasedEraBabbage -> do
-        alonzoTxOutInBabbage <- alonzoTxOutParser AlonzoEraOnwardsBabbage o
+    let era = Exp.useEra @era
+        alonzoW = convert era :: AlonzoEraOnwards era
+        babbageW = convert era :: BabbageEraOnwards era
+        conwayW = convert era :: ConwayEraOnwards era
 
-        -- We check for the existence of inline datums
-        inlineDatumHash <- o .:? "inlineDatumhash"
-        inlineDatum <- o .:? "inlineDatum"
-        mInlineDatum <-
-          case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) -> do
-              case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right hashableData -> do
-                  if hashScriptDataBytes hashableData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
-            (Nothing, Nothing) -> return TxOutDatumNone
-            (_, _) ->
-              fail
-                "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
+    alonzoTxOut <- alonzoTxOutParser alonzoW o
 
-        mReferenceScript <- o .:? "referenceScript"
+    -- We check for the existence of inline datums
+    inlineDatumHash <- o .:? "inlineDatumhash"
+    inlineDatum <- o .:? "inlineDatum"
+    mInlineDatum <-
+      case (inlineDatum, inlineDatumHash) of
+        (Just dVal, Just h) ->
+          case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
+            Left err ->
+              fail $ "Error parsing TxOut JSON: " <> displayError err
+            Right sData ->
+              if hashScriptDataBytes sData /= h
+                then fail "Inline datum not equivalent to inline datum hash"
+                else return $ TxOutDatumInline babbageW sData
+        (Nothing, Nothing) -> return TxOutDatumNone
+        (_, _) ->
+          fail
+            "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
-        reconcileBabbage alonzoTxOutInBabbage mInlineDatum mReferenceScript
-      ShelleyBasedEraConway -> do
-        alonzoTxOutInConway <- alonzoTxOutParser AlonzoEraOnwardsConway o
+    mReferenceScript <- o .:? "referenceScript"
 
-        -- We check for the existence of inline datums
-        inlineDatumHash <- o .:? "inlineDatumhash"
-        inlineDatum <- o .:? "inlineDatum"
-        mInlineDatum <-
-          case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsConway sData
-            (Nothing, Nothing) -> return TxOutDatumNone
-            (_, _) ->
-              fail
-                "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
-
-        mReferenceScript <- o .:? "referenceScript"
-
-        reconcileConway ConwayEraOnwardsConway alonzoTxOutInConway mInlineDatum mReferenceScript
-      ShelleyBasedEraDijkstra -> do
-        alonzoTxOutInConway <- alonzoTxOutParser AlonzoEraOnwardsDijkstra o
-
-        -- We check for the existence of inline datums
-        inlineDatumHash <- o .:? "inlineDatumhash"
-        inlineDatum <- o .:? "inlineDatum"
-        mInlineDatum <-
-          case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsDijkstra sData
-            (Nothing, Nothing) -> return TxOutDatumNone
-            (_, _) ->
-              fail
-                "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
-
-        mReferenceScript <- o .:? "referenceScript"
-
-        reconcileConway ConwayEraOnwardsDijkstra alonzoTxOutInConway mInlineDatum mReferenceScript
+    reconcileDatums conwayW alonzoTxOut mInlineDatum mReferenceScript
    where
-    reconcileBabbage
-      :: TxOut CtxTx BabbageEra
-      -- \^ Alonzo era datum in Babbage era
-      -> TxOutDatum CtxTx BabbageEra
+    reconcileDatums
+      :: ConwayEraOnwards era
+      -> TxOut CtxTx era
+      -- \^ Alonzo era datum
+      -> TxOutDatum CtxTx era
       -- \^ Babbage inline datum
       -> Maybe ScriptInAnyLang
-      -> Aeson.Parser (TxOut CtxTx BabbageEra)
-    reconcileBabbage top@(TxOut addr v dat r) babbageDatum mBabRefScript = do
+      -> Aeson.Parser (TxOut CtxTx era)
+    reconcileDatums w top@(TxOut addr v dat r) babbageDatum mBabRefScript = do
       -- We check for conflicting datums
       finalDat <- case (dat, babbageDatum) of
         (TxOutDatumNone, bDatum) -> return bDatum
@@ -548,34 +486,6 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
               <> "Alonzo datum: "
               <> show alonzoDat
               <> "Babbage dat: "
-              <> show babbageDat
-      finalRefScript <- case mBabRefScript of
-        Nothing -> return r
-        Just anyScript ->
-          return $ ReferenceScript BabbageEraOnwardsBabbage anyScript
-      return $ TxOut addr v finalDat finalRefScript
-
-    reconcileConway
-      :: ConwayEraOnwards era
-      -> TxOut CtxTx era
-      -- \^ Alonzo era datum in Conway era
-      -> TxOutDatum CtxTx era
-      -- \^ Babbage inline datum
-      -> Maybe ScriptInAnyLang
-      -> Aeson.Parser (TxOut CtxTx era)
-    reconcileConway w top@(TxOut addr v dat r) babbageDatum mBabRefScript = do
-      -- We check for conflicting datums
-      finalDat <- case (dat, babbageDatum) of
-        (TxOutDatumNone, bDatum) -> return bDatum
-        (anyDat, TxOutDatumNone) -> return anyDat
-        (alonzoDat, babbageDat) ->
-          fail $
-            "Parsed an Alonzo era datum and a Conway era datum "
-              <> "TxOut: "
-              <> show top
-              <> "Alonzo datum: "
-              <> show alonzoDat
-              <> "Conway dat: "
               <> show babbageDat
       finalRefScript <- case mBabRefScript of
         Nothing -> return r
@@ -616,138 +526,52 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
       -- Note: ReferenceScript is always None for Alonzo-era parsing
       pure $ TxOut parsedAddress parsedValue txOutDatum ReferenceScriptNone
 
-instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
+instance Exp.IsEra era => FromJSON (TxOut CtxUTxO era) where
   parseJSON = withObject "TxOut" $ \o -> do
-    case shelleyBasedEra :: ShelleyBasedEra era of
-      ShelleyBasedEraShelley ->
-        TxOut
-          <$> o .: "address"
-          <*> o .: "value"
-          <*> return TxOutDatumNone
-          <*> return ReferenceScriptNone
-      ShelleyBasedEraMary ->
-        TxOut
-          <$> o .: "address"
-          <*> o .: "value"
-          <*> return TxOutDatumNone
-          <*> return ReferenceScriptNone
-      ShelleyBasedEraAllegra ->
-        TxOut
-          <$> o .: "address"
-          <*> o .: "value"
-          <*> return TxOutDatumNone
-          <*> return ReferenceScriptNone
-      ShelleyBasedEraAlonzo -> alonzoTxOutParser AlonzoEraOnwardsAlonzo o
-      ShelleyBasedEraBabbage -> do
-        alonzoTxOutInBabbage <- alonzoTxOutParser AlonzoEraOnwardsBabbage o
+    let era = Exp.useEra @era
+        alonzoW = convert era :: AlonzoEraOnwards era
+        babbageW = convert era :: BabbageEraOnwards era
+        conwayW = convert era :: ConwayEraOnwards era
 
-        -- We check for the existence of inline datums
-        inlineDatumHash <- o .:? "inlineDatumhash"
-        inlineDatum <- o .:? "inlineDatum"
-        mInlineDatum <-
-          case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) -> do
-              case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right hashableData -> do
-                  if hashScriptDataBytes hashableData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
-            (Nothing, Nothing) -> return TxOutDatumNone
-            (_, _) ->
-              fail
-                "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
+    alonzoTxOut <- alonzoTxOutParser alonzoW o
 
-        -- We check for a reference script
-        mReferenceScript <- o .:? "referenceScript"
+    -- We check for the existence of inline datums
+    inlineDatumHash <- o .:? "inlineDatumhash"
+    inlineDatum <- o .:? "inlineDatum"
+    mInlineDatum <-
+      case (inlineDatum, inlineDatumHash) of
+        (Just dVal, Just h) ->
+          case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
+            Left err ->
+              fail $ "Error parsing TxOut JSON: " <> displayError err
+            Right sData ->
+              if hashScriptDataBytes sData /= h
+                then fail "Inline datum not equivalent to inline datum hash"
+                else return $ TxOutDatumInline babbageW sData
+        (Nothing, Nothing) -> return TxOutDatumNone
+        (_, _) ->
+          fail
+            "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
-        reconcileBabbage alonzoTxOutInBabbage mInlineDatum mReferenceScript
-      ShelleyBasedEraConway -> do
-        alonzoTxOutInConway <- alonzoTxOutParser AlonzoEraOnwardsConway o
+    -- We check for a reference script
+    mReferenceScript <- o .:? "referenceScript"
 
-        -- We check for the existence of inline datums
-        inlineDatumHash <- o .:? "inlineDatumhash"
-        inlineDatum <- o .:? "inlineDatum"
-        mInlineDatum <-
-          case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsConway sData
-            (Nothing, Nothing) -> return TxOutDatumNone
-            (_, _) ->
-              fail
-                "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
-
-        -- We check for a reference script
-        mReferenceScript <- o .:? "referenceScript"
-
-        reconcileConway ConwayEraOnwardsConway alonzoTxOutInConway mInlineDatum mReferenceScript
-      ShelleyBasedEraDijkstra -> do
-        alonzoTxOutInConway <- alonzoTxOutParser AlonzoEraOnwardsDijkstra o
-
-        -- We check for the existence of inline datums
-        inlineDatumHash <- o .:? "inlineDatumhash"
-        inlineDatum <- o .:? "inlineDatum"
-        mInlineDatum <-
-          case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsDijkstra sData
-            (Nothing, Nothing) -> return TxOutDatumNone
-            (_, _) ->
-              fail
-                "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
-
-        -- We check for a reference script
-        mReferenceScript <- o .:? "referenceScript"
-
-        reconcileConway ConwayEraOnwardsDijkstra alonzoTxOutInConway mInlineDatum mReferenceScript
+    reconcileDatums conwayW alonzoTxOut mInlineDatum mReferenceScript
    where
-    reconcileBabbage
-      :: TxOut CtxUTxO BabbageEra
-      -- \^ Alonzo era datum in Babbage era
-      -> TxOutDatum CtxUTxO BabbageEra
+    reconcileDatums
+      :: ConwayEraOnwards era
+      -> TxOut CtxUTxO era
+      -- \^ Alonzo era datum
+      -> TxOutDatum CtxUTxO era
       -- \^ Babbage inline datum
       -> Maybe ScriptInAnyLang
-      -> Aeson.Parser (TxOut CtxUTxO BabbageEra)
-    reconcileBabbage (TxOut addr v dat r) babbageDatum mBabRefScript = do
+      -> Aeson.Parser (TxOut CtxUTxO era)
+    reconcileDatums w (TxOut addr v dat r) babbageDatum mBabRefScript = do
       -- We check for conflicting datums
       finalDat <- case (dat, babbageDatum) of
         (TxOutDatumNone, bDatum) -> return bDatum
         (anyDat, TxOutDatumNone) -> return anyDat
         (_, _) -> fail "Parsed an Alonzo era datum and a Babbage era datum"
-      finalRefScript <- case mBabRefScript of
-        Nothing -> return r
-        Just anyScript ->
-          return $ ReferenceScript BabbageEraOnwardsBabbage anyScript
-
-      return $ TxOut addr v finalDat finalRefScript
-
-    reconcileConway
-      :: ConwayEraOnwards era
-      -> TxOut CtxUTxO era
-      -- \^ Alonzo era datum in Conway era
-      -> TxOutDatum CtxUTxO era
-      -- \^ Babbage inline datum
-      -> Maybe ScriptInAnyLang
-      -> Aeson.Parser (TxOut CtxUTxO era)
-    reconcileConway w (TxOut addr v dat r) babbageDatum mBabRefScript = do
-      -- We check for conflicting datums
-      finalDat <- case (dat, babbageDatum) of
-        (TxOutDatumNone, bDatum) -> return bDatum
-        (anyDat, TxOutDatumNone) -> return anyDat
-        (_, _) -> fail "Parsed an Alonzo era datum and a Conway era datum"
       finalRefScript <- case mBabRefScript of
         Nothing -> return r
         Just anyScript ->
@@ -960,35 +784,25 @@ deriving instance Eq (TxOutValue era)
 
 deriving instance Show (TxOutValue era)
 
-instance IsCardanoEra era => ToJSON (TxOutValue era) where
+instance Exp.IsEra era => ToJSON (TxOutValue era) where
   toJSON = \case
     TxOutValueByron ll ->
       toJSON ll
     TxOutValueShelleyBased sbe val ->
       shelleyBasedEraConstraints sbe $ toJSON (fromLedgerValue sbe val)
 
-instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
-  parseJSON = withObject "TxOutValue" $ \o ->
-    caseShelleyToAllegraOrMaryEraOnwards
-      ( \shelleyToAlleg -> do
-          ll <- o .: "lovelace"
-          let sbe = convert shelleyToAlleg
-          pure $
-            shelleyBasedEraConstraints sbe $
-              TxOutValueShelleyBased sbe $
-                A.mkAdaValue sbe ll
-      )
-      ( \w -> do
-          let l = toList o
-              sbe = convert w
-          vals <- mapM decodeAssetId l
-          pure $
-            shelleyBasedEraConstraints sbe $
-              TxOutValueShelleyBased sbe $
-                toLedgerValue w $
-                  mconcat vals
-      )
-      (shelleyBasedEra @era)
+instance Exp.IsEra era => FromJSON (TxOutValue era) where
+  parseJSON = withObject "TxOutValue" $ \o -> do
+    let era = Exp.useEra @era
+        maryW = convert era :: MaryEraOnwards era
+        sbe = convert era :: ShelleyBasedEra era
+        l = toList o
+    vals <- mapM decodeAssetId l
+    pure $
+      shelleyBasedEraConstraints sbe $
+        TxOutValueShelleyBased sbe $
+          toLedgerValue maryW $
+            mconcat vals
    where
     decodeAssetId :: (Aeson.Key, Aeson.Value) -> Aeson.Parser Value
     decodeAssetId (polid, Aeson.Object assetNameHm) = do

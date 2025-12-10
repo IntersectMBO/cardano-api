@@ -83,8 +83,7 @@ where
 
 import Cardano.Api.Era.Internal.Core (IsCardanoEra)
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
-  ( IsShelleyBasedEra
-  , ShelleyBasedEra
+  ( ShelleyBasedEra
   , ShelleyLedgerEra
   )
 import Cardano.Api.Tx.Internal.Output
@@ -137,7 +136,7 @@ instance IsCardanoEra era => ToJSON (UTxO era) where
   toJSON (UTxO m) = toJSON m
   toEncoding (UTxO m) = toEncoding m
 
-instance IsShelleyBasedEra era => FromJSON (UTxO era) where
+instance Exp.IsEra era => FromJSON (UTxO era) where
   parseJSON = Aeson.withObject "UTxO" $ \hm -> do
     let l = GHC.toList $ KeyMap.toHashMapText hm
     res <- mapM toTxIn l

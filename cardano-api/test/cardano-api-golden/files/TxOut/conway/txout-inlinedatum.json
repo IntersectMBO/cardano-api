@@ -1,0 +1,13 @@
+{
+    "address": "addr1vywpfm5wtrauh4ydcum8e9dx8lgajda6nzvzqq2ak94v0eg88t7u2",
+    "datum": null,
+    "inlineDatum": {
+        "int": 42
+    },
+    "inlineDatumRaw": "182a",
+    "inlineDatumhash": "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b",
+    "referenceScript": null,
+    "value": {
+        "lovelace": 3000000
+    }
+}
