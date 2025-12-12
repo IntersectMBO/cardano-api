@@ -466,5 +466,6 @@ test-suite cardano-api-golden
     Test.Golden.Cardano.Api.Genesis
     Test.Golden.Cardano.Api.Ledger
     Test.Golden.Cardano.Api.Script
+    Test.Golden.Cardano.Api.Tx
     Test.Golden.Cardano.Api.Value
     Test.Golden.ErrorsSpec
