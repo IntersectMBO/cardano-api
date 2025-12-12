@@ -29,7 +29,8 @@ tx_canonical :: Property
 tx_canonical = H.propertyOnce $ do
   H.workspace "tx-canonical" $ \wsPath -> do
     let goldenFile = "test/cardano-api-golden/files/tx-canonical.json"
-    outFile <- H.noteTempFile wsPath "tx-canonical.json"
+    outFileCanonical <- H.noteTempFile wsPath "tx-canonical.json"
+    outFileNonCanonical <- H.noteTempFile wsPath "tx-non-canonical.json"
 
     let era = Exp.ConwayEra
         sbe = convert era
@@ -77,6 +78,14 @@ tx_canonical = H.propertyOnce $ do
     let Exp.SignedTx ledgerTx = tx
     let oldStyleTx = ShelleyTx sbe ledgerTx
 
-    void . H.evalIO $ writeTxFileTextEnvelopeCanonical sbe (File outFile) oldStyleTx
+    void . H.evalIO $ writeTxFileTextEnvelope sbe (File outFileNonCanonical) oldStyleTx
+    void . H.evalIO $ writeTxFileTextEnvelopeCanonical sbe (File outFileCanonical) oldStyleTx
 
-    H.diffFileVsGoldenFile outFile goldenFile
+    canonical <- H.readFile outFileCanonical
+    nonCanonical <- H.readFile outFileNonCanonical
+
+    -- Ensure canonical is different from non canonical
+    H.assert $ canonical /= nonCanonical
+
+    -- Ensure canonical file matches golden
+    H.diffFileVsGoldenFile outFileCanonical goldenFile
