@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 10.13.2.0
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1052](https://github.com/IntersectMBO/cardano-api/pull/1052)
+
 ## 10.13.1.0
 
 - Fix `toAnyWitness` to not ignore simple scripts
