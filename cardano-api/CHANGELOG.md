@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 10.17.3.0
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1057](https://github.com/IntersectMBO/cardano-api/pull/1057)
+
 ## 10.17.2.0
 
 - Add JavaScript wrapper and HTML browser example of usage for the `cardano-wasm` API
