@@ -67,7 +67,9 @@ canonicaliseTerm = \case
   (TTagged tag term) ->
     TTagged tag $ canonicaliseTerm term
   (TListI terms) ->
-    TList terms
+    TList $ map canonicaliseTerm terms
+  (TList terms) ->
+    TList $ map canonicaliseTerm terms
   term -> term
 
 -- | Implements sorting of CBOR terms for canonicalisation. CBOR terms are compared by lexical order of their
