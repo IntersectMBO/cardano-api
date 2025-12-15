@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 10.16.4.0
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1056](https://github.com/IntersectMBO/cardano-api/pull/1056)
+
 ## 10.16.3.0
 
 - Add `IsShelleyBasedEra` constraint to `EraCommonConstraints`
