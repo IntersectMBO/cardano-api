@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 10.14.2.0
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1054](https://github.com/IntersectMBO/cardano-api/pull/1054)
+
 ## 10.14.1.0
 
 - Update consensus to 0.26
