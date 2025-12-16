@@ -16,7 +16,9 @@ import Cardano.Ledger.Core qualified as Ledger
 
 import Data.Maybe.Strict
 
-import Test.Gen.Cardano.Api.Orphans ()
+import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 
 import Test.QuickCheck
 
