@@ -1,6 +1,6 @@
 cabal-version: 3.8
 name: cardano-api
-version: 10.19.1.0
+version: 10.19.2.0
 synopsis: The cardano API
 description: The cardano API.
 category:

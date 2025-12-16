@@ -1,5 +1,15 @@
 # Changelog for cardano-api
 
+## 10.19.2.0
+
+- Remove duplicated `Arbitrary` orphans and re-import `testlib`s
+  (bugfix)
+  [PR 1069](https://github.com/IntersectMBO/cardano-api/pull/1069)
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1059](https://github.com/IntersectMBO/cardano-api/pull/1059)
+
 ## 10.19.1.0
 
 - Update `cardano-ledger-api` to fix bug in `queryPoolState`, where current Pool parameters were returned instead of the future ones.
