@@ -1,5 +1,15 @@
 # Changelog for cardano-api
 
+## 10.18.1.0
+
+- Remove duplicated `Arbitrary` orphans and re-import `testlib`s
+  (bugfix)
+  [PR 1068](https://github.com/IntersectMBO/cardano-api/pull/1068)
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1058](https://github.com/IntersectMBO/cardano-api/pull/1058)
+
 ## 10.18.0.0
 
 - Add some instance for `data Certificate era`
