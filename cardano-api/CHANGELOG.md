@@ -1,5 +1,15 @@
 # Changelog for cardano-api
 
+## 10.20.1.0
+
+- Remove duplicated `Arbitrary` orphans and re-import `testlib`s
+  (bugfix)
+  [PR 1070](https://github.com/IntersectMBO/cardano-api/pull/1070)
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1060](https://github.com/IntersectMBO/cardano-api/pull/1060)
+
 ## 10.20.0.0
 
 - Deprecate "old" certificate api helper functions and introduce equivalent functions exposed by:
@@ -15,6 +25,16 @@
 - Replace `Certificate` in `TxCertificates` with new api's `Certificate` type.
   (breaking)
   [PR 962](https://github.com/IntersectMBO/cardano-api/pull/962)
+
+## 10.19.2.0
+
+- Remove duplicated `Arbitrary` orphans and re-import `testlib`s
+  (bugfix)
+  [PR 1069](https://github.com/IntersectMBO/cardano-api/pull/1069)
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1059](https://github.com/IntersectMBO/cardano-api/pull/1059)
 
 ## 10.19.1.0
 
@@ -35,6 +55,16 @@
 - Add `Cardano.Api.Address.shelleyPayAddrToPaymentKeyHash`.
   (feature, compatible)
   [PR 976](https://github.com/IntersectMBO/cardano-api/pull/976)
+
+## 10.18.1.0
+
+- Remove duplicated `Arbitrary` orphans and re-import `testlib`s
+  (bugfix)
+  [PR 1068](https://github.com/IntersectMBO/cardano-api/pull/1068)
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1058](https://github.com/IntersectMBO/cardano-api/pull/1058)
 
 ## 10.18.0.0
 
@@ -69,6 +99,11 @@
 - Re-export `fromShelleyGenesis` in `Cardano.Api.Genesis`.
   (compatible)
   [PR 886](https://github.com/IntersectMBO/cardano-api/pull/886)
+
+## 10.17.3.0
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
 
 ## 10.17.2.0
 
@@ -259,6 +294,12 @@
   (compatible)
   [PR 841](https://github.com/IntersectMBO/cardano-api/pull/841)
 
+## 10.16.4.0
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1056](https://github.com/IntersectMBO/cardano-api/pull/1056)
+
 ## 10.16.3.0
 
 - Add `IsShelleyBasedEra` constraint to `EraCommonConstraints`
@@ -322,6 +363,12 @@
   (feature)
   [PR 778](https://github.com/IntersectMBO/cardano-api/pull/778)
 
+## 10.15.1.0
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1055](https://github.com/IntersectMBO/cardano-api/pull/1055)
+
 ## 10.15.0.0
 
 - Removed Babbage era from `Experimental` API together with `babbageEraOnwardsToEra` function.
@@ -344,6 +391,12 @@
 - Fixed CBOR codecs for Proposal
   (compatible, maintenance)
   [PR 823](https://github.com/IntersectMBO/cardano-api/pull/823)
+
+## 10.14.2.0
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1054](https://github.com/IntersectMBO/cardano-api/pull/1054)
 
 ## 10.14.1.0
 
@@ -378,6 +431,12 @@
   * IsShelleyBasedEra era
   (feature)
   [PR 806](https://github.com/IntersectMBO/cardano-api/pull/806)
+
+## 10.13.2.0
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1052](https://github.com/IntersectMBO/cardano-api/pull/1052)
 
 ## 10.13.1.0
 
