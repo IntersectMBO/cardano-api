@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-11-05T09:40:54Z
-  , cardano-haskell-packages 2025-11-24T10:27:41Z
+  , hackage.haskell.org 2025-12-02T22:23:29Z
+  , cardano-haskell-packages 2025-12-16T19:04:42Z
 
 packages:
     cardano-api
@@ -63,12 +63,12 @@ if arch(wasm32)
   source-repository-package
     type: git
     location: https://github.com/intersectmbo/plutus.git
-    tag: 226d9dee5024c933ab3bda086b813fdddcdd0bd5
+    tag: 31314b72a020f7e26803325fe955f87eff000460
     subdir:
       plutus-core
       plutus-ledger-api
       plutus-tx
-    --sha256: sha256-SaTtheeQGw391r49+GO0UjxbVAg7r6yD5ChzFOrqd+s=
+    --sha256: sha256-FFjX4HGxm6WFvCy37DioNxd3OgjdOh/c9gq9MJb2YDo=
 
   package plutus-core
     flags: +do-not-build-plutus-exec
