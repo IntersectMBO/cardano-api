@@ -187,6 +187,73 @@ If the repo has a release pipeline configured, it will be triggered on the tag p
    > you will observe that the `PATCH` endpoint messes up existing metadata of the release (author, associated commit, etc.).
    > So you HAVE to use the UI, as described above.
 
+## Backporting
+
+If a bug affecting a release is discovered long after that release has been made (and potentially after several subsequent releases), it may be necessary to create a patch that fixes each of the affected legacy versions. In this section, we describe how this is done.
+
+### 1. Identifying the version numbers
+
+Once the commit that introduced the issue is identified, you can determine the list of affected releases by checking which tags include that commit (GitHub often displays this list under the commit title).
+
+After identifying the affected versions, we must decide which digit to bump. As with any release, for bug fixes, this is typically the 3rd digit. It may occasionally be the 4th digit if the change is strictly backwards compatible and very minor.
+
+Using this information, we determine the new version numbers for the patches we will create.
+
+For example, if we choose to bump the 3rd digit and the affected versions include:
+
+```
+10.14.1.0, 10.14.0.0, 10.13.0.0, 10.12.2.0, 10.12.1.0, and 10.12.0.0
+```
+
+We would need to make the following releases (patching the latest version of each series):
+
+```
+10.14.2.0 (fixes 10.14.1.0)
+10.13.1.0 (fixes 10.13.0.0)
+10.12.3.0 (fixes 10.12.2.0)
+
+```
+
+By doing this, dependencies specifying a version range like `^>= 10.13` will automatically pick up the patched version.
+
+### 2. Backporting the fix
+
+For each version we decide to patch, we create a branch starting from the tag of the unpatched version. For example, for `10.14.2.0`, we create a new branch `release/cardano-api-10.14.2.0` based on the tag `cardano-api-10.14.1.0`.
+
+Next, we create a dedicated branch for the backported fix, such as `backport/cardano-api-10.14/fix-bug`. We cherry-pick the bug fix onto this backport branch, resolving any conflicts that arise. Finally, we issue a Pull Request (PR) from the backport branch to the patch release branch (e.g., `release/cardano-api-10.14.2.0`).
+
+The reason we use a PR for the backport is to ensure the changelog gathering script works correctly in later steps. (Alternatively, commits can be added directly to the release branch, but this requires manually writing the changelog entries later.)
+
+Finally, we merge the PR. This process can be repeated if multiple bugs need to be patched; ideally, create one PR per bug fix.
+
+### 3. Release preparation (changelog & versioning)
+
+Once the backport is merged, we proceed to prepare the release. We generate the changelog entry running the usual scripts:
+
+```bash
+../cardano-dev/scripts/download-prs.sh IntersectMBO/cardano-api
+../cardano-dev/scripts/generate-pr-changelogs.sh IntersectMBO/cardano-api cardano-api-10.14.1.0..HEAD
+
+```
+
+We add the generated entry to the `CHANGELOG.md`, bump the version number in the `.cabal` file, and create a release PR.
+
+### 4. Publication to CHaP (Cardano Haskell Packages)
+
+As usual, we use `add-from-github.sh` to create a CHaP entry for each of our new releases. We open a PR in the CHaP repository, and once the build passes and is approved, we merge it.
+
+### 5. Finalization and Tagging
+
+Then, we use `tag.sh` to create a release tag in the repo of the package we are fixing.
+
+There is one key difference from a standard release workflow: normally, we merge the release PR into `master`. However, for backported patches, we typically do **not** merge the release PR into `master`. Attempting to do so can cause issues:
+
+- We can't because some of the CI checks don't pass (there may be new requirements that were not satisfied by the old version, or they just broke because the context changed).
+- Even if we can, we may have really complicated conflicts, because the branch we are patching may be really different from the current `master`.
+- Even if we achieve this, through force merging and agressive conflict resolution, we are trying to merge the same patch over and over in `master`, so it does not make a lot of sense.
+
+Despite all of that, it is possible to do this, and it is a valid option. However, we suggest just closing the release PR and opening a new PR, directly from `master`, that simply updates the change-log for all the release PRs we haven't merged. This can be do just once for all the releases, after all the patches have been release.
+
 ## Troubleshooting
 
 ### Build fails due to `installed package instance does not exist`
