@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 -- TODO remove when serialiseTxLedgerCddl is removed
@@ -19,15 +20,15 @@ import Cardano.Binary qualified as CBOR
 import Codec.CBOR.Read qualified as CBOR
 import Codec.CBOR.Term (Term (..))
 import Codec.CBOR.Term qualified as CBOR
+import Data.Bifunctor (bimap)
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Builder qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
-import Data.List (sortOn)
+import Data.List (sortBy, sortOn)
 import Data.Text (Text)
 import Data.Text qualified as T
-import GHC.Stack (callStack)
 import GHC.Stack qualified as GHC
 
 import Test.Gen.Cardano.Api.Hardcoded
@@ -39,6 +40,7 @@ import Hedgehog (Property, forAll, property, tripping, (===))
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
+import Hedgehog.Gen.QuickCheck qualified as Q
 import Test.Hedgehog.Roundtrip.CBOR qualified as H
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
@@ -399,8 +401,8 @@ prop_roundtrip_GovernancePollAnswer_CBOR = property $ do
 -- | Test CBOR canonicalisation (according to RFC 7049, part of CIP-21)
 -- We're only testing ordering of the map keys and converting to finite collections here
 -- - the smallest representation is implemented in cborg library.
-prop_canonicalise_cbor :: Property
-prop_canonicalise_cbor = property $ do
+unit_canonicalise_cbor :: Property
+unit_canonicalise_cbor = H.propertyOnce $ do
   let inputMap =
         TMapI
           [ (TInt 22, TString "d")
@@ -416,27 +418,17 @@ prop_canonicalise_cbor = property $ do
           , (TBytes "bb", TString "h")
           , (TBytes "ba", TListI [TString "i", TString "j"])
           ]
-      inputMapInIndefiniteList = TListI [inputMap]
-      inputMapInDefiniteList = TList [inputMap]
+      inputMapBs = CBOR.serialize' inputMap
 
-  input <- forAll $ Gen.element [inputMap, inputMapInIndefiniteList, inputMapInDefiniteList]
-  let inputBs = CBOR.serialize' input
+  H.annotate "Canonicalise the input terms"
+  inputMapCanonicalisedBs <- H.leftFail $ canonicaliseCborBs inputMapBs
 
-  inputTerm <- decodeExampleTerm inputBs
-
-  inputCanonicalisedBs <- H.leftFail $ canonicaliseCborBs inputBs
-
-  decodedTerm <- decodeExampleTerm inputCanonicalisedBs
-  inputMapCanonicalisedTerm@(TMap elemTerms) <-
-    case decodedTerm of
-      TMap elemTerms -> pure $ TMap elemTerms
-      TList [TMap elemTerms] -> pure $ TMap elemTerms
-      t ->
-        H.failMessage callStack $
-          "Expected canonicalised term to be a map or a list with a single map: " <> show t
+  H.annotate "sanity check that cbor deserialisation succeeds"
+  inputMapCanonicalisedTerm@(TMap elemTerms) <- decodeExampleTerm inputMapCanonicalisedBs
 
   H.annotate "sanity check that cbor round trip does not change the order"
-  input === inputTerm
+  inputMapTerm <- decodeExampleTerm inputMapBs
+  inputMap === inputMapTerm
 
   H.annotate "Print bytes hex representation of the keys in the map"
   H.annotateShow
@@ -463,8 +455,39 @@ prop_canonicalise_cbor = property $ do
  where
   decodeExampleTerm bs = do
     (leftover, term) <- H.leftFail $ CBOR.deserialiseFromBytes CBOR.decodeTerm (LBS.fromStrict bs)
+    -- Fail if not all bytes were decoded.
     H.assertWith leftover LBS.null
     pure term
+
+prop_canonicalise_cbor :: Property
+prop_canonicalise_cbor = property $ do
+  term <- forAll Q.arbitrary
+  H.note_ "Check that canonicalised term is in fact canonicalised"
+  H.assertWith (canonicaliseTerm term) isCanonicalTerm
+ where
+  isCanonicalTerm :: Term -> Bool
+  isCanonicalTerm = \case
+    -- no indefinite length lists
+    TListI _ -> False
+    -- no indefinite length maps
+    TMapI _ -> False
+    -- tagged value has to be canonicalised
+    TTagged _tag term -> isCanonicalTerm term
+    -- list elements have to be canonicalised
+    TList terms -> all isCanonicalTerm terms
+    -- 1. Map keys have to be sorted lexicographically by their bytes representation
+    -- 2. Map keys and values have to be canonical.
+    TMap termPairs ->
+      map fst termPairs == map fst (sortBy compareKeyTerms termPairs)
+        && all (uncurry (&&) . bimap isCanonicalTerm isCanonicalTerm) termPairs
+    _ -> True
+
+  -- compare first terms in the pair by their byte representation
+  compareKeyTerms
+    :: (Term, a)
+    -> (Term, a)
+    -> Ordering
+  compareKeyTerms (t1, _) (t2, _) = compare (serialiseToCBOR t1) (serialiseToCBOR t2)
 
 -- -----------------------------------------------------------------------------
 
@@ -472,7 +495,8 @@ tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Typed.CBOR"
-    [ testProperty "test canonicalisation of CBOR" prop_canonicalise_cbor
+    [ testProperty "unit test canonicalisation of a predefined CBOR" unit_canonicalise_cbor
+    , testProperty "property test canonicalisation of CBOR" prop_canonicalise_cbor
     , testProperty "rountrip txbody text envelope" prop_text_envelope_roundtrip_txbody_CBOR
     , testProperty "txbody backwards compatibility" prop_txbody_backwards_compatibility
     , testProperty "rountrip tx text envelope" prop_text_envelope_roundtrip_tx_CBOR
