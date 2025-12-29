@@ -29,7 +29,7 @@ import Data.Tuple.Extra (both)
 
 -- | This function implements CBOR canonicalisation (RFC 7049):
 --
--- * Map keys are sorted lexicographically
+-- * Map keys are sorted by RFC 7049 §3.9 canonical order (shorter keys first, then lexicographically)
 -- * Indefinite-length maps/lists are converted to finite-length maps/lists
 -- * The representation of the CBOR major types is as small as possible (provided by "cborg" package)
 --
@@ -54,7 +54,7 @@ decodeTermFromBs input = do
 
 -- | This function implements CBOR canonicalisation at the Term level:
 --
--- * Map keys are sorted lexicographically
+-- * Map keys are sorted by RFC 7049 §3.9 canonical order (shorter keys first, then lexicographically)
 -- * Indefinite-length maps/lists are converted to finite-length maps/lists
 canonicaliseTerm :: Term -> Term
 canonicaliseTerm = \case
@@ -70,15 +70,19 @@ canonicaliseTerm = \case
     TList $ map canonicaliseTerm terms
   term -> term
 
--- | Implements sorting of CBOR terms for canonicalisation. CBOR terms are compared by lexical order of their
--- bytes representation. We are only sorting the keys of the map here.
+-- | RFC 7049 §3.9 canonical ordering of map keys: "If two keys have different lengths,
+-- the shorter one sorts earlier; if two keys have the same length, the one with the
+-- lower value in (byte-wise) lexical order sorts earlier."
 -- See: https://datatracker.ietf.org/doc/html/rfc7049#section-3.9
 compareKeyTerms
   :: (Term, a)
   -- ^ (key, value) from a map
   -> (Term, a)
   -> Ordering
-compareKeyTerms (t1, _) (t2, _) = compare (serialiseToCBOR t1) (serialiseToCBOR t2)
+compareKeyTerms (t1, _) (t2, _) =
+  let b1 = serialiseToCBOR t1
+      b2 = serialiseToCBOR t2
+   in compare (BS.length b1) (BS.length b2) <> compare b1 b2
 
 instance HasTypeProxy Term where
   data AsType Term = AsTerm
