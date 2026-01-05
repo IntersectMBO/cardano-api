@@ -17,8 +17,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
   ( Credential (..)
-  , PaymentCredential
-  , StakeCredential
   , StakeReference (..)
   )
 import Cardano.Ledger.Keys (GenDelegPair (..))
@@ -61,7 +59,7 @@ exampleShelleyGenesis =
     }
  where
   -- hash of the genesis verification key
-  genesisVerKeyHash :: KeyHash Genesis
+  genesisVerKeyHash :: KeyHash GenesisRole
   genesisVerKeyHash = KeyHash "23d51e91ae5adc7ae801e9de4cd54175fb7464ec2680b25686bbb194"
   -- hash of the delegators verification key
   delegVerKeyHash :: KeyHash GenesisDelegate
@@ -71,13 +69,13 @@ exampleShelleyGenesis =
   initialFundedAddress :: Addr
   initialFundedAddress = Addr Testnet paymentCredential (StakeRefBase stakingCredential)
    where
-    paymentCredential :: PaymentCredential
+    paymentCredential :: Credential Payment
     paymentCredential =
       KeyHashObj $
         KeyHash
           "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
 
-    stakingCredential :: StakeCredential
+    stakingCredential :: Credential Staking
     stakingCredential =
       KeyHashObj $
         KeyHash

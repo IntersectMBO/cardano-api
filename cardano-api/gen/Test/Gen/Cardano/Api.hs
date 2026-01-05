@@ -9,6 +9,8 @@ module Test.Gen.Cardano.Api
   )
 where
 
+import Cardano.Api.Genesis (alonzoGenesisDefaults)
+
 import Cardano.Ledger.Alonzo.Core qualified as Ledger
 import Cardano.Ledger.Alonzo.Genesis qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
@@ -106,9 +108,8 @@ genAlonzoGenesis = do
   maxCollateralInputs' <- Gen.integral (Range.linear 0 10)
 
   return
-    Alonzo.AlonzoGenesis
+    alonzoGenesisDefaults
       { Alonzo.agCoinsPerUTxOWord = Ledger.CoinPerWord coinsPerUTxOWord
-      , Alonzo.agCostModels = mempty
       , Alonzo.agPrices = prices'
       , Alonzo.agMaxTxExUnits = maxTxExUnits'
       , Alonzo.agMaxBlockExUnits = maxBlockExUnits'
