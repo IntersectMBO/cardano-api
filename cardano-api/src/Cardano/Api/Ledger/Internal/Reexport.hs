@@ -117,7 +117,9 @@ module Cardano.Api.Ledger.Internal.Reexport
   , toPlainDecoder
   -- Shelley
   , secondsToNominalDiffTimeMicro
-  , ChainAccountState -- TODO: this should be ChainAccountState (..), but it does not compile
+  , ChainAccountState
+  , casTreasuryL
+  , casReservesL
   , NewEpochState (..)
   , ShelleyGenesisStaking (..)
   -- Babbage
@@ -347,7 +349,7 @@ import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), unData)
 import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
 import Cardano.Ledger.Shelley.API
-  ( ChainAccountState -- TODO: this should be ChainAccountState (..), but it does not compile
+  ( ChainAccountState
   , GenDelegPair (..)
   , NewEpochState (..)
   , StakeReference (..)
@@ -369,7 +371,13 @@ import Cardano.Ledger.Shelley.TxCert
   , ShelleyEraTxCert (..)
   , ShelleyTxCert (..)
   )
-import Cardano.Ledger.State (PoolMetadata (..), StakePoolParams (..), StakePoolRelay (..))
+import Cardano.Ledger.State
+  ( PoolMetadata (..)
+  , StakePoolParams (..)
+  , StakePoolRelay (..)
+  , casReservesL
+  , casTreasuryL
+  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Protocol.Crypto (Crypto, StandardCrypto)
 import Cardano.Slotting.Slot (EpochNo (..))
