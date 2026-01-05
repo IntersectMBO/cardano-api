@@ -130,7 +130,9 @@ module Cardano.Api.Ledger.Internal.Reexport
   , toPlainDecoder
   -- Shelley
   , secondsToNominalDiffTimeMicro
-  , ChainAccountState -- TODO: this should be ChainAccountState (..), but it does not compile
+  , ChainAccountState
+  , casTreasuryL
+  , casReservesL
   , NewEpochState (..)
   , ShelleyGenesisStaking (..)
   -- Allegra
@@ -383,7 +385,7 @@ import Cardano.Ledger.Plutus.Language
   , toSLanguage
   )
 import Cardano.Ledger.Shelley.API
-  ( ChainAccountState -- TODO: this should be ChainAccountState (..), but it does not compile
+  ( ChainAccountState
   , GenDelegPair (..)
   , NewEpochState (..)
   , StakeReference (..)
@@ -412,6 +414,8 @@ import Cardano.Ledger.State
   , StakePoolRelay (..)
   , UTxO (..)
   , getScriptsNeeded
+  , casReservesL
+  , casTreasuryL
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val
