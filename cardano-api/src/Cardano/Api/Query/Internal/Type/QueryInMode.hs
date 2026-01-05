@@ -301,8 +301,8 @@ data QueryInShelleyBasedEra era result where
     :: Set Ledger.DRep
     -> QueryInShelleyBasedEra era (Map Ledger.DRep L.Coin)
   QuerySPOStakeDistr
-    :: Set (Ledger.KeyHash 'Ledger.StakePool)
-    -> QueryInShelleyBasedEra era (Map (Ledger.KeyHash 'Ledger.StakePool) L.Coin)
+    :: Set (Ledger.KeyHash Ledger.StakePool)
+    -> QueryInShelleyBasedEra era (Map (Ledger.KeyHash Ledger.StakePool) L.Coin)
   QueryCommitteeMembersState
     :: Set (Shelley.Credential Shelley.ColdCommitteeRole)
     -> Set (Shelley.Credential Shelley.HotCommitteeRole)
@@ -317,7 +317,7 @@ data QueryInShelleyBasedEra era result where
   QueryLedgerPeerSnapshot
     :: QueryInShelleyBasedEra era (Serialised LedgerPeerSnapshot)
   QueryStakePoolDefaultVote
-    :: Ledger.KeyHash 'Ledger.StakePool
+    :: Ledger.KeyHash Ledger.StakePool
     -> QueryInShelleyBasedEra era L.DefaultVote
 
 deriving instance Show (QueryInShelleyBasedEra era result)
@@ -501,7 +501,7 @@ fromShelleyDelegations =
     . toList
 
 fromShelleyRewardAccounts
-  :: Map (Shelley.Credential 'Core.Staking) L.Coin
+  :: Map (Shelley.Credential Core.Staking) L.Coin
   -> Map StakeCredential L.Coin
 fromShelleyRewardAccounts =
   -- TODO: write an appropriate property to show it is safe to use

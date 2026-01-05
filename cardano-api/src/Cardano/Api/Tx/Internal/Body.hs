@@ -1622,7 +1622,9 @@ fromLedgerTxInsCollateral sbe body =
     sbe
 
 fromLedgerTxInsReference
-  :: ShelleyBasedEra era -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era) -> TxInsReference ViewTx era
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
+  -> TxInsReference ViewTx era
 fromLedgerTxInsReference sbe txBody =
   caseShelleyToAlonzoOrBabbageEraOnwards
     (const TxInsReferenceNone)
@@ -1913,13 +1915,13 @@ convMintValue txMintValue = do
   multiAsset
 
 convExtraKeyWitnesses
-  :: TxExtraKeyWitnesses era -> Set (Shelley.KeyHash Shelley.Witness)
+  :: TxExtraKeyWitnesses era -> Set (Shelley.KeyHash Shelley.Guard)
 convExtraKeyWitnesses txExtraKeyWits =
   case txExtraKeyWits of
     TxExtraKeyWitnessesNone -> Set.empty
     TxExtraKeyWitnesses _ khs ->
       fromList
-        [ Shelley.asWitness kh
+        [ Shelley.coerceKeyRole kh
         | PaymentKeyHash kh <- khs
         ]
 

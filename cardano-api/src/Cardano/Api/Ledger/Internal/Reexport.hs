@@ -143,6 +143,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , EraGov
   , EraTx (witsTxL, bodyTxL)
   , Tx
+  , TopTx
   , TxDats (..)
   , costModelsValid
   , getCostModelParams
@@ -316,6 +317,7 @@ import Cardano.Ledger.Core
   , EraTxOut
   , PParams (..)
   , PoolCert (..)
+  , TopTx
   , Value
   , fromEraCBOR
   , ppMinFeeAL
