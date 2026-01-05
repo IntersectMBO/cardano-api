@@ -20,9 +20,7 @@ packages:
     cardano-api
     cardano-api-gen
     cardano-wasm
-    -- TODO: cabal cannot construct a build plan due to cardano-rpc,
-    --       we probably need to constrain it's dependencies further
-    -- cardano-rpc
+    cardano-rpc
 
 extra-packages: Cabal
 
