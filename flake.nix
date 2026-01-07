@@ -247,6 +247,7 @@
                   wasm-pkgs.curl
                   wasm-pkgs.git
                   wasm-pkgs.patch-package
+                  wasm-pkgs.binaryen
                   inputs.ghc-wasm-meta.packages.${system}.all_9_10
                   wasm.libsodium
                   wasm.secp256k1
