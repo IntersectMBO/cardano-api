@@ -190,47 +190,36 @@ If the repo has a release pipeline configured, it will be triggered on the tag p
 
 ## Backporting
 
-If a bug affecting a release is discovered long after that release has been made (and potentially after several subsequent releases), it may be necessary to create a patch that fixes each of the affected legacy versions. In this section, we describe how this is done.
+If a bug affecting a release is discovered long after that release has been made (and potentially after several subsequent releases), it may be necessary to create a patch that fixes each of the affected legacy versions. We can achieve this through the following steps:
 
-### 1. Identifying the version numbers
+1. Identify the commit that introduced the issue and determine the list of affected releases by checking which tags include that commit (GitHub often displays this list under the commit title).
 
-Once the commit that introduced the issue is identified, you can determine the list of affected releases by checking which tags include that commit (GitHub often displays this list under the commit title).
+2. Generate a new patch versions for each of the affected releases. New versions are typically calculated by incrementing the third digit of the latest release in each affected series (see the [Version bumping](./RELEASING.md#version-bumping) section for more information). By increasing the third or fourth digit, we ensure dependencies automatically pick up the fix.
 
-After identifying the versions for the affected releases, you should generate a new patch versions for each of them. New versions are typically calculated by incrementing the third digit of the latest release in each affected series (see the [Version bumping](./RELEASING.md#version-bumping) section for more information). By increasing the third or fourth digit, we ensure dependencies automatically pick up the fix.
+3. For each version we decide to patch, create a branch starting from the tag of the unpatched version. For example, for `10.14.2.0`, we create a new branch `release/cardano-api-10.14.2.0` based on the tag `cardano-api-10.14.1.0`.
 
-### 2. Backporting the fix
+4. From each of the release branches, create a dedicated branch for the backported fix, such as `backport/cardano-api-10.14/fix-bug`. Cherry-pick the bug fix onto this backport branch, resolving any conflicts that arise. And issue and merge a Pull Request (PR) from the backport branch to the patch release branch (e.g., `release/cardano-api-10.14.2.0`).
 
-For each version we decide to patch, we create a branch starting from the tag of the unpatched version. For example, for `10.14.2.0`, we create a new branch `release/cardano-api-10.14.2.0` based on the tag `cardano-api-10.14.1.0`.
+   The reason we use a PR for the backport is to ensure the changelog gathering script works correctly in later steps. (Alternatively, commits can be added directly to the release branch, but this requires manually writing the changelog entries later.)
 
-Next, we create a dedicated branch for the backported fix, such as `backport/cardano-api-10.14/fix-bug`. We cherry-pick the bug fix onto this backport branch, resolving any conflicts that arise. Finally, we issue a Pull Request (PR) from the backport branch to the patch release branch (e.g., `release/cardano-api-10.14.2.0`).
+   This step can be repeated if multiple bugs need to be patched; create one PR per bug fix.
 
-The reason we use a PR for the backport is to ensure the changelog gathering script works correctly in later steps. (Alternatively, commits can be added directly to the release branch, but this requires manually writing the changelog entries later.)
+5. Prepare the releases by generating the changelog entry running the same scripts used for normal releases:
 
-Finally, we merge the backport PR. This process can be repeated if multiple bugs need to be patched; ideally, create one PR per bug fix.
+   ```bash
+    ../cardano-dev/scripts/download-prs.sh IntersectMBO/cardano-api
+    ../cardano-dev/scripts/generate-pr-changelogs.sh IntersectMBO/cardano-api cardano-api-10.14.1.0..HEAD
+    ```
 
-### 3. Release preparation (changelog & versioning)
+   Add the generated entry to the `CHANGELOG.md`, bump the version number in the `.cabal` file, and create a release PR targeting `master`.
 
-Once the backport is merged, we proceed to prepare the release. We generate the changelog entry running the usual scripts:
+6. Publicate the releases to CHaP (Cardano Haskell Packages) in the same way than for normal releases (see [Releasing to `cardano-haskell-packages`](./RELEASING.md#releasing-to-cardano-haskell-packages) section): Use `add-from-github.sh` to create a CHaP entry for each of our new releases, open a PR in the CHaP repository, and once the build passes and is approved, we merge them.
 
-```bash
-../cardano-dev/scripts/download-prs.sh IntersectMBO/cardano-api
-../cardano-dev/scripts/generate-pr-changelogs.sh IntersectMBO/cardano-api cardano-api-10.14.1.0..HEAD
+7. Use `tag.sh` to create a release tag in the repo of the package we are fixing.
 
-```
+8. Unlike in the release workflow for normal releases, for backports, we will **not** merge the release PR into `master` (assuming the backported fix is already there). Attempting to do so may cause issues with conflicts, CI errors, and the risk of the same changes being applied several times to `master`.
 
-We add the generated entry to the `CHANGELOG.md`, bump the version number in the `.cabal` file, and create a release PR targeting `master`.
-
-### 4. Publication to CHaP (Cardano Haskell Packages)
-
-In the same way than for normal releases (see [Releasing to `cardano-haskell-packages`](./RELEASING.md#releasing-to-cardano-haskell-packages) section), we now use `add-from-github.sh` to create a CHaP entry for each of our new releases. We open a PR in the CHaP repository, and once the build passes and is approved, we merge it.
-
-### 5. Finalization and Tagging
-
-Lastly, we use `tag.sh` to create a release tag in the repo of the package we are fixing.
-
-Unlike in the release workflow for normal releases, for backports, we will **not** merge the release PR into `master` (assuming the backported fix is already there). Attempting to do so may cause issues with conflicts, CI errors, and the risk of the same changes being applied several times to `master`.
-
-Instead, we will just close the backport release PRs and open a new PR, directly forked from `master`, that will simply update the change-log for all the release PRs we haven't merged. This should be done just once for all the releases, after all the patches have been released.
+   Instead, we will just close the backport release PRs and open a new PR, directly forked from `master`, that will simply update the change-log for all the release PRs we haven't merged. This should be done just once for all the releases, after all the patches have been released.
 
 ## Troubleshooting
 
