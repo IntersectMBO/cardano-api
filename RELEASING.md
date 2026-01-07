@@ -226,15 +226,11 @@ In the same way than for normal releases (see [Releasing to `cardano-haskell-pac
 
 ### 5. Finalization and Tagging
 
-Then, we use `tag.sh` to create a release tag in the repo of the package we are fixing.
+Lastly, we use `tag.sh` to create a release tag in the repo of the package we are fixing.
 
-There is one key difference from a standard release workflow: normally, we merge the release PR into `master`. However, for backported patches, we typically do **not** merge the release PR into `master` (assuming the backported fix is already there). Attempting to do so can cause issues:
+Unlike in the release workflow for normal releases, for backports, we will **not** merge the release PR into `master` (assuming the backported fix is already there). Attempting to do so may cause issues with conflicts, CI errors, and the risk of the same changes being applied several times to `master`.
 
-- We can't because some of the CI checks don't pass (there may be new requirements that were not satisfied by the old version, or they just broke because the context changed).
-- Even if we can, we may have really complicated conflicts, because the branch we are patching may be really different from the current `master`.
-- Even if we achieve this, through force merging and agressive conflict resolution, we are trying to merge the same patch over and over in `master`, so it does not make a lot of sense.
-
-Despite all of that, it is possible to do this, and it is a valid option. However, we suggest just closing the release PR and opening a new PR, directly from `master`, that simply updates the change-log for all the release PRs we haven't merged. This can be do just once for all the releases, after all the patches have been release.
+Instead, we will just close the backport release PRs and open a new PR, directly forked from `master`, that will simply update the change-log for all the release PRs we haven't merged. This should be done just once for all the releases, after all the patches have been released.
 
 ## Troubleshooting
 
