@@ -224,7 +224,7 @@ Next, we create a dedicated branch for the backported fix, such as `backport/car
 
 The reason we use a PR for the backport is to ensure the changelog gathering script works correctly in later steps. (Alternatively, commits can be added directly to the release branch, but this requires manually writing the changelog entries later.)
 
-Finally, we merge the PR. This process can be repeated if multiple bugs need to be patched; ideally, create one PR per bug fix.
+Finally, we merge the backport PR. This process can be repeated if multiple bugs need to be patched; ideally, create one PR per bug fix.
 
 ### 3. Release preparation (changelog & versioning)
 
@@ -236,7 +236,7 @@ Once the backport is merged, we proceed to prepare the release. We generate the 
 
 ```
 
-We add the generated entry to the `CHANGELOG.md`, bump the version number in the `.cabal` file, and create a release PR.
+We add the generated entry to the `CHANGELOG.md`, bump the version number in the `.cabal` file, and create a release PR targeting `master`.
 
 ### 4. Publication to CHaP (Cardano Haskell Packages)
 
@@ -246,7 +246,7 @@ As usual, we use `add-from-github.sh` to create a CHaP entry for each of our new
 
 Then, we use `tag.sh` to create a release tag in the repo of the package we are fixing.
 
-There is one key difference from a standard release workflow: normally, we merge the release PR into `master`. However, for backported patches, we typically do **not** merge the release PR into `master`. Attempting to do so can cause issues:
+There is one key difference from a standard release workflow: normally, we merge the release PR into `master`. However, for backported patches, we typically do **not** merge the release PR into `master` (assuming the backported fix is already there). Attempting to do so can cause issues:
 
 - We can't because some of the CI checks don't pass (there may be new requirements that were not satisfied by the old version, or they just broke because the context changed).
 - Even if we can, we may have really complicated conflicts, because the branch we are patching may be really different from the current `master`.
