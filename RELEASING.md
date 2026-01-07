@@ -222,7 +222,7 @@ We add the generated entry to the `CHANGELOG.md`, bump the version number in the
 
 ### 4. Publication to CHaP (Cardano Haskell Packages)
 
-As usual, we use `add-from-github.sh` to create a CHaP entry for each of our new releases. We open a PR in the CHaP repository, and once the build passes and is approved, we merge it.
+In the same way than for normal releases (see [Releasing to `cardano-haskell-packages`](./RELEASING.md#releasing-to-cardano-haskell-packages) section), we now use `add-from-github.sh` to create a CHaP entry for each of our new releases. We open a PR in the CHaP repository, and once the build passes and is approved, we merge it.
 
 ### 5. Finalization and Tagging
 
