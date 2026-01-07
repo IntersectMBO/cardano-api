@@ -7,7 +7,8 @@ When making a new release, firstly you have to decide on a new version number fo
 ### Version bumping
 `cardano-api` is using [Haskell Package Versioning Policy](https://pvp.haskell.org/) for numbering each release version.
 
-In order to decide which version number needs to be bumped up, it is necessary to know what was the latest released version of a package.
+In order to decide which version number needs to be bumped up, it is necessary to know what was the latest released version of a package of the specific series you are targeting (e.g., the latest 8.4.x release).
+
 Three simple ways are:
 * look at the latest version on [`cardano-haskell-packages` (aka **CHaP**)](https://chap.intersectmbo.org/index.html) - the most reliable way
 * current version in the changelog
@@ -195,26 +196,7 @@ If a bug affecting a release is discovered long after that release has been made
 
 Once the commit that introduced the issue is identified, you can determine the list of affected releases by checking which tags include that commit (GitHub often displays this list under the commit title).
 
-After identifying the affected versions, we must decide which digit to bump. As with any release, for bug fixes, this is typically the 3rd digit. It may occasionally be the 4th digit if the change is strictly backwards compatible and very minor.
-
-Using this information, we determine the new version numbers for the patches we will create.
-
-For example, if we choose to bump the 3rd digit and the affected versions include:
-
-```
-10.14.1.0, 10.14.0.0, 10.13.0.0, 10.12.2.0, 10.12.1.0, and 10.12.0.0
-```
-
-We would need to make the following releases (patching the latest version of each series):
-
-```
-10.14.2.0 (fixes 10.14.1.0)
-10.13.1.0 (fixes 10.13.0.0)
-10.12.3.0 (fixes 10.12.2.0)
-
-```
-
-By doing this, dependencies specifying a version range like `^>= 10.13` will automatically pick up the patched version.
+After identifying the versions for the affected releases, you should generate a new patch versions for each of them. New versions are typically calculated by incrementing the third digit of the latest release in each affected series (see the [Version bumping](./RELEASING.md#version-bumping) section for more information). By increasing the third or fourth digit, we ensure dependencies automatically pick up the fix.
 
 ### 2. Backporting the fix
 
