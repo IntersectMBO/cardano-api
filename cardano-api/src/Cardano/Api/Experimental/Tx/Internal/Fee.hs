@@ -8,6 +8,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -130,7 +131,8 @@ data TxBodyErrorAutoBalance era
       -- ^ Total deposits
       L.MaryValue
       -- ^ Balance
-  deriving Show
+
+deriving instance Show (TxBodyErrorAutoBalance era)
 
 instance Error (TxBodyErrorAutoBalance era) where
   prettyError = \case
@@ -389,49 +391,61 @@ estimateBalancedTxBody'
     --  1. The original outputs
     --  2. Tx fee
     --  3. Return and total collateral
-    let txbody2 =
-          makeUnsignedTx
-            useEra
-            txbodycontent1
-              { txFee = fee
-              , txCollateral = maybeTxCollateral
-              }
+    let
+      txbody2 =
+        makeUnsignedTx
+          useEra
+          txbodycontent1
+            { txFee = fee
+            , txCollateral = maybeTxCollateral
+            }
 
     let fakeUTxO = createFakeUTxO txbodycontent1 $ L.coin availableUTxOValue
         balance :: Ledger.Value (LedgerEra era) =
           evaluateTransactionBalance pparams poolids stakeDelegDeposits drepDelegDeposits fakeUTxO txbody2
+
+        coinBalance :: L.Coin
+        coinBalance = obtainCommonConstraints (useEra @era) $ L.coin balance
+
         balanceTxOut :: TxOut CtxTx (LedgerEra era)
         balanceTxOut =
           obtainCommonConstraints (useEra @era) $
             TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance) Nothing
+    case useEra @era of
+      DijkstraEra -> error "estimateBalancedTxBody: DijkstraEra is not supported for fee estimation"
+      ConwayEra -> do
+        when (coinBalance < 0) $
+          Left $
+            TxFeeEstimationBalanceError $
+              BalanceIsNegative coinBalance txbody2
 
-    -- Step 6. Check all txouts have the min required UTxO value
-    -- TOOD: Fix me. You need a new error type to accomodate your new types
-    first (TxFeeEstimationBalanceError . uncurry TxBodyErrorMinUTxONotMet)
-      . mapM_ (checkMinUTxOValue pparams)
-      $ txOuts txbodycontent1
+        -- Step 6. Check all txouts have the min required UTxO value
+        -- TOOD: Fix me. You need a new error type to accomodate your new types
+        first (TxFeeEstimationBalanceError . uncurry TxBodyErrorMinUTxONotMet)
+          . mapM_ (checkMinUTxOValue pparams)
+          $ txOuts txbodycontent1
 
-    -- check if the balance is positive or negative
-    -- in one case we can produce change, in the other the inputs are insufficient
-    finalTxOuts <-
-      first TxFeeEstimationBalanceError $
-        checkAndIncludeChange pparams balanceTxOut (txOuts txbodycontent1)
+        -- check if the balance is positive or negative
+        -- in one case we can produce change, in the other the inputs are insufficient
+        finalTxOuts <-
+          first TxFeeEstimationBalanceError $
+            checkAndIncludeChange pparams balanceTxOut (txOuts txbodycontent1)
 
-    -- Step 7.
+        -- Step 7.
 
-    -- Create the txbody with the final fee and change output. This should work
-    -- provided that the fee and change are less than 2^32-1, and so will
-    -- fit within the encoding size we picked above when calculating the fee.
-    -- Yes this could be an over-estimate by a few bytes if the fee or change
-    -- would fit within 2^16-1. That's a possible optimisation.
-    let finalTxBodyContent =
-          txbodycontent1
-            { txFee = fee
-            , txOuts = finalTxOuts
-            , txCollateral = maybeTxCollateral
-            }
+        -- Create the txbody with the final fee and change output. This should work
+        -- provided that the fee and change are less than 2^32-1, and so will
+        -- fit within the encoding size we picked above when calculating the fee.
+        -- Yes this could be an over-estimate by a few bytes if the fee or change
+        -- would fit within 2^16-1. That's a possible optimisation.
+        let finalTxBodyContent =
+              txbodycontent1
+                { txFee = fee
+                , txOuts = finalTxOuts
+                , txCollateral = maybeTxCollateral
+                }
 
-    return finalTxBodyContent
+        return finalTxBodyContent
 
 data IsEmpty = Empty | NonEmpty
   deriving (Eq, Show)
