@@ -61,7 +61,7 @@ module Cardano.Api.Experimental
   , IndexedPlutusScriptWitness (..)
   , PlutusScriptPurpose (..)
   , PlutusScriptDatum (..)
-  , NoScriptDatum
+  , NoScriptDatum (..)
 
     -- ** Certificate related
   , Certificate (..)

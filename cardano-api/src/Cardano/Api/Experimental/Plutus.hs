@@ -27,7 +27,7 @@ module Cardano.Api.Experimental.Plutus
   , ScriptRedeemer
   , PlutusScriptPurpose (..)
   , PlutusScriptDatum (..)
-  , NoScriptDatum
+  , NoScriptDatum (..)
   , getPlutusScriptWitnessLanguage
 
     -- ** Constuct an indexed plutus script witness.

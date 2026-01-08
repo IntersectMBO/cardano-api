@@ -123,6 +123,13 @@ data TxBodyErrorAutoBalance era
       -- ^ Negative balance
       (UnsignedTx ConwayEra)
       -- ^ The transaction body
+  | NotEnoughAdaInUTxO
+      L.MaryValue
+      -- ^ Total UTxO value
+      L.Coin
+      -- ^ Total deposits
+      L.MaryValue
+      -- ^ Balance
   deriving Show
 
 instance Error (TxBodyErrorAutoBalance era) where
@@ -176,6 +183,16 @@ instance Error (TxBodyErrorAutoBalance era) where
         , pretty negBalance
         , "\nTransaction body: "
         , pshow txbody
+        ]
+    NotEnoughAdaInUTxO totalUTxOValue totalDeposits balance ->
+      mconcat
+        [ "The total ada in the provided UTxO(s) is not enough to cover the deposits required by the "
+        , "transaction.\nTotal UTxO value: "
+        , pshow totalUTxOValue
+        , "\nTotal deposits: "
+        , pretty totalDeposits
+        , "\nBalance (UTxO value - deposits): "
+        , pshow balance
         ]
 
 -- | Use when you do not have access to the UTxOs you intend to spend
@@ -317,6 +334,13 @@ estimateBalancedTxBody'
         availableUTxOValue :: L.MaryValue
         availableUTxOValue = totalUTxOValue L.<-> L.inject totalDeposits
 
+    when (L.coin availableUTxOValue < 0) $
+      Left $
+        TxFeeEstimationBalanceError $
+          NotEnoughAdaInUTxO
+            totalUTxOValue
+            totalDeposits
+            availableUTxOValue
     let
       partialChange =
         calculatePartialChangeValue availableUTxOValue txbodycontent1
@@ -574,10 +598,11 @@ calcReturnAndTotalCollateral fee pp' _ mTxCollateral cAddr totalAvailableCollate
       -- and round the returnCollateral down which has the effect of potentially slightly
       -- overestimating the required collateral.
       L.Coin returnCollateralAmount = totalCollateralLovelace * 100 - requiredCollateral
-      returnAdaCollateral = L.inject $ L.rationalToCoinViaFloor $ returnCollateralAmount % 100
+      returnAdaCollateral :: L.MaryValue = L.inject $ L.rationalToCoinViaFloor $ returnCollateralAmount % 100
       -- non-ada collateral is not used, so just return it as is in the return collateral output
-      nonAdaCollateral = L.modifyCoin (const mempty) totalAvailableCollateral
-      returnCollateral = returnAdaCollateral <> nonAdaCollateral
+      _nonAdaCollateral = L.modifyCoin (const mempty) totalAvailableCollateral
+      returnCollateral = returnAdaCollateral
+  -- Remove non ada in collateral output -- <> nonAdaCollateral
   case mTxCollateral of
     Just (TxCollateral{}) -> mTxCollateral
     Nothing

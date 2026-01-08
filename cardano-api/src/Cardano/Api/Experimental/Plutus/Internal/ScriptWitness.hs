@@ -19,7 +19,7 @@ module Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
   , ScriptRedeemer
   , PlutusScriptPurpose (..)
   , PlutusScriptDatum (..)
-  , NoScriptDatum
+  , NoScriptDatum (..)
 
     -- * Helpers
   , getSpendingPlutusWitnessData
@@ -173,7 +173,7 @@ data PlutusScriptPurpose
   | -- | Witnesses a vote
     VotingScript
 
-data NoScriptDatum
+data NoScriptDatum = NoScriptDatumAllowed deriving (Show, Eq)
 
 -- | The PlutusScriptDatum type family is used to determine if a script datum is allowed
 -- for a given plutus script purpose and version. This change was proposed in CIP-69
