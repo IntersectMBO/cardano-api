@@ -142,6 +142,7 @@ module Test.Gen.Cardano.Api.Typed
   , genSimpleScriptWithoutEmptyAnys
   , genWitnessable
   , genMintWitnessable
+  , genPlutusScriptInEra
   , genPlutusScriptWitness
   , genIndexedPlutusScriptWitness
   , genBlockNo
@@ -157,6 +158,8 @@ import Cardano.Api hiding (txIns)
 import Cardano.Api qualified as Api
 import Cardano.Api.Byron qualified as Byron
 import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.AnyScriptWitness
+import Cardano.Api.Experimental.Plutus qualified as Exp
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Tx qualified as A
@@ -1527,13 +1530,22 @@ genIndexedPlutusScriptWitness = do
   Exp.IndexedPlutusScriptWitness
     <$> genWitnessable
     <*> genPlutusPurpose index witnessable
-    <*> genPlutusScriptWitness
+    <*> fmap (AnyPlutusSpendingScriptWitness . PlutusSpendingScriptWitnessV3) genPlutusScriptWitness
 
 genPlutusPurpose
   :: Word32
   -> Exp.Witnessable thing (ShelleyLedgerEra era)
   -> Gen (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
 genPlutusPurpose index wit = return $ Exp.toPlutusScriptPurpose index wit
+
+genPlutusScriptInEra :: Gen (Exp.PlutusScriptInEra L.PlutusV3 (Exp.LedgerEra ConwayEra))
+genPlutusScriptInEra = do
+  v3AlwaysSucceedsPlutusScriptHex <-
+    Gen.element [v3AlwaysSucceedsPlutusScript, v3AlwaysSucceedsPlutusScriptDoubleEncoded]
+  let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
+  case Exp.deserialisePlutusScriptInEra L.SPlutusV3 v3ScriptBytes of
+    Right p -> return p
+    Left e -> error $ show e
 
 genPlutusScriptWitness :: Gen (Exp.PlutusScriptWitness L.PlutusV3 purpose era)
 genPlutusScriptWitness = do
