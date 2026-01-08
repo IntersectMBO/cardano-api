@@ -1,5 +1,35 @@
 # Changelog for cardano-api
 
+## 10.21.0.0
+
+- Bump Plutus to version 1.55
+  (compatible)
+  [PR 1072](https://github.com/IntersectMBO/cardano-api/pull/1072)
+
+- The current canonicalisation functionality does not canonicalise CBOR maps in CBOR lists
+  (bugfix)
+  [PR 1047](https://github.com/IntersectMBO/cardano-api/pull/1047)
+
+- Remove duplicated `Arbitrary` orphans and re-import `testlib`s
+  (compatible)
+  [PR 1051](https://github.com/IntersectMBO/cardano-api/pull/1051)
+
+- The reverted PR breaks the query utxo command in cardano-cli which is supposed to be compatible for all shelley based eras.
+  (bugfix)
+  [PR 1048](https://github.com/IntersectMBO/cardano-api/pull/1048)
+
+- Upgrade cardano-crypto-class-2.2.3.2 with hashes deserialisation fix
+  (compatible, bugfix)
+  [PR 1039](https://github.com/IntersectMBO/cardano-api/pull/1039)
+
+- Add `Show (AsType a)` instance
+  (compatible)
+  [PR 1031](https://github.com/IntersectMBO/cardano-api/pull/1031)
+
+- Rename throwErrorAsException to throwErrorM
+  (breaking)
+  [PR 1032](https://github.com/IntersectMBO/cardano-api/pull/1032)
+
 ## 10.20.1.0
 
 - Remove duplicated `Arbitrary` orphans and re-import `testlib`s
