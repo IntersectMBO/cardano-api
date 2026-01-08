@@ -143,11 +143,11 @@ jobs:
       run: |
         wasm32-wasi-cabal build cardano-wasm --no-semaphore -j1 --ghc-options="-j1"
         wasm32-wasi-cabal build cardano-wasi --no-semaphore -j1 --ghc-options="-j1"
-        cp $(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasi | tail -n1) cardano-wasm/cardano-wasi.wasm
+        wasm-opt -O4 $(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasi | tail -n1) -o cardano-wasm/cardano-wasi.wasm
 
     - name: Prepare example
       run: |
-        cp $(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1) cardano-wasm/lib-wrapper/
+        wasm-opt -Oz $(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1) -o cardano-wasm/lib-wrapper/cardano-wasm.wasm
         $(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i "$(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1)" -o cardano-wasm/lib-wrapper/cardano-wasm.js
         cp cardano-wasm/lib-wrapper/* cardano-wasm/examples/basic/
 
