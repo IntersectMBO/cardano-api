@@ -7,12 +7,31 @@ module Test.Golden.Cardano.Api.Tx
 where
 
 import Cardano.Api
+  ( AsType (..)
+  , PaymentCredential (..)
+  , StakeAddressReference (..)
+  , StakeCredential (..)
+  , TxIn (..)
+  , TxIx (..)
+  , deterministicSigningKey
+  , deterministicSigningKeySeedSize
+  , getVerificationKey
+  , lovelaceToTxOutValue
+  , makeShelleyAddressInEra
+  , txOutValueToLovelace
+  , verificationKeyHash
+  )
+import Cardano.Api qualified as OldApi
 import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.Tx qualified as Exp
+import Cardano.Api.Ledger qualified as L
 
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 
 import Control.Monad (void)
 import Data.ByteString.Char8 qualified as BSC
+import Data.Function
+import Lens.Micro
 
 import Hedgehog (Property)
 import Hedgehog qualified as H
@@ -33,11 +52,10 @@ tx_canonical = H.propertyOnce $ do
     outFileNonCanonical <- H.noteTempFile wsPath "tx-non-canonical.json"
 
     let era = Exp.ConwayEra
-        sbe = convert era
-        txBodyContent = defaultTxBodyContent sbe
+        sbe = OldApi.convert era
     dummyTxId <-
       H.evalEither $
-        deserialiseFromRawBytesHex $
+        OldApi.deserialiseFromRawBytesHex $
           BSC.pack "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53"
     let txIn = TxIn dummyTxId (TxIx 0)
         seedSize1 = fromIntegral $ deterministicSigningKeySeedSize AsPaymentKey
@@ -48,44 +66,49 @@ tx_canonical = H.propertyOnce $ do
     let addr1 =
           makeShelleyAddressInEra
             sbe
-            Mainnet
+            OldApi.Mainnet
             (PaymentCredentialByKey (verificationKeyHash $ getVerificationKey dummyKey))
             (StakeAddressByValue (StakeCredentialByKey (verificationKeyHash $ getVerificationKey dummyStakeKey)))
 
-        simpleScript = SimpleScript (RequireSignature (verificationKeyHash $ getVerificationKey dummyKey))
-        refScript = ReferenceScript BabbageEraOnwardsConway (ScriptInAnyLang SimpleScriptLanguage simpleScript)
+        simpleScript = OldApi.SimpleScript (OldApi.RequireSignature (verificationKeyHash $ getVerificationKey dummyKey))
+        refScript =
+          OldApi.refScriptToShelleyScript sbe $
+            OldApi.ReferenceScript
+              OldApi.BabbageEraOnwardsConway
+              (OldApi.ScriptInAnyLang OldApi.SimpleScriptLanguage simpleScript)
 
+        amt = txOutValueToLovelace $ lovelaceToTxOutValue sbe 1
+        basicOut =
+          L.mkBasicTxOut
+            (OldApi.toShelleyAddr addr1)
+            (L.inject amt)
+            & L.referenceScriptTxOutL .~ refScript
         txOut =
-          TxOut
-            addr1
-            (lovelaceToTxOutValue sbe 1)
-            TxOutDatumNone
-            refScript
-
+          Exp.TxOut
+            basicOut
+            Nothing
+        txColl = Exp.TxCollateral (L.inject $ L.Coin 1) basicOut
         txBodyContent' =
-          txBodyContent
-            { txIns = [(txIn, BuildTxWith (KeyWitness KeyWitnessForSpending))]
-            , txOuts = [txOut]
-            , txFee = TxFeeExplicit sbe (Coin 0)
-            , txValidityLowerBound = TxValidityLowerBound AllegraEraOnwardsConway (SlotNo 0)
-            , txValidityUpperBound = TxValidityUpperBound sbe Nothing
-            , txTotalCollateral = TxTotalCollateral BabbageEraOnwardsConway (Coin 1)
-            , txReturnCollateral = TxReturnCollateral BabbageEraOnwardsConway txOut
-            }
+          Exp.defaultTxBodyContent
+            & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+            & Exp.setTxOuts [txOut]
+            & Exp.setTxCollateral txColl
+            & Exp.setTxFee (L.Coin 0)
 
-    unsignedTx <- H.evalEither $ Exp.makeUnsignedTx era txBodyContent'
-    let tx = Exp.signTx era [] [] unsignedTx
-    let Exp.SignedTx ledgerTx = tx
-    let oldStyleTx = ShelleyTx sbe ledgerTx
+    let unsignedTx = Exp.makeUnsignedTx era txBodyContent'
+        tx = Exp.signTx era [] [] unsignedTx
+        Exp.SignedTx ledgerTx = tx
+        oldStyleTx = OldApi.ShelleyTx sbe ledgerTx
 
-    void . H.evalIO $ writeTxFileTextEnvelope sbe (File outFileNonCanonical) oldStyleTx
-    void . H.evalIO $ writeTxFileTextEnvelopeCanonical sbe (File outFileCanonical) oldStyleTx
+    void . H.evalIO $ OldApi.writeTxFileTextEnvelope sbe (OldApi.File outFileNonCanonical) oldStyleTx
+    void . H.evalIO $
+      OldApi.writeTxFileTextEnvelopeCanonical sbe (OldApi.File outFileCanonical) oldStyleTx
 
     canonical <- H.readFile outFileCanonical
     nonCanonical <- H.readFile outFileNonCanonical
 
-    -- Ensure canonical is different from non canonical
-    H.assert $ canonical /= nonCanonical
-
     -- Ensure canonical file matches golden
     H.diffFileVsGoldenFile outFileCanonical goldenFile
+
+    -- Ensure canonical is different from non canonical
+    H.assert $ canonical /= nonCanonical

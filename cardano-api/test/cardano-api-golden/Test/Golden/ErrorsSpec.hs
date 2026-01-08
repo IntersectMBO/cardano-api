@@ -53,7 +53,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Base64 qualified as B64
 import Data.ByteString.Lazy qualified as LBS
 import Data.Data
-import Data.Map qualified as Map
+import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
 import Data.Text qualified as Text

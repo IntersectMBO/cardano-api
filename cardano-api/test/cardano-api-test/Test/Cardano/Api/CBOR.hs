@@ -12,6 +12,7 @@ module Test.Cardano.Api.CBOR
 where
 
 import Cardano.Api
+import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Ledger qualified as Ledger
 
 import Cardano.Binary qualified as CBOR
@@ -313,6 +314,11 @@ prop_decode_only_double_wrapped_plutus_script_bytes_CBOR = H.property $ do
     alwaysSucceedsDoubleEncoded
     (AsScript AsPlutusScriptV3)
 
+  H.decodeOnlyPlutusScriptBytesExperimental
+    Exp.ConwayEra
+    alwaysSucceedsDoubleEncoded
+    Ledger.SPlutusV3
+
 prop_decode_only_wrapped_plutus_script_V1_CBOR :: Property
 prop_decode_only_wrapped_plutus_script_V1_CBOR = H.property $ do
   PlutusScriptSerialised shortBs <- H.forAll $ genPlutusScript PlutusScriptV1
@@ -322,6 +328,11 @@ prop_decode_only_wrapped_plutus_script_V1_CBOR = H.property $ do
     (SBS.fromShort shortBs)
     (AsScript AsPlutusScriptV1)
 
+  H.decodeOnlyPlutusScriptBytesExperimental
+    Exp.ConwayEra
+    (SBS.fromShort shortBs)
+    Ledger.SPlutusV1
+
 prop_decode_only_wrapped_plutus_script_V2_CBOR :: Property
 prop_decode_only_wrapped_plutus_script_V2_CBOR = H.property $ do
   PlutusScriptSerialised shortBs <- H.forAll $ genPlutusScript PlutusScriptV2
@@ -330,6 +341,10 @@ prop_decode_only_wrapped_plutus_script_V2_CBOR = H.property $ do
     PlutusScriptV2
     (SBS.fromShort shortBs)
     (AsScript AsPlutusScriptV2)
+  H.decodeOnlyPlutusScriptBytesExperimental
+    Exp.ConwayEra
+    (SBS.fromShort shortBs)
+    Ledger.SPlutusV2
 
 prop_decode_only_wrapped_plutus_script_V3_CBOR :: Property
 prop_decode_only_wrapped_plutus_script_V3_CBOR = H.property $ do
@@ -339,6 +354,11 @@ prop_decode_only_wrapped_plutus_script_V3_CBOR = H.property $ do
     PlutusScriptV3
     (SBS.fromShort shortBs)
     (AsScript AsPlutusScriptV3)
+
+  H.decodeOnlyPlutusScriptBytesExperimental
+    Exp.ConwayEra
+    (SBS.fromShort shortBs)
+    Ledger.SPlutusV3
 
 prop_double_encoded_sanity_check :: Property
 prop_double_encoded_sanity_check = H.propertyOnce $ do
