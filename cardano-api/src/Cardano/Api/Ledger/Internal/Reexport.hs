@@ -45,6 +45,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , pattern GenesisDelegTxCert
   , pattern UpdateDRepTxCert
   -- Core
+  , Addr
   , Coin (..)
   , Compactible (..)
   , partialCompactFL
@@ -52,22 +53,34 @@ module Cardano.Api.Ledger.Internal.Reexport
   , EraPParams (..)
   , Era (..)
   , EraTxOut
+  , Inject (..)
   , Network (..)
   , PoolCert (..)
+  , PolicyID (..)
   , PParams (..)
   , PParamsUpdate
+  , SLanguage (..)
+  , SlotNo (..)
   , TxId (..)
   , TxIn (..)
+  , TxOut
   , Value
   , MaryValue (..)
   , MultiAsset (..)
+  , ScriptsNeeded
+  , UTxO (..)
+  , Val (..)
   , addDeltaCoin
   , castSafeHash
+  , getScriptsNeeded
+  , mkBasicTxOut
   , toDeltaCoin
   , toEraCBOR
+  , toSLanguage
   , fromEraCBOR
   , ppMinFeeAL
   , ppMinUTxOValueL
+  , valueFromList
   -- Dijkstra
   , DijkstraPlutusPurpose (..)
   -- Conway
@@ -123,11 +136,13 @@ module Cardano.Api.Ledger.Internal.Reexport
   , ShelleyGenesisStaking (..)
   -- Babbage
   , CoinPerByte (..)
+  , referenceScriptTxOutL
   -- Alonzo
   , AlonzoEraTxBody (..)
   , AlonzoEraScript (..)
   , AlonzoEraTxWits (..)
   , AlonzoPlutusPurpose (..)
+  , AlonzoScriptsNeeded (..)
   , AsIx (..)
   , CoinPerWord (..)
   , Data (..)
@@ -156,6 +171,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , unRedeemers
   , serializeAsHexText
   , showTimelock
+  , toAsIx
   -- Base
   , boundRational
   , unboundRational
@@ -195,7 +211,7 @@ module Cardano.Api.Ledger.Internal.Reexport
 where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (showTimelock)
 import Cardano.Ledger.Alonzo.Core
   ( AlonzoEraScript (..)
@@ -221,9 +237,17 @@ import Cardano.Ledger.Alonzo.Scripts
   , costModelsValid
   , getCostModelParams
   , plutusScriptLanguage
+  , toAsIx
   )
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
-import Cardano.Ledger.Api (Constitution (..), GovAction (..), GovPurposeId (..), unRedeemers)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
+import Cardano.Ledger.Api
+  ( BabbageEraTxOut (referenceScriptTxOutL)
+  , Constitution (..)
+  , GovAction (..)
+  , GovPurposeId (..)
+  , unRedeemers
+  )
 import Cardano.Ledger.Api.Tx.Cert
   ( pattern AuthCommitteeHotKeyTxCert
   , pattern DelegStakeTxCert
@@ -246,6 +270,7 @@ import Cardano.Ledger.BaseTypes
   ( AnchorData (..)
   , DnsName
   , EpochInterval (..)
+  , Inject (..)
   , Network (..)
   , NonNegativeInterval
   , ProtVer (..)
@@ -319,8 +344,10 @@ import Cardano.Ledger.Core
   , EraTxOut
   , PParams (..)
   , PoolCert (..)
+  , TxOut
   , Value
   , fromEraCBOR
+  , mkBasicTxOut
   , ppMinFeeAL
   , ppMinUTxOValueL
   , toEraCBOR
@@ -344,9 +371,16 @@ import Cardano.Ledger.Keys
   , hashWithSerialiser
   , toVRFVerKeyHash
   )
-import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..), PolicyID (..), valueFromList)
 import Cardano.Ledger.Plutus.Data (Data (..), unData)
-import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
+import Cardano.Ledger.Plutus.Language
+  ( Language
+  , Plutus
+  , SLanguage (..)
+  , languageToText
+  , plutusBinary
+  , toSLanguage
+  )
 import Cardano.Ledger.Shelley.API
   ( ChainAccountState (..)
   , GenDelegPair (..)
@@ -371,7 +405,15 @@ import Cardano.Ledger.Shelley.TxCert
   , ShelleyEraTxCert (..)
   , ShelleyTxCert (..)
   )
-import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
+import Cardano.Ledger.State
+  ( PoolMetadata (..)
+  , PoolParams (..)
+  , ScriptsNeeded
+  , StakePoolRelay (..)
+  , UTxO (..)
+  , getScriptsNeeded
+  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.Val
 import Cardano.Protocol.Crypto (Crypto, StandardCrypto)
-import Cardano.Slotting.Slot (EpochNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
