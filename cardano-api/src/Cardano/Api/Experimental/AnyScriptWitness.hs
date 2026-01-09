@@ -30,7 +30,6 @@ import Cardano.Ledger.Plutus.Language qualified as L
 import Data.Type.Equality
 import Data.Typeable
 
-
 data AnyScriptWitness era where
   AnyScriptWitnessSimple :: SimpleScriptOrReferenceInput era -> AnyScriptWitness era
   AnyScriptWitnessPlutus :: AnyPlutusScriptWitness lang purpose era -> AnyScriptWitness era
@@ -68,7 +67,6 @@ langTypeEquality
   -> PlutusScriptWitness langB purpose era
   -> Maybe (langA :~: langB)
 langTypeEquality _ _ = eqT
-
 
 data PlutusSpendingScriptWitness era
   = PlutusSpendingScriptWitnessV1 (PlutusScriptWitness L.PlutusV1 SpendingScript era)
@@ -242,4 +240,3 @@ fromPlutusRunnable L.SPlutusV3 runnable =
   L.mkPlutusScript $ L.plutusFromRunnable runnable
 fromPlutusRunnable L.SPlutusV4 runnable =
   L.mkPlutusScript $ L.plutusFromRunnable runnable
-

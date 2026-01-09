@@ -16,9 +16,7 @@ module Cardano.Api.Experimental.Tx.Internal.Type
   )
 where
 
-
 import Cardano.Api.Experimental.Era
-
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.ProtocolParameters
@@ -26,12 +24,13 @@ import Cardano.Api.Serialise.Raw
   ( SerialiseAsRawBytes (..)
   , SerialiseAsRawBytesError (SerialiseAsRawBytesError)
   )
+
 import Cardano.Ledger.Binary qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
+
 import Control.Exception (displayException)
 import Data.Bifunctor (bimap)
 import Data.ByteString.Lazy (fromStrict)
-
 
 -- | A transaction that can contain everything
 -- except key witnesses.
