@@ -17,6 +17,7 @@ where
 
 import Cardano.Api.Address (StakeCredential)
 import Cardano.Api.Era
+import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Plutus.Internal.Script
 import Cardano.Api.ProtocolParameters
@@ -51,7 +52,7 @@ data AnyProtocolUpdate era where
 data AnyVote era where
   VotingProcedures
     :: ConwayEraOnwards era
-    -> TxVotingProcedures BuildTx era
+    -> Exp.TxVotingProcedures (ShelleyLedgerEra era)
     -> AnyVote era
   NoVotes :: AnyVote era
 
@@ -108,8 +109,8 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
         updateVotingProcedures =
           case anyVote of
             NoVotes -> id
-            VotingProcedures conwayOnwards procedures ->
-              overwriteVotingProcedures conwayOnwards (convVotingProcedures procedures)
+            VotingProcedures conwayOnwards (Exp.TxVotingProcedures procedures _) ->
+              overwriteVotingProcedures conwayOnwards procedures
 
         apiScriptWitnesses =
           [ (ix, AnyScriptWitness witness)
