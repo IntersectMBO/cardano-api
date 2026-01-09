@@ -5,6 +5,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
@@ -19,21 +20,45 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , TxVotingProcedures (..)
   , TxWithdrawals (..)
   , TxBodyContent (..)
+  , Datum (..)
   , defaultTxBodyContent
   , collectTxBodyScriptWitnessRequirements
   , makeUnsignedTx
   , extractAllIndexedPlutusScriptWitnesses
   , txMintValueToValue
+  , mkTxCertificates
+  , mkTxVotingProcedures
+  , mkTxProposalProcedures
 
     -- * Getters and Setters
+  , modTxOuts
+  , setTxAuxScripts
   , setTxCertificates
-  , setTxIns
+  , setTxCollateral
+  , setTxCurrentTreasuryValue
+  , setTxExtraKeyWits
   , setTxFee
-  , setTxOuts
+  , setTxIns
+  , setTxInsCollateral
+  , setTxInsReference
+  , setTxMetadata
   , setTxMintValue
+  , setTxOuts
   , setTxProposalProcedures
+  , setTxProtocolParams
+  , setTxScriptValidity
+  , setTxTreasuryDonation
+  , setTxValidityLowerBound
+  , setTxValidityUpperBound
   , setTxVotingProcedures
   , setTxWithdrawals
+
+    -- * Internal conversions
+  , convProposalProcedures
+
+    -- * Legacy conversions
+  , legacyDatumToDatum
+  , fromLegacyTxOut
   )
 where
 
@@ -50,20 +75,27 @@ import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
   ( AnyWitness (..)
   )
+import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   ( TxScriptWitnessRequirements (..)
   , getTxScriptWitnessesRequirements
   )
 import Cardano.Api.Experimental.Tx.Internal.Type
+import Cardano.Api.Governance.Internal.Action.VotingProcedure
+  ( VotesMergingConflict (..)
+  , mergeVotingProcedures
+  )
 import Cardano.Api.Key.Internal
 import Cardano.Api.Ledger.Internal.Reexport (StrictMaybe (..))
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
+import Cardano.Api.Plutus.Internal.ScriptData qualified as Api
 import Cardano.Api.Tx.Internal.Body
   ( CtxTx
   , TxIn
   , toShelleyTxIn
   , toShelleyWithdrawal
   )
+import Cardano.Api.Tx.Internal.Output qualified as OldApi
 import Cardano.Api.Tx.Internal.Sign
 import Cardano.Api.Tx.Internal.TxMetadata
 import Cardano.Api.Value.Internal (PolicyAssets, PolicyId, Value, policyAssetsToValue, toMaryValue)
@@ -98,11 +130,10 @@ makeUnsignedTx
   :: forall era
    . Era era
   -> TxBodyContent (LedgerEra era)
-  -> Either String (UnsignedTx era)
+  -> UnsignedTx era
 makeUnsignedTx DijkstraEra _ = error "makeUnsignedTx: Dijkstra era not supported yet"
 makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
-  TxScriptWitnessRequirements languages scripts datums redeemers <-
-    collectTxBodyScriptWitnessRequirements bc
+  let TxScriptWitnessRequirements languages scripts datums redeemers = collectTxBodyScriptWitnessRequirements bc
 
   -- cardano-api types
   let apiMintValue = txMintValue bc
@@ -160,7 +191,7 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
           & L.rdmrsTxWitsL .~ redeemers
 
   let eraSpecificTxBody = eraSpecificLedgerTxBody era ledgerTxBody bc
-  return . UnsignedTx $
+  UnsignedTx $
     L.mkBasicTx eraSpecificTxBody
       & L.witsTxL .~ scriptWitnesses
       & L.auxDataTxL .~ L.maybeToStrictMaybe (toAuxiliaryData (txMetadata bc) (txAuxScripts bc))
@@ -307,6 +338,26 @@ extractDatumsAndHashes TxOutDatumHash{} = Nothing
 extractDatumsAndHashes (TxOutSupplementalDatum h d) = Just (h, d)
 extractDatumsAndHashes (TxOutDatumInline h d) = Just (h, d)
 
+hashableScriptDatumToDatumAndHash :: L.Era era => Api.HashableScriptData -> (L.DataHash, L.Data era)
+hashableScriptDatumToDatumAndHash sd =
+  (Api.unScriptDataHash $ Api.hashScriptDataBytes sd, Api.toAlonzoData sd)
+
+legacyDatumToDatum
+  :: forall era. IsEra era => OldApi.TxOutDatum CtxTx era -> Maybe (Datum CtxTx (LedgerEra era))
+legacyDatumToDatum (OldApi.TxOutDatumHash _ h) = Just (TxOutDatumHash $ Api.unScriptDataHash h)
+legacyDatumToDatum (OldApi.TxOutSupplementalDatum _ hd) = do
+  let (hash, d) = obtainCommonConstraints (useEra @era) $ hashableScriptDatumToDatumAndHash hd
+  Just (TxOutSupplementalDatum hash d)
+legacyDatumToDatum (OldApi.TxOutDatumInline _ hd) = do
+  let (hash, d) = obtainCommonConstraints (useEra @era) $ hashableScriptDatumToDatumAndHash hd
+  Just (TxOutDatumInline hash d)
+legacyDatumToDatum OldApi.TxOutDatumNone = Nothing
+
+fromLegacyTxOut :: forall era. IsEra era => OldApi.TxOut CtxTx era -> TxOut CtxTx (LedgerEra era)
+fromLegacyTxOut tOut@(OldApi.TxOut _ _ d _) =
+  let o = OldApi.toShelleyTxOutAny (convert $ useEra @era) tOut
+   in obtainCommonConstraints (useEra @era) $ TxOut o (legacyDatumToDatum d)
+
 data TxInsReference era = TxInsReference [TxIn] (Set (Datum CtxTx era))
 
 data TxCollateral era
@@ -326,6 +377,28 @@ newtype TxCertificates era
   = TxCertificates
   {unTxCertificates :: OMap (Exp.Certificate era) (Maybe (StakeCredential, AnyWitness era))}
   deriving (Show, Eq)
+
+-- | Create 'TxCertificates'. Note that 'Certificate era' will be deduplicated. Only Certificates with a
+-- stake credential will be in the result.
+--
+-- Note that, when building a transaction in Conway era, a witness is not required for staking credential
+-- registration, but this is only the case during the transitional period of Conway era and only for staking
+-- credential registration certificates without a deposit. Future eras will require a witness for
+-- registration certificates, because the one without a deposit will be removed.
+mkTxCertificates
+  :: forall era
+   . Era era
+  -> [(Exp.Certificate (LedgerEra era), AnyWitness (LedgerEra era))]
+  -> TxCertificates (LedgerEra era)
+mkTxCertificates era certs = TxCertificates . OMap.fromList $ map getStakeCred certs
+ where
+  getStakeCred
+    :: (Exp.Certificate (LedgerEra era), AnyWitness (LedgerEra era))
+    -> ( Exp.Certificate (LedgerEra era)
+       , Maybe (StakeCredential, AnyWitness (LedgerEra era))
+       )
+  getStakeCred (c@(Exp.Certificate cert), wit) =
+    (c, (,wit) <$> getTxCertWitness (convert era) (obtainCommonConstraints era cert))
 
 -- This is incorrect. Only scripts can witness minting!
 newtype TxMintValue era
@@ -351,15 +424,66 @@ newtype TxProposalProcedures era
   = TxProposalProcedures
       ( OMap
           (L.ProposalProcedure era)
-          (Maybe (AnyWitness era))
+          (AnyWitness era)
       )
   deriving (Show, Eq)
+
+-- | A smart constructor for 'TxProposalProcedures'. It makes sure that the value produced is consistent - the
+-- witnessed proposals are also present in the first constructor parameter.
+mkTxProposalProcedures
+  :: forall era
+   . IsEra era
+  => [(L.ProposalProcedure (LedgerEra era), AnyWitness (LedgerEra era))]
+  -> TxProposalProcedures (LedgerEra era)
+mkTxProposalProcedures proposals = do
+  TxProposalProcedures $
+    obtainCommonConstraints (useEra @era) $
+      OMap.fromList proposals
 
 data TxVotingProcedures era
   = TxVotingProcedures
       (L.VotingProcedures era)
       (Map L.Voter (AnyWitness era))
   deriving (Eq, Show)
+
+-- | Create voting procedures from map of voting procedures and optional witnesses.
+-- Validates the function argument, to make sure the list of votes is legal.
+-- See 'mergeVotingProcedures' for validation rules.
+mkTxVotingProcedures
+  :: forall era
+   . [(L.VotingProcedures era, AnyWitness era)]
+  -> Either (VotesMergingConflict era) (TxVotingProcedures era)
+mkTxVotingProcedures votingProcedures = do
+  procedure <-
+    foldM f (L.VotingProcedures Map.empty) votingProcedures
+  pure $ TxVotingProcedures procedure votingScriptWitnessMap
+ where
+  votingScriptWitnessMap :: Map L.Voter (AnyWitness era)
+  votingScriptWitnessMap =
+    foldl
+      (\acc next -> acc `Map.union` uncurry votingScriptWitnessSingleton next)
+      Map.empty
+      votingProcedures
+
+  f
+    :: L.VotingProcedures era
+    -> (L.VotingProcedures era, AnyWitness era)
+    -> Either (VotesMergingConflict era) (L.VotingProcedures era)
+  f acc (procedure, _witness) = mergeVotingProcedures acc procedure
+
+  votingScriptWitnessSingleton
+    :: L.VotingProcedures era
+    -> AnyWitness era
+    -> Map L.Voter (AnyWitness era)
+  votingScriptWitnessSingleton votingProcedures' scriptWitness = do
+    let voter = fromJust $ getVotingScriptCredentials votingProcedures'
+    Map.singleton voter scriptWitness
+
+  getVotingScriptCredentials
+    :: L.VotingProcedures era
+    -> Maybe L.Voter
+  getVotingScriptCredentials (L.VotingProcedures m) =
+    listToMaybe $ Map.keys m
 
 data TxBodyContent era
   = TxBodyContent
@@ -388,7 +512,7 @@ data TxBodyContent era
   }
 
 defaultTxBodyContent
-  :: TxBodyContent (LedgerEra era)
+  :: TxBodyContent era
 defaultTxBodyContent =
   TxBodyContent
     { txIns = []
@@ -539,18 +663,13 @@ extractWitnessableProposals (Just txPropProcedures) =
     :: TxProposalProcedures (LedgerEra era)
     -> [(L.ProposalProcedure (LedgerEra era), AnyWitness (LedgerEra era))]
   getProposals (TxProposalProcedures txps) =
-    [ (p, wit)
-    | (p, mScriptWit) <- obtainCommonConstraints (useEra @era) (toList txps)
-    , wit <- maybe [] return mScriptWit
-    ]
+    obtainCommonConstraints (useEra @era) (toList txps)
 
 collectTxBodyScriptWitnessRequirements
   :: forall era
    . IsEra era
   => TxBodyContent (LedgerEra era)
-  -> Either
-       String
-       (TxScriptWitnessRequirements (LedgerEra era))
+  -> TxScriptWitnessRequirements (LedgerEra era)
 collectTxBodyScriptWitnessRequirements
   TxBodyContent
     { txIns
@@ -588,17 +707,16 @@ collectTxBodyScriptWitnessRequirements
           obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
             extractWitnessableProposals txProposalProcedures
 
-    return $
-      obtainMonoidConstraint (useEra @era) $
-        mconcat
-          [ supplementaldatums
-          , txInWits
-          , txWithdrawalWits
-          , txCertWits
-          , txMintWits
-          , txVotingWits
-          , txProposalWits
-          ]
+    obtainMonoidConstraint (useEra @era) $
+      mconcat
+        [ supplementaldatums
+        , txInWits
+        , txWithdrawalWits
+        , txCertWits
+        , txMintWits
+        , txVotingWits
+        , txProposalWits
+        ]
 
 obtainMonoidConstraint
   :: Era era
@@ -635,8 +753,35 @@ getDatums txInsRef txOutsFromTx = do
 
 -- Getters and Setters
 
+setTxAuxScripts :: [SimpleScript era] -> TxBodyContent era -> TxBodyContent era
+setTxAuxScripts v txBodyContent = txBodyContent{txAuxScripts = v}
+
+setTxExtraKeyWits :: TxExtraKeyWitnesses -> TxBodyContent era -> TxBodyContent era
+setTxExtraKeyWits v txBodyContent = txBodyContent{txExtraKeyWits = v}
+
 setTxIns :: [(TxIn, AnyWitness era)] -> TxBodyContent era -> TxBodyContent era
 setTxIns v txBodyContent = txBodyContent{txIns = v}
+
+setTxInsCollateral :: [TxIn] -> TxBodyContent era -> TxBodyContent era
+setTxInsCollateral v txBodyContent = txBodyContent{txInsCollateral = v}
+
+setTxInsReference :: TxInsReference era -> TxBodyContent era -> TxBodyContent era
+setTxInsReference v txBodyContent = txBodyContent{txInsReference = v}
+
+setTxProtocolParams :: L.PParams era -> TxBodyContent era -> TxBodyContent era
+setTxProtocolParams v txBodyContent = txBodyContent{txProtocolParams = Just v}
+
+setTxCollateral :: TxCollateral era -> TxBodyContent era -> TxBodyContent era
+setTxCollateral v txBodyContent = txBodyContent{txCollateral = Just v}
+
+setTxValidityLowerBound :: L.SlotNo -> TxBodyContent era -> TxBodyContent era
+setTxValidityLowerBound v txBodyContent = txBodyContent{txValidityLowerBound = Just v}
+
+setTxValidityUpperBound :: L.SlotNo -> TxBodyContent era -> TxBodyContent era
+setTxValidityUpperBound v txBodyContent = txBodyContent{txValidityUpperBound = Just v}
+
+setTxMetadata :: TxMetadata -> TxBodyContent era -> TxBodyContent era
+setTxMetadata v txBodyContent = txBodyContent{txMetadata = v}
 
 setTxFee :: L.Coin -> TxBodyContent era -> TxBodyContent era
 setTxFee v txBodyContent = txBodyContent{txFee = v}
@@ -646,6 +791,9 @@ setTxOuts v txBodyContent = txBodyContent{txOuts = v}
 
 setTxMintValue :: TxMintValue era -> TxBodyContent era -> TxBodyContent era
 setTxMintValue v txBodyContent = txBodyContent{txMintValue = v}
+
+setTxScriptValidity :: ScriptValidity -> TxBodyContent era -> TxBodyContent era
+setTxScriptValidity v txBodyContent = txBodyContent{txScriptValidity = v}
 
 setTxCertificates :: TxCertificates era -> TxBodyContent era -> TxBodyContent era
 setTxCertificates v txBodyContent = txBodyContent{txCertificates = v}
@@ -658,3 +806,13 @@ setTxVotingProcedures v txBodyContent = txBodyContent{txVotingProcedures = Just 
 
 setTxProposalProcedures :: TxProposalProcedures era -> TxBodyContent era -> TxBodyContent era
 setTxProposalProcedures v txBodyContent = txBodyContent{txProposalProcedures = Just v}
+
+setTxCurrentTreasuryValue :: L.Coin -> TxBodyContent era -> TxBodyContent era
+setTxCurrentTreasuryValue v txBodyContent = txBodyContent{txCurrentTreasuryValue = Just v}
+
+setTxTreasuryDonation :: L.Coin -> TxBodyContent era -> TxBodyContent era
+setTxTreasuryDonation v txBodyContent = txBodyContent{txTreasuryDonation = Just v}
+
+modTxOuts
+  :: ([TxOut CtxTx era] -> [TxOut CtxTx era]) -> TxBodyContent era -> TxBodyContent era
+modTxOuts f txBodyContent = txBodyContent{txOuts = f (txOuts txBodyContent)}
