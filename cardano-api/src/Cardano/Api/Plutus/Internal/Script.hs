@@ -29,6 +29,7 @@ module Cardano.Api.Plutus.Internal.Script
   , IsPlutusScriptLanguage (..)
   , IsScriptLanguage (..)
   , ToLedgerPlutusLanguage
+  , FromLedgerPlutusLanguage
 
     -- * Scripts in a specific language
   , Script (..)
@@ -1465,6 +1466,12 @@ type family ToLedgerPlutusLanguage lang where
   ToLedgerPlutusLanguage PlutusScriptV2 = Plutus.PlutusV2
   ToLedgerPlutusLanguage PlutusScriptV3 = Plutus.PlutusV3
   ToLedgerPlutusLanguage PlutusScriptV4 = Plutus.PlutusV4
+
+type family FromLedgerPlutusLanguage lang where
+  FromLedgerPlutusLanguage Plutus.PlutusV1 = PlutusScriptV1
+  FromLedgerPlutusLanguage Plutus.PlutusV2 = PlutusScriptV2
+  FromLedgerPlutusLanguage Plutus.PlutusV3 = PlutusScriptV3
+  FromLedgerPlutusLanguage Plutus.PlutusV4 = PlutusScriptV4
 
 data PlutusScriptInEra era lang where
   PlutusScriptInEra :: PlutusScript lang -> PlutusScriptInEra era lang

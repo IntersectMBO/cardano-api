@@ -63,6 +63,7 @@ module Cardano.Api.Value.Internal
   , fromMultiAsset
   , fromLedgerValue
   , toLedgerValue
+  , fromMaryPolicyID
 
     -- * Data family instances
   , AsType (..)

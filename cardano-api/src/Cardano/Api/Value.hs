@@ -54,6 +54,7 @@ module Cardano.Api.Value
   , fromByronLovelace
   , fromShelleyDeltaLovelace
   , toMaryValue
+  , fromMaryPolicyID
   , fromMaryValue
   , fromMultiAsset
   , fromLedgerValue

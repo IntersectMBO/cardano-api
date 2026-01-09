@@ -72,6 +72,8 @@ library
     Cardano.Api.Era
     Cardano.Api.Error
     Cardano.Api.Experimental
+    Cardano.Api.Experimental.AnyScript
+    Cardano.Api.Experimental.AnyScriptWitness
     Cardano.Api.Experimental.Certificate
     Cardano.Api.Experimental.Era
     Cardano.Api.Experimental.Plutus
@@ -233,9 +235,9 @@ library
     Cardano.Api.Experimental.Tx.Internal.Certificate
     Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible
     Cardano.Api.Experimental.Tx.Internal.Certificate.Type
-    Cardano.Api.Experimental.Tx.Internal.Compatible
     Cardano.Api.Experimental.Tx.Internal.Fee
     Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
+    Cardano.Api.Experimental.Tx.Internal.Type
     Cardano.Api.Genesis.Internal
     Cardano.Api.Genesis.Internal.Parameters
     Cardano.Api.Governance.Internal.Action.ProposalProcedure
@@ -306,6 +308,7 @@ library gen
     Test.Gen.Cardano.Api
     Test.Gen.Cardano.Api.Byron
     Test.Gen.Cardano.Api.Era
+    Test.Gen.Cardano.Api.Experimental
     Test.Gen.Cardano.Api.Hardcoded
     Test.Gen.Cardano.Api.Metadata
     Test.Gen.Cardano.Api.ProtocolParameters
@@ -336,6 +339,7 @@ library gen
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,
+    ordered-containers,
     tasty,
     tasty-hedgehog,
     text,
@@ -379,6 +383,7 @@ test-suite cardano-api-test
     hedgehog-quickcheck,
     microlens,
     mtl,
+    ordered-containers,
     ouroboros-consensus,
     ouroboros-consensus-protocol,
     raw-strings-qq,

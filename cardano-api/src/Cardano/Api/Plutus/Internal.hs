@@ -22,14 +22,12 @@ import Cardano.Api.Tx.Internal.Body (ScriptWitnessIndex (..), toScriptIndex)
 import Cardano.Api.Tx.Internal.Sign (Tx (..))
 import Cardano.Api.UTxO (UTxO)
 
-import Cardano.Ledger.Alonzo.Scripts qualified as L
 import Cardano.Ledger.Alonzo.UTxO qualified as Alonzo
 import Cardano.Ledger.Binary.Encoding (serialize')
 import Cardano.Ledger.Binary.Plain (serializeAsHexText)
 import Cardano.Ledger.Plutus.Evaluate qualified as Plutus
 import Cardano.Ledger.Plutus.ExUnits qualified as Plutus
 import Cardano.Ledger.Plutus.Language qualified as Plutus
-import Cardano.Ledger.State qualified as L
 import PlutusLedgerApi.V1 qualified as Plutus
 
 import Data.Bifunctor (Bifunctor (..))
