@@ -123,6 +123,50 @@ module Cardano.Api.Experimental.Tx
   , signTx
   , convertTxBodyToUnsignedTx
   , hashTxBody
+  , getUnsignedTxFee
+
+    -- * TxBodyContent
+  , TxBodyContent (..)
+  , defaultTxBodyContent
+  , mkTxCertificates
+  , mkTxVotingProcedures
+  , mkTxProposalProcedures
+  , modTxOuts
+  , setTxAuxScripts
+  , setTxCertificates
+  , setTxCollateral
+  , setTxCurrentTreasuryValue
+  , setTxExtraKeyWits
+  , setTxFee
+  , setTxIns
+  , setTxInsCollateral
+  , setTxInsReference
+  , setTxMetadata
+  , setTxMintValue
+  , setTxOuts
+  , setTxProposalProcedures
+  , setTxProtocolParams
+  , setTxScriptValidity
+  , setTxTreasuryDonation
+  , setTxValidityLowerBound
+  , setTxValidityUpperBound
+  , setTxVotingProcedures
+  , setTxWithdrawals
+
+    -- * Legacy Conversions
+  , legacyDatumToDatum
+  , fromLegacyTxOut
+
+    -- * TxBodyContent sub type
+  , TxCertificates (..)
+  , TxMintValue (..)
+  , TxOut (..)
+  , TxProposalProcedures (..)
+  , TxVotingProcedures (..)
+  , TxWithdrawals (..)
+  , TxCollateral (..)
+  , TxExtraKeyWitnesses (..)
+  , TxInsReference (..)
 
     -- * Witness
 
@@ -136,9 +180,16 @@ module Cardano.Api.Experimental.Tx
   , TxScriptWitnessRequirements (..)
 
     -- ** Collecting plutus script witness related transaction requirements.
+  , collectPlutusScriptHashes
   , extractAllIndexedPlutusScriptWitnesses
   , getTxScriptWitnessesRequirements
   , obtainMonoidConstraint
+
+    -- * Balancing transactions
+  , evaluateTransactionExecutionUnits
+  , makeTransactionBodyAutoBalance
+  , TxBodyErrorAutoBalance (..)
+  , TxFeeEstimationError (..)
 
     -- ** Internal functions
   , extractExecutionUnits
@@ -150,20 +201,20 @@ import Cardano.Api.Era.Internal.Core qualified as Api
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
-import Cardano.Api.Experimental.Tx.Internal.BodyContent.Old
-  ( extractAllIndexedPlutusScriptWitnesses
-  , makeUnsignedTx
-  )
+import Cardano.Api.Experimental.Tx.Internal.BodyContent.New
+import Cardano.Api.Experimental.Tx.Internal.Fee
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
+import Cardano.Api.Plutus.Internal.Script qualified as Api
 import Cardano.Api.Pretty (docToString, pretty)
 import Cardano.Api.ProtocolParameters
 import Cardano.Api.Serialise.Raw
   ( SerialiseAsRawBytes (..)
   , SerialiseAsRawBytesError (SerialiseAsRawBytesError)
   )
+import Cardano.Api.Tx.Internal.Body qualified as Api
 import Cardano.Api.Tx.Internal.Sign
 
 import Cardano.Crypto.Hash qualified as Hash
@@ -176,12 +227,19 @@ import Cardano.Ledger.Hashes qualified as L hiding (Hash)
 import Control.Exception (displayException)
 import Data.Bifunctor (bimap)
 import Data.ByteString.Lazy (fromStrict)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import GHC.Stack
 import Lens.Micro
 
 newtype UnsignedTxError
   = UnsignedTxError String
+
+getUnsignedTxFee :: UnsignedTx era -> L.Coin
+getUnsignedTxFee (UnsignedTx unsignedTx) =
+  let txbody = unsignedTx ^. L.bodyTxL
+   in txbody ^. L.feeTxBodyL
 
 hashTxBody
   :: L.HashAnnotated (Ledger.TxBody era) L.EraIndependentTxBody
@@ -267,3 +325,41 @@ convertTxBodyToUnsignedTx sbe txbody =
         let ShelleyTx _ unsignedLedgerTx = makeSignedTransaction [] txbody
         obtainCommonConstraints w $ UnsignedTx unsignedLedgerTx
     )
+
+-- | Collect all plutus script hashes that are needed to validate the given transaction
+-- and return them in a map with their corresponding 'ScriptWitnessIndex' as key.
+collectPlutusScriptHashes
+  :: forall era
+   . IsEra era
+  => UnsignedTx era
+  -> L.UTxO (LedgerEra era)
+  -> Map Api.ScriptWitnessIndex Api.ScriptHash
+collectPlutusScriptHashes (UnsignedTx tx) utxo =
+  let sNeeded :: L.AlonzoScriptsNeeded (LedgerEra era) = obtainCommonConstraints (useEra @era) $ L.getScriptsNeeded utxo (tx ^. L.bodyTxL)
+   in getPurposes @era sNeeded
+
+getPurposes
+  :: forall era
+   . IsEra era
+  => L.AlonzoScriptsNeeded (LedgerEra era)
+  -> Map Api.ScriptWitnessIndex Api.ScriptHash
+getPurposes (L.AlonzoScriptsNeeded purposes) =
+  Map.fromList $
+    Prelude.map
+      ( bimap
+          ( \pp ->
+              obtainCommonConstraints (useEra @era) $
+                Api.toScriptIndex (convert (useEra @era)) $
+                  purposeAsIxItemToAsIx pp
+          )
+          Api.fromShelleyScriptHash
+      )
+      purposes
+
+purposeAsIxItemToAsIx
+  :: forall era
+   . IsEra era
+  => L.PlutusPurpose L.AsIxItem (LedgerEra era)
+  -> L.PlutusPurpose L.AsIx (LedgerEra era)
+purposeAsIxItemToAsIx purpose =
+  obtainCommonConstraints (useEra @era) $ L.hoistPlutusPurpose L.toAsIx purpose
