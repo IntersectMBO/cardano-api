@@ -15,7 +15,7 @@ module Cardano.Api.Experimental.Tx.Internal.AnyWitness
   )
 where
 
-import Cardano.Api.Experimental.Plutus.Internal.Script
+import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Simple.Script
   ( SimpleScript (SimpleScript)
@@ -26,10 +26,8 @@ import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal.ScriptData
 
 import Cardano.Ledger.Core qualified as L
-import Cardano.Ledger.Plutus.Data qualified as L
-import Cardano.Ledger.Plutus.Language qualified as L
 
-import GHC.Exts
+import Data.Type.Equality
 
 -- | Here we consider three types of witnesses in Cardano:
 -- * key witnesses
@@ -43,42 +41,41 @@ import GHC.Exts
 data AnyWitness era where
   AnyKeyWitnessPlaceholder :: AnyWitness era
   AnySimpleScriptWitness :: SimpleScriptOrReferenceInput era -> AnyWitness era
-  AnyPlutusScriptWitness :: PlutusScriptWitness lang purpose era -> AnyWitness era
+  AnyPlutusScriptWitness :: AnyPlutusScriptWitness lang purpose era -> AnyWitness era
 
 deriving instance Show (AnyWitness era)
 
 instance Eq (AnyWitness era) where
   AnyKeyWitnessPlaceholder == AnyKeyWitnessPlaceholder = True
   (AnySimpleScriptWitness s1) == (AnySimpleScriptWitness s2) = s1 == s2
-  (AnyPlutusScriptWitness (PlutusScriptWitness l1 s1 d1 r1 e1)) == (AnyPlutusScriptWitness (PlutusScriptWitness l2 s2 d2 r2 e2)) =
-    case (l1, l2) of
-      (L.SPlutusV1, L.SPlutusV1) -> case (d1, d2) of
-        (InlineDatum, InlineDatum) -> s1 == s2 && r1 == r2 && e1 == e2
-        (NoScriptDatum, NoScriptDatum) -> s1 == s2 && r1 == r2 && e1 == e2
-        (SpendingScriptDatum d1', SpendingScriptDatum d2') -> s1 == s2 && r1 == r2 && e1 == e2 && d1' == d2'
-        (_, _) -> False
-      (L.SPlutusV2, L.SPlutusV2) -> case (d1, d2) of
-        (InlineDatum, InlineDatum) -> s1 == s2 && r1 == r2 && e1 == e2
-        (NoScriptDatum, NoScriptDatum) -> s1 == s2 && r1 == r2 && e1 == e2
-        (SpendingScriptDatum d1', SpendingScriptDatum d2') -> s1 == s2 && r1 == r2 && e1 == e2 && d1' == d2'
-        (_, _) -> False
-      (L.SPlutusV3, L.SPlutusV3) -> case (d1, d2) of
-        (InlineDatum, InlineDatum) -> s1 == s2 && r1 == r2 && e1 == e2
-        (NoScriptDatum, NoScriptDatum) -> s1 == s2 && r1 == r2 && e1 == e2
-        (SpendingScriptDatum d1', SpendingScriptDatum d2') -> s1 == s2 && r1 == r2 && e1 == e2 && d1' == d2'
-        (_, _) -> False
-      (L.SPlutusV4, L.SPlutusV4) -> case (d1, d2) of
-        (InlineDatum, InlineDatum) -> s1 == s2 && r1 == r2 && e1 == e2
-        (NoScriptDatum, NoScriptDatum) -> s1 == s2 && r1 == r2 && e1 == e2
-        (SpendingScriptDatum d1', SpendingScriptDatum d2') -> s1 == s2 && r1 == r2 && e1 == e2 && d1' == d2'
-        (_, _) -> False
-      (_, _) -> False
+  (AnyPlutusScriptWitness (AnyPlutusSpendingScriptWitness s1)) == (AnyPlutusScriptWitness (AnyPlutusSpendingScriptWitness s2)) =
+    s1 == s2
+  (AnyPlutusScriptWitness (AnyPlutusMintingScriptWitness s1)) == (AnyPlutusScriptWitness (AnyPlutusMintingScriptWitness s2)) =
+    case langTypeEquality s1 s2 of
+      Just Refl -> s1 == s2
+      Nothing -> False
+  (AnyPlutusScriptWitness (AnyPlutusWithdrawingScriptWitness s1)) == (AnyPlutusScriptWitness (AnyPlutusWithdrawingScriptWitness s2)) =
+    case langTypeEquality s1 s2 of
+      Just Refl -> s1 == s2
+      Nothing -> False
+  AnyPlutusScriptWitness (AnyPlutusCertifyingScriptWitness s1) == (AnyPlutusScriptWitness (AnyPlutusCertifyingScriptWitness s2)) =
+    case langTypeEquality s1 s2 of
+      Just Refl -> s1 == s2
+      Nothing -> False
+  AnyPlutusScriptWitness (AnyPlutusProposingScriptWitness s1) == (AnyPlutusScriptWitness (AnyPlutusProposingScriptWitness s2)) =
+    case langTypeEquality s1 s2 of
+      Just Refl -> s1 == s2
+      Nothing -> False
+  AnyPlutusScriptWitness (AnyPlutusVotingScriptWitness s1) == (AnyPlutusScriptWitness (AnyPlutusVotingScriptWitness s2)) =
+    case langTypeEquality s1 s2 of
+      Just Refl -> s1 == s2
+      Nothing -> False
   _ == _ = False
 
 getAnyWitnessPlutusLanguage :: AnyWitness era -> Maybe L.Language
 getAnyWitnessPlutusLanguage AnyKeyWitnessPlaceholder = Nothing
 getAnyWitnessPlutusLanguage (AnySimpleScriptWitness _) = Nothing
-getAnyWitnessPlutusLanguage (AnyPlutusScriptWitness swit) = Just $ getPlutusScriptWitnessLanguage swit
+getAnyWitnessPlutusLanguage (AnyPlutusScriptWitness swit) = Just $ getAnyPlutusScriptWitnessLanguage swit
 
 getAnyWitnessSimpleScript
   :: AnyWitness era -> Maybe (L.Script era)
@@ -97,55 +94,21 @@ getAnyWitnessPlutusScript AnyKeyWitnessPlaceholder = Nothing
 getAnyWitnessPlutusScript (AnySimpleScriptWitness _) = Nothing
 getAnyWitnessPlutusScript
   ( AnyPlutusScriptWitness
-      (PlutusScriptWitness l (PScript (PlutusScriptInEra plutusScriptRunnable)) _ _ _)
-    ) = L.fromPlutusScript <$> fromPlutusRunnable l plutusScriptRunnable
-getAnyWitnessPlutusScript (AnyPlutusScriptWitness (PlutusScriptWitness _ (PReferenceScript{}) _ _ _)) =
-  Nothing
+      s
+    ) = getAnyPlutusWitnessPlutusScript s
 
 -- | NB this does not include datums from inline datums existing at tx outputs!
 getAnyWitnessScriptData
   :: L.Era era => AnyWitness era -> L.TxDats era
 getAnyWitnessScriptData AnyKeyWitnessPlaceholder = mempty
 getAnyWitnessScriptData AnySimpleScriptWitness{} = mempty
-getAnyWitnessScriptData (AnyPlutusScriptWitness (PlutusScriptWitness l _ scriptDatum _ _)) =
-  let alonzoSdat = toAlonzoDatum l scriptDatum
-   in case alonzoSdat of
-        Nothing -> mempty
-        Just d -> L.TxDats $ fromList [(L.hashData d, d)]
+getAnyWitnessScriptData (AnyPlutusScriptWitness s) = getAnyPlutusScriptData s
 
 getAnyWitnessScript
   :: L.AlonzoEraScript era => AnyWitness era -> Maybe (L.Script era)
 getAnyWitnessScript AnyKeyWitnessPlaceholder = Nothing
 getAnyWitnessScript ss@(AnySimpleScriptWitness{}) = getAnyWitnessSimpleScript ss
 getAnyWitnessScript ps@(AnyPlutusScriptWitness{}) = getAnyWitnessPlutusScript ps
-
--- It should be noted that 'PlutusRunnable' is constructed via deserialization. The deserialization
--- instance lives in ledger and will fail for an invalid script language/era pairing. Therefore
--- this function should never return 'Nothing'.
-fromPlutusRunnable
-  :: L.AlonzoEraScript era
-  => L.SLanguage lang
-  -> L.PlutusRunnable lang
-  -> Maybe (L.PlutusScript era)
-fromPlutusRunnable L.SPlutusV1 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
-fromPlutusRunnable L.SPlutusV2 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
-fromPlutusRunnable L.SPlutusV3 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
-fromPlutusRunnable L.SPlutusV4 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
-
-toAlonzoDatum
-  :: L.Era era
-  => L.SLanguage lang
-  -> PlutusScriptDatum lang purpose
-  -> Maybe (L.Data era)
-toAlonzoDatum l d =
-  let mHashableData = getPlutusDatum l d
-   in case mHashableData of
-        Just h -> Just $ toAlonzoData h
-        Nothing -> Nothing
 
 getPlutusDatum
   :: L.SLanguage lang -> PlutusScriptDatum lang purpose -> Maybe HashableScriptData

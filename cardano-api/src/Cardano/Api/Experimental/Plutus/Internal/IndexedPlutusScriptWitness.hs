@@ -29,6 +29,7 @@ where
 import Cardano.Api.Address
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Ledger qualified as L
@@ -54,7 +55,7 @@ data IndexedPlutusScriptWitness witnessable (lang :: L.Language) (purpose :: Plu
     :: L.AlonzoEraScript era
     => Witnessable witnessable era
     -> (L.PlutusPurpose L.AsIx era)
-    -> (PlutusScriptWitness lang purpose era)
+    -> AnyPlutusScriptWitness lang purpose era
     -> IndexedPlutusScriptWitness witnessable lang purpose era
 
 deriving instance Show (IndexedPlutusScriptWitness witnessable lang purpose era)
@@ -147,7 +148,7 @@ createIndexedPlutusScriptWitness
   :: L.AlonzoEraScript era
   => Word32
   -> Witnessable witnessable era
-  -> PlutusScriptWitness lang purpose era
+  -> AnyPlutusScriptWitness lang purpose era
   -> IndexedPlutusScriptWitness witnessable lang purpose era
 createIndexedPlutusScriptWitness index witnessable =
   IndexedPlutusScriptWitness witnessable (toPlutusScriptPurpose index witnessable)
@@ -183,7 +184,8 @@ constructRedeemerPointer
   => AnyIndexedPlutusScriptWitness era
   -> L.Redeemers era
 constructRedeemerPointer (AnyIndexedPlutusScriptWitness (IndexedPlutusScriptWitness _ purpose scriptWit)) =
-  let PlutusScriptWitness _ _ _ redeemer execUnits = scriptWit
+  let redeemer = getAnyPlutusScriptWitnessRedeemer scriptWit
+      execUnits = getAnyPlutusScriptWitnessExecutionUnits scriptWit
    in L.Redeemers $
         fromList [(purpose, (toAlonzoData redeemer, toAlonzoExUnits execUnits))]
 
