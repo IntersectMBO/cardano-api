@@ -67,6 +67,7 @@ import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes qualified as L hiding (KeyHash)
 import Cardano.Ledger.Keys qualified as L.Keys
 import Cardano.Ledger.Mary.Value qualified as L
+import Cardano.Ledger.Plutus.Language qualified as L
 import Cardano.Ledger.Shelley.API.Mempool qualified as L
 import Cardano.Ledger.Shelley.PParams qualified as Ledger
 import Cardano.Ledger.Shelley.Rules qualified as L
@@ -470,3 +471,19 @@ instance SerialiseAsRawBytes L.GovActionId where
     L.GovActionId . toShelleyTxId
       <$> deserialiseFromRawBytes AsTxId txIdBs
       <*> deserialiseFromRawBytes AsGovActionIx index
+
+instance HasTypeProxy (L.SLanguage L.PlutusV1) where
+  data AsType (L.SLanguage L.PlutusV1) = AsPlutusScriptV1
+  proxyToAsType _ = AsPlutusScriptV1
+
+instance HasTypeProxy (L.SLanguage L.PlutusV2) where
+  data AsType (L.SLanguage L.PlutusV2) = AsPlutusScriptV2
+  proxyToAsType _ = AsPlutusScriptV2
+
+instance HasTypeProxy (L.SLanguage L.PlutusV3) where
+  data AsType (L.SLanguage L.PlutusV3) = AsPlutusScriptV3
+  proxyToAsType _ = AsPlutusScriptV3
+
+instance HasTypeProxy (L.SLanguage L.PlutusV4) where
+  data AsType (L.SLanguage L.PlutusV4) = AsPlutusScriptV4
+  proxyToAsType _ = AsPlutusScriptV4

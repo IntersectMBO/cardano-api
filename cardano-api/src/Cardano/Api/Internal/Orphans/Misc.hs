@@ -28,6 +28,7 @@ import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.HKD (NoUpdate (..))
+import Cardano.Ledger.Plutus.Language qualified as L
 import Cardano.Ledger.Shelley.PParams qualified as Ledger
 import Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import PlutusLedgerApi.Common qualified as P
@@ -39,6 +40,7 @@ import Data.ListMap qualified as ListMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid
 import Data.Text.Encoding.Error qualified as T
+import Data.Type.Equality
 import Data.Typeable
 import GHC.Exts (IsList (..))
 import Network.Mux qualified as Mux
@@ -295,3 +297,11 @@ instance Error P.ParseError where
   prettyError = pretty . show
 
 deriving via ShowOf TypeRep instance Pretty TypeRep
+
+instance TestEquality L.SLanguage where
+  testEquality s1 s2 = case (s1, s2) of
+    (L.SPlutusV1, L.SPlutusV1) -> Just Refl
+    (L.SPlutusV2, L.SPlutusV2) -> Just Refl
+    (L.SPlutusV3, L.SPlutusV3) -> Just Refl
+    (L.SPlutusV4, L.SPlutusV4) -> Just Refl
+    _ -> Nothing
