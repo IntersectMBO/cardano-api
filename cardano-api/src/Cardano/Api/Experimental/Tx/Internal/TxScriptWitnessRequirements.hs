@@ -23,7 +23,6 @@ import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus.Internal.Script (ExecutionUnits, fromAlonzoExUnits)
 
-import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Api.Era as L
 
 import Data.Map.Strict qualified as Map

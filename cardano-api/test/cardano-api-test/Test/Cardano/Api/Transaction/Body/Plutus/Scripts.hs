@@ -18,7 +18,6 @@ import Cardano.Api.Experimental.Plutus hiding (AnyPlutusScript (..))
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
 
-import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Conway qualified as L
 import Cardano.Ledger.Core qualified as L
 

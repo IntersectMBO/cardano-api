@@ -38,7 +38,6 @@ import Cardano.Api.Plutus.Internal.ScriptData
 import Cardano.Api.Tx.Internal.TxIn
 import Cardano.Api.Value.Internal
 
-import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Conway.Scripts qualified as L
 
 import Data.Function

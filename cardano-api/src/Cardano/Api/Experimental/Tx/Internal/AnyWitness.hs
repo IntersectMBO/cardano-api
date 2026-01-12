@@ -10,6 +10,7 @@ module Cardano.Api.Experimental.Tx.Internal.AnyWitness
   , getAnyWitnessScript
   , getAnyWitnessSimpleScript
   , getAnyWitnessPlutusLanguage
+  , getAnyWitnessReferenceInput
   , getAnyWitnessScriptData
   , getPlutusDatum
   )
@@ -24,6 +25,7 @@ import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Internal.Orphans.Misc ()
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal.ScriptData
+import Cardano.Api.Tx.Internal.TxIn
 
 import Cardano.Ledger.Core qualified as L
 
@@ -96,6 +98,13 @@ getAnyWitnessPlutusScript
   ( AnyPlutusScriptWitness
       s
     ) = getAnyPlutusWitnessPlutusScript s
+
+getAnyWitnessReferenceInput :: AnyWitness era -> Maybe TxIn
+getAnyWitnessReferenceInput AnyKeyWitnessPlaceholder = Nothing
+getAnyWitnessReferenceInput (AnySimpleScriptWitness (SReferenceScript txIn)) = Just txIn
+getAnyWitnessReferenceInput (AnySimpleScriptWitness (SScript _)) = Nothing
+getAnyWitnessReferenceInput (AnyPlutusScriptWitness s) =
+  getAnyPlutusScriptWitnessReferenceInput s
 
 -- | NB this does not include datums from inline datums existing at tx outputs!
 getAnyWitnessScriptData

@@ -148,6 +148,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , Data (..)
   , EraTxWits (..)
   , ExUnits (..)
+  , Redeemers (..)
   , Language
   , Plutus
   , Prices (..)
@@ -239,7 +240,7 @@ import Cardano.Ledger.Alonzo.Scripts
   , plutusScriptLanguage
   , toAsIx
   )
-import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Api
   ( BabbageEraTxOut (referenceScriptTxOutL)

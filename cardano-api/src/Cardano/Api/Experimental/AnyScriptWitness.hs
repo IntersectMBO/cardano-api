@@ -13,6 +13,7 @@ module Cardano.Api.Experimental.AnyScriptWitness
   , getAnyPlutusScriptData
   , getAnyPlutusScriptWitnessExecutionUnits
   , getAnyPlutusScriptWitnessRedeemer
+  , getAnyPlutusScriptWitnessReferenceInput
   , getAnyPlutusWitnessPlutusScript
   , getAnyPlutusScriptWitnessLanguage
   , langTypeEquality
@@ -20,10 +21,12 @@ module Cardano.Api.Experimental.AnyScriptWitness
   )
 where
 
+import Cardano.Api.Experimental.Plutus.Internal.Script
 import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Simple.Script
-import Cardano.Api.Ledger.Internal.Reexport qualified as L
+import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus.Internal.Script (ExecutionUnits)
+import Cardano.Api.Tx.Internal.TxIn
 
 import Cardano.Ledger.Plutus.Language qualified as L
 
@@ -176,6 +179,32 @@ getAnyPlutusScriptWitnessLanguage (AnyPlutusWithdrawingScriptWitness s) = getPlu
 getAnyPlutusScriptWitnessLanguage (AnyPlutusCertifyingScriptWitness s) = getPlutusScriptWitnessLanguage s
 getAnyPlutusScriptWitnessLanguage (AnyPlutusProposingScriptWitness s) = getPlutusScriptWitnessLanguage s
 getAnyPlutusScriptWitnessLanguage (AnyPlutusVotingScriptWitness s) = getPlutusScriptWitnessLanguage s
+
+getAnyPlutusScriptWitnessReferenceInput
+  :: AnyPlutusScriptWitness lang purpose era
+  -> Maybe TxIn
+getAnyPlutusScriptWitnessReferenceInput (AnyPlutusSpendingScriptWitness s) =
+  case s of
+    PlutusSpendingScriptWitnessV1 (PlutusScriptWitness _ ((PReferenceScript txin)) _ _ _) -> Just txin
+    PlutusSpendingScriptWitnessV1 (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
+    PlutusSpendingScriptWitnessV2 (PlutusScriptWitness _ (PReferenceScript txin) _ _ _) -> Just txin
+    PlutusSpendingScriptWitnessV2 (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
+    PlutusSpendingScriptWitnessV3 (PlutusScriptWitness _ (PReferenceScript txin) _ _ _) -> Just txin
+    PlutusSpendingScriptWitnessV3 (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
+    PlutusSpendingScriptWitnessV4 (PlutusScriptWitness _ (PReferenceScript txin) _ _ _) -> Just txin
+    PlutusSpendingScriptWitnessV4 (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
+getAnyPlutusScriptWitnessReferenceInput psw =
+  case psw of
+    AnyPlutusMintingScriptWitness (PlutusScriptWitness _ (PReferenceScript txin) _ _ _) -> Just txin
+    AnyPlutusMintingScriptWitness (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
+    AnyPlutusWithdrawingScriptWitness (PlutusScriptWitness _ (PReferenceScript txin) _ _ _) -> Just txin
+    AnyPlutusWithdrawingScriptWitness (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
+    AnyPlutusCertifyingScriptWitness (PlutusScriptWitness _ (PReferenceScript txin) _ _ _) -> Just txin
+    AnyPlutusCertifyingScriptWitness (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
+    AnyPlutusProposingScriptWitness (PlutusScriptWitness _ (PReferenceScript txin) _ _ _) -> Just txin
+    AnyPlutusProposingScriptWitness (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
+    AnyPlutusVotingScriptWitness (PlutusScriptWitness _ (PReferenceScript txin) _ _ _) -> Just txin
+    AnyPlutusVotingScriptWitness (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
 
 getAnyPlutusScriptData
   :: L.Era era
