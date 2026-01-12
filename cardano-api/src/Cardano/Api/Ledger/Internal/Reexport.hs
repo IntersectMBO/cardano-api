@@ -134,6 +134,8 @@ module Cardano.Api.Ledger.Internal.Reexport
   , ChainAccountState (..)
   , NewEpochState (..)
   , ShelleyGenesisStaking (..)
+  -- Allegra
+  , AllegraEraScript (..)
   , Timelock (..)
   -- Babbage
   , CoinPerByte (..)
@@ -214,7 +216,7 @@ where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
-import Cardano.Ledger.Allegra.Scripts (Timelock (..), showTimelock)
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), Timelock (..), showTimelock)
 import Cardano.Ledger.Alonzo.Core
   ( AlonzoEraScript (..)
   , AlonzoEraTxBody (..)

@@ -48,7 +48,6 @@ import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Pretty.Internal.ShowOf
 
 import Cardano.Binary
-import Cardano.Ledger.Allegra.Scripts qualified as L
 import Cardano.Ledger.Alonzo.Plutus.Context qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (Inject (..))
