@@ -358,11 +358,6 @@ mkReferencePlutusScriptWitness w l txIn d r e =
               e
           )
 
--- PlutusScriptWitness
---  l
---  (PScript $ PlutusScriptInEra plutusScriptRunnable)
---
-
 -- | When it comes to using plutus scripts we need to provide
 -- the following to the tx:
 --

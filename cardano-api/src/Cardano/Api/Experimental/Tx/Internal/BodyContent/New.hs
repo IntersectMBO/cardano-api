@@ -278,7 +278,6 @@ toAuxiliaryData txMData ss' =
   let ms = toShelleyMetadata $ unTxMetadata txMData
    in case useEra @era of
         ConwayEra ->
-          -- guard (not (Map.null ms && null ss)) $>
           let ss = [L.NativeScript s | SimpleScript s <- ss']
            in guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
         DijkstraEra ->

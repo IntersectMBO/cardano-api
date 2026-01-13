@@ -116,7 +116,6 @@ module Cardano.Api.Experimental.Tx
 
     -- * Contents
     UnsignedTx (..)
-  , UnsignedTxError (..)
   , SignedTx (..)
   , makeUnsignedTx
   , makeKeyWitness
@@ -232,9 +231,6 @@ import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import GHC.Stack
 import Lens.Micro
-
-newtype UnsignedTxError
-  = UnsignedTxError String
 
 getUnsignedTxFee :: UnsignedTx era -> L.Coin
 getUnsignedTxFee (UnsignedTx unsignedTx) =
