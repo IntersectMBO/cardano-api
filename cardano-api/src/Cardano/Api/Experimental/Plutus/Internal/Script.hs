@@ -133,13 +133,12 @@ instance
 deserialisePlutusScriptInEra
   :: forall era lang
    . (Plutus.PlutusLanguage lang, HasTypeProxy (Plutus.SLanguage lang))
-  => IsEra era
+  => L.Era era
   => L.SLanguage lang
   -> BS.ByteString
-  -> Either CBOR.DecoderError (PlutusScriptInEra lang (LedgerEra era))
+  -> Either CBOR.DecoderError (PlutusScriptInEra lang era)
 deserialisePlutusScriptInEra _ bs =
-  obtainCommonConstraints (useEra @era) $
-    deserialiseFromCBOR (AsPlutusScriptInEra (proxyToAsType (Proxy @(L.SLanguage lang)))) bs
+  deserialiseFromCBOR (AsPlutusScriptInEra (proxyToAsType (Proxy @(L.SLanguage lang)))) bs
 
 hashPlutusScriptInEra
   :: forall era lang. IsEra era => PlutusScriptInEra lang (LedgerEra era) -> L.ScriptHash
@@ -177,11 +176,11 @@ data PlutusScriptOrReferenceInput lang era
 
 data AnyPlutusScript era where
   AnyPlutusScript
-    :: (IsEra era, Typeable lang, L.PlutusLanguage lang)
-    => PlutusScriptInEra lang (LedgerEra era) -> AnyPlutusScript era
+    :: (L.Era era, Typeable lang, L.PlutusLanguage lang)
+    => PlutusScriptInEra lang era -> AnyPlutusScript era
 
 decodeAnyPlutusScript
-  :: IsEra era
+  :: L.Era era
   => ByteString
   -> AnyPlutusScriptLanguage
   -> Either CBOR.DecoderError (AnyPlutusScript era)
