@@ -225,6 +225,7 @@ type ShelleyBasedEraConstraints era =
   , L.ADDRHASH ~ Blake2b.Blake2b_224
   , L.Era (ShelleyLedgerEra era)
   , L.EraPParams (ShelleyLedgerEra era)
+  , L.EraScript (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxCert (ShelleyLedgerEra era)
