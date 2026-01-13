@@ -615,9 +615,8 @@ calcReturnAndTotalCollateral fee pp' _ mTxCollateral cAddr totalAvailableCollate
       L.Coin returnCollateralAmount = totalCollateralLovelace * 100 - requiredCollateral
       returnAdaCollateral :: L.MaryValue = L.inject $ L.rationalToCoinViaFloor $ returnCollateralAmount % 100
       -- non-ada collateral is not used, so just return it as is in the return collateral output
-      _nonAdaCollateral = L.modifyCoin (const mempty) totalAvailableCollateral
-      returnCollateral = returnAdaCollateral
-  -- Remove non ada in collateral output -- <> nonAdaCollateral
+      nonAdaCollateral = L.modifyCoin (const mempty) totalAvailableCollateral
+      returnCollateral = returnAdaCollateral <> nonAdaCollateral
   case mTxCollateral of
     Just (TxCollateral{}) -> mTxCollateral
     Nothing
@@ -824,7 +823,7 @@ substituteExecutionUnits
     mapScriptWitnessesMinting txMintValue' = do
       let mappedScriptWitnesses =
             [ (policyId, (assets,) <$> substitutedWitness)
-            | (ix, policyId, assets, wit@(AnyPlutusScriptWitness{})) <- indexTxMintValue txMintValue'
+            | (ix, policyId, assets, wit) <- indexTxMintValue txMintValue'
             , let substitutedWitness = substituteExecUnits ix wit
             ]
           -- merge map values, wit1 == wit2 will always hold
@@ -1268,8 +1267,8 @@ makeTransactionBodyAutoBalance
         fee = calculateMinTxFee pp utxo txbody1 nkeys
         totalPotentialCollateral =
           mconcat
-            [ L.coin (txOut ^. obtainCommonConstraints (useEra @era) L.valueTxOutL :: L.MaryValue)
-            | collInputs <- pure $ txInsCollateral txbodycontent
+            [ (txOut ^. obtainCommonConstraints (useEra @era) L.valueTxOutL :: L.MaryValue)
+            | let collInputs = txInsCollateral txbodycontent
             , collTxIn <- collInputs
             , Just txOut <- pure $ Map.lookup (toShelleyTxIn collTxIn) (L.unUTxO utxo)
             ]
@@ -1281,7 +1280,7 @@ makeTransactionBodyAutoBalance
               (txInsCollateral txbodycontent)
               (txCollateral txbodycontent)
               changeaddr
-              (L.inject totalPotentialCollateral)
+              totalPotentialCollateral
 
     -- Make a txbody for calculating the balance. For this the size of the tx
     -- does not matter, instead it's just the values of the fee and outputs.
@@ -1303,13 +1302,13 @@ makeTransactionBodyAutoBalance
         when (adaBalance < 0) $
           Left $
             BalanceIsNegative adaBalance txbodyForChange
-        -- Previously we reported txbody2 now
-        -- I am reporting with txbodyForChange to
-        -- see if there are any tx inputs!
 
-        let balanceTxOut :: TxOut CtxTx (LedgerEra era) =
-              obtainCommonConstraints (useEra @era) $
-                TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance) Nothing
+        let
+          -- The multiasset output of evaluateTransactionBalance will be negative when
+          -- minting a multiasset. Therefore we must make the multiasset balance positive
+          balanceTxOut :: TxOut CtxTx (LedgerEra era) =
+            obtainCommonConstraints (useEra @era) $
+              TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance) Nothing
         first (uncurry TxBodyErrorMinUTxONotMet)
           . mapM_ (checkMinUTxOValue pp)
           $ txOuts txbodycontent1

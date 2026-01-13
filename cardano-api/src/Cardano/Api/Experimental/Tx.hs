@@ -172,6 +172,7 @@ module Cardano.Api.Experimental.Tx
     -- ** Any witness (key, simple script, plutus script).
   , AnyWitness (..)
   , getAnyWitnessScript
+  , getAnyWitnessReferenceInput
   , getAnyWitnessPlutusLanguage
   , getAnyWitnessScriptData
 
