@@ -191,9 +191,12 @@ if impl (ghc >= 9.12)
 allow-newer:
   cardano-data,
   cardano-ledger-binary,
+  cardano-ledger-babbage,
   cardano-ledger-byron,
   cardano-ledger-core,
+  cardano-ledger-mary,
   cardano-ledger-shelley,
+  cardano-protocol-tpraos,
   cardano-crypto-class,
   cardano-crypto-test,
   cardano-crypto-tests,
