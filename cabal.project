@@ -16,6 +16,31 @@ index-state:
   , hackage.haskell.org 2025-12-02T22:23:29Z
   , cardano-haskell-packages 2025-12-16T19:04:42Z
 
+-- BEGIN SRP STANZAS MANAGED BY STANZAMAN --
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  tag: 097938eb22c3d8dc00f55bdec749c062d3dfc157
+  subdir: cardano-crypto-praos
+  --sha256: 1lbqmivifkcmv4wpcqxcb8f4s8yjvzkinc26vmd3qyd9lk48fb6g
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  tag: 097938eb22c3d8dc00f55bdec749c062d3dfc157
+  subdir: cardano-crypto-tests
+  --sha256: 1lbqmivifkcmv4wpcqxcb8f4s8yjvzkinc26vmd3qyd9lk48fb6g
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  tag: ba70413df47db42bf667376eb80e8a51375e9c2f
+  subdir: cardano-crypto-class
+  --sha256: 0cd4x4qs00kqdng0dp7fcaj4yqcpmasqipys0xnax6qavwi83w7l
+
+-- END SRP STANZAS MANAGED BY STANZAMAN --
+
 packages:
     cardano-api
     cardano-api-gen
