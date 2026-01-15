@@ -259,6 +259,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Text.Lazy qualified as LT
 import Data.Text.Lazy.Builder (toLazyText)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Word
 import Data.Yaml qualified as Yaml
 import Formatting.Buildable (build)
@@ -1039,10 +1040,6 @@ pushLedgerState env hist sn st block =
 rollBackLedgerStateHist :: History a -> SlotNo -> History a
 rollBackLedgerStateHist hist maxInc = Seq.dropWhileL ((> maxInc) . (\(x, _, _) -> x)) hist
 
---------------------------------------------------------------------------------
--- Everything below was copied/adapted from db-sync                           --
---------------------------------------------------------------------------------
-
 genesisConfigToEnv
   :: GenesisConfig
   -> Either GenesisConfigError Env
@@ -1061,8 +1058,15 @@ genesisConfigToEnv
                 , " /= "
                 , textShow (Ledger.sgNetworkMagic shelleyGenesis)
                 ]
-        | Cardano.Chain.Genesis.gdStartTime (Cardano.Chain.Genesis.configGenesisData bCfg)
-            /= Ledger.sgSystemStart shelleyGenesis ->
+        -- byron start time is stored in seconds precision (using `canonical-json` library)
+        -- shelley start time is stored in fracions of a seconds precision (using `aeson` library)
+        -- Because of the representation precision difference, we need to round the values to the number of seconds before comparison.
+        | let byronSystemStart =
+                round . utcTimeToPOSIXSeconds . Cardano.Chain.Genesis.gdStartTime $
+                  Cardano.Chain.Genesis.configGenesisData bCfg
+                  :: Int
+        , let shelleySystemStart = round . utcTimeToPOSIXSeconds $ Ledger.sgSystemStart shelleyGenesis :: Int
+        , byronSystemStart /= shelleySystemStart ->
             Left . NECardanoConfig $
               mconcat
                 [ "SystemStart "
@@ -1098,18 +1102,18 @@ readNodeConfig (File ncf) = do
       , ncAlonzoGenesisFile =
           mapFile (mkAdjustPath ncf) (ncAlonzoGenesisFile ncfg)
       , ncConwayGenesisFile =
-          mapFile (mkAdjustPath ncf) <$> ncConwayGenesisFile ncfg
+          mapFile (mkAdjustPath ncf) (ncConwayGenesisFile ncfg)
       }
 
 data NodeConfig = NodeConfig
   { ncPBftSignatureThreshold :: !(Maybe Double)
   , ncByronGenesisFile :: !(File ByronGenesisConfig 'In)
-  , ncByronGenesisHash :: !GenesisHashByron
+  , ncByronGenesisHash :: !(Maybe GenesisHashByron)
   , ncShelleyGenesisFile :: !(File ShelleyGenesisConfig 'In)
-  , ncShelleyGenesisHash :: !GenesisHashShelley
+  , ncShelleyGenesisHash :: !(Maybe GenesisHashShelley)
   , ncAlonzoGenesisFile :: !(File AlonzoGenesis 'In)
-  , ncAlonzoGenesisHash :: !GenesisHashAlonzo
-  , ncConwayGenesisFile :: !(Maybe (File ConwayGenesisConfig 'In))
+  , ncAlonzoGenesisHash :: !(Maybe GenesisHashAlonzo)
+  , ncConwayGenesisFile :: !(File ConwayGenesisConfig 'In)
   , ncConwayGenesisHash :: !(Maybe GenesisHashConway)
   , ncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
   , ncByronProtocolVersion :: !Cardano.Chain.Update.ProtocolVersion
@@ -1125,12 +1129,12 @@ instance FromJSON NodeConfig where
       NodeConfig
         <$> o .:? "PBftSignatureThreshold"
         <*> fmap File (o .: "ByronGenesisFile")
-        <*> fmap GenesisHashByron (o .: "ByronGenesisHash")
+        <*> (fmap . fmap) GenesisHashByron (o .:? "ByronGenesisHash")
         <*> fmap File (o .: "ShelleyGenesisFile")
-        <*> fmap GenesisHashShelley (o .: "ShelleyGenesisHash")
+        <*> (fmap . fmap) GenesisHashShelley (o .:? "ShelleyGenesisHash")
         <*> fmap File (o .: "AlonzoGenesisFile")
-        <*> fmap GenesisHashAlonzo (o .: "AlonzoGenesisHash")
-        <*> (fmap . fmap) File (o .:? "ConwayGenesisFile")
+        <*> (fmap . fmap) GenesisHashAlonzo (o .:? "AlonzoGenesisHash")
+        <*> fmap File (o .: "ConwayGenesisFile")
         <*> (fmap . fmap) GenesisHashConway (o .:? "ConwayGenesisHash")
         <*> o .: "RequiresNetworkMagic"
         <*> parseByronProtocolVersion o
@@ -1570,12 +1574,22 @@ readByronGenesisConfig
   -> t m Cardano.Chain.Genesis.Config
 readByronGenesisConfig enc = do
   let file = unFile $ ncByronGenesisFile enc
-  genHash <-
+  (_, actualHash) <-
+    modifyError (NEByronConfig file . Cardano.Chain.Genesis.ConfigurationGenesisDataError) $
+      Cardano.Chain.Genesis.readGenesisData file
+  mExpectedHash <- forM (ncByronGenesisHash enc) $ \expectedHash ->
     liftEither
       . first NEError
-      $ Cardano.Crypto.Hashing.decodeAbstractHash (unGenesisHashByron $ ncByronGenesisHash enc)
+      $ Cardano.Crypto.Hashing.decodeAbstractHash (unGenesisHashByron expectedHash)
+  -- do the hash check only if the hash is present in the configuration file
+  -- otherwise `genesisHash` will always contain the actual hash
+  let genesisHash =
+        fromMaybe (Cardano.Chain.Genesis.unGenesisHash actualHash) mExpectedHash
   modifyError (NEByronConfig file) $
-    Cardano.Chain.Genesis.mkConfigFromFile (ncRequiresNetworkMagic enc) file genHash
+    -- note that mkConfigFromFile decodes genesis and recomputes the hash again
+    -- The genesis hash check there is mandatory, so we have to provide an actual hash of the genesis if there was not
+    -- any in the node configuration.
+    Cardano.Chain.Genesis.mkConfigFromFile (ncRequiresNetworkMagic enc) file genesisHash
 
 readShelleyGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
@@ -1601,20 +1615,17 @@ readConwayGenesisConfig
   => NodeConfig
   -> t m ConwayGenesis
 readConwayGenesisConfig enc = do
-  let mFile = ncConwayGenesisFile enc
-  case mFile of
-    Nothing -> return conwayGenesisDefaults
-    Just fp ->
-      modifyError (NEConwayConfig (unFile fp) . renderConwayGenesisError) $
-        readConwayGenesis (ncConwayGenesisFile enc) (ncConwayGenesisHash enc)
+  let fp = ncConwayGenesisFile enc
+  modifyError (NEConwayConfig (unFile fp) . renderConwayGenesisError) $
+    readConwayGenesis fp (ncConwayGenesisHash enc)
 
 readShelleyGenesis
   :: forall m t
    . MonadIOTransError ShelleyGenesisError t m
   => ShelleyGenesisFile 'In
-  -> GenesisHashShelley
+  -> Maybe GenesisHashShelley
   -> t m ShelleyConfig
-readShelleyGenesis (File file) expectedGenesisHash = do
+readShelleyGenesis (File file) mExpectedGenesisHash = do
   content <-
     modifyError id $ handleIOExceptT (ShelleyGenesisReadError file . textShow) $ BS.readFile file
   let genesisHash = GenesisHashShelley (Cardano.Crypto.Hash.Class.hashWith id content)
@@ -1626,7 +1637,7 @@ readShelleyGenesis (File file) expectedGenesisHash = do
   pure $ ShelleyConfig genesis genesisHash
  where
   checkExpectedGenesisHash :: GenesisHashShelley -> t m ()
-  checkExpectedGenesisHash actual =
+  checkExpectedGenesisHash actual = forM_ mExpectedGenesisHash $ \expectedGenesisHash ->
     when (actual /= expectedGenesisHash) $
       throwError (ShelleyGenesisHashMismatch actual expectedGenesisHash)
 
@@ -1669,9 +1680,9 @@ readAlonzoGenesis
   :: forall m t
    . MonadIOTransError AlonzoGenesisError t m
   => File AlonzoGenesis 'In
-  -> GenesisHashAlonzo
+  -> Maybe GenesisHashAlonzo
   -> t m AlonzoGenesis
-readAlonzoGenesis (File file) expectedGenesisHash = do
+readAlonzoGenesis (File file) mExpectedGenesisHash = do
   content <-
     modifyError id $ handleIOExceptT (AlonzoGenesisReadError file . textShow) $ LBS.readFile file
   let genesisHash = GenesisHashAlonzo . Cardano.Crypto.Hash.Class.hashWith id $ LBS.toStrict content
@@ -1680,7 +1691,7 @@ readAlonzoGenesis (File file) expectedGenesisHash = do
     A.eitherDecode content
  where
   checkExpectedGenesisHash :: GenesisHashAlonzo -> t m ()
-  checkExpectedGenesisHash actual =
+  checkExpectedGenesisHash actual = forM_ mExpectedGenesisHash $ \expectedGenesisHash ->
     when (actual /= expectedGenesisHash) $
       throwError (AlonzoGenesisHashMismatch actual expectedGenesisHash)
 
@@ -1722,13 +1733,10 @@ renderAlonzoGenesisError sge =
 readConwayGenesis
   :: forall m t
    . MonadIOTransError ConwayGenesisError t m
-  => Maybe (ConwayGenesisFile 'In)
+  => ConwayGenesisFile 'In
   -> Maybe GenesisHashConway
   -> t m ConwayGenesis
-readConwayGenesis Nothing Nothing = return conwayGenesisDefaults
-readConwayGenesis (Just fp) Nothing = throwError $ ConwayGenesisHashMissing $ unFile fp
-readConwayGenesis Nothing (Just _) = throwError ConwayGenesisFileMissing
-readConwayGenesis (Just (File file)) (Just expectedGenesisHash) = do
+readConwayGenesis (File file) mExpectedGenesisHash = do
   content <-
     modifyError id $ handleIOExceptT (ConwayGenesisReadError file . textShow) $ BS.readFile file
   let genesisHash = GenesisHashConway (Cardano.Crypto.Hash.Class.hashWith id content)
@@ -1736,14 +1744,13 @@ readConwayGenesis (Just (File file)) (Just expectedGenesisHash) = do
   liftEither . first (ConwayGenesisDecodeError file . Text.pack) $ Aeson.eitherDecodeStrict' content
  where
   checkExpectedGenesisHash :: GenesisHashConway -> t m ()
-  checkExpectedGenesisHash actual =
+  checkExpectedGenesisHash actual = forM_ mExpectedGenesisHash $ \expectedGenesisHash ->
     when (actual /= expectedGenesisHash) $
       throwError (ConwayGenesisHashMismatch actual expectedGenesisHash)
 
 data ConwayGenesisError
   = ConwayGenesisReadError !FilePath !Text
   | ConwayGenesisHashMismatch !GenesisHashConway !GenesisHashConway -- actual, expected
-  | ConwayGenesisHashMissing !FilePath
   | ConwayGenesisFileMissing
   | ConwayGenesisDecodeError !FilePath !Text
   deriving Show
@@ -1751,40 +1758,34 @@ data ConwayGenesisError
 instance Exception ConwayGenesisError
 
 renderConwayGenesisError :: ConwayGenesisError -> Text
-renderConwayGenesisError sge =
-  case sge of
-    ConwayGenesisFileMissing ->
-      mconcat
-        [ "\"ConwayGenesisFile\" is missing from node configuration. "
-        ]
-    ConwayGenesisHashMissing fp ->
-      mconcat
-        [ "\"ConwayGenesisHash\" is missing from node configuration: "
-        , Text.pack fp
-        ]
-    ConwayGenesisReadError fp err ->
-      mconcat
-        [ "There was an error reading the genesis file: "
-        , Text.pack fp
-        , " Error: "
-        , err
-        ]
-    ConwayGenesisHashMismatch actual expected ->
-      mconcat
-        [ "Wrong Conway genesis file: the actual hash is "
-        , renderHash (unGenesisHashConway actual)
-        , ", but the expected Conway genesis hash given in the node "
-        , "configuration file is "
-        , renderHash (unGenesisHashConway expected)
-        , "."
-        ]
-    ConwayGenesisDecodeError fp err ->
-      mconcat
-        [ "There was an error parsing the genesis file: "
-        , Text.pack fp
-        , " Error: "
-        , err
-        ]
+renderConwayGenesisError = \case
+  ConwayGenesisFileMissing ->
+    mconcat
+      [ "\"ConwayGenesisFile\" is missing from node configuration. "
+      ]
+  ConwayGenesisReadError fp err ->
+    mconcat
+      [ "There was an error reading the genesis file: "
+      , Text.pack fp
+      , " Error: "
+      , err
+      ]
+  ConwayGenesisHashMismatch actual expected ->
+    mconcat
+      [ "Wrong Conway genesis file: the actual hash is "
+      , renderHash (unGenesisHashConway actual)
+      , ", but the expected Conway genesis hash given in the node "
+      , "configuration file is "
+      , renderHash (unGenesisHashConway expected)
+      , "."
+      ]
+  ConwayGenesisDecodeError fp err ->
+    mconcat
+      [ "There was an error parsing the genesis file: "
+      , Text.pack fp
+      , " Error: "
+      , err
+      ]
 
 renderHash
   :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString -> Text
