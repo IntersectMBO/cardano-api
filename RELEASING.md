@@ -213,7 +213,7 @@ If a bug affecting a release is discovered long after that release has been made
 
    Add the generated entry to the `CHANGELOG.md`, bump the version number in the `.cabal` file, and create a release PR targeting `master`.
 
-6. Publicate the releases to CHaP (Cardano Haskell Packages) in the same way than for normal releases (see [Releasing to `cardano-haskell-packages`](./RELEASING.md#releasing-to-cardano-haskell-packages) section): Use `add-from-github.sh` to create a CHaP entry for each of our new releases, open a PR in the CHaP repository, and once the build passes and is approved, we merge them.
+6. Publish the releases to CHaP (Cardano Haskell Packages) in the same way than for normal releases (see [Releasing to `cardano-haskell-packages`](./RELEASING.md#releasing-to-cardano-haskell-packages) section): Use `add-from-github.sh` to create a CHaP entry for each of our new releases, open a PR in the CHaP repository, and once the build passes and is approved, we merge them.
 
 7. Use `tag.sh` to create a release tag in the repo of the package we are fixing.
 
