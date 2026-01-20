@@ -96,12 +96,12 @@ library gen
   exposed-modules:
     Proto.Cardano.Rpc.Node
     Proto.Cardano.Rpc.Node_Fields
-    Proto.Utxorpc.V1alpha.Cardano.Cardano
-    Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields
-    Proto.Utxorpc.V1alpha.Query.Query
-    Proto.Utxorpc.V1alpha.Query.Query_Fields
-    Proto.Utxorpc.V1alpha.Submit.Submit
-    Proto.Utxorpc.V1alpha.Submit.Submit_Fields
+    Proto.Utxorpc.V1beta.Cardano.Cardano
+    Proto.Utxorpc.V1beta.Cardano.Cardano_Fields
+    Proto.Utxorpc.V1beta.Query.Query
+    Proto.Utxorpc.V1beta.Query.Query_Fields
+    Proto.Utxorpc.V1beta.Submit.Submit
+    Proto.Utxorpc.V1beta.Submit.Submit_Fields
 
   build-depends:
     proto-lens-protobuf-types,
