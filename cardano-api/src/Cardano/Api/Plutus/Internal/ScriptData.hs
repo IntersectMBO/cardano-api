@@ -86,7 +86,6 @@ import Data.Either.Combinators
 import Data.List qualified as List
 import Data.Maybe (fromMaybe)
 import Data.Scientific qualified as Scientific
-import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Text.Lazy qualified as Text.Lazy

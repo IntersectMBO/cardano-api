@@ -20,7 +20,6 @@ import Cardano.Api.Parser.Text qualified as P
 import Cardano.Ledger.Api.Era qualified as L
 
 import Data.Aeson
-import Data.Text (Text)
 import GHC.Stack
 import System.FilePath ((</>))
 

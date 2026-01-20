@@ -28,7 +28,6 @@ import Data.ByteString (ByteString)
 import Data.Data (Data)
 import Data.List qualified as List
 import Data.Set (Set)
-import Data.Text (Text)
 import GHC.Exts (IsList (..))
 import GHC.Stack
 

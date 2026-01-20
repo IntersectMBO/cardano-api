@@ -47,8 +47,6 @@ import Cardano.Api.Internal.Orphans ()
 import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Cbor
 
-import Cardano.Binary (DecoderError)
-
 import Control.Monad (unless)
 import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
@@ -63,7 +61,6 @@ import Data.Data (Data)
 import Data.List qualified as List
 import Data.Maybe (fromMaybe)
 import Data.String (IsString)
-import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 
 -- ----------------------------------------------------------------------------

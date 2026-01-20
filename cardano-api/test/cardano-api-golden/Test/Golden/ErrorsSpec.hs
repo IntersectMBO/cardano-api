@@ -56,7 +56,6 @@ import Data.Data
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
-import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Word

@@ -102,7 +102,6 @@ import Data.Ord (Down (Down), comparing)
 import Data.Ratio
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Text (Text)
 import GHC.Exts (IsList (..))
 import GHC.Stack
 import Lens.Micro ((.~), (^.))

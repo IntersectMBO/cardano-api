@@ -9,7 +9,6 @@ import Cardano.Api
 
 import Control.Monad (void)
 import Data.Aeson qualified as Aeson
-import Data.Text (Text)
 import Data.Word (Word32)
 
 import Test.Gen.Cardano.Api.Typed (genAddressByron, genAddressShelley)

@@ -53,7 +53,6 @@ import Control.Monad
 import Data.Bifunctor
 import Data.ByteString.Lazy qualified as LB
 import Data.Either.Combinators
-import Data.Text (Text)
 import Data.Text qualified as Text
 import Formatting (build, formatToString)
 

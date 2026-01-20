@@ -39,7 +39,6 @@ import Data.Function
 import Data.Map.Strict qualified as M
 import Data.Maybe
 import Data.Ratio ((%))
-import Data.Text (Text)
 import Data.Time.Format qualified as DT
 import GHC.Exts (IsList (..))
 import GHC.Stack

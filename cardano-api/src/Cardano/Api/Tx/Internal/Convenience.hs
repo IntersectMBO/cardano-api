@@ -32,7 +32,6 @@ import Cardano.Ledger.Keys qualified as L
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
 import Data.Set (Set)
-import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Exts (IsList (..))
 
