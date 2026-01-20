@@ -505,9 +505,9 @@ data TxBodyContent era
   , txProposalProcedures :: Maybe (TxProposalProcedures era)
   , txVotingProcedures :: Maybe (TxVotingProcedures era)
   , txCurrentTreasuryValue :: Maybe L.Coin
-  , -- -- ^ Current treasury value
-    txTreasuryDonation :: Maybe L.Coin
-    -- -- ^ Treasury donation to perform
+  -- ^ Current treasury value
+  , txTreasuryDonation :: Maybe L.Coin
+  -- ^ Treasury donation to perform
   }
 
 defaultTxBodyContent
