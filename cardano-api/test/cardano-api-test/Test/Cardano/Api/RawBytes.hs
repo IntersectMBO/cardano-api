@@ -13,8 +13,26 @@ import Test.Cardano.Api.Orphans ()
 
 import Hedgehog (Property)
 import Hedgehog qualified as H
+import Hedgehog.Gen qualified as H
+import Hedgehog.Range qualified as H
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
+
+prop_roundtrip_word8 :: Property
+prop_roundtrip_word8 =
+  roundtrip_raw_bytes AsWord8 $ H.word8 H.constantBounded
+
+prop_roundtrip_word16 :: Property
+prop_roundtrip_word16 =
+  roundtrip_raw_bytes AsWord16 $ H.word16 H.constantBounded
+
+prop_roundtrip_word32 :: Property
+prop_roundtrip_word32 =
+  roundtrip_raw_bytes AsWord32 $ H.word32 H.constantBounded
+
+prop_roundtrip_word64 :: Property
+prop_roundtrip_word64 =
+  roundtrip_raw_bytes AsWord64 $ H.word64 H.constantBounded
 
 -- Address CBOR round trips
 
@@ -103,7 +121,11 @@ tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Typed.RawBytes"
-    [ testProperty "roundtrip shelley address raw" prop_roundtrip_shelley_address_raw
+    [ testProperty "roundtrip Word8" prop_roundtrip_word8
+    , testProperty "roundtrip Word16" prop_roundtrip_word16
+    , testProperty "roundtrip Word32" prop_roundtrip_word32
+    , testProperty "roundtrip Word64" prop_roundtrip_word64
+    , testProperty "roundtrip shelley address raw" prop_roundtrip_shelley_address_raw
     , testProperty "roundtrip byron address raw" prop_roundtrip_byron_address_raw
     , testProperty "roundtrip stake address raw" prop_roundtrip_stake_address_raw
     , testProperty "roundtrip script hash raw" prop_roundtrip_script_hash_raw

@@ -16,7 +16,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
 import Data.Kind (Constraint, Type)
 import Data.Typeable
-import Data.Word (Word16, Word8)
+import Data.Word (Word16, Word32, Word64, Word8)
 import Numeric.Natural (Natural)
 
 class Typeable t => HasTypeProxy t where
@@ -39,6 +39,14 @@ instance HasTypeProxy Word8 where
 instance HasTypeProxy Word16 where
   data AsType Word16 = AsWord16
   proxyToAsType _ = AsWord16
+
+instance HasTypeProxy Word32 where
+  data AsType Word32 = AsWord32
+  proxyToAsType _ = AsWord32
+
+instance HasTypeProxy Word64 where
+  data AsType Word64 = AsWord64
+  proxyToAsType _ = AsWord64
 
 instance HasTypeProxy Natural where
   data AsType Natural = AsNatural

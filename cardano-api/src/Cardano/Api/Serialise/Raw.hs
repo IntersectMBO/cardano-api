@@ -22,7 +22,7 @@ import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Pretty
 
 import Data.Bifunctor (Bifunctor (..))
-import Data.Bits (Bits (..))
+import Data.Bits (Bits (..), FiniteBits (finiteBitSize))
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Builder qualified as BSB
@@ -30,12 +30,10 @@ import Data.ByteString.Char8 (ByteString)
 import Data.ByteString.Char8 qualified as BSC
 import Data.ByteString.Lazy qualified as BSL
 import Data.Data (typeRep)
-import Data.Foldable qualified as F
-import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (TypeRep, Typeable)
-import Data.Word (Word16, Word8)
+import Data.Word (Word16, Word32, Word64, Word8)
 import Numeric.Natural (Natural)
 
 class (HasTypeProxy a, Typeable a) => SerialiseAsRawBytes a where
@@ -45,24 +43,41 @@ class (HasTypeProxy a, Typeable a) => SerialiseAsRawBytes a where
 
 instance SerialiseAsRawBytes Word8 where
   serialiseToRawBytes = BS.singleton
-  deserialiseFromRawBytes AsWord8 bs = case BS.unpack bs of
-    [w] -> pure w
-    _ ->
-      throwError . SerialiseAsRawBytesError $
-        "Cannot decode Word8 from (hex): " <> BSC.unpack (Base16.encode bs)
+  deserialiseFromRawBytes AsWord8 = deserialiseWord
 
 instance SerialiseAsRawBytes Word16 where
   serialiseToRawBytes = BS.toStrict . BSB.toLazyByteString . BSB.word16BE
-  deserialiseFromRawBytes AsWord16 bs = case fromIntegral <$> BS.unpack bs of
-    [] -> throwError $ SerialiseAsRawBytesError "Cannot deserialise empty bytes into Word16"
-    [b0] -> pure b0 -- just return the single byte present
-    [b0, b1] ->
-      -- we have number > 255, so we have to convert from big endian
-      pure $ b0 `shiftL` 8 .|. b1
-    _ ->
-      -- we cannot have more than two bytes for Word16
-      throwError . SerialiseAsRawBytesError $
-        "Cannot decode Word16 from (hex): " <> BSC.unpack (Base16.encode bs)
+  deserialiseFromRawBytes AsWord16 = deserialiseWord
+
+instance SerialiseAsRawBytes Word32 where
+  serialiseToRawBytes = BS.toStrict . BSB.toLazyByteString . BSB.word32BE
+  deserialiseFromRawBytes AsWord32 = deserialiseWord
+
+instance SerialiseAsRawBytes Word64 where
+  serialiseToRawBytes = BS.toStrict . BSB.toLazyByteString . BSB.word64BE
+  deserialiseFromRawBytes AsWord64 = deserialiseWord
+
+-- | Deserialise any length number. Does not require the input to have the byte length of the target type.
+deserialiseWord
+  :: forall a
+   . (FiniteBits a, Typeable a, Num a)
+  => ByteString
+  -- ^ bytes representation of the number
+  -> Either SerialiseAsRawBytesError a
+deserialiseWord bs
+  | BS.null bs =
+      throwError $
+        SerialiseAsRawBytesError $
+          "Cannot deserialise empty bytes into " <> typeName
+  | BS.length bs > maxBytes =
+      throwError $
+        SerialiseAsRawBytesError $
+          "Cannot decode " <> typeName <> ": Value too large (hex):" <> BSC.unpack (Base16.encode bs)
+  | otherwise =
+      pure $ BS.foldl' (\acc b -> acc `shiftL` 8 .|. fromIntegral b) 0 bs
+ where
+  maxBytes = finiteBitSize (zeroBits @a) `div` 8
+  typeName = show $ typeRep (Proxy @a)
 
 -- | Convert the number into binary value
 instance SerialiseAsRawBytes Natural where
@@ -72,7 +87,7 @@ instance SerialiseAsRawBytes Natural where
     go 0 acc = acc
     go x acc = go (x `shiftR` 8) (BSB.word8 (fromIntegral (x .&. 0xFF)) <> acc)
   deserialiseFromRawBytes AsNatural "\x00" = pure 0
-  deserialiseFromRawBytes AsNatural input = pure . F.foldl' (\acc byte -> acc `shiftL` 8 .|. fromIntegral byte) 0 $ BS.unpack input
+  deserialiseFromRawBytes AsNatural input = pure $ BS.foldl' (\acc byte -> acc `shiftL` 8 .|. fromIntegral byte) 0 input
 
 instance SerialiseAsRawBytes BS.ByteString where
   serialiseToRawBytes = id
