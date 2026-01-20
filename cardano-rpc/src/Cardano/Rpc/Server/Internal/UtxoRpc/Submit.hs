@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Submit
@@ -20,6 +21,7 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Orphans ()
+import Cardano.Rpc.Server.Internal.Tracing
 
 import RIO hiding (toList)
 
@@ -43,43 +45,34 @@ submitTxMethod req = do
   -- try to submit each one consecutively
   submitResults <- forM serialisedTxs $ \(i, txBytes) -> do
     let eTx =
-          first (("Failed to decode transaction with index " <> show i <> ": ") <>) $
+          first (TraceRpcSubmitTxDecodingFailure i) $
             deserialiseTx eon txBytes
 
-    eTxId <-
-      fmap join . forM eTx $
-        fmap
-          ( first
-              ( ("Failed to submit transaction with index " <> show i <> ": ")
-                  <>
-              )
-          )
-          . submitTx eon
+    eTxId <- fmap join . forM eTx $ submitTx eon i
 
-    pure $ case eTxId of
-      Left err -> def & #errorMessage .~ fromString err
-      Right txId' -> def & #ref .~ serialiseToRawBytes txId'
+    case eTxId of
+      Left err -> do
+        putTrace err
+        pure $ def & #errorMessage .~ docToText (pretty err)
+      Right txId' -> pure $ def & #ref .~ serialiseToRawBytes txId'
 
   pure $ def & #results .~ submitResults
  where
-  deserialiseTx :: ShelleyBasedEra era -> ByteString -> Either String (Tx era)
-  deserialiseTx sbe = shelleyBasedEraConstraints sbe $ first show . deserialiseFromCBOR asType
+  deserialiseTx :: ShelleyBasedEra era -> ByteString -> Either DecoderError (Tx era)
+  deserialiseTx sbe = shelleyBasedEraConstraints sbe $ deserialiseFromCBOR asType
 
   submitTx
     :: MonadRpc e m
     => ShelleyBasedEra era
+    -> Int -- transaction index in the request
     -> Tx era
-    -> m (Either String TxId)
-  submitTx sbe tx = do
+    -> m (Either TraceRpcSubmit TxId)
+  submitTx sbe i tx = do
     nodeConnInfo <- grab
     eRes <-
       tryAny $
         submitTxToNodeLocal nodeConnInfo (TxInMode sbe tx) >>= \case
-          Net.Tx.SubmitFail reason -> pure . Left $ show reason
+          Net.Tx.SubmitFail reason -> pure . Left $ TraceRpcSubmitTxValidationError i reason
           Net.Tx.SubmitSuccess -> pure $ Right . getTxId $ getTxBody tx
-    case eRes of
-      Left err -> do
-        let errString = displayException err
-        putTrace $ "N2C connection error while trying to submit a transaction: " <> errString
-        pure $ Left errString
-      Right res -> pure res
+
+    pure . join $ first TraceRpcSubmitN2cConnectionError eRes

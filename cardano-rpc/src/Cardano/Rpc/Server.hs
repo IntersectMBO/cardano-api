@@ -10,6 +10,12 @@
 
 module Cardano.Rpc.Server
   ( runRpcServer
+
+    -- * Traces
+  , TraceRpc (..)
+  , TraceRpcSubmit (..)
+  , TraceRpcQuery (..)
+  , TraceSpanEvent (..)
   )
 where
 
@@ -22,6 +28,7 @@ import Cardano.Rpc.Server.Internal.Env
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Node
 import Cardano.Rpc.Server.Internal.Orphans ()
+import Cardano.Rpc.Server.Internal.Tracing
 import Cardano.Rpc.Server.Internal.UtxoRpc.Query
 import Cardano.Rpc.Server.Internal.UtxoRpc.Submit
 
@@ -47,18 +54,18 @@ methodsUtxoRpc
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf UtxoRpc.QueryService)
 methodsUtxoRpc =
-  Method (mkNonStreaming readParamsMethod)
-    . Method (mkNonStreaming readUtxosMethod)
+  Method (mkNonStreaming $ wrapInSpan TraceRpcQueryParamsSpan . readParamsMethod)
+    . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadUtxosSpan . readUtxosMethod)
     $ NoMoreMethods
 
 methodsUtxoRpcSubmit
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf UtxoRpc.SubmitService)
 methodsUtxoRpcSubmit =
-  Method (mkNonStreaming submitTxMethod) NoMoreMethods
+  Method (mkNonStreaming $ wrapInSpan TraceRpcSubmitSpan . submitTxMethod) NoMoreMethods
 
 runRpcServer
-  :: Tracer IO String
+  :: Tracer IO TraceRpc
   -> IO (RpcConfig, NetworkMagic)
   -- ^ action which reloads RPC configuration
   -> IO ()
@@ -103,8 +110,8 @@ runRpcServer tracer loadRpcConfig = handleFatalExceptions $ do
   -- Top level hook for request handlers, handle exceptions
   topLevelHandler :: RequestHandler () -> RequestHandler ()
   topLevelHandler h unmask req resp = catchAny (h unmask req resp) $ \e ->
-    traceWith tracer $ "Exception when processing RPC request:\n" <> displayException e
+    traceWith tracer $ TraceRpcError e
 
   handleFatalExceptions :: (HasCallStack => IO ()) -> IO ()
   handleFatalExceptions = handleAny $ \e ->
-    traceWith tracer $ "RPC server fatal error: " <> displayException e
+    traceWith tracer $ TraceRpcFatalError e
