@@ -314,7 +314,7 @@ prop_decode_only_double_wrapped_plutus_script_bytes_CBOR = H.property $ do
     alwaysSucceedsDoubleEncoded
     (AsScript AsPlutusScriptV3)
 
-  H.decodeOnlyPlutusScriptBytesExperimental
+  H.assertValidPlutusScriptBytesExperimental
     Exp.ConwayEra
     alwaysSucceedsDoubleEncoded
     Ledger.SPlutusV3
@@ -328,7 +328,7 @@ prop_decode_only_wrapped_plutus_script_V1_CBOR = H.property $ do
     (SBS.fromShort shortBs)
     (AsScript AsPlutusScriptV1)
 
-  H.decodeOnlyPlutusScriptBytesExperimental
+  H.assertValidPlutusScriptBytesExperimental
     Exp.ConwayEra
     (SBS.fromShort shortBs)
     Ledger.SPlutusV1
@@ -341,7 +341,7 @@ prop_decode_only_wrapped_plutus_script_V2_CBOR = H.property $ do
     PlutusScriptV2
     (SBS.fromShort shortBs)
     (AsScript AsPlutusScriptV2)
-  H.decodeOnlyPlutusScriptBytesExperimental
+  H.assertValidPlutusScriptBytesExperimental
     Exp.ConwayEra
     (SBS.fromShort shortBs)
     Ledger.SPlutusV2
@@ -355,7 +355,7 @@ prop_decode_only_wrapped_plutus_script_V3_CBOR = H.property $ do
     (SBS.fromShort shortBs)
     (AsScript AsPlutusScriptV3)
 
-  H.decodeOnlyPlutusScriptBytesExperimental
+  H.assertValidPlutusScriptBytesExperimental
     Exp.ConwayEra
     (SBS.fromShort shortBs)
     Ledger.SPlutusV3

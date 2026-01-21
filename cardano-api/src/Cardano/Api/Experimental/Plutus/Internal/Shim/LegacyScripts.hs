@@ -116,7 +116,7 @@ createPlutusScriptDatum
   :: Witnessable thing era
   -> Old.PlutusScriptVersion lang
   -> Old.ScriptDatum witctx
-  -> PlutusScriptDatum (Old.ToLedgerPlutusLanguage lang) (ThingToPurpose thing)
+  -> PlutusScriptDatum (Old.ToLedgerPlutusLanguage lang) (PlutusScriptFor thing)
 createPlutusScriptDatum missingContext plutusVersion oldDatum =
   case (missingContext, oldDatum) of
     (w@WitTxIn{}, d@Old.ScriptDatumForTxIn{}) -> toPlutusScriptDatum w plutusVersion d
@@ -158,7 +158,7 @@ toNewPlutusScriptWitness
   -> Old.PlutusScriptOrReferenceInput lang
   -> ScriptRedeemer
   -> ExecutionUnits
-  -> PlutusScriptDatum (Old.ToLedgerPlutusLanguage lang) (ThingToPurpose thing)
+  -> PlutusScriptDatum (Old.ToLedgerPlutusLanguage lang) (PlutusScriptFor thing)
   -> Either
        CBOR.DecoderError
        ( AnyWitness
@@ -186,13 +186,13 @@ toNewPlutusScriptWitness _ w l (Old.PReferenceScript refInput) scriptRedeemer ex
   return $
     mkReferencePlutusScriptWitness w (toPlutusSLanguage l) refInput datum scriptRedeemer execUnits
 
-type family ThingToPurpose thing where
-  ThingToPurpose TxInItem = SpendingScript
-  ThingToPurpose CertItem = CertifyingScript
-  ThingToPurpose MintItem = MintingScript
-  ThingToPurpose WithdrawalItem = WithdrawingScript
-  ThingToPurpose VoterItem = VotingScript
-  ThingToPurpose ProposalItem = ProposingScript
+type family PlutusScriptFor thing where
+  PlutusScriptFor TxInItem = SpendingScript
+  PlutusScriptFor CertItem = CertifyingScript
+  PlutusScriptFor MintItem = MintingScript
+  PlutusScriptFor WithdrawalItem = WithdrawingScript
+  PlutusScriptFor VoterItem = VotingScript
+  PlutusScriptFor ProposalItem = ProposingScript
 
 mkPlutusScriptWitness
   :: forall era thing plutuslang
@@ -201,7 +201,7 @@ mkPlutusScriptWitness
   -> Witnessable thing (ShelleyLedgerEra era)
   -> L.SLanguage plutuslang
   -> L.PlutusRunnable plutuslang
-  -> PlutusScriptDatum plutuslang (ThingToPurpose thing)
+  -> PlutusScriptDatum plutuslang (PlutusScriptFor thing)
   -> ScriptRedeemer
   -> ExecutionUnits
   -> AnyWitness (ShelleyLedgerEra era)
@@ -285,7 +285,7 @@ mkReferencePlutusScriptWitness
   => Witnessable thing (ShelleyLedgerEra era)
   -> L.SLanguage plutuslang
   -> TxIn
-  -> PlutusScriptDatum plutuslang (ThingToPurpose thing)
+  -> PlutusScriptDatum plutuslang (PlutusScriptFor thing)
   -> ScriptRedeemer
   -> ExecutionUnits
   -> AnyWitness (ShelleyLedgerEra era)

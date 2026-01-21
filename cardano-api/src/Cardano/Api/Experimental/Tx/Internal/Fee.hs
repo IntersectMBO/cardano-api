@@ -487,9 +487,9 @@ checkAndIncludeChange
   -> Either (TxBodyErrorAutoBalance (LedgerEra era)) [TxOut CtxTx (LedgerEra era)]
 checkAndIncludeChange pp change@(TxOut changeOutput _) rest = do
   isChangeEmpty <- checkNonNegative pp change
-  if isChangeEmpty == Empty
-    then pure rest
-    else do
+  case isChangeEmpty of
+    Empty -> pure rest
+    NonEmpty -> do
       let coin = changeOutput ^. L.coinTxOutL
       first ((coin &) . uncurry TxBodyErrorAdaBalanceTooSmall) $
         checkMinUTxOValue pp change

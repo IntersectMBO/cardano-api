@@ -296,7 +296,7 @@ eraSpecificLedgerTxBody era ledgerbody bc =
     let propProcedures = txProposalProcedures bc
         voteProcedures = txVotingProcedures bc
         treasuryDonation = txTreasuryDonation bc
-        currentTresuryValue = txCurrentTreasuryValue bc
+        currentTreasuryValue = txCurrentTreasuryValue bc
      in obtainCommonConstraints e $
           ledgerbody
             & L.proposalProceduresTxBodyL
@@ -306,7 +306,7 @@ eraSpecificLedgerTxBody era ledgerbody bc =
             & L.treasuryDonationTxBodyL
               .~ fromMaybe (L.Coin 0) treasuryDonation
             & L.currentTreasuryValueTxBodyL
-              .~ L.maybeToStrictMaybe currentTresuryValue
+              .~ L.maybeToStrictMaybe currentTreasuryValue
 
 data TxOut ctx era where
   TxOut :: L.EraTxOut era => L.TxOut era -> Maybe (Datum ctx era) -> TxOut ctx era

@@ -6,7 +6,7 @@
 
 module Test.Hedgehog.Roundtrip.CBOR
   ( decodeOnlyPlutusScriptBytes
-  , decodeOnlyPlutusScriptBytesExperimental
+  , assertValidPlutusScriptBytesExperimental
   , trippingCbor
   )
 where
@@ -99,7 +99,7 @@ decodeOnlyPlutusScriptBytes _ _ scriptBytes typeProxy = do
   -- should be the same.
   expectedToBeValidScriptBytes H.=== confirmedToBeValidScriptBytes
 
-decodeOnlyPlutusScriptBytesExperimental
+assertValidPlutusScriptBytesExperimental
   :: forall era lang m
    . H.MonadTest m
   => HasTypeProxy (Plutus.SLanguage lang)
@@ -109,7 +109,7 @@ decodeOnlyPlutusScriptBytesExperimental
   -- ^ This can be a double encoded or "normal" plutus script
   -> L.SLanguage lang
   -> m ()
-decodeOnlyPlutusScriptBytesExperimental era scriptBytes lang = do
+assertValidPlutusScriptBytesExperimental era scriptBytes lang = do
   -- Decode a plutus script (double wrapped or "normal" plutus script) with the existing SerialiseAsCBOR instance for
   -- 'Script lang'. This should produce plutus script bytes that are not double encoded.
   case Exp.obtainCommonConstraints era $ Exp.deserialisePlutusScriptInEra lang scriptBytes

@@ -92,6 +92,8 @@ tx_canonical = H.propertyOnce $ do
           Exp.defaultTxBodyContent
             & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
             & Exp.setTxOuts [txOut]
+            & Exp.setTxValidityLowerBound 0
+            & Exp.setTxValidityUpperBound 0
             & Exp.setTxCollateral txColl
             & Exp.setTxFee (L.Coin 0)
 
