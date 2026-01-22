@@ -50,8 +50,8 @@ data AnyProtocolUpdate era where
 
 data AnyVote era where
   VotingProcedures
-    :: ConwayEraOnwards era
-    -> TxVotingProcedures BuildTx era
+    :: L.ConwayEraTxBody era
+    => L.VotingProcedures era
     -> AnyVote era
   NoVotes :: AnyVote era
 
@@ -64,7 +64,7 @@ createCompatibleTx
   -> Lovelace
   -- ^ Fee
   -> AnyProtocolUpdate era
-  -> AnyVote era
+  -> AnyVote (ShelleyLedgerEra era)
   -> TxCertificates BuildTx era
   -> Either ProtocolParametersConversionError (Tx era)
 createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates' =
@@ -108,8 +108,8 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
         updateVotingProcedures =
           case anyVote of
             NoVotes -> id
-            VotingProcedures conwayOnwards procedures ->
-              overwriteVotingProcedures conwayOnwards (convVotingProcedures procedures)
+            VotingProcedures procedures ->
+              overwriteVotingProcedures sbe procedures
 
         apiScriptWitnesses =
           [ (ix, AnyScriptWitness witness)
@@ -144,16 +144,6 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
       babbageEraOnwardsConstraints beo $
         Endo $
           L.referenceInputsTxBodyL .~ fromList refInputs
-
-  overwriteVotingProcedures
-    :: ConwayEraOnwards era
-    -> L.VotingProcedures (ShelleyLedgerEra era)
-    -> L.Tx (ShelleyLedgerEra era)
-    -> L.Tx (ShelleyLedgerEra era)
-  overwriteVotingProcedures conwayOnwards votingProcedures =
-    conwayEraOnwardsConstraints conwayOnwards $
-      (L.bodyTxL . L.votingProceduresTxBodyL) .~ votingProcedures
-
   indexedTxCerts
     :: [ ( ScriptWitnessIndex
          , Exp.Certificate (ShelleyLedgerEra era)
@@ -189,6 +179,23 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
                   ]
           )
       ]
+
+overwriteVotingProcedures
+  :: ShelleyBasedEra era
+  -> L.VotingProcedures (ShelleyLedgerEra era)
+  -> L.Tx (ShelleyLedgerEra era)
+  -> L.Tx (ShelleyLedgerEra era)
+overwriteVotingProcedures sbe votingProcedures =
+  case sbe of
+    ShelleyBasedEraShelley -> id
+    ShelleyBasedEraAllegra -> id
+    ShelleyBasedEraMary -> id
+    ShelleyBasedEraAlonzo -> id
+    ShelleyBasedEraBabbage -> id
+    ShelleyBasedEraConway -> overwrite votingProcedures
+    ShelleyBasedEraDijkstra -> overwrite votingProcedures
+ where
+  overwrite vp = (L.bodyTxL . L.votingProceduresTxBodyL) .~ vp
 
 createCommonTxBody
   :: HasCallStack
