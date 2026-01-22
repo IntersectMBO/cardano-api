@@ -183,7 +183,7 @@ import Lens.Micro
 -- | A transaction that can contain everything
 -- except key witnesses.
 data UnsignedTx era
-  = L.EraTx (LedgerEra era) => UnsignedTx (Ledger.Tx (LedgerEra era))
+  = L.EraTx (LedgerEra era) => UnsignedTx (Ledger.Tx Ledger.TopTx (LedgerEra era))
 
 instance HasTypeProxy era => HasTypeProxy (UnsignedTx era) where
   data AsType (UnsignedTx era) = AsUnsignedTx (AsType era)
@@ -299,9 +299,9 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
 
 eraSpecificLedgerTxBody
   :: Era era
-  -> Ledger.TxBody (LedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (LedgerEra era)
   -> TxBodyContent BuildTx era
-  -> Ledger.TxBody (LedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (LedgerEra era)
 eraSpecificLedgerTxBody era ledgerbody bc =
   body era
  where
@@ -322,8 +322,8 @@ eraSpecificLedgerTxBody era ledgerbody bc =
               .~ L.maybeToStrictMaybe (unFeatured =<< currentTresuryValue)
 
 hashTxBody
-  :: L.HashAnnotated (Ledger.TxBody era) L.EraIndependentTxBody
-  => L.TxBody era -> Hash.Hash L.HASH L.EraIndependentTxBody
+  :: L.HashAnnotated (Ledger.TxBody Ledger.TopTx era) L.EraIndependentTxBody
+  => L.TxBody Ledger.TopTx era -> Hash.Hash L.HASH L.EraIndependentTxBody
 hashTxBody = L.extractHash . L.hashAnnotated
 
 makeKeyWitness
@@ -343,7 +343,7 @@ makeKeyWitness era (UnsignedTx unsignedTx) wsk =
 
 -- | A transaction that has been witnesssed
 data SignedTx era
-  = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx (LedgerEra era))
+  = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx Ledger.TopTx (LedgerEra era))
 
 deriving instance Eq (SignedTx era)
 

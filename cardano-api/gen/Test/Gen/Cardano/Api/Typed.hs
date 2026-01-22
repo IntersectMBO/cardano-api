@@ -169,8 +169,8 @@ import Cardano.Crypto.Seed qualified as Crypto
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Plutus.Language qualified as L
-import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
 import Control.Applicative (Alternative (..), optional)
 import Control.Monad
@@ -733,7 +733,7 @@ genTxValidityLowerBound =
 -- TODO: Accept a range for generating ttl.
 genTxValidityUpperBound :: ShelleyBasedEra era -> Gen (TxValidityUpperBound era)
 genTxValidityUpperBound sbe =
-  TxValidityUpperBound sbe <$> Gen.maybe genTtl
+  TxValidityUpperBound sbe . Ledger.maybeToStrictMaybe <$> Gen.maybe genTtl
 
 genTxMetadataInEra :: CardanoEra era -> Gen (TxMetadataInEra era)
 genTxMetadataInEra =

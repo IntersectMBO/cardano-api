@@ -11,6 +11,7 @@ import Cardano.Api.Experimental qualified as Exp
 
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 
+import Control.Applicative
 import Control.Monad (void)
 import Data.ByteString.Char8 qualified as BSC
 
@@ -68,7 +69,7 @@ tx_canonical = H.propertyOnce $ do
             , txOuts = [txOut]
             , txFee = TxFeeExplicit sbe (Coin 0)
             , txValidityLowerBound = TxValidityLowerBound AllegraEraOnwardsConway (SlotNo 0)
-            , txValidityUpperBound = TxValidityUpperBound sbe Nothing
+            , txValidityUpperBound = TxValidityUpperBound sbe empty
             , txTotalCollateral = TxTotalCollateral BabbageEraOnwardsConway (Coin 1)
             , txReturnCollateral = TxReturnCollateral BabbageEraOnwardsConway txOut
             }

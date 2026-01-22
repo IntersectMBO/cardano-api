@@ -25,6 +25,7 @@ import Cardano.Api.Tx.Internal.Sign
 import Cardano.Api.Value.Internal
 
 import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Core qualified as L
 
 import Data.Map.Strict qualified as Map
 import Data.Maybe
@@ -73,7 +74,7 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
       case anyProtocolUpdate of
         ProtocolUpdate shelleyToBabbageEra updateProposal -> do
           ledgerPParamsUpdate <- toLedgerUpdate sbe updateProposal
-          let updateTxBody :: Endo (L.TxBody (ShelleyLedgerEra era)) =
+          let updateTxBody :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era)) =
                 shelleyToBabbageEraConstraints shelleyToBabbageEra $
                   Endo $ \txb ->
                     txb & L.updateTxBodyL .~ SJust ledgerPParamsUpdate
@@ -93,7 +94,7 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
                 , txIn <- maybeToList $ getScriptWitnessReferenceInput sWit
                 ]
               -- append proposal reference inputs & set proposal procedures
-              updateTxBody :: Endo (L.TxBody (ShelleyLedgerEra era)) =
+              updateTxBody :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era)) =
                 conwayEraOnwardsConstraints conwayOnwards $
                   Endo $
                     (L.referenceInputsTxBodyL %~ (<> fromList referenceInputs))
@@ -126,13 +127,13 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
   era = toCardanoEra sbe
   appEndos = appEndo . mconcat
 
-  setCerts :: Endo (L.TxBody (ShelleyLedgerEra era))
+  setCerts :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era))
   setCerts =
     shelleyBasedEraConstraints sbe $
       Endo $
         L.certsTxBodyL .~ convCertificates sbe txCertificates'
 
-  setRefInputs :: Endo (L.TxBody (ShelleyLedgerEra era))
+  setRefInputs :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era))
   setRefInputs = do
     let refInputs =
           [ toShelleyTxIn refInput
@@ -148,8 +149,8 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
   overwriteVotingProcedures
     :: ConwayEraOnwards era
     -> L.VotingProcedures (ShelleyLedgerEra era)
-    -> L.Tx (ShelleyLedgerEra era)
-    -> L.Tx (ShelleyLedgerEra era)
+    -> L.Tx L.TopTx (ShelleyLedgerEra era)
+    -> L.Tx L.TopTx (ShelleyLedgerEra era)
   overwriteVotingProcedures conwayOnwards votingProcedures =
     conwayEraOnwardsConstraints conwayOnwards $
       (L.bodyTxL . L.votingProceduresTxBodyL) .~ votingProcedures
@@ -196,7 +197,7 @@ createCommonTxBody
   -> [TxIn]
   -> [TxOut ctx era]
   -> Lovelace
-  -> L.TxBody (ShelleyLedgerEra era)
+  -> L.TxBody L.TopTx (ShelleyLedgerEra era)
 createCommonTxBody era ins outs txFee' =
   let txIns' = map toShelleyTxIn ins
       txOuts' = map (toShelleyTxOutAny era) outs
@@ -224,7 +225,7 @@ addWitnesses witnesses (ShelleyTx sbe tx) =
     :: forall ledgerera
      . ShelleyLedgerEra era ~ ledgerera
     => L.EraTx ledgerera
-    => L.Tx ledgerera
+    => L.Tx L.TopTx ledgerera
   txCommon =
     tx
       & L.witsTxL

@@ -15,11 +15,10 @@ module Cardano.Api.Ledger.Internal.Reexport
   , StakeReference (..)
   , WitVKey (..)
   , hashKey
-  , hashVerKeyVRF
   , hashWithSerialiser
   , fromVRFVerKeyHash
   , toVRFVerKeyHash
-  , PoolParams (..)
+  , StakePoolParams (..)
   , HasKeyRole
   , MIRPot (..)
   , MIRTarget (..)
@@ -118,7 +117,9 @@ module Cardano.Api.Ledger.Internal.Reexport
   , toPlainDecoder
   -- Shelley
   , secondsToNominalDiffTimeMicro
-  , ChainAccountState (..)
+  , ChainAccountState
+  , casTreasuryL
+  , casReservesL
   , NewEpochState (..)
   , ShelleyGenesisStaking (..)
   -- Babbage
@@ -144,6 +145,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , EraGov
   , EraTx (witsTxL, bodyTxL)
   , Tx
+  , TopTx
   , TxDats (..)
   , costModelsValid
   , getCostModelParams
@@ -172,7 +174,6 @@ module Cardano.Api.Ledger.Internal.Reexport
   , strictMaybeToMaybe
   , maybeToStrictMaybe
   , AnchorData (..)
-  , hashAnchorData
   , UnitInterval
   , mkVersion
   , NonNegativeInterval
@@ -255,7 +256,6 @@ import Cardano.Ledger.BaseTypes
   , Version
   , boundRational
   , dnsToText
-  , hashAnchorData
   , maybeToStrictMaybe
   , mkVersion
   , portToWord16
@@ -319,6 +319,7 @@ import Cardano.Ledger.Core
   , EraTxOut
   , PParams (..)
   , PoolCert (..)
+  , TopTx
   , Value
   , fromEraCBOR
   , ppMinFeeAL
@@ -348,13 +349,12 @@ import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), unData)
 import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
 import Cardano.Ledger.Shelley.API
-  ( ChainAccountState (..)
+  ( ChainAccountState
   , GenDelegPair (..)
   , NewEpochState (..)
   , StakeReference (..)
   , WitVKey (..)
   , hashKey
-  , hashVerKeyVRF
   )
 import Cardano.Ledger.Shelley.Genesis
   ( ShelleyGenesisStaking (..)
@@ -371,7 +371,13 @@ import Cardano.Ledger.Shelley.TxCert
   , ShelleyEraTxCert (..)
   , ShelleyTxCert (..)
   )
-import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
+import Cardano.Ledger.State
+  ( PoolMetadata (..)
+  , StakePoolParams (..)
+  , StakePoolRelay (..)
+  , casReservesL
+  , casTreasuryL
+  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Protocol.Crypto (Crypto, StandardCrypto)
 import Cardano.Slotting.Slot (EpochNo (..))

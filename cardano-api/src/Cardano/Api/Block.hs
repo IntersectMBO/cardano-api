@@ -80,6 +80,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (Foldable (toList))
 import Data.Text (Text)
+import Lens.Micro ((^.))
 
 -- ----------------------------------------------------------------------------
 -- Blocks in an era
@@ -174,7 +175,7 @@ getShelleyBlockTxs
   -> [Tx era]
 getShelleyBlockTxs era (Ledger.Block _header txs) =
   [ ShelleyTx era txinblock
-  | txinblock <- toList (Ledger.fromTxSeq txs)
+  | txinblock <- toList (txs ^. Ledger.txSeqBlockBodyL)
   ]
 
 -- ----------------------------------------------------------------------------

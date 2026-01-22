@@ -136,7 +136,7 @@ makeStakeAddressUnregistrationCertificate scred =
 makeStakePoolRegistrationCertificate
   :: forall era
    . IsShelleyBasedEra era
-  => Ledger.PoolParams
+  => Ledger.StakePoolParams
   -> Certificate (ShelleyLedgerEra era)
 makeStakePoolRegistrationCertificate poolParams =
   shelleyBasedEraConstraints (shelleyBasedEra @era) $

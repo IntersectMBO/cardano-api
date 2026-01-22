@@ -311,11 +311,10 @@ type EraCommonConstraints era =
   , L.EraUTxO (LedgerEra era)
   , L.Value (LedgerEra era) ~ L.MaryValue
   , FromCBOR (ChainDepState (ConsensusProtocol era))
-  , L.NativeScript (LedgerEra era) ~ L.Timelock (LedgerEra era)
   , PraosProtocolSupportsNode (ConsensusProtocol era)
   , ShelleyLedgerEra era ~ LedgerEra era
   , ToJSON (ChainDepState (ConsensusProtocol era))
-  , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
+  , L.HashAnnotated (Ledger.TxBody Ledger.TopTx (LedgerEra era)) L.EraIndependentTxBody
   , Api.IsCardanoEra era
   , Api.IsShelleyBasedEra era
   , IsEra era

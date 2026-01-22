@@ -716,7 +716,7 @@ evaluateTransactionExecutionUnitsShelley
   -> LedgerEpochInfo
   -> LedgerProtocolParameters era
   -> UTxO era
-  -> L.Tx (ShelleyLedgerEra era)
+  -> L.Tx L.TopTx (ShelleyLedgerEra era)
   -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
   caseShelleyToMaryOrAlonzoEraOnwards
@@ -835,12 +835,12 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits u
   isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
 
   lookupDelegDeposit
-    :: Ledger.Credential 'Ledger.Staking -> Maybe L.Coin
+    :: Ledger.Credential Ledger.Staking -> Maybe L.Coin
   lookupDelegDeposit stakeCred =
     Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
 
   lookupDRepDeposit
-    :: Ledger.Credential 'Ledger.DRepRole -> Maybe L.Coin
+    :: Ledger.Credential Ledger.DRepRole -> Maybe L.Coin
   lookupDRepDeposit drepCred =
     Map.lookup drepCred drepDelegDeposits
 
