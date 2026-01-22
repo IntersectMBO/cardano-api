@@ -54,7 +54,6 @@ import Cardano.Ledger.TxIn qualified as Ledger
 import Data.Aeson (withText)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
-import Data.Text (Text)
 
 -- ----------------------------------------------------------------------------
 -- Transaction Ids

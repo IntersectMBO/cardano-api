@@ -31,7 +31,6 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.Data (Data)
 import Data.Scientific (fromRationalRepetendLimited)
-import Data.Text (Text)
 import Data.Text qualified as T
 
 newtype JsonDecodeError = JsonDecodeError String

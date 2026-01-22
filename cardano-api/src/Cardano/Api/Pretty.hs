@@ -24,6 +24,9 @@ module Cardano.Api.Pretty
   , magenta
   , cyan
   , white
+
+    -- * Useful reexports
+  , Text
   )
 where
 

@@ -11,8 +11,6 @@ where
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Serialise.Cbor
 
-import Cardano.Binary (DecoderError (..))
-
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Term
   ( Term (..)

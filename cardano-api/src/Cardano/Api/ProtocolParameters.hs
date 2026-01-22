@@ -145,7 +145,6 @@ import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Text (Text)
 import Data.Word
 import GHC.Exts (IsList (..))
 import GHC.Generics

@@ -5,6 +5,7 @@ module Cardano.Api.Serialise.Cbor
   ( SerialiseAsCBOR (..)
   , FromCBOR (..)
   , ToCBOR (..)
+  , CBOR.DecoderError (..)
   )
 where
 

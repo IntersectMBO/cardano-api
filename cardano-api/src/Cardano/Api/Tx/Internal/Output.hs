@@ -98,7 +98,6 @@ import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Scientific (toBoundedInteger)
 import Data.Sequence.Strict qualified as Seq
-import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import Data.Type.Equality
 import Data.Typeable (Typeable)

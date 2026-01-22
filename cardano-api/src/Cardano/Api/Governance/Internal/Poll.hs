@@ -50,7 +50,6 @@ import Cardano.Api.Tx.Internal.Body
 import Cardano.Api.Tx.Internal.Sign
 import Cardano.Api.Tx.Internal.TxMetadata
 
-import Cardano.Binary (DecoderError (..))
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
 import Cardano.Crypto.Hash qualified as Hash
 import Cardano.Ledger.Hashes (HASH)
@@ -60,7 +59,6 @@ import Control.Monad (foldM, when)
 import Data.Either.Combinators (maybeToRight)
 import Data.Function ((&))
 import Data.Map.Strict qualified as Map
-import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Lazy qualified as Text.Lazy
 import Data.Text.Lazy.Builder qualified as Text.Builder

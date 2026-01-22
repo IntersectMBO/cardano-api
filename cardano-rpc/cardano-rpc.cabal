@@ -52,6 +52,7 @@ library
     Cardano.Rpc.Server.Internal.Error
     Cardano.Rpc.Server.Internal.Monad
     Cardano.Rpc.Server.Internal.Node
+    Cardano.Rpc.Server.Internal.Tracing
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
     Cardano.Rpc.Server.Internal.UtxoRpc.Submit
     Cardano.Rpc.Server.Internal.UtxoRpc.Type
@@ -82,6 +83,7 @@ library
     grpc-spec,
     proto-lens,
     proto-lens-protobuf-types,
+    random,
     rio,
     text,
 

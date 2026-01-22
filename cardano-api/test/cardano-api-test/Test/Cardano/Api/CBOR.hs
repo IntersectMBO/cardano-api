@@ -25,7 +25,6 @@ import Data.ByteString.Builder qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Data.List (sortOn)
-import Data.Text (Text)
 import Data.Text qualified as T
 import GHC.Stack (callStack)
 import GHC.Stack qualified as GHC

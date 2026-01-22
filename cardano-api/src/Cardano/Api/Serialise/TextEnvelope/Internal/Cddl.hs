@@ -68,7 +68,6 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.Data (Data)
 import Data.Either.Combinators (mapLeft)
 import Data.List qualified as List
-import Data.Text (Text)
 import Data.Text qualified as T
 
 -- Why have we gone this route? The serialization format of `TxBody era`

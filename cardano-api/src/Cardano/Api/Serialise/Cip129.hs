@@ -43,7 +43,6 @@ import Codec.Binary.Bech32 qualified as Bech32
 import Control.Monad (guard)
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
-import Data.Text (Text)
 import Data.Typeable
 import Data.Word (Word8)
 import GHC.Exts (IsList (..))

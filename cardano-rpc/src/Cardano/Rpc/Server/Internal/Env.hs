@@ -9,12 +9,13 @@ where
 
 import Cardano.Api
 import Cardano.Rpc.Server.Config
+import Cardano.Rpc.Server.Internal.Tracing
 
 import Control.Tracer (Tracer)
 
 data RpcEnv = RpcEnv
   { config :: !RpcConfig
-  , tracer :: forall m. MonadIO m => Tracer m String
+  , tracer :: forall m. MonadIO m => Tracer m TraceRpc
   , -- TODO replace with better connection management than one connection per rpc request
     rpcLocalNodeConnectInfo :: !LocalNodeConnectInfo
   }
