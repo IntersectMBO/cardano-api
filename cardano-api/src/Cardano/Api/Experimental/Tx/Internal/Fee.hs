@@ -795,7 +795,7 @@ substituteExecutionUnits
                ]
           mappedWithdrawals =
             [ (addr, withdrawal, mappedWitness)
-            | (ix, addr, withdrawal, wit@AnyPlutusScriptWitness{}) <- indexTxWithdrawals txWithdrawals'
+            | (ix, addr, withdrawal, wit) <- indexTxWithdrawals txWithdrawals'
             , let mappedWitness = substituteExecUnits ix wit
             ]
        in TxWithdrawals
@@ -848,7 +848,7 @@ substituteExecutionUnits
     mapScriptWitnessesVotes (Just v@(TxVotingProcedures vProcedures _)) = do
       let eSubstitutedExecutionUnits =
             [ (vote, updatedWitness)
-            | (ix, vote, wit@(AnyPlutusScriptWitness{})) <- indexTxVotingProcedures v
+            | (ix, vote, wit) <- indexTxVotingProcedures v
             , let updatedWitness = substituteExecUnits ix wit
             ]
 

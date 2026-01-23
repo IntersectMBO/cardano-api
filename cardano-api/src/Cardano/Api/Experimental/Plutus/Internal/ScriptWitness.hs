@@ -211,30 +211,13 @@ data PlutusScriptDatum (lang :: L.Language) (purpose :: PlutusScriptPurpose) whe
   NoScriptDatum
     :: PlutusScriptDatum lang purpose
 
-instance Eq (PlutusScriptDatum L.PlutusV1 SpendingScript) where
+instance Eq (PlutusScriptDatumF lang SpendingScript) => Eq (PlutusScriptDatum lang SpendingScript) where
   (==) (SpendingScriptDatum d1) (SpendingScriptDatum d2) = d1 == d2
   (==) InlineDatum InlineDatum = True
   (==) NoScriptDatum NoScriptDatum = True
   (==) _ _ = False
 
-instance Eq (PlutusScriptDatum L.PlutusV2 SpendingScript) where
-  (==) (SpendingScriptDatum d1) (SpendingScriptDatum d2) = d1 == d2
-  (==) InlineDatum InlineDatum = True
-  (==) NoScriptDatum NoScriptDatum = True
-  (==) _ _ = False
-
-instance Eq (PlutusScriptDatum L.PlutusV3 SpendingScript) where
-  (==) (SpendingScriptDatum d1) (SpendingScriptDatum d2) = d1 == d2
-  (==) InlineDatum InlineDatum = True
-  (==) NoScriptDatum NoScriptDatum = True
-  (==) _ _ = False
-
-instance Eq (PlutusScriptDatum L.PlutusV4 SpendingScript) where
-  (==) (SpendingScriptDatum d1) (SpendingScriptDatum d2) = d1 == d2
-  (==) InlineDatum InlineDatum = True
-  (==) NoScriptDatum NoScriptDatum = True
-  (==) _ _ = False
-
+--
 instance Eq (PlutusScriptDatum lang MintingScript) where
   (==) InlineDatum InlineDatum = True
   (==) NoScriptDatum NoScriptDatum = True
