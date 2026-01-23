@@ -216,10 +216,12 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
         Nothing
 
   H.note_ $ "Fees 3: " <> show fees3
-  -- H.note_ $ "TxBody 3: " <> show txBody3
-  -- H.note_ $ "TxBodyContent 3: " <> show txBodyContent3
-  -- H.note_ $ "Change output 3: " <> show changeOutput3
 
+  -- Check old and new api serialises a tx the same way
+
+  let newTx = Api.serialiseToRawBytes $ Exp.makeUnsignedTx era newTxBodyContent
+      oldTx = Api.serialiseToCBOR $ Api.makeSignedTransaction [] txBody
+  newTx H.=== oldTx
   H.success
 
 exampleProtocolParams :: Ledger.PParams UnexportedLedger.ConwayEra

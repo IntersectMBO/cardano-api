@@ -133,7 +133,8 @@ module Cardano.Api.Experimental.Tx
   , modTxOuts
   , setTxAuxScripts
   , setTxCertificates
-  , setTxCollateral
+  , setTxReturnCollateral
+  , setTxTotalCollateral
   , setTxCurrentTreasuryValue
   , setTxExtraKeyWits
   , setTxFee
@@ -163,7 +164,8 @@ module Cardano.Api.Experimental.Tx
   , TxProposalProcedures (..)
   , TxVotingProcedures (..)
   , TxWithdrawals (..)
-  , TxCollateral (..)
+  , TxReturnCollateral (..)
+  , TxTotalCollateral (..)
   , TxExtraKeyWitnesses (..)
   , TxInsReference (..)
 

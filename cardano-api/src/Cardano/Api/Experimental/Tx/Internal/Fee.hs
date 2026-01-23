@@ -354,7 +354,7 @@ estimateBalancedTxBody'
         obtainCommonConstraints (useEra @era) $
           L.mkBasicTxOut (toShelleyAddr changeaddr) changeWithMaxLovelace
 
-    let mDummyCollateral = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
+    let (mDummyReturnCollateral, mDummyTotalCollateral) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
 
     -- Step 3. Create a tx body with out max lovelace fee. This is strictly for
     -- calculating our fee with evaluateTransactionFee.
@@ -367,7 +367,8 @@ estimateBalancedTxBody'
               , txOuts =
                   obtainCommonConstraints (useEra @era) (TxOut changeTxOut Nothing)
                     : txOuts txbodycontent
-              , txCollateral = mDummyCollateral
+              , txReturnCollateral = mDummyReturnCollateral
+              , txTotalCollateral = mDummyTotalCollateral
               }
     let fee =
           evaluateTransactionFee
@@ -378,13 +379,14 @@ estimateBalancedTxBody'
             sizeOfAllReferenceScripts
 
         -- Step 4. We use the fee to calculate the required collateral
-        maybeTxCollateral =
+        (maybeReturnTxCollateral, maybeTotalTxCollateral) =
           obtainCommonConstraints (useEra @era) $
             calcReturnAndTotalCollateral
               fee
               pparams
               (txInsCollateral txbodycontent)
-              (txCollateral txbodycontent)
+              (txReturnCollateral txbodycontent)
+              (txTotalCollateral txbodycontent)
               changeaddr
               (L.inject totalPotentialCollateral)
 
@@ -398,7 +400,8 @@ estimateBalancedTxBody'
           useEra
           txbodycontent1
             { txFee = fee
-            , txCollateral = maybeTxCollateral
+            , txReturnCollateral = maybeReturnTxCollateral
+            , txTotalCollateral = maybeTotalTxCollateral
             }
 
     let fakeUTxO = createFakeUTxO txbodycontent1 $ L.coin availableUTxOValue
@@ -443,7 +446,8 @@ estimateBalancedTxBody'
               txbodycontent1
                 { txFee = fee
                 , txOuts = finalTxOuts
-                , txCollateral = maybeTxCollateral
+                , txReturnCollateral = maybeReturnTxCollateral
+                , txTotalCollateral = maybeTotalTxCollateral
                 }
 
         return finalTxBodyContent
@@ -589,15 +593,17 @@ calcReturnAndTotalCollateral
   -> Ledger.PParams (LedgerEra era)
   -> [TxIn]
   -- ^ Collateral inputs the initial TxBodyContent
-  -> Maybe (TxCollateral (LedgerEra era))
+  -> Maybe (TxReturnCollateral (LedgerEra era))
+  -- ^ From the initial TxBodyContent
+  -> Maybe TxTotalCollateral
   -- ^ From the initial TxBodyContent
   -> AddressInEra era
   -- ^ Change address
   -> L.MaryValue
   -- ^ Total available collateral (can include non-ada)
-  -> Maybe (TxCollateral (LedgerEra era))
-calcReturnAndTotalCollateral _ _ [] _ _ _ = Nothing
-calcReturnAndTotalCollateral fee pp' _ mTxCollateral cAddr totalAvailableCollateral = do
+  -> (Maybe (TxReturnCollateral (LedgerEra era)), Maybe TxTotalCollateral)
+calcReturnAndTotalCollateral _ _ [] _ _ _ _ = (Nothing, Nothing)
+calcReturnAndTotalCollateral fee pp' _ mTxReturnCollateral mTxTotalCollateral cAddr totalAvailableCollateral = do
   let colPerc = pp' ^. Ledger.ppCollateralPercentageL
       -- We must first figure out how much lovelace we have committed
       -- as collateral and we must determine if we have enough lovelace at our
@@ -617,18 +623,21 @@ calcReturnAndTotalCollateral fee pp' _ mTxCollateral cAddr totalAvailableCollate
       -- non-ada collateral is not used, so just return it as is in the return collateral output
       nonAdaCollateral = L.modifyCoin (const mempty) totalAvailableCollateral
       returnCollateral = returnAdaCollateral <> nonAdaCollateral
-  case mTxCollateral of
-    Just (TxCollateral{}) -> mTxCollateral
-    Nothing
+  case (mTxReturnCollateral, mTxTotalCollateral) of
+    (r@Just{}, t@Just{}) -> (r, t)
+    (r@Just{}, Nothing) -> (r, Nothing)
+    (Nothing, t@Just{}) -> (Nothing, t)
+    (Nothing, Nothing)
       | returnCollateralAmount < 0 ->
-          Nothing
+          (Nothing, Nothing)
       | otherwise ->
-          Just $
-            TxCollateral
-              { totalCollateral = totalCollateral
-              , returnCollateral =
-                  obtainCommonConstraints (useEra @era) $ L.mkBasicTxOut (toShelleyAddr cAddr) returnCollateral
-              }
+          ( Just
+              $ TxReturnCollateral
+              $ obtainCommonConstraints
+                (useEra @era)
+              $ L.mkBasicTxOut (toShelleyAddr cAddr) returnCollateral
+          , Just $ TxTotalCollateral totalCollateral
+          )
 
 -- | Transaction fees can be computed for a proposed transaction based on the
 -- expected number of key witnesses (i.e. signatures).
@@ -657,24 +666,22 @@ maybeDummyTotalCollAndCollReturnOutput
    . IsEra era
   => TxBodyContent (LedgerEra era)
   -> AddressInEra era
-  -> Maybe (TxCollateral (LedgerEra era))
-maybeDummyTotalCollAndCollReturnOutput TxBodyContent{txInsCollateral, txCollateral} cAddr =
+  -> (Maybe (TxReturnCollateral (LedgerEra era)), Maybe TxTotalCollateral)
+maybeDummyTotalCollAndCollReturnOutput TxBodyContent{txInsCollateral, txReturnCollateral, txTotalCollateral} cAddr =
   if null txInsCollateral
-    then Nothing
+    then (Nothing, Nothing)
     else
       let dummyRetCol =
-            obtainCommonConstraints (useEra @era) $
-              L.mkBasicTxOut (toShelleyAddr cAddr) (L.inject $ L.Coin (2 ^ (64 :: Integer)) - 1)
+            TxReturnCollateral $
+              obtainCommonConstraints (useEra @era) $
+                L.mkBasicTxOut (toShelleyAddr cAddr) (L.inject $ L.Coin (2 ^ (64 :: Integer)) - 1)
 
-          dummyTotCol = L.Coin (2 ^ (32 :: Integer) - 1)
-       in case txCollateral of
-            Just col -> Just col
-            Nothing ->
-              return $
-                TxCollateral
-                  { returnCollateral = dummyRetCol
-                  , totalCollateral = dummyTotCol
-                  }
+          dummyTotCol = TxTotalCollateral $ L.Coin (2 ^ (32 :: Integer) - 1)
+       in case (txReturnCollateral, txTotalCollateral) of
+            (r@Just{}, t@Just{}) -> (r, t)
+            (Just retCol, Nothing) -> (Just retCol, Just dummyTotCol)
+            (Nothing, Just col) -> (Just dummyRetCol, Just col)
+            (Nothing, Nothing) -> (Just dummyRetCol, Just dummyTotCol)
 
 -- | Calculate the partial change - this does not include certificates' deposits
 calculatePartialChangeValue
@@ -706,6 +713,7 @@ substituteExecutionUnits
   exUnitsMap
   txbodycontent@( TxBodyContent
                     txIns
+                    _
                     _
                     _
                     _
@@ -1245,13 +1253,14 @@ makeTransactionBodyAutoBalance
     -- around 4000 ada (2^32-1 lovelace).
     let maxLovelaceFee = L.Coin (2 ^ (32 :: Integer) - 1)
     -- Make a txbody that we will use for calculating the fees.
-    let mDummyCollateral = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
+    let (maybeDummyReturnTxCollateral, maybeDummyTotalTxCollateral) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     let txbody1 =
           makeUnsignedTx
             useEra
             txbodycontent1
               { txFee = maxLovelaceFee
-              , txCollateral = mDummyCollateral
+              , txReturnCollateral = maybeDummyReturnTxCollateral
+              , txTotalCollateral = maybeDummyTotalTxCollateral
               , txOuts =
                   txOuts txbodycontent
                     <> [initialChangeTxOut]
@@ -1272,13 +1281,14 @@ makeTransactionBodyAutoBalance
             , collTxIn <- collInputs
             , Just txOut <- pure $ Map.lookup (toShelleyTxIn collTxIn) (L.unUTxO utxo)
             ]
-        maybeTxCollateral =
+        (maybeReturnTxCollateral, maybeTotalTxCollateral) =
           obtainCommonConstraints (useEra @era) $
             calcReturnAndTotalCollateral
               fee
               pp
               (txInsCollateral txbodycontent)
-              (txCollateral txbodycontent)
+              (txReturnCollateral txbodycontent)
+              (txTotalCollateral txbodycontent)
               changeaddr
               totalPotentialCollateral
 
@@ -1291,7 +1301,8 @@ makeTransactionBodyAutoBalance
             useEra
             txbodycontent1
               { txFee = fee
-              , txCollateral = maybeTxCollateral
+              , txReturnCollateral = maybeReturnTxCollateral
+              , txTotalCollateral = maybeTotalTxCollateral
               }
 
     case useEra @era of
@@ -1327,7 +1338,8 @@ makeTransactionBodyAutoBalance
               txbodycontent1
                 { txFee = fee
                 , txOuts = finalTxOuts
-                , txCollateral = maybeTxCollateral
+                , txReturnCollateral = maybeReturnTxCollateral
+                , txTotalCollateral = maybeTotalTxCollateral
                 }
         let txbody3 =
               makeUnsignedTx

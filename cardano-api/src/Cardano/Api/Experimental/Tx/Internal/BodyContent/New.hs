@@ -10,7 +10,8 @@
 
 module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   ( TxCertificates (..)
-  , TxCollateral (..)
+  , TxReturnCollateral (..)
+  , TxTotalCollateral (..)
   , TxExtraKeyWitnesses (..)
   , TxInsReference (..)
   , TxMintValue (..)
@@ -34,7 +35,8 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , modTxOuts
   , setTxAuxScripts
   , setTxCertificates
-  , setTxCollateral
+  , setTxReturnCollateral
+  , setTxTotalCollateral
   , setTxCurrentTreasuryValue
   , setTxExtraKeyWits
   , setTxFee
@@ -149,8 +151,8 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
       fee = txFee bc
       withdrawals = convWithdrawals $ txWithdrawals bc
       certs = convCertificates $ txCertificates bc
-      retCollateral = returnCollateral <$> txCollateral bc
-      totCollateral = totalCollateral <$> txCollateral bc
+      retCollateral = unTxReturnCollateral <$> txReturnCollateral bc
+      totCollateral = unTxTotalCollateral <$> txTotalCollateral bc
       txAuxData = toAuxiliaryData (txMetadata bc) (txAuxScripts bc)
       scriptValidity = scriptValidityToIsValid $ txScriptValidity bc
       scriptIntegrityHash =
@@ -359,11 +361,9 @@ fromLegacyTxOut tOut@(OldApi.TxOut _ _ d _) =
 
 data TxInsReference era = TxInsReference [TxIn] (Set (Datum CtxTx era))
 
-data TxCollateral era
-  = TxCollateral
-  { totalCollateral :: L.Coin
-  , returnCollateral :: L.TxOut era
-  }
+newtype TxTotalCollateral = TxTotalCollateral {unTxTotalCollateral :: L.Coin}
+
+newtype TxReturnCollateral era = TxReturnCollateral {unTxReturnCollateral :: L.TxOut era}
 
 newtype TxValidityLowerBound = TxValidityLowerBound L.SlotNo
 
@@ -490,7 +490,8 @@ data TxBodyContent era
   , txInsCollateral :: [TxIn]
   , txInsReference :: TxInsReference era
   , txOuts :: [TxOut CtxTx era]
-  , txCollateral :: Maybe (TxCollateral era)
+  , txTotalCollateral :: Maybe TxTotalCollateral
+  , txReturnCollateral :: Maybe (TxReturnCollateral era)
   , txFee :: L.Coin
   , txValidityLowerBound :: Maybe L.SlotNo
   , txValidityUpperBound :: Maybe L.SlotNo
@@ -518,7 +519,8 @@ defaultTxBodyContent =
     , txInsCollateral = []
     , txInsReference = TxInsReference mempty Set.empty
     , txOuts = []
-    , txCollateral = Nothing
+    , txTotalCollateral = Nothing
+    , txReturnCollateral = Nothing
     , txFee = 0
     , txValidityLowerBound = Nothing
     , txValidityUpperBound = Nothing
@@ -770,8 +772,11 @@ setTxInsReference v txBodyContent = txBodyContent{txInsReference = v}
 setTxProtocolParams :: L.PParams era -> TxBodyContent era -> TxBodyContent era
 setTxProtocolParams v txBodyContent = txBodyContent{txProtocolParams = Just v}
 
-setTxCollateral :: TxCollateral era -> TxBodyContent era -> TxBodyContent era
-setTxCollateral v txBodyContent = txBodyContent{txCollateral = Just v}
+setTxReturnCollateral :: TxReturnCollateral era -> TxBodyContent era -> TxBodyContent era
+setTxReturnCollateral v txBodyContent = txBodyContent{txReturnCollateral = Just v}
+
+setTxTotalCollateral :: TxTotalCollateral -> TxBodyContent era -> TxBodyContent era
+setTxTotalCollateral v txBodyContent = txBodyContent{txTotalCollateral = Just v}
 
 setTxValidityLowerBound :: L.SlotNo -> TxBodyContent era -> TxBodyContent era
 setTxValidityLowerBound v txBodyContent = txBodyContent{txValidityLowerBound = Just v}

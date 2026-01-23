@@ -87,14 +87,16 @@ tx_canonical = H.propertyOnce $ do
           Exp.TxOut
             basicOut
             Nothing
-        txColl = Exp.TxCollateral (L.inject $ L.Coin 1) basicOut
+        txRetColl = Exp.TxReturnCollateral basicOut
+        txTotalColl = Exp.TxTotalCollateral (L.inject $ L.Coin 1)
         txBodyContent' =
           Exp.defaultTxBodyContent
             & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
             & Exp.setTxOuts [txOut]
             & Exp.setTxValidityLowerBound 0
             & Exp.setTxValidityUpperBound 0
-            & Exp.setTxCollateral txColl
+            & Exp.setTxReturnCollateral txRetColl
+            & Exp.setTxTotalCollateral txTotalColl
             & Exp.setTxFee (L.Coin 0)
 
     let unsignedTx = Exp.makeUnsignedTx era txBodyContent'
