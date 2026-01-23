@@ -311,6 +311,7 @@ type EraCommonConstraints era =
   , L.EraUTxO (LedgerEra era)
   , L.Value (LedgerEra era) ~ L.MaryValue
   , FromCBOR (ChainDepState (ConsensusProtocol era))
+  , L.NativeScript (LedgerEra era) ~ L.Timelock (LedgerEra era)
   , PraosProtocolSupportsNode (ConsensusProtocol era)
   , ShelleyLedgerEra era ~ LedgerEra era
   , ToJSON (ChainDepState (ConsensusProtocol era))

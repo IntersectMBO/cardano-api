@@ -147,7 +147,6 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary qualified as Binary (decCBOR, decodeFullAnnotator)
 import Cardano.Ledger.Conway.Scripts qualified as Conway
 import Cardano.Ledger.Core qualified as Ledger
-import Cardano.Ledger.Dijkstra.Scripts (upgradeTimelock)
 import Cardano.Ledger.Dijkstra.Scripts qualified as Dijkstra
 import Cardano.Ledger.Keys qualified as Shelley
 import Cardano.Ledger.Plutus.Language qualified as Plutus
@@ -1243,7 +1242,7 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript script)) =
     SimpleScriptInAlonzo -> Alonzo.NativeScript (toAllegraTimelock script)
     SimpleScriptInBabbage -> Alonzo.NativeScript (toAllegraTimelock script)
     SimpleScriptInConway -> Alonzo.NativeScript (toAllegraTimelock script)
-    SimpleScriptInDijkstra -> Alonzo.NativeScript (upgradeTimelock $ toAllegraTimelock script)
+    SimpleScriptInDijkstra -> Alonzo.NativeScript (toAllegraTimelock script)
 toShelleyScript
   ( ScriptInEra
       langInEra

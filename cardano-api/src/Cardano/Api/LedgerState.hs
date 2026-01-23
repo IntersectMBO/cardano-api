@@ -2286,7 +2286,7 @@ getLedgerTablesUTxOValues sbe tbs =
       -> Map TxIn (TxOut CtxUTxO era)
     ejectTables idx =
       let Consensus.LedgerTables (Ledger.ValuesMK values) = HFC.ejectLedgerTables idx tbs
-       in Map.mapKeys (fromShelleyTxIn . Shelley.getOriginalTxIn) $ Map.map (fromShelleyTxOut sbe) values
+       in Map.mapKeys fromShelleyTxIn $ Map.map (fromShelleyTxOut sbe) values
    in
     case sbe of
       ShelleyBasedEraShelley -> ejectTables (IS IZ)
