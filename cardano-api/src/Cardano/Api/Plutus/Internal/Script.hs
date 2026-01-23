@@ -467,7 +467,7 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
   deserialiseFromCBOR _ bs =
     case scriptLanguage :: ScriptLanguage lang of
       SimpleScriptLanguage ->
-        let version = Ledger.eraProtVerLow @(ShelleyLedgerEra AllegraEra)
+        let version = Ledger.eraProtVerHigh @(ShelleyLedgerEra AllegraEra)
          in SimpleScript . fromAllegraTimelock @(ShelleyLedgerEra AllegraEra)
               <$> Binary.decodeFullAnnotator version "Script" Binary.decCBOR (LBS.fromStrict bs)
       PlutusScriptLanguage PlutusScriptV1 ->
@@ -1494,7 +1494,7 @@ instance
   serialiseToCBOR (PlutusScriptInEra (PlutusScriptSerialised s)) =
     SBS.fromShort s
   deserialiseFromCBOR _ bs = do
-    let v = Ledger.eraProtVerLow @(ShelleyLedgerEra era)
+    let v = Ledger.eraProtVerHigh @(ShelleyLedgerEra era)
         scriptShortBs = SBS.toShort $ removePlutusScriptDoubleEncoding $ LBS.fromStrict bs
     let plutusScript :: Plutus.Plutus (ToLedgerPlutusLanguage lang)
         plutusScript = PlutusScriptBinary scriptShortBs

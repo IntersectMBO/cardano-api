@@ -346,6 +346,19 @@ prop_decode_only_wrapped_plutus_script_V2_CBOR = H.property $ do
     (SBS.fromShort shortBs)
     Ledger.SPlutusV2
 
+prop_decode_only_wrapped_plutus_script_V2_ByteStringToInteger_CBOR :: Property
+prop_decode_only_wrapped_plutus_script_V2_ByteStringToInteger_CBOR = H.property $ do
+  let v2Special = Base16.decodeLenient "5822582001000022325333573466e1ccde5251333792945200000100111200116375a005"
+  H.decodeOnlyPlutusScriptBytes
+    ShelleyBasedEraConway
+    PlutusScriptV2
+    v2Special
+    (AsScript AsPlutusScriptV2)
+  H.assertValidPlutusScriptBytesExperimental
+    Exp.ConwayEra
+    v2Special
+    Ledger.SPlutusV2
+
 prop_decode_only_wrapped_plutus_script_V3_CBOR :: Property
 prop_decode_only_wrapped_plutus_script_V3_CBOR = H.property $ do
   PlutusScriptSerialised shortBs <- H.forAll $ genPlutusScript PlutusScriptV3
@@ -569,6 +582,9 @@ tests =
     , testProperty
         "decode only wrapped plutus script V2 CBOR"
         prop_decode_only_wrapped_plutus_script_V2_CBOR
+    , testProperty
+        "decode only wrapped plutus script V2 special CBOR"
+        prop_decode_only_wrapped_plutus_script_V2_ByteStringToInteger_CBOR
     , testProperty
         "decode only wrapped plutus script V3 CBOR"
         prop_decode_only_wrapped_plutus_script_V3_CBOR

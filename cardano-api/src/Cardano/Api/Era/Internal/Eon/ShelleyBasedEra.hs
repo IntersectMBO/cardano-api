@@ -30,7 +30,7 @@ module Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 
     -- ** Mapping to era types from the Shelley ledger library
   , ShelleyLedgerEra
-  , eraProtVerLow
+  , eraProtVerHigh
   , ShelleyBasedEraConstraints
   , shelleyBasedEraConstraints
   )
@@ -357,15 +357,15 @@ type family ShelleyLedgerEra era = ledgerera | ledgerera -> era where
 
 -- | Lookup the lower major protocol version for the shelley based era. In other words
 -- this is the major protocol version that the era has started in.
-eraProtVerLow :: ShelleyBasedEra era -> L.Version
-eraProtVerLow = \case
-  ShelleyBasedEraShelley -> L.eraProtVerLow @L.ShelleyEra
-  ShelleyBasedEraAllegra -> L.eraProtVerLow @L.AllegraEra
-  ShelleyBasedEraMary -> L.eraProtVerLow @L.MaryEra
-  ShelleyBasedEraAlonzo -> L.eraProtVerLow @L.AlonzoEra
-  ShelleyBasedEraBabbage -> L.eraProtVerLow @L.BabbageEra
-  ShelleyBasedEraConway -> L.eraProtVerLow @L.ConwayEra
-  ShelleyBasedEraDijkstra -> L.eraProtVerLow @L.DijkstraEra
+eraProtVerHigh :: ShelleyBasedEra era -> L.Version
+eraProtVerHigh = \case
+  ShelleyBasedEraShelley -> L.eraProtVerHigh @L.ShelleyEra
+  ShelleyBasedEraAllegra -> L.eraProtVerHigh @L.AllegraEra
+  ShelleyBasedEraMary -> L.eraProtVerHigh @L.MaryEra
+  ShelleyBasedEraAlonzo -> L.eraProtVerHigh @L.AlonzoEra
+  ShelleyBasedEraBabbage -> L.eraProtVerHigh @L.BabbageEra
+  ShelleyBasedEraConway -> L.eraProtVerHigh @L.ConwayEra
+  ShelleyBasedEraDijkstra -> L.eraProtVerHigh @L.DijkstraEra
 
 requireShelleyBasedEra
   :: ()

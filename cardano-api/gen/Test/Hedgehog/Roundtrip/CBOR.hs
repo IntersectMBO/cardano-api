@@ -16,7 +16,6 @@ import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Plutus qualified as Exp
 import Cardano.Api.Ledger qualified as L
 
-import Cardano.Binary
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 

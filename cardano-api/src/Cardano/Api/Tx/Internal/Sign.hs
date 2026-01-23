@@ -237,7 +237,7 @@ deserialiseShelleyBasedTx
 deserialiseShelleyBasedTx mkTx bs =
   mkTx
     <$> CBOR.decodeFullAnnotator
-      (L.eraProtVerLow @ledgerera)
+      (L.eraProtVerHigh @ledgerera)
       "Shelley Tx"
       CBOR.decCBOR
       (LBS.fromStrict bs)
@@ -729,9 +729,9 @@ instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
   serialiseToCBOR (ByronKeyWitness wit) =
     Plain.serialize' wit
   serialiseToCBOR (ShelleyKeyWitness sbe wit) =
-    CBOR.serialize' (eraProtVerLow sbe) wit
+    CBOR.serialize' (eraProtVerHigh sbe) wit
   serialiseToCBOR (ShelleyBootstrapWitness sbe wit) =
-    CBOR.serialize' (eraProtVerLow sbe) wit
+    CBOR.serialize' (eraProtVerHigh sbe) wit
 
   deserialiseFromCBOR _ bs =
     case cardanoEra :: CardanoEra era of
@@ -752,12 +752,12 @@ instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
 -- provides a convenient way to try multiple decoders until one succeeds.
 legacyKeyWitnessEncode :: KeyWitness era -> ByteString
 legacyKeyWitnessEncode (ShelleyKeyWitness sbe wit) =
-  CBOR.serialize' (eraProtVerLow sbe) $
+  CBOR.serialize' (eraProtVerHigh sbe) $
     CBOR.encodeListLen 2
       <> CBOR.encodeWord 0
       <> CBOR.encCBOR wit
 legacyKeyWitnessEncode (ShelleyBootstrapWitness sbe wit) =
-  CBOR.serialize' (eraProtVerLow sbe) $
+  CBOR.serialize' (eraProtVerHigh sbe) $
     CBOR.encodeListLen 2
       <> CBOR.encodeWord 1
       <> CBOR.encCBOR wit
@@ -789,7 +789,7 @@ decodeShelleyBasedWitness sbe bs =
   shelleyKeyWitnessDecoder b =
     ShelleyKeyWitness sbe
       <$> CBOR.decodeFullAnnotator
-        (L.eraProtVerLow @(ShelleyLedgerEra era))
+        (L.eraProtVerHigh @(ShelleyLedgerEra era))
         "Shelley Witness"
         CBOR.decCBOR
         (LBS.fromStrict b)
@@ -797,14 +797,14 @@ decodeShelleyBasedWitness sbe bs =
   bootstrapWitnessDecoder b =
     ShelleyBootstrapWitness sbe
       <$> CBOR.decodeFullAnnotator
-        (L.eraProtVerLow @(ShelleyLedgerEra era))
+        (L.eraProtVerHigh @(ShelleyLedgerEra era))
         "Shelley Witness"
         CBOR.decCBOR
         (LBS.fromStrict b)
 
   legacyKeyWitnessDecoder b =
     CBOR.decodeFullAnnotator
-      (L.eraProtVerLow @(ShelleyLedgerEra era))
+      (L.eraProtVerHigh @(ShelleyLedgerEra era))
       "Shelley Witness"
       decodeLegacy
       (LBS.fromStrict b)

@@ -88,7 +88,7 @@ deserialiseWitnessLedger sbe te =
         w <-
           first TextEnvelopeDecodeError $
             CBOR.decodeFullAnnotator
-              (eraProtVerLow sbe)
+              (eraProtVerHigh sbe)
               "Shelley Witness"
               CBOR.decCBOR
               (LBS.fromStrict teRawCBOR)
@@ -97,7 +97,7 @@ deserialiseWitnessLedger sbe te =
         w <-
           first TextEnvelopeDecodeError $
             CBOR.decodeFullAnnotator
-              (eraProtVerLow sbe)
+              (eraProtVerHigh sbe)
               "Shelley Witness"
               CBOR.decCBOR
               (LBS.fromStrict teRawCBOR)

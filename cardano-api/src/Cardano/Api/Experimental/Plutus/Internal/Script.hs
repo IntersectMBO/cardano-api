@@ -119,7 +119,7 @@ instance
     L.serialize' (L.eraProtVerHigh @era) s
 
   deserialiseFromCBOR _ bs = do
-    let v = L.eraProtVerLow @era
+    let v = L.eraProtVerHigh @era
         scriptShortBs = SBS.toShort $ removePlutusScriptDoubleEncoding $ LBS.fromStrict bs
     let plutusScript :: Plutus.Plutus lang
         plutusScript = L.Plutus $ L.PlutusBinary scriptShortBs
