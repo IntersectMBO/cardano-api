@@ -1,5 +1,23 @@
 # Changelog for cardano-api
 
+## 10.22.0.0
+
+- In order to move away from the "old" api's `TxBodyContent`  that utilizes the "eon" abstractions and somewhat 
+  unnecessarily wrapped data definitions, we introduce a new `TxBodyContent` type that aims to be closer to the 
+  ledger's type definitions and therefore easier to use.
+  (feature)
+  [PR 1011](https://github.com/IntersectMBO/cardano-api/pull/1011)
+
+- Add `SerialiseAsRawBytes Word64` instance to `Cardano.Api.Serialise.Raw`
+  Add `Text reexport to `Cardano.Api.Pretty. Add `DecoderError` reexport to `Cardano.Api.Serialise.Cbor`
+  gRPC: Add tracing datatypes
+  (compatible)
+  [PR 1079](https://github.com/IntersectMBO/cardano-api/pull/1079)
+
+- Add empty hashes support in `NodeConfig`. Add start time check with seconds precision for Shelley/Byron geneses checks.
+  (breaking, bugfix)
+  [PR 1078](https://github.com/IntersectMBO/cardano-api/pull/1078)
+
 ## 10.21.0.0
 
 - Bump Plutus to version 1.55
