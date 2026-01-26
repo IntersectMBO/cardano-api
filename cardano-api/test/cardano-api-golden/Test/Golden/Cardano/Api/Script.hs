@@ -8,6 +8,7 @@ module Test.Golden.Cardano.Api.Script
   , test_golden_SimpleScriptV2_All
   , test_golden_SimpleScriptV2_Any
   , test_golden_SimpleScriptV2_MofN
+  , test_golden_AlwaysSucceeds
   , test_roundtrip_SimpleScript_JSON
   , test_roundtrip_ScriptData
   , test_roundtrip_HashableScriptData_JSON
@@ -20,15 +21,21 @@ import Cardano.Api.Parser.Text qualified as P
 import Cardano.Ledger.Api.Era qualified as L
 
 import Data.Aeson
-import GHC.Stack
-import System.FilePath ((</>))
+import Data.ByteString qualified as BS
+import Data.ByteString.Char8 qualified as BS
+import Data.Text qualified as Text
+import GHC.Stack (HasCallStack)
+import System.Directory (createDirectoryIfMissing)
+import System.Environment (lookupEnv)
+import System.FilePath (takeDirectory, (</>))
 
 import Test.Gen.Cardano.Api.Typed
 
 import Hedgehog ((===))
 import Hedgehog qualified as H
+import Hedgehog.Extras qualified as H
 import Hedgehog.Extras.Aeson
-import Test.Tasty (TestTree)
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
 exampleSimpleScriptV1_All :: SimpleScript
@@ -120,6 +127,55 @@ test_golden_SimpleScriptV2_MofN :: TestTree
 test_golden_SimpleScriptV2_MofN =
   testProperty "golden SimpleScriptV2 MofN" $
     goldenTestJsonValuePretty exampleSimpleScriptV2_MofN (goldenPath </> "SimpleV2/atleast.script")
+
+-- | Test showing that we can correctly deserialise a Plutus script that was
+-- saved in a CBOR hex-encoded text file or in a CBOR binary file
+test_golden_AlwaysSucceeds :: TestTree
+test_golden_AlwaysSucceeds = do
+  let expectedScriptHash = "58503a1d89a21fc9fc53d6a7cccef47341175a8f47636f57ccbdca2d"
+
+  testGroup
+    "golden AlwaysSucceeds"
+    [ testProperty "golden AlwaysSucceeds PlutusScriptV1 hex-encoded CBOR" $ do
+        let goldenFile = goldenPath </> "PlutusScriptV1/alwayssucceeds.txt"
+        H.propertyOnce $ do
+          H.diffVsGoldenFile
+            (Text.unpack $ serialiseToRawBytesHexText $ examplePlutusScriptAlwaysSucceeds WitCtxTxIn)
+            goldenFile
+
+          cborBytes <- H.evalIO $ BS.readFile goldenFile
+          -- 'BS.strip' is necessary in some scenarios such as when some user opens
+          -- the files and adds a newline (often done automically by their text
+          -- editor)
+          script <- H.evalEither $ deserialiseFromRawBytesHex $ BS.strip cborBytes
+
+          expectedScriptHash === serialiseToRawBytesHexText (hashScript (PlutusScript PlutusScriptV1 script))
+    , testProperty "golden AlwaysSucceeds PlutusScriptV1 bytestring CBOR" $
+        H.propertyOnce $ do
+          let goldenFile = goldenPath </> "PlutusScriptV1/alwayssucceeds.bin"
+              cborBytes = serialiseToCBOR $ examplePlutusScriptAlwaysSucceeds WitCtxTxIn
+
+          -- Write raw CBOR bytes if RECREATE_GOLDEN_FILES is set
+          -- Not using diffVsGoldenFile because we want to save the 'ByteString', and
+          -- not have to convert it to 'Text'.
+          -- Ideally, we should have a `diffVsGoldenBinaryFile
+          recreate <- H.evalIO $ lookupEnv "RECREATE_GOLDEN_FILES"
+          case recreate of
+            Just _ -> H.evalIO $ do
+              createDirectoryIfMissing True (takeDirectory goldenFile)
+              BS.writeFile goldenFile cborBytes
+            Nothing -> pure ()
+
+          -- Read back raw CBOR and deserialize
+          cborBytesRead <- H.evalIO $ BS.readFile goldenFile
+          -- 'BS.strip' is necessary in some scenarios such as when some user opens
+          -- the files and adds a newline (often done automically by their text
+          -- editor)
+          script <-
+            H.evalEither $ deserialiseFromCBOR (AsPlutusScript AsPlutusScriptV1) $ BS.strip cborBytesRead
+
+          expectedScriptHash === serialiseToRawBytesHexText (hashScript (PlutusScript PlutusScriptV1 script))
+    ]
 
 test_roundtrip_SimpleScript_JSON :: TestTree
 test_roundtrip_SimpleScript_JSON =
