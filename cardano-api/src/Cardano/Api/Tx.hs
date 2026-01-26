@@ -326,6 +326,7 @@ module Cardano.Api.Tx
   , collectTxBodyScriptWitnesses
   , collectTxBodyScriptWitnessRequirements
   , toScriptIndex
+  , fromScriptWitnessIndex
 
     -- ** Conversion to inline data
   , scriptDataToInlineDatum

@@ -29,6 +29,7 @@ module Cardano.Api.Plutus.Internal.Script
   , IsPlutusScriptLanguage (..)
   , IsScriptLanguage (..)
   , ToLedgerPlutusLanguage
+  , FromLedgerPlutusLanguage
 
     -- * Scripts in a specific language
   , Script (..)
@@ -466,7 +467,7 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
   deserialiseFromCBOR _ bs =
     case scriptLanguage :: ScriptLanguage lang of
       SimpleScriptLanguage ->
-        let version = Ledger.eraProtVerLow @(ShelleyLedgerEra AllegraEra)
+        let version = Ledger.eraProtVerHigh @(ShelleyLedgerEra AllegraEra)
          in SimpleScript . fromAllegraTimelock @(ShelleyLedgerEra AllegraEra)
               <$> Binary.decodeFullAnnotator version "Script" Binary.decCBOR (LBS.fromStrict bs)
       PlutusScriptLanguage PlutusScriptV1 ->
@@ -1466,6 +1467,12 @@ type family ToLedgerPlutusLanguage lang where
   ToLedgerPlutusLanguage PlutusScriptV3 = Plutus.PlutusV3
   ToLedgerPlutusLanguage PlutusScriptV4 = Plutus.PlutusV4
 
+type family FromLedgerPlutusLanguage lang where
+  FromLedgerPlutusLanguage Plutus.PlutusV1 = PlutusScriptV1
+  FromLedgerPlutusLanguage Plutus.PlutusV2 = PlutusScriptV2
+  FromLedgerPlutusLanguage Plutus.PlutusV3 = PlutusScriptV3
+  FromLedgerPlutusLanguage Plutus.PlutusV4 = PlutusScriptV4
+
 data PlutusScriptInEra era lang where
   PlutusScriptInEra :: PlutusScript lang -> PlutusScriptInEra era lang
 
@@ -1487,7 +1494,7 @@ instance
   serialiseToCBOR (PlutusScriptInEra (PlutusScriptSerialised s)) =
     SBS.fromShort s
   deserialiseFromCBOR _ bs = do
-    let v = Ledger.eraProtVerLow @(ShelleyLedgerEra era)
+    let v = Ledger.eraProtVerHigh @(ShelleyLedgerEra era)
         scriptShortBs = SBS.toShort $ removePlutusScriptDoubleEncoding $ LBS.fromStrict bs
     let plutusScript :: Plutus.Plutus (ToLedgerPlutusLanguage lang)
         plutusScript = PlutusScriptBinary scriptShortBs

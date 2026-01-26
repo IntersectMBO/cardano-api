@@ -48,7 +48,7 @@ import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Pretty.Internal.ShowOf
 
 import Cardano.Binary
-import Cardano.Ledger.Allegra.Scripts qualified as L
+import Cardano.Ledger.Alonzo.Plutus.Context qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Conway qualified as Ledger
@@ -298,22 +298,28 @@ obtainConwayConstraints ConwayEra a = a
 
 type EraCommonConstraints era =
   ( L.AllegraEraScript (LedgerEra era)
+  , L.AlonzoEraScript (LedgerEra era)
   , L.AlonzoEraTx (LedgerEra era)
   , L.BabbageEraPParams (LedgerEra era)
   , L.BabbageEraTxBody (LedgerEra era)
   , L.ConwayEraTxBody (LedgerEra era)
   , L.ConwayEraTxCert (LedgerEra era)
   , L.Era (LedgerEra era)
-  , L.EraScript (LedgerEra era)
+  , L.EraCertState (LedgerEra era)
+  , L.EraPlutusContext (LedgerEra era)
   , L.EraTx (LedgerEra era)
   , L.EraTxCert (LedgerEra era)
   , L.EraTxOut (LedgerEra era)
   , L.EraUTxO (LedgerEra era)
+  , Ord (L.PlutusPurpose L.AsIx (LedgerEra era))
+  , L.ScriptsNeeded (LedgerEra era) ~ L.AlonzoScriptsNeeded (LedgerEra era)
+  , L.Val (L.Value (LedgerEra era))
   , L.Value (LedgerEra era) ~ L.MaryValue
   , FromCBOR (ChainDepState (ConsensusProtocol era))
   , L.NativeScript (LedgerEra era) ~ L.Timelock (LedgerEra era)
   , PraosProtocolSupportsNode (ConsensusProtocol era)
   , ShelleyLedgerEra era ~ LedgerEra era
+  , LedgerEra era ~ ShelleyLedgerEra era
   , ToJSON (ChainDepState (ConsensusProtocol era))
   , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
   , Api.IsCardanoEra era

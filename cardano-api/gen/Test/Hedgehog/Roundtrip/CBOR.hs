@@ -6,11 +6,15 @@
 
 module Test.Hedgehog.Roundtrip.CBOR
   ( decodeOnlyPlutusScriptBytes
+  , assertValidPlutusScriptBytesExperimental
   , trippingCbor
   )
 where
 
 import Cardano.Api
+import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.Plutus qualified as Exp
+import Cardano.Api.Ledger qualified as L
 
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Language qualified as Plutus
@@ -93,3 +97,21 @@ decodeOnlyPlutusScriptBytes _ _ scriptBytes typeProxy = do
   -- If we have fixed the double encoding issue, the bytes produced
   -- should be the same.
   expectedToBeValidScriptBytes H.=== confirmedToBeValidScriptBytes
+
+assertValidPlutusScriptBytesExperimental
+  :: forall era lang m
+   . H.MonadTest m
+  => HasTypeProxy (Plutus.SLanguage lang)
+  => Plutus.PlutusLanguage lang
+  => Exp.Era era
+  -> ByteString
+  -- ^ This can be a double encoded or "normal" plutus script
+  -> L.SLanguage lang
+  -> m ()
+assertValidPlutusScriptBytesExperimental era scriptBytes lang = do
+  -- Decode a plutus script (double wrapped or "normal" plutus script) with the existing SerialiseAsCBOR instance for
+  -- 'Script lang'. This should produce plutus script bytes that are not double encoded.
+  case Exp.obtainCommonConstraints era $ Exp.deserialisePlutusScriptInEra lang scriptBytes
+         :: Either DecoderError (Exp.PlutusScriptInEra lang (Exp.LedgerEra era)) of
+    Left e -> failWith Nothing $ "Plutus lang: Error decoding script bytes: " ++ show (e :: DecoderError)
+    Right (Exp.PlutusScriptInEra{}) -> H.success

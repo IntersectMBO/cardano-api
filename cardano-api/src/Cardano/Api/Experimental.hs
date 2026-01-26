@@ -11,7 +11,6 @@ module Cardano.Api.Experimental
 
     -- ** Transaction-related
     UnsignedTx (..)
-  , UnsignedTxError (..)
   , SignedTx (..)
   , makeUnsignedTx
   , makeKeyWitness
@@ -27,6 +26,8 @@ module Cardano.Api.Experimental
 
     -- ** Transaction fee related
   , estimateBalancedTxBody
+  , evaluateTransactionFee
+  , collectTxBodyScriptWitnesses
 
     -- ** Era-related
   , BabbageEra
@@ -50,6 +51,8 @@ module Cardano.Api.Experimental
     -- ** Simple script related
   , SimpleScript (..)
   , SimpleScriptOrReferenceInput (..)
+  , deserialiseSimpleScript
+  , hashSimpleScript
 
     -- ** Plutus related
   , PlutusScriptInEra (..)
@@ -100,6 +103,5 @@ import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx
-import Cardano.Api.Experimental.Tx.Internal.Compatible
 import Cardano.Api.Experimental.Tx.Internal.Fee
 import Cardano.Api.Tx.Internal.Fee (evaluateTransactionExecutionUnitsShelley)

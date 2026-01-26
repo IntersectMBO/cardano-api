@@ -1,11 +1,23 @@
 module Cardano.Api.Experimental.Plutus
   ( -- * Plutus Script
-    PlutusScriptInEra (..)
+    AnyPlutusScript (..)
+  , decodeAnyPlutusScript
+  , PlutusScriptInEra (..)
+  , AnyPlutusScriptLanguage (..)
+  , deserialisePlutusScriptInEra
+  , hashPlutusScriptInEra
+  , plutusLanguageToText
+  , plutusScriptInEraLanguage
+  , plutusScriptInEraSLanguage
+  , plutusScriptInEraToScript
+  , textToPlutusLanguage
 
     -- * Legacy Scripts
   , legacyWitnessToScriptRequirements
   , legacyWitnessConversion
   , toPlutusSLanguage
+  , fromPlutusSLanguage
+  , mkLegacyPolicyId
 
     -- * Plutus Script Witness
   , PlutusScriptWitness (..)
@@ -16,7 +28,6 @@ module Cardano.Api.Experimental.Plutus
   , PlutusScriptPurpose (..)
   , PlutusScriptDatum (..)
   , NoScriptDatum (..)
-  , mkPlutusScriptWitness
   , getPlutusScriptWitnessLanguage
 
     -- ** Constuct an indexed plutus script witness.

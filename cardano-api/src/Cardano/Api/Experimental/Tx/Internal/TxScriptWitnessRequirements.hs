@@ -17,15 +17,12 @@ module Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   )
 where
 
-import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
-import Cardano.Api.Era.Internal.Eon.Convert (Convert (convert))
-import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Experimental.Era qualified as Exp
 import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus.Internal.Script (ExecutionUnits, fromAlonzoExUnits)
 
-import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Api.Era as L
 
 import Data.Map.Strict qualified as Map
@@ -69,38 +66,37 @@ instance Monoid (TxScriptWitnessRequirements L.DijkstraEra) where
   mempty = TxScriptWitnessRequirements mempty mempty mempty mempty
 
 getTxScriptWitnessRequirements
-  :: AlonzoEraOnwards era
-  -> [(Witnessable witnessable (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
-  -> TxScriptWitnessRequirements (ShelleyLedgerEra era)
-getTxScriptWitnessRequirements era wits =
+  :: L.AlonzoEraScript era
+  => Monoid (TxScriptWitnessRequirements era)
+  => [(Witnessable witnessable era, AnyWitness era)]
+  -> TxScriptWitnessRequirements era
+getTxScriptWitnessRequirements wits =
   let TxScriptWitnessRequirements l s d _ =
-        obtainMonoidConstraint era $
-          mconcat
-            [ TxScriptWitnessRequirements
-                (maybe mempty Set.singleton $ getAnyWitnessPlutusLanguage anyWit)
-                (maybe mempty return $ getAnyWitnessScript (convert era) anyWit)
-                (getAnyWitnessScriptData era anyWit)
-                (alonzoEraOnwardsConstraints era mempty)
-            | (_, anyWit) <- wits
-            ]
-   in TxScriptWitnessRequirements l s d (getAnyWitnessRedeemerPointerMap era wits)
+        mconcat
+          [ TxScriptWitnessRequirements
+              (maybe mempty Set.singleton $ getAnyWitnessPlutusLanguage anyWit)
+              (maybe mempty return $ getAnyWitnessScript anyWit)
+              (getAnyWitnessScriptData anyWit)
+              mempty
+          | (_, anyWit) <- wits
+          ]
+   in TxScriptWitnessRequirements l s d (getAnyWitnessRedeemerPointerMap wits)
 
 getTxScriptWitnessesRequirements
-  :: AlonzoEraOnwards era
-  -> [(Witnessable witnessable (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
-  -> TxScriptWitnessRequirements (ShelleyLedgerEra era)
-getTxScriptWitnessesRequirements eon wits =
-  obtainMonoidConstraint eon $ getTxScriptWitnessRequirements eon wits
+  :: L.AlonzoEraScript era
+  => Monoid (TxScriptWitnessRequirements era)
+  => [(Witnessable witnessable era, AnyWitness era)]
+  -> TxScriptWitnessRequirements era
+getTxScriptWitnessesRequirements wits =
+  getTxScriptWitnessRequirements wits
 
 obtainMonoidConstraint
-  :: AlonzoEraOnwards era
-  -> (Monoid (TxScriptWitnessRequirements (ShelleyLedgerEra era)) => a)
+  :: Exp.Era era
+  -> (Monoid (TxScriptWitnessRequirements (Exp.LedgerEra era)) => a)
   -> a
 obtainMonoidConstraint eon = case eon of
-  AlonzoEraOnwardsAlonzo -> id
-  AlonzoEraOnwardsBabbage -> id
-  AlonzoEraOnwardsConway -> id
-  AlonzoEraOnwardsDijkstra -> id
+  Exp.ConwayEra -> id
+  Exp.DijkstraEra -> id
 
 extractExecutionUnits :: TxScriptWitnessRequirements era -> [ExecutionUnits]
 extractExecutionUnits (TxScriptWitnessRequirements _ _ _ redeemers) =

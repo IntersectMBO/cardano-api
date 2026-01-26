@@ -398,7 +398,7 @@ decodePoolState
   -> Either DecoderError (PoolState era)
 decodePoolState sbe (SerialisedPoolState (Serialised ls)) =
   shelleyBasedEraConstraints sbe $
-    PoolState <$> decodeFull (Core.eraProtVerLow @(ShelleyLedgerEra era)) ls
+    PoolState <$> decodeFull (Core.eraProtVerHigh @(ShelleyLedgerEra era)) ls
 
 newtype PoolDistribution era = PoolDistribution
   { unPoolDistr :: Shelley.PoolDistr
@@ -410,7 +410,7 @@ decodePoolDistribution
   -> Serialised (PoolDistribution era)
   -> Either DecoderError (PoolDistribution era)
 decodePoolDistribution sbe (Serialised ls) =
-  PoolDistribution <$> decodeFull (eraProtVerLow sbe) ls
+  PoolDistribution <$> decodeFull (eraProtVerHigh sbe) ls
 
 newtype SerialisedStakeSnapshots era
   = SerialisedStakeSnapshots

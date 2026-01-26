@@ -29,6 +29,7 @@ where
 import Cardano.Api.Address
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Ledger qualified as L
@@ -37,7 +38,6 @@ import Cardano.Api.Plutus.Internal.ScriptData
 import Cardano.Api.Tx.Internal.TxIn
 import Cardano.Api.Value.Internal
 
-import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Conway.Scripts qualified as L
 
 import Data.Function
@@ -54,7 +54,7 @@ data IndexedPlutusScriptWitness witnessable (lang :: L.Language) (purpose :: Plu
     :: L.AlonzoEraScript era
     => Witnessable witnessable era
     -> (L.PlutusPurpose L.AsIx era)
-    -> (PlutusScriptWitness lang purpose era)
+    -> AnyPlutusScriptWitness lang purpose era
     -> IndexedPlutusScriptWitness witnessable lang purpose era
 
 deriving instance Show (IndexedPlutusScriptWitness witnessable lang purpose era)
@@ -147,7 +147,7 @@ createIndexedPlutusScriptWitness
   :: L.AlonzoEraScript era
   => Word32
   -> Witnessable witnessable era
-  -> PlutusScriptWitness lang purpose era
+  -> AnyPlutusScriptWitness lang purpose era
   -> IndexedPlutusScriptWitness witnessable lang purpose era
 createIndexedPlutusScriptWitness index witnessable =
   IndexedPlutusScriptWitness witnessable (toPlutusScriptPurpose index witnessable)
@@ -169,33 +169,32 @@ createIndexedPlutusScriptWitnesses witnessableThings =
 -- script. The ledger basically reconstructs the indicies (redeemer pointers) of this map can then look up the relevant
 -- execution units/redeemer pairing. NB: the redeemer pointer has been renamed to 'PlutusPurpose AsIndex' in the ledger.
 getAnyWitnessRedeemerPointerMap
-  :: AlonzoEraOnwards era
-  -> [(Witnessable witnessable (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
-  -> L.Redeemers (ShelleyLedgerEra era)
-getAnyWitnessRedeemerPointerMap eon anyWit =
-  constructRedeeemerPointerMap eon $
-    alonzoEraOnwardsConstraints eon $
-      createIndexedPlutusScriptWitnesses anyWit
+  :: L.AlonzoEraScript era
+  => [(Witnessable witnessable era, AnyWitness era)]
+  -> L.Redeemers era
+getAnyWitnessRedeemerPointerMap anyWit =
+  constructRedeeemerPointerMap $
+    createIndexedPlutusScriptWitnesses anyWit
 
 -- | An 'IndexedPlutusScriptWitness' contains everything we need to construct a single
 -- entry in the redeemer pointer map.
 constructRedeemerPointer
-  :: AlonzoEraOnwards era
-  -> AnyIndexedPlutusScriptWitness (ShelleyLedgerEra era)
-  -> L.Redeemers (ShelleyLedgerEra era)
-constructRedeemerPointer eon (AnyIndexedPlutusScriptWitness (IndexedPlutusScriptWitness _ purpose scriptWit)) =
-  let PlutusScriptWitness _ _ _ redeemer execUnits = scriptWit
-   in alonzoEraOnwardsConstraints eon $
-        L.Redeemers $
-          fromList [(purpose, (toAlonzoData redeemer, toAlonzoExUnits execUnits))]
+  :: L.Era era
+  => AnyIndexedPlutusScriptWitness era
+  -> L.Redeemers era
+constructRedeemerPointer (AnyIndexedPlutusScriptWitness (IndexedPlutusScriptWitness _ purpose scriptWit)) =
+  let redeemer = getAnyPlutusScriptWitnessRedeemer scriptWit
+      execUnits = getAnyPlutusScriptWitnessExecutionUnits scriptWit
+   in L.Redeemers $
+        fromList [(purpose, (toAlonzoData redeemer, toAlonzoExUnits execUnits))]
 
 constructRedeeemerPointerMap
-  :: AlonzoEraOnwards era
-  -> [AnyIndexedPlutusScriptWitness (ShelleyLedgerEra era)]
-  -> L.Redeemers (ShelleyLedgerEra era)
-constructRedeeemerPointerMap eon scriptWits =
-  let redeemerPointers = map (constructRedeemerPointer eon) scriptWits
-   in alonzoEraOnwardsConstraints eon $ mconcat redeemerPointers
+  :: L.AlonzoEraScript era
+  => [AnyIndexedPlutusScriptWitness era]
+  -> L.Redeemers era
+constructRedeeemerPointerMap scriptWits =
+  let redeemerPointers = map constructRedeemerPointer scriptWits
+   in mconcat redeemerPointers
 
 obtainAlonzoScriptPurposeConstraints
   :: AlonzoEraOnwards era

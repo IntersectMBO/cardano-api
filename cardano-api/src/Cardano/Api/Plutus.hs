@@ -12,6 +12,7 @@ module Cardano.Api.Plutus
   , IsPlutusScriptLanguage (..)
   , IsScriptLanguage (..)
   , ToLedgerPlutusLanguage
+  , FromLedgerPlutusLanguage
 
     -- * Scripts in a specific language
   , Script (..)

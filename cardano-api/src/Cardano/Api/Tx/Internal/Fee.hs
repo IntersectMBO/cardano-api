@@ -47,7 +47,9 @@ module Cardano.Api.Tx.Internal.Fee
   , calculateMinimumUTxO
 
     -- ** Internal helpers
+  , EvalTxExecutionUnitsLog
   , ResolvablePointers (..)
+  , extractScriptBytesAndLanguage
   , substituteExecutionUnits
   , handleExUnitsErrors
   )
@@ -85,7 +87,6 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
 import Cardano.Ledger.Credential as Ledger (Credential)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
-import Cardano.Ledger.Val qualified as L
 import Ouroboros.Consensus.HardFork.History qualified as Consensus
 
 import Data.Bifunctor (bimap, first, second)

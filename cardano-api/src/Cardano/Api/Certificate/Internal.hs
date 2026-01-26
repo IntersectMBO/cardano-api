@@ -10,7 +10,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 -- | Certificates embedded in transactions
 module Cardano.Api.Certificate.Internal
@@ -105,7 +104,6 @@ import Data.Maybe
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
-import Data.Type.Equality (TestEquality (..))
 import Data.Typeable
 import GHC.Exts (IsList (..), fromString)
 import Network.Socket (PortNumber)
@@ -144,28 +142,6 @@ deriving instance Eq (Certificate era)
 deriving instance Ord (Certificate era)
 
 deriving instance Show (Certificate era)
-
-instance TestEquality Certificate where
-  testEquality (ShelleyRelatedCertificate _ c) (ShelleyRelatedCertificate _ c') =
-    shelleyCertTypeEquality c c'
-  testEquality (ConwayCertificate _ c) (ConwayCertificate _ c') =
-    conwayCertTypeEquality c c'
-  testEquality ShelleyRelatedCertificate{} ConwayCertificate{} = Nothing
-  testEquality ConwayCertificate{} ShelleyRelatedCertificate{} = Nothing
-
-conwayCertTypeEquality
-  :: (Typeable eraA, Typeable eraB)
-  => Ledger.ConwayTxCert (ShelleyLedgerEra eraA)
-  -> Ledger.ConwayTxCert (ShelleyLedgerEra eraB)
-  -> Maybe (eraA :~: eraB)
-conwayCertTypeEquality _ _ = eqT
-
-shelleyCertTypeEquality
-  :: (Typeable eraA, Typeable eraB)
-  => Ledger.ShelleyTxCert (ShelleyLedgerEra eraA)
-  -> Ledger.ShelleyTxCert (ShelleyLedgerEra eraB)
-  -> Maybe (eraA :~: eraB)
-shelleyCertTypeEquality _ _ = eqT
 
 instance Typeable era => HasTypeProxy (Certificate era) where
   data AsType (Certificate era) = AsCertificate
