@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 10.23.0.0
+
+- Bumped `ouroboros-consensus` to include mempool timeouts patch
+  (breaking)
+  [PR 1087](https://github.com/IntersectMBO/cardano-api/pull/1087)
+
 ## 10.22.0.0
 
 - In order to move away from the "old" api's `TxBodyContent`  that utilizes the "eon" abstractions and somewhat 
