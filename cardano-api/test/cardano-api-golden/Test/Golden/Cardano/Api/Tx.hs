@@ -86,7 +86,7 @@ tx_canonical = H.propertyOnce $ do
         txOut =
           Exp.TxOut
             basicOut
-            Nothing
+
         txRetColl = Exp.TxReturnCollateral basicOut
         txTotalColl = Exp.TxTotalCollateral (L.inject $ L.Coin 1)
         txBodyContent' =
