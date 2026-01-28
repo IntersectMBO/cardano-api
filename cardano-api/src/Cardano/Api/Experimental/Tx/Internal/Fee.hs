@@ -750,6 +750,19 @@ substituteExecutionUnits
         & setTxVotingProcedures mappedVotes
         & setTxProposalProcedures mappedProposals
    where
+    substitudeExecUnitsTxMint
+      :: ScriptWitnessIndex
+      -> AnyScriptWitness (LedgerEra era)
+      -> Either (TxBodyErrorAutoBalance (LedgerEra era)) (AnyScriptWitness (LedgerEra era))
+    substitudeExecUnitsTxMint _ w@AnyScriptWitnessSimple{} = Right w
+    substitudeExecUnitsTxMint idx (AnyScriptWitnessPlutus psw) =
+      case Map.lookup idx exUnitsMap of
+        Nothing ->
+          Left $ TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap idx exUnitsMap
+        Just exunits ->
+          Right $
+            AnyScriptWitnessPlutus $
+              updatePlutusScriptWitnessExecutionUnits exunits psw
     substituteExecUnits
       :: ScriptWitnessIndex
       -> AnyWitness (LedgerEra era)
@@ -829,10 +842,15 @@ substituteExecutionUnits
       :: TxMintValue (LedgerEra era)
       -> Either (TxBodyErrorAutoBalance (LedgerEra era)) (TxMintValue (LedgerEra era))
     mapScriptWitnessesMinting txMintValue' = do
-      let mappedScriptWitnesses =
+      let mappedScriptWitnesses
+            :: [ ( PolicyId
+                 , Either (TxBodyErrorAutoBalance (LedgerEra era)) (PolicyAssets, AnyScriptWitness (LedgerEra era))
+                 )
+               ]
+          mappedScriptWitnesses =
             [ (policyId, (assets,) <$> substitutedWitness)
             | (ix, policyId, assets, wit) <- indexTxMintValue txMintValue'
-            , let substitutedWitness = substituteExecUnits ix wit
+            , let substitutedWitness = substitudeExecUnitsTxMint ix wit
             ]
           -- merge map values, wit1 == wit2 will always hold
           mergeValues (assets1, wit1) (assets2, _wit2) = (assets1 <> assets2, wit1)
@@ -931,8 +949,8 @@ collectTxBodyScriptWitnesses
     scriptWitnessesMinting txMintValue' =
       List.nub
         [ (ix, wit)
-        | (ix, _, _, Just wit@AnyScriptWitnessPlutus{}) <-
-            fmap toAnyScriptWitness <$> indexTxMintValue txMintValue'
+        | (ix, _, _, wit@AnyScriptWitnessPlutus{}) <-
+            indexTxMintValue txMintValue'
         ]
 
     scriptWitnessesVoting
@@ -1021,7 +1039,7 @@ indexTxMintValue
   -> [ ( ScriptWitnessIndex
        , PolicyId
        , PolicyAssets
-       , AnyWitness era
+       , AnyScriptWitness era
        )
      ]
 indexTxMintValue (TxMintValue policiesWithAssets) =
