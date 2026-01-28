@@ -177,7 +177,6 @@ module Cardano.Api.Tx
     -- ** Transaction body
     TxBody (..)
   , createTransactionBody
-  , createAndValidateTransactionBody
   , TxBodyContent (..)
 
     -- ** Byron only
