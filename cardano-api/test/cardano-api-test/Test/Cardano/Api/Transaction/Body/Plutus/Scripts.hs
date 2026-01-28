@@ -180,7 +180,7 @@ prop_extractAllIndexedPlutusScriptWitnesses =
           mconcat
             [ createIndexedPlutusScriptWitnesses $ [(Exp.WitTxIn tIn, sWit) | (tIn, sWit) <- generatedTxInWits]
             , createIndexedPlutusScriptWitnesses $
-                [ (Exp.WitMint pid pAssets, sWit)
+                [ (Exp.WitMint pid pAssets, anyScriptWitnessToAnyWitness sWit)
                 | (pid, (pAssets, sWit)) <- Map.toList $ Exp.unTxMintValue generatedTxMintWits
                 ]
             , createIndexedPlutusScriptWitnesses

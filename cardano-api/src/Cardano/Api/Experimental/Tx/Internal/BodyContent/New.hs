@@ -65,6 +65,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
 where
 
 import Cardano.Api.Address
+import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Certificate qualified as Exp
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Plutus
@@ -76,6 +77,7 @@ import Cardano.Api.Experimental.Plutus
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
   ( AnyWitness (..)
+  , anyScriptWitnessToAnyWitness
   )
 import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
@@ -399,14 +401,13 @@ mkTxCertificates era certs = TxCertificates . OMap.fromList $ map getStakeCred c
   getStakeCred (c@(Exp.Certificate cert), wit) =
     (c, (,wit) <$> getTxCertWitness (convert era) (obtainCommonConstraints era cert))
 
--- This is incorrect. Only scripts can witness minting!
 newtype TxMintValue era
   = TxMintValue
   { unTxMintValue
       :: Map
            PolicyId
            ( PolicyAssets
-           , AnyWitness era
+           , AnyScriptWitness era
            )
   }
   deriving (Eq, Show)
@@ -548,7 +549,7 @@ extractAllIndexedPlutusScriptWitnesses
 extractAllIndexedPlutusScriptWitnesses era b = obtainCommonConstraints era $ do
   let txInWits = extractWitnessableTxIns $ txIns b
       certWits = extractWitnessableCertificates $ txCertificates b
-      mintWits = extractWitnessableMints $ txMintValue b
+      mintWits = [(wit, anyScriptWitnessToAnyWitness sw) | (wit, sw) <- extractWitnessableMints $ txMintValue b]
       withdrawalWits = extractWitnessableWithdrawals $ txWithdrawals b
       proposalScriptWits = extractWitnessableProposals $ txProposalProcedures b
       voteWits = extractWitnessableVotes $ txVotingProcedures b
@@ -598,7 +599,7 @@ extractWitnessableMints
   :: forall era
    . IsEra era
   => TxMintValue (LedgerEra era)
-  -> [(Witnessable MintItem (LedgerEra era), AnyWitness (LedgerEra era))]
+  -> [(Witnessable MintItem (LedgerEra era), AnyScriptWitness (LedgerEra era))]
 extractWitnessableMints mVal =
   obtainCommonConstraints (useEra @era) $
     List.nub
@@ -700,7 +701,7 @@ collectTxBodyScriptWitnessRequirements
             extractWitnessableCertificates txCertificates
         txMintWits =
           obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
-            extractWitnessableMints txMintValue
+            [(wit, anyScriptWitnessToAnyWitness sw) | (wit, sw) <- extractWitnessableMints txMintValue]
         txVotingWits =
           obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
             extractWitnessableVotes txVotingProcedures
