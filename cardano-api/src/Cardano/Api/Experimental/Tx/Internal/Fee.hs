@@ -13,9 +13,11 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Api.Experimental.Tx.Internal.Fee
-  ( TxBodyErrorAutoBalance (..)
+  ( RecursiveFeeCalculationError (..)
+  , TxBodyErrorAutoBalance (..)
   , TxFeeEstimationError (..)
   , calculateMinimumUTxO
+  , calcMinFeeRecursive
   , collectTxBodyScriptWitnesses
   , estimateBalancedTxBody
   , evaluateTransactionExecutionUnits
@@ -83,11 +85,12 @@ import Data.Maybe
 import Data.OSet.Strict qualified as OSet
 import Data.Ord (Down (Down), comparing)
 import Data.Ratio
+import Data.Sequence.Strict qualified as Seq
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Exts (IsList (..))
 import GHC.Stack
-import Lens.Micro ((.~), (^.))
+import Lens.Micro ((%~), (.~), (^.))
 import Prettyprinter (punctuate)
 
 data TxBodyErrorAutoBalance era
@@ -656,6 +659,56 @@ evaluateTransactionFee
   -> L.Coin
 evaluateTransactionFee pp (UnsignedTx tx) keywitcount byronwitcount refScriptsSize =
   L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount) refScriptsSize
+
+newtype RecursiveFeeCalculationError = NotEnoughAda Coin deriving (Show, Eq)
+
+instance Error RecursiveFeeCalculationError where
+  prettyError (NotEnoughAda balance) =
+    mconcat
+      [ "The transaction balance is negative: "
+      , pretty balance
+      , "\nThis means that the transaction does not have enough ada to cover the fees. The usual solution is to provide more inputs, or inputs with more ada."
+      ]
+
+calcMinFeeRecursive
+  :: forall era
+   . IsEra era
+  => UnsignedTx (LedgerEra era)
+  -> L.UTxO (LedgerEra era)
+  -> L.PParams (LedgerEra era)
+  -> Int
+  -- ^ Number of extra key hashes for native scripts
+  -> Either RecursiveFeeCalculationError (UnsignedTx (LedgerEra era))
+calcMinFeeRecursive unSignTx@(UnsignedTx ledgerTx) utxo pparams nExtraWitnesses
+  | minFee == txBodyFee && L.isZero txBalanceCoin =
+      -- We have reached the minimum fee but there isn't a guarantee that
+      -- the inputs/outputs are balanced
+      return unSignTx
+  | minFee == txBodyFee && txBalanceCoin > 0 =
+      -- We have a surplus balance so we modify the outputs to include it.
+      let balancedOuts = balanceTxOuts txBalanceValue unSignTx
+          updatedTx = UnsignedTx (ledgerTx & L.bodyTxL . L.outputsTxBodyL .~ Seq.fromList balancedOuts)
+       in return updatedTx
+  | txBalanceCoin < 0 = Left $ NotEnoughAda txBalanceCoin
+  | otherwise =
+      let newTx = UnsignedTx (ledgerTx & L.bodyTxL . L.feeTxBodyL .~ minFee)
+       in calcMinFeeRecursive newTx utxo pparams nExtraWitnesses
+ where
+  minFee = obtainCommonConstraints (useEra @era) $ L.calcMinFeeTx utxo pparams ledgerTx nExtraWitnesses
+  txBodyFee = ledgerTx ^. L.bodyTxL . L.feeTxBodyL
+  txBalanceValue = evaluateTransactionBalance pparams mempty mempty mempty utxo unSignTx
+  txBalanceCoin = L.coin txBalanceValue
+
+balanceTxOuts
+  :: L.Value (LedgerEra era)
+  -> UnsignedTx (LedgerEra era)
+  -> [L.TxOut (LedgerEra era)]
+balanceTxOuts txBalance (UnsignedTx tx) =
+  let outs = toList $ tx ^. L.bodyTxL . L.outputsTxBodyL
+      split = List.uncons outs
+      (h, rest) = maybe (error "calcMinFeeRecursive: No outs!") id split
+      updatedout = h & L.valueTxOutL %~ (<> txBalance)
+   in updatedout : rest
 
 -- Essentially we check for the existence of collateral inputs. If they exist we
 -- create a fictitious collateral return output. Why? Because we need to put dummy values

@@ -25,6 +25,8 @@ module Cardano.Api.Experimental
   , mkTxCertificates
 
     -- ** Transaction fee related
+  , RecursiveFeeCalculationError (..)
+  , calcMinFeeRecursive
   , estimateBalancedTxBody
   , evaluateTransactionFee
   , collectTxBodyScriptWitnesses

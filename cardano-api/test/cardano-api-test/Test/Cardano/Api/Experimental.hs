@@ -15,24 +15,34 @@ import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Genesis qualified as Genesis
+import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Ledger qualified as Ledger
+import Cardano.Api.Parser.Text qualified as Api
 import Cardano.Api.Plutus qualified as Script
 import Cardano.Api.Tx (Tx (ShelleyTx))
 
+import Cardano.Ledger.Address qualified as L
 import Cardano.Ledger.Alonzo.Scripts qualified as UnexportedLedger
 import Cardano.Ledger.Api qualified as UnexportedLedger
+import Cardano.Ledger.Babbage.TxBody qualified as L
+import Cardano.Ledger.Conway qualified as L
+import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Credential qualified as L
+import Cardano.Ledger.Plutus.Data qualified as L
 import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
 import Control.Monad.Identity (Identity)
 import Data.Bifunctor (first)
+import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Ratio ((%))
 import Data.Text.Encoding qualified as Text
 import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time
-import Lens.Micro ((&))
+import Lens.Micro
 
 import Test.Gen.Cardano.Api.Typed (genTx)
 
@@ -126,10 +136,55 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
   -- Old API
   let oldFees = Api.evaluateTransactionFee sbe exampleProtocolParams txBody 0 1 0
       -- NEW API
-      newFees = Exp.evaluateTransactionFee exampleProtocolParams (Exp.makeUnsignedTx era newTxBodyContent) 0 1 0
+      unSignTx = Exp.makeUnsignedTx era newTxBodyContent
+      newFees = Exp.evaluateTransactionFee exampleProtocolParams unSignTx 0 1 0
+
+  -- Recursive calc
+  dummyTxIn <-
+    H.evalEither
+      ( Api.toShelleyTxIn
+          <$> Api.runParser
+            Api.parseTxIn
+            "be6efd42a3d7b9a00d09d77a5d41e55ceaf0bd093a8aa8a893ce70d9caafd978#0"
+      )
+
+  let paymentCredential :: L.PaymentCredential
+      paymentCredential =
+        L.KeyHashObj $
+          L.KeyHash
+            "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
+
+      stakingCredential :: L.StakeCredential
+      stakingCredential =
+        L.KeyHashObj $
+          L.KeyHash
+            "e37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee"
+      initialFundedAddress :: L.Addr
+      initialFundedAddress = L.Addr L.Testnet paymentCredential (L.StakeRefBase stakingCredential)
+      dummyLargeTxOut :: L.BabbageTxOut L.ConwayEra =
+        Exp.obtainCommonConstraints era $
+          L.BabbageTxOut
+            initialFundedAddress
+            (L.MaryValue (L.Coin 12_000_000) mempty)
+            L.NoDatum
+            SNothing
+
+      dummyUTxO = L.UTxO $ Map.singleton dummyTxIn dummyLargeTxOut
+  Exp.UnsignedTx recFeeTx <-
+    H.evalEither $ Exp.calcMinFeeRecursive unSignTx dummyUTxO exampleProtocolParams 0
+  let recFee = recFeeTx ^. (L.bodyTxL . L.feeTxBodyL)
   H.note_ $ "Fees 1: " <> show oldFees
 
-  oldFees H.=== newFees
+  oldFees H.=== L.Coin 236
+
+  newFees H.=== L.Coin 236
+
+  -- Recursive fee calculation appears result in fees that are ~ 20% lower
+  recFee H.=== L.Coin 193
+
+  H.assert $ recFee < oldFees
+
+  H.assert $ recFee < newFees
 
   -- Balance without ledger context (other that protocol parameters)
   -- Old api
