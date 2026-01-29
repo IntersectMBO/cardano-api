@@ -4592,24 +4592,13 @@ data QueryService = QueryService {}
 instance Data.ProtoLens.Service.Types.Service QueryService where
   type ServiceName QueryService = "QueryService"
   type ServicePackage QueryService = "utxorpc.v1beta.query"
-  type ServiceMethods QueryService = '["readData",
-                                       "readEraSummary",
-                                       "readGenesis",
-                                       "readParams",
-                                       "readTx",
-                                       "readUtxos",
-                                       "searchUtxos"]
+  type ServiceMethods QueryService = '["readParams", "readUtxos"]
   packedServiceDescriptor _
     = "\n\
       \\fQueryService\DC2_\n\
       \\n\
       \ReadParams\DC2'.utxorpc.v1beta.query.ReadParamsRequest\SUB(.utxorpc.v1beta.query.ReadParamsResponse\DC2\\\n\
-      \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponse\DC2b\n\
-      \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponse\DC2Y\n\
-      \\bReadData\DC2%.utxorpc.v1beta.query.ReadDataRequest\SUB&.utxorpc.v1beta.query.ReadDataResponse\DC2S\n\
-      \\ACKReadTx\DC2#.utxorpc.v1beta.query.ReadTxRequest\SUB$.utxorpc.v1beta.query.ReadTxResponse\DC2b\n\
-      \\vReadGenesis\DC2(.utxorpc.v1beta.query.ReadGenesisRequest\SUB).utxorpc.v1beta.query.ReadGenesisResponse\DC2k\n\
-      \\SOReadEraSummary\DC2+.utxorpc.v1beta.query.ReadEraSummaryRequest\SUB,.utxorpc.v1beta.query.ReadEraSummaryResponse"
+      \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponse"
 instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readParams" where
   type MethodName QueryService "readParams" = "ReadParams"
   type MethodInput QueryService "readParams" = ReadParamsRequest
@@ -4620,31 +4609,6 @@ instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readUtxos" whe
   type MethodInput QueryService "readUtxos" = ReadUtxosRequest
   type MethodOutput QueryService "readUtxos" = ReadUtxosResponse
   type MethodStreamingType QueryService "readUtxos" = 'Data.ProtoLens.Service.Types.NonStreaming
-instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "searchUtxos" where
-  type MethodName QueryService "searchUtxos" = "SearchUtxos"
-  type MethodInput QueryService "searchUtxos" = SearchUtxosRequest
-  type MethodOutput QueryService "searchUtxos" = SearchUtxosResponse
-  type MethodStreamingType QueryService "searchUtxos" = 'Data.ProtoLens.Service.Types.NonStreaming
-instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readData" where
-  type MethodName QueryService "readData" = "ReadData"
-  type MethodInput QueryService "readData" = ReadDataRequest
-  type MethodOutput QueryService "readData" = ReadDataResponse
-  type MethodStreamingType QueryService "readData" = 'Data.ProtoLens.Service.Types.NonStreaming
-instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readTx" where
-  type MethodName QueryService "readTx" = "ReadTx"
-  type MethodInput QueryService "readTx" = ReadTxRequest
-  type MethodOutput QueryService "readTx" = ReadTxResponse
-  type MethodStreamingType QueryService "readTx" = 'Data.ProtoLens.Service.Types.NonStreaming
-instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readGenesis" where
-  type MethodName QueryService "readGenesis" = "ReadGenesis"
-  type MethodInput QueryService "readGenesis" = ReadGenesisRequest
-  type MethodOutput QueryService "readGenesis" = ReadGenesisResponse
-  type MethodStreamingType QueryService "readGenesis" = 'Data.ProtoLens.Service.Types.NonStreaming
-instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readEraSummary" where
-  type MethodName QueryService "readEraSummary" = "ReadEraSummary"
-  type MethodInput QueryService "readEraSummary" = ReadEraSummaryRequest
-  type MethodOutput QueryService "readEraSummary" = ReadEraSummaryResponse
-  type MethodStreamingType QueryService "readEraSummary" = 'Data.ProtoLens.Service.Types.NonStreaming
 packedFileDescriptor :: Data.ByteString.ByteString
 packedFileDescriptor
   = "\n\
@@ -4747,19 +4711,14 @@ packedFileDescriptor
     \\SOReadTxResponse\DC20\n\
     \\STXtx\CAN\SOH \SOH(\v2 .utxorpc.v1beta.query.AnyChainTxR\STXtx\DC2?\n\
     \\n\
-    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip2\178\ENQ\n\
+    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip2\205\SOH\n\
     \\fQueryService\DC2_\n\
     \\n\
     \ReadParams\DC2'.utxorpc.v1beta.query.ReadParamsRequest\SUB(.utxorpc.v1beta.query.ReadParamsResponse\DC2\\\n\
-    \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponse\DC2b\n\
-    \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponse\DC2Y\n\
-    \\bReadData\DC2%.utxorpc.v1beta.query.ReadDataRequest\SUB&.utxorpc.v1beta.query.ReadDataResponse\DC2S\n\
-    \\ACKReadTx\DC2#.utxorpc.v1beta.query.ReadTxRequest\SUB$.utxorpc.v1beta.query.ReadTxResponse\DC2b\n\
-    \\vReadGenesis\DC2(.utxorpc.v1beta.query.ReadGenesisRequest\SUB).utxorpc.v1beta.query.ReadGenesisResponse\DC2k\n\
-    \\SOReadEraSummary\DC2+.utxorpc.v1beta.query.ReadEraSummaryRequest\SUB,.utxorpc.v1beta.query.ReadEraSummaryResponseB\152\SOH\n\
+    \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponseB\152\SOH\n\
     \\CANcom.utxorpc.v1beta.queryB\n\
-    \QueryProtoP\SOH\162\STX\ETXUVQ\170\STX\DC4Utxorpc.V1beta.Query\202\STX\DC4Utxorpc\\V1beta\\Query\226\STX Utxorpc\\V1beta\\Query\\GPBMetadata\234\STX\SYNUtxorpc::V1beta::QueryJ\188=\n\
-    \\a\DC2\ENQ\STX\NUL\181\SOH\SOH\n\
+    \QueryProtoP\SOH\162\STX\ETXUVQ\170\STX\DC4Utxorpc.V1beta.Query\202\STX\DC4Utxorpc\\V1beta\\Query\226\STX Utxorpc\\V1beta\\Query\\GPBMetadata\234\STX\SYNUtxorpc::V1beta::QueryJ\234\&9\n\
+    \\a\DC2\ENQ\STX\NUL\176\SOH\SOH\n\
     \9\n\
     \\SOH\f\DC2\ETX\STX\NUL\DC22// A consistent view of the state of the ledger\n\
     \\n\
@@ -5435,7 +5394,7 @@ packedFileDescriptor
     \\r\n\
     \\ENQ\EOT\SYN\STX\SOH\ETX\DC2\EOT\165\SOH\SUB\ESC\n\
     \G\n\
-    \\STX\ACK\NUL\DC2\ACK\169\SOH\NUL\181\SOH\SOH\SUB9 Service definition for querying the state of the chain.\n\
+    \\STX\ACK\NUL\DC2\ACK\169\SOH\NUL\176\SOH\SOH\SUB9 Service definition for querying the state of the chain.\n\
     \\n\
     \\v\n\
     \\ETX\ACK\NUL\SOH\DC2\EOT\169\SOH\b\DC4\n\
@@ -5456,49 +5415,4 @@ packedFileDescriptor
     \\r\n\
     \\ENQ\ACK\NUL\STX\SOH\STX\DC2\EOT\171\SOH\DLE \n\
     \\r\n\
-    \\ENQ\ACK\NUL\STX\SOH\ETX\DC2\EOT\171\SOH+<\n\
-    \3\n\
-    \\EOT\ACK\NUL\STX\STX\DC2\EOT\172\SOH\STXD\"% Search for UTxO based on a pattern.\n\
-    \\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\STX\SOH\DC2\EOT\172\SOH\ACK\DC1\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\STX\STX\DC2\EOT\172\SOH\DC2$\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\STX\ETX\DC2\EOT\172\SOH/B\n\
-    \+\n\
-    \\EOT\ACK\NUL\STX\ETX\DC2\EOT\173\SOH\STX;\"\GS Read specific datum by hash\n\
-    \\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\ETX\SOH\DC2\EOT\173\SOH\ACK\SO\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\ETX\STX\DC2\EOT\173\SOH\SI\RS\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\ETX\ETX\DC2\EOT\173\SOH)9\n\
-    \3\n\
-    \\EOT\ACK\NUL\STX\EOT\DC2\EOT\174\SOH\STX5\"% Get Txs by chain-specific criteria.\n\
-    \\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\EOT\SOH\DC2\EOT\174\SOH\ACK\f\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\EOT\STX\DC2\EOT\174\SOH\r\SUB\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\EOT\ETX\DC2\EOT\174\SOH%3\n\
-    \-\n\
-    \\EOT\ACK\NUL\STX\ENQ\DC2\EOT\175\SOH\STXD\"\US Get the genesis configuration\n\
-    \\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\ENQ\SOH\DC2\EOT\175\SOH\ACK\DC1\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\ENQ\STX\DC2\EOT\175\SOH\DC2$\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\ENQ\ETX\DC2\EOT\175\SOH/B\n\
-    \)\n\
-    \\EOT\ACK\NUL\STX\ACK\DC2\EOT\176\SOH\STXM\"\ESC Get the chain era summary\n\
-    \\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\ACK\SOH\DC2\EOT\176\SOH\ACK\DC4\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\ACK\STX\DC2\EOT\176\SOH\NAK*\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\ACK\ETX\DC2\EOT\176\SOH5Kb\ACKproto3"
+    \\ENQ\ACK\NUL\STX\SOH\ETX\DC2\EOT\171\SOH+<b\ACKproto3"

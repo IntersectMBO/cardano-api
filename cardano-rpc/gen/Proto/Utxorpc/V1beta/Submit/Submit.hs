@@ -2416,44 +2416,16 @@ data SubmitService = SubmitService {}
 instance Data.ProtoLens.Service.Types.Service SubmitService where
   type ServiceName SubmitService = "SubmitService"
   type ServicePackage SubmitService = "utxorpc.v1beta.submit"
-  type ServiceMethods SubmitService = '["evalTx",
-                                        "readMempool",
-                                        "submitTx",
-                                        "waitForTx",
-                                        "watchMempool"]
+  type ServiceMethods SubmitService = '["submitTx"]
   packedServiceDescriptor _
     = "\n\
-      \\rSubmitService\DC2U\n\
-      \\ACKEvalTx\DC2$.utxorpc.v1beta.submit.EvalTxRequest\SUB%.utxorpc.v1beta.submit.EvalTxResponse\DC2[\n\
-      \\bSubmitTx\DC2&.utxorpc.v1beta.submit.SubmitTxRequest\SUB'.utxorpc.v1beta.submit.SubmitTxResponse\DC2`\n\
-      \\tWaitForTx\DC2'.utxorpc.v1beta.submit.WaitForTxRequest\SUB(.utxorpc.v1beta.submit.WaitForTxResponse0\SOH\DC2d\n\
-      \\vReadMempool\DC2).utxorpc.v1beta.submit.ReadMempoolRequest\SUB*.utxorpc.v1beta.submit.ReadMempoolResponse\DC2i\n\
-      \\fWatchMempool\DC2*.utxorpc.v1beta.submit.WatchMempoolRequest\SUB+.utxorpc.v1beta.submit.WatchMempoolResponse0\SOH"
-instance Data.ProtoLens.Service.Types.HasMethodImpl SubmitService "evalTx" where
-  type MethodName SubmitService "evalTx" = "EvalTx"
-  type MethodInput SubmitService "evalTx" = EvalTxRequest
-  type MethodOutput SubmitService "evalTx" = EvalTxResponse
-  type MethodStreamingType SubmitService "evalTx" = 'Data.ProtoLens.Service.Types.NonStreaming
+      \\rSubmitService\DC2[\n\
+      \\bSubmitTx\DC2&.utxorpc.v1beta.submit.SubmitTxRequest\SUB'.utxorpc.v1beta.submit.SubmitTxResponse"
 instance Data.ProtoLens.Service.Types.HasMethodImpl SubmitService "submitTx" where
   type MethodName SubmitService "submitTx" = "SubmitTx"
   type MethodInput SubmitService "submitTx" = SubmitTxRequest
   type MethodOutput SubmitService "submitTx" = SubmitTxResponse
   type MethodStreamingType SubmitService "submitTx" = 'Data.ProtoLens.Service.Types.NonStreaming
-instance Data.ProtoLens.Service.Types.HasMethodImpl SubmitService "waitForTx" where
-  type MethodName SubmitService "waitForTx" = "WaitForTx"
-  type MethodInput SubmitService "waitForTx" = WaitForTxRequest
-  type MethodOutput SubmitService "waitForTx" = WaitForTxResponse
-  type MethodStreamingType SubmitService "waitForTx" = 'Data.ProtoLens.Service.Types.ServerStreaming
-instance Data.ProtoLens.Service.Types.HasMethodImpl SubmitService "readMempool" where
-  type MethodName SubmitService "readMempool" = "ReadMempool"
-  type MethodInput SubmitService "readMempool" = ReadMempoolRequest
-  type MethodOutput SubmitService "readMempool" = ReadMempoolResponse
-  type MethodStreamingType SubmitService "readMempool" = 'Data.ProtoLens.Service.Types.NonStreaming
-instance Data.ProtoLens.Service.Types.HasMethodImpl SubmitService "watchMempool" where
-  type MethodName SubmitService "watchMempool" = "WatchMempool"
-  type MethodInput SubmitService "watchMempool" = WatchMempoolRequest
-  type MethodOutput SubmitService "watchMempool" = WatchMempoolResponse
-  type MethodStreamingType SubmitService "watchMempool" = 'Data.ProtoLens.Service.Types.ServerStreaming
 packedFileDescriptor :: Data.ByteString.ByteString
 packedFileDescriptor
   = "\n\
@@ -2506,15 +2478,11 @@ packedFileDescriptor
     \\DC2STAGE_ACKNOWLEDGED\DLE\SOH\DC2\DC1\n\
     \\rSTAGE_MEMPOOL\DLE\STX\DC2\DC1\n\
     \\rSTAGE_NETWORK\DLE\ETX\DC2\DC3\n\
-    \\SISTAGE_CONFIRMED\DLE\EOT2\246\ETX\n\
-    \\rSubmitService\DC2U\n\
-    \\ACKEvalTx\DC2$.utxorpc.v1beta.submit.EvalTxRequest\SUB%.utxorpc.v1beta.submit.EvalTxResponse\DC2[\n\
-    \\bSubmitTx\DC2&.utxorpc.v1beta.submit.SubmitTxRequest\SUB'.utxorpc.v1beta.submit.SubmitTxResponse\DC2`\n\
-    \\tWaitForTx\DC2'.utxorpc.v1beta.submit.WaitForTxRequest\SUB(.utxorpc.v1beta.submit.WaitForTxResponse0\SOH\DC2d\n\
-    \\vReadMempool\DC2).utxorpc.v1beta.submit.ReadMempoolRequest\SUB*.utxorpc.v1beta.submit.ReadMempoolResponse\DC2i\n\
-    \\fWatchMempool\DC2*.utxorpc.v1beta.submit.WatchMempoolRequest\SUB+.utxorpc.v1beta.submit.WatchMempoolResponse0\SOHB\158\SOH\n\
-    \\EMcom.utxorpc.v1beta.submitB\vSubmitProtoP\SOH\162\STX\ETXUVS\170\STX\NAKUtxorpc.V1beta.Submit\202\STX\NAKUtxorpc\\V1beta\\Submit\226\STX!Utxorpc\\V1beta\\Submit\\GPBMetadata\234\STX\ETBUtxorpc::V1beta::SubmitJ\135%\n\
-    \\ACK\DC2\EOT\NUL\NULo\SOH\n\
+    \\SISTAGE_CONFIRMED\DLE\EOT2l\n\
+    \\rSubmitService\DC2[\n\
+    \\bSubmitTx\DC2&.utxorpc.v1beta.submit.SubmitTxRequest\SUB'.utxorpc.v1beta.submit.SubmitTxResponseB\158\SOH\n\
+    \\EMcom.utxorpc.v1beta.submitB\vSubmitProtoP\SOH\162\STX\ETXUVS\170\STX\NAKUtxorpc.V1beta.Submit\202\STX\NAKUtxorpc\\V1beta\\Submit\226\STX!Utxorpc\\V1beta\\Submit\\GPBMetadata\234\STX\ETBUtxorpc::V1beta::SubmitJ\148!\n\
+    \\ACK\DC2\EOT\NUL\NULk\SOH\n\
     \\b\n\
     \\SOH\f\DC2\ETX\NUL\NUL\DC2\n\
     \\b\n\
@@ -2899,57 +2867,17 @@ packedFileDescriptor
     \\f\n\
     \\ENQ\EOT\SO\STX\NUL\ETX\DC2\ETXe\DC3\DC4\n\
     \W\n\
-    \\STX\ACK\NUL\DC2\EOTi\NULo\SOH\SUBK Service definition for submitting transactions and checking their status.\n\
+    \\STX\ACK\NUL\DC2\EOTi\NULk\SOH\SUBK Service definition for submitting transactions and checking their status.\n\
     \\n\
     \\n\
     \\n\
     \\ETX\ACK\NUL\SOH\DC2\ETXi\b\NAK\n\
-    \=\n\
-    \\EOT\ACK\NUL\STX\NUL\DC2\ETXj\STX5\"0 Evaluates a transaction without submitting it.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\NUL\SOH\DC2\ETXj\ACK\f\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\NUL\STX\DC2\ETXj\r\SUB\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\NUL\ETX\DC2\ETXj%3\n\
     \5\n\
-    \\EOT\ACK\NUL\STX\SOH\DC2\ETXk\STX;\"( Submit transactions to the blockchain.\n\
+    \\EOT\ACK\NUL\STX\NUL\DC2\ETXj\STX;\"( Submit transactions to the blockchain.\n\
     \\n\
     \\f\n\
-    \\ENQ\ACK\NUL\STX\SOH\SOH\DC2\ETXk\ACK\SO\n\
+    \\ENQ\ACK\NUL\STX\NUL\SOH\DC2\ETXj\ACK\SO\n\
     \\f\n\
-    \\ENQ\ACK\NUL\STX\SOH\STX\DC2\ETXk\SI\RS\n\
+    \\ENQ\ACK\NUL\STX\NUL\STX\DC2\ETXj\SI\RS\n\
     \\f\n\
-    \\ENQ\ACK\NUL\STX\SOH\ETX\DC2\ETXk)9\n\
-    \U\n\
-    \\EOT\ACK\NUL\STX\STX\DC2\ETXl\STXE\"H Wait for transactions to reach a certain stage and stream the updates.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\STX\SOH\DC2\ETXl\ACK\SI\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\STX\STX\DC2\ETXl\DLE \n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\STX\ACK\DC2\ETXl+1\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\STX\ETX\DC2\ETXl2C\n\
-    \?\n\
-    \\EOT\ACK\NUL\STX\ETX\DC2\ETXm\STXD\"2 Returns a point-in-time snapshot of the mempool.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\ETX\SOH\DC2\ETXm\ACK\DC1\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\ETX\STX\DC2\ETXm\DC2$\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\ETX\ETX\DC2\ETXm/B\n\
-    \V\n\
-    \\EOT\ACK\NUL\STX\EOT\DC2\ETXn\STXN\"I Stream transactions from the mempool matching the specified predicates.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\EOT\SOH\DC2\ETXn\ACK\DC2\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\EOT\STX\DC2\ETXn\DC3&\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\EOT\ACK\DC2\ETXn17\n\
-    \\f\n\
-    \\ENQ\ACK\NUL\STX\EOT\ETX\DC2\ETXn8Lb\ACKproto3"
+    \\ENQ\ACK\NUL\STX\NUL\ETX\DC2\ETXj)9b\ACKproto3"
