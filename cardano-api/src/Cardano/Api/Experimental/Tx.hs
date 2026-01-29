@@ -182,6 +182,11 @@ module Cardano.Api.Experimental.Tx
     -- ** All the parts that constitute a plutus script witness but also including simple scripts
   , TxScriptWitnessRequirements (..)
 
+    -- ** Plutus related
+  , Datum (..)
+  , getDatums
+  , extractDatumsAndHashes
+
     -- ** Collecting plutus script witness related transaction requirements.
   , collectPlutusScriptHashes
   , extractAllIndexedPlutusScriptWitnesses
@@ -189,6 +194,7 @@ module Cardano.Api.Experimental.Tx
   , obtainMonoidConstraint
 
     -- * Balancing transactions
+  , calculateMinimumUTxO
   , evaluateTransactionExecutionUnits
   , makeTransactionBodyAutoBalance
   , TxBodyErrorAutoBalance (..)
