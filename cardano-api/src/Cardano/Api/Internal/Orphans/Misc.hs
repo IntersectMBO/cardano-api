@@ -16,10 +16,12 @@ module Cardano.Api.Internal.Orphans.Misc
 where
 
 import Cardano.Api.Error
+import Cardano.Api.HasTypeProxy
 import Cardano.Api.Pretty
 
 import Cardano.Chain.Genesis qualified as Byron
 import Cardano.Ledger.Alonzo.PParams qualified as Ledger
+import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.BaseTypes qualified as Ledger
@@ -308,3 +310,35 @@ instance TestEquality L.SLanguage where
     (L.SPlutusV3, L.SPlutusV3) -> Just Refl
     (L.SPlutusV4, L.SPlutusV4) -> Just Refl
     _ -> Nothing
+
+instance HasTypeProxy L.ByronEra where
+  data AsType L.ByronEra = AsByronEra
+  proxyToAsType _ = AsByronEra
+
+instance HasTypeProxy L.ShelleyEra where
+  data AsType L.ShelleyEra = AsShelleyEra
+  proxyToAsType _ = AsShelleyEra
+
+instance HasTypeProxy L.AllegraEra where
+  data AsType L.AllegraEra = AsAllegraEra
+  proxyToAsType _ = AsAllegraEra
+
+instance HasTypeProxy L.MaryEra where
+  data AsType L.MaryEra = AsMaryEra
+  proxyToAsType _ = AsMaryEra
+
+instance HasTypeProxy L.AlonzoEra where
+  data AsType L.AlonzoEra = AsAlonzoEra
+  proxyToAsType _ = AsAlonzoEra
+
+instance HasTypeProxy L.BabbageEra where
+  data AsType L.BabbageEra = AsBabbageEra
+  proxyToAsType _ = AsBabbageEra
+
+instance HasTypeProxy L.ConwayEra where
+  data AsType L.ConwayEra = AsConwayEra
+  proxyToAsType _ = AsConwayEra
+
+instance HasTypeProxy L.DijkstraEra where
+  data AsType L.DijkstraEra = AsDijkstraEra
+  proxyToAsType _ = AsDijkstraEra

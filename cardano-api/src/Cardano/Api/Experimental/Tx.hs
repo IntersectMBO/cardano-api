@@ -154,6 +154,7 @@ module Cardano.Api.Experimental.Tx
   , setTxWithdrawals
 
     -- * Legacy Conversions
+  , DatumDecodingError (..)
   , legacyDatumToDatum
   , fromLegacyTxOut
 
@@ -247,7 +248,7 @@ hashTxBody = L.extractHash . L.hashAnnotated
 
 makeKeyWitness
   :: Era era
-  -> UnsignedTx era
+  -> UnsignedTx (LedgerEra era)
   -> ShelleyWitnessSigningKey
   -> L.WitVKey L.Witness
 makeKeyWitness era (UnsignedTx unsignedTx) wsk =
@@ -297,7 +298,7 @@ signTx
   :: Era era
   -> [L.BootstrapWitness]
   -> [L.WitVKey L.Witness]
-  -> UnsignedTx era
+  -> UnsignedTx (LedgerEra era)
   -> SignedTx era
 signTx era bootstrapWits shelleyKeyWits (UnsignedTx unsigned) =
   obtainCommonConstraints era $
@@ -315,7 +316,7 @@ signTx era bootstrapWits shelleyKeyWits (UnsignedTx unsigned) =
 -- Compatibility related. Will be removed once the old api has been deprecated and deleted.
 
 convertTxBodyToUnsignedTx
-  :: HasCallStack => ShelleyBasedEra era -> TxBody era -> UnsignedTx era
+  :: HasCallStack => ShelleyBasedEra era -> TxBody era -> UnsignedTx (LedgerEra era)
 convertTxBodyToUnsignedTx sbe txbody =
   Api.forEraInEon
     (Api.toCardanoEra sbe)
@@ -330,7 +331,7 @@ convertTxBodyToUnsignedTx sbe txbody =
 collectPlutusScriptHashes
   :: forall era
    . IsEra era
-  => UnsignedTx era
+  => UnsignedTx (LedgerEra era)
   -> L.UTxO (LedgerEra era)
   -> Map Api.ScriptWitnessIndex Api.ScriptHash
 collectPlutusScriptHashes (UnsignedTx tx) utxo =
@@ -346,10 +347,9 @@ getPurposes (L.AlonzoScriptsNeeded purposes) =
   Map.fromList $
     Prelude.map
       ( bimap
-          ( \pp ->
-              obtainCommonConstraints (useEra @era) $
-                Api.toScriptIndex (convert (useEra @era)) $
-                  purposeAsIxItemToAsIx pp
+          ( obtainCommonConstraints (useEra @era) $
+              Api.toScriptIndex (convert (useEra @era))
+                . purposeAsIxItemToAsIx
           )
           Api.fromShelleyScriptHash
       )
