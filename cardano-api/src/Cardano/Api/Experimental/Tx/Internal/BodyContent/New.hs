@@ -23,6 +23,8 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , TxBodyContent (..)
   , Datum (..)
   , defaultTxBodyContent
+  , extractDatumsAndHashes
+  , getDatums
   , collectTxBodyScriptWitnessRequirements
   , makeUnsignedTx
   , extractAllIndexedPlutusScriptWitnesses
@@ -66,6 +68,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
 where
 
 import Cardano.Api.Address
+import Cardano.Api.Error
 import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Certificate qualified as Exp
 import Cardano.Api.Experimental.Era
@@ -94,6 +97,7 @@ import Cardano.Api.Key.Internal
 import Cardano.Api.Ledger.Internal.Reexport (StrictMaybe (..))
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal.ScriptData qualified as Api
+import Cardano.Api.Pretty
 import Cardano.Api.Tx.Internal.Body
   ( CtxTx
   , TxIn
@@ -367,6 +371,9 @@ fromLegacyTxOut tOut@(OldApi.TxOut _ _ d _) = do
 
 newtype DatumDecodingError = DataDecodingError String
   deriving (Show, Eq)
+
+instance Error DatumDecodingError where
+  prettyError (DataDecodingError msg) = "Datum decoding error: " <> pshow msg
 
 toLedgerDatum
   :: L.Era (LedgerEra era)

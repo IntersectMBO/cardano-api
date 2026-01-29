@@ -15,6 +15,7 @@
 module Cardano.Api.Experimental.Tx.Internal.Fee
   ( TxBodyErrorAutoBalance (..)
   , TxFeeEstimationError (..)
+  , calculateMinimumUTxO
   , collectTxBodyScriptWitnesses
   , estimateBalancedTxBody
   , evaluateTransactionExecutionUnits
