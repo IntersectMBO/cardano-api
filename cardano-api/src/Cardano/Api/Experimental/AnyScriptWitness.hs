@@ -9,6 +9,7 @@ module Cardano.Api.Experimental.AnyScriptWitness
   ( AnyScriptWitness (..)
   , AnyPlutusScriptWitness (..)
   , PlutusSpendingScriptWitness (..)
+  , getAnyScriptWitnessReferenceInput
   , createPlutusSpendingScriptWitness
   , getAnyPlutusScriptData
   , getAnyPlutusScriptWitnessExecutionUnits
@@ -179,6 +180,16 @@ getAnyPlutusScriptWitnessLanguage (AnyPlutusWithdrawingScriptWitness s) = getPlu
 getAnyPlutusScriptWitnessLanguage (AnyPlutusCertifyingScriptWitness s) = getPlutusScriptWitnessLanguage s
 getAnyPlutusScriptWitnessLanguage (AnyPlutusProposingScriptWitness s) = getPlutusScriptWitnessLanguage s
 getAnyPlutusScriptWitnessLanguage (AnyPlutusVotingScriptWitness s) = getPlutusScriptWitnessLanguage s
+
+getAnyScriptWitnessReferenceInput
+  :: AnyScriptWitness era
+  -> Maybe TxIn
+getAnyScriptWitnessReferenceInput (AnyScriptWitnessSimple s) =
+  case s of
+    SReferenceScript txin -> Just txin
+    SScript{} -> Nothing
+getAnyScriptWitnessReferenceInput (AnyScriptWitnessPlutus psw) =
+  getAnyPlutusScriptWitnessReferenceInput psw
 
 getAnyPlutusScriptWitnessReferenceInput
   :: AnyPlutusScriptWitness lang purpose era
