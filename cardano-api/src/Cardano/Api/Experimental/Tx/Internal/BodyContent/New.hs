@@ -365,7 +365,7 @@ fromLegacyTxOut tOut@(OldApi.TxOut _ _ d _) = do
   newDatum :: L.Datum (LedgerEra era) <- obtainCommonConstraints (useEra @era) $ toLedgerDatum d
   return $ obtainCommonConstraints (useEra @era) $ TxOut $ o & L.datumTxOutL .~ newDatum
 
-data DatumDecodingError = DataDecodingError String
+newtype DatumDecodingError = DataDecodingError String
   deriving (Show, Eq)
 
 toLedgerDatum
