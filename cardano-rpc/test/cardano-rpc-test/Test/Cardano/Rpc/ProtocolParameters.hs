@@ -11,7 +11,6 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
-import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.PParams qualified as L
 import Cardano.Ledger.Plutus qualified as L
 
@@ -48,15 +47,15 @@ hprop_roundtrip_protocol_parameters = H.property $ do
       pp' =
         obtainCommonConstraints era $
           pp
-            & L.ppCoinsPerUTxOByteL %~ L.CoinPerByte . L.Coin . clipI 63 . L.unCoin . L.unCoinPerByte
-            & L.ppMinFeeBL %~ L.Coin . clipI 63 . L.unCoin
-            & L.ppMinFeeAL %~ L.Coin . clipI 63 . L.unCoin
+            & L.ppCoinsPerUTxOByteL %~ L.CoinPerByte . clipI 64 . L.unCoinPerByte
+            & L.ppMinFeeBL %~ clipI 64
+            & L.ppMinFeeAL %~ clipI 64
             & L.ppA0L %~ clipIBr
             & L.ppRhoL %~ clipIBr
             & L.ppTauL %~ clipIBr
             & L.ppMinFeeRefScriptCostPerByteL %~ clipIBr
-            & L.ppKeyDepositL %~ L.Coin . clipI 63 . L.unCoin
-            & L.ppPoolDepositL %~ L.Coin . clipI 63 . L.unCoin
+            & L.ppKeyDepositL %~ clipI 64
+            & L.ppPoolDepositL %~ clipI 64
             & L.ppCostModelsL .~ L.mkCostModels nonEmptyCostModels
             & L.ppPoolVotingThresholdsL . L.pvtMotionNoConfidenceL %~ clipIBr
             & L.ppPoolVotingThresholdsL . L.pvtCommitteeNormalL %~ clipIBr
@@ -81,34 +80,26 @@ hprop_roundtrip_protocol_parameters = H.property $ do
     (protocolParamsToUtxoRpcPParams era)
     (utxoRpcPParamsToProtocolParams era)
 
--- | Clip the bounded rational to a signed value not larger than 31 bits.
-clipIBr :: L.BoundedRational a => a -> a
+-- | Clip the bounded rational to a signed value not larger than 32 bits.
+clipIBr :: (Show a, L.BoundedRational a) => a -> a
 clipIBr input = do
   let r = L.unboundRational input
-  fromMaybe (error "impossible! clipped value is out of bounds") $
+      nBits = [32, 16, 8, 4] -- nominator bit sizes to try
+      dBits = nBits -- denominator bit sizes to try
+      clippedNums = (`clipI` numerator r) <$> nBits
+      clippedDens = (`clipI` denominator r) <$> dBits
+  fromMaybe (error $ "impossible! clipped value is out of bounds. Original value: " <> show input) $
     -- try to clip value to the smaller values until one succeeds
     asum @[]
-      [ L.boundRational $
-          clipI 31 (numerator r)
-            % clipI 31 (denominator r)
-      , L.boundRational $
-          clipI 31 (numerator r)
-            % denominator r
-      , L.boundRational $
-          clipI 15 (numerator r)
-            % clipI 15 (denominator r)
-      , L.boundRational $
-          clipI 15 (numerator r)
-            % denominator r
-      , L.boundRational $
-          clipI 7 (numerator r)
-            % denominator r
+      [ L.boundRational $ numerator' % denominator'
+      | numerator' <- clippedNums
+      , denominator' <- clippedDens
       ]
 
 -- | Clip the Integral to a value with n bit size.
 clipI :: (Integral a, Bits a) => Int -> a -> a
 clipI n v
-  | v > 2 ^ n = clipI n $ shiftR v 1
+  | v > 2 ^ (n - 1) - 1 || v < (-(2 ^ (n - 1))) = clipI n $ shiftR v 1
   | otherwise = fromIntegral v
 
 pvMajorL :: Lens' L.ProtVer L.Version

@@ -122,6 +122,7 @@ test-suite cardano-rpc-test
     cardano-rpc,
     containers,
     hedgehog,
+    hedgehog-extras,
     rio,
     tasty,
     tasty-hedgehog,
@@ -135,3 +136,4 @@ test-suite cardano-rpc-test
   other-modules:
     Test.Cardano.Rpc.ProtocolParameters
     Test.Cardano.Rpc.TxOutput
+    Test.Cardano.Rpc.Type

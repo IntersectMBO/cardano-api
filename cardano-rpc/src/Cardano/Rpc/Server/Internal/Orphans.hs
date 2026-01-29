@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Rpc.Server.Internal.Orphans where
@@ -62,6 +63,23 @@ instance Inject TxIn (Proto UtxoRpc.TxoRef) where
 
 instance Message a => Default (Proto a) where
   def = defMessage
+
+instance Inject Integer (Proto UtxoRpc.BigInt) where
+  inject int
+    | int <= fromIntegral (maxBound @Int64)
+        && int >= fromIntegral (minBound @Int64) =
+        inject @Int64 $ fromIntegral int
+    | int < 0 =
+        -- https://www.rfc-editor.org/rfc/rfc8949.html#name-bignums see 3.4.3 for negative integers
+        defMessage & #bigNInt .~ serialiseToRawBytes (fromIntegral @_ @Natural (-1 - int))
+    | otherwise =
+        defMessage & #bigUInt .~ serialiseToRawBytes (fromIntegral @_ @Natural int)
+
+instance Inject Int64 (Proto UtxoRpc.BigInt) where
+  inject int = defMessage & #int .~ int
+
+instance Inject L.Coin (Proto UtxoRpc.BigInt) where
+  inject = inject . fromIntegral @_ @Integer
 
 -----------
 -- Errors

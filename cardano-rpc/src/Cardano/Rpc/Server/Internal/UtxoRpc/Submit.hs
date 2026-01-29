@@ -8,7 +8,6 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Submit
   ( submitTxMethod
@@ -26,6 +25,7 @@ import Cardano.Rpc.Server.Internal.Tracing
 import RIO hiding (toList)
 
 import Data.Default
+import GHC.Stack
 import Network.GRPC.Spec
 
 -- | Submit a CBOR-serialised list of transactions to the node
@@ -33,30 +33,20 @@ submitTxMethod
   :: MonadRpc e m
   => Proto UtxoRpc.SubmitTxRequest
   -> m (Proto UtxoRpc.SubmitTxResponse)
--- ^ A list of succeeded transaction ids or errors for failed ones
 submitTxMethod req = do
-  -- index transactions in the request
-  let serialisedTxs = zip @Int [0 ..] $ req ^.. #tx . traverse . #raw
-
   nodeConnInfo <- grab
   AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
   eon <- forEraInEon era (error "Minimum Shelley era required") pure
 
-  -- try to submit each one consecutively
-  submitResults <- forM serialisedTxs $ \(i, txBytes) -> do
-    let eTx =
-          first (TraceRpcSubmitTxDecodingFailure i) $
-            deserialiseTx eon txBytes
+  tx <-
+    putTraceThrowEither
+      . first TraceRpcSubmitTxDecodingError
+      . deserialiseTx eon
+      $ req ^. #tx . #raw
 
-    eTxId <- fmap join . forM eTx $ submitTx eon i
+  txId' <- submitTx eon tx
 
-    case eTxId of
-      Left err -> do
-        putTrace err
-        pure $ def & #errorMessage .~ docToText (pretty err)
-      Right txId' -> pure $ def & #ref .~ serialiseToRawBytes txId'
-
-  pure $ def & #results .~ submitResults
+  pure $ def & #ref .~ serialiseToRawBytes txId'
  where
   deserialiseTx :: ShelleyBasedEra era -> ByteString -> Either DecoderError (Tx era)
   deserialiseTx sbe = shelleyBasedEraConstraints sbe $ deserialiseFromCBOR asType
@@ -64,15 +54,18 @@ submitTxMethod req = do
   submitTx
     :: MonadRpc e m
     => ShelleyBasedEra era
-    -> Int -- transaction index in the request
     -> Tx era
-    -> m (Either TraceRpcSubmit TxId)
-  submitTx sbe i tx = do
+    -> m TxId
+  submitTx sbe tx = do
     nodeConnInfo <- grab
-    eRes <-
-      tryAny $
-        submitTxToNodeLocal nodeConnInfo (TxInMode sbe tx) >>= \case
-          Net.Tx.SubmitFail reason -> pure . Left $ TraceRpcSubmitTxValidationError i reason
-          Net.Tx.SubmitSuccess -> pure $ Right . getTxId $ getTxBody tx
+    putTraceThrowEither . join . first TraceRpcSubmitN2cConnectionError
+      =<< tryAny
+        ( submitTxToNodeLocal nodeConnInfo (TxInMode sbe tx) >>= \case
+            Net.Tx.SubmitFail reason -> pure . Left $ TraceRpcSubmitTxValidationError reason
+            Net.Tx.SubmitSuccess -> pure . Right $ getTxId $ getTxBody tx
+        )
 
-    pure . join $ first TraceRpcSubmitN2cConnectionError eRes
+  putTraceThrowEither v = withFrozenCallStack $ do
+    -- See Cardano.Node.Tracing.Tracers.Rpc in cardano-node for details how this is logged
+    either putTrace (const $ pure ()) v
+    throwEither v
