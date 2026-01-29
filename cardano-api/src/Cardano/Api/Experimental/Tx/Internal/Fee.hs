@@ -122,7 +122,7 @@ data TxBodyErrorAutoBalance era
   | BalanceIsNegative
       L.Coin
       -- ^ Negative balance
-      (UnsignedTx ConwayEra)
+      (UnsignedTx (LedgerEra ConwayEra))
       -- ^ The transaction body
   | NotEnoughAdaInUTxO
       L.MaryValue
@@ -533,7 +533,7 @@ evaluateTransactionBalance
   -> Map StakeCredential L.Coin
   -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
   -> L.UTxO (LedgerEra era)
-  -> UnsignedTx era
+  -> UnsignedTx (LedgerEra era)
   -> L.Value (LedgerEra era)
 evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo (UnsignedTx unsignedTx) =
   let txbody = unsignedTx ^. L.bodyTxL
@@ -645,7 +645,7 @@ calcReturnAndTotalCollateral fee pp' _ mTxReturnCollateral mTxTotalCollateral cA
 -- estimate:
 evaluateTransactionFee
   :: Ledger.PParams (LedgerEra era)
-  -> UnsignedTx era
+  -> UnsignedTx (LedgerEra era)
   -> Word
   -- ^ The number of Shelley key witnesses
   -> Word
@@ -1076,7 +1076,7 @@ indexWitnessedTxProposalProcedures (TxProposalProcedures proposals) = do
     | (ix, (proposal, anyWitness)) <- allProposalsList
     ]
 
-toUnsigned :: forall era. Era era -> L.Tx (LedgerEra era) -> UnsignedTx era
+toUnsigned :: forall era. Era era -> L.Tx (LedgerEra era) -> UnsignedTx (LedgerEra era)
 toUnsigned e tx =
   obtainCommonConstraints e $
     UnsignedTx tx
@@ -1194,7 +1194,9 @@ makeTransactionBodyAutoBalance
   -- ^ Change address
   -> Maybe Word
   -- ^ Override key witnesses
-  -> Either (TxBodyErrorAutoBalance (LedgerEra era)) (UnsignedTx era, TxBodyContent (LedgerEra era))
+  -> Either
+       (TxBodyErrorAutoBalance (LedgerEra era))
+       (UnsignedTx (LedgerEra era), TxBodyContent (LedgerEra era))
 makeTransactionBodyAutoBalance
   systemstart
   history
@@ -1466,7 +1468,7 @@ calculateMinTxFee
    . IsEra era
   => Ledger.PParams (LedgerEra era)
   -> L.UTxO (LedgerEra era)
-  -> UnsignedTx era
+  -> UnsignedTx (LedgerEra era)
   -> Word
   -- ^ The number of Shelley key witnesses
   -> L.Coin

@@ -16,7 +16,6 @@ module Cardano.Api.Experimental.Tx.Internal.Type
   )
 where
 
-import Cardano.Api.Experimental.Era
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.ProtocolParameters
@@ -35,7 +34,7 @@ import Data.ByteString.Lazy (fromStrict)
 -- | A transaction that can contain everything
 -- except key witnesses.
 data UnsignedTx era
-  = L.EraTx (LedgerEra era) => UnsignedTx (Ledger.Tx (LedgerEra era))
+  = L.EraTx era => UnsignedTx (Ledger.Tx era)
 
 instance HasTypeProxy era => HasTypeProxy (UnsignedTx era) where
   data AsType (UnsignedTx era) = AsUnsignedTx (AsType era)
@@ -44,16 +43,16 @@ instance HasTypeProxy era => HasTypeProxy (UnsignedTx era) where
 
 instance
   ( HasTypeProxy era
-  , L.EraTx (LedgerEra era)
+  , L.EraTx era
   )
   => SerialiseAsRawBytes (UnsignedTx era)
   where
   serialiseToRawBytes (UnsignedTx tx) =
-    Ledger.serialize' (Ledger.eraProtVerHigh @(LedgerEra era)) tx
+    Ledger.serialize' (Ledger.eraProtVerHigh @era) tx
   deserialiseFromRawBytes _ =
     bimap wrapError UnsignedTx
       . Ledger.decodeFullAnnotator
-        (Ledger.eraProtVerHigh @(LedgerEra era))
+        (Ledger.eraProtVerHigh @era)
         "UnsignedTx"
         Ledger.decCBOR
       . fromStrict

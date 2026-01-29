@@ -59,6 +59,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , convProposalProcedures
 
     -- * Legacy conversions
+  , DatumDecodingError (..)
   , legacyDatumToDatum
   , fromLegacyTxOut
   )
@@ -135,7 +136,7 @@ makeUnsignedTx
   :: forall era
    . Era era
   -> TxBodyContent (LedgerEra era)
-  -> UnsignedTx era
+  -> UnsignedTx (LedgerEra era)
 makeUnsignedTx DijkstraEra _ = error "makeUnsignedTx: Dijkstra era not supported yet"
 makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
   let TxScriptWitnessRequirements languages scripts datums redeemers = collectTxBodyScriptWitnessRequirements bc
