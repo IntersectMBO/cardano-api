@@ -24,10 +24,6 @@ packages:
 
 extra-packages: Cabal
 
--- It may slow down build plan preparation, but without it cabal has problems
--- with solving constraints. Remove this when not needed anymore.
-max-backjumps: 50000
-
 program-options
   ghc-options: -Werror
 
