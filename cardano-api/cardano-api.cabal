@@ -416,6 +416,12 @@ test-suite cardano-api-test
     Test.Cardano.Api.Transaction.Autobalance
     Test.Cardano.Api.Transaction.Body.Plutus.Scripts
     Test.Cardano.Api.TxBody
+    Test.Cardano.Api.TxOut.Gen
+    Test.Cardano.Api.TxOut.Helpers
+    Test.Cardano.Api.TxOut.Json
+    Test.Cardano.Api.TxOut.JsonEdgeCases
+    Test.Cardano.Api.TxOut.JsonErrorCases
+    Test.Cardano.Api.TxOut.JsonRoundtrip
     Test.Cardano.Api.Value
 
   ghc-options:
