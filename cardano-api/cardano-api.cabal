@@ -38,7 +38,7 @@ common project-config
     -Wunused-packages
 
 common maybe-unix
-  if !(os(windows)|| arch(wasm32))
+  if !(os(windows) || arch(wasm32))
     build-depends: unix
 
 common maybe-Win32
@@ -46,7 +46,7 @@ common maybe-Win32
     build-depends: Win32
 
 common text
-  if os(osx)&& arch(aarch64)
+  if os(osx) && arch(aarch64)
     build-depends: text >=1.2.5.0
   else
     build-depends: text >=2.0
@@ -193,7 +193,7 @@ library
     time,
     transformers,
     transformers-except ^>=0.1.3,
-    typed-protocols ^>=1.0,
+    typed-protocols >=1.0,
     validation,
     vector,
     yaml,
