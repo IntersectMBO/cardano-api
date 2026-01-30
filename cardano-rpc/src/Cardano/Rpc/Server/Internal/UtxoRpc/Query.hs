@@ -3,7 +3,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
@@ -18,7 +17,6 @@ where
 
 import Cardano.Api
 import Cardano.Api.Experimental.Era
-import Cardano.Api.Parser.Text qualified as P
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
 import Cardano.Rpc.Server.Internal.Monad
@@ -29,7 +27,6 @@ import RIO hiding (toList)
 
 import Data.Default
 import Data.ProtoLens (defMessage)
-import Data.Text.Encoding qualified as T
 import GHC.IsList
 import Network.GRPC.Spec
 
@@ -64,12 +61,12 @@ readUtxosMethod
   -> m (Proto UtxoRpc.ReadUtxosResponse)
 readUtxosMethod req = do
   utxoFilter <-
-    if
-      | Just txoRefs <- req ^. #maybe'txoRefs ->
-          QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (txoRefs ^. #items)
-      | Just addressesProto <- req ^. #maybe'cardanoAddresses ->
-          QueryUTxOByAddress . fromList <$> mapM readAddress (addressesProto ^. #items)
-      | otherwise -> pure QueryUTxOWhole
+    if not (null $ req ^. #keys)
+      then QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. #keys)
+      -- TODO: reimplement this part as SearchUtxosRequest
+      -- \| Just addressesProto <- req ^. #maybe'cardanoAddresses ->
+      --     QueryUTxOByAddress . fromList <$> mapM readAddress (addressesProto ^. #items)
+      else pure QueryUTxOWhole
 
   nodeConnInfo <- grab
   AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
@@ -92,6 +89,7 @@ readUtxosMethod req = do
     txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. #hash
     pure $ TxIn txId' (TxIx . fromIntegral $ r ^. #index)
 
-  readAddress :: MonadRpc e m => ByteString -> m AddressAny
-  readAddress =
-    throwEither . first stringException . P.runParser parseAddressAny <=< throwEither . T.decodeUtf8'
+-- TODO: reimplement this part as SearchUtxosRequest
+-- readAddress :: MonadRpc e m => ByteString -> m AddressAny
+-- readAddress =
+--   throwEither . first stringException . P.runParser parseAddressAny <=< throwEither . T.decodeUtf8'

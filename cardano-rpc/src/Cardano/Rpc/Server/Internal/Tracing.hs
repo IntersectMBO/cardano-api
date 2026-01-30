@@ -6,6 +6,7 @@ module Cardano.Rpc.Server.Internal.Tracing where
 
 import Cardano.Api.Consensus (TxValidationErrorInCardanoMode)
 import Cardano.Api.Era (Inject (..))
+import Cardano.Api.Error
 import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Cbor (DecoderError)
 import Cardano.Api.Serialise.SerialiseUsing
@@ -53,20 +54,17 @@ instance Pretty TraceRpcQuery where
     TraceRpcQueryReadUtxosSpan (SpanBegin _) -> "Started query read UTXO method"
     TraceRpcQueryReadUtxosSpan (SpanEnd _) -> "Finished query read UTXO method"
 
+instance Error TraceRpcQuery where
+  prettyError = pretty
+
 -- | Traces used in SubmitTx service
 data TraceRpcSubmit
   = -- | Node-to-client exception
     TraceRpcSubmitN2cConnectionError SomeException
   | -- | Transaction deserialisation error
-    TraceRpcSubmitTxDecodingFailure
-      Int
-      -- ^ index of a transaction in a request
-      DecoderError
+    TraceRpcSubmitTxDecodingError DecoderError
   | -- | Transaction submission error
-    TraceRpcSubmitTxValidationError
-      Int
-      -- ^ index of a transaction in a request
-      TxValidationErrorInCardanoMode
+    TraceRpcSubmitTxValidationError TxValidationErrorInCardanoMode
   | -- | Transaction submission span
     TraceRpcSubmitSpan TraceSpanEvent
   deriving Show
@@ -76,8 +74,11 @@ instance Pretty TraceRpcSubmit where
     TraceRpcSubmitSpan (SpanBegin _) -> "Started submit method"
     TraceRpcSubmitSpan (SpanEnd _) -> "Finished submit method"
     TraceRpcSubmitN2cConnectionError e -> "N2C connection error while trying to submit a transaction: " <> prettyException e
-    TraceRpcSubmitTxDecodingFailure i e -> "Failed to decode transaction with index " <> pretty i <> ": " <> pshow e
-    TraceRpcSubmitTxValidationError i e -> "Failed to submit transaction with index " <> pretty i <> ": " <> pshow e
+    TraceRpcSubmitTxDecodingError e -> "Failed to decode transaction: " <> pshow e
+    TraceRpcSubmitTxValidationError e -> "Failed to submit transaction: " <> pshow e
+
+instance Error TraceRpcSubmit where
+  prettyError = pretty
 
 instance Inject TraceRpcSubmit TraceRpc where
   inject = TraceRpcSubmit

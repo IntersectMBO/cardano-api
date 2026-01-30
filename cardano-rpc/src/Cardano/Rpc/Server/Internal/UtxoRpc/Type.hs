@@ -18,6 +18,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   , utxoRpcTxOutputToTxOut
   , protocolParamsToUtxoRpcPParams
   , simpleScriptToUtxoRpcNativeScript
+  , utxoRpcBigIntToInteger
   , mkChainPointMsg
   )
 where
@@ -70,20 +71,20 @@ protocolParamsToUtxoRpcPParams era pparams = obtainCommonConstraints era $ do
       drepVotingThresholds :: L.DRepVotingThresholds =
         pparams ^. L.ppDRepVotingThresholdsL
   def
-    & #coinsPerUtxoByte .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to fromIntegral
+    & #coinsPerUtxoByte .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to inject
     & #maxTxSize .~ pparams ^. L.ppMaxTxSizeL . to fromIntegral
-    & #minFeeCoefficient .~ pparams ^. L.ppMinFeeBL . to fromIntegral
-    & #minFeeConstant .~ pparams ^. L.ppMinFeeAL . to fromIntegral
+    & #minFeeCoefficient .~ pparams ^. L.ppMinFeeBL . to inject
+    & #minFeeConstant .~ pparams ^. L.ppMinFeeAL . to inject
     & #maxBlockBodySize .~ pparams ^. L.ppMaxBBSizeL . to fromIntegral
     & #maxBlockHeaderSize .~ pparams ^. L.ppMaxBHSizeL . to fromIntegral
-    & #stakeKeyDeposit .~ pparams ^. L.ppKeyDepositL . to fromIntegral
-    & #poolDeposit .~ pparams ^. L.ppPoolDepositL . to fromIntegral
+    & #stakeKeyDeposit .~ pparams ^. L.ppKeyDepositL . to inject
+    & #poolDeposit .~ pparams ^. L.ppPoolDepositL . to inject
     & #poolRetirementEpochBound .~ pparams ^. L.ppEMaxL . to L.unEpochInterval . to fromIntegral
     & #desiredNumberOfPools .~ pparams ^. L.ppNOptL . to fromIntegral
     & #poolInfluence .~ pparams ^. L.ppA0L . to L.unboundRational . to inject
     & #monetaryExpansion .~ pparams ^. L.ppRhoL . to L.unboundRational . to inject
     & #treasuryExpansion .~ pparams ^. L.ppTauL . to L.unboundRational . to inject
-    & #minPoolCost .~ pparams ^. L.ppMinPoolCostL . to fromIntegral
+    & #minPoolCost .~ pparams ^. L.ppMinPoolCostL . to inject
     & #protocolVersion . #major .~ pparams ^. L.ppProtocolVersionL . to L.pvMajor . to L.getVersion
     & #protocolVersion . #minor .~ pparams ^. L.ppProtocolVersionL . to L.pvMinor . to fromIntegral
     & #maxValueSize .~ pparams ^. L.ppMaxValSizeL . to fromIntegral
@@ -129,8 +130,8 @@ protocolParamsToUtxoRpcPParams era pparams = obtainCommonConstraints era $ do
       .~ pparams ^. L.ppCommitteeMaxTermLengthL . to L.unEpochInterval . to fromIntegral
     & #governanceActionValidityPeriod
       .~ pparams ^. L.ppGovActionLifetimeL . to L.unEpochInterval . to fromIntegral
-    & #governanceActionDeposit .~ pparams ^. L.ppGovActionDepositL . to fromIntegral
-    & #drepDeposit .~ pparams ^. L.ppDRepDepositL . to fromIntegral
+    & #governanceActionDeposit .~ pparams ^. L.ppGovActionDepositL . to inject
+    & #drepDeposit .~ pparams ^. L.ppDRepDepositL . to inject
     & #drepInactivityPeriod .~ pparams ^. L.ppDRepActivityL . to L.unEpochInterval . to fromIntegral
 
 utxoRpcPParamsToProtocolParams
@@ -140,15 +141,25 @@ utxoRpcPParamsToProtocolParams
 utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era) $ do
   def
     & appFuns
-      [ pure
-          . (L.ppCoinsPerUTxOByteL .~ pp ^. #coinsPerUtxoByte . to fromIntegral . to L.Coin . to L.CoinPerByte)
+      [ \r -> do
+          coinsPerUtxoByte <-
+            pp ^. #coinsPerUtxoByte . to utxoRpcBigIntToInteger ?! "Invalid coinsPerUtxoByte"
+          pure $ set L.ppCoinsPerUTxOByteL (L.CoinPerByte $ L.Coin coinsPerUtxoByte) r
       , pure . (L.ppMaxTxSizeL .~ pp ^. #maxTxSize . to fromIntegral)
-      , pure . (L.ppMinFeeBL .~ pp ^. #minFeeCoefficient . to fromIntegral)
-      , pure . (L.ppMinFeeAL .~ pp ^. #minFeeConstant . to fromIntegral)
+      , \r -> do
+          minFeeCoeff <- pp ^. #minFeeCoefficient . to utxoRpcBigIntToInteger ?! "Invalid minFeeCoefficient"
+          pure $ set L.ppMinFeeBL (L.Coin minFeeCoeff) r
+      , \r -> do
+          minFeeConst <- pp ^. #minFeeConstant . to utxoRpcBigIntToInteger ?! "Invalid minFeeConstant"
+          pure $ set L.ppMinFeeAL (L.Coin minFeeConst) r
       , pure . (L.ppMaxBBSizeL .~ pp ^. #maxBlockBodySize . to fromIntegral)
       , pure . (L.ppMaxBHSizeL .~ pp ^. #maxBlockHeaderSize . to fromIntegral)
-      , pure . (L.ppKeyDepositL .~ pp ^. #stakeKeyDeposit . to fromIntegral)
-      , pure . (L.ppPoolDepositL .~ pp ^. #poolDeposit . to fromIntegral)
+      , \r -> do
+          stakeKeyDeposit <- pp ^. #stakeKeyDeposit . to utxoRpcBigIntToInteger ?! "Invalid stakeKeyDeposit"
+          pure $ set L.ppKeyDepositL (L.Coin stakeKeyDeposit) r
+      , \r -> do
+          poolDeposit <- pp ^. #poolDeposit . to utxoRpcBigIntToInteger ?! "Invalid poolDeposit"
+          pure $ set L.ppPoolDepositL (L.Coin poolDeposit) r
       , pure . (L.ppEMaxL .~ pp ^. #poolRetirementEpochBound . to fromIntegral . to L.EpochInterval)
       , pure . (L.ppNOptL .~ pp ^. #desiredNumberOfPools . to fromIntegral)
       , \r -> do
@@ -162,7 +173,9 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
           treasuryExpansion <-
             pp ^. #treasuryExpansion . to inject . to L.boundRational ?! "Invalid treasuryExpansion"
           pure $ set L.ppTauL treasuryExpansion r
-      , pure . (L.ppMinPoolCostL .~ pp ^. #minPoolCost . to fromIntegral)
+      , \r -> do
+          minPoolCost <- pp ^. #minPoolCost . to utxoRpcBigIntToInteger ?! "Invalid minPoolCost"
+          pure $ set L.ppMinPoolCostL (L.Coin minPoolCost) r
       , \r -> do
           major <- L.mkVersion64 $ pp ^. #protocolVersion . #major . to fromIntegral
           pure $ set (L.ppProtocolVersionL . pvMajorL) major r
@@ -273,8 +286,13 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
           . ( L.ppGovActionLifetimeL
                 .~ pp ^. #governanceActionValidityPeriod . to fromIntegral . to L.EpochInterval
             )
-      , pure . (L.ppGovActionDepositL .~ pp ^. #governanceActionDeposit . to fromIntegral)
-      , pure . (L.ppDRepDepositL .~ pp ^. #drepDeposit . to fromIntegral)
+      , \r -> do
+          govActionDeposit <-
+            pp ^. #governanceActionDeposit . to utxoRpcBigIntToInteger ?! "Invalid governanceActionDeposit"
+          pure $ set L.ppGovActionDepositL (L.Coin govActionDeposit) r
+      , \r -> do
+          drepDeposit <- pp ^. #drepDeposit . to utxoRpcBigIntToInteger ?! "Invalid drepDeposit"
+          pure $ set L.ppDRepDepositL (L.Coin drepDeposit) r
       , pure . (L.ppDRepActivityL .~ pp ^. #drepInactivityPeriod . to fromIntegral . to L.EpochInterval)
       ]
  where
@@ -313,7 +331,7 @@ mkChainPointMsg chainPoint blockNo = do
 simpleScriptToUtxoRpcNativeScript :: SimpleScript -> Proto UtxoRpc.NativeScript
 simpleScriptToUtxoRpcNativeScript = \case
   RequireSignature paymentKeyHash ->
-    defMessage & #scriptPubkey .~ serialiseToRawBytes paymentKeyHash
+    defMessage & #scriptPubkeyHash .~ serialiseToRawBytes paymentKeyHash
   RequireTimeBefore (SlotNo slotNo) ->
     defMessage & #invalidHereafter .~ slotNo
   RequireTimeAfter (SlotNo slotNo) ->
@@ -335,7 +353,7 @@ utxoRpcNativeScriptToSimpleScript
   => Proto UtxoRpc.NativeScript
   -> m SimpleScript
 utxoRpcNativeScriptToSimpleScript scriptRpc
-  | Just paymentKeyHash <- scriptRpc ^. #maybe'scriptPubkey =
+  | Just paymentKeyHash <- scriptRpc ^. #maybe'scriptPubkeyHash =
       RequireSignature <$> liftEitherError (deserialiseFromRawBytes asType paymentKeyHash)
   | Just slotNo <- scriptRpc ^. #maybe'invalidHereafter =
       pure . RequireTimeBefore $ SlotNo slotNo
@@ -399,15 +417,7 @@ scriptDataToUtxoRpcPlutusData :: ScriptData -> Proto UtxoRpc.PlutusData
 scriptDataToUtxoRpcPlutusData = \case
   ScriptDataBytes bs ->
     defMessage & #boundedBytes .~ bs
-  ScriptDataNumber int
-    | int <= fromIntegral (maxBound @Int64)
-        && int >= fromIntegral (minBound @Int64) ->
-        defMessage & #bigInt . #int .~ fromIntegral int
-    | int < 0 ->
-        -- https://www.rfc-editor.org/rfc/rfc8949.html#name-bignums see 3.4.3 for negative integers
-        defMessage & #bigInt . #bigNInt .~ serialiseToRawBytes (fromIntegral @_ @Natural (-1 - int))
-    | otherwise ->
-        defMessage & #bigInt . #bigUInt .~ serialiseToRawBytes (fromIntegral @_ @Natural int)
+  ScriptDataNumber int -> defMessage & #bigInt .~ inject int
   ScriptDataList sds ->
     defMessage & #array . #items .~ map scriptDataToUtxoRpcPlutusData sds
   ScriptDataMap elements -> do
@@ -489,7 +499,7 @@ txOutToUtxoRpcTxOutput (TxOut addressInEra txOutValue datum script) = do
                       -- we don't have access to info if the coin was minted in the transaction,
                       -- maybe we should add it later
                       -- & #maybe'mintCoin .~ Nothing
-                      & #outputCoin .~ fromIntegral qty
+                      & #quantity .~ inject qty
             defMessage
               & #policyId .~ serialiseToRawBytes pId
               & #assets .~ assets
@@ -511,7 +521,7 @@ txOutToUtxoRpcTxOutput (TxOut addressInEra txOutValue datum script) = do
 
   defMessage
     & #address .~ T.encodeUtf8 (obtainCommonConstraints (useEra @era) $ serialiseAddress addressInEra)
-    & #coin .~ fromIntegral (L.unCoin (txOutValueToLovelace txOutValue))
+    & #coin .~ inject (L.unCoin (txOutValueToLovelace txOutValue))
     & #assets .~ multiAsset
     & #maybe'datum .~ datumRpc
     & #script .~ referenceScriptToUtxoRpcScript script
@@ -544,7 +554,7 @@ utxoRpcTxOutputToTxOut txOutput = do
                 <$> deserialiseFromRawBytes asType (datumRpc ^. #hash)
       Nothing -> pure TxOutDatumNone
   referenceScript <- utxoRpcScriptToReferenceScript (txOutput ^. #script)
-  let coinValue = txOutput ^. #coin . to fromIntegral . to L.Coin . to lovelaceToValue
+  coinValue <- lovelaceToValue . L.Coin <$> txOutput ^. #coin . to utxoRpcBigIntToInteger
   multiAssetValue <- fmap (fromList @Value . join) . forM (txOutput ^. #assets) $ \policyAssets -> do
     pId <-
       liftEitherError $ deserialiseFromRawBytes AsPolicyId (policyAssets ^. #policyId)
@@ -552,9 +562,8 @@ utxoRpcTxOutputToTxOut txOutput = do
       assetName <-
         liftEitherError $
           deserialiseFromRawBytes AsAssetName (asset ^. #name)
-      let outCoin = Quantity . fromIntegral $ asset ^. #outputCoin
-          mintCoin = Quantity . fromIntegral $ asset ^. #mintCoin
-      pure (AssetId pId assetName, outCoin <> mintCoin)
+      coin <- Quantity <$> asset ^. #quantity . to utxoRpcBigIntToInteger
+      pure (AssetId pId assetName, coin)
   pure $
     TxOut
       address
@@ -563,3 +572,18 @@ utxoRpcTxOutputToTxOut txOutput = do
       )
       datum
       referenceScript
+
+utxoRpcBigIntToInteger
+  :: forall m
+   . HasCallStack
+  => MonadThrow m
+  => Proto UtxoRpc.BigInt
+  -> m Integer
+utxoRpcBigIntToInteger bigInt
+  | Just int <- bigInt ^. #maybe'int = pure $ fromIntegral int
+  | Just bytes <- bigInt ^. #maybe'bigNInt = do
+      n <- fmap fromIntegral . liftEitherError $ deserialiseFromRawBytes AsNatural bytes
+      pure $ -n - 1
+  | Just bytes <- bigInt ^. #maybe'bigUInt =
+      fmap fromIntegral . liftEitherError $ deserialiseFromRawBytes AsNatural bytes
+  | otherwise = pure 0 -- assume default value

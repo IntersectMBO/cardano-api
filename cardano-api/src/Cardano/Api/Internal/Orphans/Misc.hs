@@ -34,6 +34,7 @@ import Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import PlutusLedgerApi.Common qualified as P
 
 import Codec.Binary.Bech32 qualified as Bech32
+import Data.Bits (Bits)
 import Data.Data (Data)
 import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
@@ -65,6 +66,8 @@ deriving newtype instance Real L.Coin
 deriving newtype instance Integral L.Coin
 
 deriving newtype instance Num L.Coin
+
+deriving newtype instance Bits L.Coin
 
 -- We wrap the individual records with Last and use Last's Semigroup instance.
 -- In this instance we take the last 'Just' value or the only 'Just' value
