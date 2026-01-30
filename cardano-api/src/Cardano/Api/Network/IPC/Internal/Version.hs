@@ -15,7 +15,7 @@ import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.Cardano.Node ()
 import Ouroboros.Consensus.Ledger.Query qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
-import Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
+import Cardano.Network.NodeToClient.Version (NodeToClientVersion (..))
 import Ouroboros.Network.Protocol.LocalStateQuery.Codec
 
 -- | LocalStateQuery uses versioned queries, which means it requires the Node to support a minimum
