@@ -171,8 +171,8 @@ shelleyGenesisDefaults =
           & ppMaxBBSizeL .~ 64 * 1024 -- max 64kb blocks
           & ppMaxTxSizeL .~ 16 * 1024 -- max 16kb txs
           & ppEMaxL .~ EpochInterval 18
-          & ppMinFeeAL .~ Coin 1 -- The linear factor for the minimum fee calculation
-          & ppMinFeeBL .~ Coin 0 -- The constant factor for the minimum fee calculation
+          & ppTxFeePerByteL .~ CoinPerByte (L.CompactCoin 1) -- The linear factor for the minimum fee calculation
+          & ppTxFeeFixedL .~ Coin 0 -- The constant factor for the minimum fee calculation
           -- pot = tx_fees + ρ * remaining_reserves
           & ppRhoL .~ unsafeBR (1 % 10) -- How much of reserves goes into pot
           & ppTauL .~ unsafeBR (1 % 10) -- τ * remaining_reserves is sent to treasury every epoch
