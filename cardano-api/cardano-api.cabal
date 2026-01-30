@@ -165,7 +165,7 @@ library
     network-mux,
     nothunks,
     ordered-containers,
-    ouroboros-consensus ^>=0.29,
+    ouroboros-consensus ^>=0.30,
     ouroboros-consensus-cardano ^>=0.26,
     ouroboros-consensus-diffusion ^>=0.25,
     ouroboros-consensus-protocol ^>=0.13,
