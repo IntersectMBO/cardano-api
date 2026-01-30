@@ -23,6 +23,8 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , TxBodyContent (..)
   , Datum (..)
   , defaultTxBodyContent
+  , extractDatumsAndHashes
+  , getDatums
   , collectTxBodyScriptWitnessRequirements
   , makeUnsignedTx
   , extractAllIndexedPlutusScriptWitnesses
@@ -59,12 +61,15 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , convProposalProcedures
 
     -- * Legacy conversions
+  , DatumDecodingError (..)
   , legacyDatumToDatum
   , fromLegacyTxOut
   )
 where
 
 import Cardano.Api.Address
+import Cardano.Api.Error
+import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Certificate qualified as Exp
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Plutus
@@ -76,6 +81,7 @@ import Cardano.Api.Experimental.Plutus
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
   ( AnyWitness (..)
+  , anyScriptWitnessToAnyWitness
   )
 import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
@@ -91,6 +97,7 @@ import Cardano.Api.Key.Internal
 import Cardano.Api.Ledger.Internal.Reexport (StrictMaybe (..))
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal.ScriptData qualified as Api
+import Cardano.Api.Pretty
 import Cardano.Api.Tx.Internal.Body
   ( CtxTx
   , TxIn
@@ -113,6 +120,7 @@ import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Control.Monad
+import Data.ByteString.Short qualified as SBS
 import Data.Functor
 import Data.List qualified as List
 import Data.Map.Ordered.Strict (OMap)
@@ -132,7 +140,7 @@ makeUnsignedTx
   :: forall era
    . Era era
   -> TxBodyContent (LedgerEra era)
-  -> UnsignedTx era
+  -> UnsignedTx (LedgerEra era)
 makeUnsignedTx DijkstraEra _ = error "makeUnsignedTx: Dijkstra era not supported yet"
 makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
   let TxScriptWitnessRequirements languages scripts datums redeemers = collectTxBodyScriptWitnessRequirements bc
@@ -146,7 +154,7 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
       txins = convTxIns $ txIns bc
       collTxIns = convCollateralTxIns bc
       refTxIns = convReferenceInputs apiReferenceInputs
-      outs = fromList [o | TxOut o _ <- txOuts bc]
+      outs = fromList [o | TxOut o <- txOuts bc]
       protocolParameters = txProtocolParams bc
       fee = txFee bc
       withdrawals = convWithdrawals $ txWithdrawals bc
@@ -310,12 +318,12 @@ eraSpecificLedgerTxBody era ledgerbody bc =
             & L.currentTreasuryValueTxBodyL
               .~ L.maybeToStrictMaybe currentTreasuryValue
 
-data TxOut ctx era where
-  TxOut :: L.EraTxOut era => L.TxOut era -> Maybe (Datum ctx era) -> TxOut ctx era
+data TxOut era where
+  TxOut :: L.EraTxOut era => L.TxOut era -> TxOut era
 
-deriving instance (Show (TxOut ctx era))
+deriving instance (Show (TxOut era))
 
-deriving instance (Eq (TxOut ctx era))
+deriving instance (Eq (TxOut era))
 
 data Datum ctx era where
   TxOutDatumHash
@@ -354,10 +362,32 @@ legacyDatumToDatum (OldApi.TxOutDatumInline _ hd) = do
   Just (TxOutDatumInline hash d)
 legacyDatumToDatum OldApi.TxOutDatumNone = Nothing
 
-fromLegacyTxOut :: forall era. IsEra era => OldApi.TxOut CtxTx era -> TxOut CtxTx (LedgerEra era)
-fromLegacyTxOut tOut@(OldApi.TxOut _ _ d _) =
+fromLegacyTxOut
+  :: forall era. IsEra era => OldApi.TxOut CtxTx era -> Either DatumDecodingError (TxOut (LedgerEra era))
+fromLegacyTxOut tOut@(OldApi.TxOut _ _ d _) = do
   let o = OldApi.toShelleyTxOutAny (convert $ useEra @era) tOut
-   in obtainCommonConstraints (useEra @era) $ TxOut o (legacyDatumToDatum d)
+  newDatum :: L.Datum (LedgerEra era) <- obtainCommonConstraints (useEra @era) $ toLedgerDatum d
+  return $ obtainCommonConstraints (useEra @era) $ TxOut $ o & L.datumTxOutL .~ newDatum
+
+newtype DatumDecodingError = DataDecodingError String
+  deriving (Show, Eq)
+
+instance Error DatumDecodingError where
+  prettyError (DataDecodingError msg) = "Datum decoding error: " <> pshow msg
+
+toLedgerDatum
+  :: L.Era (LedgerEra era)
+  => OldApi.TxOutDatum CtxTx era -> Either DatumDecodingError (L.Datum (LedgerEra era))
+toLedgerDatum OldApi.TxOutDatumNone = Right L.NoDatum
+toLedgerDatum (OldApi.TxOutDatumHash _ (Api.ScriptDataHash h)) = Right $ L.DatumHash h
+toLedgerDatum (OldApi.TxOutSupplementalDatum _ h) =
+  case L.makeBinaryData $ SBS.toShort $ Api.getOriginalScriptDataBytes h of
+    Left e -> Left $ DataDecodingError e
+    Right bd -> Right $ L.Datum bd
+toLedgerDatum (OldApi.TxOutDatumInline _ h) =
+  case L.makeBinaryData $ SBS.toShort $ Api.getOriginalScriptDataBytes h of
+    Left e -> Left $ DataDecodingError e
+    Right bd -> Right $ L.Datum bd
 
 data TxInsReference era = TxInsReference [TxIn] (Set (Datum CtxTx era))
 
@@ -399,14 +429,13 @@ mkTxCertificates era certs = TxCertificates . OMap.fromList $ map getStakeCred c
   getStakeCred (c@(Exp.Certificate cert), wit) =
     (c, (,wit) <$> getTxCertWitness (convert era) (obtainCommonConstraints era cert))
 
--- This is incorrect. Only scripts can witness minting!
 newtype TxMintValue era
   = TxMintValue
   { unTxMintValue
       :: Map
            PolicyId
            ( PolicyAssets
-           , AnyWitness era
+           , AnyScriptWitness era
            )
   }
   deriving (Eq, Show)
@@ -489,7 +518,7 @@ data TxBodyContent era
   { txIns :: [(TxIn, AnyWitness era)]
   , txInsCollateral :: [TxIn]
   , txInsReference :: TxInsReference era
-  , txOuts :: [TxOut CtxTx era]
+  , txOuts :: [TxOut era]
   , txTotalCollateral :: Maybe TxTotalCollateral
   , txReturnCollateral :: Maybe (TxReturnCollateral era)
   , txFee :: L.Coin
@@ -548,7 +577,7 @@ extractAllIndexedPlutusScriptWitnesses
 extractAllIndexedPlutusScriptWitnesses era b = obtainCommonConstraints era $ do
   let txInWits = extractWitnessableTxIns $ txIns b
       certWits = extractWitnessableCertificates $ txCertificates b
-      mintWits = extractWitnessableMints $ txMintValue b
+      mintWits = [(wit, anyScriptWitnessToAnyWitness sw) | (wit, sw) <- extractWitnessableMints $ txMintValue b]
       withdrawalWits = extractWitnessableWithdrawals $ txWithdrawals b
       proposalScriptWits = extractWitnessableProposals $ txProposalProcedures b
       voteWits = extractWitnessableVotes $ txVotingProcedures b
@@ -598,7 +627,7 @@ extractWitnessableMints
   :: forall era
    . IsEra era
   => TxMintValue (LedgerEra era)
-  -> [(Witnessable MintItem (LedgerEra era), AnyWitness (LedgerEra era))]
+  -> [(Witnessable MintItem (LedgerEra era), AnyScriptWitness (LedgerEra era))]
 extractWitnessableMints mVal =
   obtainCommonConstraints (useEra @era) $
     List.nub
@@ -700,7 +729,7 @@ collectTxBodyScriptWitnessRequirements
             extractWitnessableCertificates txCertificates
         txMintWits =
           obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
-            extractWitnessableMints txMintValue
+            [(wit, anyScriptWitnessToAnyWitness sw) | (wit, sw) <- extractWitnessableMints txMintValue]
         txVotingWits =
           obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
             extractWitnessableVotes txVotingProcedures
@@ -738,14 +767,18 @@ getDatums
    . IsEra era
   => TxInsReference (LedgerEra era)
   -- ^ reference inputs
-  -> [TxOut CtxTx (LedgerEra era)]
+  -> [TxOut (LedgerEra era)]
   -> L.TxDats (LedgerEra era)
 getDatums txInsRef txOutsFromTx = do
   let TxInsReference _ datumSet = txInsRef
       refInDatums = mapMaybe extractDatumsAndHashes $ Set.toList datumSet
       -- use only supplemental datum
       txOutsDats =
-        [(h, d) | TxOut _ (Just (TxOutSupplementalDatum h d)) <- txOutsFromTx]
+        [ (L.hashData d, d)
+        | TxOut txout <- txOutsFromTx
+        , d <-
+            maybeToList $ L.strictMaybeToMaybe $ txout ^. obtainCommonConstraints (useEra @era) L.dataTxOutL
+        ]
           :: [(L.DataHash, L.Data (LedgerEra era))]
   obtainCommonConstraints (useEra @era) $
     L.TxDats $
@@ -790,7 +823,7 @@ setTxMetadata v txBodyContent = txBodyContent{txMetadata = v}
 setTxFee :: L.Coin -> TxBodyContent era -> TxBodyContent era
 setTxFee v txBodyContent = txBodyContent{txFee = v}
 
-setTxOuts :: [TxOut CtxTx era] -> TxBodyContent era -> TxBodyContent era
+setTxOuts :: [TxOut era] -> TxBodyContent era -> TxBodyContent era
 setTxOuts v txBodyContent = txBodyContent{txOuts = v}
 
 setTxMintValue :: TxMintValue era -> TxBodyContent era -> TxBodyContent era
@@ -818,5 +851,5 @@ setTxTreasuryDonation :: L.Coin -> TxBodyContent era -> TxBodyContent era
 setTxTreasuryDonation v txBodyContent = txBodyContent{txTreasuryDonation = Just v}
 
 modTxOuts
-  :: ([TxOut CtxTx era] -> [TxOut CtxTx era]) -> TxBodyContent era -> TxBodyContent era
+  :: ([TxOut era] -> [TxOut era]) -> TxBodyContent era -> TxBodyContent era
 modTxOuts f txBodyContent = txBodyContent{txOuts = f (txOuts txBodyContent)}

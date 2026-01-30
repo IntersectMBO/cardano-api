@@ -15,6 +15,7 @@
 module Cardano.Api.Experimental.Tx.Internal.Fee
   ( TxBodyErrorAutoBalance (..)
   , TxFeeEstimationError (..)
+  , calculateMinimumUTxO
   , collectTxBodyScriptWitnesses
   , estimateBalancedTxBody
   , evaluateTransactionExecutionUnits
@@ -48,8 +49,7 @@ import Cardano.Api.Pretty
 import Cardano.Api.ProtocolParameters
 import Cardano.Api.Query.Internal.Type.QueryInMode
 import Cardano.Api.Tx.Internal.Body
-  ( CtxTx
-  , ScriptWitnessIndex (..)
+  ( ScriptWitnessIndex (..)
   , renderScriptWitnessIndex
   , toScriptIndex
   )
@@ -100,7 +100,7 @@ data TxBodyErrorAutoBalance era
     -- new UTXO entries. The transaction should be changed to provide more
     -- input ada.
     TxBodyErrorAdaBalanceTooSmall
-      (TxOut CtxTx era)
+      (TxOut era)
       -- ^ Offending TxOut
       L.Coin
       -- ^ Minimum UTxO
@@ -108,7 +108,7 @@ data TxBodyErrorAutoBalance era
       -- ^ Tx balance
   | -- | The minimum spendable UTxO threshold has not been met.
     TxBodyErrorMinUTxONotMet
-      (TxOut CtxTx era)
+      (TxOut era)
       -- ^ Offending TxOut
       L.Coin
       -- ^ Minimum UTXO
@@ -123,7 +123,7 @@ data TxBodyErrorAutoBalance era
   | BalanceIsNegative
       L.Coin
       -- ^ Negative balance
-      (UnsignedTx ConwayEra)
+      (UnsignedTx (LedgerEra ConwayEra))
       -- ^ The transaction body
   | NotEnoughAdaInUTxO
       L.MaryValue
@@ -365,7 +365,7 @@ estimateBalancedTxBody'
             txbodycontent1
               { txFee = maxLovelaceFee
               , txOuts =
-                  obtainCommonConstraints (useEra @era) (TxOut changeTxOut Nothing)
+                  obtainCommonConstraints (useEra @era) (TxOut changeTxOut)
                     : txOuts txbodycontent
               , txReturnCollateral = mDummyReturnCollateral
               , txTotalCollateral = mDummyTotalCollateral
@@ -411,10 +411,10 @@ estimateBalancedTxBody'
         coinBalance :: L.Coin
         coinBalance = obtainCommonConstraints (useEra @era) $ L.coin balance
 
-        balanceTxOut :: TxOut CtxTx (LedgerEra era)
+        balanceTxOut :: TxOut (LedgerEra era)
         balanceTxOut =
           obtainCommonConstraints (useEra @era) $
-            TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance) Nothing
+            TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance)
     case useEra @era of
       DijkstraEra -> error "estimateBalancedTxBody: DijkstraEra is not supported for fee estimation"
       ConwayEra -> do
@@ -459,10 +459,10 @@ checkNonNegative
   :: forall era
    . IsEra era
   => Ledger.PParams (LedgerEra era)
-  -> TxOut CtxTx (LedgerEra era)
+  -> TxOut (LedgerEra era)
   -> Either (TxBodyErrorAutoBalance (LedgerEra era)) IsEmpty
   -- ^ result of check if txout is empty
-checkNonNegative bpparams txout@(TxOut balance _) = do
+checkNonNegative bpparams txout@(TxOut balance) = do
   let outValue@(L.MaryValue coin multiAsset) = balance ^. obtainCommonConstraints (useEra @era) L.valueTxOutL
       isPositiveValue = L.pointwise (>) outValue mempty
   if
@@ -486,10 +486,10 @@ checkAndIncludeChange
   :: forall era
    . IsEra era
   => Ledger.PParams (LedgerEra era)
-  -> TxOut CtxTx (LedgerEra era)
-  -> [TxOut CtxTx (LedgerEra era)]
-  -> Either (TxBodyErrorAutoBalance (LedgerEra era)) [TxOut CtxTx (LedgerEra era)]
-checkAndIncludeChange pp change@(TxOut changeOutput _) rest = do
+  -> TxOut (LedgerEra era)
+  -> [TxOut (LedgerEra era)]
+  -> Either (TxBodyErrorAutoBalance (LedgerEra era)) [TxOut (LedgerEra era)]
+checkAndIncludeChange pp change@(TxOut changeOutput) rest = do
   isChangeEmpty <- checkNonNegative pp change
   case isChangeEmpty of
     Empty -> pure rest
@@ -502,10 +502,10 @@ checkAndIncludeChange pp change@(TxOut changeOutput _) rest = do
 
 checkMinUTxOValue
   :: Ledger.PParams (LedgerEra era)
-  -> TxOut CtxTx (LedgerEra era)
-  -> Either (TxOut CtxTx (LedgerEra era), Coin) ()
+  -> TxOut (LedgerEra era)
+  -> Either (TxOut (LedgerEra era), Coin) ()
   -- ^ @Left (offending txout, minimum required utxo)@ or @Right ()@ when txout is ok
-checkMinUTxOValue bpp txout@(TxOut out _) = do
+checkMinUTxOValue bpp txout@(TxOut out) = do
   let minUTxO = calculateMinimumUTxO bpp txout
   if out ^. L.coinTxOutL >= minUTxO
     then Right ()
@@ -514,9 +514,9 @@ checkMinUTxOValue bpp txout@(TxOut out _) = do
 calculateMinimumUTxO
   :: HasCallStack
   => Ledger.PParams (LedgerEra era)
-  -> TxOut CtxTx (LedgerEra era)
+  -> TxOut (LedgerEra era)
   -> L.Coin
-calculateMinimumUTxO pp (TxOut txout _) =
+calculateMinimumUTxO pp (TxOut txout) =
   let txOutWithMinCoin = L.setMinCoinTxOut pp txout
    in txOutWithMinCoin ^. L.coinTxOutL
 
@@ -534,7 +534,7 @@ evaluateTransactionBalance
   -> Map StakeCredential L.Coin
   -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
   -> L.UTxO (LedgerEra era)
-  -> UnsignedTx era
+  -> UnsignedTx (LedgerEra era)
   -> L.Value (LedgerEra era)
 evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo (UnsignedTx unsignedTx) =
   let txbody = unsignedTx ^. L.bodyTxL
@@ -573,7 +573,7 @@ createFakeUTxO :: TxBodyContent era -> Coin -> L.UTxO era
 createFakeUTxO txbodycontent totalAdaInUTxO =
   let singleTxIn = maybe [] (return . toShelleyTxIn . fst) $ List.uncons [txin | (txin, _) <- txIns txbodycontent]
       singleTxOut =
-        maybe [] (\(TxOut firstOut _, _rest) -> return $ firstOut & L.coinTxOutL .~ totalAdaInUTxO) $
+        maybe [] (\(TxOut firstOut, _rest) -> return $ firstOut & L.coinTxOutL .~ totalAdaInUTxO) $
           List.uncons $
             txOuts txbodycontent
    in -- Take one txin and one txout. Replace the out value with totalAdaInUTxO
@@ -646,7 +646,7 @@ calcReturnAndTotalCollateral fee pp' _ mTxReturnCollateral mTxTotalCollateral cA
 -- estimate:
 evaluateTransactionFee
   :: Ledger.PParams (LedgerEra era)
-  -> UnsignedTx era
+  -> UnsignedTx (LedgerEra era)
   -> Word
   -- ^ The number of Shelley key witnesses
   -> Word
@@ -701,7 +701,7 @@ calculatePartialChangeValue incoming txbodycontent = do
  where
   newUtxoValue =
     mconcat
-      [out ^. obtainCommonConstraints (useEra @era) L.valueTxOutL | (TxOut out _) <- txOuts txbodycontent]
+      [out ^. obtainCommonConstraints (useEra @era) L.valueTxOutL | (TxOut out) <- txOuts txbodycontent]
 
 substituteExecutionUnits
   :: forall era
@@ -750,6 +750,19 @@ substituteExecutionUnits
         & setTxVotingProcedures mappedVotes
         & setTxProposalProcedures mappedProposals
    where
+    substitudeExecUnitsTxMint
+      :: ScriptWitnessIndex
+      -> AnyScriptWitness (LedgerEra era)
+      -> Either (TxBodyErrorAutoBalance (LedgerEra era)) (AnyScriptWitness (LedgerEra era))
+    substitudeExecUnitsTxMint _ w@AnyScriptWitnessSimple{} = Right w
+    substitudeExecUnitsTxMint idx (AnyScriptWitnessPlutus psw) =
+      case Map.lookup idx exUnitsMap of
+        Nothing ->
+          Left $ TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap idx exUnitsMap
+        Just exunits ->
+          Right $
+            AnyScriptWitnessPlutus $
+              updatePlutusScriptWitnessExecutionUnits exunits psw
     substituteExecUnits
       :: ScriptWitnessIndex
       -> AnyWitness (LedgerEra era)
@@ -829,10 +842,15 @@ substituteExecutionUnits
       :: TxMintValue (LedgerEra era)
       -> Either (TxBodyErrorAutoBalance (LedgerEra era)) (TxMintValue (LedgerEra era))
     mapScriptWitnessesMinting txMintValue' = do
-      let mappedScriptWitnesses =
+      let mappedScriptWitnesses
+            :: [ ( PolicyId
+                 , Either (TxBodyErrorAutoBalance (LedgerEra era)) (PolicyAssets, AnyScriptWitness (LedgerEra era))
+                 )
+               ]
+          mappedScriptWitnesses =
             [ (policyId, (assets,) <$> substitutedWitness)
             | (ix, policyId, assets, wit) <- indexTxMintValue txMintValue'
-            , let substitutedWitness = substituteExecUnits ix wit
+            , let substitutedWitness = substitudeExecUnitsTxMint ix wit
             ]
           -- merge map values, wit1 == wit2 will always hold
           mergeValues (assets1, wit1) (assets2, _wit2) = (assets1 <> assets2, wit1)
@@ -931,8 +949,8 @@ collectTxBodyScriptWitnesses
     scriptWitnessesMinting txMintValue' =
       List.nub
         [ (ix, wit)
-        | (ix, _, _, Just wit@AnyScriptWitnessPlutus{}) <-
-            fmap toAnyScriptWitness <$> indexTxMintValue txMintValue'
+        | (ix, _, _, wit@AnyScriptWitnessPlutus{}) <-
+            indexTxMintValue txMintValue'
         ]
 
     scriptWitnessesVoting
@@ -1021,7 +1039,7 @@ indexTxMintValue
   -> [ ( ScriptWitnessIndex
        , PolicyId
        , PolicyAssets
-       , AnyWitness era
+       , AnyScriptWitness era
        )
      ]
 indexTxMintValue (TxMintValue policiesWithAssets) =
@@ -1059,7 +1077,7 @@ indexWitnessedTxProposalProcedures (TxProposalProcedures proposals) = do
     | (ix, (proposal, anyWitness)) <- allProposalsList
     ]
 
-toUnsigned :: forall era. Era era -> L.Tx (LedgerEra era) -> UnsignedTx era
+toUnsigned :: forall era. Era era -> L.Tx (LedgerEra era) -> UnsignedTx (LedgerEra era)
 toUnsigned e tx =
   obtainCommonConstraints e $
     UnsignedTx tx
@@ -1177,7 +1195,9 @@ makeTransactionBodyAutoBalance
   -- ^ Change address
   -> Maybe Word
   -- ^ Override key witnesses
-  -> Either (TxBodyErrorAutoBalance (LedgerEra era)) (UnsignedTx era, TxBodyContent (LedgerEra era))
+  -> Either
+       (TxBodyErrorAutoBalance (LedgerEra era))
+       (UnsignedTx (LedgerEra era), TxBodyContent (LedgerEra era))
 makeTransactionBodyAutoBalance
   systemstart
   history
@@ -1202,9 +1222,9 @@ makeTransactionBodyAutoBalance
 
     let initialChangeTxOutValue :: Ledger.Value (LedgerEra era) =
           evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo txbodyForChange
-        initialChangeTxOut :: TxOut CtxTx (LedgerEra era) =
+        initialChangeTxOut :: TxOut (LedgerEra era) =
           obtainCommonConstraints (useEra @era) $
-            TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) initialChangeTxOutValue) Nothing
+            TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) initialChangeTxOutValue)
 
     -- Initial change is only used for execution units evaluation, so we don't require minimum UTXO requirement
     -- to be satisfied at this point
@@ -1317,9 +1337,9 @@ makeTransactionBodyAutoBalance
         let
           -- The multiasset output of evaluateTransactionBalance will be negative when
           -- minting a multiasset. Therefore we must make the multiasset balance positive
-          balanceTxOut :: TxOut CtxTx (LedgerEra era) =
+          balanceTxOut :: TxOut (LedgerEra era) =
             obtainCommonConstraints (useEra @era) $
-              TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance) Nothing
+              TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance)
         first (uncurry TxBodyErrorMinUTxONotMet)
           . mapM_ (checkMinUTxOValue pp)
           $ txOuts txbodycontent1
@@ -1449,7 +1469,7 @@ calculateMinTxFee
    . IsEra era
   => Ledger.PParams (LedgerEra era)
   -> L.UTxO (LedgerEra era)
-  -> UnsignedTx era
+  -> UnsignedTx (LedgerEra era)
   -> Word
   -- ^ The number of Shelley key witnesses
   -> L.Coin
