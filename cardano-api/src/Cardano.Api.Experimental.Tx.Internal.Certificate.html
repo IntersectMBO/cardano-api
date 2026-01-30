@@ -1,0 +1,940 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE InstanceSigs #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.Certificate</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Registering stake address and delegating</span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressDelegationCertificate"><span class="hs-identifier">makeStakeAddressDelegationCertificate</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressRegistrationCertificate"><span class="hs-identifier">makeStakeAddressRegistrationCertificate</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressUnregistrationCertificate"><span class="hs-identifier">makeStakeAddressUnregistrationCertificate</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Registering stake pools</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakePoolRegistrationCertificate"><span class="hs-identifier">makeStakePoolRegistrationCertificate</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakePoolRetirementCertificate"><span class="hs-identifier">makeStakePoolRetirementCertificate</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Governance related certificates</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeCommitteeColdkeyResignationCertificate"><span class="hs-identifier">makeCommitteeColdkeyResignationCertificate</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeCommitteeHotKeyAuthorizationCertificate"><span class="hs-identifier">makeCommitteeHotKeyAuthorizationCertificate</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeDrepRegistrationCertificate"><span class="hs-identifier">makeDrepRegistrationCertificate</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeDrepUnregistrationCertificate"><span class="hs-identifier">makeDrepUnregistrationCertificate</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeDrepUpdateCertificate"><span class="hs-identifier">makeDrepUpdateCertificate</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressAndDRepDelegationCertificate"><span class="hs-identifier">makeStakeAddressAndDRepDelegationCertificate</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Anchor data</span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#AnchorDataFromCertificateError"><span class="hs-identifier">AnchorDataFromCertificateError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#getAnchorDataFromCertificate"><span class="hs-identifier">getAnchorDataFromCertificate</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Data family instances</span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier">AsType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html"><span class="hs-identifier">Cardano.Api.Address</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyBasedEra</span></a></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html"><span class="hs-identifier">Cardano.Api.Error</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html"><span class="hs-identifier">Cardano.Api.Experimental.Era</span></a></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible.html#Delegatee"><span class="hs-identifier">Delegatee</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.Certificate.Type</span></a></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html"><span class="hs-identifier">Cardano.Api.HasTypeProxy</span></a></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Hash.html"><span class="hs-identifier">Cardano.Api.Hash</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.Utils.html"><span class="hs-identifier">Cardano.Api.Internal.Utils</span></a></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Key.Internal.html"><span class="hs-identifier">Cardano.Api.Key.Internal</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Ledger.Internal.Reexport.html"><span class="hs-identifier">Cardano.Api.Ledger.Internal.Reexport</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Pretty.html"><span class="hs-identifier">Cardano.Api.Pretty</span></a></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html"><span class="hs-identifier">Cardano.Api.Serialise.TextEnvelope.Internal</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-strict-containers-0.1.5.0-0498c7dd1b0a279913c027132efb4ac093bc85f9a10f50469ac9c8a0b08e36e4/share/doc/html/src/Data.Maybe.Strict.html#strictMaybe"><span class="hs-identifier">strictMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/mtl-2.3.1-inplace/src/Control.Monad.Except.html"><span class="hs-identifier">Control.Monad.Except</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/mtl-2.3.1-inplace/src/Control.Monad.Error.Class.html#MonadError"><span class="hs-identifier">MonadError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.String.html#IsString"><span class="hs-identifier">IsString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.String.html#fromString"><span class="hs-identifier">fromString</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressDelegationCertificate"><span class="hs-identifier hs-type">makeStakeAddressDelegationCertificate</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681379908"><span class="annot"><a href="#local-6989586621681379908"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-63"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681379908"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#StakeCredential"><span class="hs-identifier hs-type">StakeCredential</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible.html#Delegatee"><span class="hs-identifier hs-type">Delegatee</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681379908"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681379908"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span id="makeStakeAddressDelegationCertificate"><span class="annot"><span class="annottext">makeStakeAddressDelegationCertificate :: forall era.
+IsEra era =&gt;
+StakeCredential -&gt; Delegatee era -&gt; Certificate (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressDelegationCertificate"><span class="hs-identifier hs-var hs-var">makeStakeAddressDelegationCertificate</span></a></span></span><span> </span><span id="local-6989586621681380118"><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621681380118"><span class="hs-identifier hs-var">sCred</span></a></span></span><span> </span><span id="local-6989586621681380119"><span class="annot"><span class="annottext">Delegatee era
+</span><a href="#local-6989586621681380119"><span class="hs-identifier hs-var">delegatee</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681379908"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-69"></span><span>    </span><span id="local-6989586621681380121"><span class="annot"><span class="annottext">e :: Era era
+</span><a href="#local-6989586621681380121"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-70"></span><span>      </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681380121"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+ -&gt; Certificate (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><span class="annottext">TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era))
+-&gt; TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-72"></span><span>          </span><span class="annot"><span class="annottext">StakeCredential -&gt; Delegatee -&gt; TxCert ConwayEra
+forall era.
+ConwayEraTxCert era =&gt;
+StakeCredential -&gt; Delegatee -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#mkDelegTxCert"><span class="hs-identifier hs-var">Ledger.mkDelegTxCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeCredential
+</span><a href="Cardano.Api.Address.html#toShelleyStakeCredential"><span class="hs-identifier hs-var">toShelleyStakeCredential</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621681380118"><span class="hs-identifier hs-var">sCred</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Delegatee
+Delegatee era
+</span><a href="#local-6989586621681380119"><span class="hs-identifier hs-var">delegatee</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621681380134"><span class="annot"><span class="annottext">e :: Era era
+</span><a href="#local-6989586621681380134"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#DijkstraEra"><span class="hs-identifier hs-var">DijkstraEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>      </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681380134"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+ -&gt; Certificate (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era))
+-&gt; TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-76"></span><span>          </span><span class="annot"><span class="annottext">StakeCredential -&gt; Delegatee -&gt; TxCert DijkstraEra
+forall era.
+ConwayEraTxCert era =&gt;
+StakeCredential -&gt; Delegatee -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#mkDelegTxCert"><span class="hs-identifier hs-var">Ledger.mkDelegTxCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeCredential
+</span><a href="Cardano.Api.Address.html#toShelleyStakeCredential"><span class="hs-identifier hs-var">toShelleyStakeCredential</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621681380118"><span class="hs-identifier hs-var">sCred</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Delegatee
+Delegatee era
+</span><a href="#local-6989586621681380119"><span class="hs-identifier hs-var">delegatee</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressRegistrationCertificate"><span class="hs-identifier hs-type">makeStakeAddressRegistrationCertificate</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681379993"><span class="annot"><a href="#local-6989586621681379993"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681379993"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#StakeCredential"><span class="hs-identifier hs-type">StakeCredential</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Ledger.Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681379993"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span id="makeStakeAddressRegistrationCertificate"><span class="annot"><span class="annottext">makeStakeAddressRegistrationCertificate :: forall era.
+IsEra era =&gt;
+StakeCredential -&gt; Coin -&gt; Certificate (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressRegistrationCertificate"><span class="hs-identifier hs-var hs-var">makeStakeAddressRegistrationCertificate</span></a></span></span><span> </span><span id="local-6989586621681380145"><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621681380145"><span class="hs-identifier hs-var">scred</span></a></span></span><span> </span><span id="local-6989586621681380146"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681380146"><span class="hs-identifier hs-var">deposit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681379993"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+ -&gt; Certificate (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="annottext">TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era))
+-&gt; TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-83"></span><span>      </span><span class="annot"><span class="annottext">StakeCredential -&gt; Coin -&gt; TxCert (LedgerEra era)
+forall era.
+ConwayEraTxCert era =&gt;
+StakeCredential -&gt; Coin -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#mkRegDepositTxCert"><span class="hs-identifier hs-var">Ledger.mkRegDepositTxCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeCredential
+</span><a href="Cardano.Api.Address.html#toShelleyStakeCredential"><span class="hs-identifier hs-var">toShelleyStakeCredential</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621681380145"><span class="hs-identifier hs-var">scred</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681380146"><span class="hs-identifier hs-var">deposit</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressUnregistrationCertificate"><span class="hs-identifier hs-type">makeStakeAddressUnregistrationCertificate</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681380153"><span class="annot"><a href="#local-6989586621681380153"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380153"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#StakeCredential"><span class="hs-identifier hs-type">StakeCredential</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Ledger.Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380153"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span id="makeStakeAddressUnregistrationCertificate"><span class="annot"><span class="annottext">makeStakeAddressUnregistrationCertificate :: forall era.
+IsEra era =&gt;
+StakeCredential -&gt; Coin -&gt; Certificate (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressUnregistrationCertificate"><span class="hs-identifier hs-var hs-var">makeStakeAddressUnregistrationCertificate</span></a></span></span><span> </span><span id="local-6989586621681380156"><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621681380156"><span class="hs-identifier hs-var">scred</span></a></span></span><span> </span><span id="local-6989586621681380157"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681380157"><span class="hs-identifier hs-var">deposit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681380153"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+ -&gt; Certificate (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><span class="annottext">TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era))
+-&gt; TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-90"></span><span>      </span><span class="annot"><span class="annottext">StakeCredential -&gt; Coin -&gt; TxCert (LedgerEra era)
+forall era.
+ConwayEraTxCert era =&gt;
+StakeCredential -&gt; Coin -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#mkUnRegDepositTxCert"><span class="hs-identifier hs-var">Ledger.mkUnRegDepositTxCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeCredential
+</span><a href="Cardano.Api.Address.html#toShelleyStakeCredential"><span class="hs-identifier hs-var">toShelleyStakeCredential</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621681380156"><span class="hs-identifier hs-var">scred</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681380157"><span class="hs-identifier hs-var">deposit</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakePoolRegistrationCertificate"><span class="hs-identifier hs-type">makeStakePoolRegistrationCertificate</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681379997"><span class="annot"><a href="#local-6989586621681379997"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-94"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681379997"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.State.StakePool.html#PoolParams"><span class="hs-identifier hs-type">Ledger.PoolParams</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681379997"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span id="makeStakePoolRegistrationCertificate"><span class="annot"><span class="annottext">makeStakePoolRegistrationCertificate :: forall era. IsEra era =&gt; PoolParams -&gt; Certificate (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakePoolRegistrationCertificate"><span class="hs-identifier hs-var hs-var">makeStakePoolRegistrationCertificate</span></a></span></span><span> </span><span id="local-6989586621681380166"><span class="annot"><span class="annottext">PoolParams
+</span><a href="#local-6989586621681380166"><span class="hs-identifier hs-var">poolParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681379997"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+ -&gt; Certificate (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era))
+-&gt; TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><span class="annottext">PoolParams -&gt; TxCert (LedgerEra era)
+forall era. EraTxCert era =&gt; PoolParams -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.TxCert.html#mkRegPoolTxCert"><span class="hs-identifier hs-var">Ledger.mkRegPoolTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">PoolParams
+</span><a href="#local-6989586621681380166"><span class="hs-identifier hs-var">poolParams</span></a></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakePoolRetirementCertificate"><span class="hs-identifier hs-type">makeStakePoolRetirementCertificate</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681380001"><span class="annot"><a href="#local-6989586621681380001"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-104"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380001"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier hs-type">Api.Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Key.Internal.html#StakePoolKey"><span class="hs-identifier hs-type">Api.StakePoolKey</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-slotting-0.2.0.1-9eace196ac8404c90bd5a7bc8a58c5076ce9648ddd44c032b9cf819991efeba3/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">Ledger.EpochNo</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380001"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span id="makeStakePoolRetirementCertificate"><span class="annot"><span class="annottext">makeStakePoolRetirementCertificate :: forall era.
+IsShelleyBasedEra era =&gt;
+Hash StakePoolKey -&gt; EpochNo -&gt; Certificate (ShelleyLedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakePoolRetirementCertificate"><span class="hs-identifier hs-var hs-var">makeStakePoolRetirementCertificate</span></a></span></span><span> </span><span id="local-6989586621681380174"><span class="annot"><span class="annottext">Hash StakePoolKey
+</span><a href="#local-6989586621681380174"><span class="hs-identifier hs-var">poolId</span></a></span></span><span> </span><span id="local-6989586621681380175"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621681380175"><span class="hs-identifier hs-var">retirementEpoch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Certificate (ShelleyLedgerEra era))
+-&gt; Certificate (ShelleyLedgerEra era)
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681380001"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt;
+  Certificate (ShelleyLedgerEra era))
+ -&gt; Certificate (ShelleyLedgerEra era))
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Certificate (ShelleyLedgerEra era))
+-&gt; Certificate (ShelleyLedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">TxCert (ShelleyLedgerEra era) -&gt; Certificate (ShelleyLedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (ShelleyLedgerEra era)
+ -&gt; Certificate (ShelleyLedgerEra era))
+-&gt; TxCert (ShelleyLedgerEra era)
+-&gt; Certificate (ShelleyLedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">KeyHash 'StakePool -&gt; EpochNo -&gt; TxCert (ShelleyLedgerEra era)
+forall era.
+EraTxCert era =&gt;
+KeyHash 'StakePool -&gt; EpochNo -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.TxCert.html#mkRetirePoolTxCert"><span class="hs-identifier hs-var">Ledger.mkRetirePoolTxCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hash StakePoolKey -&gt; KeyHash 'StakePool
+</span><a href="Cardano.Api.Key.Internal.html#unStakePoolKeyHash"><span class="hs-identifier hs-var">Api.unStakePoolKeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">Hash StakePoolKey
+</span><a href="#local-6989586621681380174"><span class="hs-identifier hs-var">poolId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621681380175"><span class="hs-identifier hs-var">retirementEpoch</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeCommitteeColdkeyResignationCertificate"><span class="hs-identifier hs-type">makeCommitteeColdkeyResignationCertificate</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681380038"><span class="annot"><a href="#local-6989586621681380038"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-115"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380038"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Ledger.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#ColdCommitteeRole"><span class="hs-identifier hs-type">Ledger.ColdCommitteeRole</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Anchor"><span class="hs-identifier hs-type">Ledger.Anchor</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380038"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span id="makeCommitteeColdkeyResignationCertificate"><span class="annot"><span class="annottext">makeCommitteeColdkeyResignationCertificate :: forall era.
+IsEra era =&gt;
+Credential 'ColdCommitteeRole
+-&gt; Maybe Anchor -&gt; Certificate (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeCommitteeColdkeyResignationCertificate"><span class="hs-identifier hs-var hs-var">makeCommitteeColdkeyResignationCertificate</span></a></span></span><span> </span><span id="local-6989586621681380187"><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole
+</span><a href="#local-6989586621681380187"><span class="hs-identifier hs-var">coldKeyCred</span></a></span></span><span> </span><span id="local-6989586621681380188"><span class="annot"><span class="annottext">Maybe Anchor
+</span><a href="#local-6989586621681380188"><span class="hs-identifier hs-var">anchor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-120"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681380038"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+ -&gt; Certificate (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><span class="annottext">TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era))
+-&gt; TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-122"></span><span>      </span><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole
+-&gt; StrictMaybe Anchor -&gt; TxCert (LedgerEra era)
+forall era.
+ConwayEraTxCert era =&gt;
+Credential 'ColdCommitteeRole -&gt; StrictMaybe Anchor -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#mkResignCommitteeColdTxCert"><span class="hs-identifier hs-var">Ledger.mkResignCommitteeColdTxCert</span></a></span><span>
+</span><span id="line-123"></span><span>        </span><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole
+</span><a href="#local-6989586621681380187"><span class="hs-identifier hs-var">coldKeyCred</span></a></span><span>
+</span><span id="line-124"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Anchor -&gt; StrictMaybe Anchor
+forall a. Maybe a -&gt; StrictMaybe a
+</span><a href="Cardano.Api.Internal.Utils.html#noInlineMaybeToStrictMaybe"><span class="hs-identifier hs-var">noInlineMaybeToStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+</span><a href="#local-6989586621681380188"><span class="hs-identifier hs-var">anchor</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeCommitteeHotKeyAuthorizationCertificate"><span class="hs-identifier hs-type">makeCommitteeHotKeyAuthorizationCertificate</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681380045"><span class="annot"><a href="#local-6989586621681380045"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-128"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380045"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Ledger.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#ColdCommitteeRole"><span class="hs-identifier hs-type">Ledger.ColdCommitteeRole</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Ledger.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#HotCommitteeRole"><span class="hs-identifier hs-type">Ledger.HotCommitteeRole</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380045"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span id="makeCommitteeHotKeyAuthorizationCertificate"><span class="annot"><span class="annottext">makeCommitteeHotKeyAuthorizationCertificate :: forall era.
+IsEra era =&gt;
+Credential 'ColdCommitteeRole
+-&gt; Credential 'HotCommitteeRole -&gt; Certificate (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeCommitteeHotKeyAuthorizationCertificate"><span class="hs-identifier hs-var hs-var">makeCommitteeHotKeyAuthorizationCertificate</span></a></span></span><span> </span><span id="local-6989586621681380198"><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole
+</span><a href="#local-6989586621681380198"><span class="hs-identifier hs-var">coldKeyCredential</span></a></span></span><span> </span><span id="local-6989586621681380199"><span class="annot"><span class="annottext">Credential 'HotCommitteeRole
+</span><a href="#local-6989586621681380199"><span class="hs-identifier hs-var">hotKeyCredential</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681380045"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+ -&gt; Certificate (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><span class="annottext">TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era))
+-&gt; TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-135"></span><span>      </span><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole
+-&gt; Credential 'HotCommitteeRole -&gt; TxCert (LedgerEra era)
+forall era.
+ConwayEraTxCert era =&gt;
+Credential 'ColdCommitteeRole
+-&gt; Credential 'HotCommitteeRole -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#mkAuthCommitteeHotKeyTxCert"><span class="hs-identifier hs-var">Ledger.mkAuthCommitteeHotKeyTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole
+</span><a href="#local-6989586621681380198"><span class="hs-identifier hs-var">coldKeyCredential</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'HotCommitteeRole
+</span><a href="#local-6989586621681380199"><span class="hs-identifier hs-var">hotKeyCredential</span></a></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeDrepRegistrationCertificate"><span class="hs-identifier hs-type">makeDrepRegistrationCertificate</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681380048"><span class="annot"><a href="#local-6989586621681380048"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-139"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380048"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Ledger.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#DRepRole"><span class="hs-identifier hs-type">Ledger.DRepRole</span></a></span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Ledger.Coin</span></a></span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Anchor"><span class="hs-identifier hs-type">Ledger.Anchor</span></a></span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380048"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span id="makeDrepRegistrationCertificate"><span class="annot"><span class="annottext">makeDrepRegistrationCertificate :: forall era.
+IsEra era =&gt;
+Credential 'DRepRole
+-&gt; Coin -&gt; Maybe Anchor -&gt; Certificate (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeDrepRegistrationCertificate"><span class="hs-identifier hs-var hs-var">makeDrepRegistrationCertificate</span></a></span></span><span> </span><span id="local-6989586621681380208"><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><a href="#local-6989586621681380208"><span class="hs-identifier hs-var">vcred</span></a></span></span><span> </span><span id="local-6989586621681380209"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681380209"><span class="hs-identifier hs-var">deposit</span></a></span></span><span> </span><span id="local-6989586621681380210"><span class="annot"><span class="annottext">Maybe Anchor
+</span><a href="#local-6989586621681380210"><span class="hs-identifier hs-var">anchor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681380048"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+ -&gt; Certificate (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-146"></span><span>    </span><span class="annot"><span class="annottext">TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era))
+-&gt; TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-147"></span><span>      </span><span class="annot"><span class="annottext">Credential 'DRepRole
+-&gt; Coin -&gt; StrictMaybe Anchor -&gt; TxCert (LedgerEra era)
+forall era.
+ConwayEraTxCert era =&gt;
+Credential 'DRepRole -&gt; Coin -&gt; StrictMaybe Anchor -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#mkRegDRepTxCert"><span class="hs-identifier hs-var">Ledger.mkRegDRepTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><a href="#local-6989586621681380208"><span class="hs-identifier hs-var">vcred</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681380209"><span class="hs-identifier hs-var">deposit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Anchor -&gt; StrictMaybe Anchor
+forall a. Maybe a -&gt; StrictMaybe a
+</span><a href="Cardano.Api.Internal.Utils.html#noInlineMaybeToStrictMaybe"><span class="hs-identifier hs-var">noInlineMaybeToStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+</span><a href="#local-6989586621681380210"><span class="hs-identifier hs-var">anchor</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeDrepUnregistrationCertificate"><span class="hs-identifier hs-type">makeDrepUnregistrationCertificate</span></a></span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681380051"><span class="annot"><a href="#local-6989586621681380051"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-151"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380051"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Ledger.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#DRepRole"><span class="hs-identifier hs-type">Ledger.DRepRole</span></a></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Ledger.Coin</span></a></span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380051"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span id="makeDrepUnregistrationCertificate"><span class="annot"><span class="annottext">makeDrepUnregistrationCertificate :: forall era.
+IsEra era =&gt;
+Credential 'DRepRole -&gt; Coin -&gt; Certificate (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeDrepUnregistrationCertificate"><span class="hs-identifier hs-var hs-var">makeDrepUnregistrationCertificate</span></a></span></span><span> </span><span id="local-6989586621681380219"><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><a href="#local-6989586621681380219"><span class="hs-identifier hs-var">vcred</span></a></span></span><span> </span><span id="local-6989586621681380220"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681380220"><span class="hs-identifier hs-var">deposit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681380051"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+ -&gt; Certificate (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-157"></span><span>    </span><span class="annot"><span class="annottext">TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era))
+-&gt; TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-158"></span><span>      </span><span class="annot"><span class="annottext">Credential 'DRepRole -&gt; Coin -&gt; TxCert (LedgerEra era)
+forall era.
+ConwayEraTxCert era =&gt;
+Credential 'DRepRole -&gt; Coin -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#mkUnRegDRepTxCert"><span class="hs-identifier hs-var">Ledger.mkUnRegDRepTxCert</span></a></span><span>
+</span><span id="line-159"></span><span>        </span><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><a href="#local-6989586621681380219"><span class="hs-identifier hs-var">vcred</span></a></span><span>
+</span><span id="line-160"></span><span>        </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681380220"><span class="hs-identifier hs-var">deposit</span></a></span><span>
+</span><span id="line-161"></span><span>
+</span><span id="line-162"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeDrepUpdateCertificate"><span class="hs-identifier hs-type">makeDrepUpdateCertificate</span></a></span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681380053"><span class="annot"><a href="#local-6989586621681380053"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-164"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380053"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Ledger.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#DRepRole"><span class="hs-identifier hs-type">Ledger.DRepRole</span></a></span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Anchor"><span class="hs-identifier hs-type">Ledger.Anchor</span></a></span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380053"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span id="makeDrepUpdateCertificate"><span class="annot"><span class="annottext">makeDrepUpdateCertificate :: forall era.
+IsEra era =&gt;
+Credential 'DRepRole -&gt; Maybe Anchor -&gt; Certificate (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeDrepUpdateCertificate"><span class="hs-identifier hs-var hs-var">makeDrepUpdateCertificate</span></a></span></span><span> </span><span id="local-6989586621681380229"><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><a href="#local-6989586621681380229"><span class="hs-identifier hs-var">vcred</span></a></span></span><span> </span><span id="local-6989586621681380230"><span class="annot"><span class="annottext">Maybe Anchor
+</span><a href="#local-6989586621681380230"><span class="hs-identifier hs-var">mAnchor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-169"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681380053"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+ -&gt; Certificate (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-170"></span><span>    </span><span class="annot"><span class="annottext">TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era))
+-&gt; TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-171"></span><span>      </span><span class="annot"><span class="annottext">Credential 'DRepRole
+-&gt; StrictMaybe Anchor -&gt; TxCert (LedgerEra era)
+forall era.
+ConwayEraTxCert era =&gt;
+Credential 'DRepRole -&gt; StrictMaybe Anchor -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#mkUpdateDRepTxCert"><span class="hs-identifier hs-var">Ledger.mkUpdateDRepTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><a href="#local-6989586621681380229"><span class="hs-identifier hs-var">vcred</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Anchor -&gt; StrictMaybe Anchor
+forall a. Maybe a -&gt; StrictMaybe a
+</span><a href="Cardano.Api.Internal.Utils.html#noInlineMaybeToStrictMaybe"><span class="hs-identifier hs-var">noInlineMaybeToStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+</span><a href="#local-6989586621681380230"><span class="hs-identifier hs-var">mAnchor</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressAndDRepDelegationCertificate"><span class="hs-identifier hs-type">makeStakeAddressAndDRepDelegationCertificate</span></a></span><span>
+</span><span id="line-174"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681380055"><span class="annot"><a href="#local-6989586621681380055"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-175"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380055"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#StakeCredential"><span class="hs-identifier hs-type">StakeCredential</span></a></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#Delegatee"><span class="hs-identifier hs-type">Ledger.Delegatee</span></a></span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Ledger.Coin</span></a></span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380055"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span id="makeStakeAddressAndDRepDelegationCertificate"><span class="annot"><span class="annottext">makeStakeAddressAndDRepDelegationCertificate :: forall era.
+IsEra era =&gt;
+StakeCredential -&gt; Delegatee -&gt; Coin -&gt; Certificate (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#makeStakeAddressAndDRepDelegationCertificate"><span class="hs-identifier hs-var hs-var">makeStakeAddressAndDRepDelegationCertificate</span></a></span></span><span> </span><span id="local-6989586621681380239"><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621681380239"><span class="hs-identifier hs-var">cred</span></a></span></span><span> </span><span id="local-6989586621681380240"><span class="annot"><span class="annottext">Delegatee
+</span><a href="#local-6989586621681380240"><span class="hs-identifier hs-var">delegatee</span></a></span></span><span> </span><span id="local-6989586621681380241"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681380241"><span class="hs-identifier hs-var">deposit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-181"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681380055"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+ -&gt; Certificate (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; Certificate (LedgerEra era))
+-&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-182"></span><span>    </span><span class="annot"><span class="annottext">TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall era. EraTxCert era =&gt; TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era))
+-&gt; TxCert (LedgerEra era) -&gt; Certificate (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-183"></span><span>      </span><span class="annot"><span class="annottext">StakeCredential -&gt; Delegatee -&gt; Coin -&gt; TxCert (LedgerEra era)
+forall era.
+ConwayEraTxCert era =&gt;
+StakeCredential -&gt; Delegatee -&gt; Coin -&gt; TxCert era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#mkRegDepositDelegTxCert"><span class="hs-identifier hs-var">Ledger.mkRegDepositDelegTxCert</span></a></span><span>
+</span><span id="line-184"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeCredential
+</span><a href="Cardano.Api.Address.html#toShelleyStakeCredential"><span class="hs-identifier hs-var">toShelleyStakeCredential</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621681380239"><span class="hs-identifier hs-var">cred</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span>        </span><span class="annot"><span class="annottext">Delegatee
+</span><a href="#local-6989586621681380240"><span class="hs-identifier hs-var">delegatee</span></a></span><span>
+</span><span id="line-186"></span><span>        </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681380241"><span class="hs-identifier hs-var">deposit</span></a></span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span class="hs-comment">-- -------------------------------------</span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span id="local-6989586621681380057"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#getAnchorDataFromCertificate"><span class="hs-identifier hs-type">getAnchorDataFromCertificate</span></a></span><span>
+</span><span id="line-191"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380057"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-192"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380057"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-193"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#AnchorDataFromCertificateError"><span class="hs-identifier hs-type">AnchorDataFromCertificateError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Anchor"><span class="hs-identifier hs-type">Ledger.Anchor</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-194"></span><span id="getAnchorDataFromCertificate"><span class="annot"><span class="annottext">getAnchorDataFromCertificate :: forall era.
+Era era
+-&gt; Certificate (LedgerEra era)
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#getAnchorDataFromCertificate"><span class="hs-identifier hs-var hs-var">getAnchorDataFromCertificate</span></a></span></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span id="local-6989586621681380284"><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+</span><a href="#local-6989586621681380284"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-195"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+</span><a href="#local-6989586621681380284"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-196"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-shelley-1.17.0.0-1cca101b3db5b1729f8cb5c348d0d023d6fe54674e1770649c2244b6d2ef1144/share/doc/html/src/Cardano.Ledger.Shelley.TxCert.html#RegTxCert"><span class="hs-identifier hs-type">Ledger.RegTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-197"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-shelley-1.17.0.0-1cca101b3db5b1729f8cb5c348d0d023d6fe54674e1770649c2244b6d2ef1144/share/doc/html/src/Cardano.Ledger.Shelley.TxCert.html#UnRegTxCert"><span class="hs-identifier hs-type">Ledger.UnRegTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-198"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#RegDepositTxCert"><span class="hs-identifier hs-type">Ledger.RegDepositTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#UnRegDepositTxCert"><span class="hs-identifier hs-type">Ledger.UnRegDepositTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-200"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#RegDepositDelegTxCert"><span class="hs-identifier hs-type">Ledger.RegDepositDelegTxCert</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#DelegTxCert"><span class="hs-identifier hs-type">Ledger.DelegTxCert</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-202"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.TxCert.html#RegPoolTxCert"><span class="hs-identifier hs-type">Ledger.RegPoolTxCert</span></a></span><span> </span><span id="local-6989586621681380292"><span class="annot"><span class="annottext">PoolParams
+</span><a href="#local-6989586621681380292"><span class="hs-identifier hs-var">poolParams</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either AnchorDataFromCertificateError (Maybe Anchor)
+-&gt; (PoolMetadata
+    -&gt; Either AnchorDataFromCertificateError (Maybe Anchor))
+-&gt; StrictMaybe PoolMetadata
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a b. a -&gt; (b -&gt; a) -&gt; StrictMaybe b -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-strict-containers-0.1.5.0-0498c7dd1b0a279913c027132efb4ac093bc85f9a10f50469ac9c8a0b08e36e4/share/doc/html/src/Data.Maybe.Strict.html#strictMaybe"><span class="hs-identifier hs-var">strictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">PoolMetadata
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall (m :: * -&gt; *).
+MonadError AnchorDataFromCertificateError m =&gt;
+PoolMetadata -&gt; m (Maybe Anchor)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#anchorDataFromPoolMetadata"><span class="hs-identifier hs-var">anchorDataFromPoolMetadata</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe PoolMetadata
+ -&gt; Either AnchorDataFromCertificateError (Maybe Anchor))
+-&gt; StrictMaybe PoolMetadata
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PoolParams -&gt; StrictMaybe PoolMetadata
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.State.StakePool.html#ppMetadata"><span class="hs-identifier hs-var">Ledger.ppMetadata</span></a></span><span> </span><span class="annot"><span class="annottext">PoolParams
+</span><a href="#local-6989586621681380292"><span class="hs-identifier hs-var">poolParams</span></a></span><span>
+</span><span id="line-203"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.TxCert.html#RetirePoolTxCert"><span class="hs-identifier hs-type">Ledger.RetirePoolTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-204"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#RegDRepTxCert"><span class="hs-identifier hs-type">Ledger.RegDRepTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681380297"><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380297"><span class="hs-identifier hs-var">mAnchor</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Anchor
+ -&gt; Either AnchorDataFromCertificateError (Maybe Anchor))
+-&gt; Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor -&gt; Maybe Anchor
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-strict-containers-0.1.5.0-0498c7dd1b0a279913c027132efb4ac093bc85f9a10f50469ac9c8a0b08e36e4/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">Ledger.strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380297"><span class="hs-identifier hs-var">mAnchor</span></a></span><span>
+</span><span id="line-205"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#UnRegDRepTxCert"><span class="hs-identifier hs-type">Ledger.UnRegDRepTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-206"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#UpdateDRepTxCert"><span class="hs-identifier hs-type">Ledger.UpdateDRepTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681380301"><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380301"><span class="hs-identifier hs-var">mAnchor</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Anchor
+ -&gt; Either AnchorDataFromCertificateError (Maybe Anchor))
+-&gt; Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor -&gt; Maybe Anchor
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-strict-containers-0.1.5.0-0498c7dd1b0a279913c027132efb4ac093bc85f9a10f50469ac9c8a0b08e36e4/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">Ledger.strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380301"><span class="hs-identifier hs-var">mAnchor</span></a></span><span>
+</span><span id="line-207"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#AuthCommitteeHotKeyTxCert"><span class="hs-identifier hs-type">Ledger.AuthCommitteeHotKeyTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Credential 'HotCommitteeRole
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-208"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#ResignCommitteeColdTxCert"><span class="hs-identifier hs-type">Ledger.ResignCommitteeColdTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681380304"><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380304"><span class="hs-identifier hs-var">mAnchor</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Anchor
+ -&gt; Either AnchorDataFromCertificateError (Maybe Anchor))
+-&gt; Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor -&gt; Maybe Anchor
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-strict-containers-0.1.5.0-0498c7dd1b0a279913c027132efb4ac093bc85f9a10f50469ac9c8a0b08e36e4/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">Ledger.strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380304"><span class="hs-identifier hs-var">mAnchor</span></a></span><span>
+</span><span id="line-209"></span><span>    </span><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;getAnchorDataFromCertificate: Unrecognized cert&quot;</span></span><span>
+</span><span id="line-210"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#getAnchorDataFromCertificate"><span class="hs-identifier hs-var">getAnchorDataFromCertificate</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#DijkstraEra"><span class="hs-identifier hs-var">DijkstraEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.Type.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span id="local-6989586621681380335"><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+</span><a href="#local-6989586621681380335"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-211"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+</span><a href="#local-6989586621681380335"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-212"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#RegDepositTxCert"><span class="hs-identifier hs-type">Ledger.RegDepositTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-213"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#UnRegDepositTxCert"><span class="hs-identifier hs-type">Ledger.UnRegDepositTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-214"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#RegDepositDelegTxCert"><span class="hs-identifier hs-type">Ledger.RegDepositDelegTxCert</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-215"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#DelegTxCert"><span class="hs-identifier hs-type">Ledger.DelegTxCert</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-216"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.TxCert.html#RegPoolTxCert"><span class="hs-identifier hs-type">Ledger.RegPoolTxCert</span></a></span><span> </span><span id="local-6989586621681380336"><span class="annot"><span class="annottext">PoolParams
+</span><a href="#local-6989586621681380336"><span class="hs-identifier hs-var">poolParams</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either AnchorDataFromCertificateError (Maybe Anchor)
+-&gt; (PoolMetadata
+    -&gt; Either AnchorDataFromCertificateError (Maybe Anchor))
+-&gt; StrictMaybe PoolMetadata
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a b. a -&gt; (b -&gt; a) -&gt; StrictMaybe b -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-strict-containers-0.1.5.0-0498c7dd1b0a279913c027132efb4ac093bc85f9a10f50469ac9c8a0b08e36e4/share/doc/html/src/Data.Maybe.Strict.html#strictMaybe"><span class="hs-identifier hs-var">strictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">PoolMetadata
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall (m :: * -&gt; *).
+MonadError AnchorDataFromCertificateError m =&gt;
+PoolMetadata -&gt; m (Maybe Anchor)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#anchorDataFromPoolMetadata"><span class="hs-identifier hs-var">anchorDataFromPoolMetadata</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe PoolMetadata
+ -&gt; Either AnchorDataFromCertificateError (Maybe Anchor))
+-&gt; StrictMaybe PoolMetadata
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PoolParams -&gt; StrictMaybe PoolMetadata
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.State.StakePool.html#ppMetadata"><span class="hs-identifier hs-var">Ledger.ppMetadata</span></a></span><span> </span><span class="annot"><span class="annottext">PoolParams
+</span><a href="#local-6989586621681380336"><span class="hs-identifier hs-var">poolParams</span></a></span><span>
+</span><span id="line-217"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.TxCert.html#RetirePoolTxCert"><span class="hs-identifier hs-type">Ledger.RetirePoolTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-218"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#RegDRepTxCert"><span class="hs-identifier hs-type">Ledger.RegDRepTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681380337"><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380337"><span class="hs-identifier hs-var">mAnchor</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Anchor
+ -&gt; Either AnchorDataFromCertificateError (Maybe Anchor))
+-&gt; Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor -&gt; Maybe Anchor
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-strict-containers-0.1.5.0-0498c7dd1b0a279913c027132efb4ac093bc85f9a10f50469ac9c8a0b08e36e4/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">Ledger.strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380337"><span class="hs-identifier hs-var">mAnchor</span></a></span><span>
+</span><span id="line-219"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#UnRegDRepTxCert"><span class="hs-identifier hs-type">Ledger.UnRegDRepTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-220"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#UpdateDRepTxCert"><span class="hs-identifier hs-type">Ledger.UpdateDRepTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681380338"><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380338"><span class="hs-identifier hs-var">mAnchor</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Anchor
+ -&gt; Either AnchorDataFromCertificateError (Maybe Anchor))
+-&gt; Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor -&gt; Maybe Anchor
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-strict-containers-0.1.5.0-0498c7dd1b0a279913c027132efb4ac093bc85f9a10f50469ac9c8a0b08e36e4/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">Ledger.strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380338"><span class="hs-identifier hs-var">mAnchor</span></a></span><span>
+</span><span id="line-221"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#AuthCommitteeHotKeyTxCert"><span class="hs-identifier hs-type">Ledger.AuthCommitteeHotKeyTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Credential 'HotCommitteeRole
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-222"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-conway-1.20.0.0-41a6b5e07746c794addb49a37bba31f9cf4981039104eb6ee0dbf97b617e5468/share/doc/html/src/Cardano.Ledger.Conway.TxCert.html#ResignCommitteeColdTxCert"><span class="hs-identifier hs-type">Ledger.ResignCommitteeColdTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681380339"><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380339"><span class="hs-identifier hs-var">mAnchor</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. a -&gt; Either AnchorDataFromCertificateError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Anchor
+ -&gt; Either AnchorDataFromCertificateError (Maybe Anchor))
+-&gt; Maybe Anchor
+-&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor -&gt; Maybe Anchor
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-strict-containers-0.1.5.0-0498c7dd1b0a279913c027132efb4ac093bc85f9a10f50469ac9c8a0b08e36e4/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">Ledger.strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Anchor
+</span><a href="#local-6989586621681380339"><span class="hs-identifier hs-var">mAnchor</span></a></span><span>
+</span><span id="line-223"></span><span>    </span><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Either AnchorDataFromCertificateError (Maybe Anchor)
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;getAnchorDataFromCertificate: Unrecognized cert&quot;</span></span><span>
+</span><span id="line-224"></span><span>
+</span><span id="line-225"></span><span id="local-6989586621681380069"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#anchorDataFromPoolMetadata"><span class="hs-identifier hs-type">anchorDataFromPoolMetadata</span></a></span><span>
+</span><span id="line-226"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/mtl-2.3.1-inplace/src/Control.Monad.Error.Class.html#MonadError"><span class="hs-identifier hs-type">MonadError</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#AnchorDataFromCertificateError"><span class="hs-identifier hs-type">AnchorDataFromCertificateError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380069"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-227"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.State.StakePool.html#PoolMetadata"><span class="hs-identifier hs-type">Ledger.PoolMetadata</span></a></span><span>
+</span><span id="line-228"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681380069"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Anchor"><span class="hs-identifier hs-type">Ledger.Anchor</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-229"></span><span id="anchorDataFromPoolMetadata"><span class="annot"><span class="annottext">anchorDataFromPoolMetadata :: forall (m :: * -&gt; *).
+MonadError AnchorDataFromCertificateError m =&gt;
+PoolMetadata -&gt; m (Maybe Anchor)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#anchorDataFromPoolMetadata"><span class="hs-identifier hs-var hs-var">anchorDataFromPoolMetadata</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.State.StakePool.html#PoolMetadata"><span class="hs-identifier hs-type">Ledger.PoolMetadata</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">pmUrl :: PoolMetadata -&gt; Url
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.State.StakePool.html#pmUrl"><span class="hs-identifier hs-var">Ledger.pmUrl</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621681380351"><span class="annot"><span class="annottext">Url
+</span><a href="#local-6989586621681380351"><span class="hs-identifier hs-var">url</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pmHash :: PoolMetadata -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.State.StakePool.html#pmHash"><span class="hs-identifier hs-var">Ledger.pmHash</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621681380353"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681380353"><span class="hs-identifier hs-var">hashBytes</span></a></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-230"></span><span>  </span><span id="local-6989586621681380354"><span class="annot"><a href="#local-6989586621681380354"><span class="hs-identifier hs-var">hash</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-231"></span><span>    </span><span class="annot"><span class="annottext">m (Hash HASH AnchorData)
+-&gt; (Hash HASH AnchorData -&gt; m (Hash HASH AnchorData))
+-&gt; Maybe (Hash HASH AnchorData)
+-&gt; m (Hash HASH AnchorData)
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AnchorDataFromCertificateError -&gt; m (Hash HASH AnchorData)
+forall a. AnchorDataFromCertificateError -&gt; m a
+forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/mtl-2.3.1-inplace/src/Control.Monad.Error.Class.html#throwError"><span class="hs-identifier hs-var">throwError</span></a></span><span> </span><span class="annot"><span class="annottext">(AnchorDataFromCertificateError -&gt; m (Hash HASH AnchorData))
+-&gt; AnchorDataFromCertificateError -&gt; m (Hash HASH AnchorData)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Url -&gt; ByteString -&gt; AnchorDataFromCertificateError
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#InvalidPoolMetadataHashError"><span class="hs-identifier hs-var">InvalidPoolMetadataHashError</span></a></span><span> </span><span class="annot"><span class="annottext">Url
+</span><a href="#local-6989586621681380351"><span class="hs-identifier hs-var">url</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681380353"><span class="hs-identifier hs-var">hashBytes</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Hash HASH AnchorData -&gt; m (Hash HASH AnchorData)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (Hash HASH AnchorData) -&gt; m (Hash HASH AnchorData))
+-&gt; Maybe (Hash HASH AnchorData) -&gt; m (Hash HASH AnchorData)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-232"></span><span>      </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe (Hash HASH AnchorData)
+forall h a. HashAlgorithm h =&gt; ByteString -&gt; Maybe (Hash h a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-crypto-class-2.2.3.2-cf332d3192e72db26b911c3d19ef459172d60f034469f1a4b62af83f61cba2f1/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashFromBytes"><span class="hs-identifier hs-var">Ledger.hashFromBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681380353"><span class="hs-identifier hs-var">hashBytes</span></a></span><span>
+</span><span id="line-233"></span><span>  </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-234"></span><span>    </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span>
+</span><span id="line-235"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Anchor"><span class="hs-identifier hs-type">Ledger.Anchor</span></a></span><span>
+</span><span id="line-236"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.BaseTypes.html#anchorUrl"><span class="hs-identifier hs-var">Ledger.anchorUrl</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621681380351"><span class="hs-identifier hs-type">url</span></a></span><span>
+</span><span id="line-237"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.BaseTypes.html#anchorDataHash"><span class="hs-identifier hs-var">Ledger.anchorDataHash</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Hashes.html#unsafeMakeSafeHash"><span class="hs-identifier hs-type">Ledger.unsafeMakeSafeHash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681380354"><span class="hs-identifier hs-type">hash</span></a></span><span>
+</span><span id="line-238"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-239"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span class="hs-keyword">data</span><span> </span><span id="AnchorDataFromCertificateError"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#AnchorDataFromCertificateError"><span class="hs-identifier hs-var">AnchorDataFromCertificateError</span></a></span></span><span>
+</span><span id="line-242"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="InvalidPoolMetadataHashError"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#InvalidPoolMetadataHashError"><span class="hs-identifier hs-var">InvalidPoolMetadataHashError</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Url"><span class="hs-identifier hs-type">Ledger.Url</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-243"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681380364"><span id="local-6989586621681380370"><span class="annot"><span class="annottext">AnchorDataFromCertificateError
+-&gt; AnchorDataFromCertificateError -&gt; Bool
+(AnchorDataFromCertificateError
+ -&gt; AnchorDataFromCertificateError -&gt; Bool)
+-&gt; (AnchorDataFromCertificateError
+    -&gt; AnchorDataFromCertificateError -&gt; Bool)
+-&gt; Eq AnchorDataFromCertificateError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: AnchorDataFromCertificateError
+-&gt; AnchorDataFromCertificateError -&gt; Bool
+== :: AnchorDataFromCertificateError
+-&gt; AnchorDataFromCertificateError -&gt; Bool
+$c/= :: AnchorDataFromCertificateError
+-&gt; AnchorDataFromCertificateError -&gt; Bool
+/= :: AnchorDataFromCertificateError
+-&gt; AnchorDataFromCertificateError -&gt; Bool
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681380375"><span id="local-6989586621681380383"><span id="local-6989586621681380387"><span class="annot"><span class="annottext">Int -&gt; AnchorDataFromCertificateError -&gt; ShowS
+[AnchorDataFromCertificateError] -&gt; ShowS
+AnchorDataFromCertificateError -&gt; [Char]
+(Int -&gt; AnchorDataFromCertificateError -&gt; ShowS)
+-&gt; (AnchorDataFromCertificateError -&gt; [Char])
+-&gt; ([AnchorDataFromCertificateError] -&gt; ShowS)
+-&gt; Show AnchorDataFromCertificateError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; AnchorDataFromCertificateError -&gt; ShowS
+showsPrec :: Int -&gt; AnchorDataFromCertificateError -&gt; ShowS
+$cshow :: AnchorDataFromCertificateError -&gt; [Char]
+show :: AnchorDataFromCertificateError -&gt; [Char]
+$cshowList :: [AnchorDataFromCertificateError] -&gt; ShowS
+showList :: [AnchorDataFromCertificateError] -&gt; ShowS
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-244"></span><span>
+</span><span id="line-245"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#AnchorDataFromCertificateError"><span class="hs-identifier hs-type">AnchorDataFromCertificateError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-246"></span><span>  </span><span class="annot"><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-type">prettyError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681380395"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#AnchorDataFromCertificateError"><span class="hs-identifier hs-type">AnchorDataFromCertificateError</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Doc</span></span><span> </span><span class="annot"><a href="#local-6989586621681380395"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-247"></span><span>  </span><span id="local-6989586621681380407"><span class="annot"><span class="annottext">prettyError :: forall ann. AnchorDataFromCertificateError -&gt; Doc ann
+</span><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#InvalidPoolMetadataHashError"><span class="hs-identifier hs-type">InvalidPoolMetadataHashError</span></a></span><span> </span><span id="local-6989586621681380408"><span class="annot"><span class="annottext">Url
+</span><a href="#local-6989586621681380408"><span class="hs-identifier hs-var">url</span></a></span></span><span> </span><span id="local-6989586621681380409"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681380409"><span class="hs-identifier hs-var">hash</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-248"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Invalid pool metadata hash for URL &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Url -&gt; Doc ann
+forall ann. Url -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Url
+</span><a href="#local-6989586621681380408"><span class="hs-identifier hs-var">url</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Doc ann
+forall a. IsString a =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.String.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681380409"><span class="hs-identifier hs-var">hash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-249"></span></pre></body></html>

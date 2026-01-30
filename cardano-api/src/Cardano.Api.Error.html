@@ -1,0 +1,330 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveFunctor #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ExistentialQuantification #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTSyntax #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="annot"><span class="hs-comment">-- | Class of errors used in the Api.</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html"><span class="hs-identifier">Cardano.Api.Error</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier">Error</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#throwErrorM"><span class="hs-identifier">throwErrorM</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#liftEitherError"><span class="hs-identifier">liftEitherError</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#failEitherError"><span class="hs-identifier">failEitherError</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#ErrorAsException"><span class="hs-identifier">ErrorAsException</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier">FileError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#fileIOExceptT"><span class="hs-identifier">fileIOExceptT</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#displayError"><span class="hs-identifier">displayError</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Pretty.html#renderBuildable"><span class="hs-identifier">renderBuildable</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Monad.Error.html"><span class="hs-identifier">Cardano.Api.Monad.Error</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Pretty.html"><span class="hs-identifier">Cardano.Api.Pretty</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Exception.Safe</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/directory-1.3.8.5-inplace/src/System.Directory.html"><span class="hs-identifier">System.Directory</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/directory-1.3.8.5-inplace/src/System.Directory.html#doesFileExist"><span class="hs-identifier">doesFileExist</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/System.IO.html"><span class="hs-identifier">System.IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.IO.Handle.Types.html#Handle"><span class="hs-identifier">Handle</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">class</span><span> </span><span id="Error"><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-var">Error</span></a></span></span><span> </span><span id="local-6989586621681331536"><span class="annot"><a href="#local-6989586621681331536"><span class="hs-identifier hs-type">e</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>  </span><span id="prettyError"><span class="annot"><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-type">prettyError</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621681331533"><span class="annot"><a href="#local-6989586621681331536"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Doc</span></span><span> </span><span class="annot"><a href="#local-6989586621681331533"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621681331663"><span class="annot"><span class="annottext">prettyError :: forall ann. () -&gt; Doc ann
+</span><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><span class="hs-comment">-- | Throw an 'Error e' as  'ErrorAsException'. 'throwErrorM' will attach a call stack to the exception.</span></span><span>
+</span><span id="line-36"></span><span id="local-6989586621681331541"><span id="local-6989586621681331543"><span id="local-6989586621681331544"><span class="annot"><a href="Cardano.Api.Error.html#throwErrorM"><span class="hs-identifier hs-type">throwErrorM</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/exceptions-0.10.9-inplace/src/Control.Monad.Catch.html#MonadThrow"><span class="hs-identifier hs-type">MonadThrow</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331541"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331543"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331543"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681331543"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681331541"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331544"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-43"></span><span id="throwErrorM"><span class="annot"><span class="annottext">throwErrorM :: forall (m :: * -&gt; *) e a.
+(HasCallStack, MonadThrow m, Typeable e, Error e) =&gt;
+e -&gt; m a
+</span><a href="Cardano.Api.Error.html#throwErrorM"><span class="hs-identifier hs-var hs-var">throwErrorM</span></a></span></span><span> </span><span id="local-6989586621681331671"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681331671"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m a) -&gt; m a
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m a) -&gt; m a) -&gt; (HasCallStack =&gt; m a) -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ErrorAsException -&gt; m a
+forall (m :: * -&gt; *) e a.
+(HasCallStack, MonadThrow m, Exception e) =&gt;
+e -&gt; m a
+</span><span class="hs-identifier hs-var">throwM</span></span><span> </span><span class="annot"><span class="annottext">(ErrorAsException -&gt; m a) -&gt; ErrorAsException -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">e -&gt; ErrorAsException
+forall e.
+(HasCallStack, Typeable e, Error e) =&gt;
+e -&gt; ErrorAsException
+</span><a href="Cardano.Api.Error.html#ErrorAsException"><span class="hs-identifier hs-var">ErrorAsException</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681331671"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><span class="hs-comment">-- | Pretty print 'Error e' and 'throwM' it wrapped in 'ErrorAsException' when 'Left'.</span></span><span>
+</span><span id="line-46"></span><span id="local-6989586621681331559"><span id="local-6989586621681331560"><span id="local-6989586621681331561"><span class="annot"><a href="Cardano.Api.Error.html#liftEitherError"><span class="hs-identifier hs-type">liftEitherError</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/exceptions-0.10.9-inplace/src/Control.Monad.Catch.html#MonadThrow"><span class="hs-identifier hs-type">MonadThrow</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331559"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331560"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331560"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331560"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331561"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681331559"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331561"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-53"></span><span id="liftEitherError"><span class="annot"><span class="annottext">liftEitherError :: forall (m :: * -&gt; *) e a.
+(HasCallStack, MonadThrow m, Typeable e, Error e) =&gt;
+Either e a -&gt; m a
+</span><a href="Cardano.Api.Error.html#liftEitherError"><span class="hs-identifier hs-var hs-var">liftEitherError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; Either e a -&gt; m a) -&gt; Either e a -&gt; m a
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; Either e a -&gt; m a) -&gt; Either e a -&gt; m a)
+-&gt; (HasCallStack =&gt; Either e a -&gt; m a) -&gt; Either e a -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(e -&gt; m a) -&gt; (a -&gt; m a) -&gt; Either e a -&gt; m a
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">e -&gt; m a
+forall (m :: * -&gt; *) e a.
+(HasCallStack, MonadThrow m, Typeable e, Error e) =&gt;
+e -&gt; m a
+</span><a href="Cardano.Api.Error.html#throwErrorM"><span class="hs-identifier hs-var">throwErrorM</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m a
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><span class="hs-comment">-- | Pretty print 'Error e' and 'fail' if 'Left'.</span></span><span>
+</span><span id="line-56"></span><span id="local-6989586621681331572"><span id="local-6989586621681331573"><span id="local-6989586621681331574"><span class="annot"><a href="Cardano.Api.Error.html#failEitherError"><span class="hs-identifier hs-type">failEitherError</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Control.Monad.Fail.html#MonadFail"><span class="hs-identifier hs-type">MonadFail</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331572"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331573"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331573"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331574"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681331572"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331574"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-61"></span><span id="failEitherError"><span class="annot"><span class="annottext">failEitherError :: forall (m :: * -&gt; *) e a.
+(MonadFail m, Error e) =&gt;
+Either e a -&gt; m a
+</span><a href="Cardano.Api.Error.html#failEitherError"><span class="hs-identifier hs-var hs-var">failEitherError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(e -&gt; String) -&gt; Either e a -&gt; m a
+forall (m :: * -&gt; *) e a.
+MonadFail m =&gt;
+(e -&gt; String) -&gt; Either e a -&gt; m a
+</span><a href="Cardano.Api.Monad.Error.html#failEitherWith"><span class="hs-identifier hs-var">failEitherWith</span></a></span><span> </span><span class="annot"><span class="annottext">e -&gt; String
+forall a. Error a =&gt; a -&gt; String
+</span><a href="Cardano.Api.Error.html#displayError"><span class="hs-identifier hs-var">displayError</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><span class="hs-comment">-- | An exception wrapping any 'Error e', attaching a call stack from the construction place to it.</span></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">data</span><span> </span><span id="ErrorAsException"><span class="annot"><a href="Cardano.Api.Error.html#ErrorAsException"><span class="hs-identifier hs-var">ErrorAsException</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621681331707"><span id="ErrorAsException"><span class="annot"><a href="Cardano.Api.Error.html#ErrorAsException"><span class="hs-identifier hs-var">ErrorAsException</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331707"><span class="hs-identifier hs-type">e</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331707"><span class="hs-identifier hs-type">e</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681331707"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#ErrorAsException"><span class="hs-identifier hs-type">ErrorAsException</span></a></span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681331714"><span id="local-6989586621681331717"><span id="local-6989586621681331720"><span id="local-6989586621681331723"><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#ErrorAsException"><span class="hs-identifier hs-type">ErrorAsException</span></a></span></span></span></span></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="annot"><span class="hs-comment">-- | Pretty print the error inside the exception</span></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#ErrorAsException"><span class="hs-identifier hs-type">ErrorAsException</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621681331728"><span class="annot"><span class="annottext">prettyError :: forall ann. ErrorAsException -&gt; Doc ann
+</span><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#ErrorAsException"><span class="hs-identifier hs-type">ErrorAsException</span></a></span><span> </span><span id="local-6989586621681331733"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681331733"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="annottext">e -&gt; Doc ann
+forall ann. e -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+</span><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681331733"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | Pretty print the error inside the exception followed by the call stack pointing to the place where 'Error e' was</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- wrapped in 'ErrorAsException'</span><span>
+</span><span id="line-76"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681331735"><span id="local-6989586621681331739"><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#ErrorAsException"><span class="hs-identifier hs-type">ErrorAsException</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621681331742"><span class="annot"><span class="annottext">show :: ErrorAsException -&gt; String
+</span><a href="#local-6989586621681331742"><span class="hs-identifier hs-var hs-var hs-var">show</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#ErrorAsException"><span class="hs-identifier hs-type">ErrorAsException</span></a></span><span> </span><span id="local-6989586621681331756"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681331756"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; String
+</span><a href="Cardano.Api.Pretty.html#docToString"><span class="hs-identifier hs-var">docToString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">e -&gt; Doc AnsiStyle
+forall ann. e -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+</span><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681331756"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\n&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">CallStack -&gt; String
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Stack.html#prettyCallStack"><span class="hs-identifier hs-var">prettyCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">CallStack
+HasCallStack =&gt; CallStack
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Stack.html#callStack"><span class="hs-identifier hs-var">callStack</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span id="local-6989586621681331581"><span class="annot"><a href="Cardano.Api.Error.html#displayError"><span class="hs-identifier hs-type">displayError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331581"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681331581"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span></span><span>
+</span><span id="line-81"></span><span id="displayError"><span class="annot"><span class="annottext">displayError :: forall a. Error a =&gt; a -&gt; String
+</span><a href="Cardano.Api.Error.html#displayError"><span class="hs-identifier hs-var hs-var">displayError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; String
+</span><a href="Cardano.Api.Pretty.html#docToString"><span class="hs-identifier hs-var">docToString</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc AnsiStyle -&gt; String) -&gt; (a -&gt; Doc AnsiStyle) -&gt; a -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Doc AnsiStyle
+forall ann. a -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+</span><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">data</span><span> </span><span id="FileError"><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-var">FileError</span></a></span></span><span> </span><span id="local-6989586621681331646"><span class="annot"><a href="#local-6989586621681331646"><span class="hs-identifier hs-type">e</span></a></span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="FileError"><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-var">FileError</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331646"><span class="hs-identifier hs-type">e</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="FileErrorTempFile"><span class="annot"><a href="Cardano.Api.Error.html#FileErrorTempFile"><span class="hs-identifier hs-var">FileErrorTempFile</span></a></span></span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-87"></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Target path</span></span><span>
+</span><span id="line-88"></span><span>      </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Temporary path</span></span><span>
+</span><span id="line-90"></span><span>      </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.IO.Handle.Types.html#Handle"><span class="hs-identifier hs-type">Handle</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="FileDoesNotExistError"><span class="annot"><a href="Cardano.Api.Error.html#FileDoesNotExistError"><span class="hs-identifier hs-var">FileDoesNotExistError</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="FileIOError"><span class="annot"><a href="Cardano.Api.Error.html#FileIOError"><span class="hs-identifier hs-var">FileIOError</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.IO.Exception.html#IOException"><span class="hs-identifier hs-type">IOException</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681331770"><span id="local-6989586621681331789"><span id="local-6989586621681331793"><span class="annot"><span class="annottext">Int -&gt; FileError e -&gt; ShowS
+[FileError e] -&gt; ShowS
+FileError e -&gt; String
+(Int -&gt; FileError e -&gt; ShowS)
+-&gt; (FileError e -&gt; String)
+-&gt; ([FileError e] -&gt; ShowS)
+-&gt; Show (FileError e)
+forall e. Show e =&gt; Int -&gt; FileError e -&gt; ShowS
+forall e. Show e =&gt; [FileError e] -&gt; ShowS
+forall e. Show e =&gt; FileError e -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall e. Show e =&gt; Int -&gt; FileError e -&gt; ShowS
+showsPrec :: Int -&gt; FileError e -&gt; ShowS
+$cshow :: forall e. Show e =&gt; FileError e -&gt; String
+show :: FileError e -&gt; String
+$cshowList :: forall e. Show e =&gt; [FileError e] -&gt; ShowS
+showList :: [FileError e] -&gt; ShowS
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681331799"><span id="local-6989586621681331816"><span class="annot"><span class="annottext">FileError e -&gt; FileError e -&gt; Bool
+(FileError e -&gt; FileError e -&gt; Bool)
+-&gt; (FileError e -&gt; FileError e -&gt; Bool) -&gt; Eq (FileError e)
+forall e. Eq e =&gt; FileError e -&gt; FileError e -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall e. Eq e =&gt; FileError e -&gt; FileError e -&gt; Bool
+== :: FileError e -&gt; FileError e -&gt; Bool
+$c/= :: forall e. Eq e =&gt; FileError e -&gt; FileError e -&gt; Bool
+/= :: FileError e -&gt; FileError e -&gt; Bool
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681331822"><span id="local-6989586621681331824"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; FileError a -&gt; FileError b)
+-&gt; (forall a b. a -&gt; FileError b -&gt; FileError a)
+-&gt; Functor FileError
+forall a b. a -&gt; FileError b -&gt; FileError a
+forall a b. (a -&gt; b) -&gt; FileError a -&gt; FileError b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; FileError a -&gt; FileError b
+fmap :: forall a b. (a -&gt; b) -&gt; FileError a -&gt; FileError b
+$c&lt;$ :: forall a b. a -&gt; FileError b -&gt; FileError a
+&lt;$ :: forall a b. a -&gt; FileError b -&gt; FileError a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681331618"><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331618"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331618"><span class="hs-identifier hs-type">e</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621681331859"><span class="annot"><span class="annottext">prettyError :: forall ann. FileError e -&gt; Doc ann
+</span><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><a href="Cardano.Api.Error.html#FileErrorTempFile"><span class="hs-identifier hs-type">FileErrorTempFile</span></a></span><span> </span><span id="local-6989586621681331860"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331860"><span class="hs-identifier hs-var">targetPath</span></a></span></span><span> </span><span id="local-6989586621681331861"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331861"><span class="hs-identifier hs-var">tempPath</span></a></span></span><span> </span><span id="local-6989586621681331862"><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621681331862"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><span class="annottext">[Doc ann] -&gt; Doc ann
+forall ann. [Doc ann] -&gt; Doc ann
+</span><span class="hs-identifier hs-var">vsep</span></span><span>
+</span><span id="line-99"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Error creating temporary file at: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc ann
+forall ann. String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331861"><span class="hs-identifier hs-var">tempPath</span></a></span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Target path: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc ann
+forall ann. String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331860"><span class="hs-identifier hs-var">targetPath</span></a></span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Handle: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Handle -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621681331862"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-102"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><a href="Cardano.Api.Error.html#FileDoesNotExistError"><span class="hs-identifier hs-type">FileDoesNotExistError</span></a></span><span> </span><span id="local-6989586621681331866"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331866"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-104"></span><span>      </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Error file not found at: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc ann
+forall ann. String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331866"><span class="hs-identifier hs-var">path</span></a></span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><a href="Cardano.Api.Error.html#FileIOError"><span class="hs-identifier hs-type">FileIOError</span></a></span><span> </span><span id="local-6989586621681331867"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331867"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span id="local-6989586621681331868"><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621681331868"><span class="hs-identifier hs-var">ioe</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-106"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; Doc ann
+forall ann. String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331867"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc ann
+forall ann. String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IOException -&gt; String
+forall e. Exception e =&gt; e -&gt; String
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Exception.Type.html#displayException"><span class="hs-identifier hs-var">displayException</span></a></span><span> </span><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621681331868"><span class="hs-identifier hs-var">ioe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span id="local-6989586621681331870"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331870"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span id="local-6989586621681331871"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681331871"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-108"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; Doc ann
+forall ann. String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331870"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">e -&gt; Doc ann
+forall ann. e -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+</span><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681331871"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.IO.Exception.html#IOException"><span class="hs-identifier hs-type">IOException</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621681331877"><span class="annot"><span class="annottext">prettyError :: forall ann. IOException -&gt; Doc ann
+</span><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc ann
+forall ann. String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc ann)
+-&gt; (IOException -&gt; String) -&gt; IOException -&gt; Doc ann
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IOException -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span id="local-6989586621681331629"><span id="local-6989586621681331631"><span id="local-6989586621681331632"><span class="annot"><a href="Cardano.Api.Error.html#fileIOExceptT"><span class="hs-identifier hs-type">fileIOExceptT</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331629"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331631"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/transformers-0.6.1.1-inplace/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331632"><span class="hs-identifier hs-type">e</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621681331629"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331631"><span class="hs-identifier hs-type">s</span></a></span></span></span></span><span>
+</span><span id="line-118"></span><span id="fileIOExceptT"><span class="annot"><span class="annottext">fileIOExceptT :: forall (m :: * -&gt; *) s e.
+MonadIO m =&gt;
+String -&gt; (String -&gt; IO s) -&gt; ExceptT (FileError e) m s
+</span><a href="Cardano.Api.Error.html#fileIOExceptT"><span class="hs-identifier hs-var hs-var">fileIOExceptT</span></a></span></span><span> </span><span id="local-6989586621681331887"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331887"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span id="local-6989586621681331888"><span class="annot"><span class="annottext">String -&gt; IO s
+</span><a href="#local-6989586621681331888"><span class="hs-identifier hs-var">readFile'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-119"></span><span>  </span><span id="local-6989586621681331889"><span class="annot"><a href="#local-6989586621681331889"><span class="hs-identifier hs-var">fileExists</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(IOException -&gt; FileError e)
+-&gt; IO Bool -&gt; ExceptT (FileError e) m Bool
+forall (m :: * -&gt; *) x a.
+MonadIO m =&gt;
+(IOException -&gt; x) -&gt; IO a -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">handleIOExceptT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; IOException -&gt; FileError e
+forall e. String -&gt; IOException -&gt; FileError e
+</span><a href="Cardano.Api.Error.html#FileIOError"><span class="hs-identifier hs-var">FileIOError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331887"><span class="hs-identifier hs-var">fp</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO Bool -&gt; ExceptT (FileError e) m Bool)
+-&gt; IO Bool -&gt; ExceptT (FileError e) m Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO Bool
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/directory-1.3.8.5-inplace/src/System.Directory.html#doesFileExist"><span class="hs-identifier hs-var">doesFileExist</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681331887"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><a href="#local-6989586621681331889"><span class="hs-identifier hs-type">fileExists</span></a></span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="hs-identifier hs-type">handleIOExceptT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileIOError"><span class="hs-identifier hs-type">FileIOError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331887"><span class="hs-identifier hs-type">fp</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331888"><span class="hs-identifier hs-type">readFile'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331887"><span class="hs-identifier hs-type">fp</span></a></span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/mtl-2.3.1-inplace/src/Control.Monad.Error.Class.html#throwError"><span class="hs-identifier hs-type">throwError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileDoesNotExistError"><span class="hs-identifier hs-type">FileDoesNotExistError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681331887"><span class="hs-identifier hs-type">fp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span></pre></body></html>

@@ -1,0 +1,823 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE InstanceSigs #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Creating transactions using the new API</span></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-comment">-- Both the old and new APIs can be used to create transactions, and</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-comment">-- it is possible to transform a transaction from one format to the other</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-comment">-- as they share the same representation. However, the focus will shift</span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-comment">-- towards using the new API, while the old API will be deprecated to ensure</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-comment">-- simplicity, closer alignment with the ledger, and easier maintenance.</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-comment">-- In both the new and old APIs, constructing a transaction requires creating</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-comment">-- a 'TxBodyContent', along with at least one witness (for example, a</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-comment">-- 'ShelleyWitnessSigningKey') to sign the transaction.</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-comment">-- This process remains unchanged.</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-comment">-- To learn how to create a transaction using the old API, see the</span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-comment">-- &quot;Cardano.Api.Tx.Internal.Body&quot; documentation.</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-comment">-- In the examples below, the following qualified modules are used:</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)</span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api.Script as Script      -- types related to scripts (Plutus and native)</span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api.Ledger as Ledger      -- cardano-ledger re-exports</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api.Experimental as Exp   -- the experimental API</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-comment">-- For instructions on how to do this, refer to the @Test.Cardano.Api.Experimental@ documentation.</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Creating a 'TxBodyContent'</span></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-comment">-- Regardless of whether the experimental or the traditional API is used, creating a 'TxBodyContent'</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-comment">-- is necessary.</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-comment">-- You can see how to do this in the documentation of the &quot;Cardano.Api.Tx.Internal.Body&quot; module.</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Balancing a transaction</span></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-comment">-- If a UTXO has exactly 12 ada, the transaction could be constructed as described in</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-comment">-- &quot;Cardano.Api.Tx.Internal.Body&quot;, and it would be valid. However:</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-comment">--   * Ada may be wasted</span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-comment">--   * The UTXO that we intend to spend may not contain exactly 12 ada</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">--   * The transaction may not be this simple.</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-comment">-- For these reasons, it is recommended to balance the transaction before proceeding with</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">-- signing and submitting.</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- For instructions on how to balance a transaction, refer to the &quot;Cardano.Api.Tx.Internal.Fee&quot; documentation.</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Creating a 'ShelleyWitnessSigningKey'</span></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-comment">-- Signing a transaction requires a witness, such as a 'ShelleyWitnessSigningKey'.</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">-- For instructions on creating a 'ShelleyWitnessSigningKey' refer to the &quot;Cardano.Api.Tx.Internal.Sign&quot; documentation.</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Creating a transaction using the new API</span></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-comment">-- This section outlines how to create a transaction using the new API. First,</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- create an 'UnsignedTx' using the 'makeUnsignedTx' function and the 'Era' and</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-comment">-- 'TxBodyContent' that we defined earlier:</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-comment">-- let (Right unsignedTx) = Exp.makeUnsignedTx era txBodyContent</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-comment">-- Next, use the key witness to sign the unsigned transaction with the 'makeKeyWitness' function:</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-comment">-- let transactionWitness = Exp.makeKeyWitness era unsignedTx (Api.WitnessPaymentKey signingKey)</span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-comment">-- Finally, sign the transaction using the 'signTx' function:</span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-comment">-- let newApiSignedTx :: Ledger.Tx (Exp.LedgerEra Exp.ConwayEra) = Exp.signTx era [] [transactionWitness] unsignedTx</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-comment">-- The empty list represents the bootstrap witnesses, which are not needed in this case.</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-comment">-- The transaction is now signed.</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Converting a transaction from the new API to the old API</span></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-comment">-- A transaction created with the new API can be easily converted to the old API by</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-comment">-- wrapping it with the 'ShelleyTx' constructor:</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-comment">-- let oldStyleTx :: Api.Tx Api.ConwayEra = ShelleyTx sbe newApiSignedTx</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Inspecting transactions</span></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-comment">-- When using a 'Tx' created with the experimental API, the 'TxBody' and</span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-comment">-- 'TxWits' can be extracted using the 'txBody' and 'txWits' lenses from</span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-comment">-- &quot;Cardano.Api.Ledger&quot; respectively.</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Contents</span></span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Type.html#UnsignedTx"><span class="hs-identifier">UnsignedTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier">SignedTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#makeUnsignedTx"><span class="hs-identifier">makeUnsignedTx</span></a></span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#makeKeyWitness"><span class="hs-identifier">makeKeyWitness</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#signTx"><span class="hs-identifier">signTx</span></a></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#convertTxBodyToUnsignedTx"><span class="hs-identifier">convertTxBodyToUnsignedTx</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#hashTxBody"><span class="hs-identifier">hashTxBody</span></a></span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#getUnsignedTxFee"><span class="hs-identifier">getUnsignedTxFee</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><span class="hs-comment">-- * TxBodyContent</span></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#TxBodyContent"><span class="hs-identifier">TxBodyContent</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#defaultTxBodyContent"><span class="hs-identifier">defaultTxBodyContent</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#mkTxCertificates"><span class="hs-identifier">mkTxCertificates</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#mkTxVotingProcedures"><span class="hs-identifier">mkTxVotingProcedures</span></a></span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#mkTxProposalProcedures"><span class="hs-identifier">mkTxProposalProcedures</span></a></span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#modTxOuts"><span class="hs-identifier">modTxOuts</span></a></span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxAuxScripts"><span class="hs-identifier">setTxAuxScripts</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxCertificates"><span class="hs-identifier">setTxCertificates</span></a></span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxReturnCollateral"><span class="hs-identifier">setTxReturnCollateral</span></a></span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxTotalCollateral"><span class="hs-identifier">setTxTotalCollateral</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxCurrentTreasuryValue"><span class="hs-identifier">setTxCurrentTreasuryValue</span></a></span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxExtraKeyWits"><span class="hs-identifier">setTxExtraKeyWits</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxFee"><span class="hs-identifier">setTxFee</span></a></span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxIns"><span class="hs-identifier">setTxIns</span></a></span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxInsCollateral"><span class="hs-identifier">setTxInsCollateral</span></a></span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxInsReference"><span class="hs-identifier">setTxInsReference</span></a></span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxMetadata"><span class="hs-identifier">setTxMetadata</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxMintValue"><span class="hs-identifier">setTxMintValue</span></a></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxOuts"><span class="hs-identifier">setTxOuts</span></a></span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxProposalProcedures"><span class="hs-identifier">setTxProposalProcedures</span></a></span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxProtocolParams"><span class="hs-identifier">setTxProtocolParams</span></a></span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxScriptValidity"><span class="hs-identifier">setTxScriptValidity</span></a></span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxTreasuryDonation"><span class="hs-identifier">setTxTreasuryDonation</span></a></span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxValidityLowerBound"><span class="hs-identifier">setTxValidityLowerBound</span></a></span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxValidityUpperBound"><span class="hs-identifier">setTxValidityUpperBound</span></a></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxVotingProcedures"><span class="hs-identifier">setTxVotingProcedures</span></a></span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#setTxWithdrawals"><span class="hs-identifier">setTxWithdrawals</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Legacy Conversions</span></span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#legacyDatumToDatum"><span class="hs-identifier">legacyDatumToDatum</span></a></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#fromLegacyTxOut"><span class="hs-identifier">fromLegacyTxOut</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><span class="hs-comment">-- * TxBodyContent sub type</span></span><span>
+</span><span id="line-161"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#TxCertificates"><span class="hs-identifier">TxCertificates</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#TxMintValue"><span class="hs-identifier">TxMintValue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#TxOut"><span class="hs-identifier">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#TxProposalProcedures"><span class="hs-identifier">TxProposalProcedures</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#TxVotingProcedures"><span class="hs-identifier">TxVotingProcedures</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#TxWithdrawals"><span class="hs-identifier">TxWithdrawals</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#TxReturnCollateral"><span class="hs-identifier">TxReturnCollateral</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#TxTotalCollateral"><span class="hs-identifier">TxTotalCollateral</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#TxExtraKeyWitnesses"><span class="hs-identifier">TxExtraKeyWitnesses</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#TxInsReference"><span class="hs-identifier">TxInsReference</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Witness</span></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Any witness (key, simple script, plutus script).</span></span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#AnyWitness"><span class="hs-identifier">AnyWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#getAnyWitnessScript"><span class="hs-identifier">getAnyWitnessScript</span></a></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#getAnyWitnessReferenceInput"><span class="hs-identifier">getAnyWitnessReferenceInput</span></a></span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#getAnyWitnessPlutusLanguage"><span class="hs-identifier">getAnyWitnessPlutusLanguage</span></a></span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#getAnyWitnessScriptData"><span class="hs-identifier">getAnyWitnessScriptData</span></a></span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** All the parts that constitute a plutus script witness but also including simple scripts</span></span><span>
+</span><span id="line-182"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier">TxScriptWitnessRequirements</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Collecting plutus script witness related transaction requirements.</span></span><span>
+</span><span id="line-185"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#collectPlutusScriptHashes"><span class="hs-identifier">collectPlutusScriptHashes</span></a></span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html#extractAllIndexedPlutusScriptWitnesses"><span class="hs-identifier">extractAllIndexedPlutusScriptWitnesses</span></a></span><span>
+</span><span id="line-187"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#getTxScriptWitnessesRequirements"><span class="hs-identifier">getTxScriptWitnessesRequirements</span></a></span><span>
+</span><span id="line-188"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#obtainMonoidConstraint"><span class="hs-identifier">obtainMonoidConstraint</span></a></span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Balancing transactions</span></span><span>
+</span><span id="line-191"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Fee.html#evaluateTransactionExecutionUnits"><span class="hs-identifier">evaluateTransactionExecutionUnits</span></a></span><span>
+</span><span id="line-192"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Fee.html#makeTransactionBodyAutoBalance"><span class="hs-identifier">makeTransactionBodyAutoBalance</span></a></span><span>
+</span><span id="line-193"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Fee.html#TxBodyErrorAutoBalance"><span class="hs-identifier">TxBodyErrorAutoBalance</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-194"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Fee.html#TxFeeEstimationError"><span class="hs-identifier">TxFeeEstimationError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Internal functions</span></span><span>
+</span><span id="line-197"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#extractExecutionUnits"><span class="hs-identifier">extractExecutionUnits</span></a></span><span>
+</span><span id="line-198"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#getTxScriptWitnessRequirements"><span class="hs-identifier">getTxScriptWitnessRequirements</span></a></span><span>
+</span><span id="line-199"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-200"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-201"></span><span>
+</span><span id="line-202"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Core</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-203"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyBasedEra</span></a></span><span>
+</span><span id="line-204"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html"><span class="hs-identifier">Cardano.Api.Experimental.Era</span></a></span><span>
+</span><span id="line-205"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.AnyWitness</span></a></span><span>
+</span><span id="line-206"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.New.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.BodyContent.New</span></a></span><span>
+</span><span id="line-207"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Fee.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.Fee</span></a></span><span>
+</span><span id="line-208"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements</span></a></span><span>
+</span><span id="line-209"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Type.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.Type</span></a></span><span>
+</span><span id="line-210"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html"><span class="hs-identifier">Cardano.Api.HasTypeProxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier">HasTypeProxy</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Proxy.html#Proxy"><span class="hs-identifier">Proxy</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#asType"><span class="hs-identifier">asType</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-211"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Ledger.Internal.Reexport.html"><span class="hs-identifier">Cardano.Api.Ledger.Internal.Reexport</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-212"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html"><span class="hs-identifier">Cardano.Api.Plutus.Internal.Script</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-213"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Pretty.html"><span class="hs-identifier">Cardano.Api.Pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Pretty.html#docToString"><span class="hs-identifier">docToString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">pretty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-214"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.ProtocolParameters.html"><span class="hs-identifier">Cardano.Api.ProtocolParameters</span></a></span><span>
+</span><span id="line-215"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html"><span class="hs-identifier">Cardano.Api.Serialise.Raw</span></a></span><span>
+</span><span id="line-216"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytes"><span class="hs-identifier">SerialiseAsRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-217"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytesError"><span class="hs-identifier">SerialiseAsRawBytesError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytesError"><span class="hs-identifier">SerialiseAsRawBytesError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-218"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-219"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Body</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-220"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Sign</span></a></span><span>
+</span><span id="line-221"></span><span>
+</span><span id="line-222"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-crypto-class-2.2.3.2-cf332d3192e72db26b911c3d19ef459172d60f034469f1a4b62af83f61cba2f1/share/doc/html/src/Cardano.Crypto.Hash.html"><span class="hs-identifier">Cardano.Crypto.Hash</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Hash</span></span><span>
+</span><span id="line-223"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.Tx.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Tx</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-224"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-api-1.12.1.0-4619f5e4caafeb4651fc5dd0b0735e8869fb40033ad326d072b810bcc0414987/share/doc/html/src/Cardano.Ledger.Api.html"><span class="hs-identifier">Cardano.Ledger.Api</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-225"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-binary-1.7.0.0-ed137d5cd5b39af3416f094039c63e47a205f61663a3a6f514248a65f2065b3e/share/doc/html/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-226"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-227"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-crypto-class-2.2.3.2-cf332d3192e72db26b911c3d19ef459172d60f034469f1a4b62af83f61cba2f1/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier">Hash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Exception.Type.html#displayException"><span class="hs-identifier">displayException</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-230"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Data.Bifunctor.html#bimap"><span class="hs-identifier">bimap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-231"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.Internal.html#fromStrict"><span class="hs-identifier">fromStrict</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-232"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-233"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-234"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-235"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-236"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Lens.Micro</span></span><span>
+</span><span id="line-237"></span><span>
+</span><span id="line-238"></span><span id="local-6989586621681453916"><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#getUnsignedTxFee"><span class="hs-identifier hs-type">getUnsignedTxFee</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Type.html#UnsignedTx"><span class="hs-identifier hs-type">UnsignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453916"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span></span><span>
+</span><span id="line-239"></span><span id="getUnsignedTxFee"><span class="annot"><span class="annottext">getUnsignedTxFee :: forall era. UnsignedTx era -&gt; Coin
+</span><a href="Cardano.Api.Experimental.Tx.html#getUnsignedTxFee"><span class="hs-identifier hs-var hs-var">getUnsignedTxFee</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Type.html#UnsignedTx"><span class="hs-identifier hs-type">UnsignedTx</span></a></span><span> </span><span id="local-6989586621681454221"><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454221"><span class="hs-identifier hs-var">unsignedTx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-240"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681454222"><span class="annot"><span class="annottext">txbody :: TxBody (LedgerEra era)
+</span><a href="#local-6989586621681454222"><span class="hs-identifier hs-var hs-var">txbody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454221"><span class="hs-identifier hs-var">unsignedTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+-&gt; Getting
+     (TxBody (LedgerEra era))
+     (Tx (LedgerEra era))
+     (TxBody (LedgerEra era))
+-&gt; TxBody (LedgerEra era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (TxBody (LedgerEra era))
+  (Tx (LedgerEra era))
+  (TxBody (LedgerEra era))
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx (LedgerEra era)) (TxBody (LedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">L.bodyTxL</span></a></span><span>
+</span><span id="line-241"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">TxBody (LedgerEra era)
+</span><a href="#local-6989586621681454222"><span class="hs-identifier hs-var">txbody</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody (LedgerEra era)
+-&gt; Getting Coin (TxBody (LedgerEra era)) Coin -&gt; Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Coin (TxBody (LedgerEra era)) Coin
+forall era. EraTxBody era =&gt; Lens' (TxBody era) Coin
+Lens' (TxBody (LedgerEra era)) Coin
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#feeTxBodyL"><span class="hs-identifier hs-var">L.feeTxBodyL</span></a></span><span>
+</span><span id="line-242"></span><span>
+</span><span id="line-243"></span><span id="local-6989586621681453930"><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#hashTxBody"><span class="hs-identifier hs-type">hashTxBody</span></a></span><span>
+</span><span id="line-244"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Hashes.html#HashAnnotated"><span class="hs-identifier hs-type">L.HashAnnotated</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">Ledger.TxBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453930"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-type">L.EraIndependentTxBody</span></a></span><span>
+</span><span id="line-245"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">L.TxBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453930"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-crypto-class-2.2.3.2-cf332d3192e72db26b911c3d19ef459172d60f034469f1a4b62af83f61cba2f1/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash.Hash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">L.HASH</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-type">L.EraIndependentTxBody</span></a></span></span><span>
+</span><span id="line-246"></span><span id="hashTxBody"><span class="annot"><span class="annottext">hashTxBody :: forall era.
+HashAnnotated (TxBody era) EraIndependentTxBody =&gt;
+TxBody era -&gt; Hash HASH EraIndependentTxBody
+</span><a href="Cardano.Api.Experimental.Tx.html#hashTxBody"><span class="hs-identifier hs-var hs-var">hashTxBody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody -&gt; Hash HASH EraIndependentTxBody
+forall i. SafeHash i -&gt; Hash HASH i
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Hashes.html#extractHash"><span class="hs-identifier hs-var">L.extractHash</span></a></span><span> </span><span class="annot"><span class="annottext">(SafeHash EraIndependentTxBody -&gt; Hash HASH EraIndependentTxBody)
+-&gt; (TxBody era -&gt; SafeHash EraIndependentTxBody)
+-&gt; TxBody era
+-&gt; Hash HASH EraIndependentTxBody
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody era -&gt; SafeHash EraIndependentTxBody
+forall x i. HashAnnotated x i =&gt; x -&gt; SafeHash i
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Hashes.html#hashAnnotated"><span class="hs-identifier hs-var">L.hashAnnotated</span></a></span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span id="local-6989586621681453943"><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#makeKeyWitness"><span class="hs-identifier hs-type">makeKeyWitness</span></a></span><span>
+</span><span id="line-249"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453943"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-250"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Type.html#UnsignedTx"><span class="hs-identifier hs-type">UnsignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453943"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-251"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleyWitnessSigningKey"><span class="hs-identifier hs-type">ShelleyWitnessSigningKey</span></a></span><span>
+</span><span id="line-252"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">L.WitVKey</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">L.Witness</span></a></span></span><span>
+</span><span id="line-253"></span><span id="makeKeyWitness"><span class="annot"><span class="annottext">makeKeyWitness :: forall era.
+Era era
+-&gt; UnsignedTx era -&gt; ShelleyWitnessSigningKey -&gt; WitVKey 'Witness
+</span><a href="Cardano.Api.Experimental.Tx.html#makeKeyWitness"><span class="hs-identifier hs-var hs-var">makeKeyWitness</span></a></span></span><span> </span><span id="local-6989586621681454231"><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681454231"><span class="hs-identifier hs-var">era</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Type.html#UnsignedTx"><span class="hs-identifier hs-type">UnsignedTx</span></a></span><span> </span><span id="local-6989586621681454236"><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454236"><span class="hs-identifier hs-var">unsignedTx</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621681454237"><span class="annot"><span class="annottext">ShelleyWitnessSigningKey
+</span><a href="#local-6989586621681454237"><span class="hs-identifier hs-var">wsk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-254"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; WitVKey 'Witness)
+-&gt; WitVKey 'Witness
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681454231"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; WitVKey 'Witness)
+ -&gt; WitVKey 'Witness)
+-&gt; (EraCommonConstraints era =&gt; WitVKey 'Witness)
+-&gt; WitVKey 'Witness
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-255"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681454244"><span class="annot"><span class="annottext">txbody :: TxBody (LedgerEra era)
+</span><a href="#local-6989586621681454244"><span class="hs-identifier hs-var hs-var">txbody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454236"><span class="hs-identifier hs-var">unsignedTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+-&gt; Getting
+     (TxBody (LedgerEra era))
+     (Tx (LedgerEra era))
+     (TxBody (LedgerEra era))
+-&gt; TxBody (LedgerEra era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (TxBody (LedgerEra era))
+  (Tx (LedgerEra era))
+  (TxBody (LedgerEra era))
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx (LedgerEra era)) (TxBody (LedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">L.bodyTxL</span></a></span><span>
+</span><span id="line-256"></span><span>        </span><span class="annot"><a href="#local-6989586621681454245"><span class="hs-identifier hs-type">txhash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-crypto-class-2.2.3.2-cf332d3192e72db26b911c3d19ef459172d60f034469f1a4b62af83f61cba2f1/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash.Hash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">L.HASH</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-type">L.EraIndependentTxBody</span></a></span><span>
+</span><span id="line-257"></span><span>        </span><span id="local-6989586621681454245"><span class="annot"><span class="annottext">txhash :: Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681454245"><span class="hs-identifier hs-var hs-var">txhash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; Hash HASH EraIndependentTxBody)
+-&gt; Hash HASH EraIndependentTxBody
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681454231"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; Hash HASH EraIndependentTxBody)
+ -&gt; Hash HASH EraIndependentTxBody)
+-&gt; (EraCommonConstraints era =&gt; Hash HASH EraIndependentTxBody)
+-&gt; Hash HASH EraIndependentTxBody
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody (LedgerEra era) -&gt; Hash HASH EraIndependentTxBody
+forall era.
+HashAnnotated (TxBody era) EraIndependentTxBody =&gt;
+TxBody era -&gt; Hash HASH EraIndependentTxBody
+</span><a href="Cardano.Api.Experimental.Tx.html#hashTxBody"><span class="hs-identifier hs-var">hashTxBody</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody (LedgerEra era)
+</span><a href="#local-6989586621681454244"><span class="hs-identifier hs-var">txbody</span></a></span><span>
+</span><span id="line-258"></span><span>        </span><span id="local-6989586621681454248"><span class="annot"><span class="annottext">sk :: ShelleySigningKey
+</span><a href="#local-6989586621681454248"><span class="hs-identifier hs-var hs-var">sk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyWitnessSigningKey -&gt; ShelleySigningKey
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#toShelleySigningKey"><span class="hs-identifier hs-var">toShelleySigningKey</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyWitnessSigningKey
+</span><a href="#local-6989586621681454237"><span class="hs-identifier hs-var">wsk</span></a></span><span>
+</span><span id="line-259"></span><span>        </span><span id="local-6989586621681454250"><span class="annot"><span class="annottext">vk :: VKey 'Witness
+</span><a href="#local-6989586621681454250"><span class="hs-identifier hs-var hs-var">vk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleySigningKey -&gt; VKey 'Witness
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#getShelleyKeyWitnessVerificationKey"><span class="hs-identifier hs-var">getShelleyKeyWitnessVerificationKey</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleySigningKey
+</span><a href="#local-6989586621681454248"><span class="hs-identifier hs-var">sk</span></a></span><span>
+</span><span id="line-260"></span><span>        </span><span id="local-6989586621681454252"><span class="annot"><span class="annottext">signature :: SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="#local-6989586621681454252"><span class="hs-keyword hs-var hs-var">signature</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+-&gt; ShelleySigningKey
+-&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+forall tosign.
+SignableRepresentation tosign =&gt;
+tosign -&gt; ShelleySigningKey -&gt; SignedDSIGN DSIGN tosign
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#makeShelleySignature"><span class="hs-identifier hs-var">makeShelleySignature</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681454245"><span class="hs-identifier hs-var">txhash</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleySigningKey
+</span><a href="#local-6989586621681454248"><span class="hs-identifier hs-var">sk</span></a></span><span>
+</span><span id="line-261"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">VKey 'Witness
+-&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+-&gt; WitVKey 'Witness
+forall (kr :: KeyRole).
+VKey kr
+-&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody) -&gt; WitVKey kr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-var">L.WitVKey</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'Witness
+</span><a href="#local-6989586621681454250"><span class="hs-identifier hs-var">vk</span></a></span><span> </span><span class="annot"><span class="annottext">SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="#local-6989586621681454252"><span class="hs-keyword hs-var">signature</span></a></span><span>
+</span><span id="line-262"></span><span>
+</span><span id="line-263"></span><span class="annot"><span class="hs-comment">-- | A transaction that has been witnesssed</span></span><span>
+</span><span id="line-264"></span><span class="hs-keyword">data</span><span> </span><span id="SignedTx"><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-var">SignedTx</span></a></span></span><span> </span><span id="local-6989586621681454004"><span class="annot"><a href="#local-6989586621681454004"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-265"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">L.EraTx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454004"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="SignedTx"><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-var">SignedTx</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Ledger.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454004"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-266"></span><span>
+</span><span id="line-267"></span><span id="local-6989586621681453968"><span id="local-6989586621681454257"><span id="local-6989586621681454259"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-type">SignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453968"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-268"></span><span>
+</span><span id="line-269"></span><span id="local-6989586621681453971"><span id="local-6989586621681454264"><span id="local-6989586621681454266"><span id="local-6989586621681454270"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-type">SignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453971"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-270"></span><span>
+</span><span id="line-271"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681453977"><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453977"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-type">SignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453977"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-272"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="AsType"><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier hs-var">AsType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-type">SignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453977"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AsSignedTx"><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#AsSignedTx"><span class="hs-identifier hs-var">AsSignedTx</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier hs-type">AsType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453977"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-273"></span><span>  </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#proxyToAsType"><span class="hs-identifier hs-type">proxyToAsType</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Proxy.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-type">SignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453977"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier hs-type">AsType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-type">SignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453977"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-274"></span><span>  </span><span id="local-6989586621681454286"><span class="annot"><span class="annottext">proxyToAsType :: Proxy (SignedTx era) -&gt; AsType (SignedTx era)
+</span><a href="Cardano.Api.HasTypeProxy.html#proxyToAsType"><span class="hs-identifier hs-var hs-var hs-var">proxyToAsType</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy (SignedTx era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AsType era -&gt; AsType (SignedTx era)
+forall era. AsType era -&gt; AsType (SignedTx era)
+</span><a href="Cardano.Api.Experimental.Tx.html#AsSignedTx"><span class="hs-identifier hs-var">AsSignedTx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. HasTypeProxy t =&gt; AsType t
+</span><a href="Cardano.Api.HasTypeProxy.html#asType"><span class="hs-identifier hs-var">asType</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681453977"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-275"></span><span>
+</span><span id="line-276"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-277"></span><span>  </span><span id="local-6989586621681453991"><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453991"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-278"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">L.EraTx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453991"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-279"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-280"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytes"><span class="hs-identifier hs-type">SerialiseAsRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-type">SignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453991"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-281"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-282"></span><span>  </span><span id="local-6989586621681454307"><span class="annot"><span class="annottext">serialiseToRawBytes :: SignedTx era -&gt; ByteString
+</span><a href="#local-6989586621681454307"><span class="hs-identifier hs-var hs-var hs-var">serialiseToRawBytes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-type">SignedTx</span></a></span><span> </span><span id="local-6989586621681454312"><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454312"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-283"></span><span>    </span><span class="annot"><span class="annottext">Version -&gt; Tx (LedgerEra era) -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-binary-1.7.0.0-ed137d5cd5b39af3416f094039c63e47a205f61663a3a6f514248a65f2065b3e/share/doc/html/src/Cardano.Ledger.Binary.Encoding.html#serialize%27"><span class="hs-identifier hs-var">Ledger.serialize'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">Ledger.eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453991"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454312"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-284"></span><span>  </span><span id="local-6989586621681454323"><span class="annot"><span class="annottext">deserialiseFromRawBytes :: AsType (SignedTx era)
+-&gt; ByteString -&gt; Either SerialiseAsRawBytesError (SignedTx era)
+</span><a href="#local-6989586621681454323"><span class="hs-identifier hs-var hs-var hs-var">deserialiseFromRawBytes</span></a></span></span><span> </span><span class="annot"><span class="annottext">AsType (SignedTx era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-285"></span><span>    </span><span class="annot"><span class="annottext">(DecoderError -&gt; SerialiseAsRawBytesError)
+-&gt; (Tx (LedgerEra era) -&gt; SignedTx era)
+-&gt; Either DecoderError (Tx (LedgerEra era))
+-&gt; Either SerialiseAsRawBytesError (SignedTx era)
+forall a b c d. (a -&gt; b) -&gt; (c -&gt; d) -&gt; Either a c -&gt; Either b d
+forall (p :: * -&gt; * -&gt; *) a b c d.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; (c -&gt; d) -&gt; p a c -&gt; p b d
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Data.Bifunctor.html#bimap"><span class="hs-identifier hs-var">bimap</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; SerialiseAsRawBytesError
+</span><a href="#local-6989586621681454325"><span class="hs-identifier hs-var">wrapError</span></a></span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era) -&gt; SignedTx era
+forall era.
+EraTx (LedgerEra era) =&gt;
+Tx (LedgerEra era) -&gt; SignedTx era
+</span><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-var">SignedTx</span></a></span><span>
+</span><span id="line-286"></span><span>      </span><span class="annot"><span class="annottext">(Either DecoderError (Tx (LedgerEra era))
+ -&gt; Either SerialiseAsRawBytesError (SignedTx era))
+-&gt; (ByteString -&gt; Either DecoderError (Tx (LedgerEra era)))
+-&gt; ByteString
+-&gt; Either SerialiseAsRawBytesError (SignedTx era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator (Tx (LedgerEra era))))
+-&gt; ByteString
+-&gt; Either DecoderError (Tx (LedgerEra era))
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator a))
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-binary-1.7.0.0-ed137d5cd5b39af3416f094039c63e47a205f61663a3a6f514248a65f2065b3e/share/doc/html/src/Cardano.Ledger.Binary.Decoding.html#decodeFullAnnotator"><span class="hs-identifier hs-var">Ledger.decodeFullAnnotator</span></a></span><span>
+</span><span id="line-287"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">Ledger.eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681453991"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-288"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SignedTx&quot;</span></span><span>
+</span><span id="line-289"></span><span>        </span><span class="annot"><span class="annottext">Decoder s (Annotator (Tx (LedgerEra era)))
+forall s. Decoder s (Annotator (Tx (LedgerEra era)))
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-binary-1.7.0.0-ed137d5cd5b39af3416f094039c63e47a205f61663a3a6f514248a65f2065b3e/share/doc/html/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">Ledger.decCBOR</span></a></span><span>
+</span><span id="line-290"></span><span>      </span><span class="annot"><span class="annottext">(ByteString -&gt; Either DecoderError (Tx (LedgerEra era)))
+-&gt; (ByteString -&gt; ByteString)
+-&gt; ByteString
+-&gt; Either DecoderError (Tx (LedgerEra era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.Internal.html#fromStrict"><span class="hs-identifier hs-var">fromStrict</span></a></span><span>
+</span><span id="line-291"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-292"></span><span>    </span><span class="annot"><a href="#local-6989586621681454325"><span class="hs-identifier hs-type">wrapError</span></a></span><span>
+</span><span id="line-293"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-binary-1.7.2.0-f86dd81284e09fc7687cc8e791da760753b3fa53a834de84a19eb8bfdde6b2f9/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">Ledger.DecoderError</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytesError"><span class="hs-identifier hs-type">SerialiseAsRawBytesError</span></a></span><span>
+</span><span id="line-294"></span><span>    </span><span id="local-6989586621681454325"><span class="annot"><span class="annottext">wrapError :: DecoderError -&gt; SerialiseAsRawBytesError
+</span><a href="#local-6989586621681454325"><span class="hs-identifier hs-var hs-var">wrapError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SerialiseAsRawBytesError
+</span><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytesError"><span class="hs-identifier hs-var">SerialiseAsRawBytesError</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; SerialiseAsRawBytesError)
+-&gt; (DecoderError -&gt; String)
+-&gt; DecoderError
+-&gt; SerialiseAsRawBytesError
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; String
+forall e. Exception e =&gt; e -&gt; String
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Exception.Type.html#displayException"><span class="hs-identifier hs-var">displayException</span></a></span><span>
+</span><span id="line-295"></span><span>
+</span><span id="line-296"></span><span id="local-6989586621681454014"><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#signTx"><span class="hs-identifier hs-type">signTx</span></a></span><span>
+</span><span id="line-297"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454014"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-298"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">L.BootstrapWitness</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-299"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">L.WitVKey</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">L.Witness</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-300"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Type.html#UnsignedTx"><span class="hs-identifier hs-type">UnsignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454014"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-301"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-type">SignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454014"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-302"></span><span id="signTx"><span class="annot"><span class="annottext">signTx :: forall era.
+Era era
+-&gt; [BootstrapWitness]
+-&gt; [WitVKey 'Witness]
+-&gt; UnsignedTx era
+-&gt; SignedTx era
+</span><a href="Cardano.Api.Experimental.Tx.html#signTx"><span class="hs-identifier hs-var hs-var">signTx</span></a></span></span><span> </span><span id="local-6989586621681454329"><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681454329"><span class="hs-identifier hs-var">era</span></a></span></span><span> </span><span id="local-6989586621681454330"><span class="annot"><span class="annottext">[BootstrapWitness]
+</span><a href="#local-6989586621681454330"><span class="hs-identifier hs-var">bootstrapWits</span></a></span></span><span> </span><span id="local-6989586621681454331"><span class="annot"><span class="annottext">[WitVKey 'Witness]
+</span><a href="#local-6989586621681454331"><span class="hs-identifier hs-var">shelleyKeyWits</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Type.html#UnsignedTx"><span class="hs-identifier hs-type">UnsignedTx</span></a></span><span> </span><span id="local-6989586621681454339"><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454339"><span class="hs-identifier hs-var">unsigned</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-303"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; SignedTx era) -&gt; SignedTx era
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681454329"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; SignedTx era) -&gt; SignedTx era)
+-&gt; (EraCommonConstraints era =&gt; SignedTx era) -&gt; SignedTx era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-304"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681454348"><span class="annot"><span class="annottext">currentScriptWitnesses :: TxWits (LedgerEra era)
+</span><a href="#local-6989586621681454348"><span class="hs-identifier hs-var hs-var">currentScriptWitnesses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454339"><span class="hs-identifier hs-var">unsigned</span></a></span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+-&gt; Getting
+     (TxWits (LedgerEra era))
+     (Tx (LedgerEra era))
+     (TxWits (LedgerEra era))
+-&gt; TxWits (LedgerEra era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (TxWits (LedgerEra era))
+  (Tx (LedgerEra era))
+  (TxWits (LedgerEra era))
+forall era. EraTx era =&gt; Lens' (Tx era) (TxWits era)
+Lens' (Tx (LedgerEra era)) (TxWits (LedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-var">L.witsTxL</span></a></span><span>
+</span><span id="line-305"></span><span>        </span><span id="local-6989586621681454350"><span class="annot"><span class="annottext">keyWits :: TxWits (LedgerEra era)
+</span><a href="#local-6989586621681454350"><span class="hs-identifier hs-var hs-var">keyWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-306"></span><span>          </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; TxWits (LedgerEra era))
+-&gt; TxWits (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681454329"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; TxWits (LedgerEra era))
+ -&gt; TxWits (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; TxWits (LedgerEra era))
+-&gt; TxWits (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-307"></span><span>            </span><span class="annot"><span class="annottext">TxWits (LedgerEra era)
+forall era. EraTxWits era =&gt; TxWits era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#mkBasicTxWits"><span class="hs-identifier hs-var">L.mkBasicTxWits</span></a></span><span>
+</span><span id="line-308"></span><span>              </span><span class="annot"><span class="annottext">TxWits (LedgerEra era)
+-&gt; (TxWits (LedgerEra era) -&gt; TxWits (LedgerEra era))
+-&gt; TxWits (LedgerEra era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Set (WitVKey 'Witness) -&gt; Identity (Set (WitVKey 'Witness)))
+-&gt; TxWits (LedgerEra era) -&gt; Identity (TxWits (LedgerEra era))
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Set (WitVKey 'Witness))
+Lens' (TxWits (LedgerEra era)) (Set (WitVKey 'Witness))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#addrTxWitsL"><span class="hs-identifier hs-var">L.addrTxWitsL</span></a></span><span>
+</span><span id="line-309"></span><span>                </span><span class="annot"><span class="annottext">((Set (WitVKey 'Witness) -&gt; Identity (Set (WitVKey 'Witness)))
+ -&gt; TxWits (LedgerEra era) -&gt; Identity (TxWits (LedgerEra era)))
+-&gt; Set (WitVKey 'Witness)
+-&gt; TxWits (LedgerEra era)
+-&gt; TxWits (LedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[WitVKey 'Witness] -&gt; Set (WitVKey 'Witness)
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Set.Internal.html#fromList"><span class="hs-identifier hs-var">Set.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[WitVKey 'Witness]
+</span><a href="#local-6989586621681454331"><span class="hs-identifier hs-var">shelleyKeyWits</span></a></span><span>
+</span><span id="line-310"></span><span>              </span><span class="annot"><span class="annottext">TxWits (LedgerEra era)
+-&gt; (TxWits (LedgerEra era) -&gt; TxWits (LedgerEra era))
+-&gt; TxWits (LedgerEra era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Set BootstrapWitness -&gt; Identity (Set BootstrapWitness))
+-&gt; TxWits (LedgerEra era) -&gt; Identity (TxWits (LedgerEra era))
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Set BootstrapWitness)
+Lens' (TxWits (LedgerEra era)) (Set BootstrapWitness)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#bootAddrTxWitsL"><span class="hs-identifier hs-var">L.bootAddrTxWitsL</span></a></span><span>
+</span><span id="line-311"></span><span>                </span><span class="annot"><span class="annottext">((Set BootstrapWitness -&gt; Identity (Set BootstrapWitness))
+ -&gt; TxWits (LedgerEra era) -&gt; Identity (TxWits (LedgerEra era)))
+-&gt; Set BootstrapWitness
+-&gt; TxWits (LedgerEra era)
+-&gt; TxWits (LedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[BootstrapWitness] -&gt; Set BootstrapWitness
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Set.Internal.html#fromList"><span class="hs-identifier hs-var">Set.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[BootstrapWitness]
+</span><a href="#local-6989586621681454330"><span class="hs-identifier hs-var">bootstrapWits</span></a></span><span>
+</span><span id="line-312"></span><span>        </span><span id="local-6989586621681454368"><span class="annot"><span class="annottext">signedTx :: Tx (LedgerEra era)
+</span><a href="#local-6989586621681454368"><span class="hs-identifier hs-var hs-var">signedTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454339"><span class="hs-identifier hs-var">unsigned</span></a></span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+-&gt; (Tx (LedgerEra era) -&gt; Tx (LedgerEra era)) -&gt; Tx (LedgerEra era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(TxWits (LedgerEra era) -&gt; Identity (TxWits (LedgerEra era)))
+-&gt; Tx (LedgerEra era) -&gt; Identity (Tx (LedgerEra era))
+forall era. EraTx era =&gt; Lens' (Tx era) (TxWits era)
+Lens' (Tx (LedgerEra era)) (TxWits (LedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-var">L.witsTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((TxWits (LedgerEra era) -&gt; Identity (TxWits (LedgerEra era)))
+ -&gt; Tx (LedgerEra era) -&gt; Identity (Tx (LedgerEra era)))
+-&gt; TxWits (LedgerEra era)
+-&gt; Tx (LedgerEra era)
+-&gt; Tx (LedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxWits (LedgerEra era)
+</span><a href="#local-6989586621681454350"><span class="hs-identifier hs-var">keyWits</span></a></span><span> </span><span class="annot"><span class="annottext">TxWits (LedgerEra era)
+-&gt; TxWits (LedgerEra era) -&gt; TxWits (LedgerEra era)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TxWits (LedgerEra era)
+</span><a href="#local-6989586621681454348"><span class="hs-identifier hs-var">currentScriptWitnesses</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-313"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era) -&gt; SignedTx era
+forall era.
+EraTx (LedgerEra era) =&gt;
+Tx (LedgerEra era) -&gt; SignedTx era
+</span><a href="Cardano.Api.Experimental.Tx.html#SignedTx"><span class="hs-identifier hs-var">SignedTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454368"><span class="hs-identifier hs-var">signedTx</span></a></span><span>
+</span><span id="line-314"></span><span>
+</span><span id="line-315"></span><span class="hs-comment">-- Compatibility related. Will be removed once the old api has been deprecated and deleted.</span><span>
+</span><span id="line-316"></span><span>
+</span><span id="line-317"></span><span id="local-6989586621681454035"><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#convertTxBodyToUnsignedTx"><span class="hs-identifier hs-type">convertTxBodyToUnsignedTx</span></a></span><span>
+</span><span id="line-318"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454035"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454035"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Type.html#UnsignedTx"><span class="hs-identifier hs-type">UnsignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454035"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-319"></span><span id="convertTxBodyToUnsignedTx"><span class="annot"><span class="annottext">convertTxBodyToUnsignedTx :: forall era.
+HasCallStack =&gt;
+ShelleyBasedEra era -&gt; TxBody era -&gt; UnsignedTx era
+</span><a href="Cardano.Api.Experimental.Tx.html#convertTxBodyToUnsignedTx"><span class="hs-identifier hs-var hs-var">convertTxBodyToUnsignedTx</span></a></span></span><span> </span><span id="local-6989586621681454383"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681454383"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span id="local-6989586621681454384"><span class="annot"><span class="annottext">TxBody era
+</span><a href="#local-6989586621681454384"><span class="hs-identifier hs-var">txbody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-320"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+-&gt; UnsignedTx era -&gt; (Era era -&gt; UnsignedTx era) -&gt; UnsignedTx era
+forall (eon :: * -&gt; *) era a.
+Eon eon =&gt;
+CardanoEra era -&gt; a -&gt; (eon era -&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Core.html#forEraInEon"><span class="hs-identifier hs-var">Api.forEraInEon</span></a></span><span>
+</span><span id="line-321"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; CardanoEra era
+forall era. ShelleyBasedEra era -&gt; CardanoEra era
+forall (eon :: * -&gt; *) era.
+ToCardanoEra eon =&gt;
+eon era -&gt; CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#toCardanoEra"><span class="hs-identifier hs-var">Api.toCardanoEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681454383"><span class="hs-identifier hs-var">sbe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-322"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; UnsignedTx era
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; UnsignedTx era) -&gt; String -&gt; UnsignedTx era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;convertTxBodyToUnsignedTx: Error - unsupported era &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; String
+</span><a href="Cardano.Api.Pretty.html#docToString"><span class="hs-identifier hs-var">docToString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; Doc AnsiStyle
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+forall ann. ShelleyBasedEra era -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681454383"><span class="hs-identifier hs-var">sbe</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-323"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681454388"><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681454388"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-324"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleyTx"><span class="hs-identifier hs-type">ShelleyTx</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681454389"><span class="annot"><span class="annottext">Tx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681454389"><span class="hs-identifier hs-var">unsignedLedgerTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[KeyWitness era] -&gt; TxBody era -&gt; Tx era
+forall era. [KeyWitness era] -&gt; TxBody era -&gt; Tx era
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#makeSignedTransaction"><span class="hs-identifier hs-var">makeSignedTransaction</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">TxBody era
+</span><a href="#local-6989586621681454384"><span class="hs-identifier hs-var">txbody</span></a></span><span>
+</span><span id="line-325"></span><span>        </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; UnsignedTx era) -&gt; UnsignedTx era
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681454388"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; UnsignedTx era) -&gt; UnsignedTx era)
+-&gt; (EraCommonConstraints era =&gt; UnsignedTx era) -&gt; UnsignedTx era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era) -&gt; UnsignedTx era
+forall era.
+EraTx (LedgerEra era) =&gt;
+Tx (LedgerEra era) -&gt; UnsignedTx era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Type.html#UnsignedTx"><span class="hs-identifier hs-var">UnsignedTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx (ShelleyLedgerEra era)
+Tx (LedgerEra era)
+</span><a href="#local-6989586621681454389"><span class="hs-identifier hs-var">unsignedLedgerTx</span></a></span><span>
+</span><span id="line-326"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-327"></span><span>
+</span><span id="line-328"></span><span class="hs-comment">-- | Collect all plutus script hashes that are needed to validate the given transaction</span><span>
+</span><span id="line-329"></span><span class="hs-comment">-- and return them in a map with their corresponding 'ScriptWitnessIndex' as key.</span><span>
+</span><span id="line-330"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#collectPlutusScriptHashes"><span class="hs-identifier hs-type">collectPlutusScriptHashes</span></a></span><span>
+</span><span id="line-331"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681454091"><span class="annot"><a href="#local-6989586621681454091"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-332"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454091"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-333"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Type.html#UnsignedTx"><span class="hs-identifier hs-type">UnsignedTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454091"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-334"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">L.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454091"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-335"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndex"><span class="hs-identifier hs-type">Api.ScriptWitnessIndex</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ScriptHash"><span class="hs-identifier hs-type">Api.ScriptHash</span></a></span><span>
+</span><span id="line-336"></span><span id="collectPlutusScriptHashes"><span class="annot"><span class="annottext">collectPlutusScriptHashes :: forall era.
+IsEra era =&gt;
+UnsignedTx era
+-&gt; UTxO (LedgerEra era) -&gt; Map ScriptWitnessIndex ScriptHash
+</span><a href="Cardano.Api.Experimental.Tx.html#collectPlutusScriptHashes"><span class="hs-identifier hs-var hs-var">collectPlutusScriptHashes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Type.html#UnsignedTx"><span class="hs-identifier hs-type">UnsignedTx</span></a></span><span> </span><span id="local-6989586621681454400"><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454400"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621681454401"><span class="annot"><span class="annottext">UTxO (LedgerEra era)
+</span><a href="#local-6989586621681454401"><span class="hs-identifier hs-var">utxo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-337"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681454402"><span class="annot"><span class="annottext">AlonzoScriptsNeeded (LedgerEra era)
+</span><a href="#local-6989586621681454402"><span class="hs-identifier hs-var">sNeeded</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.UTxO.html#AlonzoScriptsNeeded"><span class="hs-identifier hs-type">L.AlonzoScriptsNeeded</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454091"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt;
+    AlonzoScriptsNeeded (LedgerEra era))
+-&gt; AlonzoScriptsNeeded (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681454091"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; AlonzoScriptsNeeded (LedgerEra era))
+ -&gt; AlonzoScriptsNeeded (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt;
+    AlonzoScriptsNeeded (LedgerEra era))
+-&gt; AlonzoScriptsNeeded (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO (LedgerEra era)
+-&gt; TxBody (LedgerEra era) -&gt; ScriptsNeeded (LedgerEra era)
+forall era.
+EraUTxO era =&gt;
+UTxO era -&gt; TxBody era -&gt; ScriptsNeeded era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.State.UTxO.html#getScriptsNeeded"><span class="hs-identifier hs-var">L.getScriptsNeeded</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO (LedgerEra era)
+</span><a href="#local-6989586621681454401"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+</span><a href="#local-6989586621681454400"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx (LedgerEra era)
+-&gt; Getting
+     (TxBody (LedgerEra era))
+     (Tx (LedgerEra era))
+     (TxBody (LedgerEra era))
+-&gt; TxBody (LedgerEra era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (TxBody (LedgerEra era))
+  (Tx (LedgerEra era))
+  (TxBody (LedgerEra era))
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx (LedgerEra era)) (TxBody (LedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">L.bodyTxL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-338"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">forall era.
+IsEra era =&gt;
+AlonzoScriptsNeeded (LedgerEra era)
+-&gt; Map ScriptWitnessIndex ScriptHash
+</span><a href="Cardano.Api.Experimental.Tx.html#getPurposes"><span class="hs-identifier hs-var">getPurposes</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681454091"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoScriptsNeeded (LedgerEra era)
+</span><a href="#local-6989586621681454402"><span class="hs-identifier hs-var">sNeeded</span></a></span><span>
+</span><span id="line-339"></span><span>
+</span><span id="line-340"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#getPurposes"><span class="hs-identifier hs-type">getPurposes</span></a></span><span>
+</span><span id="line-341"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681454103"><span class="annot"><a href="#local-6989586621681454103"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-342"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454103"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-343"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.UTxO.html#AlonzoScriptsNeeded"><span class="hs-identifier hs-type">L.AlonzoScriptsNeeded</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454103"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-344"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndex"><span class="hs-identifier hs-type">Api.ScriptWitnessIndex</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ScriptHash"><span class="hs-identifier hs-type">Api.ScriptHash</span></a></span><span>
+</span><span id="line-345"></span><span id="getPurposes"><span class="annot"><span class="annottext">getPurposes :: forall era.
+IsEra era =&gt;
+AlonzoScriptsNeeded (LedgerEra era)
+-&gt; Map ScriptWitnessIndex ScriptHash
+</span><a href="Cardano.Api.Experimental.Tx.html#getPurposes"><span class="hs-identifier hs-var hs-var">getPurposes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.UTxO.html#AlonzoScriptsNeeded"><span class="hs-identifier hs-type">L.AlonzoScriptsNeeded</span></a></span><span> </span><span id="local-6989586621681454420"><span class="annot"><span class="annottext">[(PlutusPurpose AsIxItem (LedgerEra era), ScriptHash)]
+</span><a href="#local-6989586621681454420"><span class="hs-identifier hs-var">purposes</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-346"></span><span>  </span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, ScriptHash)]
+-&gt; Map ScriptWitnessIndex ScriptHash
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(ScriptWitnessIndex, ScriptHash)]
+ -&gt; Map ScriptWitnessIndex ScriptHash)
+-&gt; [(ScriptWitnessIndex, ScriptHash)]
+-&gt; Map ScriptWitnessIndex ScriptHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-347"></span><span>    </span><span class="annot"><span class="annottext">((PlutusPurpose AsIxItem (LedgerEra era), ScriptHash)
+ -&gt; (ScriptWitnessIndex, ScriptHash))
+-&gt; [(PlutusPurpose AsIxItem (LedgerEra era), ScriptHash)]
+-&gt; [(ScriptWitnessIndex, ScriptHash)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">Prelude.map</span></a></span><span>
+</span><span id="line-348"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">(PlutusPurpose AsIxItem (LedgerEra era) -&gt; ScriptWitnessIndex)
+-&gt; (ScriptHash -&gt; ScriptHash)
+-&gt; (PlutusPurpose AsIxItem (LedgerEra era), ScriptHash)
+-&gt; (ScriptWitnessIndex, ScriptHash)
+forall a b c d. (a -&gt; b) -&gt; (c -&gt; d) -&gt; (a, c) -&gt; (b, d)
+forall (p :: * -&gt; * -&gt; *) a b c d.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; (c -&gt; d) -&gt; p a c -&gt; p b d
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Data.Bifunctor.html#bimap"><span class="hs-identifier hs-var">bimap</span></a></span><span>
+</span><span id="line-349"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681454422"><span class="annot"><span class="annottext">PlutusPurpose AsIxItem (LedgerEra era)
+</span><a href="#local-6989586621681454422"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-350"></span><span>              </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; ScriptWitnessIndex)
+-&gt; ScriptWitnessIndex
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681454103"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; ScriptWitnessIndex)
+ -&gt; ScriptWitnessIndex)
+-&gt; (EraCommonConstraints era =&gt; ScriptWitnessIndex)
+-&gt; ScriptWitnessIndex
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-351"></span><span>                </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; PlutusPurpose AsIx (ShelleyLedgerEra era) -&gt; ScriptWitnessIndex
+forall era.
+AlonzoEraOnwards era
+-&gt; PlutusPurpose AsIx (ShelleyLedgerEra era) -&gt; ScriptWitnessIndex
+</span><a href="Cardano.Api.Tx.Internal.Body.html#toScriptIndex"><span class="hs-identifier hs-var">Api.toScriptIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Era era -&gt; AlonzoEraOnwards era
+forall era. Era era -&gt; AlonzoEraOnwards era
+forall a (f :: a -&gt; *) (g :: a -&gt; *) (era :: a).
+Convert f g =&gt;
+f era -&gt; g era
+</span><a href="Cardano.Api.Era.Internal.Eon.Convert.html#convert"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681454103"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(PlutusPurpose AsIx (ShelleyLedgerEra era) -&gt; ScriptWitnessIndex)
+-&gt; PlutusPurpose AsIx (ShelleyLedgerEra era) -&gt; ScriptWitnessIndex
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-352"></span><span>                  </span><span class="annot"><span class="annottext">PlutusPurpose AsIxItem (LedgerEra era)
+-&gt; PlutusPurpose AsIx (LedgerEra era)
+forall era.
+IsEra era =&gt;
+PlutusPurpose AsIxItem (LedgerEra era)
+-&gt; PlutusPurpose AsIx (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.html#purposeAsIxItemToAsIx"><span class="hs-identifier hs-var">purposeAsIxItemToAsIx</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusPurpose AsIxItem (LedgerEra era)
+</span><a href="#local-6989586621681454422"><span class="hs-identifier hs-var">pp</span></a></span><span>
+</span><span id="line-353"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-354"></span><span>          </span><span class="annot"><span class="annottext">ScriptHash -&gt; ScriptHash
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#fromShelleyScriptHash"><span class="hs-identifier hs-var">Api.fromShelleyScriptHash</span></a></span><span>
+</span><span id="line-355"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-356"></span><span>      </span><span class="annot"><span class="annottext">[(PlutusPurpose AsIxItem (LedgerEra era), ScriptHash)]
+</span><a href="#local-6989586621681454420"><span class="hs-identifier hs-var">purposes</span></a></span><span>
+</span><span id="line-357"></span><span>
+</span><span id="line-358"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.html#purposeAsIxItemToAsIx"><span class="hs-identifier hs-type">purposeAsIxItemToAsIx</span></a></span><span>
+</span><span id="line-359"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681454120"><span class="annot"><a href="#local-6989586621681454120"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-360"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454120"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-361"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.Scripts.html#PlutusPurpose"><span class="hs-identifier hs-type">L.PlutusPurpose</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.Scripts.html#AsIxItem"><span class="hs-identifier hs-type">L.AsIxItem</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454120"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-362"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.Scripts.html#PlutusPurpose"><span class="hs-identifier hs-type">L.PlutusPurpose</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.Scripts.html#AsIx"><span class="hs-identifier hs-type">L.AsIx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681454120"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-363"></span><span id="purposeAsIxItemToAsIx"><span class="annot"><span class="annottext">purposeAsIxItemToAsIx :: forall era.
+IsEra era =&gt;
+PlutusPurpose AsIxItem (LedgerEra era)
+-&gt; PlutusPurpose AsIx (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.html#purposeAsIxItemToAsIx"><span class="hs-identifier hs-var hs-var">purposeAsIxItemToAsIx</span></a></span></span><span> </span><span id="local-6989586621681454436"><span class="annot"><span class="annottext">PlutusPurpose AsIxItem (LedgerEra era)
+</span><a href="#local-6989586621681454436"><span class="hs-identifier hs-var">purpose</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-364"></span><span>  </span><span class="annot"><span class="annottext">Era era
+-&gt; (EraCommonConstraints era =&gt; PlutusPurpose AsIx (LedgerEra era))
+-&gt; PlutusPurpose AsIx (LedgerEra era)
+forall era a. Era era -&gt; (EraCommonConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Era.html#obtainCommonConstraints"><span class="hs-identifier hs-var">obtainCommonConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681454120"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraCommonConstraints era =&gt; PlutusPurpose AsIx (LedgerEra era))
+ -&gt; PlutusPurpose AsIx (LedgerEra era))
+-&gt; (EraCommonConstraints era =&gt; PlutusPurpose AsIx (LedgerEra era))
+-&gt; PlutusPurpose AsIx (LedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(forall ix it. AsIxItem ix it -&gt; AsIx ix it)
+-&gt; PlutusPurpose AsIxItem (LedgerEra era)
+-&gt; PlutusPurpose AsIx (LedgerEra era)
+forall era (g :: * -&gt; * -&gt; *) (f :: * -&gt; * -&gt; *).
+AlonzoEraScript era =&gt;
+(forall ix it. g ix it -&gt; f ix it)
+-&gt; PlutusPurpose g era -&gt; PlutusPurpose f era
+forall (g :: * -&gt; * -&gt; *) (f :: * -&gt; * -&gt; *).
+(forall ix it. g ix it -&gt; f ix it)
+-&gt; PlutusPurpose g (LedgerEra era)
+-&gt; PlutusPurpose f (LedgerEra era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.Scripts.html#hoistPlutusPurpose"><span class="hs-identifier hs-var">L.hoistPlutusPurpose</span></a></span><span> </span><span class="annot"><span class="annottext">AsIxItem ix it -&gt; AsIx ix it
+forall ix it. AsIxItem ix it -&gt; AsIx ix it
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.Scripts.html#toAsIx"><span class="hs-identifier hs-var">L.toAsIx</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusPurpose AsIxItem (LedgerEra era)
+</span><a href="#local-6989586621681454436"><span class="hs-identifier hs-var">purpose</span></a></span><span>
+</span><span id="line-365"></span></pre></body></html>

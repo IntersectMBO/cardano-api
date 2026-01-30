@@ -1,0 +1,478 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * All the parts that constitute a plutus script witness but also including simple scripts</span></span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier">TxScriptWitnessRequirements</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Collecting plutus script witness related transaction requirements.</span></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#getTxScriptWitnessesRequirements"><span class="hs-identifier">getTxScriptWitnessesRequirements</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#obtainMonoidConstraint"><span class="hs-identifier">obtainMonoidConstraint</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- * For testing only</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#extractExecutionUnits"><span class="hs-identifier">extractExecutionUnits</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#getTxScriptWitnessRequirements"><span class="hs-identifier">getTxScriptWitnessRequirements</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html"><span class="hs-identifier">Cardano.Api.Experimental.Era</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Exp</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html"><span class="hs-identifier">Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.AnyWitness</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Ledger.html"><span class="hs-identifier">Cardano.Api.Ledger</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html"><span class="hs-identifier">Cardano.Api.Plutus.Internal.Script</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ExecutionUnits"><span class="hs-identifier">ExecutionUnits</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#fromAlonzoExUnits"><span class="hs-identifier">fromAlonzoExUnits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-api-1.12.1.0-4619f5e4caafeb4651fc5dd0b0735e8869fb40033ad326d072b810bcc0414987/share/doc/html/src/Cardano.Ledger.Api.Era.html"><span class="hs-identifier">Cardano.Ledger.Api.Era</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier">Set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><span class="hs-comment">-- | This type collects all the requirements for script witnesses in a transaction.</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">data</span><span> </span><span id="TxScriptWitnessRequirements"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span></span><span> </span><span id="local-6989586621681400756"><span class="annot"><a href="#local-6989586621681400756"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="TxScriptWitnessRequirements"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span></span><span>
+</span><span id="line-35"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier hs-type">L.Language</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>      </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-core-1.18.0.0-8daec36df0e633d66b4d3a3647d9885525b7fd1ddd313ab59da3ddcc529997f7/share/doc/html/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">L.Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400756"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-37"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.TxWits.html#TxDats"><span class="hs-identifier hs-type">L.TxDats</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400756"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.TxWits.html#Redeemers"><span class="hs-identifier hs-type">L.Redeemers</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400756"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681400822"><span id="local-6989586621681400826"><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.AlonzoEra</span></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621681400845"><span class="annot"><span class="annottext">&lt;&gt; :: TxScriptWitnessRequirements AlonzoEra
+-&gt; TxScriptWitnessRequirements AlonzoEra
+-&gt; TxScriptWitnessRequirements AlonzoEra
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var">(&lt;&gt;)</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span id="local-6989586621681400846"><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400846"><span class="hs-identifier hs-var">l1</span></a></span></span><span> </span><span id="local-6989586621681400847"><span class="annot"><span class="annottext">[Script AlonzoEra]
+</span><a href="#local-6989586621681400847"><span class="hs-identifier hs-var">s1</span></a></span></span><span> </span><span id="local-6989586621681400848"><span class="annot"><span class="annottext">TxDats AlonzoEra
+</span><a href="#local-6989586621681400848"><span class="hs-identifier hs-var">d1</span></a></span></span><span> </span><span id="local-6989586621681400849"><span class="annot"><span class="annottext">Redeemers AlonzoEra
+</span><a href="#local-6989586621681400849"><span class="hs-identifier hs-var">r1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span id="local-6989586621681400850"><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400850"><span class="hs-identifier hs-var">l2</span></a></span></span><span> </span><span id="local-6989586621681400851"><span class="annot"><span class="annottext">[Script AlonzoEra]
+</span><a href="#local-6989586621681400851"><span class="hs-identifier hs-var">s2</span></a></span></span><span> </span><span id="local-6989586621681400852"><span class="annot"><span class="annottext">TxDats AlonzoEra
+</span><a href="#local-6989586621681400852"><span class="hs-identifier hs-var">d2</span></a></span></span><span> </span><span id="local-6989586621681400853"><span class="annot"><span class="annottext">Redeemers AlonzoEra
+</span><a href="#local-6989586621681400853"><span class="hs-identifier hs-var">r2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="annottext">Set Language
+-&gt; [Script AlonzoEra]
+-&gt; TxDats AlonzoEra
+-&gt; Redeemers AlonzoEra
+-&gt; TxScriptWitnessRequirements AlonzoEra
+forall era.
+Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400846"><span class="hs-identifier hs-var">l1</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language -&gt; Set Language -&gt; Set Language
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400850"><span class="hs-identifier hs-var">l2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Script AlonzoEra]
+[AlonzoScript AlonzoEra]
+</span><a href="#local-6989586621681400847"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">[AlonzoScript AlonzoEra]
+-&gt; [AlonzoScript AlonzoEra] -&gt; [AlonzoScript AlonzoEra]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Script AlonzoEra]
+[AlonzoScript AlonzoEra]
+</span><a href="#local-6989586621681400851"><span class="hs-identifier hs-var">s2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxDats AlonzoEra
+</span><a href="#local-6989586621681400848"><span class="hs-identifier hs-var">d1</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats AlonzoEra -&gt; TxDats AlonzoEra -&gt; TxDats AlonzoEra
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats AlonzoEra
+</span><a href="#local-6989586621681400852"><span class="hs-identifier hs-var">d2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Redeemers AlonzoEra
+</span><a href="#local-6989586621681400849"><span class="hs-identifier hs-var">r1</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers AlonzoEra -&gt; Redeemers AlonzoEra -&gt; Redeemers AlonzoEra
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers AlonzoEra
+</span><a href="#local-6989586621681400853"><span class="hs-identifier hs-var">r2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681400858"><span id="local-6989586621681400862"><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.AlonzoEra</span></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621681400876"><span class="annot"><span class="annottext">mempty :: TxScriptWitnessRequirements AlonzoEra
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Language
+-&gt; [Script AlonzoEra]
+-&gt; TxDats AlonzoEra
+-&gt; Redeemers AlonzoEra
+-&gt; TxScriptWitnessRequirements AlonzoEra
+forall era.
+Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">[Script AlonzoEra]
+[AlonzoScript AlonzoEra]
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats AlonzoEra
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers AlonzoEra
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681400879"><span id="local-6989586621681400883"><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.BabbageEra</span></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621681400896"><span class="annot"><span class="annottext">&lt;&gt; :: TxScriptWitnessRequirements BabbageEra
+-&gt; TxScriptWitnessRequirements BabbageEra
+-&gt; TxScriptWitnessRequirements BabbageEra
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var">(&lt;&gt;)</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span id="local-6989586621681400897"><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400897"><span class="hs-identifier hs-var">l1</span></a></span></span><span> </span><span id="local-6989586621681400898"><span class="annot"><span class="annottext">[Script BabbageEra]
+</span><a href="#local-6989586621681400898"><span class="hs-identifier hs-var">s1</span></a></span></span><span> </span><span id="local-6989586621681400899"><span class="annot"><span class="annottext">TxDats BabbageEra
+</span><a href="#local-6989586621681400899"><span class="hs-identifier hs-var">d1</span></a></span></span><span> </span><span id="local-6989586621681400900"><span class="annot"><span class="annottext">Redeemers BabbageEra
+</span><a href="#local-6989586621681400900"><span class="hs-identifier hs-var">r1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span id="local-6989586621681400901"><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400901"><span class="hs-identifier hs-var">l2</span></a></span></span><span> </span><span id="local-6989586621681400902"><span class="annot"><span class="annottext">[Script BabbageEra]
+</span><a href="#local-6989586621681400902"><span class="hs-identifier hs-var">s2</span></a></span></span><span> </span><span id="local-6989586621681400903"><span class="annot"><span class="annottext">TxDats BabbageEra
+</span><a href="#local-6989586621681400903"><span class="hs-identifier hs-var">d2</span></a></span></span><span> </span><span id="local-6989586621681400904"><span class="annot"><span class="annottext">Redeemers BabbageEra
+</span><a href="#local-6989586621681400904"><span class="hs-identifier hs-var">r2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">Set Language
+-&gt; [Script BabbageEra]
+-&gt; TxDats BabbageEra
+-&gt; Redeemers BabbageEra
+-&gt; TxScriptWitnessRequirements BabbageEra
+forall era.
+Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400897"><span class="hs-identifier hs-var">l1</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language -&gt; Set Language -&gt; Set Language
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400901"><span class="hs-identifier hs-var">l2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Script BabbageEra]
+[AlonzoScript BabbageEra]
+</span><a href="#local-6989586621681400898"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">[AlonzoScript BabbageEra]
+-&gt; [AlonzoScript BabbageEra] -&gt; [AlonzoScript BabbageEra]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Script BabbageEra]
+[AlonzoScript BabbageEra]
+</span><a href="#local-6989586621681400902"><span class="hs-identifier hs-var">s2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxDats BabbageEra
+</span><a href="#local-6989586621681400899"><span class="hs-identifier hs-var">d1</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats BabbageEra -&gt; TxDats BabbageEra -&gt; TxDats BabbageEra
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats BabbageEra
+</span><a href="#local-6989586621681400903"><span class="hs-identifier hs-var">d2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Redeemers BabbageEra
+</span><a href="#local-6989586621681400900"><span class="hs-identifier hs-var">r1</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers BabbageEra
+-&gt; Redeemers BabbageEra -&gt; Redeemers BabbageEra
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers BabbageEra
+</span><a href="#local-6989586621681400904"><span class="hs-identifier hs-var">r2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681400909"><span id="local-6989586621681400913"><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.BabbageEra</span></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621681400922"><span class="annot"><span class="annottext">mempty :: TxScriptWitnessRequirements BabbageEra
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Language
+-&gt; [Script BabbageEra]
+-&gt; TxDats BabbageEra
+-&gt; Redeemers BabbageEra
+-&gt; TxScriptWitnessRequirements BabbageEra
+forall era.
+Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">[Script BabbageEra]
+[AlonzoScript BabbageEra]
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats BabbageEra
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers BabbageEra
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681400925"><span id="local-6989586621681400929"><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.ConwayEra</span></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621681400942"><span class="annot"><span class="annottext">&lt;&gt; :: TxScriptWitnessRequirements ConwayEra
+-&gt; TxScriptWitnessRequirements ConwayEra
+-&gt; TxScriptWitnessRequirements ConwayEra
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var">(&lt;&gt;)</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span id="local-6989586621681400943"><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400943"><span class="hs-identifier hs-var">l1</span></a></span></span><span> </span><span id="local-6989586621681400944"><span class="annot"><span class="annottext">[Script ConwayEra]
+</span><a href="#local-6989586621681400944"><span class="hs-identifier hs-var">s1</span></a></span></span><span> </span><span id="local-6989586621681400945"><span class="annot"><span class="annottext">TxDats ConwayEra
+</span><a href="#local-6989586621681400945"><span class="hs-identifier hs-var">d1</span></a></span></span><span> </span><span id="local-6989586621681400946"><span class="annot"><span class="annottext">Redeemers ConwayEra
+</span><a href="#local-6989586621681400946"><span class="hs-identifier hs-var">r1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span id="local-6989586621681400947"><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400947"><span class="hs-identifier hs-var">l2</span></a></span></span><span> </span><span id="local-6989586621681400948"><span class="annot"><span class="annottext">[Script ConwayEra]
+</span><a href="#local-6989586621681400948"><span class="hs-identifier hs-var">s2</span></a></span></span><span> </span><span id="local-6989586621681400949"><span class="annot"><span class="annottext">TxDats ConwayEra
+</span><a href="#local-6989586621681400949"><span class="hs-identifier hs-var">d2</span></a></span></span><span> </span><span id="local-6989586621681400950"><span class="annot"><span class="annottext">Redeemers ConwayEra
+</span><a href="#local-6989586621681400950"><span class="hs-identifier hs-var">r2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="annottext">Set Language
+-&gt; [Script ConwayEra]
+-&gt; TxDats ConwayEra
+-&gt; Redeemers ConwayEra
+-&gt; TxScriptWitnessRequirements ConwayEra
+forall era.
+Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400943"><span class="hs-identifier hs-var">l1</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language -&gt; Set Language -&gt; Set Language
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400947"><span class="hs-identifier hs-var">l2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Script ConwayEra]
+[AlonzoScript ConwayEra]
+</span><a href="#local-6989586621681400944"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">[AlonzoScript ConwayEra]
+-&gt; [AlonzoScript ConwayEra] -&gt; [AlonzoScript ConwayEra]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Script ConwayEra]
+[AlonzoScript ConwayEra]
+</span><a href="#local-6989586621681400948"><span class="hs-identifier hs-var">s2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxDats ConwayEra
+</span><a href="#local-6989586621681400945"><span class="hs-identifier hs-var">d1</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats ConwayEra -&gt; TxDats ConwayEra -&gt; TxDats ConwayEra
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats ConwayEra
+</span><a href="#local-6989586621681400949"><span class="hs-identifier hs-var">d2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Redeemers ConwayEra
+</span><a href="#local-6989586621681400946"><span class="hs-identifier hs-var">r1</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers ConwayEra -&gt; Redeemers ConwayEra -&gt; Redeemers ConwayEra
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers ConwayEra
+</span><a href="#local-6989586621681400950"><span class="hs-identifier hs-var">r2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681400955"><span id="local-6989586621681400959"><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.ConwayEra</span></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621681400968"><span class="annot"><span class="annottext">mempty :: TxScriptWitnessRequirements ConwayEra
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Language
+-&gt; [Script ConwayEra]
+-&gt; TxDats ConwayEra
+-&gt; Redeemers ConwayEra
+-&gt; TxScriptWitnessRequirements ConwayEra
+forall era.
+Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">[Script ConwayEra]
+[AlonzoScript ConwayEra]
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats ConwayEra
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers ConwayEra
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681400971"><span id="local-6989586621681400975"><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.DijkstraEra</span></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621681400988"><span class="annot"><span class="annottext">&lt;&gt; :: TxScriptWitnessRequirements DijkstraEra
+-&gt; TxScriptWitnessRequirements DijkstraEra
+-&gt; TxScriptWitnessRequirements DijkstraEra
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var">(&lt;&gt;)</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span id="local-6989586621681400989"><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400989"><span class="hs-identifier hs-var">l1</span></a></span></span><span> </span><span id="local-6989586621681400990"><span class="annot"><span class="annottext">[Script DijkstraEra]
+</span><a href="#local-6989586621681400990"><span class="hs-identifier hs-var">s1</span></a></span></span><span> </span><span id="local-6989586621681400991"><span class="annot"><span class="annottext">TxDats DijkstraEra
+</span><a href="#local-6989586621681400991"><span class="hs-identifier hs-var">d1</span></a></span></span><span> </span><span id="local-6989586621681400992"><span class="annot"><span class="annottext">Redeemers DijkstraEra
+</span><a href="#local-6989586621681400992"><span class="hs-identifier hs-var">r1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span id="local-6989586621681400993"><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400993"><span class="hs-identifier hs-var">l2</span></a></span></span><span> </span><span id="local-6989586621681400994"><span class="annot"><span class="annottext">[Script DijkstraEra]
+</span><a href="#local-6989586621681400994"><span class="hs-identifier hs-var">s2</span></a></span></span><span> </span><span id="local-6989586621681400995"><span class="annot"><span class="annottext">TxDats DijkstraEra
+</span><a href="#local-6989586621681400995"><span class="hs-identifier hs-var">d2</span></a></span></span><span> </span><span id="local-6989586621681400996"><span class="annot"><span class="annottext">Redeemers DijkstraEra
+</span><a href="#local-6989586621681400996"><span class="hs-identifier hs-var">r2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="annottext">Set Language
+-&gt; [Script DijkstraEra]
+-&gt; TxDats DijkstraEra
+-&gt; Redeemers DijkstraEra
+-&gt; TxScriptWitnessRequirements DijkstraEra
+forall era.
+Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400989"><span class="hs-identifier hs-var">l1</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language -&gt; Set Language -&gt; Set Language
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681400993"><span class="hs-identifier hs-var">l2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Script DijkstraEra]
+[AlonzoScript DijkstraEra]
+</span><a href="#local-6989586621681400990"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">[AlonzoScript DijkstraEra]
+-&gt; [AlonzoScript DijkstraEra] -&gt; [AlonzoScript DijkstraEra]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Script DijkstraEra]
+[AlonzoScript DijkstraEra]
+</span><a href="#local-6989586621681400994"><span class="hs-identifier hs-var">s2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxDats DijkstraEra
+</span><a href="#local-6989586621681400991"><span class="hs-identifier hs-var">d1</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats DijkstraEra -&gt; TxDats DijkstraEra -&gt; TxDats DijkstraEra
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats DijkstraEra
+</span><a href="#local-6989586621681400995"><span class="hs-identifier hs-var">d2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Redeemers DijkstraEra
+</span><a href="#local-6989586621681400992"><span class="hs-identifier hs-var">r1</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers DijkstraEra
+-&gt; Redeemers DijkstraEra -&gt; Redeemers DijkstraEra
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers DijkstraEra
+</span><a href="#local-6989586621681400996"><span class="hs-identifier hs-var">r2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681401001"><span id="local-6989586621681401005"><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">L.DijkstraEra</span></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621681401014"><span class="annot"><span class="annottext">mempty :: TxScriptWitnessRequirements DijkstraEra
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Language
+-&gt; [Script DijkstraEra]
+-&gt; TxDats DijkstraEra
+-&gt; Redeemers DijkstraEra
+-&gt; TxScriptWitnessRequirements DijkstraEra
+forall era.
+Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">[Script DijkstraEra]
+[AlonzoScript DijkstraEra]
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats DijkstraEra
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers DijkstraEra
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span id="local-6989586621681400769"><span id="local-6989586621681400770"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#getTxScriptWitnessRequirements"><span class="hs-identifier hs-type">getTxScriptWitnessRequirements</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.Scripts.html#AlonzoEraScript"><span class="hs-identifier hs-type">L.AlonzoEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400769"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400769"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#Witnessable"><span class="hs-identifier hs-type">Witnessable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400770"><span class="hs-identifier hs-type">witnessable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400769"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#AnyWitness"><span class="hs-identifier hs-type">AnyWitness</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400769"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400769"><span class="hs-identifier hs-type">era</span></a></span></span></span><span>
+</span><span id="line-73"></span><span id="getTxScriptWitnessRequirements"><span class="annot"><span class="annottext">getTxScriptWitnessRequirements :: forall era (witnessable :: WitnessableItem).
+(AlonzoEraScript era, Monoid (TxScriptWitnessRequirements era)) =&gt;
+[(Witnessable witnessable era, AnyWitness era)]
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#getTxScriptWitnessRequirements"><span class="hs-identifier hs-var hs-var">getTxScriptWitnessRequirements</span></a></span></span><span> </span><span id="local-6989586621681401031"><span class="annot"><span class="annottext">[(Witnessable witnessable era, AnyWitness era)]
+</span><a href="#local-6989586621681401031"><span class="hs-identifier hs-var">wits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span id="local-6989586621681401032"><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681401032"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621681401033"><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621681401033"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621681401034"><span class="annot"><span class="annottext">TxDats era
+</span><a href="#local-6989586621681401034"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="annot"><span class="annottext">Redeemers era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">[TxScriptWitnessRequirements era]
+-&gt; TxScriptWitnessRequirements era
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-76"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+forall era.
+Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span><span>
+</span><span id="line-77"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set Language
+-&gt; (Language -&gt; Set Language) -&gt; Maybe Language -&gt; Set Language
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">Language -&gt; Set Language
+forall a. a -&gt; Set a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Set.Internal.html#singleton"><span class="hs-identifier hs-var">Set.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Language -&gt; Set Language) -&gt; Maybe Language -&gt; Set Language
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AnyWitness era -&gt; Maybe Language
+forall era. AnyWitness era -&gt; Maybe Language
+</span><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#getAnyWitnessPlutusLanguage"><span class="hs-identifier hs-var">getAnyWitnessPlutusLanguage</span></a></span><span> </span><span class="annot"><span class="annottext">AnyWitness era
+</span><a href="#local-6989586621681401038"><span class="hs-identifier hs-var">anyWit</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Script era]
+-&gt; (Script era -&gt; [Script era])
+-&gt; Maybe (Script era)
+-&gt; [Script era]
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">[Script era]
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">Script era -&gt; [Script era]
+forall a. a -&gt; [a]
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (Script era) -&gt; [Script era])
+-&gt; Maybe (Script era) -&gt; [Script era]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AnyWitness era -&gt; Maybe (Script era)
+forall era.
+AlonzoEraScript era =&gt;
+AnyWitness era -&gt; Maybe (Script era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#getAnyWitnessScript"><span class="hs-identifier hs-var">getAnyWitnessScript</span></a></span><span> </span><span class="annot"><span class="annottext">AnyWitness era
+</span><a href="#local-6989586621681401038"><span class="hs-identifier hs-var">anyWit</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AnyWitness era -&gt; TxDats era
+forall era. Era era =&gt; AnyWitness era -&gt; TxDats era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#getAnyWitnessScriptData"><span class="hs-identifier hs-var">getAnyWitnessScriptData</span></a></span><span> </span><span class="annot"><span class="annottext">AnyWitness era
+</span><a href="#local-6989586621681401038"><span class="hs-identifier hs-var">anyWit</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>              </span><span class="annot"><span class="annottext">Redeemers era
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-81"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Witnessable witnessable era
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681401038"><span class="annot"><span class="annottext">AnyWitness era
+</span><a href="#local-6989586621681401038"><span class="hs-identifier hs-var">anyWit</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Witnessable witnessable era, AnyWitness era)]
+</span><a href="#local-6989586621681401031"><span class="hs-identifier hs-var">wits</span></a></span><span>
+</span><span id="line-82"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-83"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+forall era.
+Set Language
+-&gt; [Script era]
+-&gt; TxDats era
+-&gt; Redeemers era
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-var">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621681401032"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621681401033"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">TxDats era
+</span><a href="#local-6989586621681401034"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Witnessable witnessable era, AnyWitness era)] -&gt; Redeemers era
+forall era (witnessable :: WitnessableItem).
+AlonzoEraScript era =&gt;
+[(Witnessable witnessable era, AnyWitness era)] -&gt; Redeemers era
+</span><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#getAnyWitnessRedeemerPointerMap"><span class="hs-identifier hs-var">getAnyWitnessRedeemerPointerMap</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable witnessable era, AnyWitness era)]
+</span><a href="#local-6989586621681401031"><span class="hs-identifier hs-var">wits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span id="local-6989586621681401042"><span id="local-6989586621681401043"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#getTxScriptWitnessesRequirements"><span class="hs-identifier hs-type">getTxScriptWitnessesRequirements</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.Scripts.html#AlonzoEraScript"><span class="hs-identifier hs-type">L.AlonzoEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681401042"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681401042"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness.html#Witnessable"><span class="hs-identifier hs-type">Witnessable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681401043"><span class="hs-identifier hs-type">witnessable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681401042"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#AnyWitness"><span class="hs-identifier hs-type">AnyWitness</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681401042"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681401042"><span class="hs-identifier hs-type">era</span></a></span></span></span><span>
+</span><span id="line-90"></span><span id="getTxScriptWitnessesRequirements"><span class="annot"><span class="annottext">getTxScriptWitnessesRequirements :: forall era (witnessable :: WitnessableItem).
+(AlonzoEraScript era, Monoid (TxScriptWitnessRequirements era)) =&gt;
+[(Witnessable witnessable era, AnyWitness era)]
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#getTxScriptWitnessesRequirements"><span class="hs-identifier hs-var hs-var">getTxScriptWitnessesRequirements</span></a></span></span><span> </span><span id="local-6989586621681401048"><span class="annot"><span class="annottext">[(Witnessable witnessable era, AnyWitness era)]
+</span><a href="#local-6989586621681401048"><span class="hs-identifier hs-var">wits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><span class="annottext">[(Witnessable witnessable era, AnyWitness era)]
+-&gt; TxScriptWitnessRequirements era
+forall era (witnessable :: WitnessableItem).
+(AlonzoEraScript era, Monoid (TxScriptWitnessRequirements era)) =&gt;
+[(Witnessable witnessable era, AnyWitness era)]
+-&gt; TxScriptWitnessRequirements era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#getTxScriptWitnessRequirements"><span class="hs-identifier hs-var">getTxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="annottext">[(Witnessable witnessable era, AnyWitness era)]
+</span><a href="#local-6989586621681401048"><span class="hs-identifier hs-var">wits</span></a></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span id="local-6989586621681400794"><span id="local-6989586621681400797"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#obtainMonoidConstraint"><span class="hs-identifier hs-type">obtainMonoidConstraint</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Exp.Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400794"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">Exp.LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400794"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681400797"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681400797"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-97"></span><span id="obtainMonoidConstraint"><span class="annot"><span class="annottext">obtainMonoidConstraint :: forall era a.
+Era era
+-&gt; (Monoid (TxScriptWitnessRequirements (LedgerEra era)) =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#obtainMonoidConstraint"><span class="hs-identifier hs-var hs-var">obtainMonoidConstraint</span></a></span></span><span> </span><span id="local-6989586621681401049"><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681401049"><span class="hs-identifier hs-var">eon</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681401049"><span class="hs-identifier hs-var">eon</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">Exp.ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+(Monoid (TxScriptWitnessRequirements (LedgerEra era)) =&gt; a) -&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#DijkstraEra"><span class="hs-identifier hs-var">Exp.DijkstraEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+(Monoid (TxScriptWitnessRequirements (LedgerEra era)) =&gt; a) -&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span id="local-6989586621681400803"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#extractExecutionUnits"><span class="hs-identifier hs-type">extractExecutionUnits</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681400803"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ExecutionUnits"><span class="hs-identifier hs-type">ExecutionUnits</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-102"></span><span id="extractExecutionUnits"><span class="annot"><span class="annottext">extractExecutionUnits :: forall era. TxScriptWitnessRequirements era -&gt; [ExecutionUnits]
+</span><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#extractExecutionUnits"><span class="hs-identifier hs-var hs-var">extractExecutionUnits</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span class="annot"><span class="annottext">Set Language
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">[Script era]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TxDats era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681401059"><span class="annot"><span class="annottext">Redeemers era
+</span><a href="#local-6989586621681401059"><span class="hs-identifier hs-var">redeemers</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681401060"><span class="annot"><span class="annottext">m :: Map (PlutusPurpose AsIx era) (Data era, ExUnits)
+</span><a href="#local-6989586621681401060"><span class="hs-identifier hs-var hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Redeemers era -&gt; Map (PlutusPurpose AsIx era) (Data era, ExUnits)
+forall era.
+Redeemers era -&gt; Map (PlutusPurpose AsIx era) (Data era, ExUnits)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/cardano-ledger-alonzo-1.14.0.0-e0dea3413a0ec1ed3434971320afd622322326f604df2081def89029bcf76960/share/doc/html/src/Cardano.Ledger.Alonzo.TxWits.html#unRedeemers"><span class="hs-identifier hs-var">L.unRedeemers</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers era
+</span><a href="#local-6989586621681401059"><span class="hs-identifier hs-var">redeemers</span></a></span><span>
+</span><span id="line-104"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ExUnits -&gt; ExecutionUnits
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#fromAlonzoExUnits"><span class="hs-identifier hs-var">fromAlonzoExUnits</span></a></span><span> </span><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621681401062"><span class="hs-identifier hs-var">exUnits</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Data era
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681401062"><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621681401062"><span class="hs-identifier hs-var">exUnits</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map (PlutusPurpose AsIx era) (Data era, ExUnits)
+-&gt; [(Data era, ExUnits)]
+forall k a. Map k a -&gt; [a]
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/containers-0.7-inplace/src/Data.Map.Internal.html#elems"><span class="hs-identifier hs-var">Map.elems</span></a></span><span> </span><span class="annot"><span class="annottext">Map (PlutusPurpose AsIx era) (Data era, ExUnits)
+</span><a href="#local-6989586621681401060"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-105"></span></pre></body></html>

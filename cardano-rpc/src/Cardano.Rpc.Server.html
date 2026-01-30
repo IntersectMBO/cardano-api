@@ -1,0 +1,468 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE QuantifiedConstraints #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.html"><span class="hs-identifier">Cardano.Rpc.Server</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.html#runRpcServer"><span class="hs-identifier">runRpcServer</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Traces</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Tracing.html#TraceRpc"><span class="hs-identifier">TraceRpc</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmit"><span class="hs-identifier">TraceRpcSubmit</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQuery"><span class="hs-identifier">TraceRpcQuery</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Tracing.html#TraceSpanEvent"><span class="hs-identifier">TraceSpanEvent</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.23.0.0/doc/html/cardano-api/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.Node.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.Node</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Rpc</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UtxoRpc</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Submit.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Submit</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UtxoRpc</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Config.html"><span class="hs-identifier">Cardano.Rpc.Server.Config</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Env.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Env</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Monad.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Monad</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Node.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Node</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Orphans.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Tracing.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Tracing</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Query</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Submit.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Submit</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/rio-0.1.24.0-f91ce549d38c9e77bb8c4a5d41783ebcd8fb4154b4a25e82d16910d9820323f1/share/doc/html/src/RIO.html"><span class="hs-identifier">RIO</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Tracer</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Common.html"><span class="hs-identifier">Network.GRPC.Common</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.html"><span class="hs-identifier">Network.GRPC.Server</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.Protobuf.html"><span class="hs-identifier">Network.GRPC.Server.Protobuf</span></a></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.Run.html"><span class="hs-identifier">Network.GRPC.Server.Run</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html"><span class="hs-identifier">Network.GRPC.Server.StreamType</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- Server top level</span><span>
+</span><span id="line-45"></span><span id="local-6989586621679485018"><span id="local-6989586621679485019"><span class="annot"><a href="Cardano.Rpc.Server.html#methodsNodeRpc"><span class="hs-identifier hs-type">methodsNodeRpc</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Monad.html#MonadRpc"><span class="hs-identifier hs-type">MonadRpc</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485018"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485019"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#Methods"><span class="hs-identifier hs-type">Methods</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485019"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.Protobuf.html#ProtobufMethodsOf"><span class="hs-identifier hs-type">ProtobufMethodsOf</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Rpc.Node</span></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-48"></span><span id="methodsNodeRpc"><span class="annot"><span class="annottext">methodsNodeRpc :: forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Methods m (ProtobufMethodsOf Node)
+</span><a href="Cardano.Rpc.Server.html#methodsNodeRpc"><span class="hs-identifier hs-var hs-var">methodsNodeRpc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">ServerHandler' 'NonStreaming m (Protobuf Node &quot;getEra&quot;)
+-&gt; Methods m '[Protobuf Node &quot;getProtocolParamsJson&quot;]
+-&gt; Methods
+     m '[Protobuf Node &quot;getEra&quot;, Protobuf Node &quot;getProtocolParamsJson&quot;]
+forall {k} (rpc :: k) (styp :: StreamingType) (m :: * -&gt; *)
+       (rpcs1 :: [k]).
+(SupportsServerRpc rpc, Default (ResponseInitialMetadata rpc),
+ Default (ResponseTrailingMetadata rpc),
+ SupportsStreamingType rpc styp) =&gt;
+ServerHandler' styp m rpc
+-&gt; Methods m rpcs1 -&gt; Methods m (rpc : rpcs1)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#Method"><span class="hs-identifier hs-var">Method</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Input (Protobuf Node &quot;getEra&quot;)
+ -&gt; m (Output (Protobuf Node &quot;getEra&quot;)))
+-&gt; ServerHandler' 'NonStreaming m (Protobuf Node &quot;getEra&quot;)
+forall {k} (rpc :: k) (m :: * -&gt; *).
+SupportsStreamingType rpc 'NonStreaming =&gt;
+(Input rpc -&gt; m (Output rpc)) -&gt; ServerHandler' 'NonStreaming m rpc
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#mkNonStreaming"><span class="hs-identifier hs-var">mkNonStreaming</span></a></span><span> </span><span class="annot"><span class="annottext">Input (Protobuf Node &quot;getEra&quot;)
+-&gt; m (Output (Protobuf Node &quot;getEra&quot;))
+Proto Empty -&gt; m (Proto CurrentEra)
+forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Proto Empty -&gt; m (Proto CurrentEra)
+</span><a href="Cardano.Rpc.Server.Internal.Node.html#getEraMethod"><span class="hs-identifier hs-var">getEraMethod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><span class="annottext">(Methods m '[Protobuf Node &quot;getProtocolParamsJson&quot;]
+ -&gt; Methods m (ProtobufMethodsOf Node))
+-&gt; (Methods m '[]
+    -&gt; Methods m '[Protobuf Node &quot;getProtocolParamsJson&quot;])
+-&gt; Methods m '[]
+-&gt; Methods m (ProtobufMethodsOf Node)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ServerHandler'
+  'NonStreaming m (Protobuf Node &quot;getProtocolParamsJson&quot;)
+-&gt; Methods m '[]
+-&gt; Methods m '[Protobuf Node &quot;getProtocolParamsJson&quot;]
+forall {k} (rpc :: k) (styp :: StreamingType) (m :: * -&gt; *)
+       (rpcs1 :: [k]).
+(SupportsServerRpc rpc, Default (ResponseInitialMetadata rpc),
+ Default (ResponseTrailingMetadata rpc),
+ SupportsStreamingType rpc styp) =&gt;
+ServerHandler' styp m rpc
+-&gt; Methods m rpcs1 -&gt; Methods m (rpc : rpcs1)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#Method"><span class="hs-identifier hs-var">Method</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Input (Protobuf Node &quot;getProtocolParamsJson&quot;)
+ -&gt; m (Output (Protobuf Node &quot;getProtocolParamsJson&quot;)))
+-&gt; ServerHandler'
+     'NonStreaming m (Protobuf Node &quot;getProtocolParamsJson&quot;)
+forall {k} (rpc :: k) (m :: * -&gt; *).
+SupportsStreamingType rpc 'NonStreaming =&gt;
+(Input rpc -&gt; m (Output rpc)) -&gt; ServerHandler' 'NonStreaming m rpc
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#mkNonStreaming"><span class="hs-identifier hs-var">mkNonStreaming</span></a></span><span> </span><span class="annot"><span class="annottext">Input (Protobuf Node &quot;getProtocolParamsJson&quot;)
+-&gt; m (Output (Protobuf Node &quot;getProtocolParamsJson&quot;))
+Proto Empty -&gt; m (Proto ProtocolParamsJson)
+forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Proto Empty -&gt; m (Proto ProtocolParamsJson)
+</span><a href="Cardano.Rpc.Server.Internal.Node.html#getProtocolParamsJsonMethod"><span class="hs-identifier hs-var">getProtocolParamsJsonMethod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">(Methods m '[] -&gt; Methods m (ProtobufMethodsOf Node))
+-&gt; Methods m '[] -&gt; Methods m (ProtobufMethodsOf Node)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Methods m '[]
+forall {k} (m :: * -&gt; *). Methods m '[]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#NoMoreMethods"><span class="hs-identifier hs-var">NoMoreMethods</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span id="local-6989586621679485089"><span id="local-6989586621679485090"><span class="annot"><a href="Cardano.Rpc.Server.html#methodsUtxoRpc"><span class="hs-identifier hs-type">methodsUtxoRpc</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Monad.html#MonadRpc"><span class="hs-identifier hs-type">MonadRpc</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485089"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485090"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#Methods"><span class="hs-identifier hs-type">Methods</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485090"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.Protobuf.html#ProtobufMethodsOf"><span class="hs-identifier hs-type">ProtobufMethodsOf</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.QueryService</span></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-56"></span><span id="methodsUtxoRpc"><span class="annot"><span class="annottext">methodsUtxoRpc :: forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Methods m (ProtobufMethodsOf QueryService)
+</span><a href="Cardano.Rpc.Server.html#methodsUtxoRpc"><span class="hs-identifier hs-var hs-var">methodsUtxoRpc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">ServerHandler' 'NonStreaming m (Protobuf QueryService &quot;readParams&quot;)
+-&gt; Methods m '[Protobuf QueryService &quot;readUtxos&quot;]
+-&gt; Methods
+     m
+     '[Protobuf QueryService &quot;readParams&quot;,
+       Protobuf QueryService &quot;readUtxos&quot;]
+forall {k} (rpc :: k) (styp :: StreamingType) (m :: * -&gt; *)
+       (rpcs1 :: [k]).
+(SupportsServerRpc rpc, Default (ResponseInitialMetadata rpc),
+ Default (ResponseTrailingMetadata rpc),
+ SupportsStreamingType rpc styp) =&gt;
+ServerHandler' styp m rpc
+-&gt; Methods m rpcs1 -&gt; Methods m (rpc : rpcs1)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#Method"><span class="hs-identifier hs-var">Method</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Input (Protobuf QueryService &quot;readParams&quot;)
+ -&gt; m (Output (Protobuf QueryService &quot;readParams&quot;)))
+-&gt; ServerHandler'
+     'NonStreaming m (Protobuf QueryService &quot;readParams&quot;)
+forall {k} (rpc :: k) (m :: * -&gt; *).
+SupportsStreamingType rpc 'NonStreaming =&gt;
+(Input rpc -&gt; m (Output rpc)) -&gt; ServerHandler' 'NonStreaming m rpc
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#mkNonStreaming"><span class="hs-identifier hs-var">mkNonStreaming</span></a></span><span> </span><span class="annot"><span class="annottext">((Input (Protobuf QueryService &quot;readParams&quot;)
+  -&gt; m (Output (Protobuf QueryService &quot;readParams&quot;)))
+ -&gt; ServerHandler'
+      'NonStreaming m (Protobuf QueryService &quot;readParams&quot;))
+-&gt; (Input (Protobuf QueryService &quot;readParams&quot;)
+    -&gt; m (Output (Protobuf QueryService &quot;readParams&quot;)))
+-&gt; ServerHandler'
+     'NonStreaming m (Protobuf QueryService &quot;readParams&quot;)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceSpanEvent -&gt; TraceRpcQuery)
+-&gt; m (Proto ReadParamsResponse) -&gt; m (Proto ReadParamsResponse)
+forall t' t e (m :: * -&gt; *) a.
+(t ~ TraceRpc, Inject t' t, NFData a, Has (Tracer m t) e,
+ MonadReader e m, MonadUnliftIO m) =&gt;
+(TraceSpanEvent -&gt; t') -&gt; m a -&gt; m a
+</span><a href="Cardano.Rpc.Server.Internal.Monad.html#wrapInSpan"><span class="hs-identifier hs-var">wrapInSpan</span></a></span><span> </span><span class="annot"><span class="annottext">TraceSpanEvent -&gt; TraceRpcQuery
+</span><a href="Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQueryParamsSpan"><span class="hs-identifier hs-var">TraceRpcQueryParamsSpan</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Proto ReadParamsResponse) -&gt; m (Proto ReadParamsResponse))
+-&gt; (Proto ReadParamsRequest -&gt; m (Proto ReadParamsResponse))
+-&gt; Proto ReadParamsRequest
+-&gt; m (Proto ReadParamsResponse)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Proto ReadParamsRequest -&gt; m (Proto ReadParamsResponse)
+forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Proto ReadParamsRequest -&gt; m (Proto ReadParamsResponse)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Query.html#readParamsMethod"><span class="hs-identifier hs-var">readParamsMethod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">(Methods m '[Protobuf QueryService &quot;readUtxos&quot;]
+ -&gt; Methods m (ProtobufMethodsOf QueryService))
+-&gt; (Methods m '[]
+    -&gt; Methods m '[Protobuf QueryService &quot;readUtxos&quot;])
+-&gt; Methods m '[]
+-&gt; Methods m (ProtobufMethodsOf QueryService)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ServerHandler' 'NonStreaming m (Protobuf QueryService &quot;readUtxos&quot;)
+-&gt; Methods m '[] -&gt; Methods m '[Protobuf QueryService &quot;readUtxos&quot;]
+forall {k} (rpc :: k) (styp :: StreamingType) (m :: * -&gt; *)
+       (rpcs1 :: [k]).
+(SupportsServerRpc rpc, Default (ResponseInitialMetadata rpc),
+ Default (ResponseTrailingMetadata rpc),
+ SupportsStreamingType rpc styp) =&gt;
+ServerHandler' styp m rpc
+-&gt; Methods m rpcs1 -&gt; Methods m (rpc : rpcs1)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#Method"><span class="hs-identifier hs-var">Method</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Input (Protobuf QueryService &quot;readUtxos&quot;)
+ -&gt; m (Output (Protobuf QueryService &quot;readUtxos&quot;)))
+-&gt; ServerHandler'
+     'NonStreaming m (Protobuf QueryService &quot;readUtxos&quot;)
+forall {k} (rpc :: k) (m :: * -&gt; *).
+SupportsStreamingType rpc 'NonStreaming =&gt;
+(Input rpc -&gt; m (Output rpc)) -&gt; ServerHandler' 'NonStreaming m rpc
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#mkNonStreaming"><span class="hs-identifier hs-var">mkNonStreaming</span></a></span><span> </span><span class="annot"><span class="annottext">((Input (Protobuf QueryService &quot;readUtxos&quot;)
+  -&gt; m (Output (Protobuf QueryService &quot;readUtxos&quot;)))
+ -&gt; ServerHandler'
+      'NonStreaming m (Protobuf QueryService &quot;readUtxos&quot;))
+-&gt; (Input (Protobuf QueryService &quot;readUtxos&quot;)
+    -&gt; m (Output (Protobuf QueryService &quot;readUtxos&quot;)))
+-&gt; ServerHandler'
+     'NonStreaming m (Protobuf QueryService &quot;readUtxos&quot;)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceSpanEvent -&gt; TraceRpcQuery)
+-&gt; m (Proto ReadUtxosResponse) -&gt; m (Proto ReadUtxosResponse)
+forall t' t e (m :: * -&gt; *) a.
+(t ~ TraceRpc, Inject t' t, NFData a, Has (Tracer m t) e,
+ MonadReader e m, MonadUnliftIO m) =&gt;
+(TraceSpanEvent -&gt; t') -&gt; m a -&gt; m a
+</span><a href="Cardano.Rpc.Server.Internal.Monad.html#wrapInSpan"><span class="hs-identifier hs-var">wrapInSpan</span></a></span><span> </span><span class="annot"><span class="annottext">TraceSpanEvent -&gt; TraceRpcQuery
+</span><a href="Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcQueryReadUtxosSpan"><span class="hs-identifier hs-var">TraceRpcQueryReadUtxosSpan</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Proto ReadUtxosResponse) -&gt; m (Proto ReadUtxosResponse))
+-&gt; (Proto ReadUtxosRequest -&gt; m (Proto ReadUtxosResponse))
+-&gt; Proto ReadUtxosRequest
+-&gt; m (Proto ReadUtxosResponse)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Proto ReadUtxosRequest -&gt; m (Proto ReadUtxosResponse)
+forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Proto ReadUtxosRequest -&gt; m (Proto ReadUtxosResponse)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Query.html#readUtxosMethod"><span class="hs-identifier hs-var">readUtxosMethod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">(Methods m '[] -&gt; Methods m (ProtobufMethodsOf QueryService))
+-&gt; Methods m '[] -&gt; Methods m (ProtobufMethodsOf QueryService)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Methods m '[]
+forall {k} (m :: * -&gt; *). Methods m '[]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#NoMoreMethods"><span class="hs-identifier hs-var">NoMoreMethods</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span id="local-6989586621679485111"><span id="local-6989586621679485112"><span class="annot"><a href="Cardano.Rpc.Server.html#methodsUtxoRpcSubmit"><span class="hs-identifier hs-type">methodsUtxoRpcSubmit</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Monad.html#MonadRpc"><span class="hs-identifier hs-type">MonadRpc</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485111"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485112"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#Methods"><span class="hs-identifier hs-type">Methods</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485112"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.Protobuf.html#ProtobufMethodsOf"><span class="hs-identifier hs-type">ProtobufMethodsOf</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.SubmitService</span></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-64"></span><span id="methodsUtxoRpcSubmit"><span class="annot"><span class="annottext">methodsUtxoRpcSubmit :: forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Methods m (ProtobufMethodsOf SubmitService)
+</span><a href="Cardano.Rpc.Server.html#methodsUtxoRpcSubmit"><span class="hs-identifier hs-var hs-var">methodsUtxoRpcSubmit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">ServerHandler' 'NonStreaming m (Protobuf SubmitService &quot;submitTx&quot;)
+-&gt; Methods m '[] -&gt; Methods m '[Protobuf SubmitService &quot;submitTx&quot;]
+forall {k} (rpc :: k) (styp :: StreamingType) (m :: * -&gt; *)
+       (rpcs1 :: [k]).
+(SupportsServerRpc rpc, Default (ResponseInitialMetadata rpc),
+ Default (ResponseTrailingMetadata rpc),
+ SupportsStreamingType rpc styp) =&gt;
+ServerHandler' styp m rpc
+-&gt; Methods m rpcs1 -&gt; Methods m (rpc : rpcs1)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#Method"><span class="hs-identifier hs-var">Method</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Input (Protobuf SubmitService &quot;submitTx&quot;)
+ -&gt; m (Output (Protobuf SubmitService &quot;submitTx&quot;)))
+-&gt; ServerHandler'
+     'NonStreaming m (Protobuf SubmitService &quot;submitTx&quot;)
+forall {k} (rpc :: k) (m :: * -&gt; *).
+SupportsStreamingType rpc 'NonStreaming =&gt;
+(Input rpc -&gt; m (Output rpc)) -&gt; ServerHandler' 'NonStreaming m rpc
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#mkNonStreaming"><span class="hs-identifier hs-var">mkNonStreaming</span></a></span><span> </span><span class="annot"><span class="annottext">((Input (Protobuf SubmitService &quot;submitTx&quot;)
+  -&gt; m (Output (Protobuf SubmitService &quot;submitTx&quot;)))
+ -&gt; ServerHandler'
+      'NonStreaming m (Protobuf SubmitService &quot;submitTx&quot;))
+-&gt; (Input (Protobuf SubmitService &quot;submitTx&quot;)
+    -&gt; m (Output (Protobuf SubmitService &quot;submitTx&quot;)))
+-&gt; ServerHandler'
+     'NonStreaming m (Protobuf SubmitService &quot;submitTx&quot;)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceSpanEvent -&gt; TraceRpcSubmit)
+-&gt; m (Proto SubmitTxResponse) -&gt; m (Proto SubmitTxResponse)
+forall t' t e (m :: * -&gt; *) a.
+(t ~ TraceRpc, Inject t' t, NFData a, Has (Tracer m t) e,
+ MonadReader e m, MonadUnliftIO m) =&gt;
+(TraceSpanEvent -&gt; t') -&gt; m a -&gt; m a
+</span><a href="Cardano.Rpc.Server.Internal.Monad.html#wrapInSpan"><span class="hs-identifier hs-var">wrapInSpan</span></a></span><span> </span><span class="annot"><span class="annottext">TraceSpanEvent -&gt; TraceRpcSubmit
+</span><a href="Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcSubmitSpan"><span class="hs-identifier hs-var">TraceRpcSubmitSpan</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Proto SubmitTxResponse) -&gt; m (Proto SubmitTxResponse))
+-&gt; (Proto SubmitTxRequest -&gt; m (Proto SubmitTxResponse))
+-&gt; Proto SubmitTxRequest
+-&gt; m (Proto SubmitTxResponse)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Proto SubmitTxRequest -&gt; m (Proto SubmitTxResponse)
+forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Proto SubmitTxRequest -&gt; m (Proto SubmitTxResponse)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Submit.html#submitTxMethod"><span class="hs-identifier hs-var">submitTxMethod</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Methods m '[]
+forall {k} (m :: * -&gt; *). Methods m '[]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#NoMoreMethods"><span class="hs-identifier hs-var">NoMoreMethods</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Cardano.Rpc.Server.html#runRpcServer"><span class="hs-identifier hs-type">runRpcServer</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tracer</span></span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Tracing.html#TraceRpc"><span class="hs-identifier hs-type">TraceRpc</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Config.html#RpcConfig"><span class="hs-identifier hs-type">RpcConfig</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/ouroboros-network-api-0.16.0.0-18ce9cd65496e8c967282cc8e594725d32158a23340b61d4ac42cbb63e80f75f/share/doc/html/src/Ouroboros.Network.Magic.html#NetworkMagic"><span class="hs-identifier hs-type">NetworkMagic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ action which reloads RPC configuration</span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span id="runRpcServer"><span class="annot"><span class="annottext">runRpcServer :: Tracer IO TraceRpc -&gt; IO (RpcConfig, NetworkMagic) -&gt; IO ()
+</span><a href="Cardano.Rpc.Server.html#runRpcServer"><span class="hs-identifier hs-var hs-var">runRpcServer</span></a></span></span><span> </span><span id="local-6989586621679485442"><span class="annot"><span class="annottext">Tracer IO TraceRpc
+</span><a href="#local-6989586621679485442"><span class="hs-identifier hs-var">tracer</span></a></span></span><span> </span><span id="local-6989586621679485443"><span class="annot"><span class="annottext">IO (RpcConfig, NetworkMagic)
+</span><a href="#local-6989586621679485443"><span class="hs-identifier hs-var">loadRpcConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; IO ()) -&gt; IO ()
+</span><a href="#local-6989586621679485444"><span class="hs-identifier hs-var">handleFatalExceptions</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; IO ()) -&gt; IO ())
+-&gt; (HasCallStack =&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679485484"><span class="annot"><a href="#local-6989586621679485484"><span class="hs-identifier hs-var">rpcConfig</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Rpc.Server.Config.html#RpcConfig"><span class="hs-identifier hs-type">RpcConfig</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Config.html#isEnabled"><span class="hs-identifier hs-var">isEnabled</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span id="local-6989586621679485488"><span class="annot"><a href="#local-6989586621679485488"><span class="hs-identifier hs-var">isEnabled</span></a></span></span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Config.html#rpcSocketPath"><span class="hs-identifier hs-var">rpcSocketPath</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.10.2/cardano-api-10.23.0.0/doc/html/cardano-api/src/Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span id="local-6989586621679485491"><span class="annot"><a href="#local-6989586621679485491"><span class="hs-identifier hs-var">rpcSocketPathFp</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Config.html#nodeSocketPath"><span class="hs-identifier hs-var">nodeSocketPath</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span id="local-6989586621679485493"><span class="annot"><a href="#local-6989586621679485493"><span class="hs-identifier hs-var">nodeSocketPath</span></a></span></span><span>
+</span><span id="line-77"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679485494"><span class="annot"><a href="#local-6989586621679485494"><span class="hs-identifier hs-var">networkMagic</span></a></span></span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">IO (RpcConfig, NetworkMagic)
+</span><a href="#local-6989586621679485443"><span class="hs-identifier hs-var">loadRpcConfig</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679485495"><span class="annot"><a href="#local-6989586621679485495"><span class="hs-identifier hs-var hs-var">config</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.Run.html#ServerConfig"><span class="hs-identifier hs-type">ServerConfig</span></a></span><span>
+</span><span id="line-83"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">serverInsecure :: Maybe InsecureConfig
+</span><a href="#local-6989586621679485497"><span class="hs-identifier hs-var">serverInsecure</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InsecureConfig -&gt; Maybe InsecureConfig
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(InsecureConfig -&gt; Maybe InsecureConfig)
+-&gt; InsecureConfig -&gt; Maybe InsecureConfig
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; InsecureConfig
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.Run.html#InsecureUnix"><span class="hs-identifier hs-var">InsecureUnix</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679485491"><span class="hs-identifier hs-var">rpcSocketPathFp</span></a></span><span>
+</span><span id="line-84"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">serverSecure :: Maybe SecureConfig
+</span><a href="#local-6989586621679485499"><span class="hs-identifier hs-var">serverSecure</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe SecureConfig
+forall a. Maybe a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-85"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-86"></span><span>      </span><span id="local-6989586621679485500"><span class="annot"><a href="#local-6989586621679485500"><span class="hs-identifier hs-var hs-var">rpcEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-87"></span><span>        </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Env.html#RpcEnv"><span class="hs-identifier hs-type">RpcEnv</span></a></span><span>
+</span><span id="line-88"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">config :: RpcConfig
+</span><a href="#local-6989586621679485502"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RpcConfig
+</span><a href="#local-6989586621679485484"><span class="hs-identifier hs-var">rpcConfig</span></a></span><span>
+</span><span id="line-89"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tracer :: forall (m :: * -&gt; *). MonadIO m =&gt; Tracer m TraceRpc
+</span><a href="#local-6989586621679485503"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall x. IO x -&gt; m x) -&gt; Tracer IO TraceRpc -&gt; Tracer m TraceRpc
+forall (m :: * -&gt; *) (n :: * -&gt; *) s.
+(forall x. m x -&gt; n x) -&gt; Tracer m s -&gt; Tracer n s
+</span><span class="hs-identifier hs-var">natTracer</span></span><span> </span><span class="annot"><span class="annottext">IO x -&gt; m x
+forall x. IO x -&gt; m x
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/base-4.20.1.0-inplace/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer IO TraceRpc
+</span><a href="#local-6989586621679485442"><span class="hs-identifier hs-var">tracer</span></a></span><span>
+</span><span id="line-90"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rpcLocalNodeConnectInfo :: LocalNodeConnectInfo
+</span><a href="#local-6989586621679485508"><span class="hs-identifier hs-var">rpcLocalNodeConnectInfo</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SocketPath -&gt; NetworkMagic -&gt; LocalNodeConnectInfo
+</span><a href="Cardano.Rpc.Server.Internal.Env.html#mkLocalNodeConnectInfo"><span class="hs-identifier hs-var">mkLocalNodeConnectInfo</span></a></span><span> </span><span class="annot"><span class="annottext">SocketPath
+</span><a href="#local-6989586621679485493"><span class="hs-identifier hs-var">nodeSocketPath</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkMagic
+</span><a href="#local-6989586621679485494"><span class="hs-identifier hs-var">networkMagic</span></a></span><span>
+</span><span id="line-91"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-comment">-- TODO this is logged by node configuration already, so it would make sense to log it again when</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-comment">-- configuration gets reloaded</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-comment">-- traceWith tracer $ &quot;RPC configuration: &quot; &lt;&gt; show rpcConfig</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#when"><span class="hs-identifier hs-type">when</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485488"><span class="hs-identifier hs-type">isEnabled</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/rio-0.1.24.0-f91ce549d38c9e77bb8c4a5d41783ebcd8fb4154b4a25e82d16910d9820323f1/share/doc/html/src/RIO.Prelude.RIO.html#runRIO"><span class="hs-identifier hs-type">runRIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485500"><span class="hs-identifier hs-type">rpcEnv</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">withRunInIO</span></span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679485513"><span class="annot"><span class="annottext">forall a. RIO RpcEnv a -&gt; IO a
+</span><a href="#local-6989586621679485513"><span class="hs-identifier hs-var">runInIO</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-100"></span><span>        </span><span class="annot"><span class="annottext">ServerParams -&gt; ServerConfig -&gt; [SomeRpcHandler IO] -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.Run.html#runServerWithHandlers"><span class="hs-identifier hs-var">runServerWithHandlers</span></a></span><span> </span><span class="annot"><span class="annottext">ServerParams
+</span><a href="#local-6989586621679485515"><span class="hs-identifier hs-var">serverParams</span></a></span><span> </span><span class="annot"><span class="annottext">ServerConfig
+</span><a href="#local-6989586621679485495"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">([SomeRpcHandler IO] -&gt; IO ())
+-&gt; ([SomeRpcHandler (RIO RpcEnv)] -&gt; [SomeRpcHandler IO])
+-&gt; [SomeRpcHandler (RIO RpcEnv)]
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(SomeRpcHandler (RIO RpcEnv) -&gt; SomeRpcHandler IO)
+-&gt; [SomeRpcHandler (RIO RpcEnv)] -&gt; [SomeRpcHandler IO]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(forall a. RIO RpcEnv a -&gt; IO a)
+-&gt; SomeRpcHandler (RIO RpcEnv) -&gt; SomeRpcHandler IO
+forall (m :: * -&gt; *) (n :: * -&gt; *).
+(forall a. m a -&gt; n a) -&gt; SomeRpcHandler m -&gt; SomeRpcHandler n
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.Handler.html#hoistSomeRpcHandler"><span class="hs-identifier hs-var">hoistSomeRpcHandler</span></a></span><span> </span><span class="annot"><span class="annottext">RIO RpcEnv a -&gt; IO a
+forall a. RIO RpcEnv a -&gt; IO a
+</span><a href="#local-6989586621679485513"><span class="hs-identifier hs-var">runInIO</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([SomeRpcHandler (RIO RpcEnv)] -&gt; IO ())
+-&gt; [SomeRpcHandler (RIO RpcEnv)] -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-101"></span><span>          </span><span class="annot"><span class="annottext">[[SomeRpcHandler (RIO RpcEnv)]] -&gt; [SomeRpcHandler (RIO RpcEnv)]
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-102"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Methods
+  (RIO RpcEnv)
+  '[Protobuf Node &quot;getEra&quot;, Protobuf Node &quot;getProtocolParamsJson&quot;]
+-&gt; [SomeRpcHandler (RIO RpcEnv)]
+forall {k} (m :: * -&gt; *) (rpcs :: [k]).
+MonadIO m =&gt;
+Methods m rpcs -&gt; [SomeRpcHandler m]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#fromMethods"><span class="hs-identifier hs-var">fromMethods</span></a></span><span> </span><span class="annot"><span class="annottext">Methods
+  (RIO RpcEnv)
+  '[Protobuf Node &quot;getEra&quot;, Protobuf Node &quot;getProtocolParamsJson&quot;]
+Methods (RIO RpcEnv) (ProtobufMethodsOf Node)
+forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Methods m (ProtobufMethodsOf Node)
+</span><a href="Cardano.Rpc.Server.html#methodsNodeRpc"><span class="hs-identifier hs-var">methodsNodeRpc</span></a></span><span>
+</span><span id="line-103"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Methods
+  (RIO RpcEnv)
+  '[Protobuf QueryService &quot;readParams&quot;,
+    Protobuf QueryService &quot;readUtxos&quot;]
+-&gt; [SomeRpcHandler (RIO RpcEnv)]
+forall {k} (m :: * -&gt; *) (rpcs :: [k]).
+MonadIO m =&gt;
+Methods m rpcs -&gt; [SomeRpcHandler m]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#fromMethods"><span class="hs-identifier hs-var">fromMethods</span></a></span><span> </span><span class="annot"><span class="annottext">Methods
+  (RIO RpcEnv)
+  '[Protobuf QueryService &quot;readParams&quot;,
+    Protobuf QueryService &quot;readUtxos&quot;]
+Methods (RIO RpcEnv) (ProtobufMethodsOf QueryService)
+forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Methods m (ProtobufMethodsOf QueryService)
+</span><a href="Cardano.Rpc.Server.html#methodsUtxoRpc"><span class="hs-identifier hs-var">methodsUtxoRpc</span></a></span><span>
+</span><span id="line-104"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Methods (RIO RpcEnv) '[Protobuf SubmitService &quot;submitTx&quot;]
+-&gt; [SomeRpcHandler (RIO RpcEnv)]
+forall {k} (m :: * -&gt; *) (rpcs :: [k]).
+MonadIO m =&gt;
+Methods m rpcs -&gt; [SomeRpcHandler m]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.StreamType.html#fromMethods"><span class="hs-identifier hs-var">fromMethods</span></a></span><span> </span><span class="annot"><span class="annottext">Methods (RIO RpcEnv) '[Protobuf SubmitService &quot;submitTx&quot;]
+Methods (RIO RpcEnv) (ProtobufMethodsOf SubmitService)
+forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Methods m (ProtobufMethodsOf SubmitService)
+</span><a href="Cardano.Rpc.Server.html#methodsUtxoRpcSubmit"><span class="hs-identifier hs-var">methodsUtxoRpcSubmit</span></a></span><span>
+</span><span id="line-105"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-107"></span><span>  </span><span class="annot"><a href="#local-6989586621679485515"><span class="hs-identifier hs-type">serverParams</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.Context.html#ServerParams"><span class="hs-identifier hs-type">ServerParams</span></a></span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621679485515"><span class="annot"><span class="annottext">serverParams :: ServerParams
+</span><a href="#local-6989586621679485515"><span class="hs-identifier hs-var hs-var">serverParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ServerParams
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">def</span></span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.Context.html#serverTopLevel"><span class="hs-identifier hs-var">serverTopLevel</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679485520"><span class="hs-identifier hs-type">topLevelHandler</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-comment">-- Top level hook for request handlers, handle exceptions</span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><a href="#local-6989586621679485520"><span class="hs-identifier hs-type">topLevelHandler</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.RequestHandler.API.html#RequestHandler"><span class="hs-identifier hs-type">RequestHandler</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.10.2-inplace/grapesy-1.1.1-9ca4bba71467269d36c77125abddb4086ed5c028a742956bcc22be36dbcbacbd/share/doc/html/src/Network.GRPC.Server.RequestHandler.API.html#RequestHandler"><span class="hs-identifier hs-type">RequestHandler</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>  </span><span id="local-6989586621679485520"><span class="annot"><span class="annottext">topLevelHandler :: RequestHandler () -&gt; RequestHandler ()
+</span><a href="#local-6989586621679485520"><span class="hs-identifier hs-var hs-var">topLevelHandler</span></a></span></span><span> </span><span id="local-6989586621679485521"><span class="annot"><span class="annottext">RequestHandler ()
+</span><a href="#local-6989586621679485521"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679485522"><span class="annot"><span class="annottext">forall x. IO x -&gt; IO x
+</span><a href="#local-6989586621679485522"><span class="hs-identifier hs-var">unmask</span></a></span></span><span> </span><span id="local-6989586621679485523"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679485523"><span class="hs-identifier hs-var">req</span></a></span></span><span> </span><span id="local-6989586621679485524"><span class="annot"><span class="annottext">Response -&gt; IO ()
+</span><a href="#local-6989586621679485524"><span class="hs-identifier hs-var">resp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; (SomeException -&gt; IO ()) -&gt; IO ()
+forall (m :: * -&gt; *) a.
+MonadUnliftIO m =&gt;
+m a -&gt; (SomeException -&gt; m a) -&gt; m a
+</span><span class="hs-identifier hs-var">catchAny</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RequestHandler ()
+</span><a href="#local-6989586621679485521"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">IO x -&gt; IO x
+forall x. IO x -&gt; IO x
+</span><a href="#local-6989586621679485522"><span class="hs-identifier hs-var">unmask</span></a></span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679485523"><span class="hs-identifier hs-var">req</span></a></span><span> </span><span class="annot"><span class="annottext">Response -&gt; IO ()
+</span><a href="#local-6989586621679485524"><span class="hs-identifier hs-var">resp</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((SomeException -&gt; IO ()) -&gt; IO ())
+-&gt; (SomeException -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679485526"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679485526"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">Tracer IO TraceRpc -&gt; TraceRpc -&gt; IO ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">Tracer IO TraceRpc
+</span><a href="#local-6989586621679485442"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceRpc -&gt; IO ()) -&gt; TraceRpc -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; TraceRpc
+</span><a href="Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcError"><span class="hs-identifier hs-var">TraceRpcError</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679485526"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><a href="#local-6989586621679485444"><span class="hs-identifier hs-type">handleFatalExceptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-prim-0.12.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621679485444"><span class="annot"><span class="annottext">handleFatalExceptions :: (HasCallStack =&gt; IO ()) -&gt; IO ()
+</span><a href="#local-6989586621679485444"><span class="hs-identifier hs-var hs-var">handleFatalExceptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SomeException -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall (m :: * -&gt; *) a.
+MonadUnliftIO m =&gt;
+(SomeException -&gt; m a) -&gt; m a -&gt; m a
+</span><span class="hs-identifier hs-var">handleAny</span></span><span> </span><span class="annot"><span class="annottext">((SomeException -&gt; IO ()) -&gt; IO () -&gt; IO ())
+-&gt; (SomeException -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679485530"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679485530"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">Tracer IO TraceRpc -&gt; TraceRpc -&gt; IO ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">Tracer IO TraceRpc
+</span><a href="#local-6989586621679485442"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceRpc -&gt; IO ()) -&gt; TraceRpc -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/kpki8kp9j72vc53734k9s5v4zrr9fkk3-ghc-9.10.2-doc/share/doc/ghc-9.10.2/html/libraries/ghc-internal-9.1002.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; TraceRpc
+</span><a href="Cardano.Rpc.Server.Internal.Tracing.html#TraceRpcFatalError"><span class="hs-identifier hs-var">TraceRpcFatalError</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679485530"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-118"></span></pre></body></html>
