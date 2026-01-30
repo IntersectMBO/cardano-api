@@ -15,8 +15,9 @@ module Cardano.Wasm.Api.Info
 where
 
 import Cardano.Api (pretty)
+import Cardano.Api.Experimental.Era qualified as Exp
 
-import Cardano.Wasm.Api.Tx (UnsignedTxObject (..), newExperimentalEraTxImpl, newTxImpl)
+import Cardano.Wasm.Internal.Api.Era (currentEra, upcomingEra)
 
 import Data.Aeson qualified as Aeson
 import Data.Text qualified as Text
@@ -196,11 +197,12 @@ instance Aeson.ToJSON ApiInfo where
       ]
 
 -- | Get a comment about the era for unsigned transaction creation methods.
-getEraCommentForUnsignedTx :: Maybe UnsignedTxObject -> String
-getEraCommentForUnsignedTx utxMonad =
-  case utxMonad of
-    Just (UnsignedTxObject era _) -> "(currently " ++ show (pretty era) ++ ")"
-    Nothing -> "(currently unavailable)"
+getEraCommentFor :: Maybe (Exp.Era era) -> String
+getEraCommentFor era =
+  case era of
+    Just era' -> "(currently " ++ show (pretty era') ++ ")"
+    Nothing ->
+      "(currently unavailable, upcoming era will only be available during late development and testing phases)"
 
 -- | Provides metadata about the "virtual objects" and their methods.
 -- This is intended to help generate JavaScript wrappers.
@@ -441,7 +443,7 @@ apiInfo =
                                   { methodName = "newTx"
                                   , methodDoc =
                                       "Create a new unsigned transaction in the current era "
-                                        ++ getEraCommentForUnsignedTx (Just newTxImpl)
+                                        ++ getEraCommentFor (Just currentEra)
                                         ++ "."
                                   , methodParams = []
                                   , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
@@ -449,19 +451,11 @@ apiInfo =
                                   }
                             , MethodInfoEntry $
                                 MethodInfo
-                                  { methodName = "newExperimentalEraTx"
+                                  { methodName = "newUpcomingEraTx"
                                   , methodDoc =
-                                      "Create a new unsigned transaction in the current experimental era "
-                                        ++ getEraCommentForUnsignedTx newExperimentalEraTxImpl
+                                      "Create a new unsigned transaction in the current upcoming era "
+                                        ++ getEraCommentFor upcomingEra
                                         ++ "."
-                                  , methodParams = []
-                                  , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
-                                  , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
-                                  }
-                            , MethodInfoEntry $
-                                MethodInfo
-                                  { methodName = "newConwayTx"
-                                  , methodDoc = "Create a new unsigned transaction in the Conway era."
                                   , methodParams = []
                                   , methodReturnType = NewObject (virtualObjectName unsignedTxObj)
                                   , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
@@ -475,6 +469,117 @@ apiInfo =
                         , methodParams = [ParamInfo "webGrpcUrl" TSString "The URL of the gRPC-web server."]
                         , methodReturnType = NewObject (virtualObjectName grpcConnection)
                         , methodReturnDoc = "A promise that resolves to a new `GrpcConnection`."
+                        }
+                  , MethodGroupEntry $
+                      MethodGroup
+                        { groupName = "certificate"
+                        , groupDoc = ["Methods for creating certificates."]
+                        , groupMethods =
+                            [ MethodGroupEntry $
+                                MethodGroup
+                                  { groupName = "currentEra"
+                                  , groupDoc =
+                                      [ "Methods for creating certificates in the current era " ++ getEraCommentFor (Just currentEra) ++ "."
+                                      ]
+                                  , groupMethods =
+                                      [ MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressStakeDelegationCertificate"
+                                            , methodDoc =
+                                                "Make a certificate that delegates a stake address to a stake pool in the current era "
+                                                  ++ getEraCommentFor (Just currentEra)
+                                                  ++ "."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "poolId" TSString "The pool ID in base16 format."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressRegistrationCertificate"
+                                            , methodDoc =
+                                                "Make a stake address registration certificate in the current era "
+                                                  ++ getEraCommentFor (Just currentEra)
+                                                  ++ "."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressUnregistrationCertificate"
+                                            , methodDoc =
+                                                "Make a stake address unregistration certificate in the current era "
+                                                  ++ getEraCommentFor (Just currentEra)
+                                                  ++ "."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      ]
+                                  }
+                            , MethodGroupEntry $
+                                MethodGroup
+                                  { groupName = "upcomingEra"
+                                  , groupDoc =
+                                      [ "Methods for creating certificates in the current upcoming era "
+                                          ++ getEraCommentFor upcomingEra
+                                          ++ "."
+                                      ]
+                                  , groupMethods =
+                                      [ MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressStakeDelegationCertificateUpcomingEra"
+                                            , methodDoc =
+                                                "Make a certificate that delegates a stake address to a stake pool in the current upcoming era "
+                                                  ++ getEraCommentFor upcomingEra
+                                                  ++ "."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "poolId" TSString "The pool ID in base16 format."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressRegistrationCertificateUpcomingEra"
+                                            , methodDoc =
+                                                "Make a stake address registration certificate in the current upcoming era "
+                                                  ++ getEraCommentFor upcomingEra
+                                                  ++ "."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      , MethodInfoEntry $
+                                          MethodInfo
+                                            { methodName = "makeStakeAddressUnregistrationCertificateUpcomingEra"
+                                            , methodDoc =
+                                                "Make a stake address unregistration certificate in the current upcoming era "
+                                                  ++ getEraCommentFor upcomingEra
+                                                  ++ "."
+                                            , methodParams =
+                                                [ ParamInfo "stakeKeyHash" TSString "The stake key hash in base16 format."
+                                                , ParamInfo "deposit" TSBigInt "The deposit amount in lovelaces."
+                                                ]
+                                            , methodReturnType = OtherType TSString
+                                            , methodReturnDoc = "A promise that resolves to the CBOR-encoded certificate as a hex string."
+                                            }
+                                      ]
+                                  }
+                            ]
                         }
                   , MethodGroupEntry $
                       MethodGroup
