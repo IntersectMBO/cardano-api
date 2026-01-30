@@ -113,7 +113,7 @@ export function createInitializer(getWasi, loadWasmModule, createClient) {
           if (method.return.type === "fluent") {
             // Fluent methods are synchronous and update the provider
             // A fluent method is one that returns the same object type
-            target[method.name] = fixateArgs(method.params, function (...args) {
+            target[method.simpleName] = fixateArgs(method.params, function (...args) {
               const previousProvider = currentHaskellValueProvider;
               // We update the provider so that it resolves the previous provider and chains the next call
               currentHaskellValueProvider = async () => {
@@ -124,7 +124,7 @@ export function createInitializer(getWasi, loadWasmModule, createClient) {
             });
           } else {
             // Non-fluent methods (newObject or other) are async and apply the accumulated method calls
-            target[method.name] = fixateArgs(method.params, async function (...args) {
+            target[method.simpleName] = fixateArgs(method.params, async function (...args) {
               const haskellValue = await currentHaskellValueProvider(); // Resolve accumulated method calls
               const resultPromise = instance.exports[method.name](haskellValue, ...args); // Call the non-fluent method
 
@@ -149,7 +149,7 @@ export function createInitializer(getWasi, loadWasmModule, createClient) {
     // Populate the main API object with static methods
 
     function populateStaticMethod(method, target) {
-      target[method.name] = async function (...args) {
+      target[method.simpleName] = async function (...args) {
         if (method.group) {
           if (!target[method.group]) {
             target[method.group] = {};

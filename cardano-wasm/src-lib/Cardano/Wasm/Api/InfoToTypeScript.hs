@@ -122,7 +122,7 @@ methodInfoToInterfaceContent selfTypeName method =
         <> ["@returns " <> Info.methodReturnDoc method]
     )
     ( TypeScript.InterfaceMethod
-        (Info.methodName method)
+        (Info.methodSimpleName method)
         (map paramInfoToFunctionParam $ Info.methodParams method)
         (methodReturnTypeToString selfTypeName $ Info.methodReturnType method)
     )
