@@ -1125,7 +1125,7 @@ genValidTxBody sbe =
   Gen.mapMaybe
     ( \content ->
         either (const Nothing) (Just . (,content)) $
-          createAndValidateTransactionBody sbe content
+          createTransactionBody sbe content
     )
     (genTxBodyContent sbe)
 
