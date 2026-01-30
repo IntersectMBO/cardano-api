@@ -73,6 +73,7 @@ module Cardano.Api
   , module Cardano.Api.Monad.Error
   , module Cardano.Api.Pretty
   , module Cardano.Api.IO
+  , module Cardano.Api.HasTypeProxy
   )
 where
 
