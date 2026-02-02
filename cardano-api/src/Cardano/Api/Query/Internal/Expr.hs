@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Api.Query.Internal.Expr
@@ -68,7 +69,7 @@ import Cardano.Slotting.Slot
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 import Ouroboros.Network.Block (Serialised)
-import Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeerSnapshot)
+import Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeerSnapshot, SingLedgerPeersKind)
 
 import Data.Map (Map)
 import Data.Sequence (Seq)
@@ -153,14 +154,18 @@ queryDebugLedgerState eon = querySbe eon QueryDebugLedgerState
 queryLedgerPeerSnapshot
   :: ()
   => ShelleyBasedEra era
+  -> SingLedgerPeersKind ledgerPeersKind
   -> LocalStateQueryExpr
        block
        point
        QueryInMode
        r
        IO
-       (Either UnsupportedNtcVersionError (Either EraMismatch (Serialised LedgerPeerSnapshot)))
-queryLedgerPeerSnapshot eon = querySbe eon QueryLedgerPeerSnapshot
+       ( Either
+           UnsupportedNtcVersionError
+           (Either EraMismatch (Serialised (LedgerPeerSnapshot ledgerPeersKind)))
+       )
+queryLedgerPeerSnapshot eon = querySbe eon . QueryLedgerPeerSnapshot
 
 queryEraHistory
   :: ()
