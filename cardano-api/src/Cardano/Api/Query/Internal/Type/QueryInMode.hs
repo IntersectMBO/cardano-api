@@ -427,14 +427,15 @@ decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <
 decodeBigLedgerPeerSnapshot
   :: Consensus.ShelleyNodeToClientVersion
   -> Serialised LedgerPeerSnapshot
-  -> Either (LBS.ByteString, DecoderError) LedgerPeerSnapshot
+  -> Either (LBS.ByteString, DecoderError) (LedgerPeerSnapshot BigLedgerPeers)
 decodeBigLedgerPeerSnapshot ntcV (Serialised lps) =
-  first
-    (lps,)
-    $ Plain.decodeFullDecoder
-      "LedgerPeerSnapshot"
-      (decodeLedgerPeerSnapshot $ Consensus.ledgerPeerSnapshotSupportsSRV ntcV)
-      lps
+  -- first
+  --   (lps,)
+  --   $ Plain.decodeFullDecoder
+  --     "LedgerPeerSnapshot"
+  --     (decodeLedgerPeerSnapshot $ Consensus.ledgerPeerSnapshotSupportsSRV ntcV)
+  --     lps
+  undefined -- TODO(10.7)
 
 toShelleyAddrSet
   :: CardanoEra era
@@ -693,8 +694,9 @@ toConsensusQueryShelleyBased sbe = \case
             (consensusQueryInEraInMode era (Consensus.GetProposals govActs))
       )
       sbe
+  -- TODO(10.7): support full GetLedgerPeerSnapshot query
   QueryLedgerPeerSnapshot ->
-    Some (consensusQueryInEraInMode era (Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot))
+    Some (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot BigLedgerPeers)))
   QueryStakePoolDefaultVote govActs ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
@@ -1015,10 +1017,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
           r'
         _ -> fromConsensusQueryResultMismatch
     QueryLedgerPeerSnapshot{} ->
-      case q' of
-        Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot ->
-          r'
-        _ -> fromConsensusQueryResultMismatch
+      undefined -- TODO(10.7)
+      -- case q' of
+      --   Consensus.GetCBOR Consensus.GetLedgerPeerSnapshot{} ->
+      --     r'
+      --   _ -> fromConsensusQueryResultMismatch
     QueryStakePoolDefaultVote{} ->
       case q' of
         Consensus.QueryStakePoolDefaultVote{} ->
