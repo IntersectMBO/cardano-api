@@ -50,6 +50,7 @@ import Cardano.Ledger.BaseTypes (Version)
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Dijkstra.Scripts qualified as Dijkstra
 import Cardano.Ledger.Plutus.Language qualified as L
+import Cardano.Ledger.Mary.Value qualified as L
 
 import Data.Text qualified as Text
 import Data.Typeable

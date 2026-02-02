@@ -173,9 +173,9 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
           & L.totalCollateralTxBodyL .~ L.maybeToStrictMaybe totCollateral
           & L.collateralReturnTxBodyL .~ L.maybeToStrictMaybe retCollateral
           & L.feeTxBodyL .~ fee
-          & L.vldtTxBodyL . L.invalidBeforeL .~ txValidityLowerBound bc
-          & L.vldtTxBodyL . L.invalidHereAfterL .~ txValidityUpperBound bc
-          & L.reqSignerHashesTxBodyL .~ setReqSignerHashes
+          & L.vldtTxBodyL . L.invalidBeforeL .~ (L.maybeToStrictMaybe $ txValidityLowerBound bc)
+          & L.vldtTxBodyL . L.invalidHereAfterL .~ (L.maybeToStrictMaybe $ txValidityUpperBound bc)
+          & L.reqSignerHashesTxBodyL .~ undefined --TODO(10.7): setReqSignerHashes
           & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
           & L.withdrawalsTxBodyL .~ withdrawals
           & L.certsTxBodyL .~ certs
@@ -288,9 +288,9 @@ toAuxiliaryData txMData ss' =
 
 eraSpecificLedgerTxBody
   :: Era era
-  -> L.TxBody (LedgerEra era)
+  -> L.TxBody L.TopTx (LedgerEra era)
   -> TxBodyContent (LedgerEra era)
-  -> L.TxBody (LedgerEra era)
+  -> L.TxBody L.TopTx (LedgerEra era)
 eraSpecificLedgerTxBody era ledgerbody bc =
   body era
  where

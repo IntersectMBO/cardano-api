@@ -551,12 +551,12 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo 
   isRegPool kh = Api.StakePoolKeyHash kh `Set.member` poolids
 
   lookupDelegDeposit
-    :: Ledger.Credential 'Ledger.Staking -> Maybe L.Coin
+    :: Ledger.Credential Ledger.Staking -> Maybe L.Coin
   lookupDelegDeposit stakeCred =
     Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
 
   lookupDRepDeposit
-    :: Ledger.Credential 'Ledger.DRepRole -> Maybe L.Coin
+    :: Ledger.Credential Ledger.DRepRole -> Maybe L.Coin
   lookupDRepDeposit drepCred =
     Map.lookup drepCred drepDelegDeposits
 
@@ -1059,7 +1059,7 @@ indexWitnessedTxProposalProcedures (TxProposalProcedures proposals) = do
     | (ix, (proposal, anyWitness)) <- allProposalsList
     ]
 
-toUnsigned :: forall era. Era era -> L.Tx (LedgerEra era) -> UnsignedTx era
+toUnsigned :: forall era. Era era -> L.Tx L.TopTx (LedgerEra era) -> UnsignedTx era
 toUnsigned e tx =
   obtainCommonConstraints e $
     UnsignedTx tx
@@ -1075,7 +1075,7 @@ evaluateTransactionExecutionUnits
   -> LedgerEpochInfo
   -> L.PParams (LedgerEra era)
   -> L.UTxO (LedgerEra era)
-  -> L.Tx (LedgerEra era)
+  -> L.Tx L.TopTx (LedgerEra era)
   -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
 evaluateTransactionExecutionUnits systemstart epochInfo pp utxo tx =
   obtainCommonConstraints (useEra @era) $
