@@ -8,6 +8,8 @@ module Cardano.Api.Network
 
     -- * @network@ reexports
   , LedgerPeerSnapshot (..)
+  , SomeLedgerPeerSnapshot (..)
+  , LedgerPeersKind (..)
   , Target (..)
   , Serialised (..)
   , SubmitResult (..)
