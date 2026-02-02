@@ -168,8 +168,8 @@ if arch(wasm32)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: eabc9e0ddf9ad01785d292c775bb90bcf29b46df
-  --sha256: sha256-CirNK/WNWPSmqnEBR6IyKz8UW5JcAh6YQCg8p31AzBU=
+  tag: 324efe565237061615ec10e7f47e08699cace660
+  --sha256: sha256-Tu5TlPwJgVpEfTui+zbaUJIOMoexCwFTQ5M/n2DP2/I=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -198,8 +198,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 678aec0ce019c741a892e519386cb24913cc36dc
-  --sha256: sha256-F6VHW5O4yWmLLqxH8IVhxlfrjXm4Mb+eECEPbAoZzh8=
+  tag: 93709ba7fe1145227e7128e21d535421a74b1920
+  --sha256: sha256-vLwuGcjbMhSBVVJ6qT2XstuJJrildXnpst//B23in0Y=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
