@@ -97,10 +97,13 @@ import Cardano.Ledger.State qualified as Ledger
 
 import Control.Monad
 import Control.Monad.Except (MonadError (..))
+import Data.Array.Byte (ByteArray)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.ByteString.Short qualified as SBS
 import Data.IP (IPv4, IPv6)
 import Data.Maybe
+import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -672,7 +675,7 @@ toShelleyPoolParams
           fromMaybe
             (error "toShelleyPoolParams: invalid PoolMargin")
             (Ledger.boundRational stakePoolMargin)
-      , Ledger.sppRewardAccount = toShelleyStakeAddr stakePoolRewardAccount
+      , Ledger.sppAccountAddress = toShelleyStakeAddr stakePoolRewardAccount
       , Ledger.sppOwners =
           fromList
             [kh | StakeKeyHash kh <- stakePoolOwners]
@@ -706,7 +709,7 @@ toShelleyPoolParams
         } =
         Ledger.PoolMetadata
           { Ledger.pmUrl = toShelleyUrl stakePoolMetadataURL
-          , Ledger.pmHash = Ledger.hashToBytes mdh
+          , Ledger.pmHash = byteArrayFromShortByteString . SBS.toShort $ Ledger.hashToBytes mdh
           }
 
     toShelleyDnsName :: ByteString -> Ledger.DnsName
@@ -730,7 +733,7 @@ fromShelleyPoolParams
     , Ledger.sppPledge
     , Ledger.sppCost
     , Ledger.sppMargin
-    , Ledger.sppRewardAccount
+    , Ledger.sppAccountAddress
     , Ledger.sppOwners
     , Ledger.sppRelays
     , Ledger.sppMetadata
@@ -740,7 +743,7 @@ fromShelleyPoolParams
       , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash sppVrf)
       , stakePoolCost = sppCost
       , stakePoolMargin = Ledger.unboundRational sppMargin
-      , stakePoolRewardAccount = fromShelleyStakeAddr sppRewardAccount
+      , stakePoolRewardAccount = fromShelleyStakeAddr sppAccountAddress
       , stakePoolPledge = sppPledge
       , stakePoolOwners = map StakeKeyHash (toList sppOwners)
       , stakePoolRelays =
@@ -778,6 +781,8 @@ fromShelleyPoolParams
               StakePoolMetadataHash
                 . fromMaybe (error "fromShelleyPoolMetadata: invalid hash. TODO: proper validation")
                 . Ledger.hashFromBytes
+                . SBS.fromShort
+                . byteArrayToShortByteString
                 $ pmHash
           }
 
@@ -798,7 +803,7 @@ fromShelleyStakePoolState
     , Ledger.spsPledge
     , Ledger.spsCost
     , Ledger.spsMargin
-    , Ledger.spsRewardAccount
+    , Ledger.spsAccountAddress
     , Ledger.spsOwners
     , Ledger.spsRelays
     , Ledger.spsMetadata
@@ -808,7 +813,7 @@ fromShelleyStakePoolState
       , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash spsVrf)
       , stakePoolCost = spsCost
       , stakePoolMargin = Ledger.unboundRational spsMargin
-      , stakePoolRewardAccount = StakeAddress undefined spsRewardAccount -- TODO the Network argument was removed in Ledger
+      , stakePoolRewardAccount = StakeAddress undefined spsAccountAddress -- TODO the Network argument was removed in Ledger
       , stakePoolPledge = spsPledge
       , stakePoolOwners = map StakeKeyHash (toList spsOwners)
       , stakePoolRelays =
@@ -846,6 +851,8 @@ fromShelleyStakePoolState
               StakePoolMetadataHash
                 . fromMaybe (error "fromShelleyPoolMetadata: invalid hash. TODO: proper validation")
                 . Ledger.hashFromBytes
+                . SBS.fromShort
+                . byteArrayToShortByteString
                 $ pmHash
           }
 
@@ -856,7 +863,7 @@ fromShelleyStakePoolState
         . Ledger.dnsToText
 
 data AnchorDataFromCertificateError
-  = InvalidPoolMetadataHashError Ledger.Url ByteString
+  = InvalidPoolMetadataHashError Ledger.Url ByteArray
   deriving (Eq, Show)
 
 instance Error AnchorDataFromCertificateError where
@@ -907,7 +914,9 @@ getAnchorDataFromCertificate c =
   anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashBytes}) = do
     hash <-
       maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return $
-        Ledger.hashFromBytes hashBytes
+        Ledger.hashFromBytes $
+          SBS.fromShort $
+            byteArrayToShortByteString hashBytes
     return $
       Just
         ( Ledger.Anchor

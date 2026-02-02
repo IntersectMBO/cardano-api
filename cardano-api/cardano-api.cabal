@@ -159,6 +159,7 @@ library
     groups,
     iproute,
     memory,
+    mempack,
     microlens <0.5,
     mono-traversable,
     mtl,
