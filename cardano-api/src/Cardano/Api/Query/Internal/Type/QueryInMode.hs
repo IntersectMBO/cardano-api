@@ -57,7 +57,7 @@ module Cardano.Api.Query.Internal.Type.QueryInMode
   , LedgerState (..)
   , getProgress
   , getSlotForRelativeTime
-  , decodeBigLedgerPeerSnapshot
+  , decodeLedgerPeerSnapshot
 
     -- * Internal conversion functions
   , toLedgerUTxO
@@ -74,7 +74,7 @@ import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Genesis.Internal.Parameters
-import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy)
+import Cardano.Api.HasTypeProxy (HasTypeProxy (..))
 import Cardano.Api.Key.Internal
 import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
 import Cardano.Api.Network.Internal.NetworkId
@@ -87,6 +87,9 @@ import Cardano.Api.Serialise.TextEnvelope.Internal
 import Cardano.Api.Tx.Internal.Body
 import Cardano.Api.UTxO (UTxO (..))
 
+import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
+import Ouroboros.Consensus.Cardano.CanHardFork ()
+import Ouroboros.Consensus.HardFork.Combinator.Ledger ()
 import Cardano.Binary qualified as CBOR
 import Cardano.Chain.Update.Validation.Interface qualified as Byron.Update
 import Cardano.Ledger.Api qualified as L
@@ -115,7 +118,7 @@ import Ouroboros.Consensus.Ledger.Query qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
 import Ouroboros.Network.Block (Serialised (..))
-import Ouroboros.Network.PeerSelection.LedgerPeers.Type
+import Ouroboros.Network.PeerSelection.LedgerPeers.Type qualified as Diffusion
 import Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
 import Codec.Serialise qualified as CBOR
@@ -127,6 +130,7 @@ import Data.Either.Combinators (rightToMaybe)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
+import Data.Proxy
 import Data.SOP.Constraint (SListI)
 import Data.Sequence (Seq)
 import Data.Set (Set)
@@ -315,7 +319,8 @@ data QueryInShelleyBasedEra era result where
     :: Set L.GovActionId
     -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)))
   QueryLedgerPeerSnapshot
-    :: QueryInShelleyBasedEra era (Serialised LedgerPeerSnapshot)
+    :: Diffusion.LedgerPeersKind
+    -> QueryInShelleyBasedEra era (Serialised Diffusion.SomeLedgerPeerSnapshot)
   QueryStakePoolDefaultVote
     :: Ledger.KeyHash Ledger.StakePool
     -> QueryInShelleyBasedEra era L.DefaultVote
@@ -424,18 +429,17 @@ decodeStakeSnapshot
   -> Either DecoderError (StakeSnapshot era)
 decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <$> Plain.decodeFull ls
 
-decodeBigLedgerPeerSnapshot
+decodeLedgerPeerSnapshot
   :: Consensus.ShelleyNodeToClientVersion
-  -> Serialised LedgerPeerSnapshot
-  -> Either (LBS.ByteString, DecoderError) (LedgerPeerSnapshot BigLedgerPeers)
-decodeBigLedgerPeerSnapshot _ntcV (Serialised _lps) =
-  -- first
-  --   (lps,)
-  --   $ Plain.decodeFullDecoder
-  --     "LedgerPeerSnapshot"
-  --     (decodeLedgerPeerSnapshot $ Consensus.ledgerPeerSnapshotSupportsSRV ntcV)
-  --     lps
-  undefined -- TODO(10.7)
+  -> Serialised Diffusion.SomeLedgerPeerSnapshot
+  -> Either (LBS.ByteString, DecoderError) Diffusion.SomeLedgerPeerSnapshot
+decodeLedgerPeerSnapshot _ntcV (Serialised _lps) = undefined -- TODO(10.7)
+-- first
+--   (lps,)
+--   $ Plain.decodeFullDecoder
+--     "LedgerPeerSnapshot"
+--     (Diffusion.decodeLedgerPeerSnapshot (Proxy :: Proxy (Consensus.CardanoBlock StandardCrypto)))
+--     lps
 
 toShelleyAddrSet
   :: CardanoEra era
@@ -694,9 +698,9 @@ toConsensusQueryShelleyBased sbe = \case
             (consensusQueryInEraInMode era (Consensus.GetProposals govActs))
       )
       sbe
-  QueryLedgerPeerSnapshot ->
+  QueryLedgerPeerSnapshot peerKind ->
     Some
-      (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot BigLedgerPeers)))
+      (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot peerKind)))
   QueryStakePoolDefaultVote govActs ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
@@ -1016,11 +1020,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         Consensus.GetProposals{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
-    QueryLedgerPeerSnapshot{} ->
-      case q' of
-        Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot ->
-          r'
-        _ -> fromConsensusQueryResultMismatch
+    QueryLedgerPeerSnapshot _peerKind -> undefined -- TODO(10.7)
+    -- case q' of
+    --   Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot _peerKind) ->
+    --     r'
+    --   _ -> fromConsensusQueryResultMismatch
     QueryStakePoolDefaultVote{} ->
       case q' of
         Consensus.QueryStakePoolDefaultVote{} ->
