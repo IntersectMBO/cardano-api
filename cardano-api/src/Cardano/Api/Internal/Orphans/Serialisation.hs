@@ -99,7 +99,9 @@ import Data.Aeson
   ( KeyValue ((.=))
   , ToJSON (..)
   , ToJSONKey (..)
+  , decode
   , defaultOptions
+  , encode
   , genericToJSON
   , object
   , pairs
@@ -117,8 +119,12 @@ import Data.Data (Data)
 import Data.Kind (Constraint, Type)
 import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
+import Data.Map.NonEmpty (NonEmptyMap)
+import Data.Map.NonEmpty qualified as NonEmptyMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid
+import Data.Set.NonEmpty (NonEmptySet)
+import Data.Set.NonEmpty qualified as NonEmptySet
 import Data.Text qualified as T
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -133,8 +139,6 @@ import Network.Mux qualified as Mux
 import Numeric (showHex)
 import Prettyprinter (punctuate, viaShow)
 import Text.Read
-
-deriving instance Generic (L.ApplyTxError era)
 
 deriving instance Generic (L.Registration.TooLarge a)
 
@@ -200,9 +204,16 @@ deriving anyclass instance ToJSON L.VotingPeriod
 
 deriving anyclass instance ToJSON L.Withdrawals
 
+instance ToJSON (NonEmptyMap k v) where
+  toJSON = undefined
+
+instance ToJSON (NonEmptySet v) where
+  toJSON = undefined
+
 deriving anyclass instance
   ( ToJSON (L.PredicateFailure (L.EraRule "UTXOW" ledgerera))
   , ToJSON (L.PredicateFailure (L.EraRule "DELEGS" ledgerera))
+  , ToJSON (NonEmptyMap L.AccountAddress (Ledger.Mismatch Ledger.RelEQ L.Coin))
   )
   => ToJSON (L.ShelleyLedgerPredFailure ledgerera)
 
@@ -236,9 +247,8 @@ instance
   where
   toJSON = genericToJSON defaultOptions
 
-deriving anyclass instance
-  ToJSON (L.PredicateFailure (L.EraRule "LEDGER" ledgerera))
-  => ToJSON (L.ApplyTxError ledgerera)
+instance ToJSON (L.ApplyTxError ledgerera) where
+  toJSON = undefined
 
 deriving via
   ShowOf (L.Keys.VKey L.Keys.Witness)
@@ -365,8 +375,6 @@ instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
 --
 -- Simple newtype wrappers JSON conversion
 --
-
-deriving newtype instance ToJSON ShelleyHash
 
 deriving newtype instance ToJSON HashHeader
 
