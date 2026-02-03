@@ -174,8 +174,8 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
           & L.totalCollateralTxBodyL .~ L.maybeToStrictMaybe totCollateral
           & L.collateralReturnTxBodyL .~ L.maybeToStrictMaybe retCollateral
           & L.feeTxBodyL .~ fee
-          & L.vldtTxBodyL . L.invalidBeforeL .~ (L.maybeToStrictMaybe $ txValidityLowerBound bc)
-          & L.vldtTxBodyL . L.invalidHereAfterL .~ (L.maybeToStrictMaybe $ txValidityUpperBound bc)
+          & L.vldtTxBodyL . L.invalidBeforeL .~ L.maybeToStrictMaybe (txValidityLowerBound bc)
+          & L.vldtTxBodyL . L.invalidHereAfterL .~ L.maybeToStrictMaybe (txValidityUpperBound bc)
           & L.reqSignerHashesTxBodyL .~ setReqSignerHashes
           & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
           & L.withdrawalsTxBodyL .~ withdrawals

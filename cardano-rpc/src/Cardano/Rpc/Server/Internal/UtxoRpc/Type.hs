@@ -49,6 +49,7 @@ import Cardano.Ledger.Plutus qualified as L
 
 import RIO hiding (toList)
 
+import Control.Error.Util (note)
 import Data.ByteString.Short qualified as SBS
 import Data.Default
 import Data.Map.Strict qualified as M
@@ -71,10 +72,11 @@ protocolParamsToUtxoRpcPParams era pparams = obtainCommonConstraints era $ do
       drepVotingThresholds :: L.DRepVotingThresholds =
         pparams ^. L.ppDRepVotingThresholdsL
   def
-    & #coinsPerUtxoByte .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to inject
+    & #coinsPerUtxoByte
+      .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.fromCompact . to inject
     & #maxTxSize .~ pparams ^. L.ppMaxTxSizeL . to fromIntegral
-    & #minFeeCoefficient .~ pparams ^. L.ppMinFeeBL . to inject
-    & #minFeeConstant .~ pparams ^. L.ppMinFeeAL . to inject
+    & #minFeeCoefficient .~ pparams ^. L.ppTxFeeFixedL . to inject
+    & #minFeeConstant .~ pparams ^. L.ppTxFeePerByteL . to L.unCoinPerByte . to L.fromCompact . to inject
     & #maxBlockBodySize .~ pparams ^. L.ppMaxBBSizeL . to fromIntegral
     & #maxBlockHeaderSize .~ pparams ^. L.ppMaxBHSizeL . to fromIntegral
     & #stakeKeyDeposit .~ pparams ^. L.ppKeyDepositL . to inject
@@ -144,14 +146,18 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
       [ \r -> do
           coinsPerUtxoByte <-
             pp ^. #coinsPerUtxoByte . to utxoRpcBigIntToInteger ?! "Invalid coinsPerUtxoByte"
-          pure $ set L.ppCoinsPerUTxOByteL (L.CoinPerByte $ L.Coin coinsPerUtxoByte) r
+          compactCoinsPerUtxO <-
+            note "Could not convert coinsPerUtxoByte to compact form." $ L.toCompact (L.Coin coinsPerUtxoByte)
+          pure $ set L.ppCoinsPerUTxOByteL (L.CoinPerByte compactCoinsPerUtxO) r
       , pure . (L.ppMaxTxSizeL .~ pp ^. #maxTxSize . to fromIntegral)
       , \r -> do
           minFeeCoeff <- pp ^. #minFeeCoefficient . to utxoRpcBigIntToInteger ?! "Invalid minFeeCoefficient"
-          pure $ set L.ppMinFeeBL (L.Coin minFeeCoeff) r
+          pure $ set L.ppTxFeeFixedL (L.Coin minFeeCoeff) r
       , \r -> do
           minFeeConst <- pp ^. #minFeeConstant . to utxoRpcBigIntToInteger ?! "Invalid minFeeConstant"
-          pure $ set L.ppMinFeeAL (L.Coin minFeeConst) r
+          minFeeConstCompact <-
+            note "Could not convert minFeeConstant to compact form." $ L.toCompact (L.Coin minFeeConst)
+          pure $ set L.ppTxFeePerByteL (L.CoinPerByte minFeeConstCompact) r
       , pure . (L.ppMaxBBSizeL .~ pp ^. #maxBlockBodySize . to fromIntegral)
       , pure . (L.ppMaxBHSizeL .~ pp ^. #maxBlockHeaderSize . to fromIntegral)
       , \r -> do
@@ -208,7 +214,10 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
       , \r -> do
           minFeeScriptRefCostPerByte <-
             pp
-              ^. #minFeeScriptRefCostPerByte . to inject . to L.boundRational ?! "Invalid minFeeScriptRefCostPerByte"
+              ^. #minFeeScriptRefCostPerByte
+                . to inject
+                . to L.boundRational
+                ?! "Invalid minFeeScriptRefCostPerByte"
           pure $ set L.ppMinFeeRefScriptCostPerByteL minFeeScriptRefCostPerByte r
       , \r -> do
           let thresholds = pp ^. #poolVotingThresholds . #thresholds

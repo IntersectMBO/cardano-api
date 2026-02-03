@@ -49,7 +49,7 @@ instance
     r <-
       CBOR.runAnnotator
         <$> CBOR.decodeFull' (L.eraProtVerHigh @era) bs
-    SimpleScript <$> (r $ CBOR.Full $ BS.fromStrict bs)
+    SimpleScript <$> r (CBOR.Full $ BS.fromStrict bs)
 
 -- TODO: We should also deserialize the JSON representation of simple scripts.
 deserialiseSimpleScript
