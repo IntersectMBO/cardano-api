@@ -257,4 +257,3 @@ jobs:
         else
           echo 'Build complete'
         fi
-
