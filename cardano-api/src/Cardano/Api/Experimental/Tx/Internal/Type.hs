@@ -35,7 +35,7 @@ import Data.ByteString.Lazy (fromStrict)
 -- | A transaction that can contain everything
 -- except key witnesses.
 data UnsignedTx era
-  = L.EraTx (LedgerEra era) => UnsignedTx (Ledger.Tx (LedgerEra era))
+  = L.EraTx (LedgerEra era) => UnsignedTx (Ledger.Tx Ledger.TopTx (LedgerEra era))
 
 instance HasTypeProxy era => HasTypeProxy (UnsignedTx era) where
   data AsType (UnsignedTx era) = AsUnsignedTx (AsType era)

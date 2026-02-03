@@ -301,8 +301,8 @@ data QueryInShelleyBasedEra era result where
     :: Set Ledger.DRep
     -> QueryInShelleyBasedEra era (Map Ledger.DRep L.Coin)
   QuerySPOStakeDistr
-    :: Set (Ledger.KeyHash 'Ledger.StakePool)
-    -> QueryInShelleyBasedEra era (Map (Ledger.KeyHash 'Ledger.StakePool) L.Coin)
+    :: Set (Ledger.KeyHash Ledger.StakePool)
+    -> QueryInShelleyBasedEra era (Map (Ledger.KeyHash Ledger.StakePool) L.Coin)
   QueryCommitteeMembersState
     :: Set (Shelley.Credential Shelley.ColdCommitteeRole)
     -> Set (Shelley.Credential Shelley.HotCommitteeRole)
@@ -317,7 +317,7 @@ data QueryInShelleyBasedEra era result where
   QueryLedgerPeerSnapshot
     :: QueryInShelleyBasedEra era (Serialised LedgerPeerSnapshot)
   QueryStakePoolDefaultVote
-    :: Ledger.KeyHash 'Ledger.StakePool
+    :: Ledger.KeyHash Ledger.StakePool
     -> QueryInShelleyBasedEra era L.DefaultVote
 
 deriving instance Show (QueryInShelleyBasedEra era result)
@@ -428,7 +428,7 @@ decodeBigLedgerPeerSnapshot
   :: Consensus.ShelleyNodeToClientVersion
   -> Serialised LedgerPeerSnapshot
   -> Either (LBS.ByteString, DecoderError) (LedgerPeerSnapshot BigLedgerPeers)
-decodeBigLedgerPeerSnapshot ntcV (Serialised lps) =
+decodeBigLedgerPeerSnapshot _ntcV (Serialised _lps) =
   -- first
   --   (lps,)
   --   $ Plain.decodeFullDecoder
@@ -502,7 +502,7 @@ fromShelleyDelegations =
     . toList
 
 fromShelleyRewardAccounts
-  :: Map (Shelley.Credential 'Core.Staking) L.Coin
+  :: Map (Shelley.Credential Core.Staking) L.Coin
   -> Map StakeCredential L.Coin
 fromShelleyRewardAccounts =
   -- TODO: write an appropriate property to show it is safe to use
@@ -696,7 +696,8 @@ toConsensusQueryShelleyBased sbe = \case
       sbe
   -- TODO(10.7): support full GetLedgerPeerSnapshot query
   QueryLedgerPeerSnapshot ->
-    Some (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot BigLedgerPeers)))
+    Some
+      (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot BigLedgerPeers)))
   QueryStakePoolDefaultVote govActs ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $

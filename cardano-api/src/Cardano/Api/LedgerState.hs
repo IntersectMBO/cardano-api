@@ -166,6 +166,7 @@ import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
+import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Keys qualified as SL
 import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
 import Cardano.Ledger.Shelley.Core qualified as Core
@@ -1792,7 +1793,7 @@ renderHash
   :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString -> Text
 renderHash h = Text.decodeUtf8 $ Base16.encode (Cardano.Crypto.Hash.Class.hashToBytes h)
 
-newtype StakeCred = StakeCred {_unStakeCred :: Ledger.Credential 'Ledger.Staking}
+newtype StakeCred = StakeCred {_unStakeCred :: Ledger.Credential L.Staking}
   deriving (Eq, Ord)
 
 data Env = Env
@@ -2096,7 +2097,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         snapshot = ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
         markSnapshotPoolDistr
           :: Map
-               (SL.KeyHash 'SL.StakePool)
+               (SL.KeyHash SL.StakePool)
                SL.IndividualPoolStake
         markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
@@ -2133,7 +2134,7 @@ isLeadingSlotsTPraos
   => Set SlotNo
   -> PoolId
   -> Map
-       (SL.KeyHash 'SL.StakePool)
+       (SL.KeyHash SL.StakePool)
        SL.IndividualPoolStake
   -> Consensus.Nonce
   -> Crypto.SignKeyVRF v
@@ -2158,7 +2159,7 @@ isLeadingSlotsPraos
   => Set SlotNo
   -> PoolId
   -> Map
-       (SL.KeyHash 'SL.StakePool)
+       (SL.KeyHash SL.StakePool)
        SL.IndividualPoolStake
   -> Consensus.Nonce
   -> Crypto.SignKeyVRF (Crypto.VRF Consensus.StandardCrypto)

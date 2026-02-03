@@ -241,8 +241,8 @@ getUnsignedTxFee (UnsignedTx unsignedTx) =
    in txbody ^. L.feeTxBodyL
 
 hashTxBody
-  :: L.HashAnnotated (Ledger.TxBody era) L.EraIndependentTxBody
-  => L.TxBody era -> Hash.Hash L.HASH L.EraIndependentTxBody
+  :: L.HashAnnotated (Ledger.TxBody Ledger.TopTx era) L.EraIndependentTxBody
+  => L.TxBody Ledger.TopTx era -> Hash.Hash L.HASH L.EraIndependentTxBody
 hashTxBody = L.extractHash . L.hashAnnotated
 
 makeKeyWitness
@@ -262,7 +262,7 @@ makeKeyWitness era (UnsignedTx unsignedTx) wsk =
 
 -- | A transaction that has been witnesssed
 data SignedTx era
-  = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx (LedgerEra era))
+  = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx Ledger.TopTx (LedgerEra era))
 
 deriving instance Eq (SignedTx era)
 

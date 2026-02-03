@@ -94,6 +94,7 @@ import Cardano.Api.Plutus.Internal.ScriptData qualified as Api
 import Cardano.Api.Tx.Internal.Body
   ( CtxTx
   , TxIn
+  , asGuard
   , toShelleyTxIn
   , toShelleyWithdrawal
   )
@@ -108,8 +109,8 @@ import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Core qualified as Ledger
-import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Control.Monad
@@ -175,7 +176,7 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
           & L.feeTxBodyL .~ fee
           & L.vldtTxBodyL . L.invalidBeforeL .~ (L.maybeToStrictMaybe $ txValidityLowerBound bc)
           & L.vldtTxBodyL . L.invalidHereAfterL .~ (L.maybeToStrictMaybe $ txValidityUpperBound bc)
-          & L.reqSignerHashesTxBodyL .~ undefined --TODO(10.7): setReqSignerHashes
+          & L.reqSignerHashesTxBodyL .~ setReqSignerHashes
           & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
           & L.withdrawalsTxBodyL .~ withdrawals
           & L.certsTxBodyL .~ certs
@@ -221,10 +222,10 @@ convMintValue v = do
   multiAsset
 
 convExtraKeyWitnesses
-  :: TxExtraKeyWitnesses -> Set (L.KeyHash L.Witness)
+  :: TxExtraKeyWitnesses -> Set (L.KeyHash L.Guard)
 convExtraKeyWitnesses (TxExtraKeyWitnesses khs) =
   fromList
-    [ L.asWitness kh
+    [ asGuard kh
     | PaymentKeyHash kh <- khs
     ]
 

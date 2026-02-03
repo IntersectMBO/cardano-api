@@ -38,7 +38,7 @@ common project-config
     -Wunused-packages
 
 common maybe-unix
-  if !(os(windows) || arch(wasm32))
+  if !(os(windows)|| arch(wasm32))
     build-depends: unix
 
 common maybe-Win32
@@ -46,7 +46,7 @@ common maybe-Win32
     build-depends: Win32
 
 common text
-  if os(osx) && arch(aarch64)
+  if os(osx)&& arch(aarch64)
     build-depends: text >=1.2.5.0
   else
     build-depends: text >=2.0
@@ -129,7 +129,7 @@ library
     cardano-crypto-class ^>=2.2.3.2,
     cardano-crypto-wrapper ^>=1.7,
     cardano-data >=1.0,
-    cardano-diffusion:{api, cardano-diffusion} ^>=0.1,
+    cardano-diffusion:{cardano-diffusion, api} ^>=0.1,
     cardano-ledger-allegra >=1.7,
     cardano-ledger-alonzo >=1.13,
     cardano-ledger-api ^>=1.13,
@@ -171,7 +171,7 @@ library
     ouroboros-consensus-cardano ^>=0.26,
     ouroboros-consensus-diffusion ^>=0.24,
     ouroboros-consensus-protocol ^>=0.13,
-    ouroboros-network:{api, framework, ouroboros-network, protocols} ^>=0.24,
+    ouroboros-network:{ouroboros-network, api, framework, protocols} ^>=0.24,
     parsec,
     plutus-core ^>=1.57,
     plutus-ledger-api ^>=1.57,
@@ -325,14 +325,12 @@ library gen
     cardano-api,
     cardano-binary >=1.6 && <1.9,
     cardano-crypto-class ^>=2.2.1,
-    cardano-crypto-wrapper:{cardano-crypto-wrapper, testlib} ^>=1.7,
-    cardano-ledger-alonzo >=1.8.1,
-    cardano-ledger-babbage,
-    cardano-ledger-byron,
-    cardano-ledger-conway,
-    cardano-ledger-core >=1.14,
-    cardano-ledger-dijkstra >=0.1,
-    cardano-ledger-mary,
+    cardano-crypto-wrapper:testlib ^>=1.7,
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.8.1,
+    cardano-ledger-byron:testlib,
+    cardano-ledger-conway:testlib,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17,
+    cardano-ledger-dijkstra:testlib >=0.1,
     cardano-ledger-shelley >=1.13,
     cardano-strict-containers,
     containers,
