@@ -10,12 +10,12 @@ where
 import Cardano.Api.Error
 import Cardano.Api.Pretty
 
+import Cardano.Network.NodeToClient.Version (NodeToClientVersion (..))
 import Cardano.Protocol.Crypto
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.Cardano.Node ()
 import Ouroboros.Consensus.Ledger.Query qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
-import Cardano.Network.NodeToClient.Version (NodeToClientVersion (..))
 import Ouroboros.Network.Protocol.LocalStateQuery.Codec
 
 -- | LocalStateQuery uses versioned queries, which means it requires the Node to support a minimum
