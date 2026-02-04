@@ -153,6 +153,7 @@ queryDebugLedgerState eon = querySbe eon QueryDebugLedgerState
 queryLedgerPeerSnapshot
   :: ()
   => ShelleyBasedEra era
+  -> LedgerPeersKind
   -> LocalStateQueryExpr
        block
        point
@@ -160,7 +161,7 @@ queryLedgerPeerSnapshot
        r
        IO
        (Either UnsupportedNtcVersionError (Either EraMismatch (Serialised LedgerPeerSnapshot)))
-queryLedgerPeerSnapshot eon = querySbe eon QueryLedgerPeerSnapshot
+queryLedgerPeerSnapshot eon = querySbe eon . QueryLedgerPeerSnapshot
 
 queryEraHistory
   :: ()

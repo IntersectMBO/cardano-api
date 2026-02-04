@@ -7,7 +7,7 @@ module Cardano.Api.Network
   , mainnetNetworkMagic
 
     -- * @network@ reexports
-  , LedgerPeerSnapshot (..)
+  , SomeLedgerPeerSnapshot (..)
   , Target (..)
   , Serialised (..)
   , SubmitResult (..)
