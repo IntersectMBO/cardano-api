@@ -1,16 +1,21 @@
+{-# LANGUAGE GADTs #-}
+
 module Test.Gen.Cardano.Api.ProtocolParameters where
 
 import Cardano.Api
 import Cardano.Api.Ledger
 
-import Test.Gen.Cardano.Api.Typed (genCostModels)
+import Data.Maybe
+
+import Test.Gen.Cardano.Api.Internal.Shared
 
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 
-import Hedgehog (MonadGen)
+import Hedgehog (Gen, MonadGen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Gen.QuickCheck qualified as Q
+import Hedgehog.Range qualified as Range
 
 genStrictMaybe :: MonadGen m => m a -> m (StrictMaybe a)
 genStrictMaybe gen =
@@ -75,6 +80,41 @@ genIntroducedInConwayPParams =
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
+
+genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
+genTxUpdateProposal sbe =
+  Gen.choice $
+    catMaybes
+      [ Just $ pure TxUpdateProposalNone
+      , forEraInEon sbe Nothing $ \w ->
+          Just $ TxUpdateProposal w <$> genUpdateProposal (toCardanoEra w)
+      ]
+
+genUpdateProposal :: CardanoEra era -> Gen (UpdateProposal era)
+genUpdateProposal era =
+  UpdateProposal
+    <$> Gen.map
+      (Range.constant 1 3)
+      ( (,)
+          <$> genVerificationKeyHash AsGenesisKey
+          <*> genEraBasedProtocolParametersUpdate era
+      )
+    <*> genEpochNo
+
+genEraBasedProtocolParametersUpdate
+  :: MonadGen m
+  => CardanoEra era
+  -> m (EraBasedProtocolParametersUpdate era)
+genEraBasedProtocolParametersUpdate era =
+  case era of
+    ByronEra -> error ""
+    ShelleyEra -> genShelleyEraBasedProtocolParametersUpdate
+    AllegraEra -> genAllegraEraBasedProtocolParametersUpdate
+    MaryEra -> genMaryEraBasedProtocolParametersUpdate
+    AlonzoEra -> genAlonzoEraBasedProtocolParametersUpdate
+    BabbageEra -> genBabbageEraBasedProtocolParametersUpdate
+    ConwayEra -> genConwayEraBasedProtocolParametersUpdate
+    DijkstraEra -> error "Dijkstra era should never be used with genEraBasedProtocolParametersUpdate"
 
 genShelleyEraBasedProtocolParametersUpdate
   :: MonadGen m => m (EraBasedProtocolParametersUpdate ShelleyEra)

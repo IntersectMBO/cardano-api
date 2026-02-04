@@ -5,7 +5,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -28,6 +27,7 @@ module Test.Gen.Cardano.Api.Typed
   , genCostModel
   , genCostModels
   , genMaybePraosNonce
+  , genTxUpdateProposal
   , genPraosNonce
   , genValidProtocolParameters
   , genValueNestedRep
@@ -107,15 +107,12 @@ module Test.Gen.Cardano.Api.Typed
   , genValueDefault
   , genVerificationKey
   , genVerificationKeyHash
-  , genUpdateProposal
-  , genProtocolParametersUpdate
   , genTxOutDatumHashTxContext
   , genTxOutDatumHashUTxOContext
   , genTxOutValue
   , genTxReturnCollateral
   , genTxScriptValidity
   , genTxTotalCollateral
-  , genTxUpdateProposal
   , genTxValidityLowerBound
   , genTxValidityUpperBound
   , genTxWithdrawals
@@ -165,12 +162,9 @@ import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Tx qualified as A
 
 import Cardano.Binary qualified as CBOR
-import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as CRYPTO
-import Cardano.Crypto.Seed qualified as Crypto
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
-import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Language qualified as L
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
@@ -187,14 +181,16 @@ import Data.Maybe
 import Data.Ratio (Ratio, (%))
 import Data.String
 import Data.Typeable
-import Data.Word (Word16, Word32, Word64)
+import Data.Word (Word32, Word64)
 import GHC.Exts (IsList (..))
 import GHC.Stack
 import Numeric.Natural (Natural)
 
 import Test.Gen.Cardano.Api.Era (conwayEraOnwardsTestConstraints, shelleyBasedEraTestConstraints)
 import Test.Gen.Cardano.Api.Hardcoded
+import Test.Gen.Cardano.Api.Internal.Shared
 import Test.Gen.Cardano.Api.Metadata (genTxMetadata)
+import Test.Gen.Cardano.Api.ProtocolParameters (genTxUpdateProposal)
 
 import Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
@@ -655,15 +651,6 @@ genPaymentCredential = do
   vKey <- genVerificationKey AsPaymentKey
   return . PaymentCredentialByKey $ verificationKeyHash vKey
 
-genSigningKey :: Key keyrole => AsType keyrole -> Gen (SigningKey keyrole)
-genSigningKey roletoken = do
-  seed <- genSeed (fromIntegral seedSize)
-  let sk = deterministicSigningKey roletoken seed
-  return sk
- where
-  seedSize :: Word
-  seedSize = deterministicSigningKeySeedSize roletoken
-
 genStakeAddress :: Gen StakeAddress
 genStakeAddress = makeStakeAddress <$> genNetworkId <*> genStakeCredential
 
@@ -955,15 +942,6 @@ genMirCertificateRequirements w =
   shelleyToBabbageEraConstraints w $
     MirCertificateRequirements w <$> Q.arbitrary <*> Q.arbitrary
 
-genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
-genTxUpdateProposal sbe =
-  Gen.choice $
-    catMaybes
-      [ Just $ pure TxUpdateProposalNone
-      , forEraInEon sbe Nothing $ \w ->
-          Just $ TxUpdateProposal w <$> genUpdateProposal (toCardanoEra w)
-      ]
-
 genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
 genTxMintValue =
   inEonForEra
@@ -1183,23 +1161,6 @@ genWitnesses sbe = do
   keyWits <- Gen.list (Range.constant 0 10) (genShelleyKeyWitness sbe)
   return $ bsWits ++ keyWits
 
-genVerificationKey
-  :: ()
-  => HasTypeProxy keyrole
-  => Key keyrole
-  => AsType keyrole
-  -> Gen (VerificationKey keyrole)
-genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
-
-genVerificationKeyHash
-  :: ()
-  => HasTypeProxy keyrole
-  => Key keyrole
-  => AsType keyrole
-  -> Gen (Hash keyrole)
-genVerificationKeyHash roletoken =
-  verificationKeyHash <$> genVerificationKey roletoken
-
 genByronKeyWitness :: Gen (KeyWitness ByronEra)
 genByronKeyWitness = do
   pmId <- genProtocolMagicId
@@ -1260,17 +1221,8 @@ genCardanoKeyWitness
   -> Gen (KeyWitness era)
 genCardanoKeyWitness = genShelleyWitness
 
-genSeed :: Int -> Gen Crypto.Seed
-genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
-
 genNat :: Gen Natural
 genNat = Gen.integral (Range.linear 0 10)
-
-genWord16 :: Gen Word16
-genWord16 = Gen.integral (Range.linear 0 10)
-
-genWord32 :: Gen Word32
-genWord32 = Gen.integral (Range.linear 0 10)
 
 genRational :: Gen Rational
 genRational =
@@ -1294,12 +1246,6 @@ genRationalInt64 =
   ratioToRational :: Ratio Int64 -> Rational
   ratioToRational = toRational
 
-genEpochNo :: Gen EpochNo
-genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 10)
-
-genEpochInterval :: Gen Ledger.EpochInterval
-genEpochInterval = Ledger.EpochInterval <$> Gen.word32 (Range.linear 0 10)
-
 genPraosNonce :: Gen PraosNonce
 genPraosNonce = makePraosNonce <$> Gen.bytes (Range.linear 0 32)
 
@@ -1313,55 +1259,8 @@ genValidProtocolParameters sbe =
   shelleyBasedEraTestConstraints sbe $
     LedgerProtocolParameters <$> Q.arbitrary
 
-genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
-genProtocolParametersUpdate era = do
-  protocolUpdateProtocolVersion <- Gen.maybe ((,) <$> genNat <*> genNat)
-  protocolUpdateDecentralization <- Gen.maybe genRational
-  protocolUpdateExtraPraosEntropy <- Gen.maybe genMaybePraosNonce
-  protocolUpdateMaxBlockHeaderSize <- Gen.maybe genWord16
-  protocolUpdateMaxBlockBodySize <- Gen.maybe genWord32
-  protocolUpdateMaxTxSize <- Gen.maybe genWord32
-  protocolUpdateTxFeeFixed <- Gen.maybe genLovelace
-  protocolUpdateTxFeePerByte <- Gen.maybe genLovelace
-  protocolUpdateMinUTxOValue <- Gen.maybe genLovelace
-  protocolUpdateStakeAddressDeposit <- Gen.maybe genLovelace
-  protocolUpdateStakePoolDeposit <- Gen.maybe genLovelace
-  protocolUpdateMinPoolCost <- Gen.maybe genLovelace
-  protocolUpdatePoolRetireMaxEpoch <- Gen.maybe genEpochInterval
-  protocolUpdateStakePoolTargetNum <- Gen.maybe genWord16
-  protocolUpdatePoolPledgeInfluence <- Gen.maybe genRationalInt64
-  protocolUpdateMonetaryExpansion <- Gen.maybe genRational
-  protocolUpdateTreasuryCut <- Gen.maybe genRational
-  let protocolUpdateCostModels = mempty -- genCostModels
-  -- TODO: Babbage figure out how to deal with
-  -- asymmetric cost model JSON instances
-  protocolUpdatePrices <- Gen.maybe genExecutionUnitPrices
-  protocolUpdateMaxTxExUnits <- Gen.maybe genExecutionUnits
-  protocolUpdateMaxBlockExUnits <- Gen.maybe genExecutionUnits
-  protocolUpdateMaxValueSize <- Gen.maybe genNat
-  protocolUpdateCollateralPercent <- Gen.maybe genNat
-  protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
-  protocolUpdateUTxOCostPerByte <-
-    inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
-
-  pure ProtocolParametersUpdate{..}
-
-genUpdateProposal :: CardanoEra era -> Gen UpdateProposal
-genUpdateProposal era =
-  UpdateProposal
-    <$> Gen.map
-      (Range.constant 1 3)
-      ( (,)
-          <$> genVerificationKeyHash AsGenesisKey
-          <*> genProtocolParametersUpdate era
-      )
-    <*> genEpochNo
-
 genCostModel :: MonadGen m => m Alonzo.CostModel
 genCostModel = Q.arbitrary
-
-genCostModels :: MonadGen m => m Alonzo.CostModels
-genCostModels = Q.arbitrary
 
 genExecutionUnits :: Gen ExecutionUnits
 genExecutionUnits =

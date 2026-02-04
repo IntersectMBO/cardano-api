@@ -310,6 +310,7 @@ library gen
     Test.Gen.Cardano.Api.Era
     Test.Gen.Cardano.Api.Experimental
     Test.Gen.Cardano.Api.Hardcoded
+    Test.Gen.Cardano.Api.Internal.Shared
     Test.Gen.Cardano.Api.Metadata
     Test.Gen.Cardano.Api.ProtocolParameters
     Test.Gen.Cardano.Api.Typed

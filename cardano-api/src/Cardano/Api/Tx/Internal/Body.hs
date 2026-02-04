@@ -203,6 +203,7 @@ module Cardano.Api.Tx.Internal.Body
   , mkCommonTxBody
   , toAuxiliaryData
   , toByronTxId
+  , toLedgerUpdate
   , toShelleyTxId
   , toShelleyTxIn
   , toShelleyTxOut
@@ -631,7 +632,8 @@ indexTxCertificates (TxCertificates _ certsWits) =
 
 data TxUpdateProposal era where
   TxUpdateProposalNone :: TxUpdateProposal era
-  TxUpdateProposal :: ShelleyToBabbageEra era -> UpdateProposal -> TxUpdateProposal era
+  TxUpdateProposal
+    :: ShelleyToBabbageEra era -> UpdateProposal era -> TxUpdateProposal era
 
 deriving instance Eq (TxUpdateProposal era)
 
@@ -1291,7 +1293,7 @@ createTransactionBody sbe bc =
         treasuryDonation = maybe 0 unFeatured $ txTreasuryDonation bc
 
     setUpdateProposal <- monoidForEraInEonA era $ \w ->
-      Endo . (A.updateTxBodyL w .~) <$> convTxUpdateProposal sbe (txUpdateProposal bc)
+      pure . Endo $ A.updateTxBodyL w .~ convTxUpdateProposal sbe (txUpdateProposal bc)
 
     setInvalidBefore <- monoidForEraInEonA era $ \w ->
       pure $ Endo $ A.invalidBeforeTxBodyL w .~ convValidityLowerBound (txValidityLowerBound bc)
@@ -1818,12 +1820,30 @@ convTxUpdateProposal
   :: ()
   => ShelleyBasedEra era
   -> TxUpdateProposal era
-  -> Either TxBodyError (StrictMaybe (Ledger.Update (ShelleyLedgerEra era)))
-  -- ^ 'Left' when there's protocol params conversion error, 'Right' otherwise, 'Right SNothing' means that
-  -- there's no update proposal
+  -> StrictMaybe (Ledger.Update (ShelleyLedgerEra era))
 convTxUpdateProposal sbe = \case
-  TxUpdateProposalNone -> Right SNothing
-  TxUpdateProposal _ p -> bimap TxBodyProtocolParamsConversionError pure $ toLedgerUpdate sbe p
+  TxUpdateProposalNone -> SNothing
+  TxUpdateProposal _ (UpdateProposal m eNum) ->
+    let proposedPPUpdates = toLedgerProposedPPUpdates sbe m
+     in SJust $ Ledger.Update proposedPPUpdates eNum
+
+toLedgerUpdate
+  :: ()
+  => ShelleyBasedEra era
+  -> UpdateProposal era
+  -> Ledger.Update (ShelleyLedgerEra era)
+toLedgerUpdate sbe (UpdateProposal ppup epochno) =
+  (`Ledger.Update` epochno) $ toLedgerProposedPPUpdates sbe ppup
+
+toLedgerProposedPPUpdates
+  :: ()
+  => ShelleyBasedEra era
+  -> Map (Hash GenesisKey) (EraBasedProtocolParametersUpdate era)
+  -> Ledger.ProposedPPUpdates (ShelleyLedgerEra era)
+toLedgerProposedPPUpdates sbe m =
+  Ledger.ProposedPPUpdates $
+    Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh) $
+      Map.map (createEraBasedProtocolParamUpdate sbe) m
 
 convMintValue :: TxMintValue build era -> MultiAsset
 convMintValue txMintValue = do
