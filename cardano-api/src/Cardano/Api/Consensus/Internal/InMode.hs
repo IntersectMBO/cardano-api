@@ -262,7 +262,22 @@ appTxErrToJson
   => ShelleyBasedEra era
   -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
   -> Aeson.Value
-appTxErrToJson w e = shelleyBasedEraConstraints w $ toJSON e
+appTxErrToJson w e =
+  case w of
+    ShelleyBasedEraShelley -> toJSON e
+    ShelleyBasedEraAllegra -> toJSON e
+    ShelleyBasedEraMary -> toJSON e
+    ShelleyBasedEraAlonzo -> toJSON e
+    ShelleyBasedEraBabbage -> toJSON e
+    ShelleyBasedEraConway -> toJSON e
+    -- TODO: Ledger needs to expose DijkstraLedgerPredFailure in order
+    -- to define the necessary JSON instances for Dijkstra era.
+    ShelleyBasedEraDijkstra ->
+      Aeson.String . Text.pack $
+        unlines
+          [ "This is not JSON serializable yet. Ledger must expose DijkstraLedgerPredFailure to implement the necessary instances."
+          , show e
+          ]
 
 -- | A 'TxValidationError' in one of the eras supported by a given protocol
 -- mode.

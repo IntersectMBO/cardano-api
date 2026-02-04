@@ -45,6 +45,7 @@ import Cardano.Chain.Update.Validation.Registration qualified as L.Registration
 import Cardano.Chain.Update.Validation.Voting qualified as L.Voting
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Ledger.Allegra.Rules qualified as L
+import Cardano.Ledger.Alonzo qualified as L
 import Cardano.Ledger.Alonzo.PParams qualified as Ledger
 import Cardano.Ledger.Alonzo.Rules qualified as Alonzo
 import Cardano.Ledger.Alonzo.Rules qualified as L
@@ -63,6 +64,8 @@ import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.Conway.Rules qualified as L
 import Cardano.Ledger.Conway.TxCert qualified as L
 import Cardano.Ledger.Core qualified as L hiding (KeyHash)
+import Cardano.Ledger.Dijkstra qualified as L
+import Cardano.Ledger.Dijkstra.Rules qualified as L
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes qualified as L hiding (KeyHash)
 import Cardano.Ledger.Keys qualified as L.Keys
@@ -108,6 +111,7 @@ import Data.Aeson
   )
 import Data.Aeson qualified as A
 import Data.Aeson qualified as Aeson
+import Data.Aeson.Types (toJSONKeyText)
 import Data.Bifunctor
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as B16
@@ -119,7 +123,7 @@ import Data.Data (Data)
 import Data.Kind (Constraint, Type)
 import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
-import Data.Map.NonEmpty (NonEmptyMap)
+import Data.Map.NonEmpty (NonEmptyMap, toMap)
 import Data.Map.NonEmpty qualified as NonEmptyMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid
@@ -204,11 +208,11 @@ deriving anyclass instance ToJSON L.VotingPeriod
 
 deriving anyclass instance ToJSON L.Withdrawals
 
-instance ToJSON (NonEmptyMap k v) where
-  toJSON = undefined
+instance (ToJSONKey k, ToJSON v) => ToJSON (NonEmptyMap k v) where
+  toJSON = toJSON . toMap
 
-instance ToJSON (NonEmptySet v) where
-  toJSON = undefined
+instance ToJSON v => ToJSON (NonEmptySet v) where
+  toJSON = toJSON . NonEmptySet.toSet
 
 deriving anyclass instance
   ( ToJSON (L.PredicateFailure (L.EraRule "UTXOW" ledgerera))
@@ -247,8 +251,31 @@ instance
   where
   toJSON = genericToJSON defaultOptions
 
-instance ToJSON (L.ApplyTxError ledgerera) where
-  toJSON = undefined
+instance ToJSON (L.ApplyTxError L.ShelleyEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.ApplyTxError L.AllegraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.ApplyTxError L.MaryEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.ApplyTxError L.AlonzoEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.ApplyTxError L.BabbageEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.ApplyTxError L.ConwayEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+-- TODO: Ledger must expose DijkstraLedgerPredFailure in order to write the
+-- instances below.
+-- instance ToJSON (L.ApplyTxError L.DijkstraEra) where
+--   toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+-- instance ToJSON (L.DijkstraMempoolPredFailure L.DijkstraEra) where
+--   toJSON = Aeson.genericToJSON Aeson.defaultOptions
 
 deriving via
   ShowOf (L.Keys.VKey L.Keys.Witness)

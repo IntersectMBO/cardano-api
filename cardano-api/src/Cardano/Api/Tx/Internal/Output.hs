@@ -793,8 +793,8 @@ toShelleyTxOut
   => ShelleyBasedEra era
   -> TxOut CtxUTxO era
   -> Ledger.TxOut ledgerera
-toShelleyTxOut sbe = shelleyBasedEraConstraints sbe $ \case
-  TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
+toShelleyTxOut sbe' = shelleyBasedEraConstraints sbe' $ \case
+  TxOut addr (TxOutValueShelleyBased sbe value) txoutdata refScript ->
     caseShelleyToMaryOrAlonzoEraOnwards
       (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
       ( \case
@@ -814,13 +814,6 @@ toShelleyTxOut sbe = shelleyBasedEraConstraints sbe $ \case
                 .~ toBabbageTxOutDatumUTxO txoutdata
               & L.referenceScriptTxOutL
                 .~ refScriptToShelleyScript sbe refScript
-          -- TODO: this pattern shows up as redundant
-          -- AlonzoEraOnwardsDijkstra ->
-          --   L.mkBasicTxOut (toShelleyAddr addr) value
-          --     & L.datumTxOutL
-          --       .~ toBabbageTxOutDatumUTxO txoutdata
-          --     & L.referenceScriptTxOutL
-          --       .~ refScriptToShelleyScript sbe refScript
       )
       sbe
 
@@ -855,13 +848,6 @@ toShelleyTxOutAny sbe = shelleyBasedEraConstraints sbe $ \case
                 .~ toBabbageTxOutDatum txoutdata
               & L.referenceScriptTxOutL
                 .~ refScriptToShelleyScript sbe refScript
-          -- TODO: this pattern shows up as redundant
-          -- AlonzoEraOnwardsDijkstra ->
-          --   L.mkBasicTxOut (toShelleyAddr addr) value
-          --     & L.datumTxOutL
-          --       .~ toBabbageTxOutDatum txoutdata
-          --     & L.referenceScriptTxOutL
-          --       .~ refScriptToShelleyScript sbe refScript
       )
       sbe
 
@@ -924,24 +910,6 @@ fromShelleyTxOut sbe ledgerTxOut = shelleyBasedEraConstraints sbe $ do
      where
       datum = ledgerTxOut ^. L.datumTxOutL
       mRefScript = ledgerTxOut ^. L.referenceScriptTxOutL
-    -- TODO: this pattern shows up as redundant
-    -- ShelleyBasedEraDijkstra ->
-    --   TxOut
-    --     addressInEra
-    --     txOutValue
-    --     ( fromBabbageTxOutDatum
-    --         AlonzoEraOnwardsDijkstra
-    --         BabbageEraOnwardsDijkstra
-    --         datum
-    --     )
-    --     ( case mRefScript of
-    --         SNothing -> ReferenceScriptNone
-    --         SJust refScript ->
-    --           fromShelleyScriptToReferenceScript ShelleyBasedEraDijkstra refScript
-    --     )
-    --  where
-    --   datum = ledgerTxOut ^. L.datumTxOutL
-    --   mRefScript = ledgerTxOut ^. L.referenceScriptTxOutL
 
 -- ----------------------------------------------------------------------------
 -- Transaction output values (era-dependent)
