@@ -270,14 +270,7 @@ appTxErrToJson w e =
     ShelleyBasedEraAlonzo -> toJSON e
     ShelleyBasedEraBabbage -> toJSON e
     ShelleyBasedEraConway -> toJSON e
-    -- TODO: Ledger needs to expose DijkstraLedgerPredFailure in order
-    -- to define the necessary JSON instances for Dijkstra era.
-    ShelleyBasedEraDijkstra ->
-      Aeson.String . Text.pack $
-        unlines
-          [ "This is not JSON serializable yet. Ledger must expose DijkstraLedgerPredFailure to implement the necessary instances."
-          , show e
-          ]
+    ShelleyBasedEraDijkstra -> toJSON e
 
 -- | A 'TxValidationError' in one of the eras supported by a given protocol
 -- mode.

@@ -43,6 +43,7 @@ import Cardano.Chain.Update.Validation.Endorsement qualified as L.Endorsement
 import Cardano.Chain.Update.Validation.Interface qualified as L.Interface
 import Cardano.Chain.Update.Validation.Registration qualified as L.Registration
 import Cardano.Chain.Update.Validation.Voting qualified as L.Voting
+import Cardano.Crypto.Hash (hashToTextAsHex)
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Ledger.Allegra.Rules qualified as L
 import Cardano.Ledger.Alonzo qualified as L
@@ -269,13 +270,83 @@ instance ToJSON (L.ApplyTxError L.BabbageEra) where
 instance ToJSON (L.ApplyTxError L.ConwayEra) where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions
 
--- TODO: Ledger must expose DijkstraLedgerPredFailure in order to write the
--- instances below.
--- instance ToJSON (L.ApplyTxError L.DijkstraEra) where
---   toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance ToJSON (L.ApplyTxError L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
 
--- instance ToJSON (L.DijkstraMempoolPredFailure L.DijkstraEra) where
---   toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance ToJSON (L.DijkstraMempoolPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraLedgerPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraSubLedgersPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraSubLedgerPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraSubGovPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraSubCertsPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraSubCertPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraSubGovCertPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraGovPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraGovCertPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraSubPoolPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraSubUtxowPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraUtxowPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraSubDelegPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.ShelleyPoolPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraSubUtxoPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraUtxoPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.ConwayDelegPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.DijkstraSubUtxosPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.ConwayCertPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSON (L.ConwayUtxosPredFailure L.DijkstraEra) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance
+  ToJSON
+    (L.ConwayCertsPredFailure L.DijkstraEra)
+  where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+
+instance ToJSONKey Ledger.TxId where
+  toJSONKey = toJSONKeyText ledgerTxIdToText
+
+ledgerTxIdToText :: Ledger.TxId -> T.Text
+ledgerTxIdToText (Ledger.TxId txidHash) = hashToTextAsHex (L.extractHash txidHash)
 
 deriving via
   ShowOf (L.Keys.VKey L.Keys.Witness)
