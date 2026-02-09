@@ -369,11 +369,11 @@ fromLegacyTxOut tOut@(OldApi.TxOut _ _ d _) = do
   newDatum :: L.Datum (LedgerEra era) <- obtainCommonConstraints (useEra @era) $ toLedgerDatum d
   return $ obtainCommonConstraints (useEra @era) $ TxOut $ o & L.datumTxOutL .~ newDatum
 
-newtype DatumDecodingError = DataDecodingError String
+newtype DatumDecodingError = DatumDecodingError String
   deriving (Show, Eq)
 
 instance Error DatumDecodingError where
-  prettyError (DataDecodingError msg) = "Datum decoding error: " <> pshow msg
+  prettyError (DatumDecodingError msg) = "Datum decoding error: " <> pshow msg
 
 toLedgerDatum
   :: L.Era (LedgerEra era)
@@ -382,11 +382,11 @@ toLedgerDatum OldApi.TxOutDatumNone = Right L.NoDatum
 toLedgerDatum (OldApi.TxOutDatumHash _ (Api.ScriptDataHash h)) = Right $ L.DatumHash h
 toLedgerDatum (OldApi.TxOutSupplementalDatum _ h) =
   case L.makeBinaryData $ SBS.toShort $ Api.getOriginalScriptDataBytes h of
-    Left e -> Left $ DataDecodingError e
+    Left e -> Left $ DatumDecodingError e
     Right bd -> Right $ L.Datum bd
 toLedgerDatum (OldApi.TxOutDatumInline _ h) =
   case L.makeBinaryData $ SBS.toShort $ Api.getOriginalScriptDataBytes h of
-    Left e -> Left $ DataDecodingError e
+    Left e -> Left $ DatumDecodingError e
     Right bd -> Right $ L.Datum bd
 
 data TxInsReference era = TxInsReference [TxIn] (Set (Datum CtxTx era))

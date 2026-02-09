@@ -312,7 +312,7 @@ type EraCommonConstraints era =
   , L.EraTxCert (LedgerEra era)
   , L.EraTxOut (LedgerEra era)
   , L.EraUTxO (LedgerEra era)
-  , HasTypeProxy (LedgerEra era)
+  , HasTypeProxy era
   , Ord (L.PlutusPurpose L.AsIx (LedgerEra era))
   , L.ScriptsNeeded (LedgerEra era) ~ L.AlonzoScriptsNeeded (LedgerEra era)
   , L.Val (L.Value (LedgerEra era))

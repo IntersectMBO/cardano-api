@@ -750,19 +750,14 @@ substituteExecutionUnits
         & setTxVotingProcedures mappedVotes
         & setTxProposalProcedures mappedProposals
    where
-    substitudeExecUnitsTxMint
+    substituteExecUnitsTxMint
       :: ScriptWitnessIndex
       -> AnyScriptWitness (LedgerEra era)
       -> Either (TxBodyErrorAutoBalance (LedgerEra era)) (AnyScriptWitness (LedgerEra era))
-    substitudeExecUnitsTxMint _ w@AnyScriptWitnessSimple{} = Right w
-    substitudeExecUnitsTxMint idx (AnyScriptWitnessPlutus psw) =
-      case Map.lookup idx exUnitsMap of
-        Nothing ->
-          Left $ TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap idx exUnitsMap
-        Just exunits ->
-          Right $
-            AnyScriptWitnessPlutus $
-              updatePlutusScriptWitnessExecutionUnits exunits psw
+    substituteExecUnitsTxMint _ w@AnyScriptWitnessSimple{} = Right w
+    substituteExecUnitsTxMint idx (AnyScriptWitnessPlutus psw) =
+      AnyScriptWitnessPlutus <$> updateExecUnitsPlutusScriptWitness idx exUnitsMap psw
+
     substituteExecUnits
       :: ScriptWitnessIndex
       -> AnyWitness (LedgerEra era)
@@ -770,13 +765,7 @@ substituteExecutionUnits
     substituteExecUnits _ w@AnyKeyWitnessPlaceholder = Right w
     substituteExecUnits _ w@AnySimpleScriptWitness{} = Right w
     substituteExecUnits idx (AnyPlutusScriptWitness psw) =
-      case Map.lookup idx exUnitsMap of
-        Nothing ->
-          Left $ TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap idx exUnitsMap
-        Just exunits ->
-          Right $
-            AnyPlutusScriptWitness $
-              updatePlutusScriptWitnessExecutionUnits exunits psw
+      AnyPlutusScriptWitness <$> updateExecUnitsPlutusScriptWitness idx exUnitsMap psw
 
     mapScriptWitnessesTxIns
       :: [(TxIn, AnyWitness (LedgerEra era))]
@@ -850,7 +839,7 @@ substituteExecutionUnits
           mappedScriptWitnesses =
             [ (policyId, (assets,) <$> substitutedWitness)
             | (ix, policyId, assets, wit) <- indexTxMintValue txMintValue'
-            , let substitutedWitness = substitudeExecUnitsTxMint ix wit
+            , let substitutedWitness = substituteExecUnitsTxMint ix wit
             ]
           -- merge map values, wit1 == wit2 will always hold
           mergeValues (assets1, wit1) (assets2, _wit2) = (assets1 <> assets2, wit1)
@@ -891,6 +880,19 @@ substituteExecutionUnits
       substitutedExecutionUnits <- traverseScriptWitnesses eSubstitutedExecutionUnits
       pure $
         mkTxProposalProcedures substitutedExecutionUnits
+
+updateExecUnitsPlutusScriptWitness
+  :: ScriptWitnessIndex
+  -> Map ScriptWitnessIndex ExecutionUnits
+  -> AnyPlutusScriptWitness lang purpose era
+  -> Either (TxBodyErrorAutoBalance era) (AnyPlutusScriptWitness lang purpose era)
+updateExecUnitsPlutusScriptWitness idx exUnitsMap psw =
+  case Map.lookup idx exUnitsMap of
+    Nothing ->
+      Left $ TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap idx exUnitsMap
+    Just exunits ->
+      Right $
+        updatePlutusScriptWitnessExecutionUnits exunits psw
 
 collectTxBodyScriptWitnesses
   :: forall era
