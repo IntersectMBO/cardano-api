@@ -56,7 +56,6 @@ if impl (ghc >= 9.12)
     -- https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
 
-
 -- WASM compilation specific
 
 if arch(wasm32)
