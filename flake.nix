@@ -46,7 +46,7 @@
     defaultCompiler = "ghc9102";
     # Used for cross compilation, and so referenced in .github/workflows/release-upload.yml. Adapt the
     # latter if you change this value.
-    crossCompilerVersion = "ghc967";
+    crossCompilerVersion = "ghc9122";
   in
     inputs.flake-utils.lib.eachSystem supportedSystems (
       system: let
