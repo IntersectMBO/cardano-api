@@ -46,7 +46,7 @@
     defaultCompiler = "ghc9102";
     # Used for cross compilation, and so referenced in .github/workflows/release-upload.yml. Adapt the
     # latter if you change this value.
-    crossCompilerVersion = "ghc967";
+    crossCompilerVersion = "ghc9122";
   in
     inputs.flake-utils.lib.eachSystem supportedSystems (
       system: let
@@ -200,14 +200,20 @@
                 substituteInPlace crypton-x509-system.cabal --replace 'Crypt32' 'crypt32'
               '';
             }
-            ({pkgs, ...}: {
-              packages.proto-lens-protobuf-types.components.library.build-tools = [pkgs.buildPackages.protobuf];
-              # on GCC > 14 a conversion warning became an error and needs to be silenced
-              packages.basement.components.library.configureFlags = [
-                "--hsc2hs-option=--cflag=-Wno-int-conversion"
-              ];
-              # This is only needed when doing codegen in cardano-rpc itself
-              #   packages.cardano-rpc.components.library.build-tools = [pkgs.buildPackages.protobuf];
+            ({
+              pkgs,
+              config,
+              ...
+            }: {
+              packages =
+                {
+                  basement.components.library.configureFlags = [
+                    "--hsc2hs-option=--cflag=-Wno-int-conversion"
+                  ];
+                }
+                // lib.optionalAttrs (config.packages ? proto-lens-protobuf-types) {
+                  proto-lens-protobuf-types.components.library.build-tools = [pkgs.buildPackages.protobuf];
+                };
             })
           ];
         });
