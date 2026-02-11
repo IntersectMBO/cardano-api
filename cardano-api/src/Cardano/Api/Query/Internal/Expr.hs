@@ -42,6 +42,7 @@ module Cardano.Api.Query.Internal.Expr
   , queryProposals
   , queryStakePoolDefaultVote
   , queryLedgerConfig
+  , queryDRepDelegations
   )
 where
 
@@ -524,6 +525,22 @@ queryStakePoolDefaultVote
            (Either EraMismatch L.DefaultVote)
        )
 queryStakePoolDefaultVote eon = querySbe eon . QueryStakePoolDefaultVote
+
+queryDRepDelegations
+  :: forall era block point r
+   . ConwayEraOnwards era
+  -> Set L.DRep
+  -> LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       ( Either
+           UnsupportedNtcVersionError
+           (Either EraMismatch (Map L.DRep (Set (L.Credential L.Staking))))
+       )
+queryDRepDelegations eon = querySbe eon . GetDRepDelegations
 
 querySbe
   :: Convert eon ShelleyBasedEra
