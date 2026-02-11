@@ -324,6 +324,9 @@ data QueryInShelleyBasedEra era result where
   QueryStakePoolDefaultVote
     :: Ledger.KeyHash Ledger.StakePool
     -> QueryInShelleyBasedEra era L.DefaultVote
+  GetDRepDelegations
+    :: Set Ledger.DRep
+    -> QueryInShelleyBasedEra era (Map Ledger.DRep (Set (Ledger.Credential Ledger.Staking)))
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -711,6 +714,16 @@ toConsensusQueryShelleyBased sbe = \case
             (consensusQueryInEraInMode era (Consensus.QueryStakePoolDefaultVote govActs))
       )
       sbe
+  GetDRepDelegations dreps ->
+    caseShelleyToBabbageOrConwayEraOnwards
+      ( const $
+          error "toConsensusQueryShelleyBased: GetDRepDelegations is only available in the Conway era"
+      )
+      ( const $
+          Some
+            (consensusQueryInEraInMode era (Consensus.GetDRepDelegations dreps))
+      )
+      sbe
  where
   era = toCardanoEra sbe
 
@@ -1028,6 +1041,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryStakePoolDefaultVote{} ->
       case q' of
         Consensus.QueryStakePoolDefaultVote{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    GetDRepDelegations{} ->
+      case q' of
+        Consensus.GetDRepDelegations{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
 
