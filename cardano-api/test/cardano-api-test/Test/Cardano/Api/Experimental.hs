@@ -318,7 +318,7 @@ exampleTxBodyContentExperimental era = do
               )
             ]
           & Exp.setTxOuts
-            [ Exp.obtainCommonConstraints era $ Exp.TxOut out Nothing
+            [ Exp.obtainCommonConstraints era $ Exp.TxOut out
             ]
           & Exp.setTxFee 2_000_000
   return txBodyContent
@@ -395,7 +395,6 @@ exampleOldAndNewStyleTxBodyContent era = do
                   ( Exp.obtainCommonConstraints era $
                       Ledger.mkBasicTxOut (Api.toShelleyAddr destAddress) (Ledger.valueFromList 10_000_000 [])
                   )
-                  Nothing
             ]
           & Exp.setTxFee 2_000_000
   return (txBodyContentOldApi, txBodyContentNewApi)

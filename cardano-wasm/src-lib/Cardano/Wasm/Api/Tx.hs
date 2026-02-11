@@ -56,7 +56,7 @@ import Lens.Micro ((%~), (&), (.~), (<>~))
 data UnsignedTxObject
   = forall era. UnsignedTxObject
   { unsignedTxEra :: Exp.Era era
-  , unsignedTx :: Exp.UnsignedTx era
+  , unsignedTx :: Exp.UnsignedTx (Exp.LedgerEra era)
   }
 
 deriving instance Show UnsignedTxObject

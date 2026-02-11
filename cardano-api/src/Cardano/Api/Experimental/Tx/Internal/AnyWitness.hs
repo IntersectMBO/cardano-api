@@ -7,6 +7,7 @@
 module Cardano.Api.Experimental.Tx.Internal.AnyWitness
   ( -- * Any witness (key, simple script, plutus script).
     AnyWitness (..)
+  , anyScriptWitnessToAnyWitness
   , getAnyWitnessScript
   , getAnyWitnessSimpleScript
   , getAnyWitnessPlutusLanguage
@@ -127,3 +128,9 @@ getPlutusDatum L.SPlutusV3 (SpendingScriptDatum d) = d
 getPlutusDatum L.SPlutusV4 (SpendingScriptDatum _d) = error "dijkstra"
 getPlutusDatum _ InlineDatum = Nothing
 getPlutusDatum _ NoScriptDatum = Nothing
+
+anyScriptWitnessToAnyWitness
+  :: AnyScriptWitness era
+  -> AnyWitness era
+anyScriptWitnessToAnyWitness (AnyScriptWitnessSimple s) = AnySimpleScriptWitness s
+anyScriptWitnessToAnyWitness (AnyScriptWitnessPlutus sw) = AnyPlutusScriptWitness sw
