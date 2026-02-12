@@ -44,13 +44,14 @@ import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time
 import Lens.Micro
 
-import Test.Gen.Cardano.Api.Typed (genTx)
+import Test.Gen.Cardano.Api.Typed (genAddressInEra, genTx, genTxIn)
 
 import Hedgehog (Gen, Property)
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Internal.Property qualified as H
+import Hedgehog.Range qualified as Range
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
@@ -77,6 +78,18 @@ tests =
     , testProperty
         "Roundtrip SerialiseAsRawBytes SignedTx"
         prop_roundtrip_serialise_as_raw_bytes_signed_tx
+    , testGroup
+        "calcMinFeeRecursive"
+        [ testProperty
+            "well-funded transaction always succeeds"
+            prop_calcMinFeeRecursive_well_funded_succeeds
+        , testProperty
+            "fee calculation is idempotent"
+            prop_calcMinFeeRecursive_fee_fixpoint
+        , testProperty
+            "underfunded transaction (outputs exceed inputs) always fails"
+            prop_calcMinFeeRecursive_insufficient_funds
+        ]
     ]
 
 prop_created_transaction_with_both_apis_are_the_same :: Property
@@ -494,3 +507,106 @@ prop_roundtrip_serialise_as_raw_bytes_signed_tx = H.withTests (H.TestLimit 20) $
       signedTx
       (Text.decodeUtf8 . Api.serialiseToRawBytesHex)
       (first show . Api.deserialiseFromRawBytesHex . Text.encodeUtf8)
+
+-- ---------------------------------------------------------------------------
+-- Property tests for calcMinFeeRecursive
+-- ---------------------------------------------------------------------------
+
+-- | Generates a simple lovelace-only transaction with generous UTxO funding.
+-- UTxO has 5-20 ADA, the single output has 1-3 ADA, leaving 2-19 ADA of
+-- surplus that covers any realistic fee.
+genFundedSimpleTx
+  :: Exp.Era era
+  -> Gen
+       ( Exp.UnsignedTx (Exp.LedgerEra era)
+       , L.UTxO (Exp.LedgerEra era)
+       )
+genFundedSimpleTx era = do
+  let sbe = convert era
+  txIn <- genTxIn
+  addr <- Api.toShelleyAddr <$> genAddressInEra sbe
+  fundingCoin <- L.Coin <$> Gen.integral (Range.linear 5_000_000 20_000_000)
+  sendCoin <- L.Coin <$> Gen.integral (Range.linear 1_000_000 3_000_000)
+  let ledgerTxIn = Api.toShelleyTxIn txIn
+      fundingTxOut =
+        Exp.obtainCommonConstraints era $
+          L.mkBasicTxOut addr (L.MaryValue fundingCoin mempty)
+      utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
+      sendTxOut =
+        Exp.obtainCommonConstraints era $
+          Exp.TxOut $
+            Exp.obtainCommonConstraints era $
+              Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [sendTxOut]
+          & Exp.setTxFee 0
+  return (Exp.makeUnsignedTx era txBodyContent, utxo)
+
+-- | Generates a simple lovelace-only transaction where the single output
+-- (5-10 ADA) greatly exceeds the UTxO funding (0.5-2 ADA).
+genUnderfundedTx
+  :: forall era
+   . Exp.Era era
+  -> Gen
+       ( Exp.UnsignedTx (Exp.LedgerEra era)
+       , L.UTxO (Exp.LedgerEra era)
+       )
+genUnderfundedTx era = do
+  let sbe = convert era
+  txIn <- genTxIn
+  addr <- Api.toShelleyAddr <$> genAddressInEra sbe
+  fundingCoin <- L.Coin <$> Gen.integral (Range.linear 500_000 2_000_000)
+  sendCoin <- L.Coin <$> Gen.integral (Range.linear 5_000_000 10_000_000)
+  let ledgerTxIn = Api.toShelleyTxIn txIn
+      fundingTxOut =
+        Exp.obtainCommonConstraints era $
+          L.mkBasicTxOut addr (L.MaryValue fundingCoin mempty)
+      utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
+      sendTxOut =
+        Exp.obtainCommonConstraints era $
+          Exp.TxOut $
+            Exp.obtainCommonConstraints era $
+              Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [sendTxOut]
+          & Exp.setTxFee 0
+  return (Exp.makeUnsignedTx era txBodyContent, utxo)
+
+-- | A well-funded transaction (UTxO >> output + fee) always produces a
+-- successful positive fee calculation.
+prop_calcMinFeeRecursive_well_funded_succeeds :: Property
+prop_calcMinFeeRecursive_well_funded_succeeds = H.property $ do
+  (unsignedTx, utxo) <- H.forAll $ genFundedSimpleTx Exp.ConwayEra
+  case Exp.calcMinFeeRecursive unsignedTx utxo exampleProtocolParams 0 of
+    Left err -> H.annotateShow err >> H.failure
+    Right (Exp.UnsignedTx resultLedgerTx) -> do
+      let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
+      H.assert $ resultFee > L.Coin 0
+
+-- | 'calcMinFeeRecursive' is idempotent: applying it to its own result
+-- yields the same 'UnsignedTx'.  This confirms the fee has reached a
+-- fixed point and that any surplus was already distributed to outputs.
+prop_calcMinFeeRecursive_fee_fixpoint :: Property
+prop_calcMinFeeRecursive_fee_fixpoint = H.property $ do
+  (unsignedTx, utxo) <- H.forAll $ genFundedSimpleTx Exp.ConwayEra
+  case Exp.calcMinFeeRecursive unsignedTx utxo exampleProtocolParams 0 of
+    Left _ -> H.success
+    Right resultTx -> do
+      secondResult <-
+        H.evalEither $
+          Exp.calcMinFeeRecursive resultTx utxo exampleProtocolParams 0
+      resultTx H.=== secondResult
+
+-- | When the outputs exceed the UTxO value the function returns
+-- 'Left (NotEnoughAda _)' with a negative deficit coin.
+prop_calcMinFeeRecursive_insufficient_funds :: Property
+prop_calcMinFeeRecursive_insufficient_funds = H.property $ do
+  (unsignedTx, utxo) <- H.forAll $ genUnderfundedTx Exp.ConwayEra
+  case Exp.calcMinFeeRecursive unsignedTx utxo exampleProtocolParams 0 of
+    Left (Exp.NotEnoughAda deficit) -> H.assert $ deficit < L.Coin 0
+    Left Exp.NoTxOuts -> H.annotate "Unexpected NoTxOuts error" >> H.failure
+    Right _ -> H.failure

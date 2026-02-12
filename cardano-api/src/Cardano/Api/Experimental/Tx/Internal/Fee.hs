@@ -660,7 +660,10 @@ evaluateTransactionFee
 evaluateTransactionFee pp (UnsignedTx tx) keywitcount byronwitcount refScriptsSize =
   L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount) refScriptsSize
 
-newtype RecursiveFeeCalculationError = NotEnoughAda Coin deriving (Show, Eq)
+data RecursiveFeeCalculationError
+  = NotEnoughAda Coin
+  | NoTxOuts
+  deriving (Show, Eq)
 
 instance Error RecursiveFeeCalculationError where
   prettyError (NotEnoughAda balance) =
@@ -669,6 +672,8 @@ instance Error RecursiveFeeCalculationError where
       , pretty balance
       , "\nThis means that the transaction does not have enough ada to cover the fees. The usual solution is to provide more inputs, or inputs with more ada."
       ]
+  prettyError NoTxOuts =
+    "The transaction has no outputs. At least one output is required to balance the transaction."
 
 calcMinFeeRecursive
   :: forall era
@@ -684,10 +689,10 @@ calcMinFeeRecursive unSignTx@(UnsignedTx ledgerTx) utxo pparams nExtraWitnesses
       -- We have reached the minimum fee but there isn't a guarantee that
       -- the inputs/outputs are balanced
       return unSignTx
-  | minFee == txBodyFee && txBalanceCoin > 0 =
+  | minFee == txBodyFee && txBalanceCoin > 0 = do
       -- We have a surplus balance so we modify the outputs to include it.
-      let balancedOuts = balanceTxOuts txBalanceValue unSignTx
-          updatedTx = UnsignedTx (ledgerTx & L.bodyTxL . L.outputsTxBodyL .~ Seq.fromList balancedOuts)
+      balancedOuts <- balanceTxOuts txBalanceValue unSignTx
+      let updatedTx = UnsignedTx (ledgerTx & L.bodyTxL . L.outputsTxBodyL .~ Seq.fromList balancedOuts)
        in return updatedTx
   | txBalanceCoin < 0 = Left $ NotEnoughAda txBalanceCoin
   | otherwise =
@@ -702,13 +707,14 @@ calcMinFeeRecursive unSignTx@(UnsignedTx ledgerTx) utxo pparams nExtraWitnesses
 balanceTxOuts
   :: L.Value (LedgerEra era)
   -> UnsignedTx (LedgerEra era)
-  -> [L.TxOut (LedgerEra era)]
+  -> Either RecursiveFeeCalculationError [L.TxOut (LedgerEra era)]
 balanceTxOuts txBalance (UnsignedTx tx) =
   let outs = toList $ tx ^. L.bodyTxL . L.outputsTxBodyL
-      split = List.uncons outs
-      (h, rest) = maybe (error "calcMinFeeRecursive: No outs!") id split
-      updatedout = h & L.valueTxOutL %~ (<> txBalance)
-   in updatedout : rest
+   in case List.uncons outs of
+        Nothing -> Left NoTxOuts
+        Just (h, rest) ->
+          let updatedout = h & L.valueTxOutL %~ (<> txBalance)
+           in Right $ updatedout : rest
 
 -- Essentially we check for the existence of collateral inputs. If they exist we
 -- create a fictitious collateral return output. Why? Because we need to put dummy values
