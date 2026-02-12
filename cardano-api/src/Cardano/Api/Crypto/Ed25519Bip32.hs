@@ -40,13 +40,13 @@ instance DSIGNAlgorithm Ed25519Bip32DSIGN where
   type SeedSizeDSIGN Ed25519Bip32DSIGN = 32
 
   -- \| BIP32-Ed25519 extended verification key size is 64 octets.
-  type SizeVerKeyDSIGN Ed25519Bip32DSIGN = 64
+  type VerKeySizeDSIGN Ed25519Bip32DSIGN = 64
 
   -- \| BIP32-Ed25519 extended signing key size is 96 octets.
-  type SizeSignKeyDSIGN Ed25519Bip32DSIGN = 96
+  type SignKeySizeDSIGN Ed25519Bip32DSIGN = 96
 
   -- \| BIP32-Ed25519 extended signature size is 64 octets.
-  type SizeSigDSIGN Ed25519Bip32DSIGN = 64
+  type SigSizeDSIGN Ed25519Bip32DSIGN = 64
 
   --
   -- Key and signature types

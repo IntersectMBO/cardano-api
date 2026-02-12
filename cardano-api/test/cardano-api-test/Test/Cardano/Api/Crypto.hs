@@ -76,15 +76,15 @@ testDSIGNAlgorithm _ n =
             [ testProperty "VerKey" $
                 prop_size_serialise @(VerKeyDSIGN v)
                   rawSerialiseVerKeyDSIGN
-                  (sizeVerKeyDSIGN (Proxy @v))
+                  (verKeySizeDSIGN (Proxy @v))
             , testProperty "SignKey" $
                 prop_size_serialise @(SignKeyDSIGN v)
                   rawSerialiseSignKeyDSIGN
-                  (sizeSignKeyDSIGN (Proxy @v))
+                  (signKeySizeDSIGN (Proxy @v))
             , testProperty "Sig" $
                 prop_size_serialise @(SigDSIGN v)
                   rawSerialiseSigDSIGN
-                  (sizeSigDSIGN (Proxy @v))
+                  (sigSizeDSIGN (Proxy @v))
             ]
         , testGroup
             "direct CBOR"
