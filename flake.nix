@@ -14,6 +14,7 @@
     # blst fails to build for x86_64-darwin
     # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     nixpkgs.url = "github:NixOS/nixpkgs/11cb3517b3af6af300dd6c055aeda73c9bf52c48";
+    unstable.url = "nixpkgs/nixos-unstable";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
@@ -43,10 +44,12 @@
     ];
 
     # see flake `variants` below for alternative compilers
-    defaultCompiler = "ghc9102";
-    # Used for cross compilation, and so referenced in .github/workflows/release-upload.yml. Adapt the
-    # latter if you change this value.
-    crossCompilerVersion = "ghc9122";
+    # this is used to build cardano-node on linux, so we test against it
+    stableCompiler = "ghc967";
+    # this is our main compiler for development
+    defaultCompiler = "ghc9122";
+    # Used for cross compilation for windows.
+    crossCompilerVersion = defaultCompiler;
   in
     inputs.flake-utils.lib.eachSystem supportedSystems (
       system: let
@@ -59,9 +62,16 @@
                 buildInputs = previousAttrs.buildInputs ++ [prev.pkgs.windows.mingw_w64_pthreads];
               });
             };
+          unstableOverlay = final: prev: {
+            unstable = import inputs.unstable {
+              inherit system;
+              inherit (inputs.haskellNix) config;
+            };
+          };
         in
           import inputs.nixpkgs {
             overlays = [
+              unstableOverlay
               # iohkNix.overlays.crypto provide libsodium-vrf, libblst and libsecp256k1.
               inputs.iohkNix.overlays.crypto
               # haskellNix.overlay can be configured by later overlays, so need to come before them.
@@ -142,18 +152,18 @@
           # tools we want in our shell, from hackage
           shell.tools =
             {
-              cabal = "3.14.1.1";
+              cabal = "3.16.1.0";
             }
             // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
               # tools that work only with default compiler
               ghcid = "0.8.9";
-              cabal-gild = "1.3.1.2";
+              cabal-gild = "1.7.0.1";
               fourmolu = "0.18.0.0";
               haskell-language-server = "2.11.0.0";
               hlint = "3.10";
             };
           # and from nixpkgs or other inputs
-          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go actionlint shellcheck snappy protobuf buf blst];
+          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go unstable.actionlint shellcheck snappy protobuf buf blst];
           # disable Hoogle until someone request it
           shell.withHoogle = false;
           # Skip cross compilers for the shell
@@ -221,9 +231,16 @@
         flake = cabalProject.flake (
           lib.optionalAttrs (system == "x86_64-linux") {
             # on linux, build/test other supported compilers
-            variants = lib.genAttrs [crossCompilerVersion] (compiler-nix-name: {
-              inherit compiler-nix-name;
-            });
+            variants = let
+              # on windows we're using defaultCompiler only - stableCompiler makes ghc-iserv flaky
+              osDependentStableCompiler =
+                if nixpkgs.stdenv.hostPlatform.isWindows
+                then defaultCompiler
+                else stableCompiler;
+            in
+              lib.genAttrs [osDependentStableCompiler crossCompilerVersion] (compiler-nix-name: {
+                inherit compiler-nix-name;
+              });
           }
         );
         # wasm shell

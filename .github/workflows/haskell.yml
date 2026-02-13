@@ -20,19 +20,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["9.6", "9.10"]
-        cabal: ["3.14"]
+        ghc: [&ghc-stable "9.6", "9.10", &ghc-latest "9.12"]
+        cabal: [&cabal-version "3.16"]
         sys:
-          - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }
           - { os: ubuntu-latest, shell: bash }
         include:
           # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
           # We want a single job, because macOS runners are scarce.
-          - cabal: "3.12"
-            ghc: "9.6"
+          - ghc: *ghc-stable
+            cabal: *cabal-version
             sys:
               os: macos-latest
               shell: bash
+          - ghc: *ghc-latest
+            cabal: *cabal-version
+            sys:
+              os: windows-latest
+              shell: 'C:/msys64/usr/bin/bash.exe -e {0}'
 
     defaults:
         run:
@@ -81,11 +85,11 @@ jobs:
         use-sodium-vrf: true # default is true
 
     - name: "[Linux] Install grpc dependencies"
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && matrix.ghc != '9.12'
       run: sudo apt install libsnappy-dev protobuf-compiler
 
     - name: "[Windows] Install grpc dependencies"
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && matrix.ghc != '9.12'
       run: |
         /usr/bin/pacman --noconfirm -S mingw-w64-x86_64-snappy mingw-w64-x86_64-protobuf
         cat <<EOF >> $GITHUB_ENV
@@ -94,7 +98,7 @@ jobs:
         EOF
 
     - name: "[macOS] Install grpc dependencies"
-      if: runner.os == 'macOS'
+      if: runner.os == 'macOS' && matrix.ghc != '9.12'
       run: |
         brew install snappy protobuf
         SNAPPY_PREFIX=$(brew --prefix snappy)
@@ -114,23 +118,23 @@ jobs:
 
 
     - name: '[Linux] [cardano-rpc] Install buf'
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && matrix.ghc != '9.12'
       run: |
         curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-Linux-x86_64" -o "/usr/local/bin/buf"
         chmod +x /usr/local/bin/buf
 
     - name: '[Linux] [cardano-rpc] Install proto-lens-protoc'
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && matrix.ghc != '9.12'
       run: |
         cabal install proto-lens-protoc --installdir=$HOME/.local/bin
 
     - name: '[Linux] [cardano-rpc] Generate protobuf code'
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && matrix.ghc != '9.12'
       working-directory: cardano-rpc
       run: buf generate proto
 
     - name: '[Linux] [cardano-rpc] Check that generated files from proto definitions are up to date'
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && matrix.ghc != '9.12'
       run: |
         git add cardano-rpc/gen
         if ! git diff --staged --quiet -- cardano-rpc/gen; then
