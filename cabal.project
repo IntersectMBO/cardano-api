@@ -13,14 +13,14 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-12-02T22:23:29Z
-  , cardano-haskell-packages 2026-02-09T12:34:49Z
+  , hackage.haskell.org 2026-02-06T20:27:32Z
+  , cardano-haskell-packages 2026-02-12T12:47:38Z
 
 packages:
     cardano-api
     cardano-api-gen
     cardano-wasm
-    cardano-rpc
+    -- cardano-rpc
 
 extra-packages: Cabal
 
@@ -52,9 +52,9 @@ jobs: $ncpus
 semaphore: True
 
 if impl (ghc >= 9.12)
-  allow-newer:
-    -- https://github.com/kapralVV/Unique/issues/11
-    , Unique:hashable
+  constraints:
+    -- haskell.nix patch does not work for 1.6.8
+    , any.crypton-x509-system < 1.6.8
 
 -- WASM compilation specific
 
