@@ -3,7 +3,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -17,6 +16,7 @@ where
 
 import Cardano.Api
 import Cardano.Api.Experimental.Era
+import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
 import Cardano.Rpc.Server.Internal.Monad
@@ -52,8 +52,8 @@ readParamsMethod _req = do
 
   pure $
     def
-      & #ledgerTip .~ mkChainPointMsg chainPoint blockNo
-      & #values . #cardano .~ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
+      & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo
+      & U5c.values . U5c.cardano .~ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
 
 readUtxosMethod
   :: MonadRpc e m
@@ -61,11 +61,11 @@ readUtxosMethod
   -> m (Proto UtxoRpc.ReadUtxosResponse)
 readUtxosMethod req = do
   utxoFilter <-
-    if not (null $ req ^. #keys)
-      then QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. #keys)
+    if not (null $ req ^. U5c.keys)
+      then QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. U5c.keys)
       -- TODO: reimplement this part as SearchUtxosRequest
-      -- \| Just addressesProto <- req ^. #maybe'cardanoAddresses ->
-      --     QueryUTxOByAddress . fromList <$> mapM readAddress (addressesProto ^. #items)
+      -- \| Just addressesProto <- req ^. U5c.maybe'cardanoAddresses ->
+      --     QueryUTxOByAddress . fromList <$> mapM readAddress (addressesProto ^. U5c.items)
       else pure QueryUTxOWhole
 
   nodeConnInfo <- grab
@@ -81,13 +81,13 @@ readUtxosMethod req = do
 
   pure $
     defMessage
-      & #ledgerTip .~ mkChainPointMsg chainPoint blockNo
-      & #items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
+      & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo
+      & U5c.items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
  where
   txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
   txoRefToTxIn r = do
-    txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. #hash
-    pure $ TxIn txId' (TxIx . fromIntegral $ r ^. #index)
+    txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. U5c.hash
+    pure $ TxIn txId' (TxIx . fromIntegral $ r ^. U5c.index)
 
 -- TODO: reimplement this part as SearchUtxosRequest
 -- readAddress :: MonadRpc e m => ByteString -> m AddressAny

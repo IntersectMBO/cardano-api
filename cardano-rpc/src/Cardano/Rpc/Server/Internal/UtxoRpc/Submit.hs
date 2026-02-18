@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -16,6 +15,7 @@ where
 
 import Cardano.Api
 import Cardano.Api.Network.IPC qualified as Net.Tx
+import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
 import Cardano.Rpc.Server.Internal.Monad
@@ -42,11 +42,11 @@ submitTxMethod req = do
     putTraceThrowEither
       . first TraceRpcSubmitTxDecodingError
       . deserialiseTx eon
-      $ req ^. #tx . #raw
+      $ req ^. U5c.tx . U5c.raw
 
   txId' <- submitTx eon tx
 
-  pure $ def & #ref .~ serialiseToRawBytes txId'
+  pure $ def & U5c.ref .~ serialiseToRawBytes txId'
  where
   deserialiseTx :: ShelleyBasedEra era -> ByteString -> Either DecoderError (Tx era)
   deserialiseTx sbe = shelleyBasedEraConstraints sbe $ deserialiseFromCBOR asType

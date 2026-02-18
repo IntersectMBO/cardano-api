@@ -3,7 +3,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -33,7 +32,7 @@ import Network.GRPC.Spec
 import Proto.Google.Protobuf.Empty
 
 getEraMethod :: MonadRpc e m => Proto Empty -> m (Proto Rpc.CurrentEra)
-getEraMethod _ = pure . Proto $ defMessage & #era .~ Rpc.Conway
+getEraMethod _ = pure . Proto $ defMessage & Rpc.era .~ Rpc.Conway
 
 getProtocolParamsJsonMethod :: MonadRpc e m => Proto Empty -> m (Proto Rpc.ProtocolParamsJson)
 getProtocolParamsJsonMethod _ = do
@@ -52,4 +51,4 @@ getProtocolParamsJsonMethod _ = do
 
   pure $
     def
-      & #json .~ BL.toStrict pparamsJson
+      & Rpc.json .~ BL.toStrict pparamsJson
