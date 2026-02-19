@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuantifiedConstraints #-}
@@ -87,13 +88,11 @@ import Cardano.Api.Serialise.TextEnvelope.Internal
 import Cardano.Api.Tx.Internal.Body
 import Cardano.Api.UTxO (UTxO (..))
 
-import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
-import Ouroboros.Consensus.Cardano.CanHardFork ()
-import Ouroboros.Consensus.HardFork.Combinator.Ledger ()
 import Cardano.Binary qualified as CBOR
 import Cardano.Chain.Update.Validation.Interface qualified as Byron.Update
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.State.Query qualified as L
+import Cardano.Ledger.Api.State.Query qualified as Ledger
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Plain qualified as Plain
 import Cardano.Ledger.Coin qualified as L
@@ -108,15 +107,18 @@ import Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLen
 import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCrypto)
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
+import Ouroboros.Consensus.Cardano.CanHardFork ()
 import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras qualified as Consensus
+import Ouroboros.Consensus.HardFork.Combinator.Ledger ()
 import Ouroboros.Consensus.HardFork.History qualified as Consensus
 import Ouroboros.Consensus.HardFork.History qualified as History
 import Ouroboros.Consensus.HardFork.History.Qry qualified as Qry
 import Ouroboros.Consensus.Ledger.Query qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
+import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import Ouroboros.Network.Block (Serialised (..))
 import Ouroboros.Network.PeerSelection.LedgerPeers.Type qualified as Diffusion
 import Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
@@ -422,15 +424,19 @@ decodePoolDistribution sbe (Serialised ls) =
 
 newtype SerialisedStakeSnapshots era
   = SerialisedStakeSnapshots
-      (Serialised Consensus.StakeSnapshots)
+      (Serialised Ledger.StakeSnapshots)
 
-newtype StakeSnapshot era = StakeSnapshot Consensus.StakeSnapshots
+newtype StakeSnapshot era = StakeSnapshot Ledger.StakeSnapshots
+  deriving newtype (EncCBOR, DecCBOR)
 
 decodeStakeSnapshot
   :: forall era
-   . SerialisedStakeSnapshots era
+   . ShelleyBasedEra era
+  -> SerialisedStakeSnapshots era
   -> Either DecoderError (StakeSnapshot era)
-decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <$> Plain.decodeFull ls
+decodeStakeSnapshot sbe (SerialisedStakeSnapshots (Serialised ls)) =
+  shelleyBasedEraConstraints sbe $
+    decodeFull (Core.eraProtVerHigh @(ShelleyLedgerEra era)) ls
 
 decodeLedgerPeerSnapshot
   :: Consensus.ShelleyNodeToClientVersion
@@ -613,11 +619,17 @@ toConsensusQueryShelleyBased sbe = \case
           (Consensus.GetCBOR (Consensus.GetPoolState (Set.map unStakePoolKeyHash <$> poolIds)))
       )
   QueryStakeSnapshot mPoolIds ->
-    Some
-      ( consensusQueryInEraInMode
-          era
-          (Consensus.GetCBOR (Consensus.GetStakeSnapshots (fmap (Set.map unStakePoolKeyHash) mPoolIds)))
+    caseShelleyToBabbageOrConwayEraOnwards
+      (const $ error "toConsensusQueryShelleyBased: QueryStakeSnapshot is only available in the Conway era")
+      ( const $
+          ( Some
+              ( consensusQueryInEraInMode
+                  era
+                  (Consensus.GetCBOR (Consensus.GetStakeSnapshots (fmap (Set.map unStakePoolKeyHash) mPoolIds)))
+              )
+          )
       )
+      sbe
   QueryPoolDistribution poolIds ->
     Some
       (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetPoolDistr2 (getPoolIds <$> poolIds))))
