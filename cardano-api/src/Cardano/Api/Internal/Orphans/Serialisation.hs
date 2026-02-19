@@ -50,6 +50,7 @@ import Cardano.Ledger.Alonzo.Rules qualified as Alonzo
 import Cardano.Ledger.Alonzo.Rules qualified as L
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Api.State.Query qualified as Ledger
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
 import Cardano.Ledger.Babbage.Rules qualified as Babbage
 import Cardano.Ledger.Babbage.Rules qualified as L
@@ -313,18 +314,18 @@ instance Pretty L.AssetName where
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
 
-instance ToJSON Consensus.StakeSnapshots where
+instance ToJSON Ledger.StakeSnapshots where
   toJSON = object . stakeSnapshotsToPair
   toEncoding = pairs . mconcat . stakeSnapshotsToPair
 
 stakeSnapshotsToPair
-  :: Aeson.KeyValue e a => Consensus.StakeSnapshots -> [a]
+  :: Aeson.KeyValue e a => Ledger.StakeSnapshots -> [a]
 stakeSnapshotsToPair
-  Consensus.StakeSnapshots
-    { Consensus.ssStakeSnapshots
-    , Consensus.ssMarkTotal
-    , Consensus.ssSetTotal
-    , Consensus.ssGoTotal
+  Ledger.StakeSnapshots
+    { Ledger.ssStakeSnapshots
+    , Ledger.ssMarkTotal
+    , Ledger.ssSetTotal
+    , Ledger.ssGoTotal
     } =
     [ "pools" .= ssStakeSnapshots
     , "total"
@@ -335,16 +336,16 @@ stakeSnapshotsToPair
           ]
     ]
 
-instance ToJSON Consensus.StakeSnapshot where
+instance ToJSON Ledger.StakeSnapshot where
   toJSON = object . stakeSnapshotToPair
   toEncoding = pairs . mconcat . stakeSnapshotToPair
 
-stakeSnapshotToPair :: Aeson.KeyValue e a => Consensus.StakeSnapshot -> [a]
+stakeSnapshotToPair :: Aeson.KeyValue e a => Ledger.StakeSnapshot -> [a]
 stakeSnapshotToPair
-  Consensus.StakeSnapshot
-    { Consensus.ssMarkPool
-    , Consensus.ssSetPool
-    , Consensus.ssGoPool
+  Ledger.StakeSnapshot
+    { Ledger.ssMarkPool
+    , Ledger.ssSetPool
+    , Ledger.ssGoPool
     } =
     [ "stakeMark" .= ssMarkPool
     , "stakeSet" .= ssSetPool
