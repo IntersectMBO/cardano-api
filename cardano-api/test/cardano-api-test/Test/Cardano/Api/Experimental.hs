@@ -513,8 +513,11 @@ prop_roundtrip_serialise_as_raw_bytes_signed_tx = H.withTests (H.TestLimit 20) $
 -- ---------------------------------------------------------------------------
 
 -- | Generates a simple lovelace-only transaction with generous UTxO funding.
--- UTxO has 5-20 ADA, the single output has 1-3 ADA, leaving 2-19 ADA of
--- surplus that covers any realistic fee.
+-- @sendCoin@ values span different CBOR unsigned integer encoding sizes
+-- (5-byte and 9-byte), including values near the 2^32 boundary.
+-- The minimum UTxO requirement (~1 ADA) prevents values in the 1–3 byte ranges.
+-- @fundingCoin = sendCoin + surplus@, where surplus is 2–17 ADA, ensuring the
+-- transaction is always well-funded for any realistic fee.
 genFundedSimpleTx
   :: Exp.Era era
   -> Gen
@@ -525,8 +528,23 @@ genFundedSimpleTx era = do
   let sbe = convert era
   txIn <- genTxIn
   addr <- Api.toShelleyAddr <$> genAddressInEra sbe
-  fundingCoin <- L.Coin <$> Gen.integral (Range.linear 5_000_000 20_000_000)
-  sendCoin <- L.Coin <$> Gen.integral (Range.linear 1_000_000 3_000_000)
+  -- CBOR unsigned integer encoding sizes: ≤23 → 1 byte, ≤255 → 2 bytes,
+  -- ≤65535 → 3 bytes, ≤4294967295 → 5 bytes, >4294967295 → 9 bytes.
+  -- Minimum UTxO (~1 ADA = 1_000_000 lovelace) constrains sendCoin to
+  -- the 5-byte range at minimum.
+  sendCoin <-
+    L.Coin
+      <$> Gen.choice
+        [ Gen.integral (Range.linear 1_000_000 3_000_000) -- 5-byte CBOR (low)
+        , Gen.integral (Range.linear 100_000_000 500_000_000) -- 5-byte CBOR (mid)
+        , Gen.integral (Range.linear 4_290_000_000 4_300_000_000) -- near 2^32 boundary
+        , Gen.integral (Range.linear 5_000_000_000 10_000_000_000) -- 9-byte CBOR
+        ]
+  -- Surplus of 2–17 ADA ensures funding always exceeds sendCoin + fees.
+  -- Fees are typically < 1000 lovelace with test protocol parameters
+  -- (minFeeA=1, minFeeB=0).
+  surplus <- L.Coin <$> Gen.integral (Range.linear 2_000_000 17_000_000)
+  let fundingCoin = sendCoin + surplus
   let ledgerTxIn = Api.toShelleyTxIn txIn
       fundingTxOut =
         Exp.obtainCommonConstraints era $
