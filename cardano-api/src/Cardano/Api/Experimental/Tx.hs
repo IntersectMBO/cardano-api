@@ -158,6 +158,7 @@ module Cardano.Api.Experimental.Tx
   , DatumDecodingError (..)
   , legacyDatumToDatum
   , fromLegacyTxOut
+  , supplementalDatumFromLegacy
 
     -- * TxBodyContent sub type
   , TxCertificates (..)

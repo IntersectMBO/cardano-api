@@ -65,6 +65,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , DatumDecodingError (..)
   , legacyDatumToDatum
   , fromLegacyTxOut
+  , supplementalDatumFromLegacy
   )
 where
 
@@ -364,11 +365,27 @@ legacyDatumToDatum (OldApi.TxOutDatumInline _ hd) = do
 legacyDatumToDatum OldApi.TxOutDatumNone = Nothing
 
 fromLegacyTxOut
-  :: forall era. IsEra era => OldApi.TxOut CtxTx era -> Either DatumDecodingError (TxOut (LedgerEra era))
+  :: forall era
+   . IsEra era
+  => OldApi.TxOut CtxTx era
+  -> Either DatumDecodingError (TxOut (LedgerEra era), Map L.DataHash (L.Data (LedgerEra era)))
 fromLegacyTxOut tOut@(OldApi.TxOut _ _ d _) = do
   let o = OldApi.toShelleyTxOutAny (convert $ useEra @era) tOut
   newDatum :: L.Datum (LedgerEra era) <- obtainCommonConstraints (useEra @era) $ toLedgerDatum d
-  return $ obtainCommonConstraints (useEra @era) $ TxOut $ o & L.datumTxOutL .~ newDatum
+  let txOut = obtainCommonConstraints (useEra @era) $ TxOut $ o & L.datumTxOutL .~ newDatum
+      suppDats = obtainCommonConstraints (useEra @era) $ supplementalDatumFromLegacy d
+  return (txOut, suppDats)
+
+-- | Extract supplemental datum data from a legacy 'TxOutDatum'.
+-- Returns 'mempty' for non-supplemental datums.
+supplementalDatumFromLegacy
+  :: L.Era (LedgerEra era)
+  => OldApi.TxOutDatum CtxTx era
+  -> Map L.DataHash (L.Data (LedgerEra era))
+supplementalDatumFromLegacy (OldApi.TxOutSupplementalDatum _ h) =
+  let ledgerData = Api.toAlonzoData h
+   in fromList [(L.hashData ledgerData, ledgerData)]
+supplementalDatumFromLegacy _ = mempty
 
 newtype DatumDecodingError = DatumDecodingError String
   deriving (Show, Eq)
@@ -382,9 +399,7 @@ toLedgerDatum
 toLedgerDatum OldApi.TxOutDatumNone = Right L.NoDatum
 toLedgerDatum (OldApi.TxOutDatumHash _ (Api.ScriptDataHash h)) = Right $ L.DatumHash h
 toLedgerDatum (OldApi.TxOutSupplementalDatum _ h) =
-  case L.makeBinaryData $ SBS.toShort $ Api.getOriginalScriptDataBytes h of
-    Left e -> Left $ DatumDecodingError e
-    Right bd -> Right $ L.Datum bd
+  Right $ L.DatumHash (Api.unScriptDataHash $ Api.hashScriptDataBytes h)
 toLedgerDatum (OldApi.TxOutDatumInline _ h) =
   case L.makeBinaryData $ SBS.toShort $ Api.getOriginalScriptDataBytes h of
     Left e -> Left $ DatumDecodingError e
