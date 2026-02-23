@@ -51,6 +51,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , setTxProposalProcedures
   , setTxProtocolParams
   , setTxScriptValidity
+  , setTxSupplementalDatums
   , setTxTreasuryDonation
   , setTxValidityLowerBound
   , setTxValidityUpperBound
@@ -538,6 +539,9 @@ data TxBodyContent era
   -- ^ Current treasury value
   , txTreasuryDonation :: Maybe L.Coin
   -- ^ Treasury donation to perform
+  , txSupplementalDatums :: Map L.DataHash (L.Data era)
+  -- ^ Supplemental datums are datums whose hashes correspond to output datum hashes.
+  -- They are included in the transaction witness set for communication purposes only.
   }
 
 defaultTxBodyContent
@@ -565,6 +569,7 @@ defaultTxBodyContent =
     , txVotingProcedures = Nothing
     , txCurrentTreasuryValue = Nothing
     , txTreasuryDonation = Nothing
+    , txSupplementalDatums = mempty
     }
 
 extractAllIndexedPlutusScriptWitnesses
@@ -704,18 +709,18 @@ collectTxBodyScriptWitnessRequirements
   TxBodyContent
     { txIns
     , txInsReference
-    , txOuts
     , txCertificates
     , txMintValue
     , txWithdrawals
     , txVotingProcedures
     , txProposalProcedures
+    , txSupplementalDatums
     } = obtainCommonConstraints (useEra @era) $ do
     let supplementaldatums =
           TxScriptWitnessRequirements
             mempty
             mempty
-            (getDatums txInsReference txOuts)
+            (getDatums txInsReference txSupplementalDatums)
             mempty
 
     let txInWits =
@@ -756,9 +761,13 @@ obtainMonoidConstraint eon = case eon of
   ConwayEra -> id
   DijkstraEra -> id
 
--- | Extract datum:
--- 1. supplemental datums from transaction outputs
+-- | Collect datums for the transaction witness set ('TxDats'):
+-- 1. supplemental datums provided explicitly
 -- 2. datums from reference inputs
+--
+-- Supplemental datums are datums whose hashes correspond to datum hashes
+-- in transaction outputs. They are included for communication purposes only
+-- (the Alonzo ledger spec uses subset equality for these).
 --
 -- Note that this function does not check whose datum hashes are present in the reference inputs. This means if there
 -- are redundant datums in 'TxInsReference', a submission of such transaction will fail.
@@ -767,23 +776,14 @@ getDatums
    . IsEra era
   => TxInsReference (LedgerEra era)
   -- ^ reference inputs
-  -> [TxOut (LedgerEra era)]
+  -> Map L.DataHash (L.Data (LedgerEra era))
+  -- ^ supplemental datums
   -> L.TxDats (LedgerEra era)
-getDatums txInsRef txOutsFromTx = do
+getDatums txInsRef supplementalDats = do
   let TxInsReference _ datumSet = txInsRef
       refInDatums = mapMaybe extractDatumsAndHashes $ Set.toList datumSet
-      -- use only supplemental datum
-      txOutsDats =
-        [ (L.hashData d, d)
-        | TxOut txout <- txOutsFromTx
-        , d <-
-            maybeToList $ L.strictMaybeToMaybe $ txout ^. obtainCommonConstraints (useEra @era) L.dataTxOutL
-        ]
-          :: [(L.DataHash, L.Data (LedgerEra era))]
   obtainCommonConstraints (useEra @era) $
-    L.TxDats $
-      fromList $
-        refInDatums <> txOutsDats
+    L.TxDats $ fromList refInDatums <> supplementalDats
 
 -- Getters and Setters
 
@@ -849,6 +849,9 @@ setTxCurrentTreasuryValue v txBodyContent = txBodyContent{txCurrentTreasuryValue
 
 setTxTreasuryDonation :: L.Coin -> TxBodyContent era -> TxBodyContent era
 setTxTreasuryDonation v txBodyContent = txBodyContent{txTreasuryDonation = Just v}
+
+setTxSupplementalDatums :: Map L.DataHash (L.Data era) -> TxBodyContent era -> TxBodyContent era
+setTxSupplementalDatums v txBodyContent = txBodyContent{txSupplementalDatums = v}
 
 modTxOuts
   :: ([TxOut era] -> [TxOut era]) -> TxBodyContent era -> TxBodyContent era

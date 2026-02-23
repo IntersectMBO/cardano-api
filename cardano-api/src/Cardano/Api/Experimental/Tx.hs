@@ -147,6 +147,7 @@ module Cardano.Api.Experimental.Tx
   , setTxProposalProcedures
   , setTxProtocolParams
   , setTxScriptValidity
+  , setTxSupplementalDatums
   , setTxTreasuryDonation
   , setTxValidityLowerBound
   , setTxValidityUpperBound
