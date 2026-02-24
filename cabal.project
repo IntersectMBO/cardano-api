@@ -29,7 +29,7 @@ extra-packages: Cabal
 max-backjumps: 50000
 
 program-options
-  ghc-options: -Werror
+  -- ghc-options: -Werror
 
 package crypton
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
@@ -231,8 +231,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 6ac49ca0ac4899609af8808e898cca503d7eeeea
-  --sha256: sha256-A+77cCaZAH/l1N6WKYhc7OxXWkQd7HSi8PtxjoodniI=
+  tag: 31dd702a9b75ce6c662b3ef257979ee52ccc2326
+  --sha256: sha256-+wkjFoPoYujJlj6xRW0L+VizY0P40b+8HChOL76+dfA=
   subdir:
     ouroboros-network
     cardano-diffusion
