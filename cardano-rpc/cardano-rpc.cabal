@@ -1,15 +1,20 @@
 cabal-version: 3.8
 name: cardano-rpc
-version: 10.0.0.0
-synopsis: The cardano RPC interface
-description: The cardano RPC interface
-category:
-  Cardano,
-  RPC,
-  library,
-  network,
+version: 10.1.0.0
+synopsis: A gRPC server and client for interacting with the Cardano node
+description:
+  A Haskell library providing a gRPC-based RPC interface for the Cardano node,
+  implementing the UTxO RPC protocol for chain querying and transaction
+  submission.
 
-copyright: 2019-2023 Input Output Global Inc (IOG), 2023-2025 Intersect.
+category:
+  Blockchain,
+  Cardano,
+  GRPC,
+  Network,
+  RPC,
+
+copyright: 2019-2023 Input Output Global Inc (IOG), 2023-2026 Intersect.
 author: IOHK
 maintainer: operations@iohk.io
 license: Apache-2.0
