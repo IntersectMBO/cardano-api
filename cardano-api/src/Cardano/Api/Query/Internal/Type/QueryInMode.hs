@@ -442,13 +442,13 @@ decodeLedgerPeerSnapshot
   :: Consensus.ShelleyNodeToClientVersion
   -> Serialised Diffusion.SomeLedgerPeerSnapshot
   -> Either (LBS.ByteString, DecoderError) Diffusion.SomeLedgerPeerSnapshot
-decodeLedgerPeerSnapshot _ntcV (Serialised _lps) = undefined -- TODO(10.7)
--- first
---   (lps,)
---   $ Plain.decodeFullDecoder
---     "LedgerPeerSnapshot"
---     (Diffusion.decodeLedgerPeerSnapshot (Proxy :: Proxy (Consensus.CardanoBlock StandardCrypto)))
---     lps
+decodeLedgerPeerSnapshot _ntcV (Serialised lps) =
+  first
+    (lps,)
+    $ Plain.decodeFullDecoder
+      "LedgerPeerSnapshot"
+      Diffusion.decodeLedgerPeerSnapshot
+      lps
 
 toShelleyAddrSet
   :: CardanoEra era
@@ -1045,11 +1045,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         Consensus.GetProposals{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
-    QueryLedgerPeerSnapshot _peerKind -> undefined -- TODO(10.7)
-    -- case q' of
-    --   Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot _peerKind) ->
-    --     r'
-    --   _ -> fromConsensusQueryResultMismatch
+    QueryLedgerPeerSnapshot _peerKind ->
+      case q' of
+        Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot _peerKind) ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
     QueryStakePoolDefaultVote{} ->
       case q' of
         Consensus.QueryStakePoolDefaultVote{} ->
