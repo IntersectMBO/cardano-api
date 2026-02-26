@@ -94,6 +94,15 @@ import Ouroboros.Network.Protocol.LocalTxSubmission.Type qualified as Net.Tx
 import PlutusLedgerApi.Common qualified as P
 import PlutusLedgerApi.V2 qualified as V2
 
+import qualified Cardano.Ledger.Dijkstra.Rules as L
+import qualified Cardano.Ledger.Shelley.API.Mempool as Shelley (ApplyTxError (..))
+import qualified Cardano.Ledger.Allegra as Allegra (ApplyTxError (..))
+import qualified Cardano.Ledger.Mary as Mary (ApplyTxError (..))
+import qualified Cardano.Ledger.Alonzo as Alonzo (ApplyTxError (..))
+import qualified Cardano.Ledger.Babbage as Babbage (ApplyTxError (..))
+import qualified Cardano.Ledger.Conway as Conway (ApplyTxError (..))
+import qualified Cardano.Ledger.Dijkstra as Dijkstra (ApplyTxError (..))
+
 import Codec.Binary.Bech32 qualified as Bech32
 import Codec.CBOR.Read qualified as CBOR
 import Data.Aeson
@@ -248,8 +257,15 @@ instance
   where
   toJSON = genericToJSON defaultOptions
 
-instance ToJSON (L.ApplyTxError ledgerera) where
-  toJSON = undefined
+deriving newtype instance ToJSON (Shelley.ApplyTxError Consensus.ShelleyEra)
+deriving newtype instance ToJSON (Allegra.ApplyTxError Consensus.AllegraEra)
+deriving newtype instance ToJSON (Mary.ApplyTxError Consensus.MaryEra)
+deriving newtype instance ToJSON (Alonzo.ApplyTxError Consensus.AlonzoEra)
+deriving newtype instance ToJSON (Babbage.ApplyTxError Consensus.BabbageEra)
+deriving newtype instance ToJSON (Conway.ApplyTxError Consensus.ConwayEra)
+-- TODO: fix this instance when the Dijkstra era is stable in Ledger
+instance ToJSON (Dijkstra.ApplyTxError Consensus.DijkstraEra) where
+  toJSON = error "Dijkstra era is not active yet"
 
 deriving via
   ShowOf (L.Keys.VKey L.Keys.Witness)
