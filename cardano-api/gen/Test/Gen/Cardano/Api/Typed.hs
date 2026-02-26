@@ -1338,9 +1338,9 @@ genProtocolParametersUpdate era = do
   protocolUpdatePrices <- Gen.maybe genExecutionUnitPrices
   protocolUpdateMaxTxExUnits <- Gen.maybe genExecutionUnits
   protocolUpdateMaxBlockExUnits <- Gen.maybe genExecutionUnits
-  protocolUpdateMaxValueSize <- Gen.maybe genNat
-  protocolUpdateCollateralPercent <- Gen.maybe genNat
-  protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
+  protocolUpdateMaxValueSize <- Gen.maybe genWord32
+  protocolUpdateCollateralPercent <- Gen.maybe genWord16
+  protocolUpdateMaxCollateralInputs <- Gen.maybe genWord16
   protocolUpdateUTxOCostPerByte <-
     inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
 

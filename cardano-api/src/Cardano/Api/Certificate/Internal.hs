@@ -793,74 +793,12 @@ fromShelleyPoolParams
         . Ledger.dnsToText
 
 fromShelleyStakePoolState
-  :: Ledger.KeyHash Ledger.StakePool
+  :: Ledger.Network
+  -> Ledger.KeyHash Ledger.StakePool
   -> Ledger.StakePoolState
   -> StakePoolParameters
-fromShelleyStakePoolState
-  poolId
-  Ledger.StakePoolState
-    { Ledger.spsVrf
-    , Ledger.spsPledge
-    , Ledger.spsCost
-    , Ledger.spsMargin
-    , Ledger.spsAccountAddress
-    , Ledger.spsOwners
-    , Ledger.spsRelays
-    , Ledger.spsMetadata
-    } =
-    StakePoolParameters
-      { stakePoolId = StakePoolKeyHash poolId
-      , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash spsVrf)
-      , stakePoolCost = spsCost
-      , stakePoolMargin = Ledger.unboundRational spsMargin
-      , stakePoolRewardAccount = StakeAddress undefined spsAccountAddress -- TODO the Network argument was removed in Ledger
-      , stakePoolPledge = spsPledge
-      , stakePoolOwners = map StakeKeyHash (toList spsOwners)
-      , stakePoolRelays =
-          map
-            fromShelleyStakePoolRelay
-            (toList spsRelays)
-      , stakePoolMetadata =
-          fromShelleyPoolMetadata
-            <$> Ledger.strictMaybeToMaybe spsMetadata
-      }
-   where
-    fromShelleyStakePoolRelay :: Ledger.StakePoolRelay -> StakePoolRelay
-    fromShelleyStakePoolRelay (Ledger.SingleHostAddr mport mipv4 mipv6) =
-      StakePoolRelayIp
-        (Ledger.strictMaybeToMaybe mipv4)
-        (Ledger.strictMaybeToMaybe mipv6)
-        (fromIntegral . Ledger.portToWord16 <$> Ledger.strictMaybeToMaybe mport)
-    fromShelleyStakePoolRelay (Ledger.SingleHostName mport dnsname) =
-      StakePoolRelayDnsARecord
-        (fromShelleyDnsName dnsname)
-        (fromIntegral . Ledger.portToWord16 <$> Ledger.strictMaybeToMaybe mport)
-    fromShelleyStakePoolRelay (Ledger.MultiHostName dnsname) =
-      StakePoolRelayDnsSrvRecord
-        (fromShelleyDnsName dnsname)
-
-    fromShelleyPoolMetadata :: Ledger.PoolMetadata -> StakePoolMetadataReference
-    fromShelleyPoolMetadata
-      Ledger.PoolMetadata
-        { Ledger.pmUrl
-        , Ledger.pmHash
-        } =
-        StakePoolMetadataReference
-          { stakePoolMetadataURL = Ledger.urlToText pmUrl
-          , stakePoolMetadataHash =
-              StakePoolMetadataHash
-                . fromMaybe (error "fromShelleyPoolMetadata: invalid hash. TODO: proper validation")
-                . Ledger.hashFromBytes
-                . SBS.fromShort
-                . byteArrayToShortByteString
-                $ pmHash
-          }
-
-    -- TODO: change the ledger rep of the DNS name to use ShortByteString
-    fromShelleyDnsName :: Ledger.DnsName -> ByteString
-    fromShelleyDnsName =
-      Text.encodeUtf8
-        . Ledger.dnsToText
+fromShelleyStakePoolState networkId poolId =
+  fromShelleyPoolParams . Ledger.stakePoolStateToStakePoolParams networkId poolId
 
 data AnchorDataFromCertificateError
   = InvalidPoolMetadataHashError Ledger.Url ByteArray

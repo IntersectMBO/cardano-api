@@ -229,7 +229,7 @@ data IntroducedInConwayPParams era
   = IntroducedInConwayPParams
   { icPoolVotingThresholds :: StrictMaybe Ledger.PoolVotingThresholds
   , icDRepVotingThresholds :: StrictMaybe Ledger.DRepVotingThresholds
-  , icMinCommitteeSize :: StrictMaybe Natural
+  , icMinCommitteeSize :: StrictMaybe Word16
   , icCommitteeTermLength :: StrictMaybe Ledger.EpochInterval
   , icGovActionLifetime :: StrictMaybe Ledger.EpochInterval
   , icGovActionDeposit :: StrictMaybe Ledger.Coin
@@ -394,9 +394,9 @@ data AlonzoOnwardsPParams ledgerera
   , alPrices :: StrictMaybe Alonzo.Prices
   , alMaxTxExUnits :: StrictMaybe Alonzo.ExUnits
   , alMaxBlockExUnits :: StrictMaybe Alonzo.ExUnits
-  , alMaxValSize :: StrictMaybe Natural
-  , alCollateralPercentage :: StrictMaybe Natural
-  , alMaxCollateralInputs :: StrictMaybe Natural
+  , alMaxValSize :: StrictMaybe Word32
+  , alCollateralPercentage :: StrictMaybe Word16
+  , alMaxCollateralInputs :: StrictMaybe Word16
   }
   deriving Show
 
@@ -730,16 +730,16 @@ data ProtocolParametersUpdate
   -- ^ Max total script execution resources units allowed per block
   --
   -- /Introduced in Alonzo/
-  , protocolUpdateMaxValueSize :: Maybe Natural
+  , protocolUpdateMaxValueSize :: Maybe Word32
   -- ^ Max size of a 'Value' in a tx output.
   --
   -- /Introduced in Alonzo/
-  , protocolUpdateCollateralPercent :: Maybe Natural
+  , protocolUpdateCollateralPercent :: Maybe Word16
   -- ^ The percentage of the script contribution to the txfee that must be
   -- provided as collateral inputs when including Plutus scripts.
   --
   -- /Introduced in Alonzo/
-  , protocolUpdateMaxCollateralInputs :: Maybe Natural
+  , protocolUpdateMaxCollateralInputs :: Maybe Word16
   -- ^ The maximum number of collateral inputs allowed in a transaction.
   --
   -- /Introduced in Alonzo/

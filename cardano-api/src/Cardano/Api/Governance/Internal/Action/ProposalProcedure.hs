@@ -131,7 +131,7 @@ fromGovernanceAction = \case
     InitiateHardfork prevGovId pVer
   Gov.TreasuryWithdrawals withdrawlMap govPolicy ->
     let res =
-          [ (L.aaNetworkId rwdAcnt, fromShelleyStakeCredential (L.unAccountId $ L.aaAccountId rwdAcnt), coin)
+          [ (L.aaNetworkId rwdAcnt, fromShelleyStakeCredential (L.unAccountId $ L.aaId rwdAcnt), coin)
           | (rwdAcnt, coin) <- toList withdrawlMap
           ]
      in TreasuryWithdrawal res govPolicy
@@ -217,7 +217,7 @@ fromProposalProcedure sbe (Proposal pp) =
   shelleyBasedEraConstraints
     sbe
     ( Gov.pProcDeposit pp
-    , fromShelleyStakeCredential (L.unAccountId $ L.aaAccountId (Gov.pProcReturnAddr pp))
+    , fromShelleyStakeCredential (L.unAccountId $ L.aaId (Gov.pProcReturnAddr pp))
     , fromGovernanceAction (Gov.pProcGovAction pp)
     )
 

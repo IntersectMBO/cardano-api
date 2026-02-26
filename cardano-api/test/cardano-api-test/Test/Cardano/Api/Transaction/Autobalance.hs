@@ -576,7 +576,7 @@ prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
           , L.pProcReturnAddr =
               L.AccountAddress
                 { L.aaNetworkId = L.Testnet
-                , L.aaAccountId =
+                , L.aaId =
                     L.AccountId $ mkCredential "keyHash-0b1b872f7953bccfc4245f3282b3363f3d19e9e001a5c41e307363d7"
                 }
           , L.pProcGovAction = L.InfoAction

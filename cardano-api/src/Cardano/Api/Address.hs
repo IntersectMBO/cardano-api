@@ -648,7 +648,7 @@ toShelleyStakeAddr :: StakeAddress -> Shelley.AccountAddress
 toShelleyStakeAddr (StakeAddress nw sc) =
   Shelley.AccountAddress
     { Shelley.aaNetworkId = nw
-    , Shelley.aaAccountId = Shelley.AccountId sc
+    , Shelley.aaId = Shelley.AccountId sc
     }
 
 toShelleyPaymentCredential
