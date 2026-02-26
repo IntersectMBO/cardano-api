@@ -66,19 +66,15 @@ methodsUtxoRpcSubmit =
 
 runRpcServer
   :: Tracer IO TraceRpc
-  -> IO (RpcConfig, NetworkMagic)
-  -- ^ action which reloads RPC configuration
+  -> (RpcConfig, NetworkMagic)
   -> IO ()
-runRpcServer tracer loadRpcConfig = handleFatalExceptions $ do
-  ( rpcConfig@RpcConfig
-      { isEnabled = Identity isEnabled
-      , rpcSocketPath = Identity (File rpcSocketPathFp)
-      , nodeSocketPath = Identity nodeSocketPath
-      }
-    , networkMagic
-    ) <-
-    loadRpcConfig
-  let config =
+runRpcServer tracer (rpcConfig, networkMagic) = handleFatalExceptions $ do
+  let RpcConfig
+        { isEnabled = Identity isEnabled
+        , rpcSocketPath = Identity (File rpcSocketPathFp)
+        , nodeSocketPath = Identity nodeSocketPath
+        } = rpcConfig
+      config =
         ServerConfig
           { serverInsecure = Just $ InsecureUnix rpcSocketPathFp
           , serverSecure = Nothing
@@ -89,10 +85,6 @@ runRpcServer tracer loadRpcConfig = handleFatalExceptions $ do
           , tracer = natTracer liftIO tracer
           , rpcLocalNodeConnectInfo = mkLocalNodeConnectInfo nodeSocketPath networkMagic
           }
-
-  -- TODO this is logged by node configuration already, so it would make sense to log it again when
-  -- configuration gets reloaded
-  -- traceWith tracer $ "RPC configuration: " <> show rpcConfig
 
   when isEnabled $
     runRIO rpcEnv $
