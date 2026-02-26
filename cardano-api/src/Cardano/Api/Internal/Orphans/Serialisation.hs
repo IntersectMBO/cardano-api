@@ -44,13 +44,16 @@ import Cardano.Chain.Update.Validation.Interface qualified as L.Interface
 import Cardano.Chain.Update.Validation.Registration qualified as L.Registration
 import Cardano.Chain.Update.Validation.Voting qualified as L.Voting
 import Cardano.Crypto.Hash qualified as Crypto
+import Cardano.Ledger.Allegra qualified as Allegra (ApplyTxError (..))
 import Cardano.Ledger.Allegra.Rules qualified as L
+import Cardano.Ledger.Alonzo qualified as Alonzo (ApplyTxError (..))
 import Cardano.Ledger.Alonzo.PParams qualified as Ledger
 import Cardano.Ledger.Alonzo.Rules qualified as Alonzo
 import Cardano.Ledger.Alonzo.Rules qualified as L
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.State.Query qualified as Ledger
+import Cardano.Ledger.Babbage qualified as Babbage (ApplyTxError (..))
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
 import Cardano.Ledger.Babbage.Rules qualified as Babbage
 import Cardano.Ledger.Babbage.Rules qualified as L
@@ -60,16 +63,21 @@ import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Plain qualified as Plain
 import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Conway qualified as Conway (ApplyTxError (..))
 import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.Conway.Rules qualified as L
 import Cardano.Ledger.Conway.TxCert qualified as L
 import Cardano.Ledger.Core qualified as L hiding (KeyHash)
+import Cardano.Ledger.Dijkstra qualified as Dijkstra (ApplyTxError (..))
+import Cardano.Ledger.Dijkstra.Rules qualified as L
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes qualified as L hiding (KeyHash)
 import Cardano.Ledger.Keys qualified as L.Keys
+import Cardano.Ledger.Mary qualified as Mary (ApplyTxError (..))
 import Cardano.Ledger.Mary.Value qualified as L
 import Cardano.Ledger.Plutus.Language qualified as L
 import Cardano.Ledger.Shelley.API.Mempool qualified as L
+import Cardano.Ledger.Shelley.API.Mempool qualified as Shelley (ApplyTxError (..))
 import Cardano.Ledger.Shelley.PParams qualified as Ledger
 import Cardano.Ledger.Shelley.Rules qualified as L
 import Cardano.Ledger.Shelley.TxBody qualified as L
@@ -248,8 +256,21 @@ instance
   where
   toJSON = genericToJSON defaultOptions
 
-instance ToJSON (L.ApplyTxError ledgerera) where
-  toJSON = undefined
+deriving newtype instance ToJSON (Shelley.ApplyTxError Consensus.ShelleyEra)
+
+deriving newtype instance ToJSON (Allegra.ApplyTxError Consensus.AllegraEra)
+
+deriving newtype instance ToJSON (Mary.ApplyTxError Consensus.MaryEra)
+
+deriving newtype instance ToJSON (Alonzo.ApplyTxError Consensus.AlonzoEra)
+
+deriving newtype instance ToJSON (Babbage.ApplyTxError Consensus.BabbageEra)
+
+deriving newtype instance ToJSON (Conway.ApplyTxError Consensus.ConwayEra)
+
+-- TODO: fix this instance when the Dijkstra era is stable in Ledger
+instance ToJSON (Dijkstra.ApplyTxError Consensus.DijkstraEra) where
+  toJSON = error "Dijkstra era is not active yet"
 
 deriving via
   ShowOf (L.Keys.VKey L.Keys.Witness)
