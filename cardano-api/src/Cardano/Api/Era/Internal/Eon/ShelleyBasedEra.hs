@@ -242,6 +242,7 @@ type ShelleyBasedEraConstraints era =
   , IsCardanoEra era
   , IsShelleyBasedEra era
   , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
+  , ToJSON (Consensus.ApplyTxError (ShelleyLedgerEra era))
   , ToJSON (L.PredicateFailure (L.EraRule "LEDGER" (ShelleyLedgerEra era)))
   , Typeable era
   , (era == ByronEra) ~ False
