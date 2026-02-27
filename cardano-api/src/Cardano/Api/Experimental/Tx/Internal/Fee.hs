@@ -733,6 +733,7 @@ substituteExecutionUnits
                     txVotingProcedures
                     _
                     _
+                    _
                   ) = do
     mappedTxIns <- mapScriptWitnessesTxIns txIns
     mappedWithdrawals <- mapScriptWitnessesWithdrawals txWithdrawals
