@@ -798,7 +798,8 @@ getDatums txInsRef supplementalDats = do
   let TxInsReference _ datumSet = txInsRef
       refInDatums = mapMaybe extractDatumsAndHashes $ Set.toList datumSet
   obtainCommonConstraints (useEra @era) $
-    L.TxDats $ fromList refInDatums <> supplementalDats
+    L.TxDats $
+      fromList refInDatums <> supplementalDats
 
 -- Getters and Setters
 
