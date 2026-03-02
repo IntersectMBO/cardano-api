@@ -1,5 +1,14 @@
 # Changelog for cardano-api
 
+## 10.24.1.0
+
+- Fix supplemental datum handling in experimental API. `toLedgerDatum` now correctly
+  produces `DatumHash` for supplemental datums instead of inline `Datum` representation.
+- `getDatums` uses new explicit `txSupplementalDatums` field instead of extracting from
+  outputs, which incorrectly included inline datums in `TxDats`.
+  (bugfix)
+  [PR 1112](https://github.com/IntersectMBO/cardano-api/pull/1112)
+
 ## 10.24.0.0
 
 - TxBodyContent refactoring related fixes
