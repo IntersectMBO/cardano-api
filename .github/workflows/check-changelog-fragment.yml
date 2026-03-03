@@ -1,0 +1,142 @@
+name: Check Changelog Fragment
+
+on:
+  merge_group:
+  pull_request:
+    types: [opened, edited, synchronize, ready_for_review]
+
+jobs:
+  check-fragment:
+    name: Changelog fragment present and valid
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip on merge_group
+        if: github.event_name == 'merge_group'
+        run: echo "Skipping changelog check on merge_group"
+
+      - uses: actions/checkout@v4
+        if: github.event_name != 'merge_group'
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        if: github.event_name != 'merge_group'
+        run: git fetch origin ${{ github.event.pull_request.base.ref }}
+
+      - name: Find changelog fragments added in this PR
+        if: github.event_name != 'merge_group'
+        id: find-fragments
+        run: |
+          BASE="origin/${{ github.event.pull_request.base.ref }}"
+          FRAGMENTS=$(git diff --name-only --diff-filter=A "$BASE...HEAD" \
+            | grep '^\.changes/unreleased/.*\.yaml$' || true)
+
+          if [ -z "$FRAGMENTS" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            # Use random EOF delimiter to safely handle arbitrary fragment paths
+            EOF_DELIM=$(openssl rand -hex 8)
+            {
+              echo "fragments<<${EOF_DELIM}"
+              echo "$FRAGMENTS"
+              echo "${EOF_DELIM}"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail if no fragment found
+        if: >-
+          github.event_name != 'merge_group'
+          && steps.find-fragments.outputs.found == 'false'
+        run: |
+          echo "::error::No changelog fragment found in .changes/unreleased/"
+          echo ""
+          echo "Every PR must include a changie fragment. To add one, run:"
+          echo ""
+          echo "    changie new --project <package>"
+          echo ""
+          echo "and commit the generated file."
+          exit 1
+
+      - name: Validate fragment files
+        if: >-
+          github.event_name != 'merge_group'
+          && steps.find-fragments.outputs.found == 'true'
+        env:
+          FRAGMENTS: ${{ steps.find-fragments.outputs.fragments }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python3 << 'PYEOF'
+          import sys
+          import os
+          import yaml
+
+          VALID_KINDS = {
+              'breaking', 'feature', 'compatible', 'bugfix', 'optimisation',
+              'refactoring', 'test', 'maintenance', 'release', 'documentation',
+          }
+
+          pr_number = int(os.environ['PR_NUMBER'])
+          fragments = [f for f in os.environ['FRAGMENTS'].strip().split('\n') if f]
+          all_ok = True
+
+          for path in fragments:
+              try:
+                  with open(path) as fh:
+                      fragment = yaml.safe_load(fh)
+              except Exception as exc:
+                  print(f"::error file={path}::Failed to parse YAML: {exc}")
+                  all_ok = False
+                  continue
+
+              if not isinstance(fragment, dict):
+                  print(f"::error file={path}::Fragment must be a YAML mapping, got {type(fragment).__name__}")
+                  all_ok = False
+                  continue
+
+              errors = []
+
+              # Validate custom.Kind (comma-separated, at least one required)
+              custom = fragment.get('custom') or {}
+              kind_str = custom.get('Kind', '').strip()
+              if not kind_str:
+                  errors.append("missing required field 'custom.Kind'")
+              else:
+                  kinds = [k.strip() for k in kind_str.split(',')]
+                  invalid = [k for k in kinds if k not in VALID_KINDS]
+                  if invalid:
+                      errors.append(
+                          f"invalid kind(s): {', '.join(invalid)}; "
+                          f"must be one of: {', '.join(sorted(VALID_KINDS))}"
+                      )
+                  if not kinds or all(k == '' for k in kinds):
+                      errors.append("'custom.Kind' must contain at least one kind")
+
+              if not fragment.get('body', '').strip():
+                  errors.append("missing or empty required field 'body'")
+
+              # Validate custom.PR matches the current PR number
+              if 'PR' not in custom:
+                  errors.append("missing required field 'custom.PR' (PR number)")
+              else:
+                  fragment_pr = custom['PR']
+                  try:
+                      fragment_pr = int(fragment_pr)
+                  except (TypeError, ValueError):
+                      errors.append(f"'custom.PR' must be an integer, got: {fragment_pr!r}")
+                      fragment_pr = None
+                  if fragment_pr is not None and fragment_pr != pr_number:
+                      errors.append(
+                          f"'custom.PR' is {fragment_pr} but this is PR #{pr_number} "
+                          f"— fragment must reference the current PR"
+                      )
+
+              if errors:
+                  for err in errors:
+                      print(f"::error file={path}::{err}")
+                  all_ok = False
+              else:
+                  print(f"Fragment OK: {path} (kinds={kind_str}, PR=#{custom.get('PR')})")
+
+          sys.exit(0 if all_ok else 1)
+          PYEOF
