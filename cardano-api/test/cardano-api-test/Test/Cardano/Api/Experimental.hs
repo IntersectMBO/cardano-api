@@ -103,6 +103,9 @@ tests =
         , testProperty
             "Tiny surplus consumed by fee increase yields NotEnoughAda"
             prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada
+        , testProperty
+            "Extra lovelace beyond exact balance should not cause failure"
+            prop_calcMinFeeRecursive_extra_lovelace_should_not_fail
         ]
     ]
 
@@ -909,3 +912,119 @@ prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada = H.property $ do
       H.assert $ actual < required
     Left err -> H.annotateShow err >> H.failure
     Right _ -> H.annotate "Expected NotEnoughAda or MinUTxONotMet but tx balanced successfully" >> H.failure
+
+-- ---------------------------------------------------------------------------
+-- Bug demonstration: extra lovelace beyond exact balance causes failure
+-- ---------------------------------------------------------------------------
+
+-- | Demonstrates a bug in 'calcMinFeeRecursive': a transaction with exactly
+-- enough ADA to cover the output plus fee succeeds, but providing even 1
+-- extra lovelace causes failure.
+--
+-- Mechanism:
+--   1. With exact funding (@sendCoin + fee@), the balance is zero.
+--      'calcMinFeeRecursive' hits Case 2 and succeeds — no change output.
+--   2. With 1 extra lovelace, the balance is 1. Case 3 triggers and a
+--      new change output is appended. This increases the tx size and thus
+--      the fee. The change output is then updated:
+--      @newValue = 1 + (oldFee − newFee)@, which goes negative because
+--      the 2-output fee is higher than the 1-output fee.
+--      Result: @Left (NotEnoughAda _)@.
+--
+-- This is a bug: providing strictly more ADA should never cause a
+-- previously valid transaction to fail.
+prop_calcMinFeeRecursive_extra_lovelace_should_not_fail :: Property
+prop_calcMinFeeRecursive_extra_lovelace_should_not_fail = H.propertyOnce $ do
+  let era = Exp.ConwayEra
+
+  -- Two *distinct* addresses so that the surplus creates a NEW change
+  -- output rather than being absorbed into the existing send output.
+  let destAddr :: L.Addr
+      destAddr =
+        L.Addr
+          L.Testnet
+          (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+          (L.StakeRefBase $ L.KeyHashObj $ L.KeyHash "e37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee")
+
+      changeAddr :: L.Addr
+      changeAddr =
+        L.Addr
+          L.Testnet
+          (L.KeyHashObj $ L.KeyHash "2c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+          (L.StakeRefBase $ L.KeyHashObj $ L.KeyHash "f37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee")
+
+  -- Fixed TxIn.
+  txIn <- getExampleSrcTxId
+  let ledgerTxIn = Api.toShelleyTxIn txIn
+
+  let sendCoin = L.Coin 5_000_000
+
+  -- Transaction body content parameterised by fee.
+  let mkTxBodyContent fee =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts
+            [ Exp.obtainCommonConstraints era $
+                Exp.TxOut $
+                  Exp.obtainCommonConstraints era $
+                    Ledger.mkBasicTxOut destAddr (L.MaryValue sendCoin mempty)
+            ]
+          & Exp.setTxFee fee
+
+  -- Helper: run calcMinFeeRecursive with a given UTxO funding amount.
+  let runCalc fundingCoin =
+        let fundingTxOut =
+              Exp.obtainCommonConstraints era $
+                L.mkBasicTxOut destAddr (L.MaryValue fundingCoin mempty)
+            utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
+            unsignedTx = Exp.makeUnsignedTx era (mkTxBodyContent (L.Coin 0))
+         in Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+
+  -- Find the exact funding that gives zero balance (no change output).
+  -- evaluateTransactionFee (estimateMinFeeTx) and calcMinFeeTx (used
+  -- internally by calcMinFeeRecursive) differ, so we search upward from
+  -- a conservative lower bound to find the exact breakpoint.
+  -- Below the exact fee every attempt fails with NotEnoughAda; the first
+  -- success is the zero-balance sweet spot.
+  let findExactSurplus surplus
+        | surplus > L.Coin 500 = Nothing
+        | otherwise =
+            case runCalc (sendCoin + surplus) of
+              Right _ -> Just surplus
+              Left _ -> findExactSurplus (surplus + L.Coin 1)
+
+  exactSurplus <- H.evalMaybe $ findExactSurplus (L.Coin 100)
+  let exactFunding = sendCoin + exactSurplus
+
+  H.note_ $
+    "Exact funding (should succeed): " <> show exactFunding <> " (fee = " <> show exactSurplus <> ")"
+
+  -- === Verify: exact funding does succeed ===
+  case runCalc exactFunding of
+    Left err -> do
+      H.annotateShow err
+      H.annotate "Transaction with exact funding should succeed but didn't"
+      H.failure
+    Right _ ->
+      H.note_ "OK: Transaction with exact funding succeeded"
+
+  -- === Exact + 1 lovelace ===
+  -- The balance is 1 lovelace, which triggers a change output. Because the
+  -- change output increases the tx size (and therefore the fee), the change
+  -- amount becomes negative → the transaction fails.
+  -- This SHOULD succeed — having more money must not cause failure.
+  let extraFunding = exactFunding + L.Coin 1
+  H.note_ $ "Extra funding (exact + 1 lovelace, should also succeed): " <> show extraFunding
+  case runCalc extraFunding of
+    Left err -> do
+      H.annotateShow err
+      H.annotate $
+        "BUG: Transaction with "
+          <> show extraFunding
+          <> " (more money) fails, while transaction with "
+          <> show exactFunding
+          <> " (less money) succeeds. "
+          <> "Having more ADA should never cause a transaction to fail."
+      H.failure
+    Right _ ->
+      H.note_ "OK: Transaction with extra lovelace also succeeded (bug may be fixed)"

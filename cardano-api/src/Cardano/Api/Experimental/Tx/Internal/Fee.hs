@@ -90,7 +90,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Exts (IsList (..))
 import GHC.Stack
-import Lens.Micro ((%~), (.~), (^.))
+import Lens.Micro ((.~), (^.))
 import Prettyprinter (punctuate)
 
 data TxBodyErrorAutoBalance era
@@ -834,12 +834,16 @@ balanceTxOuts changeAddr txBalance (UnsignedTx tx) =
      in case outs of
           rest Seq.:|> lastOut
             | lastOut ^. L.addrTxOutL == changeAddr ->
-                -- Update existing change output in place
-                let updatedOut = lastOut & L.valueTxOutL %~ (<> txBalance)
-                    changeCoin = L.coin (updatedOut ^. L.valueTxOutL)
+                -- Compute the new value as a MaryValue first (which can hold
+                -- negative quantities) and check the coin BEFORE updating the
+                -- TxOut. The Babbage compact TxOut representation throws a
+                -- runtime error on negative values, so we must guard against it.
+                let currentValue = lastOut ^. L.valueTxOutL
+                    newValue = currentValue <> txBalance
+                    changeCoin = L.coin newValue
                  in if changeCoin < 0
                       then Left $ NotEnoughAda changeCoin
-                      else Right $ rest Seq.:|> updatedOut
+                      else Right $ rest Seq.:|> (lastOut & L.valueTxOutL .~ newValue)
           _ ->
             -- Append a new change output
             let changeCoin = L.coin txBalance
