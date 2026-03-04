@@ -1,0 +1,137 @@
+name: Check Changelog Fragment
+
+on:
+  merge_group:
+  pull_request:
+    types: [opened, edited, synchronize, ready_for_review, labeled, unlabeled]
+
+jobs:
+  check-fragment:
+    name: Changelog fragment present and valid
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip on merge_group
+        if: github.event_name == 'merge_group'
+        run: echo "Skipping changelog check on merge_group"
+
+      - uses: actions/checkout@v4
+        if: github.event_name != 'merge_group'
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        if: github.event_name != 'merge_group'
+        run: git fetch origin ${{ github.event.pull_request.base.ref }}
+
+      - name: Check for no-changelog label
+        if: github.event_name != 'merge_group'
+        id: check-label
+        run: |
+          labels='${{ toJSON(github.event.pull_request.labels.*.name) }}'
+          if python3 -c "
+          import sys, json
+          labels = json.loads('$labels')
+          sys.exit(0 if 'no-changelog' in labels else 1)
+          " 2>/dev/null; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "PR has 'no-changelog' label — skipping fragment check."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find changelog fragments added in this PR
+        if: github.event_name != 'merge_group' && steps.check-label.outputs.skip != 'true'
+        id: find-fragments
+        run: |
+          BASE="origin/${{ github.event.pull_request.base.ref }}"
+          FRAGMENTS=$(git diff --name-only --diff-filter=A "$BASE...HEAD" \
+            | grep '^\.changes/unreleased/.*\.yaml$' || true)
+
+          if [ -z "$FRAGMENTS" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            # Use random EOF delimiter to safely handle arbitrary fragment paths
+            EOF_DELIM=$(openssl rand -hex 8)
+            {
+              echo "fragments<<${EOF_DELIM}"
+              echo "$FRAGMENTS"
+              echo "${EOF_DELIM}"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail if no fragment found
+        if: >-
+          github.event_name != 'merge_group'
+          && steps.check-label.outputs.skip != 'true'
+          && steps.find-fragments.outputs.found == 'false'
+        run: |
+          echo "::error::No changelog fragment found in .changes/unreleased/"
+          echo ""
+          echo "Every PR that changes user-visible behaviour must include a changie fragment."
+          echo "To add one, run:"
+          echo ""
+          echo "    changie new --project <package>"
+          echo ""
+          echo "and commit the generated file."
+          echo "Add the 'no-changelog' label to skip this check for maintenance / test-only PRs."
+          exit 1
+
+      - name: Validate fragment files
+        if: >-
+          github.event_name != 'merge_group'
+          && steps.check-label.outputs.skip != 'true'
+          && steps.find-fragments.outputs.found == 'true'
+        env:
+          FRAGMENTS: ${{ steps.find-fragments.outputs.fragments }}
+        run: |
+          python3 << 'PYEOF'
+          import sys
+          import os
+          import yaml
+
+          VALID_KINDS = {'breaking', 'feature', 'compatible', 'bugfix', 'optimisation'}
+
+          fragments = [f for f in os.environ['FRAGMENTS'].strip().split('\n') if f]
+          all_ok = True
+
+          for path in fragments:
+              try:
+                  with open(path) as fh:
+                      fragment = yaml.safe_load(fh)
+              except Exception as exc:
+                  print(f"::error file={path}::Failed to parse YAML: {exc}")
+                  all_ok = False
+                  continue
+
+              if not isinstance(fragment, dict):
+                  print(f"::error file={path}::Fragment must be a YAML mapping, got {type(fragment).__name__}")
+                  all_ok = False
+                  continue
+
+              errors = []
+
+              kind = fragment.get('kind')
+              if not kind:
+                  errors.append("missing required field 'kind'")
+              elif kind not in VALID_KINDS:
+                  errors.append(
+                      f"invalid kind '{kind}'; must be one of: {', '.join(sorted(VALID_KINDS))}"
+                  )
+
+              if not fragment.get('body', '').strip():
+                  errors.append("missing or empty required field 'body'")
+
+              custom = fragment.get('custom') or {}
+              if 'PR' not in custom:
+                  errors.append("missing required field 'custom.PR' (PR number)")
+
+              if errors:
+                  for err in errors:
+                      print(f"::error file={path}::{err}")
+                  all_ok = False
+              else:
+                  print(f"Fragment OK: {path} (kind={kind}, PR={custom.get('PR')})")
+
+          sys.exit(0 if all_ok else 1)
+          PYEOF

@@ -1,4 +1,13 @@
-name: Check if PR changelog was filled correctly
+# This workflow has been superseded by check-changelog-fragment.yml, which validates
+# per-PR changie fragment files instead of parsing the PR description YAML block.
+#
+# This job is kept as a no-op pass-through so that existing branch protection rules
+# that require "check-changelog / check-changelog" to pass are not broken during the
+# transition period. It can be removed once branch protection is updated to reference
+# "check-fragment / Changelog fragment present and valid" instead.
+
+name: Check if PR changelog was filled correctly (legacy — no-op)
+
 on:
   merge_group:
   pull_request:
@@ -6,96 +15,10 @@ on:
 
 jobs:
   check-changelog:
+    name: check-changelog (superseded — see check-changelog-fragment.yml)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        if: ${{ github.event_name != 'merge_group' }}
-        with:
-          node-version: 22
-
-      - run: npm install js-yaml@4.1.0
-        if: ${{ github.event_name != 'merge_group' }}
-
-      - name: Fail if PR changelog is not correct
-        if: ${{ github.event_name != 'merge_group' }}
-        uses: actions/github-script@v8
-        id: check-changelog
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const yaml = require('js-yaml');
-            const fs   = require('fs');
-            const execSync = require('child_process').execSync;
-
-            const prDescription = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-
-            const changelogRegex = /# Changelog[\s\S]*?```yaml([\s\S]*?)```/;
-            const changelogMatch = prDescription.data.body.match(changelogRegex);
-            const yamlContent = changelogMatch ? changelogMatch[1].trim() : '';
-            yamlContent || console.error('Failed to find changelog YAML section in the "Changelog" paragraph');
-
-            try {
-              changelog = yaml.load(yamlContent)[0];
-            } catch (e) {
-              console.error('Failed to parse YAML changelog as array:', yamlContent);
-              process.exit(1);
-            }
-
-            try {
-              config = yaml.load(fs.readFileSync('.cardano-dev.yaml', 'utf8'));
-            } catch (e) {
-              console.error('Failed to load .cardano-dev.yaml config:', e);
-              process.exit(1);
-            }
-
-            let isCompatibilityValid = false;
-            if (!changelog.compatibility) {
-              isCompatibilityValid = true;
-            }
-            if (!isCompatibilityValid) {
-              console.error('Changelog field "compatibility" is deprecated and no longer used. Please remove it.');
-            }
-
-            let isTypeValid = false;
-            const validTypeValues = Object.keys(config.changelog.options.type);
-            if (Array.isArray(changelog.type) && !!changelog.type) {
-              isTypeValid = changelog.type.every(value => validTypeValues.includes(value));
-            } else {
-              isTypeValid = validTypeValues.includes(changelog.type);
-            }
-            if (!isTypeValid) {
-              console.error(`PR changelog has invalid type: ${changelog.type}\nExpected one, or more of: ${validTypeValues}`)
-            }
-
-            let isProjectsValid = false;
-            // .filter(Boolean) is a trick that removes empty values from the array (see https://michaeluloth.com/javascript-filter-boolean/)
-            const validProjectsValues = execSync("ls */CHANGELOG* | cut -d/ -f1").toString().split('\n').filter(Boolean)
-            if (Array.isArray(changelog.projects) && !!changelog.projects) {
-              isProjectsValid = changelog.projects.every(value => validProjectsValues.includes(value));
-            } else {
-              isProjectsValid = validProjectsValue.includes(changelog.projects);
-            }
-            if (!isProjectsValid) {
-              console.error(`PR changelog has invalid project: ${changelog.projects}\nExpected one, or more of: ${validProjectsValues}`)
-            }
-
-            let isDescriptionValid = true;
-            if (changelog.description.trim() === '<insert-changelog-description-here>') {
-              console.error('PR changelog description has not been updated!')
-              isDescriptionValid = false;
-            } else if (!changelog.description.trim()) {
-              console.error('PR changelog description field is missing!')
-              isDescriptionValid = false;
-            }
-
-            if (!isCompatibilityValid || !isTypeValid || !isProjectsValid || !isDescriptionValid) {
-              console.error('Failed PR changelog checks!');
-              process.exit(1);
-            }
-
+      - name: Pass (no-op)
+        run: |
+          echo "This check is a no-op. Changelog validation is now performed by"
+          echo "the 'check-changelog-fragment' workflow (check-changelog-fragment.yml)."

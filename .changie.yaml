@@ -1,0 +1,59 @@
+changesDir: .changes
+unreleasedDir: unreleased
+headerPath: .changes/header.tpl.md
+changelogPath: CHANGELOG.md
+versionFormat: '## {{.Version}}'
+kindFormat: ''
+changeFormat: |-
+  - {{.Body}}
+    ({{.Kind}})
+    [PR {{.Custom.PR}}](https://github.com/IntersectMBO/cardano-api/pull/{{.Custom.PR}})
+
+kinds:
+  - label: breaking
+  - label: feature
+  - label: compatible
+  - label: bugfix
+  - label: optimisation
+
+custom:
+  - key: PR
+    type: int
+    label: PR Number
+
+projects:
+  - label: cardano-api
+    key: cardano-api
+    changelog: cardano-api/CHANGELOG.md
+    replacements:
+      - path: cardano-api/cardano-api.cabal
+        find: '^version:.*$'
+        replace: 'version:        {{.Version}}'
+        flag: m
+
+  - label: cardano-api-gen
+    key: cardano-api-gen
+    changelog: cardano-api-gen/CHANGELOG.md
+    replacements:
+      - path: cardano-api-gen/cardano-api-gen.cabal
+        find: '^version:.*$'
+        replace: 'version:        {{.Version}}'
+        flag: m
+
+  - label: cardano-rpc
+    key: cardano-rpc
+    changelog: cardano-rpc/CHANGELOG.md
+    replacements:
+      - path: cardano-rpc/cardano-rpc.cabal
+        find: '^version:.*$'
+        replace: 'version:        {{.Version}}'
+        flag: m
+
+  - label: cardano-wasm
+    key: cardano-wasm
+    changelog: cardano-wasm/CHANGELOG.md
+    replacements:
+      - path: cardano-wasm/cardano-wasm.cabal
+        find: '^version:.*$'
+        replace: 'version:        {{.Version}}'
+        flag: m
