@@ -785,7 +785,7 @@ calcMinFeeRecursive changeAddr = go maxIterations
     | minFee == txBodyFee = do
         -- Case 3
         balancedOuts <- balanceTxOuts @era changeAddr txBalanceValue unSignTx
-        let updatedTx = UnsignedTx (ledgerTx & L.bodyTxL . L.outputsTxBodyL .~ Seq.fromList balancedOuts)
+        let updatedTx = UnsignedTx (ledgerTx & L.bodyTxL . L.outputsTxBodyL .~ balancedOuts)
         go (n - 1) updatedTx utxo pparams poolids stakeDelegDeposits drepDelegDeposits nExtraWitnesses
     | otherwise =
         -- Case 4
@@ -827,25 +827,25 @@ balanceTxOuts
   => L.Addr
   -> L.Value (LedgerEra era)
   -> UnsignedTx (LedgerEra era)
-  -> Either FeeCalculationError [L.TxOut (LedgerEra era)]
+  -> Either FeeCalculationError (Seq.StrictSeq (L.TxOut (LedgerEra era)))
 balanceTxOuts changeAddr txBalance (UnsignedTx tx) =
   obtainCommonConstraints (useEra @era) $
-    let outs = toList $ tx ^. L.bodyTxL . L.outputsTxBodyL
-     in case reverse outs of
-          lastOut : revInit
+    let outs = tx ^. L.bodyTxL . L.outputsTxBodyL
+     in case outs of
+          rest Seq.:|> lastOut
             | lastOut ^. L.addrTxOutL == changeAddr ->
                 -- Update existing change output in place
                 let updatedOut = lastOut & L.valueTxOutL %~ (<> txBalance)
                     changeCoin = L.coin (updatedOut ^. L.valueTxOutL)
                  in if changeCoin < 0
                       then Left $ NotEnoughAda changeCoin
-                      else Right $ reverse revInit ++ [updatedOut]
+                      else Right $ rest Seq.:|> updatedOut
           _ ->
             -- Append a new change output
             let changeCoin = L.coin txBalance
              in if changeCoin < 0
                   then Left $ NotEnoughAda changeCoin
-                  else Right $ outs ++ [L.mkBasicTxOut changeAddr txBalance]
+                  else Right $ outs Seq.:|> L.mkBasicTxOut changeAddr txBalance
 
 -- Essentially we check for the existence of collateral inputs. If they exist we
 -- create a fictitious collateral return output. Why? Because we need to put dummy values
