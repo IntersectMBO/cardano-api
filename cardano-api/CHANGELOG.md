@@ -2,10 +2,6 @@
 
 ## 10.24.1.0
 
-- Export `fromLedgerTxValidityLowerBound` and `fromLedgerTxValidityUpperBound` from
-  `Cardano.Api.Tx.Internal.Body`
-  (compatible)
-
 - Fix supplemental datum handling in experimental API. `toLedgerDatum` now correctly
   produces `DatumHash` for supplemental datums instead of inline `Datum` representation.
 - `getDatums` uses new explicit `txSupplementalDatums` field instead of extracting from
