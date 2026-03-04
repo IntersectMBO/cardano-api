@@ -9,9 +9,12 @@ module Test.Gen.Cardano.Api
   )
 where
 
+import Cardano.Api.Genesis (defaultV1CostModel)
+
 import Cardano.Ledger.Alonzo.Core qualified as Ledger
 import Cardano.Ledger.Alonzo.Genesis qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.Alonzo.Scripts qualified as L
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Coin qualified as Ledger
 import Cardano.Ledger.Plutus.CostModels qualified as Plutus
@@ -97,7 +100,20 @@ genAlonzoGenesis :: Gen Alonzo.AlonzoGenesis
 genAlonzoGenesis = do
   coinsPerUTxOWord <- genCoin (Range.linear 0 5)
   -- TODO: Babbage: Figure out how to deal with the asymmetric cost model JSON
-  _costmdls' <- genCostModels
+  costmdls' <- genCostModels
+  v1CostModel <- case Map.lookup Alonzo.PlutusV1 $ L.costModelsValid costmdls' of
+    Just cm -> return cm
+    Nothing -> return defaultV1CostModel
+
+  let v2OnwardsCostModels =
+        mconcat $
+          map
+            ( \l -> case l `Map.lookup` L.costModelsValid costmdls' of
+                Just cm -> Map.singleton l cm
+                Nothing -> Map.empty
+            )
+            [Alonzo.PlutusV2 .. maxBound]
+      extraConfig = Just $ Alonzo.AlonzoExtraConfig $ Just $ L.mkCostModels v2OnwardsCostModels
   prices' <- genPrices
   maxTxExUnits' <- genExUnits
   maxBlockExUnits' <- genExUnits
@@ -105,14 +121,14 @@ genAlonzoGenesis = do
   collateralPercentage' <- Gen.integral (Range.linear 0 10)
   maxCollateralInputs' <- Gen.integral (Range.linear 0 10)
 
-  return
+  return $
     Alonzo.AlonzoGenesis
-      { Alonzo.agCoinsPerUTxOWord = Ledger.CoinPerWord coinsPerUTxOWord
-      , Alonzo.agCostModels = mempty
-      , Alonzo.agPrices = prices'
-      , Alonzo.agMaxTxExUnits = maxTxExUnits'
-      , Alonzo.agMaxBlockExUnits = maxBlockExUnits'
-      , Alonzo.agMaxValSize = maxValSize'
-      , Alonzo.agCollateralPercentage = collateralPercentage'
-      , Alonzo.agMaxCollateralInputs = maxCollateralInputs'
-      }
+      (Ledger.CoinPerWord coinsPerUTxOWord)
+      v1CostModel
+      prices'
+      maxTxExUnits'
+      maxBlockExUnits'
+      maxValSize'
+      collateralPercentage'
+      maxCollateralInputs'
+      extraConfig

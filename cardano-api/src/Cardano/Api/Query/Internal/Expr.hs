@@ -429,7 +429,7 @@ queryDRepStakeDistribution eon = querySbe eon . QueryDRepStakeDistr
 
 querySPOStakeDistribution
   :: ConwayEraOnwards era
-  -> Set (L.KeyHash 'L.StakePool)
+  -> Set (L.KeyHash L.StakePool)
   -- ^ An empty SPO key hash set means that distributions for all SPOs will be returned
   -> LocalStateQueryExpr
        block
@@ -439,7 +439,7 @@ querySPOStakeDistribution
        IO
        ( Either
            UnsupportedNtcVersionError
-           (Either EraMismatch (Map (L.KeyHash 'L.StakePool) L.Coin))
+           (Either EraMismatch (Map (L.KeyHash L.StakePool) L.Coin))
        )
 querySPOStakeDistribution eon = querySbe eon . QuerySPOStakeDistr
 
@@ -507,7 +507,7 @@ queryProposals eon = querySbe eon . QueryProposals
 queryStakePoolDefaultVote
   :: forall era block point r
    . ConwayEraOnwards era
-  -> L.KeyHash 'L.StakePool
+  -> L.KeyHash L.StakePool
   -> LocalStateQueryExpr
        block
        point

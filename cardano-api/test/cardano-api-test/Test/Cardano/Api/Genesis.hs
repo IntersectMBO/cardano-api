@@ -83,7 +83,7 @@ prop_check_default_alonzo_genesis_roundtrips = H.propertyOnce $ do
           ]
 
   forM_ eras $ \(Some aeo) -> do
-    let defaultCostModels = L.agCostModels alonzoGenesisDefaults
+    let defaultCostModels = fromJust . L.aecCostModels $ fromJust $ L.agExtraConfig alonzoGenesisDefaults
         defaultCostModelsBs = encodeCborInEraCostModels aeo defaultCostModels
     H.note_ $ "Decode alonzo genesis for era " <> show aeo
     defaultCostModels' <- H.leftFail $ decodeCborInEraCostModels aeo defaultCostModelsBs
@@ -115,13 +115,36 @@ loadPlutusV2CostModelFromGenesis
   => FilePath
   -> m (Either String (L.CostModels, [Int64]))
 loadPlutusV2CostModelFromGenesis filePath = withFrozenCallStack . runExceptT $ do
-  genesis <- H.readJsonFileOk filePath
-  let costModels = L.agCostModels genesis
+  aGen <- H.readJsonFileOk filePath
+  extraConfig <-
+    liftEither
+      $ maybe
+        ( Left $
+            unlines
+              [ "No V2 costmodels present in Alonzo genesis: " <> filePath
+              , "AlonzoGenesis: " <> show aGen
+              ]
+        )
+        Right
+      $ L.agExtraConfig aGen
+
+  costModels <-
+    liftEither
+      $ maybe
+        ( Left $
+            unlines
+              [ "No cost models present in Alonzo genesis: " <> filePath
+              , "ExtraConfig: " <> show extraConfig
+              , "AlonzoGenesis: " <> show aGen
+              ]
+        )
+        Right
+      $ L.aecCostModels extraConfig
+  let m = L.costModelsValid costModels
   liftEither
     . fmap ((costModels,) . L.getCostModelParams)
     . maybe (Left "No PlutusV2 model found") Right
-    . M.lookup L.PlutusV2
-    $ L.costModelsValid costModels
+    $ M.lookup L.PlutusV2 m
 
 decodeCborInEraCostModels
   :: forall era

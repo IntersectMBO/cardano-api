@@ -10,6 +10,7 @@ where
 import Cardano.Api.Error
 import Cardano.Api.Pretty
 
+import Cardano.Network.NodeToClient.Version (NodeToClientVersion (..))
 import Cardano.Protocol.Crypto
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.Cardano.Node ()
