@@ -124,7 +124,7 @@ import Lens.Micro
 data Tx era where
   ShelleyTx
     :: ShelleyBasedEra era
-    -> L.Tx (ShelleyLedgerEra era)
+    -> L.Tx L.TopTx (ShelleyLedgerEra era)
     -> Tx era
 
 -- | This pattern will be deprecated in the future. We advise against introducing new usage of it.
@@ -224,14 +224,14 @@ instance IsShelleyBasedEra era => SerialiseAsCBOR (Tx era) where
 serialiseShelleyBasedTx
   :: forall ledgerera
    . L.EraTx ledgerera
-  => L.Tx ledgerera
+  => L.Tx L.TopTx ledgerera
   -> ByteString
 serialiseShelleyBasedTx = Plain.serialize'
 
 deserialiseShelleyBasedTx
   :: forall ledgerera tx'
    . L.EraTx ledgerera
-  => (L.Tx ledgerera -> tx')
+  => (L.Tx L.TopTx ledgerera -> tx')
   -> ByteString
   -> Either CBOR.DecoderError tx'
 deserialiseShelleyBasedTx mkTx bs =
@@ -296,7 +296,7 @@ instance IsShelleyBasedEra era => HasTextEnvelope (Tx era) where
 data TxBody era where
   ShelleyTxBody
     :: ShelleyBasedEra era
-    -> Ledger.TxBody (ShelleyLedgerEra era)
+    -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
     -- We include the scripts along with the tx body, rather than the
     -- witnesses set, since they need to be known when building the body.
     -> [Ledger.Script (ShelleyLedgerEra era)]
@@ -319,7 +319,7 @@ data TxBody era where
 
 -- The 'ShelleyBasedEra' GADT tells us what era we are in.
 -- The 'ShelleyLedgerEra' type family maps that to the era type from the
--- ledger lib. The 'Ledger.TxBody' type family maps that to a specific
+-- ledger lib. The 'Ledger.TxBody Ledger.TopTx' type family maps that to a specific
 -- tx body type, which is different for each Shelley-based era.
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
@@ -952,7 +952,7 @@ getTxWitnesses (ShelleyTx sbe tx') =
   getShelleyTxWitnesses
     :: forall ledgerera
      . L.EraTx ledgerera
-    => L.Tx ledgerera
+    => L.Tx L.TopTx ledgerera
     -> [KeyWitness era]
   getShelleyTxWitnesses tx =
     map (ShelleyBootstrapWitness sbe) (Set.elems (tx ^. L.witsTxL . L.bootAddrTxWitsL))
@@ -961,7 +961,7 @@ getTxWitnesses (ShelleyTx sbe tx') =
   getAlonzoTxWitnesses
     :: forall ledgerera
      . L.EraTx ledgerera
-    => L.Tx ledgerera
+    => L.Tx L.TopTx ledgerera
     -> [KeyWitness era]
   getAlonzoTxWitnesses = getShelleyTxWitnesses
 
@@ -993,7 +993,7 @@ makeSignedTransaction
       :: forall ledgerera
        . ShelleyLedgerEra era ~ ledgerera
       => L.EraTx ledgerera
-      => L.Tx ledgerera
+      => L.Tx L.TopTx ledgerera
     txCommon =
       L.mkBasicTx txbody
         & L.witsTxL
@@ -1100,7 +1100,7 @@ makeShelleyBasedBootstrapWitness
    . ()
   => ShelleyBasedEra era
   -> WitnessNetworkIdOrByronAddress
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> SigningKey ByronKey
   -> KeyWitness era
 makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
@@ -1192,7 +1192,7 @@ makeShelleyKeyWitness'
   :: forall era
    . ()
   => ShelleyBasedEra era
-  -> L.TxBody (ShelleyLedgerEra era)
+  -> L.TxBody L.TopTx (ShelleyLedgerEra era)
   -> ShelleyWitnessSigningKey
   -> KeyWitness era
 makeShelleyKeyWitness' sbe txBody wsk =

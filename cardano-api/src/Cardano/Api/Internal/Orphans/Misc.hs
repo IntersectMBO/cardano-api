@@ -73,8 +73,8 @@ deriving newtype instance Bits L.Coin
 -- In this instance we take the last 'Just' value or the only 'Just' value
 instance Semigroup (Ledger.ShelleyPParams StrictMaybe era) where
   (<>) pp1 pp2 =
-    let fsppMinFeeA = lastMappendWith Ledger.sppMinFeeA pp1 pp2
-        fsppMinFeeB = lastMappendWith Ledger.sppMinFeeB pp1 pp2
+    let fsppTxFeePerByte = lastMappendWith Ledger.sppTxFeePerByte pp1 pp2
+        fsppTxFeeFixed = lastMappendWith Ledger.sppTxFeeFixed pp1 pp2
         fsppMaxBBSize = lastMappendWith Ledger.sppMaxBBSize pp1 pp2
         fsppMaxTxSize = lastMappendWith Ledger.sppMaxTxSize pp1 pp2
         fsppMaxBHSize = lastMappendWith Ledger.sppMaxBHSize pp1 pp2
@@ -91,8 +91,8 @@ instance Semigroup (Ledger.ShelleyPParams StrictMaybe era) where
         fsppMinUTxOValue = lastMappendWith Ledger.sppMinUTxOValue pp1 pp2
         fsppMinPoolCost = lastMappendWith Ledger.sppMinPoolCost pp1 pp2
      in Ledger.ShelleyPParams
-          { Ledger.sppMinFeeA = fsppMinFeeA
-          , Ledger.sppMinFeeB = fsppMinFeeB
+          { Ledger.sppTxFeePerByte = fsppTxFeePerByte
+          , Ledger.sppTxFeeFixed = fsppTxFeeFixed
           , Ledger.sppMaxBBSize = fsppMaxBBSize
           , Ledger.sppMaxTxSize = fsppMaxTxSize
           , Ledger.sppMaxBHSize = fsppMaxBHSize
@@ -112,8 +112,8 @@ instance Semigroup (Ledger.ShelleyPParams StrictMaybe era) where
 
 instance Semigroup (Ledger.AlonzoPParams StrictMaybe era) where
   (<>) p1 p2 =
-    let fappMinFeeA = lastMappendWith Ledger.appMinFeeA p1 p2
-        fappMinFeeB = lastMappendWith Ledger.appMinFeeB p1 p2
+    let fappTxFeePerByte = lastMappendWith Ledger.appTxFeePerByte p1 p2
+        fappTxFeeFixed = lastMappendWith Ledger.appTxFeeFixed p1 p2
         fappMaxBBSize = lastMappendWith Ledger.appMaxBBSize p1 p2
         fappMaxTxSize = lastMappendWith Ledger.appMaxTxSize p1 p2
         fappMaxBHSize = lastMappendWith Ledger.appMaxBHSize p1 p2
@@ -137,8 +137,8 @@ instance Semigroup (Ledger.AlonzoPParams StrictMaybe era) where
         fappCollateralPercentage = lastMappendWith Ledger.appCollateralPercentage p1 p2
         fappMaxCollateralInputs = lastMappendWith Ledger.appMaxCollateralInputs p1 p2
      in Ledger.AlonzoPParams
-          { Ledger.appMinFeeA = fappMinFeeA
-          , Ledger.appMinFeeB = fappMinFeeB
+          { Ledger.appTxFeePerByte = fappTxFeePerByte
+          , Ledger.appTxFeeFixed = fappTxFeeFixed
           , Ledger.appMaxBBSize = fappMaxBBSize
           , Ledger.appMaxTxSize = fappMaxTxSize
           , Ledger.appMaxBHSize = fappMaxBHSize
@@ -179,8 +179,8 @@ lastMappendWith l = under2 l lastMappend
 
 instance Semigroup (Ledger.BabbagePParams StrictMaybe era) where
   (<>) p1 p2 =
-    let fbppMinFeeA = lastMappendWith Ledger.bppMinFeeA p1 p2
-        fbppMinFeeB = lastMappendWith Ledger.bppMinFeeB p1 p2
+    let fbppTxFeePerByte = lastMappendWith Ledger.bppTxFeePerByte p1 p2
+        fbppTxFeeFixed = lastMappendWith Ledger.bppTxFeeFixed p1 p2
         fbppMaxBBSize = lastMappendWith Ledger.bppMaxBBSize p1 p2
         fbppMaxTxSize = lastMappendWith Ledger.bppMaxTxSize p1 p2
         fbppMaxBHSize = lastMappendWith Ledger.bppMaxBHSize p1 p2
@@ -202,8 +202,8 @@ instance Semigroup (Ledger.BabbagePParams StrictMaybe era) where
         fbppCollateralPercentage = lastMappendWith Ledger.bppCollateralPercentage p1 p2
         fbppMaxCollateralInputs = lastMappendWith Ledger.bppMaxCollateralInputs p1 p2
      in Ledger.BabbagePParams
-          { Ledger.bppMinFeeA = fbppMinFeeA
-          , Ledger.bppMinFeeB = fbppMinFeeB
+          { Ledger.bppTxFeePerByte = fbppTxFeePerByte
+          , Ledger.bppTxFeeFixed = fbppTxFeeFixed
           , Ledger.bppMaxBBSize = fbppMaxBBSize
           , Ledger.bppMaxTxSize = fbppMaxTxSize
           , Ledger.bppMaxBHSize = fbppMaxBHSize
@@ -229,8 +229,8 @@ instance Semigroup (Ledger.BabbagePParams StrictMaybe era) where
 instance Semigroup (Ledger.ConwayPParams StrictMaybe era) where
   (<>) p1 p2 =
     Ledger.ConwayPParams
-      { Ledger.cppMinFeeA = lastMappendWithTHKD Ledger.cppMinFeeA p1 p2
-      , Ledger.cppMinFeeB = lastMappendWithTHKD Ledger.cppMinFeeB p1 p2
+      { Ledger.cppTxFeePerByte = lastMappendWithTHKD Ledger.cppTxFeePerByte p1 p2
+      , Ledger.cppTxFeeFixed = lastMappendWithTHKD Ledger.cppTxFeeFixed p1 p2
       , Ledger.cppMaxBBSize = lastMappendWithTHKD Ledger.cppMaxBBSize p1 p2
       , Ledger.cppMaxTxSize = lastMappendWithTHKD Ledger.cppMaxTxSize p1 p2
       , Ledger.cppMaxBHSize = lastMappendWithTHKD Ledger.cppMaxBHSize p1 p2
