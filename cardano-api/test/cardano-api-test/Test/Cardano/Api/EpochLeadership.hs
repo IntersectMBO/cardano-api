@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Api.EpochLeadership
@@ -15,8 +16,9 @@ import Cardano.Api.Ledger (KeyHash (..), toCompactPartial)
 import Cardano.Binary (serialize)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Api.PParams (emptyPParams)
-import Cardano.Ledger.BaseTypes (Nonce (..), WithOrigin (..))
+import Cardano.Ledger.BaseTypes (NonZero (..), Nonce (..), WithOrigin (..), knownNonZero)
 import Cardano.Ledger.Binary.Encoding (toByronCBOR)
+import Cardano.Ledger.Coin (toCoinNonZero)
 import Cardano.Ledger.Hashes qualified as L
 import Cardano.Ledger.Shelley.API qualified as L
 import Cardano.Ledger.State qualified as L
@@ -110,7 +112,7 @@ test_currentEpochEligibleLeadershipSlots =
                         }
                     )
                   ]
-              , L.pdTotalActiveStake = toCompactPartial 0
+              , L.pdTotalActiveStake = nonZeroCoin
               }
           serPoolDistr = Serialised (serialize (toByronCBOR poolDistr))
           currentEpoch = EpochNo 4
@@ -136,3 +138,6 @@ test_currentEpochEligibleLeadershipSlots =
   encodeProtocolState cds = ProtocolState (Serialised pbs)
    where
     pbs = serialize (toCBOR cds)
+
+nonZeroCoin :: NonZero Coin
+nonZeroCoin = toCoinNonZero $ knownNonZero @1

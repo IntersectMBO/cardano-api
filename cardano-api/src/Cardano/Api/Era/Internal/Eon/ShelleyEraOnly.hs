@@ -84,7 +84,7 @@ type ShelleyEraOnlyConstraints era =
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.ExactEra L.ShelleyEra (ShelleyLedgerEra era)
   , L.ExactEra L.ShelleyEra (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
+  , L.HashAnnotated (L.TxBody L.TopTx (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.ProtVerAtMost (ShelleyLedgerEra era) 2
   , L.ProtVerAtMost (ShelleyLedgerEra era) 6
   , L.ProtVerAtMost (ShelleyLedgerEra era) 8

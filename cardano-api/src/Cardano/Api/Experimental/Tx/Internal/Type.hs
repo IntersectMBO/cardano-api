@@ -39,7 +39,7 @@ import Data.Typeable
 -- | A transaction that can contain everything
 -- except key witnesses.
 data UnsignedTx era
-  = L.EraTx era => UnsignedTx (Ledger.Tx era)
+  = L.EraTx era => UnsignedTx (Ledger.Tx Ledger.TopTx era)
 
 type family ToApiEra ledgerera where
   ToApiEra L.DijkstraEra = Api.DijkstraEra
