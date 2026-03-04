@@ -92,13 +92,13 @@ tests =
             "underfunded transaction (outputs exceed inputs) always fails"
             prop_calcMinFeeRecursive_insufficient_funds
         , testProperty
-            "Case 2: outputs with tokens not in UTxO returns NonAdaAssetsUnbalanced"
+            "Case 1: outputs with tokens not in UTxO returns NonAdaAssetsUnbalanced"
             prop_calcMinFeeRecursive_non_ada_unbalanced
         , testProperty
-            "Case 3: output with multi-assets below min UTxO returns MinUTxONotMet"
+            "Case 2: output with multi-assets below min UTxO returns MinUTxONotMet"
             prop_calcMinFeeRecursive_min_utxo_not_met
         , testProperty
-            "Case 4: transaction with no outputs creates change output"
+            "Case 3: transaction with no outputs creates change output"
             prop_calcMinFeeRecursive_no_tx_outs
         ]
     ]
@@ -682,7 +682,7 @@ prop_calcMinFeeRecursive_insufficient_funds = H.property $ do
 
 -- | Generates a transaction whose output demands a native token that does
 -- not exist in the UTxO (which is ADA-only). This guarantees a negative
--- multi-asset balance, triggering Case 2 ('NonAdaAssetsUnbalanced').
+-- multi-asset balance, triggering Case 1 ('NonAdaAssetsUnbalanced').
 genNonAdaUnbalancedTx
   :: Exp.Era era
   -> Gen
@@ -724,8 +724,8 @@ genNonAdaUnbalancedTx era = do
 -- | Generates a two-output transaction where the second output carries native
 -- tokens with only 1000 lovelace — well below the minimum UTxO for a
 -- token-bearing output. The surplus ADA is distributed to the first
--- output (Case 4), so the second output stays below minimum, triggering
--- Case 3 ('MinUTxONotMet').
+-- output (Case 3), so the second output stays below minimum, triggering
+-- Case 2 ('MinUTxONotMet').
 genMinUTxOViolatingTx
   :: Exp.Era era
   -> Gen
@@ -768,7 +768,7 @@ genMinUTxOViolatingTx era = do
   return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
 
 -- | Generates a transaction with inputs but no outputs. Once the fee
--- converges (Case 5), the positive surplus triggers Case 4, and
+-- converges (Case 4), the positive surplus triggers Case 3, and
 -- 'balanceTxOuts' creates a change output with the surplus.
 genNoOutputsTx
   :: Exp.Era era
