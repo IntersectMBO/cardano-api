@@ -131,7 +131,7 @@ library
     cardano-data >=1.0,
     cardano-diffusion:{api, cardano-diffusion} ^>=0.1,
     cardano-ledger-allegra >=1.7,
-    cardano-ledger-alonzo >=1.13,
+    cardano-ledger-alonzo >=1.15,
     cardano-ledger-api ^>=1.13,
     cardano-ledger-babbage >=1.11,
     cardano-ledger-binary >=1.6,
