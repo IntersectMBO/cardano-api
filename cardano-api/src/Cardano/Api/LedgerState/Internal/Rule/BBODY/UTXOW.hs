@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -29,24 +30,26 @@ import Control.State.Transition.Extended
 
 handleConwayUTxOWEvent
   :: AlonzoUtxowEvent ConwayEra -> Maybe LedgerEvent
-handleConwayUTxOWEvent (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent (Alonzo.UtxosEvent conwayUTxOsEvent))) =
-  case conwayUTxOsEvent of
-    Conway.TotalDeposits{} -> Nothing
-    Conway.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
-    Conway.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
-    Conway.TxUTxODiff _ _ -> Nothing
+handleConwayUTxOWEvent = \case
+  (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent TotalDeposits{})) -> Nothing
+  (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent TxUTxODiff{})) -> Nothing
+  (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent (Alonzo.UtxosEvent conwayUTxOsEvent))) ->
+    case conwayUTxOsEvent of
+      Conway.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
+      Conway.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
 
 handleAlonzoUTxOWEvent
   :: Event (Ledger.Core.EraRule "UTXO" ledgerera) ~ AlonzoUtxoEvent ledgerera
   => Event (Ledger.Core.EraRule "UTXOS" ledgerera) ~ AlonzoUtxosEvent ledgerera
   => AlonzoUtxowEvent ledgerera -> Maybe LedgerEvent
-handleAlonzoUTxOWEvent (WrappedShelleyEraEvent (Shelley.UtxoEvent (UtxosEvent utxoEvent))) =
-  case utxoEvent of
-    Alonzo.AlonzoPpupToUtxosEvent{} -> Nothing
-    Alonzo.TotalDeposits{} -> Nothing
-    Alonzo.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
-    Alonzo.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
-    Alonzo.TxUTxODiff _ _ -> Nothing
+handleAlonzoUTxOWEvent = \case
+  (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent TotalDeposits{})) -> Nothing
+  (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent TxUTxODiff{})) -> Nothing
+  (WrappedShelleyEraEvent (Shelley.UtxoEvent (UtxosEvent utxoEvent))) ->
+    case utxoEvent of
+      Alonzo.AlonzoPpupToUtxosEvent{} -> Nothing
+      Alonzo.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
+      Alonzo.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
 
 handlePreAlonzoUTxOWEvent
   :: Event (Ledger.Core.EraRule "UTXO" ledgerera) ~ Shelley.UtxoEvent ledgerera

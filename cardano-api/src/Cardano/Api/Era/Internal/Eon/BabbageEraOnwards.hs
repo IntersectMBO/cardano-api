@@ -112,7 +112,7 @@ type BabbageEraOnwardsConstraints era =
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.EraUTxO (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
+  , L.HashAnnotated (L.TxBody L.TopTx (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.MaryEraTxBody (ShelleyLedgerEra era)
   , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
   , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)

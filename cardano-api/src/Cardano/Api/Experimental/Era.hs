@@ -322,7 +322,7 @@ type EraCommonConstraints era =
   , ShelleyLedgerEra era ~ LedgerEra era
   , LedgerEra era ~ ShelleyLedgerEra era
   , ToJSON (ChainDepState (ConsensusProtocol era))
-  , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
+  , L.HashAnnotated (Ledger.TxBody Ledger.TopTx (LedgerEra era)) L.EraIndependentTxBody
   , Api.IsCardanoEra era
   , Api.IsShelleyBasedEra era
   , IsEra era
@@ -332,4 +332,5 @@ type EraConwayConstraints =
   ( EraCommonConstraints ConwayEra
   , L.TxCert (LedgerEra ConwayEra) ~ L.ConwayTxCert (LedgerEra ConwayEra)
   , L.ShelleyEraTxCert (LedgerEra ConwayEra)
+  , L.NativeScript (ShelleyLedgerEra ConwayEra) ~ L.Timelock (ShelleyLedgerEra ConwayEra)
   )

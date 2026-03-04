@@ -603,7 +603,7 @@ instance HasTypeProxy GenesisKey where
 
 instance Key GenesisKey where
   newtype VerificationKey GenesisKey
-    = GenesisVerificationKey (Shelley.VKey Shelley.Genesis)
+    = GenesisVerificationKey (Shelley.VKey Shelley.GenesisRole)
     deriving stock Eq
     deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey GenesisKey)
     deriving newtype (ToCBOR, FromCBOR)
@@ -652,7 +652,7 @@ instance SerialiseAsRawBytes (SigningKey GenesisKey) where
       GenesisSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
 
 newtype instance Hash GenesisKey
-  = GenesisKeyHash {unGenesisKeyHash :: Shelley.KeyHash Shelley.Genesis}
+  = GenesisKeyHash {unGenesisKeyHash :: Shelley.KeyHash Shelley.GenesisRole}
   deriving stock (Eq, Ord)
   deriving (Show, Pretty) via UsingRawBytesHex (Hash GenesisKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisKey)

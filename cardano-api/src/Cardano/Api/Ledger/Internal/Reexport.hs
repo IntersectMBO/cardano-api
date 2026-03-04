@@ -15,11 +15,10 @@ module Cardano.Api.Ledger.Internal.Reexport
   , StakeReference (..)
   , WitVKey (..)
   , hashKey
-  , hashVerKeyVRF
   , hashWithSerialiser
   , fromVRFVerKeyHash
   , toVRFVerKeyHash
-  , PoolParams (..)
+  , StakePoolParams (..)
   , HasKeyRole
   , MIRPot (..)
   , MIRTarget (..)
@@ -79,6 +78,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , toSLanguage
   , fromEraCBOR
   , ppMinFeeAL
+  , ppTxFeePerByteL
   , ppMinUTxOValueL
   , valueFromList
   -- Dijkstra
@@ -131,7 +131,9 @@ module Cardano.Api.Ledger.Internal.Reexport
   , toPlainDecoder
   -- Shelley
   , secondsToNominalDiffTimeMicro
-  , ChainAccountState (..)
+  , ChainAccountState
+  , casTreasuryL
+  , casReservesL
   , NewEpochState (..)
   , ShelleyGenesisStaking (..)
   -- Allegra
@@ -192,7 +194,6 @@ module Cardano.Api.Ledger.Internal.Reexport
   , strictMaybeToMaybe
   , maybeToStrictMaybe
   , AnchorData (..)
-  , hashAnchorData
   , UnitInterval
   , mkVersion
   , NonNegativeInterval
@@ -210,12 +211,12 @@ module Cardano.Api.Ledger.Internal.Reexport
   , unsafeMakeSafeHash
   , extractHash
   -- Reward
-  , RewardAccount (..)
+  , AccountAddress (..)
   )
 where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), Addr (..))
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), Timelock (..), showTimelock)
 import Cardano.Ledger.Alonzo.Core
   ( AlonzoEraScript (..)
@@ -284,7 +285,6 @@ import Cardano.Ledger.BaseTypes
   , Version
   , boundRational
   , dnsToText
-  , hashAnchorData
   , maybeToStrictMaybe
   , mkVersion
   , portToWord16
@@ -354,6 +354,7 @@ import Cardano.Ledger.Core
   , mkBasicTxOut
   , ppMinFeeAL
   , ppMinUTxOValueL
+  , ppTxFeePerByteL
   , toEraCBOR
   )
 import Cardano.Ledger.Credential (Credential (..), credToText)
@@ -386,13 +387,12 @@ import Cardano.Ledger.Plutus.Language
   , toSLanguage
   )
 import Cardano.Ledger.Shelley.API
-  ( ChainAccountState (..)
+  ( ChainAccountState
   , GenDelegPair (..)
   , NewEpochState (..)
   , StakeReference (..)
   , WitVKey (..)
   , hashKey
-  , hashVerKeyVRF
   )
 import Cardano.Ledger.Shelley.Genesis
   ( ShelleyGenesisStaking (..)
@@ -411,10 +411,12 @@ import Cardano.Ledger.Shelley.TxCert
   )
 import Cardano.Ledger.State
   ( PoolMetadata (..)
-  , PoolParams (..)
   , ScriptsNeeded
+  , StakePoolParams (..)
   , StakePoolRelay (..)
   , UTxO (..)
+  , casReservesL
+  , casTreasuryL
   , getScriptsNeeded
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))

@@ -121,7 +121,7 @@ type ConwayEraOnwardsConstraints era =
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.GovState (ShelleyLedgerEra era) ~ L.ConwayGovState (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
+  , L.HashAnnotated (L.TxBody L.TopTx (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.MaryEraTxBody (ShelleyLedgerEra era)
   , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
   , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
