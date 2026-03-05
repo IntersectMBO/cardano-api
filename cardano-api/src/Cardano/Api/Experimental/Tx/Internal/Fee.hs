@@ -90,7 +90,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Exts (IsList (..))
 import GHC.Stack
-import Lens.Micro ((%~), (.~), (^.))
+import Lens.Micro ((.~), (^.))
 import Prettyprinter (punctuate)
 
 data TxBodyErrorAutoBalance era
@@ -823,7 +823,8 @@ getMultiAssets era val = case era of
 
 balanceTxOuts
   :: forall era
-   . IsEra era
+   . HasCallStack
+  => IsEra era
   => L.Addr
   -> L.Value (LedgerEra era)
   -> UnsignedTx (LedgerEra era)
@@ -834,12 +835,15 @@ balanceTxOuts changeAddr txBalance (UnsignedTx tx) =
      in case outs of
           rest Seq.:|> lastOut
             | lastOut ^. L.addrTxOutL == changeAddr ->
-                -- Update existing change output in place
-                let updatedOut = lastOut & L.valueTxOutL %~ (<> txBalance)
-                    changeCoin = L.coin (updatedOut ^. L.valueTxOutL)
+                -- Update existing change output in place.
+                -- We compute the new value before writing it into the TxOut,
+                -- because the ledger's TxOut setter throws an exception on
+                -- negative values.
+                let newValue = (lastOut ^. L.valueTxOutL) <> txBalance
+                    changeCoin = L.coin newValue
                  in if changeCoin < 0
                       then Left $ NotEnoughAda changeCoin
-                      else Right $ rest Seq.:|> updatedOut
+                      else Right $ rest Seq.:|> (lastOut & L.valueTxOutL .~ newValue)
           _ ->
             -- Append a new change output
             let changeCoin = L.coin txBalance
