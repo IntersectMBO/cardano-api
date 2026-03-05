@@ -86,6 +86,9 @@ tests =
             "well-funded transaction always succeeds"
             prop_calcMinFeeRecursive_well_funded_succeeds
         , testProperty
+            "well-funded multi-asset transaction always succeeds"
+            prop_calcMinFeeRecursive_well_funded_multi_asset
+        , testProperty
             "fee calculation is idempotent"
             prop_calcMinFeeRecursive_fee_fixpoint
         , testProperty
@@ -612,6 +615,44 @@ genFundedSimpleTx era = do
           & Exp.setTxFee 0
   return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
 
+-- | Like 'genFundedSimpleTx' but the UTxO and output both carry native tokens.
+-- The output sends all tokens; the surplus ADA goes to the change output.
+-- This exercises Case 2's multi-asset handling on the success path.
+genFundedMultiAssetTx
+  :: Exp.Era era
+  -> Gen
+       ( Exp.UnsignedTx (Exp.LedgerEra era)
+       , L.UTxO (Exp.LedgerEra era)
+       , L.Addr
+       )
+genFundedMultiAssetTx era = do
+  let sbe = convert era
+  txIn <- genTxIn
+  addr <- Api.toShelleyAddr <$> genAddressInEra sbe
+  changeAddr <- Api.toShelleyAddr <$> genAddressInEra sbe
+  sendCoin <- L.Coin <$> Gen.integral (Range.linear 2_000_000 5_000_000)
+  surplus <- L.Coin <$> Gen.integral (Range.linear 2_000_000 17_000_000)
+  tokenQty <- Gen.integral (Range.linear 1 1_000_000)
+  let fundingCoin = sendCoin + surplus
+      policyId = L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
+      multiAsset = L.MultiAsset $ Map.singleton policyId (Map.singleton (Mary.AssetName "testtoken") tokenQty)
+      ledgerTxIn = Api.toShelleyTxIn txIn
+      fundingTxOut =
+        Exp.obtainCommonConstraints era $
+          L.mkBasicTxOut addr (L.MaryValue fundingCoin multiAsset)
+      utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
+      sendTxOut =
+        Exp.obtainCommonConstraints era $
+          Exp.TxOut $
+            Exp.obtainCommonConstraints era $
+              Ledger.mkBasicTxOut addr (L.MaryValue sendCoin multiAsset)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [sendTxOut]
+          & Exp.setTxFee 0
+  return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
+
 -- | Generates a simple lovelace-only transaction where the single output
 -- (5-10 ADA) greatly exceeds the UTxO funding (0.5-2 ADA).
 genUnderfundedTx
@@ -657,6 +698,27 @@ prop_calcMinFeeRecursive_well_funded_succeeds = H.property $ do
       let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
       H.assert $ resultFee > L.Coin 0
       -- The resulting transaction must be fully balanced (zero balance).
+      let balance =
+            UnexportedLedger.evalBalanceTxBody
+              exampleProtocolParams
+              (const Nothing)
+              (const Nothing)
+              (const False)
+              utxo
+              (resultLedgerTx ^. L.bodyTxL)
+      balance H.=== mempty
+
+-- | Like 'prop_calcMinFeeRecursive_well_funded_succeeds' but the UTxO and
+-- output carry native tokens. Verifies that surplus tokens are correctly
+-- distributed to the change output and the result is fully balanced.
+prop_calcMinFeeRecursive_well_funded_multi_asset :: Property
+prop_calcMinFeeRecursive_well_funded_multi_asset = H.property $ do
+  (unsignedTx, utxo, changeAddr) <- H.forAll $ genFundedMultiAssetTx Exp.ConwayEra
+  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
+    Left err -> H.annotateShow err >> H.failure
+    Right (Exp.UnsignedTx resultLedgerTx) -> do
+      let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
+      H.assert $ resultFee > L.Coin 0
       let balance =
             UnexportedLedger.evalBalanceTxBody
               exampleProtocolParams
