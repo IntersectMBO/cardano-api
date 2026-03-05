@@ -126,7 +126,7 @@ library
     cardano-addresses ^>=4.0.0,
     cardano-binary,
     cardano-crypto,
-    cardano-crypto-class ^>=2.3.0.0,
+    cardano-crypto-class ^>=2.3.1.0,
     cardano-crypto-wrapper ^>=1.7,
     cardano-data >=1.0,
     cardano-ledger-allegra >=1.7,
