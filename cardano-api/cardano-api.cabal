@@ -359,7 +359,7 @@ test-suite cardano-api-test
     cardano-binary,
     cardano-crypto,
     cardano-crypto-class,
-    cardano-crypto-tests ^>=2.3,
+    cardano-crypto-class:testlib,
     cardano-crypto-wrapper:testlib,
     cardano-ledger-alonzo,
     cardano-ledger-api ^>=1.13,
