@@ -242,6 +242,10 @@ constraints:
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8
 
+allow-newer:
+  -- ouroboros-network requires random ^>=1.3 but quickcheck-state-machine bounds are stale
+  , quickcheck-state-machine:random
+
 if impl(ghc >= 9.12)
   allow-newer:
     -- we need newer io-classes: https://github.com/input-output-hk/typed-protocols/tree/coot/io-classes-1.9
