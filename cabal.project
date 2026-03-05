@@ -20,9 +20,135 @@ index-state:
 
 source-repository-package
   type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: eras/mary/impl
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: eras/conway/impl
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: eras/shelley/test-suite
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: eras/shelley/impl
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  tag: 4b27937b34b957a1afb0014f9d6e9038163e0763
+  subdir: cardano-crypto-class
+  --sha256: 0fdkfzdrm58d4i0q65a8q56z02kk54ihccv5xyj1ci47ixjcxwhr
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: libs/cardano-ledger-core
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: eras/byron/crypto
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: a7d37a65887fa444be08f60f22025f2a426c4d5b
+  subdir: network-mux
+  --sha256: 0aszspd6j2vl5pvzcgsg1psnzvw1bkcqbfwaayjna4q4iri4inns
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: eras/byron/ledger/impl
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: libs/cardano-ledger-api
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
   tag: a7d37a65887fa444be08f60f22025f2a426c4d5b
   subdir: cardano-diffusion
+  --sha256: 0aszspd6j2vl5pvzcgsg1psnzvw1bkcqbfwaayjna4q4iri4inns
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: libs/cardano-data
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: eras/allegra/impl
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: libs/small-steps
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: eras/alonzo/test-suite
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: eras/dijkstra/impl
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: libs/cardano-protocol-tpraos
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: 57c3e32cafc13b9a5184e23fee057f5152eec03b
+  subdir: .
+  --sha256: 12qi3cry2sxmzd8b12404mwqkff5fs9l1p46f2b5fry3p3drf23f
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: a7d37a65887fa444be08f60f22025f2a426c4d5b
+  subdir: ouroboros-network
   --sha256: 0aszspd6j2vl5pvzcgsg1psnzvw1bkcqbfwaayjna4q4iri4inns
 
 source-repository-package
@@ -36,7 +162,14 @@ source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
   tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: libs/cardano-ledger-core
+  subdir: eras/shelley-ma/test-suite
+  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
+  subdir: libs/cardano-ledger-binary
   --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
 
 source-repository-package
@@ -52,118 +185,6 @@ source-repository-package
   tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
   subdir: eras/alonzo/impl
   --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: eras/allegra/impl
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 57c3e32cafc13b9a5184e23fee057f5152eec03b
-  subdir: .
-  --sha256: 12qi3cry2sxmzd8b12404mwqkff5fs9l1p46f2b5fry3p3drf23f
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: libs/cardano-protocol-tpraos
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: libs/cardano-ledger-api
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: a7d37a65887fa444be08f60f22025f2a426c4d5b
-  subdir: network-mux
-  --sha256: 0aszspd6j2vl5pvzcgsg1psnzvw1bkcqbfwaayjna4q4iri4inns
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: eras/byron/crypto
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: libs/cardano-data
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: eras/byron/ledger/impl
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: eras/dijkstra/impl
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: eras/shelley/impl
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: a7d37a65887fa444be08f60f22025f2a426c4d5b
-  subdir: ouroboros-network
-  --sha256: 0aszspd6j2vl5pvzcgsg1psnzvw1bkcqbfwaayjna4q4iri4inns
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: eras/mary/impl
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: libs/cardano-ledger-binary
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: eras/conway/impl
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: d7e960e4cfdd206a90206a6085abce6877f2b88f
-  subdir: libs/small-steps
-  --sha256: 124ljmjrnbrp0ig0izmjifcbkdxz3wpg7w4wnmwlzhnylkv7nn58
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-base.git
-  tag: 4b27937b34b957a1afb0014f9d6e9038163e0763
-  subdir: cardano-crypto-class
-  --sha256: 0fdkfzdrm58d4i0q65a8q56z02kk54ihccv5xyj1ci47ixjcxwhr
 
 -- END SRP STANZAS MANAGED BY STANZAMAN --
 
