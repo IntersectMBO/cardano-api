@@ -92,13 +92,13 @@ tests =
             "underfunded transaction (outputs exceed inputs) always fails"
             prop_calcMinFeeRecursive_insufficient_funds
         , testProperty
-            "Case 1: outputs with tokens not in UTxO returns NonAdaAssetsUnbalanced"
+            "Precondition: outputs with tokens not in UTxO returns NonAdaAssetsUnbalanced"
             prop_calcMinFeeRecursive_non_ada_unbalanced
         , testProperty
-            "Case 2: output with multi-assets below min UTxO returns MinUTxONotMet"
+            "Case 1: output with multi-assets below min UTxO returns MinUTxONotMet"
             prop_calcMinFeeRecursive_min_utxo_not_met
         , testProperty
-            "Case 3: transaction with no outputs creates change output"
+            "Case 2: transaction with no outputs creates change output"
             prop_calcMinFeeRecursive_no_tx_outs
         , testProperty
             "Tiny surplus consumed by fee increase yields NotEnoughAda"
@@ -647,7 +647,7 @@ genUnderfundedTx era = do
   return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
 
 -- | A well-funded transaction (UTxO >> output + fee) always produces a
--- successful positive fee calculation.
+-- successful, fully balanced result with a positive fee.
 prop_calcMinFeeRecursive_well_funded_succeeds :: Property
 prop_calcMinFeeRecursive_well_funded_succeeds = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genFundedSimpleTx Exp.ConwayEra
@@ -656,6 +656,16 @@ prop_calcMinFeeRecursive_well_funded_succeeds = H.property $ do
     Right (Exp.UnsignedTx resultLedgerTx) -> do
       let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
       H.assert $ resultFee > L.Coin 0
+      -- The resulting transaction must be fully balanced (zero balance).
+      let balance =
+            UnexportedLedger.evalBalanceTxBody
+              exampleProtocolParams
+              (const Nothing)
+              (const Nothing)
+              (const False)
+              utxo
+              (resultLedgerTx ^. L.bodyTxL)
+      balance H.=== mempty
 
 -- | 'calcMinFeeRecursive' is idempotent: applying it to its own result
 -- yields the same 'UnsignedTx'.  This confirms the fee has reached a
@@ -685,7 +695,7 @@ prop_calcMinFeeRecursive_insufficient_funds = H.property $ do
 
 -- | Generates a transaction whose output demands a native token that does
 -- not exist in the UTxO (which is ADA-only). This guarantees a negative
--- multi-asset balance, triggering Case 1 ('NonAdaAssetsUnbalanced').
+-- multi-asset balance, triggering the multi-asset precondition check ('NonAdaAssetsUnbalanced').
 genNonAdaUnbalancedTx
   :: Exp.Era era
   -> Gen
@@ -727,8 +737,8 @@ genNonAdaUnbalancedTx era = do
 -- | Generates a two-output transaction where the second output carries native
 -- tokens with only 1000 lovelace — well below the minimum UTxO for a
 -- token-bearing output. The surplus ADA is distributed to the first
--- output (Case 3), so the second output stays below minimum, triggering
--- Case 2 ('MinUTxONotMet').
+-- output (Case 2), so the second output stays below minimum, triggering
+-- Case 1 ('MinUTxONotMet').
 genMinUTxOViolatingTx
   :: Exp.Era era
   -> Gen
@@ -771,7 +781,7 @@ genMinUTxOViolatingTx era = do
   return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
 
 -- | Generates a transaction with inputs but no outputs. Once the fee
--- converges (Case 4), the positive surplus triggers Case 3, and
+-- converges (Case 3), the positive surplus triggers Case 2, and
 -- 'balanceTxOuts' creates a change output with the surplus.
 genNoOutputsTx
   :: Exp.Era era
@@ -851,7 +861,7 @@ prop_calcMinFeeRecursive_no_tx_outs = H.property $ do
 --   Fee for 2-output tx (F2) ≈ 259 lovelace
 --   Delta = F2 - F1 ≈ 23
 -- A surplus of F1 + 1 to F1 + 15 ensures:
---   1. After fee convergence at F1, a positive balance triggers Case 3.
+--   1. After fee convergence at F1, a positive balance triggers Case 2.
 --   2. Adding the change output raises the fee to F2.
 --   3. The change is updated: (surplus - F1) + (F1 - F2) = surplus - F2 < 0.
 --   4. balanceTxOuts returns NotEnoughAda.
