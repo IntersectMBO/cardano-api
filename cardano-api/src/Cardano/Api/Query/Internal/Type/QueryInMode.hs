@@ -321,8 +321,8 @@ data QueryInShelleyBasedEra era result where
     :: Set L.GovActionId
     -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)))
   QueryLedgerPeerSnapshot
-    :: Diffusion.LedgerPeersKind
-    -> QueryInShelleyBasedEra era (Serialised Diffusion.SomeLedgerPeerSnapshot)
+    :: Diffusion.SingLedgerPeersKind ledgerPeersKind
+    -> QueryInShelleyBasedEra era (Serialised (Diffusion.LedgerPeerSnapshot ledgerPeersKind))
   QueryStakePoolDefaultVote
     :: Ledger.KeyHash Ledger.StakePool
     -> QueryInShelleyBasedEra era L.DefaultVote
@@ -439,15 +439,16 @@ decodeStakeSnapshot sbe (SerialisedStakeSnapshots (Serialised ls)) =
     decodeFull (Core.eraProtVerHigh @(ShelleyLedgerEra era)) ls
 
 decodeLedgerPeerSnapshot
-  :: Consensus.ShelleyNodeToClientVersion
-  -> Serialised Diffusion.SomeLedgerPeerSnapshot
-  -> Either (LBS.ByteString, DecoderError) Diffusion.SomeLedgerPeerSnapshot
-decodeLedgerPeerSnapshot _ntcV (Serialised lps) =
+  :: Diffusion.SingLedgerPeersKind ledgerPeersKind
+  -> Consensus.ShelleyNodeToClientVersion
+  -> Serialised (Diffusion.LedgerPeerSnapshot ledgerPeersKind)
+  -> Either (LBS.ByteString, DecoderError) (Diffusion.LedgerPeerSnapshot ledgerPeersKind)
+decodeLedgerPeerSnapshot ledgerPeersKind _ntcV (Serialised lps) =
   first
     (lps,)
     $ Plain.decodeFullDecoder
       "LedgerPeerSnapshot"
-      Diffusion.decodeLedgerPeerSnapshot
+      (Diffusion.decodeLedgerPeerSnapshot ledgerPeersKind)
       lps
 
 toShelleyAddrSet
@@ -1045,9 +1046,14 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         Consensus.GetProposals{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
-    QueryLedgerPeerSnapshot _peerKind ->
+    QueryLedgerPeerSnapshot Diffusion.SingAllLedgerPeers ->
       case q' of
-        Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot _peerKind) ->
+        Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot Diffusion.SingAllLedgerPeers) ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryLedgerPeerSnapshot Diffusion.SingBigLedgerPeers ->
+      case q' of
+        Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot Diffusion.SingBigLedgerPeers) ->
           r'
         _ -> fromConsensusQueryResultMismatch
     QueryStakePoolDefaultVote{} ->
