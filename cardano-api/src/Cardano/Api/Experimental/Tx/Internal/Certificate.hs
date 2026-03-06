@@ -52,10 +52,12 @@ import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
 import Cardano.Api.Pretty
 import Cardano.Api.Serialise.TextEnvelope.Internal
 
+import Cardano.Crypto.Hash.Class (hashFromBytesShort)
 import Cardano.Ledger.BaseTypes (strictMaybe)
 
 import Control.Monad.Except (MonadError (..))
-import Data.ByteString (ByteString)
+import Data.Array.Byte (ByteArray)
+import Data.ByteString.Short (fromByteArray)
 import Data.String (IsString (fromString))
 
 makeStakeAddressDelegationCertificate
@@ -229,7 +231,7 @@ anchorDataFromPoolMetadata
 anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashBytes}) = do
   hash <-
     maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return $
-      Ledger.hashFromBytes hashBytes
+      hashFromBytesShort (fromByteArray hashBytes)
   return $
     Just
       ( Ledger.Anchor
@@ -239,7 +241,7 @@ anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHas
       )
 
 data AnchorDataFromCertificateError
-  = InvalidPoolMetadataHashError Ledger.Url ByteString
+  = InvalidPoolMetadataHashError Ledger.Url ByteArray
   deriving (Eq, Show)
 
 instance Error AnchorDataFromCertificateError where

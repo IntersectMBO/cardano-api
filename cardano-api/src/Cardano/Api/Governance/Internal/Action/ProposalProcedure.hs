@@ -85,7 +85,7 @@ toGovernanceAction sbe =
         prevGovAction
         Gov.Constitution
           { Gov.constitutionAnchor = anchor
-          , Gov.constitutionScript = mConstitutionScriptHash
+          , Gov.constitutionGuardrailsScriptHash = mConstitutionScriptHash
           }
     ProposeNewCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor ->
       Gov.UpdateCommittee
@@ -124,7 +124,7 @@ fromGovernanceAction = \case
     ProposeNewConstitution
       prevGovId
       (Gov.constitutionAnchor constitution)
-      (Gov.constitutionScript constitution)
+      (Gov.constitutionGuardrailsScriptHash constitution)
   Gov.ParameterChange prevGovId pparams govPolicy ->
     UpdatePParams prevGovId pparams govPolicy
   Gov.HardForkInitiation prevGovId pVer ->
