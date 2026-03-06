@@ -14,6 +14,7 @@ import Cardano.Api qualified as Api
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Experimental.Tx qualified as Exp
+import Cardano.Api.Experimental.Tx.Internal.Fee (calcMinFeeRecursiveWith)
 import Cardano.Api.Genesis qualified as Genesis
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Ledger qualified as Ledger
@@ -106,6 +107,9 @@ tests =
         , testProperty
             "Tiny surplus consumed by fee increase yields NotEnoughAda"
             prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada
+        , testProperty
+            "iteration limit exhausted returns FeeCalculationDidNotConverge"
+            prop_calcMinFeeRecursive_did_not_converge
         ]
     ]
 
@@ -981,3 +985,36 @@ prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada = H.property $ do
       H.assert $ actual < required
     Left err -> H.annotateShow err >> H.failure
     Right _ -> H.annotate "Expected NotEnoughAda or MinUTxONotMet but tx balanced successfully" >> H.failure
+
+-- ---------------------------------------------------------------------------
+-- Iteration limit: FeeCalculationDidNotConverge
+-- ---------------------------------------------------------------------------
+
+-- | When the maximum iteration count is set to 1 and the transaction starts
+-- with a zero fee, the first iteration updates the fee field (Case 3) but
+-- immediately exhausts the budget, so the function must return
+-- 'FeeCalculationDidNotConverge'.
+--
+-- This test uses 'calcMinFeeRecursiveWith' (the internal variant that exposes
+-- the iteration limit) to reliably exercise the error path without requiring
+-- a pathological transaction that genuinely fails to converge under the
+-- default 50-iteration limit.
+prop_calcMinFeeRecursive_did_not_converge :: Property
+prop_calcMinFeeRecursive_did_not_converge = H.property $ do
+  (unsignedTx, utxo, changeAddr) <- H.forAll $ genFundedSimpleTx Exp.ConwayEra
+  -- maxIterations = 1: the first iteration sets the fee (Case 3) and then
+  -- the counter hits 0, returning FeeCalculationDidNotConverge.
+  let result =
+        calcMinFeeRecursiveWith
+          1
+          changeAddr
+          unsignedTx
+          utxo
+          exampleProtocolParams
+          mempty
+          mempty
+          mempty
+          0
+  case result of
+    Left Exp.FeeCalculationDidNotConverge -> H.success
+    other -> H.annotateShow other >> H.failure

@@ -25,6 +25,7 @@ module Cardano.Api.Experimental.Tx.Internal.Fee
   , indexWitnessedTxProposalProcedures
   , makeTransactionBodyAutoBalance
   -- Internal
+  , calcMinFeeRecursiveWith
   , toUnsigned
   )
 where
@@ -754,7 +755,38 @@ calcMinFeeRecursive
   -> Int
   -- ^ Number of extra key hashes for native scripts
   -> Either FeeCalculationError (UnsignedTx (LedgerEra era))
-calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposits drepDelegDeposits nExtraWitnesses
+calcMinFeeRecursive = calcMinFeeRecursiveWith 50
+
+-- | Like 'calcMinFeeRecursive' but with a configurable maximum iteration
+-- limit. Exported for testing purposes to exercise the
+-- 'FeeCalculationDidNotConverge' error path by passing a small limit.
+calcMinFeeRecursiveWith
+  :: forall era
+   . IsEra era
+  => Int
+  -- ^ Maximum number of iterations before returning
+  -- 'FeeCalculationDidNotConverge'. 'calcMinFeeRecursive' uses 50.
+  -> L.Addr
+  -- ^ Change address. Any surplus value (ADA and/or native tokens) is
+  -- sent to a new output at this address, appended at the end of the
+  -- existing outputs.
+  -> UnsignedTx (LedgerEra era)
+  -> L.UTxO (LedgerEra era)
+  -> L.PParams (LedgerEra era)
+  -> Set PoolId
+  -- ^ The set of registered stake pools. Pool registrations for pools
+  -- already in this set are treated as re-registrations (no deposit
+  -- required on the produced side).
+  -> Map StakeCredential L.Coin
+  -- ^ Deposits for stake credentials being deregistered in this
+  -- transaction. These are counted as refunds on the consumed side.
+  -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
+  -- ^ Deposits for DRep credentials being deregistered in this
+  -- transaction. These are counted as refunds on the consumed side.
+  -> Int
+  -- ^ Number of extra key hashes for native scripts
+  -> Either FeeCalculationError (UnsignedTx (LedgerEra era))
+calcMinFeeRecursiveWith maxIterations changeAddr unsignedTx utxo pparams poolids stakeDelegDeposits drepDelegDeposits nExtraWitnesses
   -- If multi-assets are non-negative initially, they stay non-negative across
   -- iterations (only ADA and fee change), so check once upfront.
   | multiAssetIsNegative =
@@ -777,8 +809,6 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
   multiAssetIsNegative =
     obtainCommonConstraints (useEra @era) $
       not (L.pointwise (>=) (L.MaryValue (L.Coin 0) multiAssets) mempty)
-  maxIterations :: Int
-  maxIterations = 50
 
   go
     :: Int
