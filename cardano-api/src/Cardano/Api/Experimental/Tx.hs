@@ -271,7 +271,7 @@ makeKeyWitness era (UnsignedTx unsignedTx) wsk =
 
 -- | A transaction that has been witnesssed
 data SignedTx era
-  = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx (LedgerEra era))
+  = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx Ledger.TopTx (LedgerEra era))
 
 deriving instance Eq (SignedTx era)
 

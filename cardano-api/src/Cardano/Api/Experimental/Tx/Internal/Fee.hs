@@ -67,6 +67,7 @@ import Cardano.Ledger.Alonzo.Core qualified as Ledger
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
+import Cardano.Ledger.Core (TopTx)
 import Cardano.Ledger.Credential as Ledger (Credential)
 import Cardano.Ledger.Val qualified as L
 
@@ -1080,7 +1081,7 @@ indexWitnessedTxProposalProcedures (TxProposalProcedures proposals) = do
     | (ix, (proposal, anyWitness)) <- allProposalsList
     ]
 
-toUnsigned :: forall era. Era era -> L.Tx (LedgerEra era) -> UnsignedTx (LedgerEra era)
+toUnsigned :: forall era. Era era -> L.Tx TopTx (LedgerEra era) -> UnsignedTx (LedgerEra era)
 toUnsigned e tx =
   obtainCommonConstraints e $
     UnsignedTx tx
@@ -1096,7 +1097,7 @@ evaluateTransactionExecutionUnits
   -> LedgerEpochInfo
   -> L.PParams (LedgerEra era)
   -> L.UTxO (LedgerEra era)
-  -> L.Tx (LedgerEra era)
+  -> L.Tx TopTx (LedgerEra era)
   -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
 evaluateTransactionExecutionUnits systemstart epochInfo pp utxo tx =
   obtainCommonConstraints (useEra @era) $

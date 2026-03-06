@@ -298,9 +298,9 @@ toAuxiliaryData txMData ss' =
 
 eraSpecificLedgerTxBody
   :: Era era
-  -> L.TxBody (LedgerEra era)
+  -> L.TxBody Ledger.TopTx (LedgerEra era)
   -> TxBodyContent (LedgerEra era)
-  -> L.TxBody (LedgerEra era)
+  -> L.TxBody Ledger.TopTx (LedgerEra era)
 eraSpecificLedgerTxBody era ledgerbody bc =
   body era
  where

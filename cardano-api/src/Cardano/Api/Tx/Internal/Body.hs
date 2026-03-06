@@ -1185,7 +1185,7 @@ getTxId (ShelleyTxBody sbe tx _ _ _ _) =
 getTxIdShelley
   :: Ledger.EraTxBody (ShelleyLedgerEra era)
   => ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxId
 getTxIdShelley _ tx =
   TxId
@@ -1517,7 +1517,7 @@ getTxBodyContent = \case
 fromLedgerTxBody
   :: ShelleyBasedEra era
   -> TxScriptValidity era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxBodyScriptData era
   -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
   -> TxBodyContent ViewTx era
@@ -1551,7 +1551,7 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
 
 fromLedgerProposalProcedures
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (TxProposalProcedures ViewTx era))
 fromLedgerProposalProcedures sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
@@ -1563,7 +1563,7 @@ fromLedgerProposalProcedures sbe body =
 fromLedgerVotingProcedures
   :: ()
   => ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (TxVotingProcedures ViewTx era))
 fromLedgerVotingProcedures sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
@@ -1576,7 +1576,7 @@ fromLedgerVotingProcedures sbe body =
 fromLedgerCurrentTreasuryValue
   :: ()
   => ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (Maybe Coin))
 fromLedgerCurrentTreasuryValue sbe body = forEraInEonMaybe (toCardanoEra sbe) $ \ceo ->
   conwayEraOnwardsConstraints ceo $
@@ -1586,7 +1586,7 @@ fromLedgerCurrentTreasuryValue sbe body = forEraInEonMaybe (toCardanoEra sbe) $ 
 fromLedgerTreasuryDonation
   :: ()
   => ShelleyBasedEra era
-  -> L.TxBody (ShelleyLedgerEra era)
+  -> L.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era Coin)
 fromLedgerTreasuryDonation sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
@@ -1596,7 +1596,7 @@ fromLedgerTreasuryDonation sbe body =
 fromLedgerTxIns
   :: forall era
    . ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> [(TxIn, BuildTxWith ViewTx (Witness WitCtxTxIn era))]
 fromLedgerTxIns sbe body =
   [ (fromShelleyTxIn input, ViewTx)
@@ -1605,7 +1605,7 @@ fromLedgerTxIns sbe body =
  where
   inputs_
     :: ShelleyBasedEra era
-    -> Ledger.TxBody (ShelleyLedgerEra era)
+    -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
     -> Set Ledger.TxIn
   inputs_ ShelleyBasedEraShelley = view L.inputsTxBodyL
   inputs_ ShelleyBasedEraAllegra = view L.inputsTxBodyL
@@ -1618,7 +1618,7 @@ fromLedgerTxIns sbe body =
 fromLedgerTxInsCollateral
   :: forall era
    . ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxInsCollateral era
 fromLedgerTxInsCollateral sbe body =
   caseShelleyToMaryOrAlonzoEraOnwards
@@ -1627,7 +1627,9 @@ fromLedgerTxInsCollateral sbe body =
     sbe
 
 fromLedgerTxInsReference
-  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference ViewTx era
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
+  -> TxInsReference ViewTx era
 fromLedgerTxInsReference sbe txBody =
   caseShelleyToAlonzoOrBabbageEraOnwards
     (const TxInsReferenceNone)
@@ -1636,7 +1638,7 @@ fromLedgerTxInsReference sbe txBody =
 
 fromLedgerTxTotalCollateral
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxTotalCollateral era
 fromLedgerTxTotalCollateral sbe txbody =
   caseShelleyToAlonzoOrBabbageEraOnwards
@@ -1650,7 +1652,7 @@ fromLedgerTxTotalCollateral sbe txbody =
 
 fromLedgerTxReturnCollateral
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxReturnCollateral CtxTx era
 fromLedgerTxReturnCollateral sbe txbody =
   caseShelleyToAlonzoOrBabbageEraOnwards
@@ -1663,7 +1665,7 @@ fromLedgerTxReturnCollateral sbe txbody =
     sbe
 
 fromLedgerTxFee
-  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxFee era
+  :: ShelleyBasedEra era -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era) -> TxFee era
 fromLedgerTxFee sbe body =
   shelleyBasedEraConstraints sbe $
     TxFeeExplicit sbe $
@@ -1750,7 +1752,7 @@ fromLedgerTxAuxiliaryData sbe (Just auxData) =
 
 fromLedgerTxExtraKeyWitnesses
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxExtraKeyWitnesses era
 fromLedgerTxExtraKeyWitnesses sbe body =
   caseShelleyToMaryOrAlonzoEraOnwards
@@ -1770,7 +1772,7 @@ fromLedgerTxExtraKeyWitnesses sbe body =
 
 fromLedgerTxWithdrawals
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxWithdrawals ViewTx era
 fromLedgerTxWithdrawals sbe body =
   shelleyBasedEraConstraints sbe $
@@ -1781,7 +1783,7 @@ fromLedgerTxWithdrawals sbe body =
 
 fromLedgerTxCertificates
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxCertificates ViewTx era
 fromLedgerTxCertificates sbe body =
   shelleyBasedEraConstraints sbe $
@@ -1794,7 +1796,7 @@ fromLedgerTxCertificates sbe body =
 maybeFromLedgerTxUpdateProposal
   :: ()
   => ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxUpdateProposal era
 maybeFromLedgerTxUpdateProposal sbe body =
   caseShelleyToBabbageOrConwayEraOnwards
@@ -1808,7 +1810,7 @@ maybeFromLedgerTxUpdateProposal sbe body =
 
 fromLedgerTxMintValue
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxMintValue ViewTx era
 fromLedgerTxMintValue sbe body = forEraInEon (toCardanoEra sbe) TxMintNone $ \w ->
   maryEraOnwardsConstraints w $ do
