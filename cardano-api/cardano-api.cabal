@@ -129,6 +129,8 @@ library
     cardano-crypto-class ^>=2.3.1.0,
     cardano-crypto-wrapper ^>=1.7,
     cardano-data >=1.0,
+    cardano-diffusion,
+    cardano-diffusion:api,
     cardano-ledger-allegra >=1.7,
     cardano-ledger-alonzo >=1.13,
     cardano-ledger-api ^>=1.13,

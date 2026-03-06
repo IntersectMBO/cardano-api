@@ -19,7 +19,8 @@ module Cardano.Api.Ledger.Internal.Reexport
   , hashWithSerialiser
   , fromVRFVerKeyHash
   , toVRFVerKeyHash
-  , PoolParams (..)
+  , StakePoolParams (..)
+  , pattern PoolParams
   , HasKeyRole
   , MIRPot (..)
   , MIRTarget (..)
@@ -192,7 +193,6 @@ module Cardano.Api.Ledger.Internal.Reexport
   , strictMaybeToMaybe
   , maybeToStrictMaybe
   , AnchorData (..)
-  , hashAnchorData
   , UnitInterval
   , mkVersion
   , NonNegativeInterval
@@ -210,12 +210,12 @@ module Cardano.Api.Ledger.Internal.Reexport
   , unsafeMakeSafeHash
   , extractHash
   -- Reward
-  , RewardAccount (..)
+  , pattern RewardAccount
   )
 where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (Addr (..), pattern RewardAccount)
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), Timelock (..), showTimelock)
 import Cardano.Ledger.Alonzo.Core
   ( AlonzoEraScript (..)
@@ -284,7 +284,6 @@ import Cardano.Ledger.BaseTypes
   , Version
   , boundRational
   , dnsToText
-  , hashAnchorData
   , maybeToStrictMaybe
   , mkVersion
   , portToWord16
@@ -392,7 +391,6 @@ import Cardano.Ledger.Shelley.API
   , StakeReference (..)
   , WitVKey (..)
   , hashKey
-  , hashVerKeyVRF
   )
 import Cardano.Ledger.Shelley.Genesis
   ( ShelleyGenesisStaking (..)
@@ -411,13 +409,14 @@ import Cardano.Ledger.Shelley.TxCert
   )
 import Cardano.Ledger.State
   ( PoolMetadata (..)
-  , PoolParams (..)
   , ScriptsNeeded
+  , StakePoolParams (..)
   , StakePoolRelay (..)
   , UTxO (..)
   , getScriptsNeeded
+  , pattern PoolParams
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val
-import Cardano.Protocol.Crypto (Crypto, StandardCrypto)
+import Cardano.Protocol.Crypto (Crypto, StandardCrypto, hashVerKeyVRF)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
