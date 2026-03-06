@@ -863,7 +863,7 @@ fromShelleyStakePoolState
         . Ledger.dnsToText
 
 data AnchorDataFromCertificateError
-  = InvalidPoolMetadataHashError Ledger.Url ByteString
+  = InvalidPoolMetadataHashError Ledger.Url ByteArray
   deriving (Eq, Show)
 
 instance Error AnchorDataFromCertificateError where
@@ -914,7 +914,7 @@ getAnchorDataFromCertificate c =
   anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashBytes}) = do
     hash <-
       maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return $
-        Ledger.hashFromBytes hashBytes
+        hashFromBytesShort (SBSI.SBS (case hashBytes of ByteArray ba# -> ba#))
     return $
       Just
         ( Ledger.Anchor
