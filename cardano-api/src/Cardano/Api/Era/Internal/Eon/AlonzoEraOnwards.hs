@@ -8,6 +8,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-inaccessible-code #-}
 
 module Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
   ( AlonzoEraOnwards (..)
