@@ -730,7 +730,14 @@ instance Error FeeCalculationError where
 --   computed minimum fee and the function recurses.
 --
 -- A maximum iteration limit (currently 50) guards against non-termination.
--- In practice convergence occurs within 2–3 iterations.
+-- In practice convergence occurs within 2–3 iterations.  If the limit is
+-- reached, the fee currently in the transaction body is checked: the fee is
+-- considered /reasonable/ (and the current transaction returned) when
+-- @minFee <= txBodyFee <= 2 * minFee@.  The lower bound ensures the ledger
+-- will accept the fee; the upper bound (twice the minimum) rules out a fee so
+-- far above the minimum that it likely signals a calculation error rather than
+-- ordinary oscillation.  Only when these bounds are not met is
+-- 'FeeCalculationDidNotConverge' returned.
 calcMinFeeRecursive
   :: forall era
    . IsEra era
@@ -790,7 +797,27 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
     -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
     -> Int
     -> Either FeeCalculationError (UnsignedTx (LedgerEra era))
-  go 0 _ _ _ _ _ _ _ = Left FeeCalculationDidNotConverge
+  -- When the iteration limit is reached, accept the current transaction if its
+  -- fee is "reasonable": at least the ledger-computed minimum and at most twice
+  -- that minimum (@minFee <= txBodyFee <= 2 * minFee@).  The result is still
+  -- useful even though strict convergence was not confirmed.
+  --
+  -- The lower bound ensures the transaction will not be rejected by the ledger
+  -- for an insufficient fee.  The upper bound (2 * minFee) rules out a fee that
+  -- is so far above the minimum that it likely indicates a calculation error
+  -- rather than ordinary oscillation.  In practice the fee at this point is
+  -- a ledger-computed minimum from a prior iteration and will be within a tiny
+  -- fraction of the current minimum (oscillation stems from a few bytes of
+  -- CBOR encoding difference between iterations).
+  go 0 unSignTx@(UnsignedTx ledgerTx) utxo' pparams' _ _ _ nExtraWitnesses'
+    | txBodyFee >= minFee && txBodyFee <= 2 * minFee = do
+        let outs = toList $ ledgerTx ^. L.bodyTxL . L.outputsTxBodyL
+        mapM_ (checkOutputMinUTxO pparams') outs
+        return unSignTx
+    | otherwise = Left FeeCalculationDidNotConverge
+   where
+    minFee = obtainCommonConstraints (useEra @era) $ L.calcMinFeeTx utxo' pparams' ledgerTx nExtraWitnesses'
+    txBodyFee = ledgerTx ^. L.bodyTxL . L.feeTxBodyL
   go n unSignTx@(UnsignedTx ledgerTx) utxo' pparams' poolids' stakeDelegDeposits' drepDelegDeposits' nExtraWitnesses'
     | minFee == txBodyFee && L.isZero txBalanceValue = do
         -- Case 1
