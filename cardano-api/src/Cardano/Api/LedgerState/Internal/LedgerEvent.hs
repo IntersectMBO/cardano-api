@@ -72,7 +72,7 @@ data LedgerEvent
       Ledger.TxId
       (Set (Ledger.Voter, Ledger.GovActionId))
       -- ^ Votes that were replaced in this tx.
-      (Set (Ledger.Credential 'Ledger.DRepRole))
+      (Set (Ledger.Credential Ledger.DRepRole))
       -- ^ Any votes from these DReps in this or in previous txs are removed
   | -- | The current state of governance matters at the epoch boundary.
     -- I.E the current constitution, committee, protocol parameters, etc.

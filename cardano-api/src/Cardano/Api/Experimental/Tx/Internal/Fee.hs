@@ -552,12 +552,12 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo 
   isRegPool kh = Api.StakePoolKeyHash kh `Set.member` poolids
 
   lookupDelegDeposit
-    :: Ledger.Credential 'Ledger.Staking -> Maybe L.Coin
+    :: Ledger.Credential Ledger.Staking -> Maybe L.Coin
   lookupDelegDeposit stakeCred =
     Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
 
   lookupDRepDeposit
-    :: Ledger.Credential 'Ledger.DRepRole -> Maybe L.Coin
+    :: Ledger.Credential Ledger.DRepRole -> Maybe L.Coin
   lookupDRepDeposit drepCred =
     Map.lookup drepCred drepDelegDeposits
 
