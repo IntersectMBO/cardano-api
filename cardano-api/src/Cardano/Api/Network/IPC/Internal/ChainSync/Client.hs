@@ -15,5 +15,5 @@ module Cardano.Api.Network.IPC.Internal.ChainSync.Client
   )
 where
 
-import Cardano.Network.NodeToClient ()
+import Cardano.Network.NodeToClient (chainSyncPeerNull)
 import Ouroboros.Network.Protocol.ChainSync.Client

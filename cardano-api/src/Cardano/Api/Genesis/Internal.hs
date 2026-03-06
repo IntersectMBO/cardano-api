@@ -46,7 +46,7 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices (..))
 import Cardano.Ledger.Api (CoinPerWord (..))
 import Cardano.Ledger.BaseTypes as Ledger
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), CompactForm (..))
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.PParams
@@ -74,7 +74,6 @@ import PlutusLedgerApi.Common (IsParamName, readParamName)
 import PlutusLedgerApi.V3 qualified as V3
 
 import Control.Monad
-import Control.Monad.Trans.Fail.String (errorFail)
 import Data.ByteString (ByteString)
 import Data.Default.Class qualified as DefaultClass
 import Data.Functor.Identity
@@ -87,7 +86,6 @@ import Data.Ratio
 import Data.Text (Text)
 import Data.Time qualified as Time
 import Data.Typeable
-import GHC.Exts (IsList (..))
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 
@@ -171,8 +169,8 @@ shelleyGenesisDefaults =
           & ppMaxBBSizeL .~ 64 * 1024 -- max 64kb blocks
           & ppMaxTxSizeL .~ 16 * 1024 -- max 16kb txs
           & ppEMaxL .~ EpochInterval 18
-          & ppMinFeeAL .~ Coin 1 -- The linear factor for the minimum fee calculation
-          & ppMinFeeBL .~ Coin 0 -- The constant factor for the minimum fee calculation
+          & ppTxFeePerByteL .~ CoinPerByte (CompactCoin 1) -- The linear factor for the minimum fee calculation
+          & ppTxFeeFixedL .~ Coin 0 -- The constant factor for the minimum fee calculation
           -- pot = tx_fees + ρ * remaining_reserves
           & ppRhoL .~ unsafeBR (1 % 10) -- How much of reserves goes into pot
           & ppTauL .~ unsafeBR (1 % 10) -- τ * remaining_reserves is sent to treasury every epoch

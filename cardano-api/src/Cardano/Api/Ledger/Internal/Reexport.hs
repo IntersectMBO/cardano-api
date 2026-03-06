@@ -20,7 +20,6 @@ module Cardano.Api.Ledger.Internal.Reexport
   , fromVRFVerKeyHash
   , toVRFVerKeyHash
   , StakePoolParams (..)
-  , pattern PoolParams
   , HasKeyRole
   , MIRPot (..)
   , MIRTarget (..)
@@ -132,7 +131,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , toPlainDecoder
   -- Shelley
   , secondsToNominalDiffTimeMicro
-  , ChainAccountState (..)
+  , ChainAccountState
   , NewEpochState (..)
   , ShelleyGenesisStaking (..)
   -- Allegra
@@ -385,7 +384,7 @@ import Cardano.Ledger.Plutus.Language
   , toSLanguage
   )
 import Cardano.Ledger.Shelley.API
-  ( ChainAccountState (..)
+  ( ChainAccountState
   , GenDelegPair (..)
   , NewEpochState (..)
   , StakeReference (..)
