@@ -105,7 +105,6 @@ type AlonzoEraOnwardsConstraints era =
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.EraUTxO (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.MaryEraTxBody (ShelleyLedgerEra era)
   , L.NativeScript (ShelleyLedgerEra era) ~ L.Timelock (ShelleyLedgerEra era)
   , Plutus.EraPlutusContext (ShelleyLedgerEra era)

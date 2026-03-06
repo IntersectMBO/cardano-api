@@ -323,7 +323,6 @@ type EraCommonConstraints era =
   , ShelleyLedgerEra era ~ LedgerEra era
   , LedgerEra era ~ ShelleyLedgerEra era
   , ToJSON (ChainDepState (ConsensusProtocol era))
-  , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
   , Api.IsCardanoEra era
   , Api.IsShelleyBasedEra era
   , IsEra era

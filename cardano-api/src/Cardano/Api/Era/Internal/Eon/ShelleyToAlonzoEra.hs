@@ -90,7 +90,6 @@ type ShelleyToAlonzoEraConstraints era =
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxOut (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.ProtVerAtMost (ShelleyLedgerEra era) 6
   , L.ProtVerAtMost (ShelleyLedgerEra era) 8
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)

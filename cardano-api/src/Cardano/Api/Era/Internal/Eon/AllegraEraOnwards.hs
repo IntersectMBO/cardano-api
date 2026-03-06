@@ -96,7 +96,6 @@ type AllegraEraOnwardsConstraints era =
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxOut (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.AllegraEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))

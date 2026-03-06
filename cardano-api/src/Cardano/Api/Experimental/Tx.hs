@@ -250,8 +250,8 @@ getUnsignedTxFee (UnsignedTx unsignedTx) =
    in txbody ^. L.feeTxBodyL
 
 hashTxBody
-  :: L.HashAnnotated (Ledger.TxBody era) L.EraIndependentTxBody
-  => L.TxBody era -> Hash.Hash L.HASH L.EraIndependentTxBody
+  :: L.HashAnnotated (Ledger.TxBody l era) L.EraIndependentTxBody
+  => Ledger.TxBody l era -> Hash.Hash L.HASH L.EraIndependentTxBody
 hashTxBody = L.extractHash . L.hashAnnotated
 
 makeKeyWitness
