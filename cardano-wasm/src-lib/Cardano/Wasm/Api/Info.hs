@@ -129,7 +129,9 @@ data MethodInfo = MethodInfo
   { methodName :: String
   -- ^ Name of the global method name in the API (which should match the exported function and it must be unique globally).
   , methodSimpleName :: Maybe String
-  -- ^ Name of the method in the virtual object of the API when accessed via JS (used for re-exporting to JS, may be shorter than methodName and does not need to be unique unlike methodName). Defaults to methodName when Nothing.
+  -- ^ Name of the method in the virtual object of the API when accessed via JS (used for re-exporting to JS,
+  -- may be shorter than @methodName@ and does not need to be globally unique unlike @methodName@, but it does need to be unique
+  -- within its containing virtual object). It defaults to methodName when @Nothing@.
   , methodDoc :: String
   -- ^ General documentation for the method.
   , methodParams :: [ParamInfo]
