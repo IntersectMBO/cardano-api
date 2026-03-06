@@ -202,7 +202,7 @@ getAnchorDataFromCertificate ConwayEra (Certificate c) =
     Ledger.UnRegDepositTxCert _ _ -> return Nothing
     Ledger.RegDepositDelegTxCert{} -> return Nothing
     Ledger.DelegTxCert{} -> return Nothing
-    Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+    Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.sppMetadata poolParams
     Ledger.RetirePoolTxCert _ _ -> return Nothing
     Ledger.RegDRepTxCert _ _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
     Ledger.UnRegDRepTxCert _ _ -> return Nothing
@@ -216,7 +216,7 @@ getAnchorDataFromCertificate DijkstraEra (Certificate c) =
     Ledger.UnRegDepositTxCert _ _ -> return Nothing
     Ledger.RegDepositDelegTxCert{} -> return Nothing
     Ledger.DelegTxCert{} -> return Nothing
-    Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+    Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.sppMetadata poolParams
     Ledger.RetirePoolTxCert _ _ -> return Nothing
     Ledger.RegDRepTxCert _ _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
     Ledger.UnRegDRepTxCert _ _ -> return Nothing
