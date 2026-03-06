@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -56,8 +57,8 @@ import Cardano.Crypto.Hash.Class (hashFromBytesShort)
 import Cardano.Ledger.BaseTypes (strictMaybe)
 
 import Control.Monad.Except (MonadError (..))
-import Data.Array.Byte (ByteArray)
-import Data.ByteString.Short (fromByteArray)
+import Data.Array.Byte (ByteArray (..))
+import Data.ByteString.Short.Internal qualified as SBSI
 import Data.String (IsString (fromString))
 
 makeStakeAddressDelegationCertificate
@@ -231,7 +232,7 @@ anchorDataFromPoolMetadata
 anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashBytes}) = do
   hash <-
     maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return $
-      hashFromBytesShort (fromByteArray hashBytes)
+      hashFromBytesShort (SBSI.SBS (case hashBytes of ByteArray ba# -> ba#))
   return $
     Just
       ( Ledger.Anchor
