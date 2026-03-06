@@ -10,6 +10,7 @@ module Cardano.Api.Network
   , LedgerPeerSnapshot (..)
   , SomeLedgerPeerSnapshot (..)
   , LedgerPeersKind (..)
+  , SingLedgerPeersKind (..)
   , Target (..)
   , Serialised (..)
   , SubmitResult (..)
