@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -91,6 +92,7 @@ import Cardano.Api.Pretty (Doc)
 import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.TextEnvelope.Internal
 
+import Cardano.Crypto.Hash.Class (hashFromBytesShort, hashToByteArray)
 import Cardano.Ledger.Address (AccountId (..))
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
@@ -98,8 +100,10 @@ import Cardano.Ledger.State qualified as Ledger
 
 import Control.Monad
 import Control.Monad.Except (MonadError (..))
+import Data.Array.Byte (ByteArray (..))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.ByteString.Short.Internal qualified as SBSI
 import Data.IP (IPv4, IPv6)
 import Data.Maybe
 import Data.Text (Text)
@@ -330,11 +334,11 @@ makeStakeAddressDelegationCertificate = \case
 data StakePoolRegistrationRequirements era where
   StakePoolRegistrationRequirementsConwayOnwards
     :: ConwayEraOnwards era
-    -> Ledger.PoolParams
+    -> Ledger.StakePoolParams
     -> StakePoolRegistrationRequirements era
   StakePoolRegistrationRequirementsPreConway
     :: ShelleyToBabbageEra era
-    -> Ledger.PoolParams
+    -> Ledger.StakePoolParams
     -> StakePoolRegistrationRequirements era
 
 {-# DEPRECATED
@@ -649,7 +653,7 @@ fromShelleyCertificate
 fromShelleyCertificate =
   caseShelleyToBabbageOrConwayEraOnwards ShelleyRelatedCertificate ConwayCertificate
 
-toShelleyPoolParams :: StakePoolParameters -> Ledger.PoolParams
+toShelleyPoolParams :: StakePoolParameters -> Ledger.StakePoolParams
 toShelleyPoolParams
   StakePoolParameters
     { stakePoolId = StakePoolKeyHash poolkh
@@ -664,23 +668,23 @@ toShelleyPoolParams
     } =
     -- TODO: validate pool parameters such as the PoolMargin below, but also
     -- do simple client-side sanity checks, e.g. on the pool metadata url
-    Ledger.PoolParams
-      { Ledger.ppId = poolkh
-      , Ledger.ppVrf = Ledger.toVRFVerKeyHash vrfkh
-      , Ledger.ppPledge = stakePoolPledge
-      , Ledger.ppCost = stakePoolCost
-      , Ledger.ppMargin =
+    Ledger.StakePoolParams
+      { Ledger.sppId = poolkh
+      , Ledger.sppVrf = Ledger.toVRFVerKeyHash vrfkh
+      , Ledger.sppPledge = stakePoolPledge
+      , Ledger.sppCost = stakePoolCost
+      , Ledger.sppMargin =
           fromMaybe
             (error "toShelleyPoolParams: invalid PoolMargin")
             (Ledger.boundRational stakePoolMargin)
-      , Ledger.ppAccountAddress = toShelleyStakeAddr stakePoolRewardAccount
-      , Ledger.ppOwners =
+      , Ledger.sppAccountAddress = toShelleyStakeAddr stakePoolRewardAccount
+      , Ledger.sppOwners =
           fromList
             [kh | StakeKeyHash kh <- stakePoolOwners]
-      , Ledger.ppRelays =
+      , Ledger.sppRelays =
           fromList
             (map toShelleyStakePoolRelay stakePoolRelays)
-      , Ledger.ppMetadata =
+      , Ledger.sppMetadata =
           toShelleyPoolMetadata
             <$> Ledger.maybeToStrictMaybe stakePoolMetadata
       }
@@ -707,7 +711,7 @@ toShelleyPoolParams
         } =
         Ledger.PoolMetadata
           { Ledger.pmUrl = toShelleyUrl stakePoolMetadataURL
-          , Ledger.pmHash = Ledger.hashToBytes mdh
+          , Ledger.pmHash = hashToByteArray mdh
           }
 
     toShelleyDnsName :: ByteString -> Ledger.DnsName
@@ -722,35 +726,35 @@ toShelleyPoolParams
         Ledger.textToUrl (Text.length url) url
 
 fromShelleyPoolParams
-  :: Ledger.PoolParams
+  :: Ledger.StakePoolParams
   -> StakePoolParameters
 fromShelleyPoolParams
-  Ledger.PoolParams
-    { Ledger.ppId
-    , Ledger.ppVrf
-    , Ledger.ppPledge
-    , Ledger.ppCost
-    , Ledger.ppMargin
-    , Ledger.ppAccountAddress
-    , Ledger.ppOwners
-    , Ledger.ppRelays
-    , Ledger.ppMetadata
+  Ledger.StakePoolParams
+    { Ledger.sppId
+    , Ledger.sppVrf
+    , Ledger.sppPledge
+    , Ledger.sppCost
+    , Ledger.sppMargin
+    , Ledger.sppAccountAddress
+    , Ledger.sppOwners
+    , Ledger.sppRelays
+    , Ledger.sppMetadata
     } =
     StakePoolParameters
-      { stakePoolId = StakePoolKeyHash ppId
-      , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash ppVrf)
-      , stakePoolCost = ppCost
-      , stakePoolMargin = Ledger.unboundRational ppMargin
-      , stakePoolRewardAccount = fromShelleyStakeAddr ppAccountAddress
-      , stakePoolPledge = ppPledge
-      , stakePoolOwners = map StakeKeyHash (toList ppOwners)
+      { stakePoolId = StakePoolKeyHash sppId
+      , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash sppVrf)
+      , stakePoolCost = sppCost
+      , stakePoolMargin = Ledger.unboundRational sppMargin
+      , stakePoolRewardAccount = fromShelleyStakeAddr sppAccountAddress
+      , stakePoolPledge = sppPledge
+      , stakePoolOwners = map StakeKeyHash (toList sppOwners)
       , stakePoolRelays =
           map
             fromShelleyStakePoolRelay
-            (toList ppRelays)
+            (toList sppRelays)
       , stakePoolMetadata =
           fromShelleyPoolMetadata
-            <$> Ledger.strictMaybeToMaybe ppMetadata
+            <$> Ledger.strictMaybeToMaybe sppMetadata
       }
    where
     fromShelleyStakePoolRelay :: Ledger.StakePoolRelay -> StakePoolRelay
@@ -778,8 +782,8 @@ fromShelleyPoolParams
           , stakePoolMetadataHash =
               StakePoolMetadataHash
                 . fromMaybe (error "fromShelleyPoolMetadata: invalid hash. TODO: proper validation")
-                . Ledger.hashFromBytes
-                $ pmHash
+                . hashFromBytesShort
+                $ SBSI.SBS (case pmHash of ByteArray ba# -> ba#)
           }
 
     -- TODO: change the ledger rep of the DNS name to use ShortByteString
@@ -848,8 +852,8 @@ fromShelleyStakePoolState
           , stakePoolMetadataHash =
               StakePoolMetadataHash
                 . fromMaybe (error "fromShelleyPoolMetadata: invalid hash. TODO: proper validation")
-                . Ledger.hashFromBytes
-                $ pmHash
+                . hashFromBytesShort
+                $ SBSI.SBS (case pmHash of ByteArray ba# -> ba#)
           }
 
     -- TODO: change the ledger rep of the DNS name to use ShortByteString
@@ -880,7 +884,7 @@ getAnchorDataFromCertificate c =
           Ledger.RegTxCert _ -> return Nothing
           Ledger.UnRegTxCert _ -> return Nothing
           Ledger.DelegStakeTxCert _ _ -> return Nothing
-          Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+          Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.sppMetadata poolParams
           Ledger.RetirePoolTxCert _ _ -> return Nothing
           Ledger.GenesisDelegTxCert{} -> return Nothing
           Ledger.MirTxCert _ -> return Nothing
@@ -894,7 +898,7 @@ getAnchorDataFromCertificate c =
           Ledger.UnRegDepositTxCert _ _ -> return Nothing
           Ledger.RegDepositDelegTxCert{} -> return Nothing
           Ledger.DelegTxCert{} -> return Nothing
-          Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+          Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.sppMetadata poolParams
           Ledger.RetirePoolTxCert _ _ -> return Nothing
           Ledger.RegDRepTxCert _ _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
           Ledger.UnRegDRepTxCert _ _ -> return Nothing
