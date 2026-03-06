@@ -5,11 +5,12 @@ module Cardano.Api.Network.Internal.Reexport
   , Serialised (..)
   , SubmitResult (..)
   , LedgerPeersKind (..)
+  , SingLedgerPeersKind (..)
   )
 where
 
 import Ouroboros.Network.Block (Serialised (..))
-import Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeersKind (..))
+import Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeersKind (..), SingLedgerPeersKind (..))
 import Ouroboros.Network.PeerSelection.LedgerPeers.Type
   ( LedgerPeerSnapshot (..)
   , SomeLedgerPeerSnapshot (..)
