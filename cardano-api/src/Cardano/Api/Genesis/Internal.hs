@@ -46,7 +46,7 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices (..))
 import Cardano.Ledger.Api (CoinPerWord (..))
 import Cardano.Ledger.BaseTypes as Ledger
-import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), CompactForm (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.PParams

@@ -232,7 +232,6 @@ type ShelleyBasedEraConstraints era =
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.EraTxWits (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.EraCertState (ShelleyLedgerEra era)
   , L.EraAccounts (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
