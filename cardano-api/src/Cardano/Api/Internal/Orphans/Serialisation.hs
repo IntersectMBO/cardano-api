@@ -134,8 +134,6 @@ import Numeric (showHex)
 import Prettyprinter (punctuate, viaShow)
 import Text.Read
 
-deriving instance Generic (L.ApplyTxError era)
-
 deriving instance Generic (L.Registration.TooLarge a)
 
 deriving instance Generic L.ApplicationNameError
@@ -234,9 +232,8 @@ instance
   where
   toJSON = genericToJSON defaultOptions
 
-deriving anyclass instance
-  ToJSON (L.PredicateFailure (L.EraRule "LEDGER" ledgerera))
-  => ToJSON (L.ApplyTxError ledgerera)
+instance Show (L.ApplyTxError ledgerera) => ToJSON (L.ApplyTxError ledgerera) where
+  toJSON = toJSON . show
 
 deriving via
   ShowOf (L.Keys.VKey L.Keys.Witness)
@@ -363,8 +360,6 @@ instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
 --
 -- Simple newtype wrappers JSON conversion
 --
-
-deriving newtype instance ToJSON ShelleyHash
 
 deriving newtype instance ToJSON HashHeader
 
