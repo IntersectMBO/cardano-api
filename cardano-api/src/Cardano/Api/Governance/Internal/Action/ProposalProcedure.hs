@@ -85,7 +85,7 @@ toGovernanceAction sbe =
         prevGovAction
         Gov.Constitution
           { Gov.constitutionAnchor = anchor
-          , Gov.constitutionScript = mConstitutionScriptHash
+          , Gov.constitutionGuardrailsScriptHash = mConstitutionScriptHash
           }
     ProposeNewCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor ->
       Gov.UpdateCommittee
@@ -105,7 +105,9 @@ toGovernanceAction sbe =
     InfoAct ->
       Gov.InfoAction
     TreasuryWithdrawal withdrawals govPol ->
-      let m = fromList [(L.RewardAccount nw (toShelleyStakeCredential sc), l) | (nw, sc, l) <- withdrawals]
+      let m =
+            fromList
+              [(L.AccountAddress nw (L.AccountId (toShelleyStakeCredential sc)), l) | (nw, sc, l) <- withdrawals]
        in Gov.TreasuryWithdrawals m govPol
     InitiateHardfork prevGovId pVer ->
       Gov.HardForkInitiation prevGovId pVer
@@ -122,14 +124,14 @@ fromGovernanceAction = \case
     ProposeNewConstitution
       prevGovId
       (Gov.constitutionAnchor constitution)
-      (Gov.constitutionScript constitution)
+      (Gov.constitutionGuardrailsScriptHash constitution)
   Gov.ParameterChange prevGovId pparams govPolicy ->
     UpdatePParams prevGovId pparams govPolicy
   Gov.HardForkInitiation prevGovId pVer ->
     InitiateHardfork prevGovId pVer
   Gov.TreasuryWithdrawals withdrawlMap govPolicy ->
     let res =
-          [ (L.raNetwork rwdAcnt, fromShelleyStakeCredential (L.raCredential rwdAcnt), coin)
+          [ (L.aaNetworkId rwdAcnt, fromShelleyStakeCredential (L.unAccountId $ L.aaId rwdAcnt), coin)
           | (rwdAcnt, coin) <- toList withdrawlMap
           ]
      in TreasuryWithdrawal res govPolicy
@@ -202,7 +204,7 @@ createProposalProcedure sbe nw dep cred govAct anchor =
     Proposal
       Gov.ProposalProcedure
         { Gov.pProcDeposit = dep
-        , Gov.pProcReturnAddr = L.RewardAccount nw $ toShelleyStakeCredential cred
+        , Gov.pProcReturnAddr = L.AccountAddress nw (L.AccountId $ toShelleyStakeCredential cred)
         , Gov.pProcGovAction = toGovernanceAction sbe govAct
         , Gov.pProcAnchor = anchor
         }
@@ -215,7 +217,7 @@ fromProposalProcedure sbe (Proposal pp) =
   shelleyBasedEraConstraints
     sbe
     ( Gov.pProcDeposit pp
-    , fromShelleyStakeCredential (L.raCredential (Gov.pProcReturnAddr pp))
+    , fromShelleyStakeCredential (L.unAccountId $ L.aaId (Gov.pProcReturnAddr pp))
     , fromGovernanceAction (Gov.pProcGovAction pp)
     )
 

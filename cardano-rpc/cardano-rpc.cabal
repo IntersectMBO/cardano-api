@@ -77,6 +77,7 @@ library
     containers,
     contra-tracer,
     data-default,
+    errors,
     filepath,
     generic-data,
     grapesy,

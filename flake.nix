@@ -147,7 +147,7 @@
             # Work around for issue created by our inability to register sublibs.
             # This package may need to be built and we need to make sure its dependencies
             # are included in `ghc-pkg list` (in particular `compact`)
-            p.ouroboros-consensus-cardano
+            p.ouroboros-consensus
           ];
           # tools we want in our shell, from hackage
           shell.tools =

@@ -44,12 +44,16 @@ import Cardano.Chain.Update.Validation.Interface qualified as L.Interface
 import Cardano.Chain.Update.Validation.Registration qualified as L.Registration
 import Cardano.Chain.Update.Validation.Voting qualified as L.Voting
 import Cardano.Crypto.Hash qualified as Crypto
+import Cardano.Ledger.Allegra qualified as Allegra (ApplyTxError (..))
 import Cardano.Ledger.Allegra.Rules qualified as L
+import Cardano.Ledger.Alonzo qualified as Alonzo (ApplyTxError (..))
 import Cardano.Ledger.Alonzo.PParams qualified as Ledger
 import Cardano.Ledger.Alonzo.Rules qualified as Alonzo
 import Cardano.Ledger.Alonzo.Rules qualified as L
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Api.State.Query qualified as Ledger
+import Cardano.Ledger.Babbage qualified as Babbage (ApplyTxError (..))
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
 import Cardano.Ledger.Babbage.Rules qualified as Babbage
 import Cardano.Ledger.Babbage.Rules qualified as L
@@ -59,16 +63,21 @@ import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Plain qualified as Plain
 import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Conway qualified as Conway (ApplyTxError (..))
 import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.Conway.Rules qualified as L
 import Cardano.Ledger.Conway.TxCert qualified as L
 import Cardano.Ledger.Core qualified as L hiding (KeyHash)
+import Cardano.Ledger.Dijkstra qualified as Dijkstra (ApplyTxError (..))
+import Cardano.Ledger.Dijkstra.Rules qualified as L
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes qualified as L hiding (KeyHash)
 import Cardano.Ledger.Keys qualified as L.Keys
+import Cardano.Ledger.Mary qualified as Mary (ApplyTxError (..))
 import Cardano.Ledger.Mary.Value qualified as L
 import Cardano.Ledger.Plutus.Language qualified as L
 import Cardano.Ledger.Shelley.API.Mempool qualified as L
+import Cardano.Ledger.Shelley.API.Mempool qualified as Shelley (ApplyTxError (..))
 import Cardano.Ledger.Shelley.PParams qualified as Ledger
 import Cardano.Ledger.Shelley.Rules qualified as L
 import Cardano.Ledger.Shelley.TxBody qualified as L
@@ -99,7 +108,9 @@ import Data.Aeson
   ( KeyValue ((.=))
   , ToJSON (..)
   , ToJSONKey (..)
+  , decode
   , defaultOptions
+  , encode
   , genericToJSON
   , object
   , pairs
@@ -117,8 +128,12 @@ import Data.Data (Data)
 import Data.Kind (Constraint, Type)
 import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
+import Data.Map.NonEmpty (NonEmptyMap)
+import Data.Map.NonEmpty qualified as NonEmptyMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid
+import Data.Set.NonEmpty (NonEmptySet)
+import Data.Set.NonEmpty qualified as NonEmptySet
 import Data.Text qualified as T
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -133,8 +148,6 @@ import Network.Mux qualified as Mux
 import Numeric (showHex)
 import Prettyprinter (punctuate, viaShow)
 import Text.Read
-
-deriving instance Generic (L.ApplyTxError era)
 
 deriving instance Generic (L.Registration.TooLarge a)
 
@@ -198,9 +211,18 @@ deriving anyclass instance ToJSON L.Voting.Error
 
 deriving anyclass instance ToJSON L.VotingPeriod
 
+deriving anyclass instance ToJSON L.Withdrawals
+
+instance ToJSON (NonEmptyMap k v) where
+  toJSON = undefined
+
+instance ToJSON (NonEmptySet v) where
+  toJSON = undefined
+
 deriving anyclass instance
   ( ToJSON (L.PredicateFailure (L.EraRule "UTXOW" ledgerera))
   , ToJSON (L.PredicateFailure (L.EraRule "DELEGS" ledgerera))
+  , ToJSON (NonEmptyMap L.AccountAddress (Ledger.Mismatch Ledger.RelEQ L.Coin))
   )
   => ToJSON (L.ShelleyLedgerPredFailure ledgerera)
 
@@ -234,9 +256,21 @@ instance
   where
   toJSON = genericToJSON defaultOptions
 
-deriving anyclass instance
-  ToJSON (L.PredicateFailure (L.EraRule "LEDGER" ledgerera))
-  => ToJSON (L.ApplyTxError ledgerera)
+deriving newtype instance ToJSON (Shelley.ApplyTxError Consensus.ShelleyEra)
+
+deriving newtype instance ToJSON (Allegra.ApplyTxError Consensus.AllegraEra)
+
+deriving newtype instance ToJSON (Mary.ApplyTxError Consensus.MaryEra)
+
+deriving newtype instance ToJSON (Alonzo.ApplyTxError Consensus.AlonzoEra)
+
+deriving newtype instance ToJSON (Babbage.ApplyTxError Consensus.BabbageEra)
+
+deriving newtype instance ToJSON (Conway.ApplyTxError Consensus.ConwayEra)
+
+-- TODO: fix this instance when the Dijkstra era is stable in Ledger
+instance ToJSON (Dijkstra.ApplyTxError Consensus.DijkstraEra) where
+  toJSON = error "Dijkstra era is not active yet"
 
 deriving via
   ShowOf (L.Keys.VKey L.Keys.Witness)
@@ -301,18 +335,18 @@ instance Pretty L.AssetName where
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
 
-instance ToJSON Consensus.StakeSnapshots where
+instance ToJSON Ledger.StakeSnapshots where
   toJSON = object . stakeSnapshotsToPair
   toEncoding = pairs . mconcat . stakeSnapshotsToPair
 
 stakeSnapshotsToPair
-  :: Aeson.KeyValue e a => Consensus.StakeSnapshots -> [a]
+  :: Aeson.KeyValue e a => Ledger.StakeSnapshots -> [a]
 stakeSnapshotsToPair
-  Consensus.StakeSnapshots
-    { Consensus.ssStakeSnapshots
-    , Consensus.ssMarkTotal
-    , Consensus.ssSetTotal
-    , Consensus.ssGoTotal
+  Ledger.StakeSnapshots
+    { Ledger.ssStakeSnapshots
+    , Ledger.ssMarkTotal
+    , Ledger.ssSetTotal
+    , Ledger.ssGoTotal
     } =
     [ "pools" .= ssStakeSnapshots
     , "total"
@@ -323,16 +357,16 @@ stakeSnapshotsToPair
           ]
     ]
 
-instance ToJSON Consensus.StakeSnapshot where
+instance ToJSON Ledger.StakeSnapshot where
   toJSON = object . stakeSnapshotToPair
   toEncoding = pairs . mconcat . stakeSnapshotToPair
 
-stakeSnapshotToPair :: Aeson.KeyValue e a => Consensus.StakeSnapshot -> [a]
+stakeSnapshotToPair :: Aeson.KeyValue e a => Ledger.StakeSnapshot -> [a]
 stakeSnapshotToPair
-  Consensus.StakeSnapshot
-    { Consensus.ssMarkPool
-    , Consensus.ssSetPool
-    , Consensus.ssGoPool
+  Ledger.StakeSnapshot
+    { Ledger.ssMarkPool
+    , Ledger.ssSetPool
+    , Ledger.ssGoPool
     } =
     [ "stakeMark" .= ssMarkPool
     , "stakeSet" .= ssSetPool
@@ -363,8 +397,6 @@ instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
 --
 -- Simple newtype wrappers JSON conversion
 --
-
-deriving newtype instance ToJSON ShelleyHash
 
 deriving newtype instance ToJSON HashHeader
 

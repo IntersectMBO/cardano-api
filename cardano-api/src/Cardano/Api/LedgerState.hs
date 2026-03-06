@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -10,6 +11,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+
+#if __GLASGOW_HASKELL__ >= 910
+{-# OPTIONS_GHC -Wno-x-ord-preserving-coercions #-}
+#endif
 
 module Cardano.Api.LedgerState
   ( -- * Initialization / Accumulation
@@ -165,6 +170,7 @@ import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
+import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Keys qualified as SL
 import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
 import Cardano.Ledger.Shelley.Core qualified as Core
@@ -207,6 +213,7 @@ import Ouroboros.Consensus.Shelley.HFEras qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Block qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Ledger qualified as Shelley
 import Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
+import Ouroboros.Consensus.Util (coerceMapKeys)
 import Ouroboros.Network.Block (blockNo)
 import Ouroboros.Network.Block qualified
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as CS
@@ -1790,7 +1797,7 @@ renderHash
   :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString -> Text
 renderHash h = Text.decodeUtf8 $ Base16.encode (Cardano.Crypto.Hash.Class.hashToBytes h)
 
-newtype StakeCred = StakeCred {_unStakeCred :: Ledger.Credential 'Ledger.Staking}
+newtype StakeCred = StakeCred {_unStakeCred :: Ledger.Credential L.Staking}
   deriving (Eq, Ord)
 
 data Env = Env
@@ -2094,7 +2101,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         snapshot = ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
         markSnapshotPoolDistr
           :: Map
-               (SL.KeyHash 'SL.StakePool)
+               (SL.KeyHash SL.StakePool)
                SL.IndividualPoolStake
         markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
@@ -2131,7 +2138,7 @@ isLeadingSlotsTPraos
   => Set SlotNo
   -> PoolId
   -> Map
-       (SL.KeyHash 'SL.StakePool)
+       (SL.KeyHash SL.StakePool)
        SL.IndividualPoolStake
   -> Consensus.Nonce
   -> Crypto.SignKeyVRF v
@@ -2156,7 +2163,7 @@ isLeadingSlotsPraos
   => Set SlotNo
   -> PoolId
   -> Map
-       (SL.KeyHash 'SL.StakePool)
+       (SL.KeyHash SL.StakePool)
        SL.IndividualPoolStake
   -> Consensus.Nonce
   -> Crypto.SignKeyVRF (Crypto.VRF Consensus.StandardCrypto)
@@ -2285,7 +2292,7 @@ getLedgerTablesUTxOValues sbe tbs =
       -> Map TxIn (TxOut CtxUTxO era)
     ejectTables idx =
       let Consensus.LedgerTables (Ledger.ValuesMK values) = HFC.ejectLedgerTables idx tbs
-       in Map.mapKeys fromShelleyTxIn $ Map.map (fromShelleyTxOut sbe) values
+       in Map.mapKeys fromShelleyTxIn $ coerceMapKeys $ Map.map (fromShelleyTxOut sbe) values
    in
     case sbe of
       ShelleyBasedEraShelley -> ejectTables (IS IZ)

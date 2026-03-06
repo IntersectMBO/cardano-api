@@ -118,6 +118,7 @@ import Cardano.Ledger.Babbage.Core qualified as Ledger
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Compactible qualified as Ledger
 import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.Hashes (HASH)
 import Cardano.Ledger.Plutus.CostModels qualified as Plutus
@@ -228,7 +229,7 @@ data IntroducedInConwayPParams era
   = IntroducedInConwayPParams
   { icPoolVotingThresholds :: StrictMaybe Ledger.PoolVotingThresholds
   , icDRepVotingThresholds :: StrictMaybe Ledger.DRepVotingThresholds
-  , icMinCommitteeSize :: StrictMaybe Natural
+  , icMinCommitteeSize :: StrictMaybe Word16
   , icCommitteeTermLength :: StrictMaybe Ledger.EpochInterval
   , icGovActionLifetime :: StrictMaybe Ledger.EpochInterval
   , icGovActionDeposit :: StrictMaybe Ledger.Coin
@@ -301,8 +302,8 @@ createEraBasedProtocolParamUpdate sbe eraPParamsUpdate =
 -- if parameters are deprecated.
 data CommonProtocolParametersUpdate
   = CommonProtocolParametersUpdate
-  { cppMinFeeA :: StrictMaybe Ledger.Coin
-  , cppMinFeeB :: StrictMaybe Ledger.Coin
+  { cppTxFeePerByteL :: StrictMaybe Ledger.CoinPerByte
+  , cppTxFeeFixedL :: StrictMaybe Ledger.Coin
   , cppMaxBlockBodySize :: StrictMaybe Word32
   , cppMaxTxSize :: StrictMaybe Word32
   , cppMaxBlockHeaderSize :: StrictMaybe Word16
@@ -322,8 +323,8 @@ createCommonPParamsUpdate
   :: EraPParams ledgerera => CommonProtocolParametersUpdate -> Ledger.PParamsUpdate ledgerera
 createCommonPParamsUpdate CommonProtocolParametersUpdate{..} =
   emptyPParamsUpdate
-    & Ledger.ppuMinFeeAL .~ cppMinFeeA
-    & Ledger.ppuMinFeeBL .~ cppMinFeeB
+    & Ledger.ppuTxFeePerByteL .~ cppTxFeePerByteL
+    & Ledger.ppuTxFeeFixedL .~ cppTxFeeFixedL
     & Ledger.ppuMaxBBSizeL .~ cppMaxBlockBodySize
     & Ledger.ppuMaxTxSizeL .~ cppMaxTxSize
     & Ledger.ppuMaxBHSizeL .~ cppMaxBlockHeaderSize
@@ -393,9 +394,9 @@ data AlonzoOnwardsPParams ledgerera
   , alPrices :: StrictMaybe Alonzo.Prices
   , alMaxTxExUnits :: StrictMaybe Alonzo.ExUnits
   , alMaxBlockExUnits :: StrictMaybe Alonzo.ExUnits
-  , alMaxValSize :: StrictMaybe Natural
-  , alCollateralPercentage :: StrictMaybe Natural
-  , alMaxCollateralInputs :: StrictMaybe Natural
+  , alMaxValSize :: StrictMaybe Word32
+  , alCollateralPercentage :: StrictMaybe Word16
+  , alMaxCollateralInputs :: StrictMaybe Word16
   }
   deriving Show
 
@@ -678,7 +679,8 @@ data ProtocolParametersUpdate
   -- algorithm.
   , protocolUpdateTxFeeFixed :: Maybe L.Coin
   -- ^ The constant factor for the minimum fee calculation.
-  , protocolUpdateTxFeePerByte :: Maybe L.Coin
+  , protocolUpdateTxFeePerByte :: Maybe L.Coin -- TODO: consider using Ledger.CoinPerByte
+
   -- ^ The linear factor for the minimum fee calculation.
   , protocolUpdateMinUTxOValue :: Maybe L.Coin
   -- ^ The minimum permitted value for new UTxO entries, ie for
@@ -728,16 +730,16 @@ data ProtocolParametersUpdate
   -- ^ Max total script execution resources units allowed per block
   --
   -- /Introduced in Alonzo/
-  , protocolUpdateMaxValueSize :: Maybe Natural
+  , protocolUpdateMaxValueSize :: Maybe Word32
   -- ^ Max size of a 'Value' in a tx output.
   --
   -- /Introduced in Alonzo/
-  , protocolUpdateCollateralPercent :: Maybe Natural
+  , protocolUpdateCollateralPercent :: Maybe Word16
   -- ^ The percentage of the script contribution to the txfee that must be
   -- provided as collateral inputs when including Plutus scripts.
   --
   -- /Introduced in Alonzo/
-  , protocolUpdateMaxCollateralInputs :: Maybe Natural
+  , protocolUpdateMaxCollateralInputs :: Maybe Word16
   -- ^ The maximum number of collateral inputs allowed in a transaction.
   --
   -- /Introduced in Alonzo/
@@ -1137,8 +1139,8 @@ toShelleyCommonPParamsUpdate
     tau <- mapM (boundRationalEither "Tau") protocolUpdateTreasuryCut
     let ppuCommon =
           emptyPParamsUpdate
-            & ppuMinFeeAL .~ noInlineMaybeToStrictMaybe protocolUpdateTxFeePerByte
-            & ppuMinFeeBL .~ noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed
+            & ppuTxFeePerByteL .~ noInlineMaybeToStrictMaybe (unsafeToCoinPerByte <$> protocolUpdateTxFeePerByte)
+            & ppuTxFeeFixedL .~ noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed
             & ppuMaxBBSizeL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxBlockBodySize
             & ppuMaxTxSizeL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxTxSize
             & ppuMaxBHSizeL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxBlockHeaderSize
@@ -1151,6 +1153,9 @@ toShelleyCommonPParamsUpdate
             & ppuTauL .~ noInlineMaybeToStrictMaybe tau
             & ppuMinPoolCostL .~ noInlineMaybeToStrictMaybe protocolUpdateMinPoolCost
     pure ppuCommon
+   where
+    -- TODO: instead, use 'CoinPerByte' in 'ProtocolParametersUpdate'
+    unsafeToCoinPerByte = Ledger.CoinPerByte . Ledger.toCompactPartial
 
 toShelleyPParamsUpdate
   :: ( EraPParams ledgerera
@@ -1240,8 +1245,12 @@ toBabbageCommonPParamsUpdate
     ppuAlonzoCommon <- toAlonzoCommonPParamsUpdate protocolParametersUpdate
     let ppuBabbage =
           ppuAlonzoCommon
-            & ppuCoinsPerUTxOByteL .~ fmap CoinPerByte (noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte)
+            & ppuCoinsPerUTxOByteL
+              .~ fmap (CoinPerByte . unsafeToCompact) (noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte)
     pure ppuBabbage
+   where
+    -- TODO: instead, use CompactCoin in ProtocolParametersUpdate
+    unsafeToCompact = Ledger.toCompactPartial
 
 toBabbagePParamsUpdate
   :: ProtocolParametersUpdate
@@ -1322,8 +1331,9 @@ fromShelleyCommonPParamsUpdate ppu =
     , protocolUpdateMaxBlockHeaderSize = strictMaybeToMaybe (ppu ^. ppuMaxBHSizeL)
     , protocolUpdateMaxBlockBodySize = strictMaybeToMaybe (ppu ^. ppuMaxBBSizeL)
     , protocolUpdateMaxTxSize = strictMaybeToMaybe (ppu ^. ppuMaxTxSizeL)
-    , protocolUpdateTxFeeFixed = strictMaybeToMaybe (ppu ^. ppuMinFeeBL)
-    , protocolUpdateTxFeePerByte = strictMaybeToMaybe (ppu ^. ppuMinFeeAL)
+    , protocolUpdateTxFeeFixed = strictMaybeToMaybe (ppu ^. ppuTxFeeFixedL)
+    , protocolUpdateTxFeePerByte =
+        Ledger.fromCompact . unCoinPerByte <$> strictMaybeToMaybe (ppu ^. ppuTxFeePerByteL)
     , protocolUpdateStakeAddressDeposit = strictMaybeToMaybe (ppu ^. ppuKeyDepositL)
     , protocolUpdateStakePoolDeposit = strictMaybeToMaybe (ppu ^. ppuPoolDepositL)
     , protocolUpdateMinPoolCost = strictMaybeToMaybe (ppu ^. ppuMinPoolCostL)
@@ -1409,7 +1419,8 @@ fromBabbageCommonPParamsUpdate
   -> ProtocolParametersUpdate
 fromBabbageCommonPParamsUpdate ppu =
   (fromAlonzoCommonPParamsUpdate ppu)
-    { protocolUpdateUTxOCostPerByte = unCoinPerByte <$> strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
+    { protocolUpdateUTxOCostPerByte =
+        Ledger.fromCompact . unCoinPerByte <$> strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
     }
 
 fromBabbagePParamsUpdate

@@ -103,6 +103,7 @@ import Cardano.Chain.Common qualified as Byron
 import Cardano.Ledger.Address qualified as Shelley
 import Cardano.Ledger.BaseTypes qualified as Shelley
 import Cardano.Ledger.Credential qualified as Shelley
+import Cardano.Ledger.Keys qualified as Shelley
 import Cardano.Ledger.Plutus.TxInfo qualified as Plutus
 import PlutusLedgerApi.V1 qualified as PlutusAPI
 
@@ -183,7 +184,7 @@ data Address addrtype where
   -- in Shelley era and are thus supported from the Shelley era onwards
   ShelleyAddress
     :: Shelley.Network
-    -> Shelley.PaymentCredential
+    -> Shelley.Credential Shelley.Payment
     -> Shelley.StakeReference
     -> Address ShelleyAddr
 
@@ -527,7 +528,7 @@ makeShelleyAddressInEra sbe nw pc scr =
 data StakeAddress where
   StakeAddress
     :: Shelley.Network
-    -> Shelley.StakeCredential
+    -> Shelley.Credential Shelley.Staking
     -> StakeAddress
   deriving (Eq, Ord, Show)
 
@@ -567,12 +568,12 @@ instance HasTypeProxy StakeAddress where
 
 instance SerialiseAsRawBytes StakeAddress where
   serialiseToRawBytes (StakeAddress nw sc) =
-    Shelley.serialiseRewardAccount (Shelley.RewardAccount nw sc)
+    Shelley.serialiseAccountAddress (Shelley.AccountAddress nw (Shelley.AccountId sc))
 
   deserialiseFromRawBytes AsStakeAddress bs =
-    case Shelley.deserialiseRewardAccount bs of
+    case Shelley.deserialiseAccountAddress bs of
       Nothing -> Left (SerialiseAsRawBytesError "Unable to deserialise StakeAddress")
-      Just (Shelley.RewardAccount nw sc) -> Right (StakeAddress nw sc)
+      Just (Shelley.AccountAddress nw (Shelley.AccountId sc)) -> Right (StakeAddress nw sc)
 
 instance SerialiseAsBech32 StakeAddress where
   bech32PrefixFor (StakeAddress Shelley.Mainnet _) = unsafeHumanReadablePartFromText "stake"
@@ -643,16 +644,16 @@ toShelleyAddr
     ) =
     Shelley.Addr nw pc scr
 
-toShelleyStakeAddr :: StakeAddress -> Shelley.RewardAccount
+toShelleyStakeAddr :: StakeAddress -> Shelley.AccountAddress
 toShelleyStakeAddr (StakeAddress nw sc) =
-  Shelley.RewardAccount
-    { Shelley.raNetwork = nw
-    , Shelley.raCredential = sc
+  Shelley.AccountAddress
+    { Shelley.aaNetworkId = nw
+    , Shelley.aaId = Shelley.AccountId sc
     }
 
 toShelleyPaymentCredential
   :: PaymentCredential
-  -> Shelley.PaymentCredential
+  -> Shelley.Credential Shelley.Payment
 toShelleyPaymentCredential (PaymentCredentialByKey (PaymentKeyHash kh)) =
   Shelley.KeyHashObj kh
 toShelleyPaymentCredential (PaymentCredentialByScript sh) =
@@ -660,7 +661,7 @@ toShelleyPaymentCredential (PaymentCredentialByScript sh) =
 
 toShelleyStakeCredential
   :: StakeCredential
-  -> Shelley.StakeCredential
+  -> Shelley.Credential Shelley.Staking
 toShelleyStakeCredential (StakeCredentialByKey (StakeKeyHash kh)) =
   Shelley.KeyHashObj kh
 toShelleyStakeCredential (StakeCredentialByScript sh) =
@@ -700,11 +701,11 @@ fromShelleyAddr sbe (Shelley.Addr nw pc scr) =
       (ShelleyAddressInEra sbe)
       (ShelleyAddress nw pc scr)
 
-fromShelleyStakeAddr :: Shelley.RewardAccount -> StakeAddress
-fromShelleyStakeAddr (Shelley.RewardAccount nw sc) = StakeAddress nw sc
+fromShelleyStakeAddr :: Shelley.AccountAddress -> StakeAddress
+fromShelleyStakeAddr (Shelley.AccountAddress nw (Shelley.AccountId sc)) = StakeAddress nw sc
 
 fromShelleyStakeCredential
-  :: Shelley.StakeCredential
+  :: Shelley.Credential Shelley.Staking
   -> StakeCredential
 fromShelleyStakeCredential (Shelley.KeyHashObj kh) =
   StakeCredentialByKey (StakeKeyHash kh)
@@ -712,7 +713,7 @@ fromShelleyStakeCredential (Shelley.ScriptHashObj sh) =
   StakeCredentialByScript (fromShelleyScriptHash sh)
 
 fromShelleyPaymentCredential
-  :: Shelley.PaymentCredential
+  :: Shelley.Credential Shelley.Payment
   -> PaymentCredential
 fromShelleyPaymentCredential (Shelley.KeyHashObj kh) =
   PaymentCredentialByKey (PaymentKeyHash kh)
