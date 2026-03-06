@@ -88,7 +88,7 @@ txBodyL :: Lens' (LedgerTxBody era) (L.TxBody L.TopTx (ShelleyLedgerEra era))
 txBodyL = lens unTxBody (\_ x -> LedgerTxBody x)
 
 invalidBeforeTxBodyL :: AllegraEraOnwards era -> Lens' (LedgerTxBody era) (Maybe SlotNo)
-invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ txBodyL . L.vldtTxBodyL . L.invalidBeforeL
+invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ txBodyL . L.vldtTxBodyL . L.invalidBeforeL . strictMaybeL
 
 -- | Compatibility lens that provides a consistent interface over 'ttlTxBodyL' and
 -- 'vldtTxBodyL . invalidHereAfterStrictL' across all shelley based eras.
@@ -109,7 +109,7 @@ invalidHereAfterTxBodyL :: ShelleyBasedEra era -> Lens' (LedgerTxBody era) (Mayb
 invalidHereAfterTxBodyL =
   caseShelleyEraOnlyOrAllegraEraOnwards
     ttlAsInvalidHereAfterTxBodyL
-    (const $ txBodyL . L.vldtTxBodyL . L.invalidHereAfterL)
+    (const $ txBodyL . L.vldtTxBodyL . L.invalidHereAfterL . strictMaybeL)
 
 -- | Compatibility lens over 'ttlTxBodyL' which represents 'maxBound' as Nothing and all other values as 'Just'.
 ttlAsInvalidHereAfterTxBodyL :: ShelleyEraOnly era -> Lens' (LedgerTxBody era) (Maybe SlotNo)
@@ -165,7 +165,7 @@ collateralInputsTxBodyL
 collateralInputsTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.collateralInputsTxBodyL
 
 reqSignerHashesTxBodyL
-  :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set (L.KeyHash L.Witness))
+  :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set (L.KeyHash L.Guard))
 reqSignerHashesTxBodyL w@AlonzoEraOnwardsAlonzo = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
 reqSignerHashesTxBodyL w@AlonzoEraOnwardsBabbage = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
 reqSignerHashesTxBodyL w@AlonzoEraOnwardsConway = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL

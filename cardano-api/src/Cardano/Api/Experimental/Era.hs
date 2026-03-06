@@ -53,8 +53,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Conway qualified as Ledger
-import Cardano.Ledger.Core qualified as Ledger
-import Cardano.Ledger.Hashes qualified as L
 import Cardano.Ledger.State qualified as L
 
 import Control.Monad.Error.Class
