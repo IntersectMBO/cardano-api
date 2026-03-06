@@ -105,7 +105,9 @@ toGovernanceAction sbe =
     InfoAct ->
       Gov.InfoAction
     TreasuryWithdrawal withdrawals govPol ->
-      let m = fromList [(L.RewardAccount nw (toShelleyStakeCredential sc), l) | (nw, sc, l) <- withdrawals]
+      let m =
+            fromList
+              [(L.AccountAddress nw (L.AccountId (toShelleyStakeCredential sc)), l) | (nw, sc, l) <- withdrawals]
        in Gov.TreasuryWithdrawals m govPol
     InitiateHardfork prevGovId pVer ->
       Gov.HardForkInitiation prevGovId pVer
@@ -202,7 +204,7 @@ createProposalProcedure sbe nw dep cred govAct anchor =
     Proposal
       Gov.ProposalProcedure
         { Gov.pProcDeposit = dep
-        , Gov.pProcReturnAddr = L.RewardAccount nw $ toShelleyStakeCredential cred
+        , Gov.pProcReturnAddr = L.AccountAddress nw $ L.AccountId $ toShelleyStakeCredential cred
         , Gov.pProcGovAction = toGovernanceAction sbe govAct
         , Gov.pProcAnchor = anchor
         }
