@@ -196,41 +196,32 @@ deriving anyclass instance ToJSON L.Voting.Error
 
 deriving anyclass instance ToJSON L.VotingPeriod
 
-deriving anyclass instance
-  ( ToJSON (L.PredicateFailure (L.EraRule "UTXOW" ledgerera))
-  , ToJSON (L.PredicateFailure (L.EraRule "DELEGS" ledgerera))
-  )
-  => ToJSON (L.ShelleyLedgerPredFailure ledgerera)
+deriving via
+  ShowOf (L.ShelleyLedgerPredFailure ledgerera)
+  instance
+    Show (L.ShelleyLedgerPredFailure ledgerera) => ToJSON (L.ShelleyLedgerPredFailure ledgerera)
 
-deriving anyclass instance
-  ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
-  => ToJSON (L.ShelleyUtxowPredFailure ledgerera)
+deriving via
+  ShowOf (L.ShelleyUtxowPredFailure ledgerera)
+  instance
+    Show (L.ShelleyUtxowPredFailure ledgerera) => ToJSON (L.ShelleyUtxowPredFailure ledgerera)
 
 deriving anyclass instance
   ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
   => ToJSON (L.ShelleyPpupPredFailure ledgerera)
 
-instance
-  ( ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
-  , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
-  , ToJSON (L.PlutusPurpose L.AsIx ledgerera)
-  )
-  => ToJSON (L.AlonzoUtxowPredFailure ledgerera)
-  where
-  toJSON = genericToJSON defaultOptions
+deriving via
+  ShowOf (L.AlonzoUtxowPredFailure ledgerera)
+  instance
+    Show (L.AlonzoUtxowPredFailure ledgerera) => ToJSON (L.AlonzoUtxowPredFailure ledgerera)
 
 instance ToJSON C8.ByteString where
   toJSON = Aeson.String . Text.decodeLatin1 . B16.encode
 
-instance
-  ( ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
-  , ToJSON (L.TxCert ledgerera)
-  , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
-  , ToJSON (L.PlutusPurpose L.AsIx ledgerera)
-  )
-  => ToJSON (L.BabbageUtxowPredFailure ledgerera)
-  where
-  toJSON = genericToJSON defaultOptions
+deriving via
+  ShowOf (L.BabbageUtxowPredFailure ledgerera)
+  instance
+    Show (L.BabbageUtxowPredFailure ledgerera) => ToJSON (L.BabbageUtxowPredFailure ledgerera)
 
 instance Show (L.ApplyTxError ledgerera) => ToJSON (L.ApplyTxError ledgerera) where
   toJSON = toJSON . show
