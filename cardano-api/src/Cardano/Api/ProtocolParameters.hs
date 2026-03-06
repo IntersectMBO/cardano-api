@@ -323,8 +323,8 @@ createCommonPParamsUpdate
   :: EraPParams ledgerera => CommonProtocolParametersUpdate -> Ledger.PParamsUpdate ledgerera
 createCommonPParamsUpdate CommonProtocolParametersUpdate{..} =
   emptyPParamsUpdate
-    & Ledger.ppuMinFeeAL .~ cppMinFeeA
-    & Ledger.ppuMinFeeBL .~ cppMinFeeB
+    & ppuTxFeePerByteL .~ (CoinPerByte . L.compactCoinOrError <$> cppMinFeeA)
+    & ppuTxFeeFixedL .~ cppMinFeeB
     & Ledger.ppuMaxBBSizeL .~ cppMaxBlockBodySize
     & Ledger.ppuMaxTxSizeL .~ cppMaxTxSize
     & Ledger.ppuMaxBHSizeL .~ cppMaxBlockHeaderSize
@@ -1138,8 +1138,9 @@ toShelleyCommonPParamsUpdate
     tau <- mapM (boundRationalEither "Tau") protocolUpdateTreasuryCut
     let ppuCommon =
           emptyPParamsUpdate
-            & ppuMinFeeAL .~ noInlineMaybeToStrictMaybe protocolUpdateTxFeePerByte
-            & ppuMinFeeBL .~ noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed
+            & ppuTxFeePerByteL
+              .~ (CoinPerByte . L.compactCoinOrError <$> noInlineMaybeToStrictMaybe protocolUpdateTxFeePerByte)
+            & ppuTxFeeFixedL .~ noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed
             & ppuMaxBBSizeL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxBlockBodySize
             & ppuMaxTxSizeL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxTxSize
             & ppuMaxBHSizeL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxBlockHeaderSize
@@ -1326,8 +1327,9 @@ fromShelleyCommonPParamsUpdate ppu =
     , protocolUpdateMaxBlockHeaderSize = strictMaybeToMaybe (ppu ^. ppuMaxBHSizeL)
     , protocolUpdateMaxBlockBodySize = strictMaybeToMaybe (ppu ^. ppuMaxBBSizeL)
     , protocolUpdateMaxTxSize = strictMaybeToMaybe (ppu ^. ppuMaxTxSizeL)
-    , protocolUpdateTxFeeFixed = strictMaybeToMaybe (ppu ^. ppuMinFeeBL)
-    , protocolUpdateTxFeePerByte = strictMaybeToMaybe (ppu ^. ppuMinFeeAL)
+    , protocolUpdateTxFeeFixed = strictMaybeToMaybe (ppu ^. ppuTxFeeFixedL)
+    , protocolUpdateTxFeePerByte =
+        fromCompact . unCoinPerByte <$> strictMaybeToMaybe (ppu ^. ppuTxFeePerByteL)
     , protocolUpdateStakeAddressDeposit = strictMaybeToMaybe (ppu ^. ppuKeyDepositL)
     , protocolUpdateStakePoolDeposit = strictMaybeToMaybe (ppu ^. ppuPoolDepositL)
     , protocolUpdateMinPoolCost = strictMaybeToMaybe (ppu ^. ppuMinPoolCostL)

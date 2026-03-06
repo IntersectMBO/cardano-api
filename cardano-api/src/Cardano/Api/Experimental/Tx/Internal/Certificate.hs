@@ -92,7 +92,7 @@ makeStakeAddressUnregistrationCertificate scred deposit =
 makeStakePoolRegistrationCertificate
   :: forall era
    . IsEra era
-  => Ledger.PoolParams
+  => Ledger.StakePoolParams
   -> Certificate (LedgerEra era)
 makeStakePoolRegistrationCertificate poolParams =
   obtainCommonConstraints (useEra @era) $
