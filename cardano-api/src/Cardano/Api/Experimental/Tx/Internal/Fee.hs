@@ -730,7 +730,13 @@ instance Error FeeCalculationError where
 --   computed minimum fee and the function recurses.
 --
 -- A maximum iteration limit (currently 50) guards against non-termination.
--- In practice convergence occurs within 2–3 iterations.
+-- In practice convergence occurs within 2–3 iterations.  If the limit is
+-- reached, the fee currently in the transaction body is checked: if it is
+-- at least the ledger-computed minimum fee (@txBodyFee >= minFee@) the
+-- current transaction is returned – the fee is considered /reasonable/
+-- even though strict convergence was not confirmed.  Only when the fee
+-- falls below the ledger minimum is 'FeeCalculationDidNotConverge'
+-- returned.
 calcMinFeeRecursive
   :: forall era
    . IsEra era
@@ -790,7 +796,19 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
     -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
     -> Int
     -> Either FeeCalculationError (UnsignedTx (LedgerEra era))
-  go 0 _ _ _ _ _ _ _ = Left FeeCalculationDidNotConverge
+  -- When the iteration limit is reached, accept the current transaction if its
+  -- fee is at least the ledger-computed minimum (i.e. the fee is "reasonable"):
+  -- the result is still useful even though strict convergence was not confirmed.
+  -- Only fail when the fee would be below the ledger minimum.
+  go 0 unSignTx@(UnsignedTx ledgerTx) utxo' pparams' _ _ _ nExtraWitnesses'
+    | txBodyFee >= minFee = do
+        let outs = toList $ ledgerTx ^. L.bodyTxL . L.outputsTxBodyL
+        mapM_ (checkOutputMinUTxO pparams') outs
+        return unSignTx
+    | otherwise = Left FeeCalculationDidNotConverge
+   where
+    minFee = obtainCommonConstraints (useEra @era) $ L.calcMinFeeTx utxo' pparams' ledgerTx nExtraWitnesses'
+    txBodyFee = ledgerTx ^. L.bodyTxL . L.feeTxBodyL
   go n unSignTx@(UnsignedTx ledgerTx) utxo' pparams' poolids' stakeDelegDeposits' drepDelegDeposits' nExtraWitnesses'
     | minFee == txBodyFee && L.isZero txBalanceValue = do
         -- Case 1
