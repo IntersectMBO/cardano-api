@@ -103,6 +103,7 @@ import Cardano.Chain.Common qualified as Byron
 import Cardano.Ledger.Address qualified as Shelley
 import Cardano.Ledger.BaseTypes qualified as Shelley
 import Cardano.Ledger.Credential qualified as Shelley
+import Cardano.Ledger.Keys (Payment, Staking)
 import Cardano.Ledger.Plutus.TxInfo qualified as Plutus
 import PlutusLedgerApi.V1 qualified as PlutusAPI
 
@@ -183,7 +184,7 @@ data Address addrtype where
   -- in Shelley era and are thus supported from the Shelley era onwards
   ShelleyAddress
     :: Shelley.Network
-    -> Shelley.PaymentCredential
+    -> Shelley.Credential Payment
     -> Shelley.StakeReference
     -> Address ShelleyAddr
 
@@ -527,7 +528,7 @@ makeShelleyAddressInEra sbe nw pc scr =
 data StakeAddress where
   StakeAddress
     :: Shelley.Network
-    -> Shelley.StakeCredential
+    -> Shelley.Credential Staking
     -> StakeAddress
   deriving (Eq, Ord, Show)
 
@@ -652,7 +653,7 @@ toShelleyStakeAddr (StakeAddress nw sc) =
 
 toShelleyPaymentCredential
   :: PaymentCredential
-  -> Shelley.PaymentCredential
+  -> Shelley.Credential Payment
 toShelleyPaymentCredential (PaymentCredentialByKey (PaymentKeyHash kh)) =
   Shelley.KeyHashObj kh
 toShelleyPaymentCredential (PaymentCredentialByScript sh) =
@@ -660,7 +661,7 @@ toShelleyPaymentCredential (PaymentCredentialByScript sh) =
 
 toShelleyStakeCredential
   :: StakeCredential
-  -> Shelley.StakeCredential
+  -> Shelley.Credential Staking
 toShelleyStakeCredential (StakeCredentialByKey (StakeKeyHash kh)) =
   Shelley.KeyHashObj kh
 toShelleyStakeCredential (StakeCredentialByScript sh) =
@@ -704,7 +705,7 @@ fromShelleyStakeAddr :: Shelley.AccountAddress -> StakeAddress
 fromShelleyStakeAddr (Shelley.AccountAddress nw (Shelley.AccountId sc)) = StakeAddress nw sc
 
 fromShelleyStakeCredential
-  :: Shelley.StakeCredential
+  :: Shelley.Credential Staking
   -> StakeCredential
 fromShelleyStakeCredential (Shelley.KeyHashObj kh) =
   StakeCredentialByKey (StakeKeyHash kh)
@@ -712,7 +713,7 @@ fromShelleyStakeCredential (Shelley.ScriptHashObj sh) =
   StakeCredentialByScript (fromShelleyScriptHash sh)
 
 fromShelleyPaymentCredential
-  :: Shelley.PaymentCredential
+  :: Shelley.Credential Payment
   -> PaymentCredential
 fromShelleyPaymentCredential (Shelley.KeyHashObj kh) =
   PaymentCredentialByKey (PaymentKeyHash kh)

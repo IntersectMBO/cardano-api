@@ -91,6 +91,7 @@ import Cardano.Api.Pretty (Doc)
 import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.TextEnvelope.Internal
 
+import Cardano.Ledger.Address (AccountId (..))
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.State qualified as Ledger
@@ -672,7 +673,7 @@ toShelleyPoolParams
           fromMaybe
             (error "toShelleyPoolParams: invalid PoolMargin")
             (Ledger.boundRational stakePoolMargin)
-      , Ledger.ppRewardAccount = toShelleyStakeAddr stakePoolRewardAccount
+      , Ledger.ppAccountAddress = toShelleyStakeAddr stakePoolRewardAccount
       , Ledger.ppOwners =
           fromList
             [kh | StakeKeyHash kh <- stakePoolOwners]
@@ -730,7 +731,7 @@ fromShelleyPoolParams
     , Ledger.ppPledge
     , Ledger.ppCost
     , Ledger.ppMargin
-    , Ledger.ppRewardAccount
+    , Ledger.ppAccountAddress
     , Ledger.ppOwners
     , Ledger.ppRelays
     , Ledger.ppMetadata
@@ -740,7 +741,7 @@ fromShelleyPoolParams
       , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash ppVrf)
       , stakePoolCost = ppCost
       , stakePoolMargin = Ledger.unboundRational ppMargin
-      , stakePoolRewardAccount = fromShelleyStakeAddr ppRewardAccount
+      , stakePoolRewardAccount = fromShelleyStakeAddr ppAccountAddress
       , stakePoolPledge = ppPledge
       , stakePoolOwners = map StakeKeyHash (toList ppOwners)
       , stakePoolRelays =
@@ -788,17 +789,19 @@ fromShelleyPoolParams
         . Ledger.dnsToText
 
 fromShelleyStakePoolState
-  :: Ledger.KeyHash Ledger.StakePool
+  :: Ledger.Network
+  -> Ledger.KeyHash Ledger.StakePool
   -> Ledger.StakePoolState
   -> StakePoolParameters
 fromShelleyStakePoolState
+  nw
   poolId
   Ledger.StakePoolState
     { Ledger.spsVrf
     , Ledger.spsPledge
     , Ledger.spsCost
     , Ledger.spsMargin
-    , Ledger.spsRewardAccount
+    , Ledger.spsAccountId
     , Ledger.spsOwners
     , Ledger.spsRelays
     , Ledger.spsMetadata
@@ -808,7 +811,7 @@ fromShelleyStakePoolState
       , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash spsVrf)
       , stakePoolCost = spsCost
       , stakePoolMargin = Ledger.unboundRational spsMargin
-      , stakePoolRewardAccount = fromShelleyStakeAddr spsRewardAccount
+      , stakePoolRewardAccount = StakeAddress nw (unAccountId spsAccountId)
       , stakePoolPledge = spsPledge
       , stakePoolOwners = map StakeKeyHash (toList spsOwners)
       , stakePoolRelays =

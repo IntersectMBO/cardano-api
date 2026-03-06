@@ -110,7 +110,7 @@ data PoolReapDetails = PoolReapDetails
 
 convertRetiredPoolsMap
   :: Map
-       Ledger.StakeCredential
+       (Ledger.Credential Ledger.Staking)
        (Map (Ledger.KeyHash Ledger.StakePool) (Ledger.CompactForm Ledger.Coin))
   -> Map StakeCredential (Map (Hash StakePoolKey) L.Coin)
 convertRetiredPoolsMap =
