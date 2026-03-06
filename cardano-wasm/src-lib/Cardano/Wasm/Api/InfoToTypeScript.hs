@@ -7,6 +7,7 @@ import Cardano.Wasm.Api.TypeScriptDefs qualified as TypeScript
 import Data.List (nub)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 
 -- | Converts the Cardano API information to a TypeScript declaration file AST.
 apiInfoToTypeScriptFile :: Info.ApiInfo -> [TypeScript.TypeScriptFile]
@@ -122,7 +123,7 @@ methodInfoToInterfaceContent selfTypeName method =
         <> ["@returns " <> Info.methodReturnDoc method]
     )
     ( TypeScript.InterfaceMethod
-        (Info.methodSimpleName method)
+        (fromMaybe (Info.methodName method) (Info.methodSimpleName method))
         (map paramInfoToFunctionParam $ Info.methodParams method)
         (methodReturnTypeToString selfTypeName $ Info.methodReturnType method)
     )
