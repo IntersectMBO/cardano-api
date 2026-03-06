@@ -118,6 +118,7 @@ import Cardano.Ledger.Babbage.Core qualified as Ledger
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.Hashes (HASH)
 import Cardano.Ledger.Plutus.CostModels qualified as Plutus
@@ -246,7 +247,7 @@ createIntroducedInConwayPParams IntroducedInConwayPParams{..} =
   Ledger.emptyPParamsUpdate
     & Ledger.ppuPoolVotingThresholdsL .~ icPoolVotingThresholds
     & Ledger.ppuDRepVotingThresholdsL .~ icDRepVotingThresholds
-    & Ledger.ppuCommitteeMinSizeL .~ icMinCommitteeSize
+    & Ledger.ppuCommitteeMinSizeL .~ (fromIntegral <$> icMinCommitteeSize)
     & Ledger.ppuCommitteeMaxTermLengthL .~ icCommitteeTermLength
     & Ledger.ppuGovActionLifetimeL .~ icGovActionLifetime
     & Ledger.ppuGovActionDepositL .~ icGovActionDeposit
@@ -411,9 +412,9 @@ createPParamsUpdateIntroducedInAlonzo w (AlonzoOnwardsPParams{..}) =
       & Ledger.ppuPricesL .~ alPrices
       & Ledger.ppuMaxTxExUnitsL .~ alMaxTxExUnits
       & Ledger.ppuMaxBlockExUnitsL .~ alMaxBlockExUnits
-      & Ledger.ppuMaxValSizeL .~ alMaxValSize
-      & Ledger.ppuCollateralPercentageL .~ alCollateralPercentage
-      & Ledger.ppuMaxCollateralInputsL .~ alMaxCollateralInputs
+      & Ledger.ppuMaxValSizeL .~ (fromIntegral <$> alMaxValSize)
+      & Ledger.ppuCollateralPercentageL .~ (fromIntegral <$> alCollateralPercentage)
+      & Ledger.ppuMaxCollateralInputsL .~ (fromIntegral <$> alMaxCollateralInputs)
 
 newtype IntroducedInBabbagePParams era
   = -- | Coins per UTxO byte
@@ -1207,9 +1208,11 @@ toAlonzoCommonPParamsUpdate
               .~ (toAlonzoExUnits <$> noInlineMaybeToStrictMaybe protocolUpdateMaxTxExUnits)
             & ppuMaxBlockExUnitsL
               .~ (toAlonzoExUnits <$> noInlineMaybeToStrictMaybe protocolUpdateMaxBlockExUnits)
-            & ppuMaxValSizeL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxValueSize
-            & ppuCollateralPercentageL .~ noInlineMaybeToStrictMaybe protocolUpdateCollateralPercent
-            & ppuMaxCollateralInputsL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxCollateralInputs
+            & ppuMaxValSizeL .~ (fromIntegral <$> noInlineMaybeToStrictMaybe protocolUpdateMaxValueSize)
+            & ppuCollateralPercentageL
+              .~ (fromIntegral <$> noInlineMaybeToStrictMaybe protocolUpdateCollateralPercent)
+            & ppuMaxCollateralInputsL
+              .~ (fromIntegral <$> noInlineMaybeToStrictMaybe protocolUpdateMaxCollateralInputs)
     pure ppuAlonzoCommon
 
 toAlonzoPParamsUpdate
@@ -1240,7 +1243,8 @@ toBabbageCommonPParamsUpdate
     ppuAlonzoCommon <- toAlonzoCommonPParamsUpdate protocolParametersUpdate
     let ppuBabbage =
           ppuAlonzoCommon
-            & ppuCoinsPerUTxOByteL .~ fmap CoinPerByte (noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte)
+            & ppuCoinsPerUTxOByteL
+              .~ fmap (CoinPerByte . L.compactCoinOrError) (noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte)
     pure ppuBabbage
 
 toBabbagePParamsUpdate
@@ -1387,9 +1391,11 @@ fromAlonzoCommonPParamsUpdate ppu =
     , protocolUpdateMaxBlockExUnits =
         fromAlonzoExUnits
           <$> strictMaybeToMaybe (ppu ^. ppuMaxBlockExUnitsL)
-    , protocolUpdateMaxValueSize = strictMaybeToMaybe (ppu ^. ppuMaxValSizeL)
-    , protocolUpdateCollateralPercent = strictMaybeToMaybe (ppu ^. ppuCollateralPercentageL)
-    , protocolUpdateMaxCollateralInputs = strictMaybeToMaybe (ppu ^. ppuMaxCollateralInputsL)
+    , protocolUpdateMaxValueSize = fromIntegral <$> strictMaybeToMaybe (ppu ^. ppuMaxValSizeL)
+    , protocolUpdateCollateralPercent =
+        fromIntegral <$> strictMaybeToMaybe (ppu ^. ppuCollateralPercentageL)
+    , protocolUpdateMaxCollateralInputs =
+        fromIntegral <$> strictMaybeToMaybe (ppu ^. ppuMaxCollateralInputsL)
     , protocolUpdateUTxOCostPerByte = Nothing
     }
 
@@ -1409,7 +1415,8 @@ fromBabbageCommonPParamsUpdate
   -> ProtocolParametersUpdate
 fromBabbageCommonPParamsUpdate ppu =
   (fromAlonzoCommonPParamsUpdate ppu)
-    { protocolUpdateUTxOCostPerByte = unCoinPerByte <$> strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
+    { protocolUpdateUTxOCostPerByte =
+        fromCompact . unCoinPerByte <$> strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
     }
 
 fromBabbagePParamsUpdate
