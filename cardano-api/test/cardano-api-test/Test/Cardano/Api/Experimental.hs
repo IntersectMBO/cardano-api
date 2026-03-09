@@ -45,7 +45,8 @@ import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time
 import Lens.Micro
 
-import Test.Gen.Cardano.Api.Typed (genTx)
+import Test.Gen.Cardano.Api.Experimental (genAnyScript)
+import Test.Gen.Cardano.Api.Typed (genAddressInEra, genTx, genTxIn)
 
 import Hedgehog (Gen, Property)
 import Hedgehog qualified as H
@@ -78,7 +79,56 @@ tests =
     , testProperty
         "Roundtrip SerialiseAsRawBytes SignedTx"
         prop_roundtrip_serialise_as_raw_bytes_signed_tx
+    , testGroup
+        "SerialiseAsCBOR AnyScript"
+        [ testProperty
+            "Roundtrip serialiseToCBOR/deserialiseFromCBOR AnyScript"
+            prop_roundtrip_cbor_any_script
+        , testProperty
+            "Deserialising garbage bytes returns Left"
+            prop_deserialise_garbage_bytes_returns_left
+        ]
+    , testGroup
+        "calcMinFeeRecursive"
+        [ testProperty
+            "well-funded transaction always succeeds"
+            prop_calcMinFeeRecursive_well_funded_succeeds
+        , testProperty
+            "well-funded multi-asset transaction always succeeds"
+            prop_calcMinFeeRecursive_well_funded_multi_asset
+        , testProperty
+            "fee calculation is idempotent"
+            prop_calcMinFeeRecursive_fee_fixpoint
+        , testProperty
+            "underfunded transaction (outputs exceed inputs) always fails"
+            prop_calcMinFeeRecursive_insufficient_funds
+        , testProperty
+            "Precondition: outputs with tokens not in UTxO returns NonAdaAssetsUnbalanced"
+            prop_calcMinFeeRecursive_non_ada_unbalanced
+        , testProperty
+            "Case 1: output with multi-assets below min UTxO returns MinUTxONotMet"
+            prop_calcMinFeeRecursive_min_utxo_not_met
+        , testProperty
+            "Case 2: transaction with no outputs creates change output"
+            prop_calcMinFeeRecursive_no_tx_outs
+        , testProperty
+            "Tiny surplus consumed by fee increase yields NotEnoughAdaForChangeOutput"
+            prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada
+        ]
     ]
+
+prop_roundtrip_cbor_any_script :: Property
+prop_roundtrip_cbor_any_script = H.property $ do
+  script <- H.forAll genAnyScript
+  H.tripping script Exp.serialiseToCBOR (Exp.deserialiseFromCBOR Exp.AsAnyScript)
+
+-- | Deserialising random garbage bytes should always return 'Left'.
+prop_deserialise_garbage_bytes_returns_left :: Property
+prop_deserialise_garbage_bytes_returns_left = H.property $ do
+  garbage <- H.forAll $ Gen.bytes (Range.linear 0 128)
+  case Exp.deserialiseFromCBOR Exp.AsAnyScript garbage of
+    Left _ -> H.success
+    Right _ -> H.annotate "Expected deserialisation failure but got Right" >> H.failure
 
 prop_created_transaction_with_both_apis_are_the_same :: Property
 prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
