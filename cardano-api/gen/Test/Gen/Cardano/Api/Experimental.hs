@@ -1,16 +1,19 @@
 {-# LANGUAGE DataKinds #-}
 
 module Test.Gen.Cardano.Api.Experimental
-  ( genScriptWitnessedTxCertificates
+  ( genAnyScript
+  , genScriptWitnessedTxCertificates
   , genScriptWitnessedTxIn
   , genScriptWitnessedTxMintValue
   , genScriptWitnessedTxProposals
   , genScriptWitnesssedTxVotingProcedures
   , genScriptWitnessedTxWithdrawals
+  , genSimpleScriptInEra
   )
 where
 
 import Cardano.Api (TxIn)
+import Cardano.Api qualified as Old
 import Cardano.Api.Experimental
 import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Tx
@@ -19,7 +22,13 @@ import Cardano.Api.Ledger qualified as L
 import Data.Map.Ordered.Strict qualified as OMap
 import Data.Typeable
 
-import Test.Gen.Cardano.Api.Typed (genExecutionUnits, genHashableScriptData, genTxIn)
+import Test.Gen.Cardano.Api.Typed
+  ( genExecutionUnits
+  , genHashableScriptData
+  , genPlutusScriptInEra
+  , genSimpleScript
+  , genTxIn
+  )
 
 import Hedgehog (Gen)
 import Hedgehog.Gen qualified as Gen
@@ -87,6 +96,19 @@ genAnyPlutusScriptWitnessV3 =
 genAnyPlutusScriptWitnessV4 :: Gen (AnyWitness era)
 genAnyPlutusScriptWitnessV4 =
   genAnyPlutusScriptWitness L.SPlutusV4
+
+genSimpleScriptInEra :: Gen (SimpleScript (LedgerEra ConwayEra))
+genSimpleScriptInEra = do
+  oldSimpleScript <- genSimpleScript
+  let timelock = Old.toAllegraTimelock oldSimpleScript
+  return $ SimpleScript timelock
+
+genAnyScript :: Gen (AnyScript (LedgerEra ConwayEra))
+genAnyScript =
+  Gen.choice
+    [ AnySimpleScript <$> genSimpleScriptInEra
+    , AnyPlutusScript <$> genPlutusScriptInEra
+    ]
 
 genAnySimpleScriptWitness :: Gen (SimpleScriptOrReferenceInput era)
 genAnySimpleScriptWitness = SReferenceScript <$> genTxIn

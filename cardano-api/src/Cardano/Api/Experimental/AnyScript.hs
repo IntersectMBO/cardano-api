@@ -35,7 +35,8 @@ import Prettyprinter (pretty)
 
 data AnyScript era where
   AnySimpleScript :: SimpleScript era -> AnyScript era
-  AnyPlutusScript :: (Plutus.PlutusLanguage lang, Typeable lang) => PlutusScriptInEra lang era -> AnyScript era
+  AnyPlutusScript
+    :: (Plutus.PlutusLanguage lang, Typeable lang) => PlutusScriptInEra lang era -> AnyScript era
 
 instance L.Era era => HasTypeProxy (AnyScript era) where
   data AsType (AnyScript era) = AsAnyScript
