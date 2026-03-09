@@ -61,7 +61,7 @@ exampleShelleyGenesis =
     }
  where
   -- hash of the genesis verification key
-  genesisVerKeyHash :: KeyHash Genesis
+  genesisVerKeyHash :: KeyHash GenesisRole
   genesisVerKeyHash = KeyHash "23d51e91ae5adc7ae801e9de4cd54175fb7464ec2680b25686bbb194"
   -- hash of the delegators verification key
   delegVerKeyHash :: KeyHash GenesisDelegate

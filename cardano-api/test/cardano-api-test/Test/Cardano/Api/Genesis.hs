@@ -83,7 +83,7 @@ prop_check_default_alonzo_genesis_roundtrips = H.propertyOnce $ do
           ]
 
   forM_ eras $ \(Some aeo) -> do
-    let defaultCostModels = L.agCostModels alonzoGenesisDefaults
+    let defaultCostModels = L.mkCostModels (M.singleton L.PlutusV1 (L.agPlutusV1CostModel alonzoGenesisDefaults))
         defaultCostModelsBs = encodeCborInEraCostModels aeo defaultCostModels
     H.note_ $ "Decode alonzo genesis for era " <> show aeo
     defaultCostModels' <- H.leftFail $ decodeCborInEraCostModels aeo defaultCostModelsBs
@@ -116,7 +116,7 @@ loadPlutusV2CostModelFromGenesis
   -> m (Either String (L.CostModels, [Int64]))
 loadPlutusV2CostModelFromGenesis filePath = withFrozenCallStack . runExceptT $ do
   genesis <- H.readJsonFileOk filePath
-  let costModels = L.agCostModels genesis
+  let costModels = fromMaybe mempty (L.agExtraConfig genesis >>= L.aecCostModels)
   liftEither
     . fmap ((costModels,) . L.getCostModelParams)
     . maybe (Left "No PlutusV2 model found") Right

@@ -240,7 +240,8 @@ exampleProtocolParams =
   alonzoUpgrade =
     UnexportedLedger.UpgradeAlonzoPParams
       { UnexportedLedger.uappCoinsPerUTxOWord = Ledger.CoinPerWord $ Ledger.Coin 34_482
-      , UnexportedLedger.uappCostModels = UnexportedLedger.emptyCostModels -- We are not using scripts for this tests, so this is fine for now
+      , UnexportedLedger.uappPlutusV1CostModel =
+          UnexportedLedger.agPlutusV1CostModel Genesis.alonzoGenesisDefaults
       , UnexportedLedger.uappPrices =
           Ledger.Prices
             { Ledger.prSteps = fromMaybe maxBound $ Ledger.boundRational $ 721 % 10_000_000

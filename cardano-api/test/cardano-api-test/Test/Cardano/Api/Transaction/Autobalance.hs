@@ -19,6 +19,7 @@ import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Tx qualified as Api
 
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Credential qualified as L
@@ -574,9 +575,9 @@ prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
         L.ProposalProcedure
           { L.pProcDeposit = 100_000_000
           , L.pProcReturnAddr =
-              L.RewardAccount
-                { L.raNetwork = L.Testnet
-                , L.raCredential = mkCredential "keyHash-0b1b872f7953bccfc4245f3282b3363f3d19e9e001a5c41e307363d7"
+              AccountAddress
+                { aaNetworkId = L.Testnet
+                , aaId = AccountId (mkCredential "keyHash-0b1b872f7953bccfc4245f3282b3363f3d19e9e001a5c41e307363d7")
                 }
           , L.pProcGovAction = L.InfoAction
           , L.pProcAnchor = anchor

@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Api.EpochLeadership
@@ -17,6 +18,7 @@ import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Api.PParams (emptyPParams)
 import Cardano.Ledger.BaseTypes (Nonce (..), WithOrigin (..))
 import Cardano.Ledger.Binary.Encoding (toByronCBOR)
+import Cardano.Ledger.Coin (knownNonZeroCoin)
 import Cardano.Ledger.Hashes qualified as L
 import Cardano.Ledger.Shelley.API qualified as L
 import Cardano.Ledger.State qualified as L
@@ -110,7 +112,7 @@ test_currentEpochEligibleLeadershipSlots =
                         }
                     )
                   ]
-              , L.pdTotalActiveStake = toCompactPartial 0
+              , L.pdTotalActiveStake = knownNonZeroCoin @1
               }
           serPoolDistr = Serialised (serialize (toByronCBOR poolDistr))
           currentEpoch = EpochNo 4
