@@ -20,7 +20,6 @@ import Cardano.Api.Plutus qualified as Script
 import Cardano.Api.Tx (Tx (ShelleyTx))
 
 import Cardano.Ledger.Alonzo.Genesis (agPlutusV1CostModel)
-import Cardano.Ledger.Alonzo.Scripts qualified as UnexportedLedger
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core (TopTx)
 import Cardano.Slotting.EpochInfo qualified as Slotting
