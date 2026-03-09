@@ -14,11 +14,9 @@ import Cardano.Ledger.Alonzo.Genesis qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Coin qualified as Ledger
-import Cardano.Ledger.Plutus.CostModels qualified as Plutus
 import Cardano.Ledger.Plutus.Language qualified as Alonzo
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 
-import Data.Map.Strict qualified as Map
 import Data.Word (Word64)
 import GHC.Exts (IsList (..))
 
@@ -83,15 +81,6 @@ genExUnits = do
       { Alonzo.exUnitsMem = exUnitsMem'
       , Alonzo.exUnitsSteps = exUnitsSteps'
       }
-
-genCostModels :: Gen Alonzo.CostModels
-genCostModels = do
-  alonzoCostModel <- genCostModel
-  Plutus.mkCostModels . conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel)
- where
-  conv :: [Alonzo.CostModel] -> Map.Map Alonzo.Language Alonzo.CostModel
-  conv [] = mempty
-  conv (c : rest) = Map.singleton (Alonzo.getCostModelLanguage c) c <> conv rest
 
 genAlonzoGenesis :: Gen Alonzo.AlonzoGenesis
 genAlonzoGenesis = do
