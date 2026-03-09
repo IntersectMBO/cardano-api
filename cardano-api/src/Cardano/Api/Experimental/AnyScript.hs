@@ -29,15 +29,25 @@ import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Data.ByteString qualified as BS
 import Data.Text qualified as Text
+import Data.Type.Equality ((:~:) (..))
+import Data.Typeable (Typeable, eqT)
 import Prettyprinter (pretty)
 
 data AnyScript era where
   AnySimpleScript :: SimpleScript era -> AnyScript era
-  AnyPlutusScript :: Plutus.PlutusLanguage lang => PlutusScriptInEra lang era -> AnyScript era
+  AnyPlutusScript :: (Plutus.PlutusLanguage lang, Typeable lang) => PlutusScriptInEra lang era -> AnyScript era
 
 instance L.Era era => HasTypeProxy (AnyScript era) where
   data AsType (AnyScript era) = AsAnyScript
   proxyToAsType _ = AsAnyScript
+
+instance Eq (AnyScript era) where
+  AnySimpleScript s1 == AnySimpleScript s2 = s1 == s2
+  AnyPlutusScript (ps1 :: PlutusScriptInEra lang1 era) == AnyPlutusScript (ps2 :: PlutusScriptInEra lang2 era) =
+    case eqT @lang1 @lang2 of
+      Just Refl -> ps1 == ps2
+      Nothing -> False
+  _ == _ = False
 
 instance
   L.AlonzoEraScript era
