@@ -14,7 +14,6 @@ import Cardano.Ledger.Alonzo.Genesis qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Coin qualified as Ledger
-import Cardano.Ledger.Plutus.Language qualified as Alonzo
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 
 import Data.Word (Word64)
