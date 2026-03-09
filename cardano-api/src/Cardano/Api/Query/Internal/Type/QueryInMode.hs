@@ -315,7 +315,7 @@ data QueryInShelleyBasedEra era result where
     :: Set L.GovActionId
     -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)))
   QueryLedgerPeerSnapshot
-    :: QueryInShelleyBasedEra era (Serialised LedgerPeerSnapshot)
+    :: QueryInShelleyBasedEra era (Serialised (LedgerPeerSnapshot BigLedgerPeers))
   QueryStakePoolDefaultVote
     :: Ledger.KeyHash Ledger.StakePool
     -> QueryInShelleyBasedEra era L.DefaultVote
@@ -426,8 +426,8 @@ decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <
 
 decodeBigLedgerPeerSnapshot
   :: Consensus.ShelleyNodeToClientVersion
-  -> Serialised LedgerPeerSnapshot
-  -> Either (LBS.ByteString, DecoderError) LedgerPeerSnapshot
+  -> Serialised (LedgerPeerSnapshot BigLedgerPeers)
+  -> Either (LBS.ByteString, DecoderError) (LedgerPeerSnapshot BigLedgerPeers)
 decodeBigLedgerPeerSnapshot ntcV (Serialised lps) =
   first
     (lps,)
