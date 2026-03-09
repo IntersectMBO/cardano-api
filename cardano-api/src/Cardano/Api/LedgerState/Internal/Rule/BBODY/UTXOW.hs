@@ -31,10 +31,10 @@ handleConwayUTxOWEvent
   :: AlonzoUtxowEvent ConwayEra -> Maybe LedgerEvent
 handleConwayUTxOWEvent (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent (Alonzo.UtxosEvent conwayUTxOsEvent))) =
   case conwayUTxOsEvent of
-    Conway.TotalDeposits{} -> Nothing
+    Alonzo.TotalDeposits{} -> Nothing
     Conway.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
     Conway.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
-    Conway.TxUTxODiff _ _ -> Nothing
+    Alonzo.TxUTxODiff _ _ -> Nothing
 
 handleAlonzoUTxOWEvent
   :: Event (Ledger.Core.EraRule "UTXO" ledgerera) ~ AlonzoUtxoEvent ledgerera

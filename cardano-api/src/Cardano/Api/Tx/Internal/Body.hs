@@ -1920,13 +1920,13 @@ convMintValue txMintValue = do
   multiAsset
 
 convExtraKeyWitnesses
-  :: TxExtraKeyWitnesses era -> Set (Shelley.KeyHash Shelley.Witness)
+  :: TxExtraKeyWitnesses era -> Set (Shelley.KeyHash Shelley.Guard)
 convExtraKeyWitnesses txExtraKeyWits =
   case txExtraKeyWits of
     TxExtraKeyWitnessesNone -> Set.empty
     TxExtraKeyWitnesses _ khs ->
       fromList
-        [ Shelley.asWitness kh
+        [ Shelley.coerceKeyRole kh
         | PaymentKeyHash kh <- khs
         ]
 
