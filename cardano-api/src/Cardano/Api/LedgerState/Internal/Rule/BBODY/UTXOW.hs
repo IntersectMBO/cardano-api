@@ -29,23 +29,27 @@ import Control.State.Transition.Extended
 
 handleConwayUTxOWEvent
   :: AlonzoUtxowEvent ConwayEra -> Maybe LedgerEvent
-handleConwayUTxOWEvent (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent (Alonzo.UtxosEvent conwayUTxOsEvent))) =
-  case conwayUTxOsEvent of
+handleConwayUTxOWEvent (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent utxoEvent)) =
+  case utxoEvent of
+    Alonzo.UtxosEvent conwayUTxOsEvent ->
+      case conwayUTxOsEvent of
+        Conway.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
+        Conway.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
     Alonzo.TotalDeposits{} -> Nothing
-    Conway.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
-    Conway.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
     Alonzo.TxUTxODiff _ _ -> Nothing
 
 handleAlonzoUTxOWEvent
   :: Event (Ledger.Core.EraRule "UTXO" ledgerera) ~ AlonzoUtxoEvent ledgerera
   => Event (Ledger.Core.EraRule "UTXOS" ledgerera) ~ AlonzoUtxosEvent ledgerera
   => AlonzoUtxowEvent ledgerera -> Maybe LedgerEvent
-handleAlonzoUTxOWEvent (WrappedShelleyEraEvent (Shelley.UtxoEvent (UtxosEvent utxoEvent))) =
+handleAlonzoUTxOWEvent (WrappedShelleyEraEvent (Shelley.UtxoEvent utxoEvent)) =
   case utxoEvent of
-    Alonzo.AlonzoPpupToUtxosEvent{} -> Nothing
+    UtxosEvent utxosEvent ->
+      case utxosEvent of
+        Alonzo.AlonzoPpupToUtxosEvent{} -> Nothing
+        Alonzo.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
+        Alonzo.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
     Alonzo.TotalDeposits{} -> Nothing
-    Alonzo.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
-    Alonzo.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
     Alonzo.TxUTxODiff _ _ -> Nothing
 
 handlePreAlonzoUTxOWEvent

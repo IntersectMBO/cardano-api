@@ -414,9 +414,9 @@ decodePoolDistribution sbe (Serialised ls) =
 
 newtype SerialisedStakeSnapshots era
   = SerialisedStakeSnapshots
-      (Serialised Consensus.StakeSnapshots)
+      (Serialised L.StakeSnapshots)
 
-newtype StakeSnapshot era = StakeSnapshot Consensus.StakeSnapshots
+newtype StakeSnapshot era = StakeSnapshot L.StakeSnapshots
 
 decodeStakeSnapshot
   :: forall era
@@ -501,7 +501,7 @@ fromShelleyDelegations =
     . toList
 
 fromShelleyRewardAccounts
-  :: Map (Shelley.Credential 'Core.Staking) L.Coin
+  :: Map (Shelley.Credential Shelley.Staking) L.Coin
   -> Map StakeCredential L.Coin
 fromShelleyRewardAccounts =
   -- TODO: write an appropriate property to show it is safe to use
@@ -694,7 +694,8 @@ toConsensusQueryShelleyBased sbe = \case
       )
       sbe
   QueryLedgerPeerSnapshot ->
-    Some (consensusQueryInEraInMode era (Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot))
+    Some
+      (consensusQueryInEraInMode era (Consensus.GetCBOR Consensus.GetLedgerPeerSnapshot BigLedgerPeers))
   QueryStakePoolDefaultVote govActs ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
@@ -1016,7 +1017,7 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         _ -> fromConsensusQueryResultMismatch
     QueryLedgerPeerSnapshot{} ->
       case q' of
-        Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot ->
+        Consensus.GetCBOR Consensus.GetLedgerPeerSnapshot BigLedgerPeers ->
           r'
         _ -> fromConsensusQueryResultMismatch
     QueryStakePoolDefaultVote{} ->

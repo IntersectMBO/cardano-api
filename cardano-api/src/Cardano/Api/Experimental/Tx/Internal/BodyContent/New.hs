@@ -231,10 +231,10 @@ convMintValue v = do
   multiAsset
 
 convExtraKeyWitnesses
-  :: TxExtraKeyWitnesses -> Set (L.KeyHash L.Witness)
+  :: TxExtraKeyWitnesses -> Set (L.KeyHash L.Guard)
 convExtraKeyWitnesses (TxExtraKeyWitnesses khs) =
   fromList
-    [ L.asWitness kh
+    [ L.coerceKeyRole kh
     | PaymentKeyHash kh <- khs
     ]
 
