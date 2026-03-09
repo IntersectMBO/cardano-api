@@ -661,7 +661,10 @@ evaluateTransactionFee pp (UnsignedTx tx) keywitcount byronwitcount refScriptsSi
   L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount) refScriptsSize
 
 data FeeCalculationError
-  = NotEnoughAda Coin
+  = -- | Updating an existing change output resulted in negative ADA.
+    NotEnoughAdaForChangeOutput Coin
+  | -- | Creating a new change output would require negative ADA.
+    NotEnoughAdaForNewOutput Coin
   | NonAdaAssetsUnbalanced L.MultiAsset
   | -- | @MinUTxONotMet actual required@: an output does not meet the minimum UTxO requirement.
     MinUTxONotMet L.Coin L.Coin
@@ -669,9 +672,15 @@ data FeeCalculationError
   deriving (Show, Eq)
 
 instance Error FeeCalculationError where
-  prettyError (NotEnoughAda balance) =
+  prettyError (NotEnoughAdaForChangeOutput balance) =
     mconcat
-      [ "The transaction balance is negative: "
+      [ "Not enough ADA when updating existing change output. Balance: "
+      , pretty balance
+      , "\nThis means that the transaction does not have enough ada to cover the fees. The usual solution is to provide more inputs, or inputs with more ada."
+      ]
+  prettyError (NotEnoughAdaForNewOutput balance) =
+    mconcat
+      [ "Not enough ADA when creating new change output. Balance: "
       , pretty balance
       , "\nThis means that the transaction does not have enough ada to cover the fees. The usual solution is to provide more inputs, or inputs with more ada."
       ]
@@ -721,7 +730,7 @@ instance Error FeeCalculationError where
 --   balance and appended to the end of the existing outputs; if a change
 --   output already exists it is updated in place. If the resulting change
 --   output would have negative ADA, the transaction is unrecoverable and
---   'NotEnoughAda' is returned. Otherwise the function recurses, because
+--   'NotEnoughAdaForChangeOutput' or 'NotEnoughAdaForNewOutput' is returned. Otherwise the function recurses, because
 --   the changed output may alter the transaction size and therefore the
 --   required fee, and must also satisfy the minimum UTxO
 --   (@coinPerUTxOByte@) constraint.
@@ -760,18 +769,13 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
   | multiAssetIsNegative =
       Left $ NonAdaAssetsUnbalanced multiAssets
   | otherwise =
-      go
-        maxIterations
-        unsignedTx
-        utxo
-        pparams
-        poolids
-        stakeDelegDeposits
-        drepDelegDeposits
-        nExtraWitnesses
+      go maxIterations unsignedTx
  where
   initialBalance = evaluateTransactionBalance pparams poolids stakeDelegDeposits drepDelegDeposits utxo unsignedTx
-  multiAssets = getMultiAssets (useEra @era) initialBalance
+  multiAssets =
+    obtainCommonConstraints (useEra @era) $
+      let L.MaryValue _ ma = initialBalance
+       in ma
   -- Check whether any native token quantity is negative.
   -- ADA is zeroed out so it doesn't influence the check.
   multiAssetIsNegative =
@@ -783,34 +787,28 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
   go
     :: Int
     -> UnsignedTx (LedgerEra era)
-    -> L.UTxO (LedgerEra era)
-    -> L.PParams (LedgerEra era)
-    -> Set PoolId
-    -> Map StakeCredential L.Coin
-    -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
-    -> Int
     -> Either FeeCalculationError (UnsignedTx (LedgerEra era))
-  go 0 _ _ _ _ _ _ _ = Left FeeCalculationDidNotConverge
-  go n unSignTx@(UnsignedTx ledgerTx) utxo' pparams' poolids' stakeDelegDeposits' drepDelegDeposits' nExtraWitnesses'
+  go 0 _ = Left FeeCalculationDidNotConverge
+  go n unSignTx@(UnsignedTx ledgerTx)
     | minFee == txBodyFee && L.isZero txBalanceValue = do
         -- Case 1
         let outs = toList $ ledgerTx ^. L.bodyTxL . L.outputsTxBodyL
-        mapM_ (checkOutputMinUTxO pparams') outs
+        mapM_ (checkOutputMinUTxO pparams) outs
         return unSignTx
     | minFee == txBodyFee = do
         -- Case 2
         balancedOuts <- balanceTxOuts @era changeAddr txBalanceValue unSignTx
         let updatedTx = UnsignedTx (ledgerTx & L.bodyTxL . L.outputsTxBodyL .~ balancedOuts)
-        go (n - 1) updatedTx utxo' pparams' poolids' stakeDelegDeposits' drepDelegDeposits' nExtraWitnesses'
+        go (n - 1) updatedTx
     | otherwise =
         -- Case 3
         let newTx = UnsignedTx (ledgerTx & L.bodyTxL . L.feeTxBodyL .~ minFee)
-         in go (n - 1) newTx utxo' pparams' poolids' stakeDelegDeposits' drepDelegDeposits' nExtraWitnesses'
+         in go (n - 1) newTx
    where
-    minFee = obtainCommonConstraints (useEra @era) $ L.calcMinFeeTx utxo' pparams' ledgerTx nExtraWitnesses'
+    minFee = obtainCommonConstraints (useEra @era) $ L.calcMinFeeTx utxo pparams ledgerTx nExtraWitnesses
     txBodyFee = ledgerTx ^. L.bodyTxL . L.feeTxBodyL
     txBalanceValue =
-      evaluateTransactionBalance pparams' poolids' stakeDelegDeposits' drepDelegDeposits' utxo' unSignTx
+      evaluateTransactionBalance pparams poolids stakeDelegDeposits drepDelegDeposits utxo unSignTx
 
 checkOutputMinUTxO
   :: forall era
@@ -825,13 +823,6 @@ checkOutputMinUTxO pp out =
           Right () -> Right ()
           Left (TxOut offending, minRequired) ->
             Left $ MinUTxONotMet (offending ^. L.coinTxOutL) minRequired
-
-getMultiAssets :: Era era -> L.Value (LedgerEra era) -> L.MultiAsset
-getMultiAssets era val = case era of
-  DijkstraEra -> mempty
-  ConwayEra ->
-    let L.MaryValue _ ma = val
-     in ma
 
 balanceTxOuts
   :: forall era
@@ -854,13 +845,13 @@ balanceTxOuts changeAddr txBalance (UnsignedTx tx) =
                 let newValue = (lastOut ^. L.valueTxOutL) <> txBalance
                     changeCoin = L.coin newValue
                  in if changeCoin < 0
-                      then Left $ NotEnoughAda changeCoin
+                      then Left $ NotEnoughAdaForChangeOutput changeCoin
                       else Right $ rest Seq.:|> (lastOut & L.valueTxOutL .~ newValue)
           _ ->
             -- Append a new change output
             let changeCoin = L.coin txBalance
              in if changeCoin < 0
-                  then Left $ NotEnoughAda changeCoin
+                  then Left $ NotEnoughAdaForNewOutput changeCoin
                   else Right $ outs Seq.:|> L.mkBasicTxOut changeAddr txBalance
 
 -- Essentially we check for the existence of collateral inputs. If they exist we

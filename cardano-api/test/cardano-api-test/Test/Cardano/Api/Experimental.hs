@@ -104,7 +104,7 @@ tests =
             "Case 2: transaction with no outputs creates change output"
             prop_calcMinFeeRecursive_no_tx_outs
         , testProperty
-            "Tiny surplus consumed by fee increase yields NotEnoughAda"
+            "Tiny surplus consumed by fee increase yields NotEnoughAdaForChangeOutput"
             prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada
         ]
     ]
@@ -606,8 +606,7 @@ genFundedSimpleTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
-              Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -644,8 +643,7 @@ genFundedMultiAssetTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
-              Ledger.mkBasicTxOut addr (L.MaryValue sendCoin multiAsset)
+            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin multiAsset)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -678,8 +676,7 @@ genUnderfundedTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
-              Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -744,15 +741,16 @@ prop_calcMinFeeRecursive_fee_fixpoint = H.property $ do
       resultTx H.=== secondResult
 
 -- | When the outputs exceed the UTxO value the function returns
--- 'Left (NotEnoughAda _)' with a negative deficit coin.
+-- 'Left (NotEnoughAdaForNewOutput _)' with a negative deficit coin.
 prop_calcMinFeeRecursive_insufficient_funds :: Property
 prop_calcMinFeeRecursive_insufficient_funds = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genUnderfundedTx Exp.ConwayEra
   case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
-    Left (Exp.NotEnoughAda deficit) -> H.assert $ deficit < L.Coin 0
+    Left (Exp.NotEnoughAdaForNewOutput deficit) -> H.assert $ deficit < L.Coin 0
     Left Exp.NonAdaAssetsUnbalanced{} -> H.annotate "Unexpected NonAdaAssetsUnbalanced error" >> H.failure
     Left Exp.MinUTxONotMet{} -> H.annotate "Unexpected MinUTxONotMet error" >> H.failure
     Left Exp.FeeCalculationDidNotConverge -> H.annotate "Unexpected FeeCalculationDidNotConverge error" >> H.failure
+    Left err -> H.annotateShow err >> H.failure
     Right _ -> H.failure
 
 -- | Generates a transaction whose output demands a native token that does
@@ -787,8 +785,7 @@ genNonAdaUnbalancedTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
-              Ledger.mkBasicTxOut addr sendValue
+            Ledger.mkBasicTxOut addr sendValue
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -827,14 +824,12 @@ genMinUTxOViolatingTx era = do
       sendTxOut1 =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
-              Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000_000) mempty)
+            Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000_000) mempty)
       -- Output 2: tokens with tiny ADA (below min UTxO)
       sendTxOut2 =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
-              Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000) multiAsset)
+            Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000) multiAsset)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -877,7 +872,8 @@ prop_calcMinFeeRecursive_non_ada_unbalanced = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genNonAdaUnbalancedTx Exp.ConwayEra
   case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
     Left (Exp.NonAdaAssetsUnbalanced _) -> H.success
-    Left Exp.NotEnoughAda{} -> H.annotate "Unexpected NotEnoughAda" >> H.failure
+    Left Exp.NotEnoughAdaForChangeOutput{} -> H.annotate "Unexpected NotEnoughAdaForChangeOutput" >> H.failure
+    Left Exp.NotEnoughAdaForNewOutput{} -> H.annotate "Unexpected NotEnoughAdaForNewOutput" >> H.failure
     Left Exp.MinUTxONotMet{} -> H.annotate "Unexpected MinUTxONotMet" >> H.failure
     Left Exp.FeeCalculationDidNotConverge -> H.annotate "Unexpected FeeCalculationDidNotConverge" >> H.failure
     Right _ -> H.annotate "Expected NonAdaAssetsUnbalanced but got Right" >> H.failure
@@ -892,7 +888,8 @@ prop_calcMinFeeRecursive_min_utxo_not_met = H.property $ do
     Left (Exp.MinUTxONotMet actual required) -> do
       H.annotate $ "Actual: " <> show actual <> ", Required: " <> show required
       H.assert $ actual < required
-    Left Exp.NotEnoughAda{} -> H.annotate "Unexpected NotEnoughAda" >> H.failure
+    Left Exp.NotEnoughAdaForChangeOutput{} -> H.annotate "Unexpected NotEnoughAdaForChangeOutput" >> H.failure
+    Left Exp.NotEnoughAdaForNewOutput{} -> H.annotate "Unexpected NotEnoughAdaForNewOutput" >> H.failure
     Left Exp.NonAdaAssetsUnbalanced{} -> H.annotate "Unexpected NonAdaAssetsUnbalanced" >> H.failure
     Left Exp.FeeCalculationDidNotConverge -> H.annotate "Unexpected FeeCalculationDidNotConverge" >> H.failure
     Right _ -> H.annotate "Expected MinUTxONotMet but got Right" >> H.failure
@@ -926,7 +923,7 @@ prop_calcMinFeeRecursive_no_tx_outs = H.property $ do
 --   1. After fee convergence at F1, a positive balance triggers Case 2.
 --   2. Adding the change output raises the fee to F2.
 --   3. The change is updated: (surplus - F1) + (F1 - F2) = surplus - F2 < 0.
---   4. balanceTxOuts returns NotEnoughAda.
+--   4. balanceTxOuts returns NotEnoughAdaForChangeOutput.
 genTinySurplusTx
   :: Exp.Era era
   -> Gen
@@ -955,8 +952,7 @@ genTinySurplusTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
-              Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -966,12 +962,12 @@ genTinySurplusTx era = do
 
 -- | When the surplus is just barely enough to cover the initial fee but not
 -- the higher fee after adding a change output, the change output balance
--- goes negative and the function returns NotEnoughAda.
+-- goes negative and the function returns NotEnoughAdaForChangeOutput.
 prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada :: Property
 prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genTinySurplusTx Exp.ConwayEra
   case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
-    Left (Exp.NotEnoughAda deficit) -> do
+    Left (Exp.NotEnoughAdaForChangeOutput deficit) -> do
       H.annotate $ "Deficit: " <> show deficit
       H.assert $ deficit < L.Coin 0
     Left (Exp.MinUTxONotMet actual required) -> do
@@ -980,4 +976,6 @@ prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada = H.property $ do
       H.annotate $ "Change output ADA: " <> show actual <> ", minUTxO: " <> show required
       H.assert $ actual < required
     Left err -> H.annotateShow err >> H.failure
-    Right _ -> H.annotate "Expected NotEnoughAda or MinUTxONotMet but tx balanced successfully" >> H.failure
+    Right _ ->
+      H.annotate "Expected NotEnoughAdaForChangeOutput or MinUTxONotMet but tx balanced successfully"
+        >> H.failure
