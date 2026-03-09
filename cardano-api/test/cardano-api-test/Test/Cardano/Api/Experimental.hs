@@ -19,6 +19,7 @@ import Cardano.Api.Ledger qualified as Ledger
 import Cardano.Api.Plutus qualified as Script
 import Cardano.Api.Tx (Tx (ShelleyTx))
 
+import Cardano.Ledger.Alonzo.Genesis (agPlutusV1CostModel)
 import Cardano.Ledger.Alonzo.Scripts qualified as UnexportedLedger
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Slotting.EpochInfo qualified as Slotting
@@ -241,7 +242,7 @@ exampleProtocolParams =
     UnexportedLedger.UpgradeAlonzoPParams
       { UnexportedLedger.uappCoinsPerUTxOWord = Ledger.CoinPerWord $ Ledger.Coin 34_482
       , UnexportedLedger.uappPlutusV1CostModel =
-          UnexportedLedger.agPlutusV1CostModel Genesis.alonzoGenesisDefaults
+          agPlutusV1CostModel Genesis.alonzoGenesisDefaults
       , UnexportedLedger.uappPrices =
           Ledger.Prices
             { Ledger.prSteps = fromMaybe maxBound $ Ledger.boundRational $ 721 % 10_000_000

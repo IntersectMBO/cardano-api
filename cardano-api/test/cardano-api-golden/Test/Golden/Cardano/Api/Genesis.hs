@@ -11,14 +11,11 @@ where
 import Cardano.Api.Genesis
 
 import Cardano.Crypto.VRF (VerKeyVRF)
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (Network (..), knownNonZeroBounded)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
   ( Credential (..)
-  , PaymentCredential
-  , StakeCredential
   , StakeReference (..)
   )
 import Cardano.Ledger.Keys (GenDelegPair (..))
@@ -71,13 +68,13 @@ exampleShelleyGenesis =
   initialFundedAddress :: Addr
   initialFundedAddress = Addr Testnet paymentCredential (StakeRefBase stakingCredential)
    where
-    paymentCredential :: PaymentCredential
+    paymentCredential :: Credential Payment
     paymentCredential =
       KeyHashObj $
         KeyHash
           "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
 
-    stakingCredential :: StakeCredential
+    stakingCredential :: Credential Staking
     stakingCredential =
       KeyHashObj $
         KeyHash
