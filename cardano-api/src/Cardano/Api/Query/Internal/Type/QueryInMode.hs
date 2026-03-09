@@ -315,7 +315,7 @@ data QueryInShelleyBasedEra era result where
     :: Set L.GovActionId
     -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)))
   QueryLedgerPeerSnapshot
-    :: QueryInShelleyBasedEra era (Serialised (LedgerPeerSnapshot BigLedgerPeers))
+    :: QueryInShelleyBasedEra era (Serialised SomeLedgerPeerSnapshot)
   QueryStakePoolDefaultVote
     :: Ledger.KeyHash Ledger.StakePool
     -> QueryInShelleyBasedEra era L.DefaultVote
@@ -425,15 +425,14 @@ decodeStakeSnapshot
 decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <$> Plain.decodeFull ls
 
 decodeBigLedgerPeerSnapshot
-  :: Consensus.ShelleyNodeToClientVersion
-  -> Serialised (LedgerPeerSnapshot BigLedgerPeers)
-  -> Either (LBS.ByteString, DecoderError) (LedgerPeerSnapshot BigLedgerPeers)
-decodeBigLedgerPeerSnapshot ntcV (Serialised lps) =
+  :: Serialised SomeLedgerPeerSnapshot
+  -> Either (LBS.ByteString, DecoderError) SomeLedgerPeerSnapshot
+decodeBigLedgerPeerSnapshot (Serialised lps) =
   first
     (lps,)
     $ Plain.decodeFullDecoder
       "LedgerPeerSnapshot"
-      (decodeLedgerPeerSnapshot $ Consensus.ledgerPeerSnapshotSupportsSRV ntcV)
+      decodeLedgerPeerSnapshot
       lps
 
 toShelleyAddrSet
@@ -547,6 +546,7 @@ toConsensusQueryShelleyBased
    . ()
   => ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol (ShelleyLedgerEra era)
   => Consensus.CardanoBlock StandardCrypto ~ block
+  => L.EraGov (ShelleyLedgerEra era)
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
   -> Some (Consensus.Query block)
@@ -695,7 +695,7 @@ toConsensusQueryShelleyBased sbe = \case
       sbe
   QueryLedgerPeerSnapshot ->
     Some
-      (consensusQueryInEraInMode era (Consensus.GetCBOR Consensus.GetLedgerPeerSnapshot BigLedgerPeers))
+      (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot BigLedgerPeers)))
   QueryStakePoolDefaultVote govActs ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
@@ -1017,7 +1017,7 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         _ -> fromConsensusQueryResultMismatch
     QueryLedgerPeerSnapshot{} ->
       case q' of
-        Consensus.GetCBOR Consensus.GetLedgerPeerSnapshot BigLedgerPeers ->
+        Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot BigLedgerPeers) ->
           r'
         _ -> fromConsensusQueryResultMismatch
     QueryStakePoolDefaultVote{} ->
