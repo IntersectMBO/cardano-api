@@ -22,6 +22,7 @@ import Cardano.Api.Tx (Tx (ShelleyTx))
 import Cardano.Ledger.Alonzo.Genesis (agPlutusV1CostModel)
 import Cardano.Ledger.Alonzo.Scripts qualified as UnexportedLedger
 import Cardano.Ledger.Api qualified as UnexportedLedger
+import Cardano.Ledger.Core (TopTx)
 import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
@@ -412,7 +413,7 @@ expEraGen =
   let eras :: [Exp.Some Exp.Era] = [minBound .. maxBound]
    in Gen.element eras
 
-expTxForEraGen :: Exp.Era era -> Gen (Ledger.Tx (Exp.LedgerEra era))
+expTxForEraGen :: Exp.Era era -> Gen (Ledger.Tx TopTx (Exp.LedgerEra era))
 expTxForEraGen era = do
   Exp.obtainCommonConstraints era $ do
     ShelleyTx _ tx <- genTx (convert era)
