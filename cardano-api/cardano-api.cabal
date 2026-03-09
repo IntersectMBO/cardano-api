@@ -168,6 +168,7 @@ library
     ordered-containers,
     ouroboros-consensus ^>=1.0,
     ouroboros-consensus:cardano,
+    ouroboros-consensus:diffusion,
     ouroboros-consensus:protocol,
     ouroboros-network ^>=0.24,
     ouroboros-network:api,
