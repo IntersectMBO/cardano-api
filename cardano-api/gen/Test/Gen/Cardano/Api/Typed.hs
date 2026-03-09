@@ -172,8 +172,8 @@ import Cardano.Crypto.Seed qualified as Crypto
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Plutus.Language qualified as L
-import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
 import Control.Applicative (Alternative (..), optional)
 import Control.Monad
