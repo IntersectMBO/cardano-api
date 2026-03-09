@@ -364,6 +364,8 @@ module Cardano.Api.Tx
   , fromShelleyTxOut
   , fromByronTxIn
   , fromLedgerTxOuts
+  , fromLedgerTxValidityLowerBound
+  , fromLedgerTxValidityUpperBound
   , renderTxIn
 
     -- ** Misc helpers
