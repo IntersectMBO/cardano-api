@@ -44,6 +44,7 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (WithOrigin (..))
 import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.Coin (compactCoinOrError)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Conway.PParams qualified as L
 import Cardano.Ledger.Plutus qualified as L
@@ -72,7 +73,8 @@ protocolParamsToUtxoRpcPParams era pparams = obtainCommonConstraints era $ do
       drepVotingThresholds :: L.DRepVotingThresholds =
         pparams ^. L.ppDRepVotingThresholdsL
   def
-    & U5c.coinsPerUtxoByte .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to inject
+    & U5c.coinsPerUtxoByte
+      .~ pparams ^. L.ppCoinsPerUTxOByteL . to (fromCompact . L.unCoinPerByte) . to inject
     & U5c.maxTxSize .~ pparams ^. L.ppMaxTxSizeL . to fromIntegral
     & U5c.minFeeCoefficient .~ pparams ^. L.ppMinFeeBL . to inject
     & U5c.minFeeConstant .~ pparams ^. L.ppMinFeeAL . to inject
