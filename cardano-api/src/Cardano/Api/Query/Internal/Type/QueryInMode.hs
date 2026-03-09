@@ -422,7 +422,8 @@ decodeStakeSnapshot
   :: forall era
    . SerialisedStakeSnapshots era
   -> Either DecoderError (StakeSnapshot era)
-decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <$> Plain.decodeFull ls
+decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) =
+  StakeSnapshot <$> decodeFull (maxBound @Version) ls
 
 decodeBigLedgerPeerSnapshot
   :: Serialised SomeLedgerPeerSnapshot
