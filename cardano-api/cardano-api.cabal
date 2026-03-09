@@ -334,7 +334,6 @@ library gen
     cardano-ledger-dijkstra:testlib >=0.1,
     cardano-ledger-shelley >=1.13,
     cardano-strict-containers,
-    containers,
     filepath,
     hedgehog >=1.1,
     hedgehog-extras,
