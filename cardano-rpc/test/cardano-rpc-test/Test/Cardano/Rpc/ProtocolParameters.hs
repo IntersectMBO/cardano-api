@@ -11,6 +11,8 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
+import Cardano.Ledger.Coin (compactCoinOrError)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.PParams qualified as L
 import Cardano.Ledger.Plutus qualified as L
 
@@ -47,9 +49,10 @@ hprop_roundtrip_protocol_parameters = H.property $ do
       pp' =
         obtainCommonConstraints era $
           pp
-            & L.ppCoinsPerUTxOByteL %~ L.CoinPerByte . clipI 64 . L.unCoinPerByte
-            & L.ppMinFeeBL %~ clipI 64
-            & L.ppMinFeeAL %~ clipI 64
+            & L.ppCoinsPerUTxOByteL
+              %~ L.CoinPerByte . compactCoinOrError . clipI 64 . fromCompact . L.unCoinPerByte
+            & L.ppTxFeeFixedL %~ clipI 64
+            & L.ppTxFeePerByteL %~ L.CoinPerByte . compactCoinOrError . clipI 64 . fromCompact . L.unCoinPerByte
             & L.ppA0L %~ clipIBr
             & L.ppRhoL %~ clipIBr
             & L.ppTauL %~ clipIBr
