@@ -43,6 +43,7 @@ import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (WithOrigin (..))
 import Cardano.Ledger.BaseTypes qualified as L
+import Cardano.Ledger.Coin (compactCoinOrError)
 import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Conway.PParams qualified as L
 import Cardano.Ledger.Plutus qualified as L
@@ -148,7 +149,7 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
       [ \r -> do
           coinsPerUtxoByte <-
             pp ^. U5c.coinsPerUtxoByte . to utxoRpcBigIntToInteger ?! "Invalid coinsPerUtxoByte"
-          pure $ set L.ppCoinsPerUTxOByteL (L.CoinPerByte $ L.Coin coinsPerUtxoByte) r
+          pure $ set L.ppCoinsPerUTxOByteL (L.CoinPerByte $ compactCoinOrError $ L.Coin coinsPerUtxoByte) r
       , pure . (L.ppMaxTxSizeL .~ pp ^. U5c.maxTxSize . to fromIntegral)
       , \r -> do
           minFeeCoeff <-
