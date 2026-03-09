@@ -2094,7 +2094,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         snapshot = ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
         markSnapshotPoolDistr
           :: Map
-               (SL.KeyHash 'SL.StakePool)
+               (SL.KeyHash SL.StakePool)
                SL.IndividualPoolStake
         markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
@@ -2131,7 +2131,7 @@ isLeadingSlotsTPraos
   => Set SlotNo
   -> PoolId
   -> Map
-       (SL.KeyHash 'SL.StakePool)
+       (SL.KeyHash SL.StakePool)
        SL.IndividualPoolStake
   -> Consensus.Nonce
   -> Crypto.SignKeyVRF v
@@ -2156,7 +2156,7 @@ isLeadingSlotsPraos
   => Set SlotNo
   -> PoolId
   -> Map
-       (SL.KeyHash 'SL.StakePool)
+       (SL.KeyHash SL.StakePool)
        SL.IndividualPoolStake
   -> Consensus.Nonce
   -> Crypto.SignKeyVRF (Crypto.VRF Consensus.StandardCrypto)
