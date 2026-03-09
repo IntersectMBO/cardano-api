@@ -606,7 +606,6 @@ genFundedSimpleTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
               Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
@@ -644,7 +643,6 @@ genFundedMultiAssetTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
               Ledger.mkBasicTxOut addr (L.MaryValue sendCoin multiAsset)
       txBodyContent =
         Exp.defaultTxBodyContent
@@ -678,7 +676,6 @@ genUnderfundedTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
               Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
@@ -787,7 +784,6 @@ genNonAdaUnbalancedTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
               Ledger.mkBasicTxOut addr sendValue
       txBodyContent =
         Exp.defaultTxBodyContent
@@ -827,13 +823,11 @@ genMinUTxOViolatingTx era = do
       sendTxOut1 =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
               Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000_000) mempty)
       -- Output 2: tokens with tiny ADA (below min UTxO)
       sendTxOut2 =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
               Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000) multiAsset)
       txBodyContent =
         Exp.defaultTxBodyContent
@@ -955,7 +949,6 @@ genTinySurplusTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Exp.obtainCommonConstraints era $
               Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent

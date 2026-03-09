@@ -760,18 +760,13 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
   | multiAssetIsNegative =
       Left $ NonAdaAssetsUnbalanced multiAssets
   | otherwise =
-      go
-        maxIterations
-        unsignedTx
-        utxo
-        pparams
-        poolids
-        stakeDelegDeposits
-        drepDelegDeposits
-        nExtraWitnesses
+      go maxIterations unsignedTx
  where
   initialBalance = evaluateTransactionBalance pparams poolids stakeDelegDeposits drepDelegDeposits utxo unsignedTx
-  multiAssets = getMultiAssets (useEra @era) initialBalance
+  multiAssets =
+    obtainCommonConstraints (useEra @era) $
+      let L.MaryValue _ ma = initialBalance
+       in ma
   -- Check whether any native token quantity is negative.
   -- ADA is zeroed out so it doesn't influence the check.
   multiAssetIsNegative =
@@ -783,34 +778,28 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
   go
     :: Int
     -> UnsignedTx (LedgerEra era)
-    -> L.UTxO (LedgerEra era)
-    -> L.PParams (LedgerEra era)
-    -> Set PoolId
-    -> Map StakeCredential L.Coin
-    -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
-    -> Int
     -> Either FeeCalculationError (UnsignedTx (LedgerEra era))
-  go 0 _ _ _ _ _ _ _ = Left FeeCalculationDidNotConverge
-  go n unSignTx@(UnsignedTx ledgerTx) utxo' pparams' poolids' stakeDelegDeposits' drepDelegDeposits' nExtraWitnesses'
+  go 0 _ = Left FeeCalculationDidNotConverge
+  go n unSignTx@(UnsignedTx ledgerTx)
     | minFee == txBodyFee && L.isZero txBalanceValue = do
         -- Case 1
         let outs = toList $ ledgerTx ^. L.bodyTxL . L.outputsTxBodyL
-        mapM_ (checkOutputMinUTxO pparams') outs
+        mapM_ (checkOutputMinUTxO pparams) outs
         return unSignTx
     | minFee == txBodyFee = do
         -- Case 2
         balancedOuts <- balanceTxOuts @era changeAddr txBalanceValue unSignTx
         let updatedTx = UnsignedTx (ledgerTx & L.bodyTxL . L.outputsTxBodyL .~ balancedOuts)
-        go (n - 1) updatedTx utxo' pparams' poolids' stakeDelegDeposits' drepDelegDeposits' nExtraWitnesses'
+        go (n - 1) updatedTx
     | otherwise =
         -- Case 3
         let newTx = UnsignedTx (ledgerTx & L.bodyTxL . L.feeTxBodyL .~ minFee)
-         in go (n - 1) newTx utxo' pparams' poolids' stakeDelegDeposits' drepDelegDeposits' nExtraWitnesses'
+         in go (n - 1) newTx
    where
-    minFee = obtainCommonConstraints (useEra @era) $ L.calcMinFeeTx utxo' pparams' ledgerTx nExtraWitnesses'
+    minFee = obtainCommonConstraints (useEra @era) $ L.calcMinFeeTx utxo pparams ledgerTx nExtraWitnesses
     txBodyFee = ledgerTx ^. L.bodyTxL . L.feeTxBodyL
     txBalanceValue =
-      evaluateTransactionBalance pparams' poolids' stakeDelegDeposits' drepDelegDeposits' utxo' unSignTx
+      evaluateTransactionBalance pparams poolids stakeDelegDeposits drepDelegDeposits utxo unSignTx
 
 checkOutputMinUTxO
   :: forall era
@@ -826,12 +815,6 @@ checkOutputMinUTxO pp out =
           Left (TxOut offending, minRequired) ->
             Left $ MinUTxONotMet (offending ^. L.coinTxOutL) minRequired
 
-getMultiAssets :: Era era -> L.Value (LedgerEra era) -> L.MultiAsset
-getMultiAssets era val = case era of
-  DijkstraEra -> mempty
-  ConwayEra ->
-    let L.MaryValue _ ma = val
-     in ma
 
 balanceTxOuts
   :: forall era
