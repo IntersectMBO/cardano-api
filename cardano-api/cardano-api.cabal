@@ -385,7 +385,6 @@ test-suite cardano-api-test
     hedgehog-quickcheck,
     microlens,
     mtl,
-    ordered-containers,
     ouroboros-consensus,
     ouroboros-consensus-protocol,
     raw-strings-qq,

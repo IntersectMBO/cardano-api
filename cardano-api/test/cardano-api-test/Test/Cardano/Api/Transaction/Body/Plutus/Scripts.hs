@@ -11,7 +11,6 @@ where
 import Cardano.Api (AlonzoEraOnwards (..))
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental
-import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.AnyScript
 import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Plutus hiding (AnyPlutusScript (..))
@@ -178,11 +177,14 @@ prop_extractAllIndexedPlutusScriptWitnesses =
     let allGeneratedPlutusScriptWitnesses =
           mconcat
             [ createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableTxIns generatedTxInWits
-            , createIndexedPlutusScriptWitnesses $ map (\(w, sw) -> (w, anyScriptWitnessToAnyWitness sw)) $ Exp.extractWitnessableMints generatedTxMintWits
+            , createIndexedPlutusScriptWitnesses $
+                map (\(w, sw) -> (w, anyScriptWitnessToAnyWitness sw)) $
+                  Exp.extractWitnessableMints generatedTxMintWits
             , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableCertificates generatedTxCertWits
             , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableWithdrawals generatedTxWithdrawals
             , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableVotes (Just generatedTxVotingprocedures)
-            , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableProposals (Just generatedTxProposalProcedures)
+            , createIndexedPlutusScriptWitnesses $
+                Exp.extractWitnessableProposals (Just generatedTxProposalProcedures)
             ]
 
     H.note_ "All generated script witnesses"
