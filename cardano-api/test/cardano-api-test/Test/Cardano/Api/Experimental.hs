@@ -122,13 +122,15 @@ tests =
 prop_roundtrip_cbor_any_script :: Property
 prop_roundtrip_cbor_any_script = H.property $ do
   script <- H.forAll genAnyScript
-  H.tripping script Exp.serialiseToCBOR (Exp.deserialiseFromCBOR Exp.AsAnyScript)
+  H.tripping script Api.serialiseToCBOR (Api.deserialiseFromCBOR Exp.AsAnyScript)
 
 -- | Deserialising random garbage bytes should always return 'Left'.
 prop_deserialise_garbage_bytes_returns_left :: Property
 prop_deserialise_garbage_bytes_returns_left = H.property $ do
   garbage <- H.forAll $ Gen.bytes (Range.linear 0 128)
-  case Exp.deserialiseFromCBOR Exp.AsAnyScript garbage of
+  case Api.deserialiseFromCBOR
+    (Exp.AsAnyScript :: Exp.AsType (Exp.AnyScript (Exp.LedgerEra Exp.ConwayEra)))
+    garbage of
     Left _ -> H.success
     Right _ -> H.annotate "Expected deserialisation failure but got Right" >> H.failure
 

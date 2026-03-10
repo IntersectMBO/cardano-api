@@ -50,6 +50,12 @@ module Cardano.Api.Experimental
   , Witnessable (..)
   , WitnessableItem (..)
 
+    -- ** AnyScript related
+  , AnyScript (..)
+  , deserialiseAnyPlutusScriptOfLanguage
+  , deserialiseAnySimpleScript
+  , hashAnyScript
+
     -- ** Simple script related
   , SimpleScript (..)
   , SimpleScriptOrReferenceInput (..)
@@ -98,6 +104,7 @@ module Cardano.Api.Experimental
   )
 where
 
+import Cardano.Api.Experimental.AnyScript
 import Cardano.Api.Experimental.Certificate
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness

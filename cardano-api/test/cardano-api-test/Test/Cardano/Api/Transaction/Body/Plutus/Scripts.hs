@@ -11,7 +11,6 @@ where
 import Cardano.Api (AlonzoEraOnwards (..))
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental
-import Cardano.Api.Experimental.AnyScript
 import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Plutus hiding (AnyPlutusScript (..))
 import Cardano.Api.Experimental.Tx qualified as Exp

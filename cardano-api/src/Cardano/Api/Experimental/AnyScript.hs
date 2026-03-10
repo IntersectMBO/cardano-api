@@ -42,6 +42,10 @@ instance L.Era era => HasTypeProxy (AnyScript era) where
   data AsType (AnyScript era) = AsAnyScript
   proxyToAsType _ = AsAnyScript
 
+instance Show (AnyScript era) where
+  show (AnySimpleScript ss) = "AnySimpleScript " ++ show ss
+  show (AnyPlutusScript ps) = "AnyPlutusScript " ++ show ps
+
 instance Eq (AnyScript era) where
   AnySimpleScript s1 == AnySimpleScript s2 = s1 == s2
   AnyPlutusScript (ps1 :: PlutusScriptInEra lang1 era) == AnyPlutusScript (ps2 :: PlutusScriptInEra lang2 era) =
