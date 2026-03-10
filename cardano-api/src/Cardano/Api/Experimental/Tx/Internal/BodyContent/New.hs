@@ -60,6 +60,12 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
 
     -- * Internal conversions
   , convProposalProcedures
+  , extractWitnessableTxIns
+  , extractWitnessableMints
+  , extractWitnessableCertificates
+  , extractWitnessableWithdrawals
+  , extractWitnessableVotes
+  , extractWitnessableProposals
 
     -- * Legacy conversions
   , DatumDecodingError (..)

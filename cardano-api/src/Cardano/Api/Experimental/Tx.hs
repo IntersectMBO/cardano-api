@@ -205,6 +205,12 @@ module Cardano.Api.Experimental.Tx
     -- ** Internal functions
   , extractExecutionUnits
   , getTxScriptWitnessRequirements
+  , extractWitnessableTxIns
+  , extractWitnessableMints
+  , extractWitnessableCertificates
+  , extractWitnessableWithdrawals
+  , extractWitnessableVotes
+  , extractWitnessableProposals
   )
 where
 
