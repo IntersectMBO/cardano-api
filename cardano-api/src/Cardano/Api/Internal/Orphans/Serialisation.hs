@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -50,6 +51,7 @@ import Cardano.Ledger.Alonzo.Rules qualified as Alonzo
 import Cardano.Ledger.Alonzo.Rules qualified as L
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Api.State.Query (StakeSnapshot (..), StakeSnapshots (..))
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
 import Cardano.Ledger.Babbage.Rules qualified as Babbage
 import Cardano.Ledger.Babbage.Rules qualified as L
@@ -87,7 +89,6 @@ import Ouroboros.Consensus.Protocol.TPraos (TPraosState)
 import Ouroboros.Consensus.Protocol.TPraos qualified as Consensus
 import Ouroboros.Consensus.Shelley.Eras qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
-import Ouroboros.Consensus.Shelley.Ledger.Query qualified as Consensus
 import Ouroboros.Network.Block (HeaderHash, Tip (..))
 import Ouroboros.Network.Protocol.LocalTxSubmission.Type qualified as Net.Tx
 import PlutusLedgerApi.Common qualified as P
@@ -117,8 +118,12 @@ import Data.Data (Data)
 import Data.Kind (Constraint, Type)
 import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
+import Data.Map.NonEmpty (NonEmptyMap)
+import Data.Map.NonEmpty qualified as NEM
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid
+import Data.Set.NonEmpty (NonEmptySet)
+import Data.Set.NonEmpty qualified as NES
 import Data.Text qualified as T
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -133,8 +138,6 @@ import Network.Mux qualified as Mux
 import Numeric (showHex)
 import Prettyprinter (punctuate, viaShow)
 import Text.Read
-
-deriving instance Generic (L.ApplyTxError era)
 
 deriving instance Generic (L.Registration.TooLarge a)
 
@@ -198,6 +201,15 @@ deriving anyclass instance ToJSON L.Voting.Error
 
 deriving anyclass instance ToJSON L.VotingPeriod
 
+instance (ToJSON k, ToJSON v) => ToJSON (NonEmptyMap k v) where
+  toJSON m = toJSON (NEM.toList m)
+
+instance ToJSON a => ToJSON (NonEmptySet a) where
+  toJSON s = toJSON (NES.toList s)
+
+instance ToJSON L.Withdrawals where
+  toJSON (L.Withdrawals m) = toJSON (toList m)
+
 deriving anyclass instance
   ( ToJSON (L.PredicateFailure (L.EraRule "UTXOW" ledgerera))
   , ToJSON (L.PredicateFailure (L.EraRule "DELEGS" ledgerera))
@@ -219,6 +231,7 @@ instance
   )
   => ToJSON (L.AlonzoUtxowPredFailure ledgerera)
   where
+  toJSON :: L.AlonzoUtxowPredFailure ledgerera -> Aeson.Value
   toJSON = genericToJSON defaultOptions
 
 instance ToJSON C8.ByteString where
@@ -234,9 +247,14 @@ instance
   where
   toJSON = genericToJSON defaultOptions
 
-deriving anyclass instance
-  ToJSON (L.PredicateFailure (L.EraRule "LEDGER" ledgerera))
+instance
+  ( Generic (L.ApplyTxError ledgerera)
+  , Aeson.GToJSON Aeson.Zero (Rep (L.ApplyTxError ledgerera))
+  , ToJSON (L.PredicateFailure (L.EraRule "LEDGER" ledgerera))
+  )
   => ToJSON (L.ApplyTxError ledgerera)
+  where
+  toJSON = genericToJSON defaultOptions
 
 deriving via
   ShowOf (L.Keys.VKey L.Keys.Witness)
@@ -301,18 +319,18 @@ instance Pretty L.AssetName where
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
 
-instance ToJSON Consensus.StakeSnapshots where
+instance ToJSON StakeSnapshots where
   toJSON = object . stakeSnapshotsToPair
   toEncoding = pairs . mconcat . stakeSnapshotsToPair
 
 stakeSnapshotsToPair
-  :: Aeson.KeyValue e a => Consensus.StakeSnapshots -> [a]
+  :: Aeson.KeyValue e a => StakeSnapshots -> [a]
 stakeSnapshotsToPair
-  Consensus.StakeSnapshots
-    { Consensus.ssStakeSnapshots
-    , Consensus.ssMarkTotal
-    , Consensus.ssSetTotal
-    , Consensus.ssGoTotal
+  StakeSnapshots
+    { ssStakeSnapshots
+    , ssMarkTotal
+    , ssSetTotal
+    , ssGoTotal
     } =
     [ "pools" .= ssStakeSnapshots
     , "total"
@@ -323,16 +341,16 @@ stakeSnapshotsToPair
           ]
     ]
 
-instance ToJSON Consensus.StakeSnapshot where
+instance ToJSON StakeSnapshot where
   toJSON = object . stakeSnapshotToPair
   toEncoding = pairs . mconcat . stakeSnapshotToPair
 
-stakeSnapshotToPair :: Aeson.KeyValue e a => Consensus.StakeSnapshot -> [a]
+stakeSnapshotToPair :: Aeson.KeyValue e a => StakeSnapshot -> [a]
 stakeSnapshotToPair
-  Consensus.StakeSnapshot
-    { Consensus.ssMarkPool
-    , Consensus.ssSetPool
-    , Consensus.ssGoPool
+  StakeSnapshot
+    { ssMarkPool
+    , ssSetPool
+    , ssGoPool
     } =
     [ "stakeMark" .= ssMarkPool
     , "stakeSet" .= ssSetPool
@@ -363,8 +381,6 @@ instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
 --
 -- Simple newtype wrappers JSON conversion
 --
-
-deriving newtype instance ToJSON ShelleyHash
 
 deriving newtype instance ToJSON HashHeader
 
