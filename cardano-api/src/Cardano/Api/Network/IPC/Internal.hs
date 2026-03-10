@@ -85,7 +85,6 @@ import Ouroboros.Consensus.Cardano.CanHardFork
 import Ouroboros.Consensus.Ledger.Query qualified as Consensus
 import Ouroboros.Consensus.Ledger.SupportsMempool qualified as Consensus
 import Ouroboros.Consensus.Ledger.SupportsProtocol qualified as Consensus
-import Ouroboros.Consensus.Network.NodeToClient qualified as Consensus
 import Ouroboros.Consensus.Node.NetworkProtocolVersion qualified as Consensus
 import Ouroboros.Consensus.Node.ProtocolInfo qualified as Consensus
 import Ouroboros.Consensus.Protocol.TPraos qualified as Consensus
@@ -93,11 +92,6 @@ import Ouroboros.Consensus.Shelley.Ledger.Block qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import Ouroboros.Network.Block qualified as Net
 import Ouroboros.Network.Mux qualified as Net
-import Ouroboros.Network.NodeToClient
-  ( NodeToClientProtocols (..)
-  , NodeToClientVersionData (..)
-  )
-import Ouroboros.Network.NodeToClient qualified as Net
 import Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.SyncP
 import Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
