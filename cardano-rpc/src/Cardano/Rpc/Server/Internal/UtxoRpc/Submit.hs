@@ -14,7 +14,6 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Submit
 where
 
 import Cardano.Api
-import Cardano.Api.Network.IPC qualified as Net.Tx
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
@@ -58,12 +57,12 @@ submitTxMethod req = do
     -> m TxId
   submitTx sbe tx = do
     nodeConnInfo <- grab
-    putTraceThrowEither . join . first TraceRpcSubmitN2cConnectionError
-      =<< tryAny
-        ( submitTxToNodeLocal nodeConnInfo (TxInMode sbe tx) >>= \case
-            Net.Tx.SubmitFail reason -> pure . Left $ TraceRpcSubmitTxValidationError reason
-            Net.Tx.SubmitSuccess -> pure . Right $ getTxId $ getTxBody tx
-        )
+    result <-
+      submitTxToNodeLocal nodeConnInfo (TxInMode sbe tx) <&> \case
+        TxSubmitError e -> Left $ TraceRpcSubmitN2cConnectionError e
+        TxSubmitFail reason -> Left $ TraceRpcSubmitTxValidationError reason
+        TxSubmitSuccess -> Right $ getTxId $ getTxBody tx
+    putTraceThrowEither result
 
   putTraceThrowEither v = withFrozenCallStack $ do
     -- See Cardano.Node.Tracing.Tracers.Rpc in cardano-node for details how this is logged

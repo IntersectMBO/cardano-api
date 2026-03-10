@@ -35,6 +35,7 @@ module Cardano.Api.Network.IPC.Internal
   , TxValidationErrorInCardanoMode
   , TxValidationError
   , submitTxToNodeLocal
+  , TxSubmitResult (..)
   , SubmitResult (..)
 
     -- *** Local state query
@@ -122,8 +123,10 @@ import Control.Concurrent.STM
   , putTMVar
   , takeTMVar
   , tryPutTMVar
+  , tryTakeTMVar
   )
-import Control.Exception (throwIO)
+import Control.Exception (SomeException, throwIO)
+import Control.Exception.Safe (tryAny)
 import Control.Monad (void)
 import Control.Monad.IO.Class
 import Control.Tracer (nullTracer)
@@ -131,6 +134,7 @@ import Data.Aeson (ToJSON, object, toJSON, (.=))
 import Data.ByteString.Lazy qualified as LBS
 import Data.Void (Void)
 import GHC.Exts (IsList (..))
+import GHC.Stack (HasCallStack)
 import Network.Mux qualified as Net
 import Network.Mux.Trace (nullTracers)
 
@@ -621,22 +625,56 @@ queryNodeLocalState connctInfo mpoint query = do
                 pure $ Net.Query.SendMsgDone ()
             }
 
+-- | The result of submitting a transaction via 'submitTxToNodeLocal'.
+data TxSubmitResult
+  = -- | The transaction was accepted into the node's mempool.
+    TxSubmitSuccess
+  | -- | The node rejected the transaction due to a validation error.
+    TxSubmitFail TxValidationErrorInCardanoMode
+  | -- | An exception escaped the underlying connection machinery. This covers
+    -- network-level errors (e.g. socket missing, bearer closed mid-protocol,
+    -- handshake failure) but may also include unexpected exceptions from the
+    -- protocol handlers.
+    --
+    -- Note: if the protocol handler wrote a result to the internal TMVar before
+    -- the exception was thrown (e.g. the node responded but the bearer then
+    -- closed), that result takes precedence and 'TxSubmitSuccess' or
+    -- 'TxSubmitFail' is returned instead.
+    TxSubmitError SomeException
+  deriving Show
+
 submitTxToNodeLocal
-  :: MonadIO m
+  :: (HasCallStack, MonadIO m)
   => LocalNodeConnectInfo
   -> TxInMode
-  -> m (Net.Tx.SubmitResult TxValidationErrorInCardanoMode)
-submitTxToNodeLocal connctInfo tx = do
-  resultVar <- liftIO newEmptyTMVarIO
-  connectToLocalNode
-    connctInfo
-    LocalNodeClientProtocols
-      { localChainSyncClient = NoLocalChainSyncClient
-      , localTxSubmissionClient = Just (localTxSubmissionClientSingle resultVar)
-      , localStateQueryClient = Nothing
-      , localTxMonitoringClient = Nothing
-      }
-  liftIO $ atomically (takeTMVar resultVar)
+  -> m TxSubmitResult
+submitTxToNodeLocal connctInfo tx = liftIO $ do
+  resultVar <- newEmptyTMVarIO
+  result <-
+    tryAny $
+      connectToLocalNode
+        connctInfo
+        LocalNodeClientProtocols
+          { localChainSyncClient = NoLocalChainSyncClient
+          , localTxSubmissionClient = Just (localTxSubmissionClientSingle resultVar)
+          , localStateQueryClient = Nothing
+          , localTxMonitoringClient = Nothing
+          }
+  case result of
+    Left e -> do
+      -- The connection threw an exception, but the protocol handler may have
+      -- already written a result (e.g. node responded then bearer closed).
+      -- Prefer the protocol result if available; fall back to the exception.
+      mResult <- atomically (tryTakeTMVar resultVar)
+      pure $ case mResult of
+        Just Net.Tx.SubmitSuccess -> TxSubmitSuccess
+        Just (Net.Tx.SubmitFail reason) -> TxSubmitFail reason
+        Nothing -> TxSubmitError e
+    Right () -> do
+      submitResult <- atomically (takeTMVar resultVar)
+      pure $ case submitResult of
+        Net.Tx.SubmitSuccess -> TxSubmitSuccess
+        Net.Tx.SubmitFail reason -> TxSubmitFail reason
  where
   localTxSubmissionClientSingle
     :: ()
