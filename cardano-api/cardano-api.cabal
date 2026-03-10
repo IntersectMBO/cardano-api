@@ -111,7 +111,6 @@ library
     Cardano.Api.Value
 
   build-depends:
-    FailT,
     aeson >=1.5.6.0,
     aeson-pretty >=0.8.5,
     attoparsec,
@@ -129,6 +128,7 @@ library
     cardano-crypto-class ^>=2.3.1.0,
     cardano-crypto-wrapper ^>=1.7,
     cardano-data >=1.0,
+    cardano-diffusion,
     cardano-ledger-allegra >=1.7,
     cardano-ledger-alonzo >=1.13,
     cardano-ledger-api ^>=1.13,
