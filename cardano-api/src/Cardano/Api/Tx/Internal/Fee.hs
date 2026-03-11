@@ -85,6 +85,7 @@ import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
+import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Credential as Ledger (Credential)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Ouroboros.Consensus.HardFork.History qualified as Consensus
@@ -717,7 +718,7 @@ evaluateTransactionExecutionUnitsShelley
   -> LedgerEpochInfo
   -> LedgerProtocolParameters era
   -> UTxO era
-  -> L.Tx (ShelleyLedgerEra era)
+  -> L.Tx L.TopTx (ShelleyLedgerEra era)
   -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
   caseShelleyToMaryOrAlonzoEraOnwards
@@ -836,12 +837,12 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits u
   isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
 
   lookupDelegDeposit
-    :: Ledger.Credential 'Ledger.Staking -> Maybe L.Coin
+    :: Ledger.Credential Ledger.Staking -> Maybe L.Coin
   lookupDelegDeposit stakeCred =
     Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
 
   lookupDRepDeposit
-    :: Ledger.Credential 'Ledger.DRepRole -> Maybe L.Coin
+    :: Ledger.Credential Ledger.DRepRole -> Maybe L.Coin
   lookupDRepDeposit drepCred =
     Map.lookup drepCred drepDelegDeposits
 
