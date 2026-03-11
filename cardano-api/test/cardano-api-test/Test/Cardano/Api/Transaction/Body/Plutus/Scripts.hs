@@ -11,7 +11,6 @@ where
 import Cardano.Api (AlonzoEraOnwards (..))
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental
-import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.AnyScript
 import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Plutus hiding (AnyPlutusScript (..))
@@ -25,7 +24,6 @@ import Prelude
 
 import Data.Function
 import Data.List qualified as List
-import Data.Map.Ordered qualified as OMap
 import Data.Map.Strict qualified as Map
 
 import Test.Gen.Cardano.Api.Experimental qualified as Exp
@@ -178,30 +176,15 @@ prop_extractAllIndexedPlutusScriptWitnesses =
 
     let allGeneratedPlutusScriptWitnesses =
           mconcat
-            [ createIndexedPlutusScriptWitnesses $ [(Exp.WitTxIn tIn, sWit) | (tIn, sWit) <- generatedTxInWits]
+            [ createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableTxIns generatedTxInWits
             , createIndexedPlutusScriptWitnesses $
-                [ (Exp.WitMint pid pAssets, anyScriptWitnessToAnyWitness sWit)
-                | (pid, (pAssets, sWit)) <- Map.toList $ Exp.unTxMintValue generatedTxMintWits
-                ]
-            , createIndexedPlutusScriptWitnesses
-                [ (Exp.WitTxCert c scred, wit)
-                | (Certificate c, Just (scred, wit)) <-
-                    OMap.toAscList $ Exp.unTxCertificates generatedTxCertWits
-                ]
-            , createIndexedPlutusScriptWitnesses
-                [ (Exp.WitWithdrawal sAddr deposit, wit)
-                | (sAddr, deposit, wit) <- Exp.unTxWithdrawals generatedTxWithdrawals
-                ]
-            , createIndexedPlutusScriptWitnesses
-                [ (Exp.WitVote v, wit)
-                | let Exp.TxVotingProcedures _ vMap = generatedTxVotingprocedures
-                , (v, wit) <- Map.toList vMap
-                ]
-            , createIndexedPlutusScriptWitnesses
-                [ (Exp.WitProposal p, wit)
-                | let Exp.TxProposalProcedures pMap = generatedTxProposalProcedures
-                , (p, wit) <- OMap.toAscList pMap
-                ]
+                map (\(w, sw) -> (w, anyScriptWitnessToAnyWitness sw)) $
+                  Exp.extractWitnessableMints generatedTxMintWits
+            , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableCertificates generatedTxCertWits
+            , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableWithdrawals generatedTxWithdrawals
+            , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableVotes (Just generatedTxVotingprocedures)
+            , createIndexedPlutusScriptWitnesses $
+                Exp.extractWitnessableProposals (Just generatedTxProposalProcedures)
             ]
 
     H.note_ "All generated script witnesses"
