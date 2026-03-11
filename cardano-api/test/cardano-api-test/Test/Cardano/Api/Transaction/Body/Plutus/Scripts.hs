@@ -22,6 +22,7 @@ import Cardano.Ledger.Core qualified as L
 
 import Prelude
 
+import Data.Bifunctor (second)
 import Data.Function
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
@@ -178,7 +179,7 @@ prop_extractAllIndexedPlutusScriptWitnesses =
           mconcat
             [ createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableTxIns generatedTxInWits
             , createIndexedPlutusScriptWitnesses $
-                map (\(w, sw) -> (w, anyScriptWitnessToAnyWitness sw)) $
+                map (second anyScriptWitnessToAnyWitness) $
                   Exp.extractWitnessableMints generatedTxMintWits
             , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableCertificates generatedTxCertWits
             , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableWithdrawals generatedTxWithdrawals
