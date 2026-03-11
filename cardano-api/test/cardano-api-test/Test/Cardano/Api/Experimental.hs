@@ -23,12 +23,10 @@ import Cardano.Api.Plutus qualified as Script
 import Cardano.Api.Tx (Tx (ShelleyTx))
 
 import Cardano.Ledger.Address qualified as L
-import Cardano.Ledger.Alonzo.Scripts qualified as UnexportedLedger
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Babbage.TxBody qualified as L
 import Cardano.Ledger.Conway qualified as L
 import Cardano.Ledger.Core qualified as L
-import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Plutus.Data qualified as L
 import Cardano.Slotting.EpochInfo qualified as Slotting
@@ -187,13 +185,13 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
 
   -- Set up the change address used by both the dummy output and the
   -- recursive fee calculation, so the serialized output sizes match.
-  let paymentCredential :: L.PaymentCredential
+  let paymentCredential :: L.Credential L.Payment
       paymentCredential =
         L.KeyHashObj $
           L.KeyHash
             "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
 
-      stakingCredential :: L.StakeCredential
+      stakingCredential :: L.Credential L.Staking
       stakingCredential =
         L.KeyHashObj $
           L.KeyHash
