@@ -1,7 +1,7 @@
 cabal-version: 3.4
 name: cardano-wasm
 version: 10.0.0.0
-copyright: 2020-2025 Input Output Global Inc (IOG).
+copyright: 2020-2026 Input Output Global Inc (IOG).
 author: IOHK
 maintainer: operations@iohk.io
 license: Apache-2.0
