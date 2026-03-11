@@ -12,7 +12,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Api.Plutus.Internal.Script
@@ -1431,13 +1430,11 @@ fromShelleyMultiSig = go
 -- Allegra and Mary eras.
 toAllegraTimelock
   :: forall era
-   . ( Allegra.AllegraEraScript era
-     , Ledger.NativeScript era ~ Allegra.Timelock era
-     )
+   . Allegra.AllegraEraScript era
   => SimpleScript -> Ledger.NativeScript era
 toAllegraTimelock = go
  where
-  go :: SimpleScript -> Timelock.Timelock era
+  go :: SimpleScript -> Ledger.NativeScript era
   go (RequireSignature (PaymentKeyHash kh)) =
     Shelley.RequireSignature (Shelley.asWitness kh)
   go (RequireAllOf s) = Shelley.RequireAllOf (fromList (map go s))
