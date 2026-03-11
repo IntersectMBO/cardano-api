@@ -11,7 +11,7 @@
   [PR 1080](https://github.com/IntersectMBO/cardano-api/pull/1080)
 
 - Add `SerialiseAsRawBytes Word64` instance to `Cardano.Api.Serialise.Raw`
-  Add `Text reexport to `Cardano.Api.Pretty. Add `DecoderError` reexport to `Cardano.Api.Serialise.Cbor`
+  Add `Text` reexport to `Cardano.Api.Pretty. Add `DecoderError` reexport to `Cardano.Api.Serialise.Cbor`
   gRPC: Add tracing datatypes
   (compatible)
   [PR 1079](https://github.com/IntersectMBO/cardano-api/pull/1079)
