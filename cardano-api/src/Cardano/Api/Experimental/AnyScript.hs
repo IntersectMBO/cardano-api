@@ -28,10 +28,9 @@ import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Data.ByteString qualified as BS
-import Data.Text qualified as Text
+import Data.Foldable (asum)
 import Data.Type.Equality ((:~:) (..))
 import Data.Typeable (Typeable, eqT)
-import Prettyprinter (pretty)
 
 data AnyScript era where
   AnySimpleScript :: SimpleScript era -> AnyScript era
@@ -65,29 +64,21 @@ instance
 
   deserialiseFromCBOR _ bs = do
     script <- decodeScript
-    case L.getNativeScript script of
-      Just ns -> Right $ AnySimpleScript (SimpleScript ns)
-      Nothing ->
-        case L.toPlutusScript script of
-          Just ps ->
+    maybe
+      ( Left $
+          CBOR.DecoderErrorCustom
+            "AnyScript"
+            "Decoded Script era is neither a NativeScript nor a PlutusScript"
+      )
+      Right
+      $ asum
+        [ AnySimpleScript . SimpleScript <$> L.getNativeScript script
+        , do
+            ps <- L.toPlutusScript script
             L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) ->
-              case Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus of
-                Left e ->
-                  Left $
-                    CBOR.DecoderErrorCustom
-                      ( mconcat
-                          [ "AnyScript PlutusScript ("
-                          , Text.pack (show (Plutus.plutusLanguage plutus))
-                          , ")"
-                          ]
-                      )
-                      (Text.pack . show $ pretty e)
-                Right runnable -> Right $ AnyPlutusScript (PlutusScriptInEra runnable)
-          Nothing ->
-            Left $
-              CBOR.DecoderErrorCustom
-                "AnyScript"
-                "Decoded Script era is neither a NativeScript nor a PlutusScript"
+              AnyPlutusScript . PlutusScriptInEra
+                <$> either (const Nothing) Just (Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus)
+        ]
    where
     decodeScript :: Either CBOR.DecoderError (L.Script era)
     decodeScript = do
