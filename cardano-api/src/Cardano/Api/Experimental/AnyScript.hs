@@ -28,6 +28,7 @@ import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Data.ByteString qualified as BS
+import Data.Either.Combinators (maybeToRight, rightToMaybe)
 import Data.Foldable (asum)
 import Data.Type.Equality ((:~:) (..))
 import Data.Typeable (Typeable, eqT)
@@ -64,26 +65,32 @@ instance
 
   deserialiseFromCBOR _ bs = do
     script <- decodeScript
-    maybe
-      ( Left $
-          CBOR.DecoderErrorCustom
-            "AnyScript"
-            "Decoded Script era is neither a NativeScript nor a PlutusScript"
-      )
-      Right
-      $ asum
-        [ AnySimpleScript . SimpleScript <$> L.getNativeScript script
-        , do
-            ps <- L.toPlutusScript script
-            L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) ->
-              AnyPlutusScript . PlutusScriptInEra
-                <$> either (const Nothing) Just (Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus)
+    maybeToRight noParseError $
+      asum
+        [ tryNativeScript script
+        , tryPlutusScript script
         ]
    where
     decodeScript :: Either CBOR.DecoderError (L.Script era)
     decodeScript = do
       r <- CBOR.runAnnotator <$> CBOR.decodeFull' (L.eraProtVerHigh @era) bs
       return $ r $ CBOR.Full $ BS.fromStrict bs
+
+    tryNativeScript :: L.Script era -> Maybe (AnyScript era)
+    tryNativeScript = fmap (AnySimpleScript . SimpleScript) . L.getNativeScript
+
+    tryPlutusScript :: L.Script era -> Maybe (AnyScript era)
+    tryPlutusScript script = do
+      ps <- L.toPlutusScript script
+      L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) ->
+        AnyPlutusScript . PlutusScriptInEra
+          <$> rightToMaybe (Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus)
+
+    noParseError :: CBOR.DecoderError
+    noParseError =
+      CBOR.DecoderErrorCustom
+        "AnyScript"
+        "Decoded Script era is neither a NativeScript nor a PlutusScript"
 
 hashAnyScript :: forall era. IsEra era => AnyScript (LedgerEra era) -> L.ScriptHash
 hashAnyScript (AnySimpleScript ss) =
