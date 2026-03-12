@@ -63,8 +63,11 @@
 # Ignore all files in cardano-rpc/gen (generated code)
 - ignore: {within: [Proto.Cardano.**, Proto.Utxorpc.**]}
 
+# Eta reduction can obscure the intent of function definitions
 - ignore: {name: Eta reduce}
+# Using `+` directly is intentional in some arithmetic expressions and avoids importing operators
 - ignore: {name: Use + directly}
+# Using `fmap` vs `<$>` is a style choice; both are acceptable in this codebase
 - ignore: {name: Use fmap}
 
 # Define some custom infix operators

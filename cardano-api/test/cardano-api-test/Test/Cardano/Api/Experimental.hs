@@ -16,6 +16,8 @@ import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Genesis qualified as Genesis
+-- 'Cardano.Api.Ledger' is intentionally imported under two qualifiers:
+-- 'L' for brevity in complex expressions and 'Ledger' where the full name aids readability.
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Ledger qualified as Ledger
 import Cardano.Api.Parser.Text qualified as Api
