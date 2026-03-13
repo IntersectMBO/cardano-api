@@ -56,6 +56,8 @@ import Cardano.Ledger.BaseTypes (strictMaybe)
 
 import Control.Monad.Except (MonadError (..))
 import Data.ByteString (ByteString)
+import Data.ByteString.Short qualified as SBS
+import Data.MemPack.Buffer (byteArrayToShortByteString)
 import Data.String (IsString (fromString))
 
 makeStakeAddressDelegationCertificate
@@ -92,7 +94,7 @@ makeStakeAddressUnregistrationCertificate scred deposit =
 makeStakePoolRegistrationCertificate
   :: forall era
    . IsEra era
-  => Ledger.PoolParams
+  => Ledger.StakePoolParams
   -> Certificate (LedgerEra era)
 makeStakePoolRegistrationCertificate poolParams =
   obtainCommonConstraints (useEra @era) $
@@ -199,7 +201,7 @@ getAnchorDataFromCertificate ConwayEra (Certificate c) =
     Ledger.UnRegDepositTxCert _ _ -> return Nothing
     Ledger.RegDepositDelegTxCert{} -> return Nothing
     Ledger.DelegTxCert{} -> return Nothing
-    Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+    Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.sppMetadata poolParams
     Ledger.RetirePoolTxCert _ _ -> return Nothing
     Ledger.RegDRepTxCert _ _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
     Ledger.UnRegDRepTxCert _ _ -> return Nothing
@@ -213,7 +215,7 @@ getAnchorDataFromCertificate DijkstraEra (Certificate c) =
     Ledger.UnRegDepositTxCert _ _ -> return Nothing
     Ledger.RegDepositDelegTxCert{} -> return Nothing
     Ledger.DelegTxCert{} -> return Nothing
-    Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+    Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.sppMetadata poolParams
     Ledger.RetirePoolTxCert _ _ -> return Nothing
     Ledger.RegDRepTxCert _ _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
     Ledger.UnRegDRepTxCert _ _ -> return Nothing
@@ -226,10 +228,11 @@ anchorDataFromPoolMetadata
   :: MonadError AnchorDataFromCertificateError m
   => Ledger.PoolMetadata
   -> m (Maybe Ledger.Anchor)
-anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashBytes}) = do
+anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashByteArray}) = do
+  let hashByteString = SBS.fromShort $ byteArrayToShortByteString hashByteArray
   hash <-
-    maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return $
-      Ledger.hashFromBytes hashBytes
+    maybe (throwError $ InvalidPoolMetadataHashError url hashByteString) return $
+      Ledger.hashFromBytes hashByteString
   return $
     Just
       ( Ledger.Anchor
