@@ -78,6 +78,11 @@ import Cardano.Api.Query.Internal.Type.QueryInMode
 import Cardano.Api.Tx.Internal.Body
 import Cardano.Api.Tx.Internal.Sign
 
+import Cardano.Network.NodeToClient
+  ( NodeToClientProtocols (..)
+  , NodeToClientVersionData (..)
+  )
+import Cardano.Network.NodeToClient qualified as Net
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Block qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
@@ -85,6 +90,7 @@ import Ouroboros.Consensus.Cardano.CanHardFork
 import Ouroboros.Consensus.Ledger.Query qualified as Consensus
 import Ouroboros.Consensus.Ledger.SupportsMempool qualified as Consensus
 import Ouroboros.Consensus.Ledger.SupportsProtocol qualified as Consensus
+import Ouroboros.Consensus.Network.NodeToClient qualified as Consensus
 import Ouroboros.Consensus.Node.NetworkProtocolVersion qualified as Consensus
 import Ouroboros.Consensus.Node.ProtocolInfo qualified as Consensus
 import Ouroboros.Consensus.Protocol.TPraos qualified as Consensus
