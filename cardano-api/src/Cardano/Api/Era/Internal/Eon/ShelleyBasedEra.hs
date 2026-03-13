@@ -225,6 +225,7 @@ type ShelleyBasedEraConstraints era =
   , L.ADDRHASH ~ Blake2b.Blake2b_224
   , L.Era (ShelleyLedgerEra era)
   , L.EraPParams (ShelleyLedgerEra era)
+  , L.EraGov (ShelleyLedgerEra era)
   , L.EraScript (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
@@ -241,6 +242,7 @@ type ShelleyBasedEraConstraints era =
   , HasTypeProxy era
   , IsCardanoEra era
   , IsShelleyBasedEra era
+  , ToJSON (Consensus.ApplyTxError (ShelleyLedgerEra era))
   , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
   , ToJSON (L.PredicateFailure (L.EraRule "LEDGER" (ShelleyLedgerEra era)))
   , Typeable era
