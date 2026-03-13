@@ -122,7 +122,6 @@ prop_roundtrip_cbor_any_script = H.property $ do
   script <- H.forAll genAnyScript
   H.tripping script Api.serialiseToCBOR (Api.deserialiseFromCBOR Exp.AsAnyScript)
 
-
 prop_created_transaction_with_both_apis_are_the_same :: Property
 prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
   let era = Exp.ConwayEra
