@@ -1,12 +1,15 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.Experimental.AnyScript
   ( AnyScript (..)
+  , AsType (..)
   , deserialiseAnyPlutusScriptOfLanguage
   , deserialiseAnySimpleScript
   , hashAnyScript
@@ -18,16 +21,76 @@ import Cardano.Api.Experimental.Plutus.Internal.Script hiding (AnyPlutusScript)
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
+import Cardano.Api.Serialise.Cbor
 
-import Cardano.Binary qualified as CBOR
+import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Data.ByteString qualified as BS
+import Data.Either.Combinators (maybeToRight, rightToMaybe)
+import Data.Foldable (asum)
+import Data.Type.Equality ((:~:) (..))
+import Data.Typeable (Typeable, eqT)
 
 data AnyScript era where
   AnySimpleScript :: SimpleScript era -> AnyScript era
-  AnyPlutusScript :: Plutus.PlutusLanguage lang => PlutusScriptInEra lang era -> AnyScript era
+  AnyPlutusScript
+    :: (Plutus.PlutusLanguage lang, Typeable lang) => PlutusScriptInEra lang era -> AnyScript era
+
+instance L.Era era => HasTypeProxy (AnyScript era) where
+  data AsType (AnyScript era) = AsAnyScript
+  proxyToAsType _ = AsAnyScript
+
+instance Show (AnyScript era) where
+  show (AnySimpleScript ss) = "AnySimpleScript " ++ show ss
+  show (AnyPlutusScript ps) = "AnyPlutusScript " ++ show ps
+
+instance Eq (AnyScript era) where
+  AnySimpleScript s1 == AnySimpleScript s2 = s1 == s2
+  AnyPlutusScript (ps1 :: PlutusScriptInEra lang1 era) == AnyPlutusScript (ps2 :: PlutusScriptInEra lang2 era) =
+    case eqT @lang1 @lang2 of
+      Just Refl -> ps1 == ps2
+      Nothing -> False
+  _ == _ = False
+
+instance
+  L.AlonzoEraScript era
+  => SerialiseAsCBOR (AnyScript era)
+  where
+  serialiseToCBOR (AnySimpleScript (SimpleScript ns)) =
+    L.serialize' (L.eraProtVerHigh @era) (L.fromNativeScript ns :: L.Script era)
+  serialiseToCBOR (AnyPlutusScript ps) =
+    L.serialize' (L.eraProtVerHigh @era) (plutusScriptInEraToScript ps)
+
+  deserialiseFromCBOR _ bs = do
+    script <- decodeScript
+    maybeToRight noParseError $
+      asum
+        [ tryNativeScript script
+        , tryPlutusScript script
+        ]
+   where
+    decodeScript :: Either CBOR.DecoderError (L.Script era)
+    decodeScript = do
+      r <- CBOR.runAnnotator <$> CBOR.decodeFull' (L.eraProtVerHigh @era) bs
+      return $ r $ CBOR.Full $ BS.fromStrict bs
+
+    tryNativeScript :: L.Script era -> Maybe (AnyScript era)
+    tryNativeScript = fmap (AnySimpleScript . SimpleScript) . L.getNativeScript
+
+    tryPlutusScript :: L.Script era -> Maybe (AnyScript era)
+    tryPlutusScript script = do
+      ps <- L.toPlutusScript script
+      L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) ->
+        AnyPlutusScript . PlutusScriptInEra
+          <$> rightToMaybe (Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus)
+
+    noParseError :: CBOR.DecoderError
+    noParseError =
+      CBOR.DecoderErrorCustom
+        "AnyScript"
+        "Decoded Script era is neither a NativeScript nor a PlutusScript"
 
 hashAnyScript :: forall era. IsEra era => AnyScript (LedgerEra era) -> L.ScriptHash
 hashAnyScript (AnySimpleScript ss) =
