@@ -26,8 +26,6 @@ import Cardano.Ledger.Address qualified as L
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Babbage.TxBody qualified as L
 import Cardano.Ledger.Conway qualified as L
-import Cardano.Ledger.Core qualified as Ledger
-import Cardano.Ledger.Plutus qualified as L
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Mary.Value qualified as Mary

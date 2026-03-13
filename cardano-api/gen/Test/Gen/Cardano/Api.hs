@@ -24,8 +24,11 @@ import GHC.Exts (IsList (..))
 
 import Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
 
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidCostModel)
+
 import Hedgehog (Gen, Range)
 import Hedgehog.Gen qualified as Gen
+import Hedgehog.Gen.QuickCheck qualified as Q
 import Hedgehog.Internal.Range qualified as Range
 
 genMetadata :: Ledger.Era era => Gen (ShelleyTxAuxData era)
@@ -97,7 +100,7 @@ genAlonzoGenesis :: Gen Alonzo.AlonzoGenesis
 genAlonzoGenesis = do
   coinsPerUTxOWord <- genCoin (Range.linear 0 5)
   -- TODO: Babbage: Figure out how to deal with the asymmetric cost model JSON
-  costModel <- genCostModel
+  plutusV1CostModel <- Q.quickcheck (genValidCostModel Alonzo.PlutusV1)
   mExtraConfig <-
     Gen.maybe
       ( (\mCostModel -> Alonzo.AlonzoExtraConfig{Alonzo.aecCostModels = mCostModel})
@@ -113,7 +116,7 @@ genAlonzoGenesis = do
   return
     Alonzo.AlonzoGenesis
       { Alonzo.agCoinsPerUTxOWord = Ledger.CoinPerWord coinsPerUTxOWord
-      , Alonzo.agPlutusV1CostModel = costModel
+      , Alonzo.agPlutusV1CostModel = plutusV1CostModel
       , Alonzo.agPrices = prices'
       , Alonzo.agMaxTxExUnits = maxTxExUnits'
       , Alonzo.agMaxBlockExUnits = maxBlockExUnits'
