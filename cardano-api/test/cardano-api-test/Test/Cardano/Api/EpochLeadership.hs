@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Api.EpochLeadership
@@ -16,7 +17,9 @@ import Cardano.Binary (serialize)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Api.PParams (emptyPParams)
 import Cardano.Ledger.BaseTypes (Nonce (..), WithOrigin (..))
+import Cardano.Ledger.BaseTypes.NonZero (NonZero, knownNonZeroBounded)
 import Cardano.Ledger.Binary.Encoding (toByronCBOR)
+import Cardano.Ledger.Coin (compactCoinNonZero, fromCompactCoinNonZero)
 import Cardano.Ledger.Hashes qualified as L
 import Cardano.Ledger.Shelley.API qualified as L
 import Cardano.Ledger.State qualified as L
@@ -29,6 +32,7 @@ import Ouroboros.Consensus.Protocol.TPraos (TPraosState (..))
 import Data.Map qualified as Map
 import Data.Ratio ((%))
 import Data.Time.Clock (secondsToNominalDiffTime)
+import Data.Word (Word64)
 import GHC.Exts (IsList (..))
 
 import Hedgehog
@@ -110,7 +114,8 @@ test_currentEpochEligibleLeadershipSlots =
                         }
                     )
                   ]
-              , L.pdTotalActiveStake = toCompactPartial 0
+              , L.pdTotalActiveStake =
+                  fromCompactCoinNonZero $ compactCoinNonZero (knownNonZeroBounded @1 :: NonZero Word64)
               }
           serPoolDistr = Serialised (serialize (toByronCBOR poolDistr))
           currentEpoch = EpochNo 4

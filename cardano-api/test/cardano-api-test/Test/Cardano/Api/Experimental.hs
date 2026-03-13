@@ -23,10 +23,11 @@ import Cardano.Api.Plutus qualified as Script
 import Cardano.Api.Tx (Tx (ShelleyTx))
 
 import Cardano.Ledger.Address qualified as L
-import Cardano.Ledger.Alonzo.Scripts qualified as UnexportedLedger
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Babbage.TxBody qualified as L
 import Cardano.Ledger.Conway qualified as L
+import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Plutus qualified as L
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Mary.Value qualified as Mary
@@ -49,6 +50,8 @@ import Lens.Micro
 
 import Test.Gen.Cardano.Api.Experimental (genAnyScript)
 import Test.Gen.Cardano.Api.Typed (genAddressInEra, genTx, genTxIn)
+
+import Test.Cardano.Ledger.Plutus qualified as Ledger
 
 import Hedgehog (Gen, Property)
 import Hedgehog qualified as H
@@ -151,7 +154,7 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
   exampleTransactionExperimentalWay
     :: H.MonadTest m
     => Exp.Era Exp.ConwayEra
-    -> m (Ledger.Tx (Exp.LedgerEra Exp.ConwayEra))
+    -> m (Ledger.Tx Ledger.TopTx (Exp.LedgerEra Exp.ConwayEra))
   exampleTransactionExperimentalWay era = do
     txBodyContent <- exampleTxBodyContentExperimental era
     signingKey <- exampleSigningKey
@@ -162,7 +165,7 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
     let bootstrapWitnesses = []
         keyWitnesses = [witness]
 
-    let Exp.SignedTx (signedTx :: Ledger.Tx (Exp.LedgerEra Exp.ConwayEra)) = Exp.signTx era bootstrapWitnesses keyWitnesses unsignedTx
+    let Exp.SignedTx (signedTx :: Ledger.Tx Ledger.TopTx (Exp.LedgerEra Exp.ConwayEra)) = Exp.signTx era bootstrapWitnesses keyWitnesses unsignedTx
     return signedTx
 
 prop_balance_transaction_two_ways :: Property
@@ -372,7 +375,8 @@ exampleProtocolParams =
   alonzoUpgrade =
     UnexportedLedger.UpgradeAlonzoPParams
       { UnexportedLedger.uappCoinsPerUTxOWord = Ledger.CoinPerWord $ Ledger.Coin 34_482
-      , UnexportedLedger.uappCostModels = UnexportedLedger.emptyCostModels -- We are not using scripts for this tests, so this is fine for now
+      , UnexportedLedger.uappPlutusV1CostModel =
+          Ledger.mkCostModelConst L.PlutusV1 0 -- We are not using scripts for this tests, so this is fine for now
       , UnexportedLedger.uappPrices =
           Ledger.Prices
             { Ledger.prSteps = fromMaybe maxBound $ Ledger.boundRational $ 721 % 10_000_000
@@ -542,7 +546,7 @@ expEraGen =
   let eras :: [Exp.Some Exp.Era] = [minBound .. maxBound]
    in Gen.element eras
 
-expTxForEraGen :: Exp.Era era -> Gen (Ledger.Tx (Exp.LedgerEra era))
+expTxForEraGen :: Exp.Era era -> Gen (Ledger.Tx Ledger.TopTx (Exp.LedgerEra era))
 expTxForEraGen era = do
   Exp.obtainCommonConstraints era $ do
     ShelleyTx _ tx <- genTx (convert era)
