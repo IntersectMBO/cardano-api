@@ -172,12 +172,13 @@ module Cardano.Api.Network.IPC
     -- result <- Api.submitTxToNodeLocal connectionInfo (Api.TxInMode sbe signedTx)
     -- @
     --
-    -- The result is a 'SubmitResult' value, which can be inspected as follows:
+    -- The result is a 'TxSubmitResult' value, which can be inspected as follows:
     --
     -- @
     -- case result of
-    --   Api.SubmitSuccess -> putStrLn "Transaction submitted successfully!"
-    --   Api.SubmitFail reason -> error $ "Error submitting transaction: " ++ show reason
+    --   Api.TxSubmitSuccess -> putStrLn "Transaction submitted successfully!"
+    --   Api.TxSubmitFail reason -> error $ "Validation error: " ++ show reason
+    --   Api.TxSubmitError err -> error $ "Error: " ++ show err
     -- @
     --
     -- If the command succeeds, the transaction gets into the node's mempool, ready
@@ -206,6 +207,7 @@ module Cardano.Api.Network.IPC
   , TxValidationErrorInCardanoMode
   , TxValidationError
   , submitTxToNodeLocal
+  , TxSubmitResult (..)
   , SubmitResult (..)
 
     -- *** Local state query
