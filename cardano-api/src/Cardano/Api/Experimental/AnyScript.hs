@@ -28,10 +28,10 @@ import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Data.ByteString qualified as BS
-import Data.Text qualified as Text
+import Data.Either.Combinators (maybeToRight, rightToMaybe)
+import Data.Foldable (asum)
 import Data.Type.Equality ((:~:) (..))
 import Data.Typeable (Typeable, eqT)
-import Prettyprinter (pretty)
 
 data AnyScript era where
   AnySimpleScript :: SimpleScript era -> AnyScript era
@@ -65,34 +65,32 @@ instance
 
   deserialiseFromCBOR _ bs = do
     script <- decodeScript
-    case L.getNativeScript script of
-      Just ns -> Right $ AnySimpleScript (SimpleScript ns)
-      Nothing ->
-        case L.toPlutusScript script of
-          Just ps ->
-            L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) ->
-              case Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus of
-                Left e ->
-                  Left $
-                    CBOR.DecoderErrorCustom
-                      ( mconcat
-                          [ "AnyScript PlutusScript ("
-                          , Text.pack (show (Plutus.plutusLanguage plutus))
-                          , ")"
-                          ]
-                      )
-                      (Text.pack . show $ pretty e)
-                Right runnable -> Right $ AnyPlutusScript (PlutusScriptInEra runnable)
-          Nothing ->
-            Left $
-              CBOR.DecoderErrorCustom
-                "AnyScript"
-                "Decoded Script era is neither a NativeScript nor a PlutusScript"
+    maybeToRight noParseError $
+      asum
+        [ tryNativeScript script
+        , tryPlutusScript script
+        ]
    where
     decodeScript :: Either CBOR.DecoderError (L.Script era)
     decodeScript = do
       r <- CBOR.runAnnotator <$> CBOR.decodeFull' (L.eraProtVerHigh @era) bs
       return $ r $ CBOR.Full $ BS.fromStrict bs
+
+    tryNativeScript :: L.Script era -> Maybe (AnyScript era)
+    tryNativeScript = fmap (AnySimpleScript . SimpleScript) . L.getNativeScript
+
+    tryPlutusScript :: L.Script era -> Maybe (AnyScript era)
+    tryPlutusScript script = do
+      ps <- L.toPlutusScript script
+      L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) ->
+        AnyPlutusScript . PlutusScriptInEra
+          <$> rightToMaybe (Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus)
+
+    noParseError :: CBOR.DecoderError
+    noParseError =
+      CBOR.DecoderErrorCustom
+        "AnyScript"
+        "Decoded Script era is neither a NativeScript nor a PlutusScript"
 
 hashAnyScript :: forall era. IsEra era => AnyScript (LedgerEra era) -> L.ScriptHash
 hashAnyScript (AnySimpleScript ss) =
