@@ -102,6 +102,7 @@ module Test.Gen.Cardano.Api.Typed
   , genTxMintValue
   , genPolicyAssets
   , genLovelace
+  , genLovelacePerByte
   , genPositiveLovelace
   , genValue
   , genValueDefault
@@ -160,6 +161,7 @@ import Cardano.Api.Byron qualified as Byron
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Plutus qualified as Exp
+import Cardano.Api.Ledger (unsafeMakeSafeHash)
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Tx qualified as A
@@ -171,9 +173,9 @@ import Cardano.Crypto.Hash.Class qualified as CRYPTO
 import Cardano.Crypto.Seed qualified as Crypto
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.BaseTypes qualified as Ledger
+import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Language qualified as L
-import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
 import Control.Applicative (Alternative (..), optional)
 import Control.Monad
@@ -228,8 +230,14 @@ genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
 genLovelace :: Gen L.Coin
 genLovelace = L.Coin <$> Gen.integral (Range.linear 0 5000)
 
+genLovelacePerByte :: Gen L.CoinPerByte
+genLovelacePerByte = L.CoinPerByte <$> genCompactLovelace
+
 genPositiveLovelace :: Gen L.Coin
 genPositiveLovelace = L.Coin <$> Gen.integral (Range.linear 1 5000)
+
+genCompactLovelace :: Gen (L.CompactForm L.Coin)
+genCompactLovelace = L.CompactCoin <$> genWord64
 
 ----------------------------------------------------------------------------
 -- SimpleScript generators
@@ -1272,6 +1280,9 @@ genWord16 = Gen.integral (Range.linear 0 10)
 genWord32 :: Gen Word32
 genWord32 = Gen.integral (Range.linear 0 10)
 
+genWord64 :: Gen Word64
+genWord64 = Gen.integral (Range.linear 0 10)
+
 genRational :: Gen Rational
 genRational =
   (\d -> ratioToRational (1 % d)) <$> genDenominator
@@ -1322,7 +1333,7 @@ genProtocolParametersUpdate era = do
   protocolUpdateMaxBlockBodySize <- Gen.maybe genWord32
   protocolUpdateMaxTxSize <- Gen.maybe genWord32
   protocolUpdateTxFeeFixed <- Gen.maybe genLovelace
-  protocolUpdateTxFeePerByte <- Gen.maybe genLovelace
+  protocolUpdateTxFeePerByte <- Gen.maybe genLovelacePerByte
   protocolUpdateMinUTxOValue <- Gen.maybe genLovelace
   protocolUpdateStakeAddressDeposit <- Gen.maybe genLovelace
   protocolUpdateStakePoolDeposit <- Gen.maybe genLovelace
@@ -1338,11 +1349,11 @@ genProtocolParametersUpdate era = do
   protocolUpdatePrices <- Gen.maybe genExecutionUnitPrices
   protocolUpdateMaxTxExUnits <- Gen.maybe genExecutionUnits
   protocolUpdateMaxBlockExUnits <- Gen.maybe genExecutionUnits
-  protocolUpdateMaxValueSize <- Gen.maybe genNat
-  protocolUpdateCollateralPercent <- Gen.maybe genNat
-  protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
+  protocolUpdateMaxValueSize <- Gen.maybe genWord32
+  protocolUpdateCollateralPercent <- Gen.maybe genWord16
+  protocolUpdateMaxCollateralInputs <- Gen.maybe genWord16
   protocolUpdateUTxOCostPerByte <-
-    inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
+    inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genCompactLovelace)) era
 
   pure ProtocolParametersUpdate{..}
 

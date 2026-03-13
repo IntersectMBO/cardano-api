@@ -97,7 +97,12 @@ genAlonzoGenesis :: Gen Alonzo.AlonzoGenesis
 genAlonzoGenesis = do
   coinsPerUTxOWord <- genCoin (Range.linear 0 5)
   -- TODO: Babbage: Figure out how to deal with the asymmetric cost model JSON
-  _costmdls' <- genCostModels
+  costModel <- genCostModel
+  mExtraConfig <-
+    Gen.maybe
+      ( (\mCostModel -> Alonzo.AlonzoExtraConfig{Alonzo.aecCostModels = mCostModel})
+          <$> Gen.maybe genCostModels
+      )
   prices' <- genPrices
   maxTxExUnits' <- genExUnits
   maxBlockExUnits' <- genExUnits
@@ -108,11 +113,12 @@ genAlonzoGenesis = do
   return
     Alonzo.AlonzoGenesis
       { Alonzo.agCoinsPerUTxOWord = Ledger.CoinPerWord coinsPerUTxOWord
-      , Alonzo.agCostModels = mempty
+      , Alonzo.agPlutusV1CostModel = costModel
       , Alonzo.agPrices = prices'
       , Alonzo.agMaxTxExUnits = maxTxExUnits'
       , Alonzo.agMaxBlockExUnits = maxBlockExUnits'
       , Alonzo.agMaxValSize = maxValSize'
       , Alonzo.agCollateralPercentage = collateralPercentage'
       , Alonzo.agMaxCollateralInputs = maxCollateralInputs'
+      , Alonzo.agExtraConfig = mExtraConfig
       }

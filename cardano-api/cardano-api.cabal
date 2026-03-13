@@ -328,6 +328,7 @@ library gen
     cardano-api,
     cardano-binary >=1.6 && <1.8,
     cardano-crypto-class,
+    cardano-crypto-wrapper:testlib,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.8.1,
     cardano-ledger-byron:testlib,
     cardano-ledger-conway:testlib,
