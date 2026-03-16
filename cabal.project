@@ -278,15 +278,6 @@ if arch(wasm32)
 
   source-repository-package
     type: git
-    location: https://github.com/palas/ouroboros-network.git
-    tag: a3a7c6070e9dcdcdf0b993d05de1477d98215195
-    subdir:
-      ouroboros-network
-      ouroboros-network-framework
-    --sha256: sha256-QpnqR6zYMJHq+gaBgEV1pKdqs0IrOGGqcV6NMAPkRUA=
-
-  source-repository-package
-    type: git
     location: https://github.com/palas/criterion.git
     tag: dd160d2b5f051e918e72fe1957d77905682b8d6c
     subdir:
@@ -320,12 +311,6 @@ if arch(wasm32)
       basement
       foundation
     --sha256: sha256-QKKHl/XocxGD7bwAoGe7VaIg9o8x4dA20j3sJOgiTBw=
-
-  source-repository-package
-    type: git
-    location: https://github.com/palas/mempack.git
-    tag: 0211addbbbf51011e5348d3696566eb12ccbef07
-    --sha256: sha256-iLc+foF2AM3vG6deuZ51+faI6buMkubMP75md51hMe8=
 
   source-repository-package
     type: git
