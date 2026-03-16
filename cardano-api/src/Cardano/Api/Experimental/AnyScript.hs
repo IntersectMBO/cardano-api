@@ -74,7 +74,7 @@ instance
     decodeScript :: Either CBOR.DecoderError (L.Script era)
     decodeScript = do
       r <- CBOR.runAnnotator <$> CBOR.decodeFull' (L.eraProtVerHigh @era) bs
-      return $ r $ CBOR.Full $ BS.fromStrict bs
+      r $ CBOR.Full $ BS.fromStrict bs
 
     tryNativeScript :: L.Script era -> Maybe (AnyScript era)
     tryNativeScript = fmap (AnySimpleScript . SimpleScript) . L.getNativeScript
