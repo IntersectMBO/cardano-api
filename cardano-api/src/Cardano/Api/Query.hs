@@ -37,7 +37,7 @@ module Cardano.Api.Query
   , LedgerState (..)
   , getProgress
   , getSlotForRelativeTime
-  , decodeLedgerPeerSnapshot
+  , decodeSomeLedgerPeerSnapshot
 
     -- * Convenience functions
   , QueryConvenienceError (..)

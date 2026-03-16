@@ -57,7 +57,7 @@ module Cardano.Api.Query.Internal.Type.QueryInMode
   , LedgerState (..)
   , getProgress
   , getSlotForRelativeTime
-  , decodeLedgerPeerSnapshot
+  , decodeSomeLedgerPeerSnapshot
 
     -- * Internal conversion functions
   , toLedgerUTxO
@@ -427,10 +427,10 @@ decodeStakeSnapshot
 decodeStakeSnapshot sbe (SerialisedStakeSnapshots (Serialised ls)) =
   StakeSnapshot <$> decodeFull (eraProtVerHigh sbe) ls
 
-decodeLedgerPeerSnapshot
-  :: Serialised Network.LedgerPeerSnapshot
+decodeSomeLedgerPeerSnapshot
+  :: Serialised Network.SomeLedgerPeerSnapshot
   -> Either (LBS.ByteString, DecoderError) Network.SomeLedgerPeerSnapshot
-decodeLedgerPeerSnapshot (Serialised lps) =
+decodeSomeLedgerPeerSnapshot (Serialised lps) =
   first
     (lps,)
     $ Plain.decodeFullDecoder
