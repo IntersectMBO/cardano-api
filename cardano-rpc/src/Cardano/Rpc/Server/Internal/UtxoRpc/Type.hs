@@ -19,6 +19,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   , simpleScriptToUtxoRpcNativeScript
   , utxoRpcBigIntToInteger
   , mkChainPointMsg
+  , utxoRpcChainPointMsgToChainPoint
   )
 where
 
@@ -56,6 +57,8 @@ import Data.Map.Strict qualified as M
 import Data.ProtoLens (defMessage)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
+import Data.Time.Clock (UTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import GHC.IsList
 import Network.GRPC.Spec
 
@@ -331,18 +334,44 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
 mkChainPointMsg
   :: ChainPoint
   -> WithOrigin BlockNo
+  -> UTCTime
   -> Proto UtxoRpc.ChainPoint
-mkChainPointMsg chainPoint blockNo = do
+mkChainPointMsg chainPoint blockNo timestamp = do
   let (slotNo, blockHash) = case chainPoint of
         ChainPointAtGenesis -> (0, mempty)
         ChainPoint (SlotNo slot) (HeaderHash hash) -> (slot, SBS.fromShort hash)
       blockHeight = case blockNo of
         Origin -> 0
         At (BlockNo h) -> h
+      timestampMs = round . (* 1000) . utcTimeToPOSIXSeconds $ timestamp
   defMessage
     & U5c.slot .~ slotNo
     & U5c.hash .~ blockHash
     & U5c.height .~ blockHeight
+    & U5c.timestamp .~ timestampMs
+
+-- | Inverse of 'mkChainPointMsg'. Note: @Origin@ and @At (BlockNo 0)@ both
+-- encode to @height=0@, so the decode always maps @0@ back to @Origin@.
+utxoRpcChainPointMsgToChainPoint
+  :: HasCallStack
+  => MonadThrow m
+  => Proto UtxoRpc.ChainPoint
+  -> m (ChainPoint, WithOrigin BlockNo, UTCTime)
+utxoRpcChainPointMsgToChainPoint msg = do
+  let slot = msg ^. U5c.slot
+      blockHash = msg ^. U5c.hash
+      blockHeight = msg ^. U5c.height
+      timestamp = posixSecondsToUTCTime . (/ 1000) . fromIntegral $ msg ^. U5c.timestamp
+  chainPoint <-
+    if slot == 0 && blockHash == mempty
+      then pure ChainPointAtGenesis
+      else do
+        headerHash <- liftEitherError $ deserialiseFromRawBytes (AsHash asType) blockHash
+        pure $ ChainPoint (SlotNo slot) headerHash
+  let blockNo
+        | blockHeight == 0 = Origin
+        | otherwise = At (BlockNo blockHeight)
+  pure (chainPoint, blockNo, timestamp)
 
 simpleScriptToUtxoRpcNativeScript :: SimpleScript -> Proto UtxoRpc.NativeScript
 simpleScriptToUtxoRpcNativeScript = \case

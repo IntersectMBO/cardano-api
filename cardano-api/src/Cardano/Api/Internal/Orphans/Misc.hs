@@ -31,6 +31,12 @@ import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Plutus.Language qualified as L
 import Cardano.Ledger.Shelley.PParams qualified as Ledger
 import Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
+import Ouroboros.Consensus.HardFork.History.Qry (PastHorizonException (..))
+import Ouroboros.Consensus.HardFork.History.Summary
+  ( Bound (..)
+  , EraEnd (..)
+  , EraSummary (..)
+  )
 import PlutusLedgerApi.Common qualified as P
 
 import Codec.Binary.Bech32 qualified as Bech32
@@ -44,7 +50,9 @@ import Data.Text.Encoding.Error qualified as T
 import Data.Type.Equality
 import Data.Typeable
 import GHC.Exts (IsList (..))
+import GHC.Stack (prettyCallStack)
 import Network.Mux qualified as Mux
+import Prettyprinter (indent)
 import Text.Parsec.Error qualified as P
 
 deriving instance Data DecoderError
@@ -298,6 +306,28 @@ instance Error Byron.GenesisDataGenerationError where
 
 instance Error P.ParseError where
   prettyError = pretty . show
+
+instance Error PastHorizonException where
+  prettyError e =
+    vsep
+      [ "Past horizon! Tried to convert a slot/time past the point where the"
+          <+> "hard fork history is known."
+      , mempty
+      , "Expression:" <+> pshow (pastHorizonExpression e)
+      , mempty
+      , "Era summary (" <> pretty (length $ pastHorizonSummary e) <+> "eras):"
+      , indent 2 . vsep $ zipWith prettyEraSummary [1 :: Int ..] (pastHorizonSummary e)
+      , mempty
+      , "Call stack:"
+      , indent 2 . pretty . prettyCallStack $ pastHorizonCallStack e
+      ]
+   where
+    prettyEraSummary i era =
+      "Era" <+> pretty i <> ":" <+> prettyBound (eraStart era) <+> "-" <+> prettyEraEnd (eraEnd era)
+    prettyBound bound =
+      "slot" <+> pshow (boundSlot bound) <> "," <+> "epoch" <+> pshow (boundEpoch bound)
+    prettyEraEnd EraUnbounded = "unbounded"
+    prettyEraEnd (EraEnd bound) = prettyBound bound
 
 deriving via ShowOf TypeRep instance Pretty TypeRep
 

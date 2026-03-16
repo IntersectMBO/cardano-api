@@ -92,6 +92,7 @@ library
     random,
     rio,
     text,
+    time,
 
 -- this should be replaced by utxorpc package from hackage
 -- ideally we should upstream whatever is implemented in Proto.Cardano.Rpc.Node
@@ -132,6 +133,7 @@ test-suite cardano-rpc-test
     rio,
     tasty,
     tasty-hedgehog,
+    time,
 
   ghc-options:
     -threaded
