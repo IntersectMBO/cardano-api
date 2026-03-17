@@ -213,11 +213,11 @@ deriving anyclass instance ToJSON L.VotingPeriod
 
 deriving anyclass instance ToJSON L.Withdrawals
 
-instance ToJSON (NonEmptyMap k v) where
-  toJSON = undefined
+instance (ToJSONKey k, ToJSON v) => ToJSON (NonEmptyMap k v) where
+  toJSON = toJSON . NonEmptyMap.toMap
 
-instance ToJSON (NonEmptySet v) where
-  toJSON = undefined
+instance ToJSON v => ToJSON (NonEmptySet v) where
+  toJSON = toJSON . NonEmptySet.toSet
 
 deriving anyclass instance
   ( ToJSON (L.PredicateFailure (L.EraRule "UTXOW" ledgerera))
