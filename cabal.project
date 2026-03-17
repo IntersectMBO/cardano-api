@@ -124,12 +124,6 @@ if arch(wasm32)
 
   source-repository-package
     type: git
-    location: https://github.com/palas/mempack.git
-    tag: 3514811b33741c4ac37d6f78b01f5d33088f6303
-    --sha256: sha256-fATs5q/l+gs5qJnzqxW0pe/EqjdwxKYcBcGKrbU4L+Y=
-
-  source-repository-package
-    type: git
     location: https://github.com/haskell-wasm/network
     tag: ab92e48e9fdf3abe214f85fdbe5301c1280e14e9
     --sha256: sha256-U+ln/gbXoQZpNjZHydNa0FG/9GdJFgL1+T3+7KTzDWo=
