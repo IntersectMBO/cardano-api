@@ -30,6 +30,7 @@ module Cardano.Api.Experimental
   , estimateBalancedTxBody
   , evaluateTransactionFee
   , collectTxBodyScriptWitnesses
+  , substituteExecutionUnits
 
     -- ** Era-related
   , BabbageEra

@@ -24,6 +24,7 @@ module Cardano.Api.Experimental.Tx.Internal.Fee
   , evaluateTransactionFee
   , indexWitnessedTxProposalProcedures
   , makeTransactionBodyAutoBalance
+  , substituteExecutionUnits
   -- Internal
   , toUnsigned
   )

@@ -24,7 +24,7 @@ import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
 import Lens.Micro
 
-import Test.Gen.Cardano.Api.Typed (genAddressInEra, genTxIn)
+import Test.Gen.Cardano.Api.Typed (genAddressInEra, genStakeCredential, genTxIn)
 
 import Test.Cardano.Api.Experimental (exampleProtocolParams)
 
@@ -44,6 +44,12 @@ tests =
   testGroup
     "Test.Cardano.Api.Experimental.Fee"
     [ testGroup
+        "substituteExecutionUnits"
+        [ testProperty
+            "all certificates are preserved after execution unit substitution"
+            prop_substituteExecutionUnits_preserves_certs
+        ]
+    , testGroup
         "calcMinFeeRecursive"
         [ testProperty
             "well-funded transaction always succeeds"
@@ -492,3 +498,42 @@ prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada = H.property $ do
     Right _ ->
       H.annotate "Expected NotEnoughAdaForChangeOutput or MinUTxONotMet but tx balanced successfully"
         >> H.failure
+
+-- | Regression test for the bug where 'mapScriptWitnessesCertificates' silently
+-- dropped certs stored with a @Nothing@ witness (e.g. shelley stake registration
+-- certificates) when rebuilding 'TxCertificates' during fee balancing.
+--
+-- We build a 'TxCertificates' containing one cert that stores as @Nothing@ in
+-- the OMap (Conway stake registration without deposit) and one that stores as
+-- @Just@ (Conway stake deregistration with deposit, requiring a key witness),
+-- then verify that both survive 'substituteExecutionUnits' unchanged.
+prop_substituteExecutionUnits_preserves_certs :: Property
+prop_substituteExecutionUnits_preserves_certs = H.property $ do
+  stakeCred1 <- H.forAll genStakeCredential
+  stakeCred2 <- H.forAll genStakeCredential
+  let
+    -- Conway stake registration without deposit.
+    -- getTxCertWitness returns Nothing, so mkTxCertificates stores this as
+    -- (cert, Nothing) in the TxCertificates OMap.
+    regCert =
+      Exp.Certificate $
+        L.ConwayTxCertDeleg
+          (L.ConwayRegCert (Api.toShelleyStakeCredential stakeCred1) L.SNothing)
+    -- Conway stake deregistration with deposit.
+    -- getTxCertWitness returns Just stakeCred, so mkTxCertificates stores this
+    -- as (cert, Just (stakeCred, AnyKeyWitnessPlaceholder)).
+    unRegCert =
+      Exp.Certificate $
+        L.ConwayTxCertDeleg
+          (L.ConwayUnRegCert (Api.toShelleyStakeCredential stakeCred2) (L.SJust (L.Coin 2_000_000)))
+    inputCerts =
+      Exp.mkTxCertificates
+        Exp.ConwayEra
+        [ (regCert, Exp.AnyKeyWitnessPlaceholder)
+        , (unRegCert, Exp.AnyKeyWitnessPlaceholder)
+        ]
+    txBodyContent =
+      Exp.defaultTxBodyContent
+        & Exp.setTxCertificates inputCerts
+  result <- H.evalEither $ Exp.substituteExecutionUnits Map.empty txBodyContent
+  Exp.txCertificates result H.=== inputCerts
