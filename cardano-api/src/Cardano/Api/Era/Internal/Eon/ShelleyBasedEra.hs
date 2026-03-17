@@ -235,6 +235,7 @@ type ShelleyBasedEraConstraints era =
   , L.HashAnnotated (L.TxBody L.TopTx (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.EraCertState (ShelleyLedgerEra era)
   , L.EraAccounts (ShelleyLedgerEra era)
+  , L.EraGov (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (L.TxCert (ShelleyLedgerEra era))
