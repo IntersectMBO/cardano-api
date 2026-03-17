@@ -736,7 +736,7 @@ genTxValidityLowerBound =
 -- TODO: Accept a range for generating ttl.
 genTxValidityUpperBound :: ShelleyBasedEra era -> Gen (TxValidityUpperBound era)
 genTxValidityUpperBound sbe =
-  TxValidityUpperBound sbe . Ledger.maybeToStrictMaybe <$> Gen.maybe genTtl
+  TxValidityUpperBound sbe <$> Gen.maybe genTtl
 
 genTxMetadataInEra :: CardanoEra era -> Gen (TxMetadataInEra era)
 genTxMetadataInEra =
