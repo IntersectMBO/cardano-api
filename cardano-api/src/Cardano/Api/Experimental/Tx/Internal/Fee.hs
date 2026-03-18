@@ -24,6 +24,7 @@ module Cardano.Api.Experimental.Tx.Internal.Fee
   , evaluateTransactionFee
   , indexWitnessedTxProposalProcedures
   , makeTransactionBodyAutoBalance
+  , substituteExecutionUnits
   -- Internal
   , toUnsigned
   )
@@ -1006,7 +1007,7 @@ substituteExecutionUnits
     mapScriptWitnessesCertificates
       :: TxCertificates (LedgerEra era)
       -> Either (TxBodyErrorAutoBalance (LedgerEra era)) (TxCertificates (LedgerEra era))
-    mapScriptWitnessesCertificates txCertificates' = do
+    mapScriptWitnessesCertificates (TxCertificates certsMap) = do
       let mappedScriptWitnesses
             :: [ ( Exp.Certificate (LedgerEra era)
                  , Either
@@ -1018,10 +1019,20 @@ substituteExecutionUnits
                      )
                  )
                ]
+          -- We iterate over all certs, not just the witnessed subset.
+          -- TxCertificates holds certs both with and without witnesses; certs
+          -- with Nothing must pass through unchanged, or they would be silently
+          -- dropped from the rebuilt TxCertificates. The index ix is the cert's
+          -- position in the full list, which matches the ledger's redeemer
+          -- indexing: non-witnessed certs consume an index slot but produce no
+          -- redeemer purpose (see addUniqueTxCertPurpose in cardano-ledger).
           mappedScriptWitnesses =
-            [ (cert, Just . (stakeCred,) <$> eWitness')
-            | (ix, cert, stakeCred, wit) <- indexTxCertificates txCertificates'
-            , let eWitness' = substituteExecUnits ix wit
+            [ case mWit of
+                Nothing -> (cert, Right Nothing)
+                Just (stakeCred, wit) ->
+                  let eWitness' = substituteExecUnits (ScriptWitnessIndexCertificate ix) wit
+                   in (cert, Just . (stakeCred,) <$> eWitness')
+            | (ix, (cert, mWit)) <- zip [0 ..] (toList certsMap)
             ]
       TxCertificates . fromList <$> traverseScriptWitnesses mappedScriptWitnesses
 
