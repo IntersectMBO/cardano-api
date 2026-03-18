@@ -17,6 +17,7 @@ module Cardano.Api.Experimental
   , signTx
   , convertTxBodyToUnsignedTx
   , EraCommonConstraints
+  , obtainConwayConstraints
   , obtainCommonConstraints
   , hashTxBody
   , evaluateTransactionExecutionUnitsShelley

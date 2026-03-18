@@ -114,9 +114,9 @@ jobs:
 
     - name: Restore cached deps
       run: |
-        wget "https://agrius.feralhosting.com/palas/wasm-cache/3cb3dd8c0e361bcde820ee8c1eb1270346b54c06024aaa7500c4da2a74e2be79.tar.xz"
-        tar -xf 3cb3dd8c0e361bcde820ee8c1eb1270346b54c06024aaa7500c4da2a74e2be79.tar.xz
-        rm 3cb3dd8c0e361bcde820ee8c1eb1270346b54c06024aaa7500c4da2a74e2be79.tar.xz
+        wget "https://agrius.feralhosting.com/palas/wasm-cache/d1a007cb07f43d2418e4d177c7e7dffc25b30cda49c50e669a1672ffadf42fe1.tar.xz"
+        tar -xf d1a007cb07f43d2418e4d177c7e7dffc25b30cda49c50e669a1672ffadf42fe1.tar.xz
+        rm d1a007cb07f43d2418e4d177c7e7dffc25b30cda49c50e669a1672ffadf42fe1.tar.xz
         rm -fr ~/.ghc-wasm/.cabal/store/
         mv store ~/.ghc-wasm/.cabal/
 
@@ -257,4 +257,3 @@ jobs:
         else
           echo 'Build complete'
         fi
-

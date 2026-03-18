@@ -23,12 +23,10 @@ import Cardano.Api.Plutus qualified as Script
 import Cardano.Api.Tx (Tx (ShelleyTx))
 
 import Cardano.Ledger.Address qualified as L
-import Cardano.Ledger.Alonzo.Scripts qualified as UnexportedLedger
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Babbage.TxBody qualified as L
 import Cardano.Ledger.Conway qualified as L
 import Cardano.Ledger.Core qualified as L
-import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Plutus.Data qualified as L
 import Cardano.Slotting.EpochInfo qualified as Slotting
@@ -151,7 +149,7 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
   exampleTransactionExperimentalWay
     :: H.MonadTest m
     => Exp.Era Exp.ConwayEra
-    -> m (Ledger.Tx (Exp.LedgerEra Exp.ConwayEra))
+    -> m (Ledger.Tx L.TopTx (Exp.LedgerEra Exp.ConwayEra))
   exampleTransactionExperimentalWay era = do
     txBodyContent <- exampleTxBodyContentExperimental era
     signingKey <- exampleSigningKey
@@ -162,7 +160,7 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
     let bootstrapWitnesses = []
         keyWitnesses = [witness]
 
-    let Exp.SignedTx (signedTx :: Ledger.Tx (Exp.LedgerEra Exp.ConwayEra)) = Exp.signTx era bootstrapWitnesses keyWitnesses unsignedTx
+    let Exp.SignedTx (signedTx :: Ledger.Tx L.TopTx (Exp.LedgerEra Exp.ConwayEra)) = Exp.signTx era bootstrapWitnesses keyWitnesses unsignedTx
     return signedTx
 
 prop_balance_transaction_two_ways :: Property
@@ -187,13 +185,13 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
 
   -- Set up the change address used by both the dummy output and the
   -- recursive fee calculation, so the serialized output sizes match.
-  let paymentCredential :: L.PaymentCredential
+  let paymentCredential :: L.Credential L.Payment
       paymentCredential =
         L.KeyHashObj $
           L.KeyHash
             "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
 
-      stakingCredential :: L.StakeCredential
+      stakingCredential :: L.Credential L.Staking
       stakingCredential =
         L.KeyHashObj $
           L.KeyHash
@@ -372,7 +370,7 @@ exampleProtocolParams =
   alonzoUpgrade =
     UnexportedLedger.UpgradeAlonzoPParams
       { UnexportedLedger.uappCoinsPerUTxOWord = Ledger.CoinPerWord $ Ledger.Coin 34_482
-      , UnexportedLedger.uappCostModels = UnexportedLedger.emptyCostModels -- We are not using scripts for this tests, so this is fine for now
+      , UnexportedLedger.uappPlutusV1CostModel = Genesis.defaultV1CostModel -- We are not using scripts for this tests, so this is fine for now
       , UnexportedLedger.uappPrices =
           Ledger.Prices
             { Ledger.prSteps = fromMaybe maxBound $ Ledger.boundRational $ 721 % 10_000_000
@@ -542,7 +540,7 @@ expEraGen =
   let eras :: [Exp.Some Exp.Era] = [minBound .. maxBound]
    in Gen.element eras
 
-expTxForEraGen :: Exp.Era era -> Gen (Ledger.Tx (Exp.LedgerEra era))
+expTxForEraGen :: Exp.Era era -> Gen (Ledger.Tx L.TopTx (Exp.LedgerEra era))
 expTxForEraGen era = do
   Exp.obtainCommonConstraints era $ do
     ShelleyTx _ tx <- genTx (convert era)

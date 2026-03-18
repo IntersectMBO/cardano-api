@@ -87,7 +87,7 @@ type ShelleyToAllegraEraConstraints era =
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.EraUTxO (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
+  , L.HashAnnotated (L.TxBody L.TopTx (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.ProtVerAtMost (ShelleyLedgerEra era) 4
   , L.ProtVerAtMost (ShelleyLedgerEra era) 6
   , L.ProtVerAtMost (ShelleyLedgerEra era) 8
