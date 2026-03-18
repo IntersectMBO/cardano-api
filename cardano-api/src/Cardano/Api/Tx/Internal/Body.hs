@@ -142,6 +142,7 @@ module Cardano.Api.Tx.Internal.Body
   , TxCertificates (..)
   , mkTxCertificates
   , indexTxCertificates
+  , indexCertificatesWith
   , TxUpdateProposal (..)
   , TxMintValue (..)
   , mkTxMintValue
@@ -625,21 +626,43 @@ mkTxCertificates sbe certs = TxCertificates sbe . fromList $ map getStakeCred ce
           (,wit) <$> getTxCertWitness sbe cert
       )
 
--- | Index certificates with witnesses by the order they appear in the list (in the transaction).
+-- | Core indexing logic for certificates. Iterates over /all/ certs, not just
+-- the witnessed subset. 'TxCertificates' holds certs both with and without
+-- witnesses; unwitnessed certs (stored with a @Nothing@ witness) must pass
+-- through unchanged, or they would be silently dropped when the
+-- 'TxCertificates' is rebuilt (e.g. in @mapScriptWitnessesCertificates@).
+--
+-- Each cert's index @ix@ is its position in the full list, which matches the
+-- ledger's redeemer indexing: non-witnessed certs consume an index slot but
+-- produce no redeemer purpose (see @addUniqueTxCertPurpose@ in cardano-ledger).
+--
+-- Whether a certificate requires a witness is determined by the ledger's
+-- @getVKeyWitnessTxCert@ and @getScriptWitnessTxCert@ (see @EraTxCert@
+-- instances in cardano-ledger).
+indexCertificatesWith
+  :: [(cert, Maybe wit)]
+  -> [(ScriptWitnessIndex, cert, Maybe wit)]
+indexCertificatesWith certs =
+  [ (ScriptWitnessIndexCertificate ix, cert, mWit)
+  | (ix, (cert, mWit)) <- zip [0 ..] certs
+  ]
+
+-- | Index certificates by the order they appear in the transaction, including
+-- both witnessed and unwitnessed certs. See 'indexCertificatesWith' for which
+-- certificate types are unwitnessed.
+--
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
 indexTxCertificates
   :: TxCertificates BuildTx era
   -> [ ( ScriptWitnessIndex
        , Exp.Certificate (ShelleyLedgerEra era)
-       , StakeCredential
-       , Witness WitCtxStake era
+       , Maybe (StakeCredential, Witness WitCtxStake era)
        )
      ]
 indexTxCertificates TxCertificatesNone = []
 indexTxCertificates (TxCertificates _ certsWits) =
-  [ (ScriptWitnessIndexCertificate ix, cert, stakeCred, witness)
-  | (ix, (cert, BuildTxWith (Just (stakeCred, witness)))) <- zip [0 ..] $ toList certsWits
-  ]
+  indexCertificatesWith
+    [(cert, m) | (cert, BuildTxWith m) <- toList certsWits]
 
 data TxUpdateProposal era where
   TxUpdateProposalNone :: TxUpdateProposal era
@@ -2888,7 +2911,7 @@ collectTxBodyScriptWitnesses
     scriptWitnessesCertificates txc =
       List.nub
         [ (ix, AnyScriptWitness witness)
-        | (ix, _, _, ScriptWitness _ witness) <- indexTxCertificates txc
+        | (ix, _, Just (_, ScriptWitness _ witness)) <- indexTxCertificates txc
         ]
 
     scriptWitnessesMinting
