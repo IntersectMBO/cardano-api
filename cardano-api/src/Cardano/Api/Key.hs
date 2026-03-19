@@ -5,7 +5,7 @@ module Cardano.Api.Key
   , generateInsecureSigningKey
   , CastVerificationKeyRole (..)
   , CastSigningKeyRole (..)
-  , AsType (AsVerificationKey, AsSigningKey)
+  , AsType (AsVerificationKey, AsSigningKey, AsBlsKey)
 
     -- * Hash
   , Hash (..)
@@ -68,6 +68,11 @@ module Cardano.Api.Key
     -- ** Signing
   , signArbitraryBytesKes
 
+    -- * Leios
+
+    -- | BLS12-381 key type
+  , BlsKey
+
     -- ** Type proxy
   , HasTypeProxy (..)
   , asType
@@ -79,6 +84,7 @@ where
 import Cardano.Api.Hash
 import Cardano.Api.Key.Internal
 import Cardano.Api.Key.Internal.Class
+import Cardano.Api.Key.Internal.Leios
 import Cardano.Api.Key.Internal.Mnemonic
 import Cardano.Api.Key.Internal.Praos
 import Cardano.Api.Key.Internal.SomeAddressVerificationKey

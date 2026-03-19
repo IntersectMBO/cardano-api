@@ -260,6 +260,7 @@ library
     Cardano.Api.Internal.Utils
     Cardano.Api.Key.Internal
     Cardano.Api.Key.Internal.Class
+    Cardano.Api.Key.Internal.Leios
     Cardano.Api.Key.Internal.Mnemonic
     Cardano.Api.Key.Internal.Praos
     Cardano.Api.Key.Internal.SomeAddressVerificationKey
