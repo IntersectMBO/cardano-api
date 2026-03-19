@@ -119,6 +119,26 @@
 
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
+        # Fetch proto-lens with submodules and fix symlinks for plan and build phases
+        protoLensSrc = nixpkgs.fetchgit {
+          url = "https://github.com/google/proto-lens";
+          rev = "20de5227947b0c37dd6852dcc6f2db1cd5889cee";
+          sha256 = "sha256-VUYU2swjU7L8Zdu6Zfz6jo2ulW5uPhAamt2GjH5hZRY=";
+          fetchSubmodules = true;
+        };
+        fixProtoLensSrc = nixpkgs.runCommand "proto-lens-fixed" {} ''
+          mkdir -p $out
+          cp -a ${protoLensSrc}/. $out/
+          chmod -R +w $out
+          # Fix proto-lens-imports symlink in proto-lens
+          rm -rf $out/proto-lens/proto-lens-imports/google
+          cp -r ${protoLensSrc}/google/protobuf/src/google $out/proto-lens/proto-lens-imports/
+          # Fix proto-src symlink in proto-lens-protobuf-types
+          rm -rf $out/proto-lens-protobuf-types/proto-src
+          cp -r ${protoLensSrc}/google/protobuf/src $out/proto-lens-protobuf-types/proto-src
+          chmod -R -w $out
+        '';
+
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
           src = ./.;
           name = "cardano-api";
@@ -136,6 +156,7 @@
           #
           inputMap = {
             "https://chap.intersectmbo.org/" = inputs.CHaP;
+            "https://github.com/google/proto-lens/20de5227947b0c37dd6852dcc6f2db1cd5889cee" = fixProtoLensSrc;
           };
           # Also currently needed to make `nix flake lock --update-input CHaP` work.
           cabalProjectLocal = ''
@@ -203,49 +224,27 @@
           # specific enough, or doesn't allow setting these.
           modules = [
             # TODO remove this module when removing proto-lens SRP
-            # Override proto-lens source to fetch submodules and fix symlinks
-            ({
-              pkgs,
-              lib,
-              ...
-            }: let
-              protoLensSrc = pkgs.fetchgit {
-                url = "https://github.com/carbolymer/proto-lens";
-                rev = "732ff478957507bdbdaf72606281df3fcb6b0121";
-                sha256 = "sha256-DR2hxFDNMICcueggBObhi+L5bKeake/Mj4N0078P3SA=";
-                fetchSubmodules = true;
-              };
-              # Fix proto-lens source by copying google protobuf files alongside proto-lens subdirectory
-              fixProtoLensSubdir = subdir:
-                pkgs.runCommand "proto-lens-${subdir}-fixed" {} ''
-                  mkdir -p $out
-                  cp -r ${protoLensSrc}/${subdir}/* $out/
-                  chmod -R +w $out
-                  # Fix proto-lens-imports symlink in proto-lens
-                  if [ -d $out/proto-lens-imports ]; then
-                    rm -f $out/proto-lens-imports/google
-                    cp -r ${protoLensSrc}/google/protobuf/src/google $out/proto-lens-imports/
-                  fi
-                  # Fix proto-src symlink in proto-lens-protobuf-types
-                  if [ -L $out/proto-src ]; then
-                    rm -f $out/proto-src
-                    cp -r ${protoLensSrc}/google/protobuf/src $out/proto-src
-                  fi
-                  chmod -R -w $out
-                '';
+            # Override proto-lens source to use fixed symlinks (inputMap provides the fixed
+            # source for plan computation; this module provides it for the build phase)
+            ({lib, config, ...}: let
+              protoLensPackages = [
+                "proto-lens"
+                "proto-lens-arbitrary"
+                "proto-lens-discrimination"
+                "proto-lens-optparse"
+                "proto-lens-protobuf-types"
+                "proto-lens-protoc"
+                "proto-lens-runtime"
+                "proto-lens-setup"
+                "proto-lens-tests-dep"
+                "proto-lens-tests"
+                "discrimination-ieee754"
+                "proto-lens-benchmarks"
+              ];
             in {
-              packages.proto-lens.src = lib.mkForce (fixProtoLensSubdir "proto-lens");
-              packages.proto-lens-arbitrary.src = lib.mkForce (protoLensSrc + "/proto-lens-arbitrary");
-              packages.proto-lens-discrimination.src = lib.mkForce (protoLensSrc + "/proto-lens-discrimination");
-              packages.proto-lens-optparse.src = lib.mkForce (protoLensSrc + "/proto-lens-optparse");
-              packages.proto-lens-protobuf-types.src = lib.mkForce (fixProtoLensSubdir "proto-lens-protobuf-types");
-              packages.proto-lens-protoc.src = lib.mkForce (protoLensSrc + "/proto-lens-protoc");
-              packages.proto-lens-runtime.src = lib.mkForce (protoLensSrc + "/proto-lens-runtime");
-              packages.proto-lens-setup.src = lib.mkForce (protoLensSrc + "/proto-lens-setup");
-              packages.proto-lens-tests-dep.src = lib.mkForce (protoLensSrc + "/proto-lens-tests-dep");
-              packages.proto-lens-tests.src = lib.mkForce (protoLensSrc + "/proto-lens-tests");
-              packages.discrimination-ieee754.src = lib.mkForce (protoLensSrc + "/discrimination-ieee754");
-              packages.proto-lens-benchmarks.src = lib.mkForce (protoLensSrc + "/proto-lens-benchmarks");
+              packages = lib.genAttrs
+                (builtins.filter (p: config.packages ? ${p}) protoLensPackages)
+                (p: { src = lib.mkForce (fixProtoLensSrc + "/${p}"); });
             })
             ({...}: {
               packages.cardano-api = {
