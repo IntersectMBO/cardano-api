@@ -1,5 +1,62 @@
 # Changelog for cardano-api
 
+## 10.25.0.0
+
+- Unify cert indexing via shared indexCertificatesWith helper. Fix
+  indexTxCertificates in all three call sites (legacy, experimental,
+  compatible) to preserve unwitnessed certificates. Fix
+  mapScriptWitnessesCertificates in both APIs to handle Nothing-witness
+  certs. Fix collectTxBodyScriptWitnesses to collect simple script
+  witnesses from certs, not just Plutus.
+  (bugfix, refactoring, test)
+  [PR 1140](https://github.com/IntersectMBO/cardano-api/pull/1140)
+
+- Integrate new Ledger and Consensus packages for Node 10.7.
+  (breaking)
+  [PR 1050](https://github.com/IntersectMBO/cardano-api/pull/1050)
+
+- Fix mapScriptWitnessesCertificates silently dropping key-witnessed certs
+  (e.g. shelley stake registration certificates) when rebuilding the
+  transaction body during fee balancing. The function previously iterated
+  only over script-witnessed certs, so certs stored with a Nothing witness
+  were omitted from the balanced transaction.
+  (bugfix)
+  [PR 1136](https://github.com/IntersectMBO/cardano-api/pull/1136)
+
+- Add `SerialiseAsCBOR (AnyScript era)` and `Eq (AnyScript era)` instances,
+  and generators and property tests for CBOR roundtripping.
+  (feature)
+  [PR 1122](https://github.com/IntersectMBO/cardano-api/pull/1122)
+
+- submitTxToNodeLocal now returns TxSubmitResult instead of
+  SubmitResult TxValidationErrorInCardanoMode. TxSubmitResult has three
+  constructors: TxSubmitSuccess, TxSubmitFail TxValidationErrorInCardanoMode,
+  and TxSubmitError SomeException, so network-level errors no longer escape
+  as exceptions.
+  (breaking)
+  [PR 1126](https://github.com/IntersectMBO/cardano-api/pull/1126)
+
+- Fix RFC 7049 canonical CBOR map key ordering and add property test
+  (bugfix, test)
+  [PR 1075](https://github.com/IntersectMBO/cardano-api/pull/1075)
+
+- Export `extractWitnessableTxIns`, `extractWitnessableMints`,
+  `extractWitnessableCertificates`, `extractWitnessableWithdrawals`,
+  `extractWitnessableVotes`, and `extractWitnessableProposals` from
+  `Cardano.Api.Experimental.Tx.Internal.BodyContent.New` and
+  `Cardano.Api.Experimental.Tx`, and reuse them in tests to eliminate
+  duplicated inline conversion logic.
+  (feature)
+  [PR 1125](https://github.com/IntersectMBO/cardano-api/pull/1125)
+
+- Export `fromLedgerTxValidityLowerBound` and `fromLedgerTxValidityUpperBound`.
+  (compatible)
+  [PR 1118](https://github.com/IntersectMBO/cardano-api/pull/1118)
+
+- Introduce recursive minimum fee calculation
+  (feature)
+  [PR 1106](https://github.com/IntersectMBO/cardano-api/pull/1106)
+
 ## 10.24.1.0
 
 - Fix supplemental datum handling in experimental API. `toLedgerDatum` now correctly
