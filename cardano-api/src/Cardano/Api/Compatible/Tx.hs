@@ -128,7 +128,7 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
 
         apiScriptWitnesses =
           [ (ix, witness)
-          | (ix, _, _, witness) <- indexedTxCerts
+          | (ix, _, Just (_, witness)) <- indexedTxCerts
           ]
 
     pure
@@ -151,7 +151,7 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
   setRefInputs = do
     let refInputs =
           [ toShelleyTxIn refInput
-          | (_, _, _, wit) <- indexedTxCerts
+          | (_, _, Just (_, wit)) <- indexedTxCerts
           , refInput <- maybeToList $ getAnyWitnessReferenceInput wit
           ]
 
@@ -172,8 +172,7 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
   indexedTxCerts
     :: [ ( ScriptWitnessIndex
          , Exp.Certificate (ShelleyLedgerEra era)
-         , StakeCredential
-         , Exp.AnyWitness (ShelleyLedgerEra era)
+         , Maybe (StakeCredential, Exp.AnyWitness (ShelleyLedgerEra era))
          )
        ]
   indexedTxCerts = indexTxCertificates txCertificates'
@@ -329,17 +328,17 @@ indexWitnessedTxProposalProcedures cOnwards (Exp.TxProposalProcedures proposals)
     | (ix, (proposal, anyWitness)) <- allProposalsList
     ]
 
--- | Index certificates with witnesses by the order they appear in the list (in the transaction).
+-- | Index certificates by the order they appear in the transaction, including
+-- both witnessed and unwitnessed certs. See 'indexCertificatesWith' for which
+-- certificate types are unwitnessed.
+--
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
 indexTxCertificates
   :: Exp.TxCertificates (ShelleyLedgerEra era)
   -> [ ( ScriptWitnessIndex
        , Exp.Certificate (ShelleyLedgerEra era)
-       , StakeCredential
-       , AnyWitness (ShelleyLedgerEra era)
+       , Maybe (StakeCredential, AnyWitness (ShelleyLedgerEra era))
        )
      ]
 indexTxCertificates (Exp.TxCertificates certsWits) =
-  [ (ScriptWitnessIndexCertificate ix, cert, stakeCred, witness)
-  | (ix, (cert, Just (stakeCred, witness))) <- zip [0 ..] $ toList certsWits
-  ]
+  indexCertificatesWith $ toList certsWits

@@ -10,11 +10,11 @@ module Test.Cardano.Api.Experimental.Fee
 where
 
 import Cardano.Api qualified as Api
+import Cardano.Api.Compatible.Tx (AnyProtocolUpdate (..), AnyVote (..), createCompatibleTx)
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Ledger qualified as Ledger
 
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
@@ -22,6 +22,7 @@ import Cardano.Ledger.Mary.Value qualified as Mary
 
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
+import Data.Sequence.Strict qualified as Seq
 import Lens.Micro
 
 import Test.Gen.Cardano.Api.Typed (genAddressInEra, genStakeCredential, genTxIn)
@@ -48,6 +49,18 @@ tests =
         [ testProperty
             "all certificates are preserved after execution unit substitution"
             prop_substituteExecutionUnits_preserves_certs
+        ]
+    , testGroup
+        "collectTxBodyScriptWitnesses"
+        [ testProperty
+            "unwitnessed certs produce no script witnesses"
+            prop_collectTxBodyScriptWitnesses_ignores_unwitnessed_certs
+        ]
+    , testGroup
+        "createCompatibleTx"
+        [ testProperty
+            "all certs (witnessed and unwitnessed) appear in the ledger tx"
+            prop_createCompatibleTx_preserves_all_certs
         ]
     , testGroup
         "calcMinFeeRecursive"
@@ -125,7 +138,7 @@ genFundedSimpleTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+            L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -162,7 +175,7 @@ genFundedMultiAssetTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin multiAsset)
+            L.mkBasicTxOut addr (L.MaryValue sendCoin multiAsset)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -195,7 +208,7 @@ genUnderfundedTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+            L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -235,7 +248,7 @@ genNonAdaUnbalancedTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Ledger.mkBasicTxOut addr sendValue
+            L.mkBasicTxOut addr sendValue
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -274,12 +287,12 @@ genMinUTxOViolatingTx era = do
       sendTxOut1 =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000_000) mempty)
+            L.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000_000) mempty)
       -- Output 2: tokens with tiny ADA (below min UTxO)
       sendTxOut2 =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000) multiAsset)
+            L.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000) multiAsset)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -357,7 +370,7 @@ genTinySurplusTx era = do
       sendTxOut =
         Exp.obtainCommonConstraints era $
           Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+            L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -503,37 +516,99 @@ prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada = H.property $ do
 -- dropped certs stored with a @Nothing@ witness (e.g. shelley stake registration
 -- certificates) when rebuilding 'TxCertificates' during fee balancing.
 --
--- We build a 'TxCertificates' containing one cert that stores as @Nothing@ in
--- the OMap (Conway stake registration without deposit) and one that stores as
--- @Just@ (Conway stake deregistration with deposit, requiring a key witness),
--- then verify that both survive 'substituteExecutionUnits' unchanged.
+-- We build a 'TxCertificates' covering a range of Conway cert types — some that
+-- store as @Nothing@ in the OMap (no witness required) and some as @Just@ (witness
+-- required) — then verify that all survive 'substituteExecutionUnits' unchanged.
 prop_substituteExecutionUnits_preserves_certs :: Property
 prop_substituteExecutionUnits_preserves_certs = H.property $ do
-  stakeCred1 <- H.forAll genStakeCredential
-  stakeCred2 <- H.forAll genStakeCredential
+  (allCerts, _) <- H.forAll genShuffledCertsWithCount
+  let inputCerts = Exp.mkTxCertificates Exp.ConwayEra allCerts
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxCertificates inputCerts
+  result <- H.evalEither $ Exp.substituteExecutionUnits Map.empty txBodyContent
+  Exp.txCertificates result H.=== inputCerts
+
+-- | 'collectTxBodyScriptWitnesses' must return exactly the script-witnessed
+-- certs (1 simple script witness in the generator) and must not include
+-- unwitnessed or key-witnessed certs as spurious script witnesses.
+prop_collectTxBodyScriptWitnesses_ignores_unwitnessed_certs :: Property
+prop_collectTxBodyScriptWitnesses_ignores_unwitnessed_certs = H.property $ do
+  (allCerts, _) <- H.forAll genShuffledCertsWithCount
+  let inputCerts = Exp.mkTxCertificates Exp.ConwayEra allCerts
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxCertificates inputCerts
+      scriptWitnesses = Exp.collectTxBodyScriptWitnesses txBodyContent
+  length scriptWitnesses H.=== 1
+
+-- | 'createCompatibleTx' must include every certificate (both witnessed and
+-- unwitnessed) in the resulting ledger transaction body. This ensures that
+-- the @setCerts@ / @convCertificates@ path does not silently drop certs.
+prop_createCompatibleTx_preserves_all_certs :: Property
+prop_createCompatibleTx_preserves_all_certs = H.property $ do
+  (allCerts, expectedCount) <- H.forAll genShuffledCertsWithCount
+  let sbe = convert Exp.ConwayEra
+      inputCerts = Exp.mkTxCertificates Exp.ConwayEra allCerts
+  Api.ShelleyTx _ ledgerTx <-
+    H.evalEither $ createCompatibleTx sbe [] [] 0 (NoPParamsUpdate sbe) NoVotes inputCerts
+  let bodyCerts = ledgerTx ^. L.bodyTxL . L.certsTxBodyL
+  Seq.length bodyCerts H.=== expectedCount
+
+-- ---------------------------------------------------------------------------
+-- Shared cert generators
+-- ---------------------------------------------------------------------------
+
+-- | Generate a shuffled list of Conway certs (mix of witnessed and unwitnessed,
+-- with both key and simple script witnesses) along with the expected count.
+genShuffledCertsWithCount
+  :: Gen
+       ( [(Exp.Certificate (Exp.LedgerEra Exp.ConwayEra), Exp.AnyWitness (Exp.LedgerEra Exp.ConwayEra))]
+       , Int
+       )
+genShuffledCertsWithCount = do
+  stakeCred1 <- genStakeCredential
+  stakeCred2 <- genStakeCredential
+  stakeCred3 <- genStakeCredential
+  stakeCred4 <- genStakeCredential
+  refTxIn <- genTxIn
   let
-    -- Conway stake registration without deposit.
-    -- getTxCertWitness returns Nothing, so mkTxCertificates stores this as
-    -- (cert, Nothing) in the TxCertificates OMap.
+    shelleyCred1 = Api.toShelleyStakeCredential stakeCred1
+    shelleyCred2 = Api.toShelleyStakeCredential stakeCred2
+    shelleyCred3 = Api.toShelleyStakeCredential stakeCred3
+    shelleyCred4 = Api.toShelleyStakeCredential stakeCred4
+
+    -- Unwitnessed: ConwayRegCert without deposit
     regCert =
       Exp.Certificate $
         L.ConwayTxCertDeleg
-          (L.ConwayRegCert (Api.toShelleyStakeCredential stakeCred1) L.SNothing)
-    -- Conway stake deregistration with deposit.
-    -- getTxCertWitness returns Just stakeCred, so mkTxCertificates stores this
-    -- as (cert, Just (stakeCred, AnyKeyWitnessPlaceholder)).
+          (L.ConwayRegCert shelleyCred1 L.SNothing)
+
+    -- Key-witnessed: ConwayUnRegCert with deposit
     unRegCert =
       Exp.Certificate $
         L.ConwayTxCertDeleg
-          (L.ConwayUnRegCert (Api.toShelleyStakeCredential stakeCred2) (L.SJust (L.Coin 2_000_000)))
-    inputCerts =
-      Exp.mkTxCertificates
-        Exp.ConwayEra
-        [ (regCert, Exp.AnyKeyWitnessPlaceholder)
-        , (unRegCert, Exp.AnyKeyWitnessPlaceholder)
-        ]
-    txBodyContent =
-      Exp.defaultTxBodyContent
-        & Exp.setTxCertificates inputCerts
-  result <- H.evalEither $ Exp.substituteExecutionUnits Map.empty txBodyContent
-  Exp.txCertificates result H.=== inputCerts
+          (L.ConwayUnRegCert shelleyCred2 (L.SJust (L.Coin 2_000_000)))
+
+    -- Simple-script-witnessed (via reference input): ConwayDelegCert
+    delegCert =
+      Exp.Certificate $
+        L.ConwayTxCertDeleg
+          (L.ConwayDelegCert shelleyCred3 (L.DelegVote L.DRepAlwaysAbstain))
+
+    -- Key-witnessed: ConwayRegDelegCert
+    regDelegCert =
+      Exp.Certificate $
+        L.ConwayTxCertDeleg
+          (L.ConwayRegDelegCert shelleyCred4 (L.DelegVote L.DRepAlwaysAbstain) (L.Coin 2_000_000))
+
+    simpleScriptWitness = Exp.AnySimpleScriptWitness (Exp.SReferenceScript refTxIn)
+
+    allCerts =
+      [ (regCert, Exp.AnyKeyWitnessPlaceholder)
+      , (unRegCert, Exp.AnyKeyWitnessPlaceholder)
+      , (delegCert, simpleScriptWitness)
+      , (regDelegCert, Exp.AnyKeyWitnessPlaceholder)
+      ]
+  shuffled <- Gen.shuffle allCerts
+  pure (shuffled, length shuffled)

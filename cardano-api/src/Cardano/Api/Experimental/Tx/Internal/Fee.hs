@@ -53,6 +53,7 @@ import Cardano.Api.ProtocolParameters
 import Cardano.Api.Query.Internal.Type.QueryInMode
 import Cardano.Api.Tx.Internal.Body
   ( ScriptWitnessIndex (..)
+  , indexCertificatesWith
   , renderScriptWitnessIndex
   , toScriptIndex
   )
@@ -1008,7 +1009,7 @@ substituteExecutionUnits
     mapScriptWitnessesCertificates
       :: TxCertificates (LedgerEra era)
       -> Either (TxBodyErrorAutoBalance (LedgerEra era)) (TxCertificates (LedgerEra era))
-    mapScriptWitnessesCertificates (TxCertificates certsMap) = do
+    mapScriptWitnessesCertificates txCerts@(TxCertificates _) = do
       let mappedScriptWitnesses
             :: [ ( Exp.Certificate (LedgerEra era)
                  , Either
@@ -1020,20 +1021,12 @@ substituteExecutionUnits
                      )
                  )
                ]
-          -- We iterate over all certs, not just the witnessed subset.
-          -- TxCertificates holds certs both with and without witnesses; certs
-          -- with Nothing must pass through unchanged, or they would be silently
-          -- dropped from the rebuilt TxCertificates. The index ix is the cert's
-          -- position in the full list, which matches the ledger's redeemer
-          -- indexing: non-witnessed certs consume an index slot but produce no
-          -- redeemer purpose (see addUniqueTxCertPurpose in cardano-ledger).
           mappedScriptWitnesses =
             [ case mWit of
                 Nothing -> (cert, Right Nothing)
                 Just (stakeCred, wit) ->
-                  let eWitness' = substituteExecUnits (ScriptWitnessIndexCertificate ix) wit
-                   in (cert, Just . (stakeCred,) <$> eWitness')
-            | (ix, (cert, mWit)) <- zip [0 ..] (toList certsMap)
+                  (cert, Just . (stakeCred,) <$> substituteExecUnits ix wit)
+            | (ix, cert, mWit) <- indexTxCertificates txCerts
             ]
       TxCertificates . fromList <$> traverseScriptWitnesses mappedScriptWitnesses
 
@@ -1151,8 +1144,8 @@ collectTxBodyScriptWitnesses
     scriptWitnessesCertificates txc =
       List.nub
         [ (ix, wit)
-        | (ix, _, _, Just wit@AnyScriptWitnessPlutus{}) <-
-            fmap toAnyScriptWitness <$> indexTxCertificates txc
+        | (ix, _, Just (_, anyWit)) <- indexTxCertificates txc
+        , Just wit <- [toAnyScriptWitness anyWit]
         ]
 
     scriptWitnessesMinting
@@ -1229,20 +1222,20 @@ indexTxWithdrawals (TxWithdrawals withdrawals) =
   orderStakeAddrs :: [(StakeAddress, x, v)] -> [(StakeAddress, x, v)]
   orderStakeAddrs = sortBy (compare `on` (\(k, _, _) -> k))
 
--- | Index certificates with witnesses by the order they appear in the list (in the transaction).
+-- | Index certificates by the order they appear in the transaction, including
+-- both witnessed and unwitnessed certs. See 'indexCertificatesWith' for which
+-- certificate types are unwitnessed.
+--
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
 indexTxCertificates
   :: TxCertificates (LedgerEra era)
   -> [ ( ScriptWitnessIndex
        , Exp.Certificate (LedgerEra era)
-       , StakeCredential
-       , AnyWitness (LedgerEra era)
+       , Maybe (StakeCredential, AnyWitness (LedgerEra era))
        )
      ]
 indexTxCertificates (TxCertificates certsWits) =
-  [ (ScriptWitnessIndexCertificate ix, cert, stakeCred, witness)
-  | (ix, (cert, Just (stakeCred, witness))) <- zip [0 ..] $ toList certsWits
-  ]
+  indexCertificatesWith $ toList certsWits
 
 -- | Index the assets with witnesses in the order of policy ids.
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf

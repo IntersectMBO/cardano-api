@@ -1550,9 +1550,11 @@ substituteExecutionUnits
                  )
                ]
           mappedScriptWitnesses =
-            [ (cert, BuildTxWith . Just . (stakeCred,) <$> eWitness')
-            | (ix, cert, stakeCred, witness) <- indexTxCertificates txCertificates'
-            , let eWitness' = adjustScriptWitness (substituteExecUnits ix) witness
+            [ case mWit of
+                Nothing -> (cert, Right $ BuildTxWith Nothing)
+                Just (stakeCred, witness) ->
+                  (cert, BuildTxWith . Just . (stakeCred,) <$> adjustScriptWitness (substituteExecUnits ix) witness)
+            | (ix, cert, mWit) <- indexTxCertificates txCertificates'
             ]
       TxCertificates supported . fromList <$> traverseScriptWitnesses mappedScriptWitnesses
 
