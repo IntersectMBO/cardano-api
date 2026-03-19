@@ -30,6 +30,11 @@
       flake = false;
     };
 
+    hls = {
+      url = "github:haskell/haskell-language-server/2.13.0.0";
+      flake = false;
+    };
+
     # wasm specific inputs
     wasm-nixpkgs.follows = "ghc-wasm-meta/nixpkgs";
     ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
@@ -159,11 +164,30 @@
               ghcid = "0.8.9";
               cabal-gild = "1.7.0.1";
               fourmolu = "0.18.0.0";
-              haskell-language-server = "2.11.0.0";
+              haskell-language-server = {
+                src = inputs.hls;
+                configureArgs = "--disable-benchmarks --disable-tests";
+                cabalProjectLocal = ''
+                  allow-newer: haddock-library:base
+                '';
+                sha256map."https://github.com/snowleopard/alga"."d4e43fb42db05413459fb2df493361d5a666588a" = "0s1mlnl64wj7pkg3iipv5bb4syy3bhxwqzqv93zqlvkyfn64015i";
+              };
               hlint = "3.10";
             };
           # and from nixpkgs or other inputs
-          shell.nativeBuildInputs = with nixpkgs; [gh git jq yq-go unstable.actionlint shellcheck snappy protobuf buf blst];
+          shell.nativeBuildInputs = with nixpkgs; [
+            gh
+            git
+            jq
+            yq-go
+            unstable.actionlint
+            shellcheck
+            snappy
+            protobuf
+            buf
+            blst
+            (writeShellScriptBin "haskell-language-server-wrapper" ''exec haskell-language-server "$@"'')
+          ];
           # disable Hoogle until someone request it
           shell.withHoogle = false;
           # Skip cross compilers for the shell
