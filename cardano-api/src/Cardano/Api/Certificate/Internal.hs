@@ -84,6 +84,7 @@ import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)
+import Cardano.Api.Key (BlsKey, Hash (BlsKeyHash))
 import Cardano.Api.Key.Internal
 import Cardano.Api.Key.Internal.Praos
 import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
@@ -94,6 +95,7 @@ import Cardano.Api.Serialise.TextEnvelope.Internal
 import Cardano.Ledger.Address qualified as Ledger
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Hashes qualified as Ledger
 import Cardano.Ledger.State qualified as Ledger
 
 import Control.Monad
@@ -208,6 +210,7 @@ data StakePoolParameters
   = StakePoolParameters
   { stakePoolId :: PoolId
   , stakePoolVRF :: Hash VrfKey
+  , stakePoolBLS :: Maybe (Hash BlsKey)
   , stakePoolCost :: L.Coin
   , stakePoolMargin :: Rational
   , stakePoolRewardAccount :: StakeAddress
@@ -656,6 +659,7 @@ toShelleyPoolParams
   StakePoolParameters
     { stakePoolId = StakePoolKeyHash poolkh
     , stakePoolVRF = VrfKeyHash vrfkh
+    , stakePoolBLS
     , stakePoolCost
     , stakePoolMargin
     , stakePoolRewardAccount
@@ -675,6 +679,9 @@ toShelleyPoolParams
           fromMaybe
             (error "toShelleyPoolParams: invalid PoolMargin")
             (Ledger.boundRational stakePoolMargin)
+      , Ledger.sppBls = case stakePoolBLS of
+          Nothing -> Ledger.SNothing
+          Just (BlsKeyHash blsKh) -> Ledger.SJust $ Ledger.toBLSVerKeyHash blsKh
       , Ledger.sppAccountAddress = toShelleyStakeAddr stakePoolRewardAccount
       , Ledger.sppOwners =
           fromList
@@ -731,6 +738,7 @@ fromShelleyPoolParams
   Ledger.StakePoolParams
     { Ledger.sppId
     , Ledger.sppVrf
+    , Ledger.sppBls
     , Ledger.sppPledge
     , Ledger.sppCost
     , Ledger.sppMargin
@@ -742,6 +750,9 @@ fromShelleyPoolParams
     StakePoolParameters
       { stakePoolId = StakePoolKeyHash sppId
       , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash sppVrf)
+      , stakePoolBLS = case sppBls of
+          Ledger.SNothing -> Nothing
+          Ledger.SJust blsKh -> Just $ BlsKeyHash (Ledger.fromBLSVerKeyHash blsKh)
       , stakePoolCost = sppCost
       , stakePoolMargin = Ledger.unboundRational sppMargin
       , stakePoolRewardAccount = fromShelleyStakeAddr sppAccountAddress
@@ -802,6 +813,7 @@ fromShelleyStakePoolState
   poolId
   Ledger.StakePoolState
     { Ledger.spsVrf
+    , Ledger.spsBls
     , Ledger.spsPledge
     , Ledger.spsCost
     , Ledger.spsMargin
@@ -813,6 +825,9 @@ fromShelleyStakePoolState
     StakePoolParameters
       { stakePoolId = StakePoolKeyHash poolId
       , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash spsVrf)
+      , stakePoolBLS = case spsBls of
+          Ledger.SNothing -> Nothing
+          Ledger.SJust blsKh -> Just $ BlsKeyHash (Ledger.fromBLSVerKeyHash blsKh)
       , stakePoolCost = spsCost
       , stakePoolMargin = Ledger.unboundRational spsMargin
       , stakePoolRewardAccount = StakeAddress nw accId
