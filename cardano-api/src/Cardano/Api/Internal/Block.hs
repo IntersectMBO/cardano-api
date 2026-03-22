@@ -73,7 +73,6 @@ import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
-import Ouroboros.Consensus.Shelley.Protocol.Abstract qualified as Consensus
 import Ouroboros.Network.Block qualified as Consensus
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
@@ -169,13 +168,13 @@ getShelleyBlockTxs
   :: forall era ledgerera blockheader
    . ShelleyLedgerEra era ~ ledgerera
   => Consensus.ShelleyCompatible (ConsensusProtocol era) ledgerera
-  => Consensus.ShelleyProtocolHeader (ConsensusProtocol era) ~ blockheader
   => ShelleyBasedEra era
   -> Ledger.Block blockheader ledgerera
   -> [Tx era]
-getShelleyBlockTxs era (Ledger.Block _header txs) =
+getShelleyBlockTxs era block =
   [ ShelleyTx era txinblock
-  | txinblock <- toList (Ledger.fromTxSeq txs)
+  | let txs = Ledger.bodyTxs $ Ledger.blockBody block
+  , txinblock <- toList (Ledger.fromTxSeq txs)
   ]
 
 -- ----------------------------------------------------------------------------
