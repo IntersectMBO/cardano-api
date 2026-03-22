@@ -159,7 +159,7 @@ getShelleyBlockTxs
   => ShelleyBasedEra era
   -> Ledger.Block blockheader ledgerera
   -> [Tx era]
-getShelleyBlockTxs era (Ledger.Block _header txs) =
+getShelleyBlockTxs era block =
   [ ShelleyTx era txinblock
   | txinblock <- toList (txs ^. Ledger.txSeqBlockBodyL)
   ]
