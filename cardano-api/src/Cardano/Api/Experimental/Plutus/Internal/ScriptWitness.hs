@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -173,7 +174,7 @@ data PlutusScriptPurpose
   | -- | Witnesses a vote
     VotingScript
 
-data NoScriptDatum
+data NoScriptDatum deriving (Show, Eq)
 
 -- | The PlutusScriptDatum type family is used to determine if a script datum is allowed
 -- for a given plutus script purpose and version. This change was proposed in CIP-69
