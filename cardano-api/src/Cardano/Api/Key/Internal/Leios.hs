@@ -38,10 +38,12 @@ import Cardano.Ledger.Hashes (HASH)
 import Data.Either.Combinators (maybeToRight)
 import Data.String (IsString (..))
 
+-- | BLS keys. To participate in the Leios protocol as voting member/block producing node, stake pool operators must
+-- register one additional cryptographic key for the voting scheme alongside their existing VRF and KES keys.
+-- In this implementation, the BLS key is over the BLS12-381 elliptic curve.
 --
--- BLS keys
---
-
+-- The reason we use BLS keys for the voting scheme of Leios is that they support signature aggregation, which allows
+-- multiple signature to be combined resulting in a single signature that is compact.
 data BlsKey
 
 instance HasTypeProxy BlsKey where
