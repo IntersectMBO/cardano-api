@@ -19,6 +19,7 @@ import Cardano.Api.Byron.Internal.Key
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Key.Internal
 import Cardano.Api.Key.Internal.Class
+import Cardano.Api.Key.Internal.Leios (AsType (..), BlsKey)
 import Cardano.Api.Key.Internal.Praos
 import Cardano.Api.Serialise.Bech32
 import Cardano.Api.Serialise.DeserialiseAnyOf
@@ -44,6 +45,7 @@ data SomeAddressVerificationKey
       (VerificationKey GenesisDelegateExtendedKey)
   | AKesVerificationKey (VerificationKey KesKey)
   | AVrfVerificationKey (VerificationKey VrfKey)
+  | ABlsVerificationKey (VerificationKey BlsKey)
   | AStakeVerificationKey (VerificationKey StakeKey)
   | AStakeExtendedVerificationKey (VerificationKey StakeExtendedKey)
   | AStakePoolVerificationKey (VerificationKey StakePoolKey)
@@ -75,6 +77,7 @@ renderSomeAddressVerificationKey =
        in serialiseToBech32 stakePoolKey
     AKesVerificationKey vk -> serialiseToBech32 vk
     AVrfVerificationKey vk -> serialiseToBech32 vk
+    ABlsVerificationKey vk -> serialiseToBech32 vk
     AStakeVerificationKey vk -> serialiseToBech32 vk
     AStakePoolVerificationKey vk -> serialiseToBech32 vk
     AStakePoolExtendedVerificationKey vk -> serialiseToBech32 vk
@@ -100,6 +103,7 @@ mapSomeAddressVerificationKey f = \case
   AGenesisDelegateExtendedVerificationKey vk -> f vk
   AGenesisExtendedVerificationKey vk -> f vk
   AVrfVerificationKey vk -> f vk
+  ABlsVerificationKey vk -> f vk
   AStakeVerificationKey vk -> f vk
   AStakePoolVerificationKey vk -> f vk
   AStakePoolExtendedVerificationKey vk -> f vk
@@ -154,6 +158,7 @@ deserialiseAnyVerificationKeyBech32 =
     , FromSomeType (AsVerificationKey AsPaymentExtendedKey) APaymentExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsKesKey) AKesVerificationKey
     , FromSomeType (AsVerificationKey AsVrfKey) AVrfVerificationKey
+    , FromSomeType (AsVerificationKey AsBlsKey) ABlsVerificationKey
     , FromSomeType (AsVerificationKey AsStakeKey) AStakeVerificationKey
     , FromSomeType (AsVerificationKey AsStakeExtendedKey) AStakeExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsStakePoolKey) AStakePoolVerificationKey
