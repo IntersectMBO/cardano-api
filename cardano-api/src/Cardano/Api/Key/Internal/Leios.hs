@@ -125,6 +125,7 @@ instance SerialiseAsRawBytes (Hash BlsKey) where
       BlsKeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey BlsKey) where
+  textEnvelopeType :: AsType (VerificationKey BlsKey) -> TextEnvelopeType
   textEnvelopeType _ =
     "BlsVerificationKey_"
       <> fromString (Crypto.algorithmNameDSIGN proxy)
@@ -132,10 +133,17 @@ instance HasTextEnvelope (VerificationKey BlsKey) where
     proxy :: Proxy Crypto.BLS12381MinSigDSIGN
     proxy = Proxy
 
+  textEnvelopeDefaultDescr :: VerificationKey BlsKey -> TextEnvelopeDescr
+  textEnvelopeDefaultDescr _ = "BLS12-381 verification key"
+
 instance HasTextEnvelope (SigningKey BlsKey) where
+  textEnvelopeType :: AsType (SigningKey BlsKey) -> TextEnvelopeType
   textEnvelopeType _ =
     "BlsSigningKey_"
       <> fromString (Crypto.algorithmNameDSIGN proxy)
    where
     proxy :: Proxy Crypto.BLS12381MinSigDSIGN
     proxy = Proxy
+
+  textEnvelopeDefaultDescr :: SigningKey BlsKey -> TextEnvelopeDescr
+  textEnvelopeDefaultDescr _ = "BLS12-381 signing key"
