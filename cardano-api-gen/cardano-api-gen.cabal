@@ -1,4 +1,4 @@
-cabal-version: 3.12
+cabal-version: 3.0
 name: cardano-api-gen
 version: 10.2.0.0
 synopsis: Generators for the cardano api
@@ -40,15 +40,6 @@ library
   hs-source-dirs: src
   -- These modules should match those in cardano-api:gen
   exposed-modules: Test.Gen.Cardano.Api.Empty
-
-  other-modules:
-    PackageInfo_cardano_api_gen
-    Paths_cardano_api_gen
-
-  autogen-modules:
-    PackageInfo_cardano_api_gen
-    Paths_cardano_api_gen
-
   reexported-modules:
     Test.Gen.Cardano.Api,
     Test.Gen.Cardano.Api.Metadata,
