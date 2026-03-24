@@ -1,5 +1,15 @@
 # Changelog for cardano-rpc
 
+## 10.2.0.0
+
+- Integrate new Ledger and Consensus packages for Node 10.7.
+  (breaking)
+  [PR 1050](https://github.com/IntersectMBO/cardano-api/pull/1050)
+
+- Add lower bound to proto-lens >= 0.7.1.6
+  (compatible)
+  [PR 1149](https://github.com/IntersectMBO/cardano-api/pull/1149)
+
 ## 10.1.0.0
 
 - Remove configuration reload action in cardano-rpc server startup
