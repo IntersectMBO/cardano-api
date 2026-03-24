@@ -1,4 +1,4 @@
-cabal-version: 3.8
+cabal-version: 3.12
 name: cardano-rpc
 version: 10.1.0.0
 synopsis: A gRPC server and client for interacting with the Cardano node
@@ -64,9 +64,11 @@ library
 
   other-modules:
     Cardano.Rpc.Server.Internal.Orphans
+    PackageInfo_cardano_rpc
     Paths_cardano_rpc
 
   autogen-modules:
+    PackageInfo_cardano_rpc
     Paths_cardano_rpc
 
   build-depends:
@@ -109,7 +111,16 @@ library gen
     Proto.Utxorpc.V1beta.Submit.Submit
     Proto.Utxorpc.V1beta.Submit.Submit_Fields
 
+  other-modules:
+    PackageInfo_cardano_rpc
+    Paths_cardano_rpc
+
+  autogen-modules:
+    PackageInfo_cardano_rpc
+    Paths_cardano_rpc
+
   build-depends:
+    base,
     proto-lens-protobuf-types,
     proto-lens-runtime,
 
@@ -143,3 +154,9 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.ProtocolParameters
     Test.Cardano.Rpc.TxOutput
     Test.Cardano.Rpc.Type
+    PackageInfo_cardano_rpc
+    Paths_cardano_rpc
+
+  autogen-modules:
+    PackageInfo_cardano_rpc
+    Paths_cardano_rpc

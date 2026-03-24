@@ -1,4 +1,4 @@
-cabal-version: 3.4
+cabal-version: 3.12
 name: cardano-wasm
 version: 10.0.0.0
 copyright: 2020-2026 Input Output Global Inc (IOG).
@@ -40,6 +40,12 @@ library cardano-wasi-lib
 
   other-modules:
     Cardano.Wasm.Internal.Api.Random
+    PackageInfo_cardano_wasm
+    Paths_cardano_wasm
+
+  autogen-modules:
+    PackageInfo_cardano_wasm
+    Paths_cardano_wasm
 
   build-depends:
     aeson,
@@ -84,6 +90,12 @@ executable cardano-wasi
     Cardano.Wasi.Internal.Api.Tx
     Cardano.Wasi.Internal.Api.Wallet
     Cardano.Wasi.Internal.Conversion
+    PackageInfo_cardano_wasm
+    Paths_cardano_wasm
+
+  autogen-modules:
+    PackageInfo_cardano_wasm
+    Paths_cardano_wasm
 
   build-depends:
     aeson,
@@ -111,6 +123,12 @@ executable cardano-wasm
     Cardano.Wasm.Internal.JavaScript.Bridge
     Cardano.Wasm.Internal.JavaScript.GRPC
     Cardano.Wasm.Internal.JavaScript.GRPCTypes
+    PackageInfo_cardano_wasm
+    Paths_cardano_wasm
+
+  autogen-modules:
+    PackageInfo_cardano_wasm
+    Paths_cardano_wasm
 
   build-depends:
     base,
@@ -150,6 +168,12 @@ test-suite cardano-wasm-golden
 
     other-modules:
       Test.Golden.Cardano.Wasm.TypeScript
+      PackageInfo_cardano_wasm
+      Paths_cardano_wasm
+
+    autogen-modules:
+      PackageInfo_cardano_wasm
+      Paths_cardano_wasm
   else
     build-depends:
       base

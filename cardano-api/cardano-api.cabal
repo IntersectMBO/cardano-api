@@ -1,4 +1,4 @@
-cabal-version: 3.8
+cabal-version: 3.12
 name: cardano-api
 version: 10.25.0.0
 synopsis: The cardano API
@@ -296,6 +296,12 @@ library
     Cardano.Api.Tx.Internal.TxMetadata
     Cardano.Api.Value.Internal
     Cardano.Api.Value.Internal.Parser
+    PackageInfo_cardano_api
+    Paths_cardano_api
+
+  autogen-modules:
+    PackageInfo_cardano_api
+    Paths_cardano_api
 
 library gen
   import: project-config
@@ -314,6 +320,14 @@ library gen
     Test.Hedgehog.Golden.ErrorMessage
     Test.Hedgehog.Roundtrip.Bech32
     Test.Hedgehog.Roundtrip.CBOR
+
+  other-modules:
+    PackageInfo_cardano_api
+    Paths_cardano_api
+
+  autogen-modules:
+    PackageInfo_cardano_api
+    Paths_cardano_api
 
   build-depends:
     QuickCheck <2.18,
@@ -414,6 +428,12 @@ test-suite cardano-api-test
     Test.Cardano.Api.Transaction.Body.Plutus.Scripts
     Test.Cardano.Api.TxBody
     Test.Cardano.Api.Value
+    PackageInfo_cardano_api
+    Paths_cardano_api
+
+  autogen-modules:
+    PackageInfo_cardano_api
+    Paths_cardano_api
 
   ghc-options:
     -threaded
@@ -472,3 +492,9 @@ test-suite cardano-api-golden
     Test.Golden.Cardano.Api.Tx
     Test.Golden.Cardano.Api.Value
     Test.Golden.ErrorsSpec
+    PackageInfo_cardano_api
+    Paths_cardano_api
+
+  autogen-modules:
+    PackageInfo_cardano_api
+    Paths_cardano_api
