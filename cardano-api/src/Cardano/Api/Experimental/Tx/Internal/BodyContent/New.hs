@@ -98,7 +98,7 @@ import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   )
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.Governance.Internal.Action.VotingProcedure
-  ( VotesMergingConflict (..)
+  ( VotingError (..)
   , mergeVotingProcedures
   )
 import Cardano.Api.Key.Internal
@@ -503,38 +503,31 @@ data TxVotingProcedures era
 mkTxVotingProcedures
   :: forall era
    . [(L.VotingProcedures era, AnyWitness era)]
-  -> Either (VotesMergingConflict era) (TxVotingProcedures era)
+  -> Either (VotingError era) (TxVotingProcedures era)
 mkTxVotingProcedures votingProcedures = do
   procedure <-
     foldM f (L.VotingProcedures Map.empty) votingProcedures
-  pure $ TxVotingProcedures procedure votingScriptWitnessMap
- where
-  votingScriptWitnessMap :: Map L.Voter (AnyWitness era)
-  votingScriptWitnessMap =
-    foldl
-      (\acc next -> acc `Map.union` uncurry votingScriptWitnessSingleton next)
+  votingScriptWitnessMap <-
+    foldM
+      (\acc next -> Map.union acc <$> uncurry votingScriptWitnessSingleton next)
       Map.empty
       votingProcedures
-
+  pure $ TxVotingProcedures procedure votingScriptWitnessMap
+ where
   f
     :: L.VotingProcedures era
     -> (L.VotingProcedures era, AnyWitness era)
-    -> Either (VotesMergingConflict era) (L.VotingProcedures era)
+    -> Either (VotingError era) (L.VotingProcedures era)
   f acc (procedure, _witness) = mergeVotingProcedures acc procedure
 
   votingScriptWitnessSingleton
     :: L.VotingProcedures era
     -> AnyWitness era
-    -> Map L.Voter (AnyWitness era)
-  votingScriptWitnessSingleton votingProcedures' scriptWitness = do
-    let voter = fromJust $ getVotingScriptCredentials votingProcedures'
-    Map.singleton voter scriptWitness
-
-  getVotingScriptCredentials
-    :: L.VotingProcedures era
-    -> Maybe L.Voter
-  getVotingScriptCredentials (L.VotingProcedures m) =
-    listToMaybe $ Map.keys m
+    -> Either (VotingError era) (Map L.Voter (AnyWitness era))
+  votingScriptWitnessSingleton lVotingProcedures scriptWitness =
+    case fst <$> Map.lookupMin (L.unVotingProcedures lVotingProcedures) of
+      Nothing -> Left $ VotingScriptWitnessWithoutVoter lVotingProcedures
+      Just voter -> Right $ Map.singleton voter scriptWitness
 
 data TxBodyContent era
   = TxBodyContent
