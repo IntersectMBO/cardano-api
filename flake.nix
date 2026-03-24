@@ -122,8 +122,8 @@
         # Fetch proto-lens with submodules and fix symlinks for plan and build phases
         protoLensSrc = nixpkgs.fetchgit {
           url = "https://github.com/google/proto-lens";
-          rev = "20de5227947b0c37dd6852dcc6f2db1cd5889cee";
-          sha256 = "sha256-VUYU2swjU7L8Zdu6Zfz6jo2ulW5uPhAamt2GjH5hZRY=";
+          rev = "9b41fe0e10e8fe12ec508a3b361d0f0c2217c491";
+          sha256 = "sha256-ruTbbUKVJBPANnm6puigtp26mmiVDd0jMpLfJLOuUpU=";
           fetchSubmodules = true;
         };
         fixProtoLensSrc = nixpkgs.runCommand "proto-lens-fixed" {} ''
@@ -156,7 +156,7 @@
           #
           inputMap = {
             "https://chap.intersectmbo.org/" = inputs.CHaP;
-            "https://github.com/google/proto-lens/20de5227947b0c37dd6852dcc6f2db1cd5889cee" = fixProtoLensSrc;
+            "https://github.com/google/proto-lens/9b41fe0e10e8fe12ec508a3b361d0f0c2217c491" = protoLensSrc;
           };
           # Also currently needed to make `nix flake lock --update-input CHaP` work.
           cabalProjectLocal = ''
