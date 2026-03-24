@@ -26,7 +26,7 @@ common project-config
     ImportQualifiedPost
     OverloadedStrings
 
-  build-depends: base >=4.14 && <4.22
+  build-depends: base >=4.14 && <4.23
   ghc-options:
     -Wall
     -Wcompat
@@ -56,6 +56,15 @@ library
   hs-source-dirs:
     src
 
+  if impl(ghc >=9.14)
+    ghc-options:
+      -- Warning handling for ghc 9.14 and later.
+      -- * Wpattern-namespace-specifier is a new warning in ghc-9.14 and the
+      --   pattern specifier is still needed for earlier GHC versions.
+      -- * Wredundant-constraints is now trigger on constraints that are
+      --   required for earlier versions of GHC.
+      -Wno-pattern-namespace-specifier
+      -Wno-redundant-constraints
   -- Do not expose any additional modules. The correct way
   -- to expose new functionality is via Cardano.Api
   exposed-modules:
