@@ -763,34 +763,28 @@ deriving instance Show (TxVotingProcedures build era)
 mkTxVotingProcedures
   :: Applicative (BuildTxWith build)
   => [(VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))]
-  -> Either (VotesMergingConflict (ShelleyLedgerEra era)) (TxVotingProcedures build era)
+  -> Either (VotingError (ShelleyLedgerEra era)) (TxVotingProcedures build era)
 mkTxVotingProcedures votingProcedures = do
   procedure <-
     foldM f (L.VotingProcedures Map.empty) votingProcedures
-  pure $ TxVotingProcedures procedure (pure votingScriptWitnessMap)
- where
-  votingScriptWitnessMap =
-    foldl
-      (\acc next -> acc `Map.union` uncurry votingScriptWitnessSingleton next)
+  votingScriptWitnessMap <-
+    foldM
+      (\acc next -> Map.union acc <$> uncurry votingScriptWitnessSingleton next)
       Map.empty
       votingProcedures
-
+  pure $ TxVotingProcedures procedure (pure votingScriptWitnessMap)
+ where
   f acc (VotingProcedures procedure, _witness) = mergeVotingProcedures acc procedure
 
   votingScriptWitnessSingleton
     :: VotingProcedures era
     -> Maybe (ScriptWitness WitCtxStake era)
-    -> Map L.Voter (ScriptWitness WitCtxStake era)
-  votingScriptWitnessSingleton _ Nothing = Map.empty
-  votingScriptWitnessSingleton votingProcedures' (Just scriptWitness) = do
-    let voter = fromJust $ getVotingScriptCredentials votingProcedures'
-    Map.singleton voter scriptWitness
-
-  getVotingScriptCredentials
-    :: VotingProcedures era
-    -> Maybe L.Voter
-  getVotingScriptCredentials (VotingProcedures (L.VotingProcedures m)) =
-    listToMaybe $ Map.keys m
+    -> Either (VotingError (ShelleyLedgerEra era)) (Map L.Voter (ScriptWitness WitCtxStake era))
+  votingScriptWitnessSingleton _ Nothing = Right Map.empty
+  votingScriptWitnessSingleton (VotingProcedures lVotingProcedures) (Just scriptWitness) =
+    case fst <$> Map.lookupMin (L.unVotingProcedures lVotingProcedures) of
+      Nothing -> Left $ VotingScriptWitnessWithoutVoter lVotingProcedures
+      Just voter -> Right $ Map.singleton voter scriptWitness
 
 -- | Index voting procedures by the order of the votes ('Ord').
 indexTxVotingProcedures

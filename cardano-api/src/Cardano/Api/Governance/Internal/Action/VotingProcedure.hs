@@ -138,15 +138,18 @@ singletonVotingProcedures _ voter govActionId votingProcedure =
       Map.singleton voter $
         Map.singleton govActionId votingProcedure
 
--- | A voter, and the conflicting votes of this voter (i.e. votes with the same governance action identifier)
-newtype VotesMergingConflict era
-  = VotesMergingConflict
+-- | Errors that can occur when constructing voting procedures for a transaction.
+data VotingError era
+  = -- | A voter has conflicting votes (i.e. votes with the same governance action identifier).
+    VotesMergingConflict
       ( L.Voter
       , [L.GovActionId]
       )
+  | -- | A script witness was provided for voting procedures that contain no voter.
+    VotingScriptWitnessWithoutVoter (L.VotingProcedures era)
   deriving Show
 
-instance Error (VotesMergingConflict era) where
+instance Error (VotingError era) where
   prettyError = pshow
 
 -- | @mergeVotingProcedures vote1 vote2@ merges @vote1@ and @vote2@ into a single vote,
@@ -157,7 +160,7 @@ mergeVotingProcedures
   -- ^ Votes to merge
   -> L.VotingProcedures era
   -- ^ Votes to merge
-  -> Either (VotesMergingConflict era) (L.VotingProcedures era)
+  -> Either (VotingError era) (L.VotingProcedures era)
   -- ^ Either the conflict found, or the merged votes
 mergeVotingProcedures vpsa vpsb =
   L.VotingProcedures <$> foldM mergeVotesOfOneVoter Map.empty allVoters
