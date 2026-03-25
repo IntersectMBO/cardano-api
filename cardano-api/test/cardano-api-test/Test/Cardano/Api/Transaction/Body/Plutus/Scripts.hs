@@ -8,22 +8,26 @@ module Test.Cardano.Api.Transaction.Body.Plutus.Scripts
   )
 where
 
-import Cardano.Api (AlonzoEraOnwards (..))
+import Cardano.Api (AlonzoEraOnwards (..), proxyToAsType)
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental
 import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Plutus hiding (AnyPlutusScript (..))
+import Cardano.Api.Experimental.Plutus qualified as Plutus
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Serialise.Cbor (SerialiseAsCBOR (..))
 
 import Cardano.Ledger.Conway qualified as L
 import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Plutus.Language qualified as L
 
 import Prelude
 
 import Data.Function
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
+import Data.Proxy (Proxy (..))
 
 import Test.Gen.Cardano.Api.Experimental qualified as Exp
 import Test.Gen.Cardano.Api.Typed
@@ -54,6 +58,23 @@ prop_compare_plutus_script_hashes = property $ do
   let hash = L.hashScript script
 
   hash === anyScriptHash
+
+prop_roundtrip_plutus_script_in_era_cbor :: Property
+prop_roundtrip_plutus_script_in_era_cbor = property $ do
+  scriptInEra <- forAll genPlutusScriptInEra
+  tripping
+    scriptInEra
+    serialiseToCBOR
+    (deserialiseFromCBOR (proxyToAsType (Proxy @(PlutusScriptInEra L.PlutusV3 (LedgerEra ConwayEra)))))
+
+prop_roundtrip_any_plutus_script_text_envelope :: Property
+prop_roundtrip_any_plutus_script_text_envelope = property $ do
+  scriptInEra <- forAll genPlutusScriptInEra
+  let anyScript = Plutus.AnyPlutusScript scriptInEra
+  tripping
+    anyScript
+    (serialiseAnyPlutusScriptToTextEnvelope Nothing)
+    (deserialiseAnyPlutusScriptFromTextEnvelope @(LedgerEra ConwayEra))
 
 -- | This property checks that the redeemer pointer map is constructed correctly.
 -- Previously identical script purposes were being created and overwriting each other
@@ -214,6 +235,12 @@ tests =
   testGroup
     "Test.Cardano.Api.Transaction.Body.Plutus.Scripts"
     [ testProperty "prop_compare_plutus_script_hashes" prop_compare_plutus_script_hashes
+    , testProperty
+        "prop_roundtrip_plutus_script_in_era_cbor"
+        prop_roundtrip_plutus_script_in_era_cbor
+    , testProperty
+        "prop_roundtrip_any_plutus_script_text_envelope"
+        prop_roundtrip_any_plutus_script_text_envelope
     , testProperty
         "prop_extractAllIndexedPlutusScriptWitnesses"
         prop_extractAllIndexedPlutusScriptWitnesses
