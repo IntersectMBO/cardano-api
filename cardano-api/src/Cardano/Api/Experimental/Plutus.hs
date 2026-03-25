@@ -2,6 +2,8 @@ module Cardano.Api.Experimental.Plutus
   ( -- * Plutus Script
     AnyPlutusScript (..)
   , decodeAnyPlutusScript
+  , serialiseAnyPlutusScriptToTextEnvelope
+  , deserialiseAnyPlutusScriptFromTextEnvelope
   , PlutusScriptInEra (..)
   , AnyPlutusScriptLanguage (..)
   , deserialisePlutusScriptInEra

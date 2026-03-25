@@ -11,6 +11,8 @@
 module Cardano.Api.Experimental.Plutus.Internal.Script
   ( AnyPlutusScript (..)
   , decodeAnyPlutusScript
+  , serialiseAnyPlutusScriptToTextEnvelope
+  , deserialiseAnyPlutusScriptFromTextEnvelope
   , AnyPlutusScriptLanguage (..)
   , PlutusScriptInEra (..)
   , PlutusScriptOrReferenceInput (..)
@@ -201,3 +203,27 @@ data AnyPlutusScriptLanguage where
   AnyPlutusScriptLanguage
     :: L.PlutusLanguage lang
     => L.SLanguage lang -> AnyPlutusScriptLanguage
+
+serialiseAnyPlutusScriptToTextEnvelope
+  :: Maybe TextEnvelopeDescr -> AnyPlutusScript era -> TextEnvelope
+serialiseAnyPlutusScriptToTextEnvelope mbDescr (AnyPlutusScript script) =
+  obtainLangConstraints (plutusScriptInEraSLanguage script) $
+    serialiseToTextEnvelope mbDescr script
+
+deserialiseAnyPlutusScriptFromTextEnvelope
+  :: forall era
+   . L.Era era
+  => TextEnvelope
+  -> Either TextEnvelopeError (AnyPlutusScript era)
+deserialiseAnyPlutusScriptFromTextEnvelope =
+  deserialiseFromTextEnvelopeAnyOf textEnvTypes
+ where
+  textEnvTypes :: [FromSomeType HasTextEnvelope (AnyPlutusScript era)]
+  textEnvTypes =
+    map
+      ( \l ->
+          Plutus.withSLanguage l $ \(slang :: Plutus.SLanguage l) ->
+            obtainLangConstraints slang $
+              FromSomeType (asType @(PlutusScriptInEra l era)) AnyPlutusScript
+      )
+      Plutus.nonNativeLanguages

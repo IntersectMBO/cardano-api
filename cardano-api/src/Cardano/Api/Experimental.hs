@@ -67,6 +67,8 @@ module Cardano.Api.Experimental
     -- ** Plutus related
   , PlutusScriptInEra (..)
   , PlutusScriptOrReferenceInput (..)
+  , serialiseAnyPlutusScriptToTextEnvelope
+  , deserialiseAnyPlutusScriptFromTextEnvelope
   , IndexedPlutusScriptWitness (..)
   , PlutusScriptPurpose (..)
   , PlutusScriptDatum (..)
