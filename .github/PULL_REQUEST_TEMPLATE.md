@@ -1,27 +1,27 @@
 # Changelog
 
-Add a changelog fragment by running the following command and committing the generated file:
-
-```bash
-changie new --project <package>
+```yaml
+- description: |
+    <insert-changelog-description-here>
+# uncomment types applicable to the change:
+  type:
+  # - feature        # introduces a new feature
+  # - breaking       # the API has changed in a breaking way
+  # - compatible     # the API has changed but is non-breaking
+  # - optimisation   # measurable performance improvements
+  # - refactoring    # QoL changes
+  # - bugfix         # fixes a defect
+  # - test           # fixes/modifies tests
+  # - maintenance    # not directly related to the code
+  # - release        # related to a new release preparation
+  # - documentation  # change in code docs, haddocks...
+# uncomment at least one main project this PR is associated with
+  projects:
+  # - cardano-api
+  # - cardano-api-gen
+  # - cardano-rpc
+  # - cardano-wasm
 ```
-
-Available packages: `cardano-api`, `cardano-api-gen`, `cardano-rpc`, `cardano-wasm`
-
-Available kinds (comma-separated, multiple allowed):
-
-| Kind | Appears in changelog | When to use |
-|------|---------------------|-------------|
-| `breaking` | yes | Removed or changed exported API in a backwards-incompatible way |
-| `feature` | yes | New exported function, type, or behaviour |
-| `compatible` | yes | Changed API in a backwards-compatible way |
-| `bugfix` | yes | Fixed incorrect behaviour |
-| `optimisation` | yes | Measurable performance improvement with no API change |
-| `refactoring` | no | Internal code quality improvements |
-| `test` | no | New or modified tests |
-| `maintenance` | no | CI, tooling, dependency updates |
-| `release` | no | Release preparation |
-| `documentation` | no | Documentation or haddock changes |
 
 # Context
 
