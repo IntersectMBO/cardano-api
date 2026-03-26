@@ -10,8 +10,8 @@ on:
       - master
   # GH caches are removed when not accessed within 7 days - this schedule runs the job every 6 days making
   # sure that we always have some caches on master
-#  schedule:
-#    - cron: '0 0 */6 * *'
+  schedule:
+    - cron: '0 0 */6 * *'
 
 jobs:
   build:
@@ -30,7 +30,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2025-05-29"
+      CABAL_CACHE_VERSION: "2026-05-29"
 
     concurrency:
       group: >
@@ -90,59 +90,44 @@ jobs:
         STORE=$(wasm32-wasi-cabal path --store | tail -n 1)
         EOF
 
-# Cache is disabled because GHA default builders are not able to build all dependencies
-# because they lack RAM, so having the cache expire would break the CI check.
-# For this reason, we are providing a build of the dependencies instead in
-# the "Restore cached deps" step, and we make the check not required.
-# When we are able to make this CI check self-sufficient, we should reenable the
-# caching and remove the manual restoring of cached deps.
-
     # From the dependency list we restore the cached dependencies.
     # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
     # until the `index-state` values in the `cabal.project` file changes.
-#    - name: Restore cached dependencies
-#      uses: actions/cache/restore@v4
-#      id: cache
-#      with:
-#        path: |
-#          ${{ env.STORE }}
-#          dist-newstyle
-#        key:
-#          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ hashFiles('cardano-wasm/dependencies.txt') }}
-#        restore-keys: |
-#          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-
-
-    - name: Restore cached deps
-      run: |
-        wget "https://agrius.feralhosting.com/palas/wasm-cache/d1a007cb07f43d2418e4d177c7e7dffc25b30cda49c50e669a1672ffadf42fe1.tar.xz"
-        tar -xf d1a007cb07f43d2418e4d177c7e7dffc25b30cda49c50e669a1672ffadf42fe1.tar.xz
-        rm d1a007cb07f43d2418e4d177c7e7dffc25b30cda49c50e669a1672ffadf42fe1.tar.xz
-        rm -fr ~/.ghc-wasm/.cabal/store/
-        mv store ~/.ghc-wasm/.cabal/
+    - name: Restore cached dependencies
+      uses: actions/cache/restore@v4
+      id: cache
+      with:
+        path: |
+          ${{ env.STORE }}
+          dist-newstyle
+        key:
+          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ hashFiles('cardano-wasm/dependencies.txt') }}
+        restore-keys: |
+          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-
 
     # Now we install the dependencies. If the cache was found and restored in the previous step,
     # this should be a no-op, but if the cache key was not found we need to build stuff so we can
     # cache it for the next step.
     - name: Install dependencies
       run: |
-        wasm32-wasi-cabal build cardano-wasm --only-dependencies --no-semaphore -j1 --ghc-options="-j1"
+        wasm32-wasi-cabal build cardano-wasm --only-dependencies
 
     # Always store the cabal cache.
-#    - name: Cache Cabal store
-#      uses: actions/cache/save@v4
-#      if: always()
-#      with:
-#        path: |
-#          ${{ env.STORE }}
-#          dist-newstyle
-#        key:
-#          ${{ steps.cache.outputs.cache-primary-key }}
+    - name: Cache Cabal store
+      uses: actions/cache/save@v4
+      if: always()
+      with:
+        path: |
+          ${{ env.STORE }}
+          dist-newstyle
+        key:
+          ${{ steps.cache.outputs.cache-primary-key }}
 
     # Now we build.
     - name: Build all
       run: |
-        wasm32-wasi-cabal build cardano-wasm --no-semaphore -j1 --ghc-options="-j1"
-        wasm32-wasi-cabal build cardano-wasi --no-semaphore -j1 --ghc-options="-j1"
+        wasm32-wasi-cabal build cardano-wasm
+        wasm32-wasi-cabal build cardano-wasi
         wasm-opt -O4 $(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasi | tail -n1) -o cardano-wasm/cardano-wasi.wasm
 
     - name: Prepare example
