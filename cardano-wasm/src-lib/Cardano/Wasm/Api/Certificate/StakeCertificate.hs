@@ -37,6 +37,7 @@ import Control.Monad.Catch (MonadThrow)
 import Data.ByteString.Base16 qualified as Base16
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
+import Numeric.Natural (Natural)
 
 -- * Type aliases for clarity
 
@@ -47,7 +48,7 @@ type StakeKeyHashBase16 = String
 type PoolIdBase16 = String
 
 -- | Deposit amount in lovelace.
-type DepositLovelace = Integer
+type DepositLovelace = Natural
 
 -- | Certificate serialized to CBOR as a base16-encoded string.
 type CertificateCBORBase16 = String
@@ -106,7 +107,7 @@ makeStakeAddressRegistrationCertificateWrapper era skHash deposit =
     let cert :: Certificate (Exp.LedgerEra era) =
           Exp.makeStakeAddressRegistrationCertificate
             (StakeCredentialByKey skHash)
-            (Coin deposit)
+            (Coin $ toInteger deposit)
     return $ serialiseCertificateToCBOR era cert
 
 -- | Make a stake address unregistration certificate in the current era.
@@ -131,7 +132,7 @@ makeStakeAddressUnregistrationCertificateWrapper era skHash deposit =
     let cert :: Certificate (Exp.LedgerEra era) =
           Exp.makeStakeAddressUnregistrationCertificate
             (StakeCredentialByKey skHash)
-            (Coin deposit)
+            (Coin $ toInteger deposit)
     return $ serialiseCertificateToCBOR era cert
 
 serialiseCertificateToCBOR

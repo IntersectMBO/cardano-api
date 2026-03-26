@@ -38,6 +38,7 @@ library cardano-wasi-lib
     Cardano.Wasm.Api.TypeScriptDefs
     Cardano.Wasm.Api.Wallet
     Cardano.Wasm.ExceptionHandling
+    Cardano.Wasm.NumberConversion
 
   other-modules:
     Cardano.Wasm.Internal.Api.Era

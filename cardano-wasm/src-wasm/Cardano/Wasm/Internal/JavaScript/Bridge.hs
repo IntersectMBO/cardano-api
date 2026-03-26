@@ -31,6 +31,7 @@ import Cardano.Wasm.Internal.JavaScript.GRPC
   , js_submitTx
   )
 import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient, JSUtxos)
+import Cardano.Wasm.NumberConversion (integerToNatural)
 
 import Control.Exception (evaluate)
 import Control.Monad
@@ -446,7 +447,7 @@ makeStakeAddressRegistrationCertificate jsStakeKeyHash jsDeposit =
     =<< join
       ( Wasm.makeStakeAddressRegistrationCertificateImpl
           <$> fromJSVal jsStakeKeyHash
-          <*> (fromInteger <$> fromJSBigInt jsDeposit)
+          <*> (integerToNatural =<< fromJSBigInt jsDeposit)
       )
 
 -- | Make a stake address registration certificate in the upcoming era.
@@ -456,7 +457,7 @@ makeStakeAddressRegistrationCertificateUpcomingEra jsStakeKeyHash jsDeposit =
     =<< join
       ( Wasm.makeStakeAddressRegistrationCertificateUpcomingEraImpl
           <$> fromJSVal jsStakeKeyHash
-          <*> (fromInteger <$> fromJSBigInt jsDeposit)
+          <*> (integerToNatural =<< fromJSBigInt jsDeposit)
       )
 
 -- | Make a stake address unregistration certificate in the current era.
@@ -466,7 +467,7 @@ makeStakeAddressUnregistrationCertificate jsStakeKeyHash jsDeposit =
     =<< join
       ( Wasm.makeStakeAddressUnregistrationCertificateImpl
           <$> fromJSVal jsStakeKeyHash
-          <*> (fromInteger <$> fromJSBigInt jsDeposit)
+          <*> (integerToNatural =<< fromJSBigInt jsDeposit)
       )
 
 -- | Make a stake address unregistration certificate in the upcoming era.
@@ -476,7 +477,7 @@ makeStakeAddressUnregistrationCertificateUpcomingEra jsStakeKeyHash jsDeposit =
     =<< join
       ( Wasm.makeStakeAddressUnregistrationCertificateUpcomingEraImpl
           <$> fromJSVal jsStakeKeyHash
-          <*> (fromInteger <$> fromJSBigInt jsDeposit)
+          <*> (integerToNatural =<< fromJSBigInt jsDeposit)
       )
 
 -- | Set the transaction fee for an unsigned transaction.

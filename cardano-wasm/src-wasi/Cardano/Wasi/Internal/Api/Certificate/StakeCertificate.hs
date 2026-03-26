@@ -12,6 +12,7 @@ where
 
 import Cardano.Wasi.Internal.Conversion (cstrToInt)
 import Cardano.Wasm.Api.Certificate.StakeCertificate qualified as Wasm
+import Cardano.Wasm.NumberConversion (integerToNatural)
 
 import Control.Monad (join)
 
@@ -67,7 +68,7 @@ makeStakeAddressRegistrationCertificate stakeKeyHashCStr depositCStr =
     =<< join
       ( Wasm.makeStakeAddressRegistrationCertificateImpl
           <$> peekCString stakeKeyHashCStr
-          <*> (toInteger <$> cstrToInt "deposit" depositCStr)
+          <*> (integerToNatural =<< cstrToInt "deposit" depositCStr)
       )
 
 -- | Make a stake address registration certificate in the upcoming era.
@@ -77,7 +78,7 @@ makeStakeAddressRegistrationCertificateUpcomingEra stakeKeyHashCStr depositCStr 
     =<< join
       ( Wasm.makeStakeAddressRegistrationCertificateUpcomingEraImpl
           <$> peekCString stakeKeyHashCStr
-          <*> (toInteger <$> cstrToInt "deposit" depositCStr)
+          <*> (integerToNatural =<< cstrToInt "deposit" depositCStr)
       )
 
 -- | Make a stake address unregistration certificate in the current era.
@@ -87,7 +88,7 @@ makeStakeAddressUnregistrationCertificate stakeKeyHashCStr depositCStr =
     =<< join
       ( Wasm.makeStakeAddressUnregistrationCertificateImpl
           <$> peekCString stakeKeyHashCStr
-          <*> (toInteger <$> cstrToInt "deposit" depositCStr)
+          <*> (integerToNatural =<< cstrToInt "deposit" depositCStr)
       )
 
 -- | Make a stake address unregistration certificate in the upcoming era.
@@ -97,5 +98,5 @@ makeStakeAddressUnregistrationCertificateUpcomingEra stakeKeyHashCStr depositCSt
     =<< join
       ( Wasm.makeStakeAddressUnregistrationCertificateUpcomingEraImpl
           <$> peekCString stakeKeyHashCStr
-          <*> (toInteger <$> cstrToInt "deposit" depositCStr)
+          <*> (integerToNatural =<< cstrToInt "deposit" depositCStr)
       )
