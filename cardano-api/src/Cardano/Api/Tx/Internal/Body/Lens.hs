@@ -4,8 +4,6 @@
 
 {- HLINT ignore "Eta reduce" -}
 
--- TODO: Deprecate all the lenses that use eons. Explore parameterizing them on `Era era` instead.
-
 module Cardano.Api.Tx.Internal.Body.Lens
   ( -- * Types
     LedgerTxBody (..)
@@ -69,6 +67,86 @@ import Data.OSet.Strict qualified as L
 import Data.Sequence.Strict qualified as L
 import Data.Set (Set)
 import Lens.Micro
+
+{-# DEPRECATED
+  invalidBeforeTxBodyL
+  "Use 'txBodyL . L.vldtTxBodyL . L.invalidBeforeL' with appropriate era constraints instead"
+  #-}
+
+{-# DEPRECATED
+  invalidHereAfterTxBodyL
+  "Use 'txBodyL . L.vldtTxBodyL . L.invalidHereAfterL' with appropriate era constraints instead. For Shelley era, use 'L.ttlTxBodyL' directly."
+  #-}
+
+{-# DEPRECATED ttlAsInvalidHereAfterTxBodyL "Use 'txBodyL . L.ttlTxBodyL' with ShelleyEraOnly constraints instead" #-}
+
+{-# DEPRECATED updateTxBodyL "Use 'txBodyL . L.updateTxBodyL' with ShelleyToBabbageEra constraints instead" #-}
+
+{-# DEPRECATED mintTxBodyL "Use 'txBodyL . L.mintTxBodyL' with MaryEraOnwards constraints instead" #-}
+
+{-# DEPRECATED
+  scriptIntegrityHashTxBodyL
+  "Use 'txBodyL . L.scriptIntegrityHashTxBodyL' with AlonzoEraOnwards constraints instead"
+  #-}
+
+{-# DEPRECATED
+  collateralInputsTxBodyL
+  "Use 'txBodyL . L.collateralInputsTxBodyL' with AlonzoEraOnwards constraints instead"
+  #-}
+
+{-# DEPRECATED
+  reqSignerHashesTxBodyL
+  "Use 'txBodyL . L.reqSignerHashesTxBodyL' with AlonzoEraOnwards constraints instead"
+  #-}
+
+{-# DEPRECATED
+  referenceInputsTxBodyL
+  "Use 'txBodyL . L.referenceInputsTxBodyL' with BabbageEraOnwards constraints instead"
+  #-}
+
+{-# DEPRECATED
+  collateralReturnTxBodyL
+  "Use 'txBodyL . L.collateralReturnTxBodyL' with BabbageEraOnwards constraints instead"
+  #-}
+
+{-# DEPRECATED
+  totalCollateralTxBodyL
+  "Use 'txBodyL . L.totalCollateralTxBodyL' with BabbageEraOnwards constraints instead"
+  #-}
+
+{-# DEPRECATED certsTxBodyL "Use 'txBodyL . L.certsTxBodyL' with ShelleyBasedEra constraints instead" #-}
+
+{-# DEPRECATED
+  votingProceduresTxBodyL
+  "Use 'txBodyL . L.votingProceduresTxBodyL' with ConwayEraOnwards constraints instead"
+  #-}
+
+{-# DEPRECATED
+  proposalProceduresTxBodyL
+  "Use 'txBodyL . L.proposalProceduresTxBodyL' with ConwayEraOnwards constraints instead"
+  #-}
+
+{-# DEPRECATED
+  currentTreasuryValueTxBodyL
+  "Use 'txBodyL . L.currentTreasuryValueTxBodyL' with ConwayEraOnwards constraints instead"
+  #-}
+
+{-# DEPRECATED
+  treasuryDonationTxBodyL
+  "Use 'txBodyL . L.treasuryDonationTxBodyL' with ConwayEraOnwards constraints instead"
+  #-}
+
+{-# DEPRECATED adaAssetL "For MaryEraOnwards (Conway, Dijkstra), use a direct lens over MaryValue instead" #-}
+
+{-# DEPRECATED adaAssetShelleyToAllegraEraL "No longer needed. Pre-Mary eras are not supported by the new API." #-}
+
+{-# DEPRECATED adaAssetMaryEraOnwardsL "Use a direct lens over MaryValue instead" #-}
+
+{-# DEPRECATED multiAssetL "Use a direct lens over MaryValue instead" #-}
+
+{-# DEPRECATED valueTxOutL "Use 'L.valueTxOutL' with ShelleyBasedEra constraints instead" #-}
+
+{-# DEPRECATED valueTxOutAdaAssetL "Use 'L.valueTxOutL' composed with a direct MaryValue lens instead" #-}
 
 newtype LedgerTxBody era = LedgerTxBody
   { unTxBody :: L.TxBody L.TopTx (ShelleyLedgerEra era)

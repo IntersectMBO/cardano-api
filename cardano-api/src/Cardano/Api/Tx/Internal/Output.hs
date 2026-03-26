@@ -64,7 +64,9 @@ import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra
 import Cardano.Api.Error (Error (..), displayError)
 import Cardano.Api.HasTypeProxy qualified as HTP
 import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
@@ -87,6 +89,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data qualified as Plutus
 
 import Data.Aeson (object, withObject, (.:), (.:?), (.=))
@@ -858,7 +861,7 @@ fromShelleyTxOut
   -> Core.TxOut (ShelleyLedgerEra era)
   -> TxOut ctx era
 fromShelleyTxOut sbe ledgerTxOut = shelleyBasedEraConstraints sbe $ do
-  let txOutValue = TxOutValueShelleyBased sbe $ ledgerTxOut ^. A.valueTxOutL sbe
+  let txOutValue = TxOutValueShelleyBased sbe $ ledgerTxOut ^. L.valueTxOutL
   let addressInEra = fromShelleyAddr sbe $ ledgerTxOut ^. L.addrTxOutL
 
   case sbe of
@@ -1004,7 +1007,11 @@ txOutValueToLovelace :: TxOutValue era -> L.Coin
 txOutValueToLovelace tv =
   case tv of
     TxOutValueByron l -> l
-    TxOutValueShelleyBased sbe v -> v ^. A.adaAssetL sbe
+    TxOutValueShelleyBased sbe v ->
+      caseShelleyToAllegraOrMaryEraOnwards
+        (\w -> shelleyToAllegraEraConstraints w v)
+        (\w -> maryEraOnwardsConstraints w $ let MaryValue c _ = v in c)
+        sbe
 
 txOutValueToValue :: TxOutValue era -> Value
 txOutValueToValue tv =

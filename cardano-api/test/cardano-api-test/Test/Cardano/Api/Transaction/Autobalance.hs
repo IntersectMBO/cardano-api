@@ -482,7 +482,7 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
       era = convert beo
   feeCoin@(L.Coin fee) <- forAll genLovelace
   totalCollateral <- forAll $ genLedgerValueForTxOut sbe
-  let totalCollateralAda = totalCollateral ^. Api.adaAssetL sbe
+  let totalCollateralAda = let L.MaryValue c _ = totalCollateral in c
   pparams <-
     H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
   requiredCollateralPct <- H.noteShow . fromIntegral $ pparams ^. L.ppCollateralPercentageL

@@ -285,7 +285,7 @@ estimateBalancedTxBody
 
     let partialChange = toLedgerValue w $ calculatePartialChangeValue sbe availableUTxOValue txbodycontent1
         maxLovelaceChange = L.Coin (2 ^ (64 :: Integer)) - 1
-        changeWithMaxLovelace = partialChange & A.adaAssetL sbe .~ maxLovelaceChange
+        changeWithMaxLovelace = setAdaCoin w partialChange maxLovelaceChange
         changeTxOut =
           forShelleyBasedEraInEon
             sbe
@@ -1308,7 +1308,7 @@ calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTo
       -- We must first figure out how much lovelace we have committed
       -- as collateral and we must determine if we have enough lovelace at our
       -- collateral tx inputs to cover the tx
-      totalCollateralLovelace = totalAvailableCollateral ^. A.adaAssetL sbe
+      totalCollateralLovelace = let L.MaryValue c _ = totalAvailableCollateral in c
       requiredCollateral@(L.Coin reqAmt) = fromIntegral colPerc * fee
       totalCollateral =
         TxTotalCollateral w . L.rationalToCoinViaCeiling $
@@ -1627,3 +1627,13 @@ calculateMinimumUTxO sbe pp txout =
   shelleyBasedEraConstraints sbe $
     let txOutWithMinCoin = L.setMinCoinTxOut pp (toShelleyTxOutAny sbe txout)
      in txOutWithMinCoin ^. L.coinTxOutL
+
+-- | Set the ada (coin) component of a ledger value for Mary-era-onwards eras.
+-- All Mary+ eras use MaryValue, so this is a simple pattern match.
+setAdaCoin
+  :: MaryEraOnwards era -> L.Value (ShelleyLedgerEra era) -> L.Coin -> L.Value (ShelleyLedgerEra era)
+setAdaCoin MaryEraOnwardsMary (L.MaryValue _ ma) c = L.MaryValue c ma
+setAdaCoin MaryEraOnwardsAlonzo (L.MaryValue _ ma) c = L.MaryValue c ma
+setAdaCoin MaryEraOnwardsBabbage (L.MaryValue _ ma) c = L.MaryValue c ma
+setAdaCoin MaryEraOnwardsConway (L.MaryValue _ ma) c = L.MaryValue c ma
+setAdaCoin MaryEraOnwardsDijkstra (L.MaryValue _ ma) c = L.MaryValue c ma

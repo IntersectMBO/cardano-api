@@ -73,13 +73,13 @@ where
 import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Parser.Text (($>), (<?>), (<|>))
 import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Plutus.Internal.Script
 import Cardano.Api.Serialise.Raw
 import Cardano.Api.Serialise.SerialiseUsing
-import Cardano.Api.Tx.Internal.Body.Lens qualified as A
 
 import Cardano.Chain.Common qualified as Byron
 import Cardano.Ledger.Allegra.Core qualified as L
@@ -109,7 +109,7 @@ import Data.MonoTraversable
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Exts (IsList (..))
-import Lens.Micro ((%~))
+import Lens.Micro (Lens', lens, (%~))
 
 toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
 toByronLovelace (L.Coin x) =
@@ -297,9 +297,12 @@ negateLedgerValue
   :: ShelleyBasedEra era -> L.Value (ShelleyLedgerEra era) -> L.Value (ShelleyLedgerEra era)
 negateLedgerValue sbe v =
   caseShelleyToAllegraOrMaryEraOnwards
-    (\_ -> v & A.adaAssetL sbe %~ L.Coin . negate . L.unCoin)
-    (\w -> v & A.multiAssetL w %~ invert)
+    (\w -> shelleyToAllegraEraConstraints w $ L.Coin . negate . L.unCoin $ v)
+    (\w -> maryEraOnwardsConstraints w $ v & maryMultiAssetL %~ invert)
     sbe
+ where
+  maryMultiAssetL :: Lens' MaryValue L.MultiAsset
+  maryMultiAssetL = lens (\(MaryValue _ ma) -> ma) (\(MaryValue c _) ma -> MaryValue c ma)
 
 filterValue :: (AssetId -> Bool) -> Value -> Value
 filterValue p (Value m) = Value (Map.filterWithKey (\k _v -> p k) m)
