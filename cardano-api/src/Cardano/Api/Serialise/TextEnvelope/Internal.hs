@@ -32,6 +32,7 @@ module Cardano.Api.Serialise.TextEnvelope.Internal
     -- * Reading one of several key types
   , FromSomeType (..)
   , deserialiseFromTextEnvelopeAnyOf
+  , decodeTextEnvelopeJSON
   , deserialiseFromTextEnvelopeJSON
   , deserialiseFromTextEnvelopeJSONAnyOf
   , readFileTextEnvelopeAnyOf
@@ -252,20 +253,32 @@ deserialiseFromTextEnvelopeAnyOf types te =
 
   matching (FromSomeType ttoken _f) = textEnvelopeType ttoken `legacyComparison` actualType
 
+-- | Decode a JSON-encoded 'TextEnvelope' from a strict 'ByteString' (UTF-8).
+-- Returns 'TextEnvelopeAesonDecodeError' if the JSON parsing fails.
+decodeTextEnvelopeJSON :: ByteString -> Either TextEnvelopeError TextEnvelope
+decodeTextEnvelopeJSON bs =
+  first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' bs
+
+-- | Deserialise a value from a JSON-encoded text envelope 'ByteString' (UTF-8).
+-- This performs no file I\/O. Returns 'TextEnvelopeAesonDecodeError' for JSON
+-- parse failures, or downstream errors from 'deserialiseFromTextEnvelope' for
+-- type mismatches and CBOR decoding failures.
 deserialiseFromTextEnvelopeJSON
   :: HasTextEnvelope a
   => ByteString -> Either TextEnvelopeError a
-deserialiseFromTextEnvelopeJSON bs = do
-  te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' bs
-  deserialiseFromTextEnvelope te
+deserialiseFromTextEnvelopeJSON bs =
+  decodeTextEnvelopeJSON bs >>= deserialiseFromTextEnvelope
 
+-- | Like 'deserialiseFromTextEnvelopeJSON' but accepts multiple target types.
+-- This performs no file I\/O. Returns 'TextEnvelopeAesonDecodeError' for JSON
+-- parse failures, or downstream errors from 'deserialiseFromTextEnvelopeAnyOf'
+-- for type mismatches and CBOR decoding failures.
 deserialiseFromTextEnvelopeJSONAnyOf
   :: [FromSomeType HasTextEnvelope b]
   -> ByteString
   -> Either TextEnvelopeError b
-deserialiseFromTextEnvelopeJSONAnyOf types bs = do
-  te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' bs
-  deserialiseFromTextEnvelopeAnyOf types te
+deserialiseFromTextEnvelopeJSONAnyOf types bs =
+  decodeTextEnvelopeJSON bs >>= deserialiseFromTextEnvelopeAnyOf types
 
 writeFileTextEnvelope
   :: HasTextEnvelope a

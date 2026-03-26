@@ -20,6 +20,7 @@ module Cardano.Api.Serialise.TextEnvelope
     -- ** Reading one of several key types
   , FromSomeType (..)
   , deserialiseFromTextEnvelopeAnyOf
+  , decodeTextEnvelopeJSON
   , deserialiseFromTextEnvelopeJSON
   , deserialiseFromTextEnvelopeJSONAnyOf
   , readFileTextEnvelopeAnyOf
