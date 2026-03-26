@@ -20,13 +20,13 @@ declare interface CardanoApi {
      */
     tx: {
         /**
-         * Create a new unsigned transaction in the current era (currently Conway).
+         * Create a new unsigned transaction in the current mainnet era (currently Conway).
          * @returns A promise that resolves to a new `UnsignedTx` object.
          */
         newTx(): Promise<UnsignedTx>;
 
         /**
-         * Create a new unsigned transaction in the current upcoming era (currently Dijkstra).
+         * Create a new unsigned transaction in the upcoming mainnet era (currently Dijkstra).
          * @returns A promise that resolves to a new `UnsignedTx` object.
          */
         newUpcomingEraTx(): Promise<UnsignedTx>;
@@ -50,11 +50,11 @@ declare interface CardanoApi {
      */
     certificate: {
         /**
-         * Methods for creating certificates in the current era (currently Conway).
+         * Methods for creating certificates in the current mainnet era (currently Conway).
          */
-        currentEra: {
+        mainnetEra: {
             /**
-             * Make a certificate that delegates a stake address to a stake pool in the current era (currently Conway).
+             * Make a certificate that delegates a stake address to a stake pool in the current mainnet era (currently Conway).
              * @param stakeKeyHash The stake key hash in base16 format.
              * @param poolId The pool ID in base16 format.
              * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
@@ -62,7 +62,7 @@ declare interface CardanoApi {
             makeStakeAddressStakeDelegationCertificate(stakeKeyHash: string, poolId: string): Promise<string>;
 
             /**
-             * Make a stake address registration certificate in the current era (currently Conway).
+             * Make a stake address registration certificate in the current mainnet era (currently Conway).
              * @param stakeKeyHash The stake key hash in base16 format.
              * @param deposit The deposit amount in lovelaces.
              * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
@@ -70,7 +70,7 @@ declare interface CardanoApi {
             makeStakeAddressRegistrationCertificate(stakeKeyHash: string, deposit: bigint): Promise<string>;
 
             /**
-             * Make a stake address unregistration certificate in the current era (currently Conway).
+             * Make a stake address unregistration certificate in the current mainnet era (currently Conway).
              * @param stakeKeyHash The stake key hash in base16 format.
              * @param deposit The deposit amount in lovelaces.
              * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.

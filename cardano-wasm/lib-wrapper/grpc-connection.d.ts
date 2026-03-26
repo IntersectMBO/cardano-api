@@ -11,7 +11,7 @@ declare interface GrpcConnection {
 
     /**
      * Get the era from the Cardano Node using a GRPC-web client.
-     * @returns A promise that resolves to the current era number.
+     * @returns A promise that resolves to the current mainnet era number.
      */
     getEra(): Promise<number>;
 

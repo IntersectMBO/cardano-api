@@ -407,7 +407,7 @@ apiInfo =
                     , methodDoc = "Get the era from the Cardano Node using a GRPC-web client."
                     , methodParams = []
                     , methodReturnType = OtherType TSNumber
-                    , methodReturnDoc = "A promise that resolves to the current era number."
+                    , methodReturnDoc = "A promise that resolves to the current mainnet era number."
                     }
               , MethodInfoEntry $
                   MethodInfo
@@ -469,7 +469,7 @@ apiInfo =
                                   { methodName = "newTx"
                                   , methodSimpleName = Nothing
                                   , methodDoc =
-                                      "Create a new unsigned transaction in the current era "
+                                      "Create a new unsigned transaction in the current mainnet era "
                                         ++ getEraCommentFor (Just currentEra)
                                         ++ "."
                                   , methodParams = []
@@ -481,7 +481,7 @@ apiInfo =
                                   { methodName = "newUpcomingEraTx"
                                   , methodSimpleName = Nothing
                                   , methodDoc =
-                                      "Create a new unsigned transaction in the current upcoming era "
+                                      "Create a new unsigned transaction in the upcoming mainnet era "
                                         ++ getEraCommentFor upcomingEra
                                         ++ "."
                                   , methodParams = []
@@ -515,9 +515,11 @@ apiInfo =
                         , groupMethods =
                             [ MethodGroupEntry $
                                 MethodGroup
-                                  { groupName = "currentEra"
+                                  { groupName = "mainnetEra"
                                   , groupDoc =
-                                      [ "Methods for creating certificates in the current era " ++ getEraCommentFor (Just currentEra) ++ "."
+                                      [ "Methods for creating certificates in the current mainnet era "
+                                          ++ getEraCommentFor (Just currentEra)
+                                          ++ "."
                                       ]
                                   , groupMethods =
                                       [ MethodInfoEntry $
@@ -525,7 +527,7 @@ apiInfo =
                                             { methodName = "makeStakeAddressStakeDelegationCertificate"
                                             , methodSimpleName = Nothing
                                             , methodDoc =
-                                                "Make a certificate that delegates a stake address to a stake pool in the current era "
+                                                "Make a certificate that delegates a stake address to a stake pool in the current mainnet era "
                                                   ++ getEraCommentFor (Just currentEra)
                                                   ++ "."
                                             , methodParams =
@@ -540,7 +542,7 @@ apiInfo =
                                             { methodName = "makeStakeAddressRegistrationCertificate"
                                             , methodSimpleName = Nothing
                                             , methodDoc =
-                                                "Make a stake address registration certificate in the current era "
+                                                "Make a stake address registration certificate in the current mainnet era "
                                                   ++ getEraCommentFor (Just currentEra)
                                                   ++ "."
                                             , methodParams =
@@ -555,7 +557,7 @@ apiInfo =
                                             { methodName = "makeStakeAddressUnregistrationCertificate"
                                             , methodSimpleName = Nothing
                                             , methodDoc =
-                                                "Make a stake address unregistration certificate in the current era "
+                                                "Make a stake address unregistration certificate in the current mainnet era "
                                                   ++ getEraCommentFor (Just currentEra)
                                                   ++ "."
                                             , methodParams =
