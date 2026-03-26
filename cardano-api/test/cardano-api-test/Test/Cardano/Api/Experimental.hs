@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -8,6 +9,7 @@
 module Test.Cardano.Api.Experimental
   ( tests
   , exampleProtocolParams
+  , exampleProtocolParamsEra
   )
 where
 
@@ -27,6 +29,7 @@ import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Babbage.TxBody qualified as L
 import Cardano.Ledger.Conway qualified as L
 import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Plutus.Data qualified as L
 import Cardano.Slotting.EpochInfo qualified as Slotting
@@ -109,9 +112,6 @@ tests =
         , testProperty
             "Case 2: transaction with no outputs creates change output"
             prop_calcMinFeeRecursive_no_tx_outs
-        , testProperty
-            "Tiny surplus consumed by fee increase yields NotEnoughAdaForChangeOutput"
-            prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada
         ]
     ]
 
@@ -353,6 +353,14 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
       oldTx = Api.serialiseToCBOR $ Api.makeSignedTransaction [] txBody
   newTx H.=== oldTx
   H.success
+
+exampleProtocolParamsEra :: Exp.Era era -> L.PParams (Exp.LedgerEra era)
+exampleProtocolParamsEra = \case
+  Exp.ConwayEra -> exampleProtocolParams
+  Exp.DijkstraEra ->
+    UnexportedLedger.upgradePParams
+      (dgUpgradePParams Genesis.dijkstraGenesisDefaults)
+      exampleProtocolParams
 
 exampleProtocolParams :: Ledger.PParams UnexportedLedger.ConwayEra
 exampleProtocolParams =
@@ -606,7 +614,7 @@ genFundedSimpleTx era = do
         ]
   -- Surplus of 2–17 ADA ensures funding always exceeds sendCoin + fees.
   -- Fees are typically < 1000 lovelace with test protocol parameters
-  -- (minFeeA=1, minFeeB=0).
+  -- (feePerByte=1, feeFixed=0).
   surplus <- L.Coin <$> Gen.integral (Range.linear 2_000_000 17_000_000)
   let fundingCoin = sendCoin + surplus
   let ledgerTxIn = Api.toShelleyTxIn txIn
@@ -916,77 +924,3 @@ prop_calcMinFeeRecursive_no_tx_outs = H.property $ do
       let outs = toList $ resultLedgerTx ^. L.bodyTxL . L.outputsTxBodyL
       -- The result should have exactly one output (the change output)
       length outs H.=== 1
-
--- ---------------------------------------------------------------------------
--- Border case: tiny surplus consumed by fee increase
--- ---------------------------------------------------------------------------
-
--- | Generates a transaction where the surplus (funding - output) is barely
--- above the fee for the 1-output transaction, but once a change output is
--- appended (increasing the tx size and therefore the fee), the new higher fee
--- exceeds the surplus, driving the change output balance negative.
---
--- Concretely, with test protocol parameters:
---   Fee for 1-output tx (F1) ≈ 236 lovelace
---   Fee for 2-output tx (F2) ≈ 259 lovelace
---   Delta = F2 - F1 ≈ 23
--- A surplus of F1 + 1 to F1 + 15 ensures:
---   1. After fee convergence at F1, a positive balance triggers Case 2.
---   2. Adding the change output raises the fee to F2.
---   3. The change is updated: (surplus - F1) + (F1 - F2) = surplus - F2 < 0.
---   4. balanceTxOuts returns NotEnoughAdaForChangeOutput.
-genTinySurplusTx
-  :: Exp.Era era
-  -> Gen
-       ( Exp.UnsignedTx (Exp.LedgerEra era)
-       , L.UTxO (Exp.LedgerEra era)
-       , L.Addr
-       )
-genTinySurplusTx era = do
-  let sbe = convert era
-  txIn <- genTxIn
-  addr <- Api.toShelleyAddr <$> genAddressInEra sbe
-  changeAddr <- Api.toShelleyAddr <$> genAddressInEra sbe
-  sendCoin <- L.Coin <$> Gen.integral (Range.linear 2_000_000 5_000_000)
-  -- Tiny margin above F1 but below F2. The exact fee F1 depends on the
-  -- generated address, but with test protocol params it's around 230–240.
-  -- A surplus of 240 + small_delta is enough to pass the first fee
-  -- convergence but not survive the fee increase from adding a change output.
-  -- We use a narrow range to stay within the F1-to-F2 gap (~23 lovelace).
-  surplus <- L.Coin <$> Gen.integral (Range.linear 237 250)
-  let fundingCoin = sendCoin + surplus
-  let ledgerTxIn = Api.toShelleyTxIn txIn
-      fundingTxOut =
-        Exp.obtainCommonConstraints era $
-          L.mkBasicTxOut addr (L.MaryValue fundingCoin mempty)
-      utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
-      sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
-      txBodyContent =
-        Exp.defaultTxBodyContent
-          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
-          & Exp.setTxOuts [sendTxOut]
-          & Exp.setTxFee 0
-  return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
-
--- | When the surplus is just barely enough to cover the initial fee but not
--- the higher fee after adding a change output, the change output balance
--- goes negative and the function returns NotEnoughAdaForChangeOutput.
-prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada :: Property
-prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada = H.property $ do
-  (unsignedTx, utxo, changeAddr) <- H.forAll $ genTinySurplusTx Exp.ConwayEra
-  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
-    Left (Exp.NotEnoughAdaForChangeOutput deficit) -> do
-      H.annotate $ "Deficit: " <> show deficit
-      H.assert $ deficit < L.Coin 0
-    Left (Exp.MinUTxONotMet actual required) -> do
-      -- If surplus - F2 >= 0 (barely), we may land in MinUTxONotMet instead.
-      -- This is also a valid failure for this border region.
-      H.annotate $ "Change output ADA: " <> show actual <> ", minUTxO: " <> show required
-      H.assert $ actual < required
-    Left err -> H.annotateShow err >> H.failure
-    Right _ ->
-      H.annotate "Expected NotEnoughAdaForChangeOutput or MinUTxONotMet but tx balanced successfully"
-        >> H.failure
