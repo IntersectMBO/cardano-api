@@ -32,6 +32,8 @@ module Cardano.Api.Serialise.TextEnvelope.Internal
     -- * Reading one of several key types
   , FromSomeType (..)
   , deserialiseFromTextEnvelopeAnyOf
+  , deserialiseFromTextEnvelopeJSON
+  , deserialiseFromTextEnvelopeJSONAnyOf
   , readFileTextEnvelopeAnyOf
 
     -- * Data family instances
@@ -250,6 +252,21 @@ deserialiseFromTextEnvelopeAnyOf types te =
 
   matching (FromSomeType ttoken _f) = textEnvelopeType ttoken `legacyComparison` actualType
 
+deserialiseFromTextEnvelopeJSON
+  :: HasTextEnvelope a
+  => ByteString -> Either TextEnvelopeError a
+deserialiseFromTextEnvelopeJSON bs = do
+  te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' bs
+  deserialiseFromTextEnvelope te
+
+deserialiseFromTextEnvelopeJSONAnyOf
+  :: [FromSomeType HasTextEnvelope b]
+  -> ByteString
+  -> Either TextEnvelopeError b
+deserialiseFromTextEnvelopeJSONAnyOf types bs = do
+  te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' bs
+  deserialiseFromTextEnvelopeAnyOf types te
+
 writeFileTextEnvelope
   :: HasTextEnvelope a
   => File content Out
@@ -274,9 +291,9 @@ readFileTextEnvelope
 readFileTextEnvelope path =
   runExceptT $ do
     content <- fileIOExceptT (unFile path) readFileBlocking
-    firstExceptT (FileError (unFile path)) $ hoistEither $ do
-      te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
-      deserialiseFromTextEnvelope te
+    firstExceptT (FileError (unFile path)) $
+      hoistEither $
+        deserialiseFromTextEnvelopeJSON content
 
 readFileTextEnvelopeAnyOf
   :: [FromSomeType HasTextEnvelope b]
@@ -285,9 +302,9 @@ readFileTextEnvelopeAnyOf
 readFileTextEnvelopeAnyOf types path =
   runExceptT $ do
     content <- fileIOExceptT (unFile path) readFileBlocking
-    firstExceptT (FileError (unFile path)) $ hoistEither $ do
-      te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
-      deserialiseFromTextEnvelopeAnyOf types te
+    firstExceptT (FileError (unFile path)) $
+      hoistEither $
+        deserialiseFromTextEnvelopeJSONAnyOf types content
 
 readTextEnvelopeFromFile
   :: FilePath
