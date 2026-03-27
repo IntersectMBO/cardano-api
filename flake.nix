@@ -35,6 +35,8 @@
       flake = false;
     };
 
+    cardano-dev.url = "github:input-output-hk/cardano-dev";
+
     # wasm specific inputs
     wasm-nixpkgs.follows = "ghc-wasm-meta/nixpkgs";
     ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
@@ -209,6 +211,7 @@
             protobuf
             buf
             blst
+            inputs.cardano-dev.packages.${system}.herald
             (writeShellScriptBin "haskell-language-server-wrapper" ''exec haskell-language-server "$@"'')
           ];
           # disable Hoogle until someone request it

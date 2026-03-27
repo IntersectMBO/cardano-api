@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1134
+kind:
+  - bugfix
+description: |
+  gRPC: add tip timestamp to ChainPoint response

@@ -1,0 +1,8 @@
+project: cardano-api
+pr: 1182
+kind:
+  - feature
+  - breaking
+description: |
+  Bump ouroboros-consensus to ^>=3.0 and plutus to ^>=1.61.
+  The golden file changes come from upstream plutus changes to the TokenName Show instance.
