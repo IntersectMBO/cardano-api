@@ -164,7 +164,7 @@ queryLedgerPeerSnapshot
        IO
        ( Either
            UnsupportedNtcVersionError
-           (Either EraMismatch (Serialised (LedgerPeerSnapshot ledgerPeersKind)))
+           (Either EraMismatch (LedgerPeerSnapshot ledgerPeersKind))
        )
 queryLedgerPeerSnapshot eon = querySbe eon . QueryLedgerPeerSnapshot
 

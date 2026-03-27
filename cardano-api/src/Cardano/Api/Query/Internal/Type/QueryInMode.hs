@@ -322,7 +322,7 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)))
   QueryLedgerPeerSnapshot
     :: Diffusion.SingLedgerPeersKind ledgerPeersKind
-    -> QueryInShelleyBasedEra era (Serialised (Diffusion.LedgerPeerSnapshot ledgerPeersKind))
+    -> QueryInShelleyBasedEra era (Diffusion.LedgerPeerSnapshot ledgerPeersKind)
   QueryStakePoolDefaultVote
     :: Ledger.KeyHash Ledger.StakePool
     -> QueryInShelleyBasedEra era L.DefaultVote
@@ -711,7 +711,7 @@ toConsensusQueryShelleyBased sbe = \case
       sbe
   QueryLedgerPeerSnapshot peerKind ->
     Some
-      (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot peerKind)))
+      (consensusQueryInEraInMode era (Consensus.GetLedgerPeerSnapshot peerKind))
   QueryStakePoolDefaultVote govActs ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
@@ -1043,12 +1043,12 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         _ -> fromConsensusQueryResultMismatch
     QueryLedgerPeerSnapshot Diffusion.SingAllLedgerPeers ->
       case q' of
-        Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot Diffusion.SingAllLedgerPeers) ->
+        Consensus.GetLedgerPeerSnapshot Diffusion.SingAllLedgerPeers ->
           r'
         _ -> fromConsensusQueryResultMismatch
     QueryLedgerPeerSnapshot Diffusion.SingBigLedgerPeers ->
       case q' of
-        Consensus.GetCBOR (Consensus.GetLedgerPeerSnapshot Diffusion.SingBigLedgerPeers) ->
+        Consensus.GetLedgerPeerSnapshot Diffusion.SingBigLedgerPeers ->
           r'
         _ -> fromConsensusQueryResultMismatch
     QueryStakePoolDefaultVote{} ->
