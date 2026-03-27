@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to release (must match a project in .herald.yml)'
+        required: true
+        type: choice
+        options:
+          - cardano-api
+          - cardano-api-gen
+          - cardano-rpc
+          - cardano-wasm
+      version:
+        description: 'Explicit version (A.B.C.D). Leave empty for auto-bump.'
+        required: false
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v30
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
+            substituters = https://cache.iog.io/ https://cache.nixos.org/
+
+      - uses: input-output-hk/cardano-dev/herald/.github/actions/release@mgalazyn/release-tool
+        with:
+          package: ${{ inputs.package }}
+          version: ${{ inputs.version }}
+          herald-ref: github:input-output-hk/cardano-dev/mgalazyn/release-tool
