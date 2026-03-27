@@ -11,26 +11,26 @@ async function get_protocol_params() {
 let protocolParams = await get_protocol_params();
 
 const output = document.createElement("code");
-output.innerText = "";
+output.textContent = "";
 output.id = "test-output";
 document.body.appendChild(output);
 
 function log(out) {
     console.log(out);
     if (typeof (out) == "object") {
-        output.innerText += "> [object] {\n";
+        output.textContent += "> [object] {\n";
         for (let [key, val] of Object.entries(out)) {
             let text = val.toString();
             if (typeof (val) == "function") {
                 text = text.split("{")[0];
             }
-            output.innerText += "    " + key + ": " + text + "\n";
+            output.textContent += "    " + key + ": " + text + "\n";
         }
-        output.innerText += "  }\n";
+        output.textContent += "  }\n";
     } else if (typeof (out) == "bigint") {
-        output.innerText += "> " + out.toString() + "n\n";
+        output.textContent += "> " + out.toString() + "n\n";
     } else {
-        output.innerText += "> " + JSON.stringify(out) + "\n";
+        output.textContent += "> " + JSON.stringify(out) + "\n";
     }
 }
 

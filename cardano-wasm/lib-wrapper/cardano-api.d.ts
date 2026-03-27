@@ -20,16 +20,16 @@ declare interface CardanoApi {
      */
     tx: {
         /**
-         * Create a new unsigned transaction in the current era (currently Conway).
+         * Create a new unsigned transaction in the current mainnet era (currently Conway).
          * @returns A promise that resolves to a new `UnsignedTx` object.
          */
         newTx(): Promise<UnsignedTx>;
 
         /**
-         * Create a new unsigned transaction in the current experimental era (currently unavailable).
+         * Create a new unsigned transaction in the upcoming mainnet era (currently Dijkstra).
          * @returns A promise that resolves to a new `UnsignedTx` object.
          */
-        newExperimentalEraTx(): Promise<UnsignedTx>;
+        newUpcomingEraTx(): Promise<UnsignedTx>;
 
         /**
          * Create a new unsigned transaction in the Conway era.
@@ -44,6 +44,69 @@ declare interface CardanoApi {
      * @returns A promise that resolves to a new `GrpcConnection`.
      */
     newGrpcConnection(webGrpcUrl: string): Promise<GrpcConnection>;
+
+    /**
+     * Methods for creating certificates.
+     */
+    certificate: {
+        /**
+         * Methods for creating certificates in the current mainnet era (currently Conway).
+         */
+        mainnetEra: {
+            /**
+             * Make a certificate that delegates a stake address to a stake pool in the current mainnet era (currently Conway).
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param poolId The pool ID in base16 format.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressStakeDelegationCertificate(stakeKeyHash: string, poolId: string): Promise<string>;
+
+            /**
+             * Make a stake address registration certificate in the current mainnet era (currently Conway).
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param deposit The deposit amount in lovelaces.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressRegistrationCertificate(stakeKeyHash: string, deposit: bigint): Promise<string>;
+
+            /**
+             * Make a stake address unregistration certificate in the current mainnet era (currently Conway).
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param deposit The deposit amount in lovelaces.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressUnregistrationCertificate(stakeKeyHash: string, deposit: bigint): Promise<string>;
+        }
+
+        /**
+         * Methods for creating certificates in the current upcoming era (currently Dijkstra).
+         */
+        upcomingEra: {
+            /**
+             * Make a certificate that delegates a stake address to a stake pool in the current upcoming era (currently Dijkstra).
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param poolId The pool ID in base16 format.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressStakeDelegationCertificateUpcomingEra(stakeKeyHash: string, poolId: string): Promise<string>;
+
+            /**
+             * Make a stake address registration certificate in the current upcoming era (currently Dijkstra).
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param deposit The deposit amount in lovelaces.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressRegistrationCertificateUpcomingEra(stakeKeyHash: string, deposit: bigint): Promise<string>;
+
+            /**
+             * Make a stake address unregistration certificate in the current upcoming era (currently Dijkstra).
+             * @param stakeKeyHash The stake key hash in base16 format.
+             * @param deposit The deposit amount in lovelaces.
+             * @returns A promise that resolves to the CBOR-encoded certificate as a hex string.
+             */
+            makeStakeAddressUnregistrationCertificateUpcomingEra(stakeKeyHash: string, deposit: bigint): Promise<string>;
+        }
+    }
 
     /**
      * Methods for generating and restoring wallets.
