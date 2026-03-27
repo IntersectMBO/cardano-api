@@ -1,0 +1,6 @@
+description: Fixed some bug
+kind:
+- bugfix
+- compatible
+pr: 1235
+project: cardano-rpc
