@@ -12,6 +12,7 @@ module Cardano.Api.Pretty
   , renderBuildable
   , textShow
   , pshow
+  , pshow2
   , prettyException
   , hsep
   , vsep
@@ -88,6 +89,11 @@ white = annotate (color White)
 -- | Short hand for 'viaShow'.
 pshow :: Show a => a -> Doc ann
 pshow = viaShow
+
+
+-- | Short hand for 'viaShow'.
+pshow2 :: Show a => a -> Doc ann
+pshow2 = viaShow
 
 -- | Short hand for @'pretty' . 'displayException'@
 prettyException :: Exception a => a -> Doc ann
