@@ -22,6 +22,7 @@ import Test.Cardano.Api.IO qualified
 import Test.Cardano.Api.Json qualified
 import Test.Cardano.Api.KeysByron qualified
 import Test.Cardano.Api.Ledger qualified
+import Test.Cardano.Api.Leios qualified
 import Test.Cardano.Api.Metadata qualified
 import Test.Cardano.Api.Ord qualified
 import Test.Cardano.Api.RawBytes qualified
@@ -61,6 +62,7 @@ tests =
     , Test.Cardano.Api.Json.tests
     , Test.Cardano.Api.KeysByron.tests
     , Test.Cardano.Api.Ledger.tests
+    , Test.Cardano.Api.Leios.tests
     , Test.Cardano.Api.Metadata.tests
     , Test.Cardano.Api.Ord.tests
     , Test.Cardano.Api.RawBytes.tests

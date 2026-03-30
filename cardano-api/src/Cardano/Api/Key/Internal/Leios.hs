@@ -17,6 +17,11 @@ module Cardano.Api.Key.Internal.Leios
   , Hash (..)
   , VerificationKey (..)
   , SigningKey (..)
+
+    -- * Possession proof
+  , BlsPossessionProof
+  , blsPossessionProof
+  , createBlsPossessionProof
   )
 where
 
@@ -35,6 +40,7 @@ import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Ledger.Hashes (HASH)
 
+import Data.ByteString (ByteString)
 import Data.Either.Combinators (maybeToRight)
 import Data.String (IsString (..))
 
@@ -149,3 +155,80 @@ instance HasTextEnvelope (SigningKey BlsKey) where
 
   textEnvelopeDefaultDescr :: SigningKey BlsKey -> TextEnvelopeDescr
   textEnvelopeDefaultDescr _ = "BLS12-381 signing key"
+
+-- | BlsPossessionProof is used in the Leios protocol to prove ownership of a BLS signing key
+-- when registering a BLS verification key for a stake pool. This is required to prevent malicious
+-- actors from registering a BLS verification key for a stake pool without actually owning the
+-- corresponding signing key.
+newtype BlsPossessionProof = BlsPossessionProof (Crypto.PossessionProofDSIGN Crypto.BLS12381MinSigDSIGN)
+  deriving stock Eq
+  deriving newtype (ToCBOR, FromCBOR)
+  deriving anyclass SerialiseAsCBOR
+
+instance Show BlsPossessionProof where
+  show p = "blsPossessionProof " ++ show (serialiseToRawBytesHex p)
+
+instance Pretty BlsPossessionProof where
+  pretty p = "blsPossessionProof" <+> pretty (serialiseToRawBytesHexText p)
+
+instance SerialiseAsRawBytes BlsPossessionProof where
+  serialiseToRawBytes (BlsPossessionProof proof) =
+    Crypto.rawSerialisePossessionProofDSIGN proof
+
+  deserialiseFromRawBytes AsBlsPossessionProof bs =
+    maybeToRight (SerialiseAsRawBytesError "Unable to deserialise BlsPossessionProof") $
+      BlsPossessionProof <$> Crypto.rawDeserialisePossessionProofDSIGN bs
+
+-- | Construct a 'BlsPossessionProof' from a hex-encoded raw 'ByteString'.
+--
+-- This is a partial function that calls 'error' if the input is not valid.
+-- It is intended to be used with the output of 'show' or 'pretty' to
+-- reconstruct a 'BlsPossessionProof' value.
+blsPossessionProof :: ByteString -> BlsPossessionProof
+blsPossessionProof hexBs =
+  case deserialiseFromRawBytesHex hexBs of
+    Left e -> error $ "blsPossessionProof: " ++ show e
+    Right p -> p
+
+-- | Signing context including the Domain Separation Tag (DST) for the proofs-of-possession of
+-- BLS keys using the minimal-signature-size BLS12-381 variant.
+--
+-- A Domain Separation Tag is a unique tag (like a magic number) that we add to ensure that
+-- the signature is used only in the context that it was intended for.
+-- This is because BLS keys and signatures can be used for multiple purposes, and
+-- we don't want a proof of possession for one purpose to be interpreted as something different
+-- in a different context.
+minSigPoPContext :: Crypto.BLS12381SignContext
+minSigPoPContext = Crypto.BLS12381SignContext (Just minSigPoPDST) Nothing
+
+-- TODO: This is a provisional definition. Import @minSigPoPDST@ from
+-- @Cardano.Crypto.DSIGN.BLS12381@ (cardano-crypto-class) when
+-- IntersectMBO/cardano-base#635 is merged and the dependency is bumped.
+minSigPoPDST :: ByteString
+minSigPoPDST = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_"
+
+-- | Create a proof of possession for a BLS signing key.
+--
+-- This proof demonstrates that the holder of a BLS verification key knows the corresponding
+-- secret key, which is required before the key can safely participate in signature aggregation.
+-- Without this proof, an attacker could register a crafted verification key that cancels out
+-- honest participants' keys during aggregation (a rogue key attack).
+createBlsPossessionProof :: SigningKey BlsKey -> BlsPossessionProof
+createBlsPossessionProof (BlsSigningKey sk) =
+  BlsPossessionProof (Crypto.createPossessionProofDSIGN minSigPoPContext sk)
+
+instance HasTypeProxy BlsPossessionProof where
+  data AsType BlsPossessionProof = AsBlsPossessionProof
+  proxyToAsType _ = AsBlsPossessionProof
+
+instance HasTextEnvelope BlsPossessionProof where
+  textEnvelopeType :: AsType BlsPossessionProof -> TextEnvelopeType
+  textEnvelopeType _ =
+    "BlsPossessionProof_"
+      <> fromString (Crypto.algorithmNameDSIGN proxy)
+   where
+    proxy :: Proxy Crypto.BLS12381MinSigDSIGN
+    proxy = Proxy
+
+  textEnvelopeDefaultDescr :: BlsPossessionProof -> TextEnvelopeDescr
+  textEnvelopeDefaultDescr _ = "BLS12-381 possession proof"
