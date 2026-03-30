@@ -19,6 +19,7 @@ import Cardano.Api.Ledger qualified as L
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Mary.Value qualified as Mary
+import Cardano.Ledger.Tools qualified as L (calcMinFeeTx)
 
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
@@ -27,7 +28,7 @@ import Lens.Micro
 
 import Test.Gen.Cardano.Api.Typed (genAddressInEra, genStakeCredential, genTxIn)
 
-import Test.Cardano.Api.Experimental (exampleProtocolParams)
+import Test.Cardano.Api.Experimental (exampleProtocolParams, exampleProtocolParamsEra)
 
 import Hedgehog (Gen, Property)
 import Hedgehog qualified as H
@@ -127,7 +128,7 @@ genFundedSimpleTx era = do
         ]
   -- Surplus of 2–17 ADA ensures funding always exceeds sendCoin + fees.
   -- Fees are typically < 1000 lovelace with test protocol parameters
-  -- (minFeeA=1, minFeeB=0).
+  -- (feePerByte=1, feeFixed=0).
   surplus <- L.Coin <$> Gen.integral (Range.linear 2_000_000 17_000_000)
   let fundingCoin = sendCoin + surplus
   let ledgerTxIn = Api.toShelleyTxIn txIn
@@ -328,20 +329,22 @@ genNoOutputsTx era = do
           & Exp.setTxFee 0
   return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
 
--- | Generates a transaction where the surplus (funding - output) is barely
--- above the fee for the 1-output transaction, but once a change output is
--- appended (increasing the tx size and therefore the fee), the new higher fee
--- exceeds the surplus, driving the change output balance negative.
+-- | Generates a transaction designed to trigger 'NotEnoughAdaForChangeOutput'.
 --
--- Concretely, with test protocol parameters:
---   Fee for 1-output tx (F1) ≈ 236 lovelace
---   Fee for 2-output tx (F2) ≈ 259 lovelace
---   Delta = F2 - F1 ≈ 23
--- A surplus of F1 + 1 to F1 + 15 ensures:
---   1. After fee convergence at F1, a positive balance triggers Case 2.
---   2. Adding the change output raises the fee to F2.
---   3. The change is updated: (surplus - F1) + (F1 - F2) = surplus - F2 < 0.
---   4. balanceTxOuts returns NotEnoughAdaForChangeOutput.
+-- The generator:
+--
+--   1. Generates random tx parts (TxIn, addresses, send amount 2–5 ADA).
+--   2. Builds a 1-output tx with fee=0.
+--   3. Computes F1 via 'calcMinFeeTx' — the actual min fee for this specific
+--      tx. F1 varies per run because different random addresses have different
+--      serialized sizes.
+--   4. Picks a surplus in @[F1+4, F1+10]@ — enough for 'calcMinFeeRecursive'
+--      to converge the fee and attempt a change output, but not enough to
+--      survive the fee increase (~23 bytes) caused by that extra output.
+--   5. Builds the UTxO with @sendCoin + surplus@ as the funding amount.
+--
+-- The property test calls 'calcMinFeeRecursive' on the result and expects
+-- failure: the change output drives the balance negative.
 genTinySurplusTx
   :: Exp.Era era
   -> Gen
@@ -349,34 +352,42 @@ genTinySurplusTx
        , L.UTxO (Exp.LedgerEra era)
        , L.Addr
        )
-genTinySurplusTx era = do
+genTinySurplusTx era = Exp.obtainCommonConstraints era $ do
   let sbe = convert era
   txIn <- genTxIn
   addr <- Api.toShelleyAddr <$> genAddressInEra sbe
   changeAddr <- Api.toShelleyAddr <$> genAddressInEra sbe
   sendCoin <- L.Coin <$> Gen.integral (Range.linear 2_000_000 5_000_000)
-  -- Tiny margin above F1 but below F2. The exact fee F1 depends on the
-  -- generated address, but with test protocol params it's around 230–240.
-  -- A surplus of 240 + small_delta is enough to pass the first fee
-  -- convergence but not survive the fee increase from adding a change output.
-  -- We use a narrow range to stay within the F1-to-F2 gap (~23 lovelace).
-  surplus <- L.Coin <$> Gen.integral (Range.linear 237 250)
-  let fundingCoin = sendCoin + surplus
+  -- Build a preliminary tx to measure F1 (min fee for the 1-output shape).
+  -- The fee depends on serialized tx size, which varies with the generated
+  -- address structure. We use sendCoin as the funding amount; adding
+  -- a few hundred lovelace of surplus won't change the CBOR encoding size
+  -- of the multi-million lovelace coin value.
   let ledgerTxIn = Api.toShelleyTxIn txIn
-      fundingTxOut =
-        Exp.obtainCommonConstraints era $
-          L.mkBasicTxOut addr (L.MaryValue fundingCoin mempty)
-      utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
+      prelimFundingTxOut =
+        L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+      prelimUtxo = L.UTxO $ Map.singleton ledgerTxIn prelimFundingTxOut
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+        Exp.TxOut $
+          L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
-  return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
+      unsignedTx = Exp.makeUnsignedTx era txBodyContent
+      -- Compute F1 via case match on UnsignedTx (needed to bring EraTx into scope)
+      L.Coin f1 = case unsignedTx of
+        Exp.UnsignedTx prelimLedgerTx ->
+          L.calcMinFeeTx prelimUtxo (exampleProtocolParamsEra era) prelimLedgerTx 0
+  -- Surplus just above F1 but well below F2 (≈ F1 + 23). This is enough
+  -- to pass fee convergence but not survive adding a change output.
+  surplus <- L.Coin <$> Gen.integral (Range.linear (f1 + 4) (f1 + 10))
+  let fundingCoin = sendCoin + surplus
+      fundingTxOut =
+        L.mkBasicTxOut addr (L.MaryValue fundingCoin mempty)
+      utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
+  return (unsignedTx, utxo, changeAddr)
 
 -- ---------------------------------------------------------------------------
 -- Property tests

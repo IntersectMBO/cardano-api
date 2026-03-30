@@ -376,6 +376,7 @@ test-suite cardano-api-test
     cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core,
+    cardano-ledger-dijkstra,
     cardano-ledger-mary,
     cardano-ledger-shelley,
     cardano-protocol-tpraos,
