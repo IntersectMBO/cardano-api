@@ -11,6 +11,8 @@
 module Cardano.Api.Experimental.Plutus.Internal.Script
   ( AnyPlutusScript (..)
   , decodeAnyPlutusScript
+  , serialiseAnyPlutusScriptToTextEnvelope
+  , deserialiseAnyPlutusScriptFromTextEnvelope
   , AnyPlutusScriptLanguage (..)
   , PlutusScriptInEra (..)
   , PlutusScriptOrReferenceInput (..)
@@ -115,8 +117,11 @@ instance
   )
   => SerialiseAsCBOR (PlutusScriptInEra (lang :: L.Language) era)
   where
+  -- The 'PlutusBinary' stored in the 'PlutusRunnable' already contains
+  -- CBOR-wrapped Flat-encoded UPLC bytes (see 'Cardano.Ledger.Plutus.Language'),
+  -- so we extract them directly rather than re-encoding with 'L.serialize''.
   serialiseToCBOR (PlutusScriptInEra s) =
-    L.serialize' (L.eraProtVerHigh @era) s
+    SBS.fromShort . L.unPlutusBinary . L.plutusBinary $ L.plutusFromRunnable s
 
   deserialiseFromCBOR _ bs = do
     let v = L.eraProtVerHigh @era
@@ -179,6 +184,15 @@ data AnyPlutusScript era where
     :: (L.Era era, Typeable lang, L.PlutusLanguage lang)
     => PlutusScriptInEra lang era -> AnyPlutusScript era
 
+instance Show (AnyPlutusScript era) where
+  show (AnyPlutusScript ps) = "AnyPlutusScript " ++ show ps
+
+instance Eq (AnyPlutusScript era) where
+  AnyPlutusScript (ps1 :: PlutusScriptInEra lang1 era) == AnyPlutusScript (ps2 :: PlutusScriptInEra lang2 era) =
+    case eqT @lang1 @lang2 of
+      Just Refl -> ps1 == ps2
+      Nothing -> False
+
 decodeAnyPlutusScript
   :: L.Era era
   => ByteString
@@ -201,3 +215,32 @@ data AnyPlutusScriptLanguage where
   AnyPlutusScriptLanguage
     :: L.PlutusLanguage lang
     => L.SLanguage lang -> AnyPlutusScriptLanguage
+
+-- | Serialise an 'AnyPlutusScript' to a 'TextEnvelope'. The text envelope type
+-- is determined by the Plutus language version of the script.
+serialiseAnyPlutusScriptToTextEnvelope
+  :: Maybe TextEnvelopeDescr -> AnyPlutusScript era -> TextEnvelope
+serialiseAnyPlutusScriptToTextEnvelope mbDescr (AnyPlutusScript script) =
+  obtainLangConstraints (plutusScriptInEraSLanguage script) $
+    serialiseToTextEnvelope mbDescr script
+
+-- | Deserialise an 'AnyPlutusScript' from a 'TextEnvelope'. The text envelope type
+-- is matched against all known Plutus language versions derived from
+-- 'Plutus.nonNativeLanguages', so new language versions are picked up automatically.
+deserialiseAnyPlutusScriptFromTextEnvelope
+  :: forall era
+   . L.Era era
+  => TextEnvelope
+  -> Either TextEnvelopeError (AnyPlutusScript era)
+deserialiseAnyPlutusScriptFromTextEnvelope =
+  deserialiseFromTextEnvelopeAnyOf textEnvTypes
+ where
+  textEnvTypes :: [FromSomeType HasTextEnvelope (AnyPlutusScript era)]
+  textEnvTypes =
+    map
+      ( \l ->
+          Plutus.withSLanguage l $ \(slang :: Plutus.SLanguage l) ->
+            obtainLangConstraints slang $
+              FromSomeType (asType @(PlutusScriptInEra l era)) AnyPlutusScript
+      )
+      Plutus.nonNativeLanguages
