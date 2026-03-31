@@ -55,6 +55,8 @@
     defaultCompiler = "ghc9122";
     # Used for cross compilation for windows.
     crossCompilerVersion = defaultCompiler;
+    # Used for haddock generation (avoids GHC 9.12 tyConStupidTheta panic)
+    haddockCompiler = "ghc914";
   in
     inputs.flake-utils.lib.eachSystem supportedSystems (
       system: let
@@ -226,7 +228,11 @@
             # TODO remove this module when removing proto-lens SRP
             # Override proto-lens source to use fixed symlinks (inputMap provides the fixed
             # source for plan computation; this module provides it for the build phase)
-            ({lib, config, ...}: let
+            ({
+              lib,
+              config,
+              ...
+            }: let
               protoLensPackages = [
                 "proto-lens"
                 "proto-lens-arbitrary"
@@ -242,9 +248,10 @@
                 "proto-lens-benchmarks"
               ];
             in {
-              packages = lib.genAttrs
+              packages =
+                lib.genAttrs
                 (builtins.filter (p: config.packages ? ${p}) protoLensPackages)
-                (p: { src = lib.mkForce (fixProtoLensSrc + "/${p}"); });
+                (p: {src = lib.mkForce (fixProtoLensSrc + "/${p}");});
             })
             ({...}: {
               packages.cardano-api = {
@@ -306,7 +313,7 @@
                 then defaultCompiler
                 else stableCompiler;
             in
-              lib.genAttrs [osDependentStableCompiler crossCompilerVersion] (compiler-nix-name: {
+              lib.genAttrs [osDependentStableCompiler crossCompilerVersion haddockCompiler] (compiler-nix-name: {
                 inherit compiler-nix-name;
               });
           }
