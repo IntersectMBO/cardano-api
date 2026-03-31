@@ -37,6 +37,7 @@ module Cardano.Api.Query
   , LedgerState (..)
   , getProgress
   , getSlotForRelativeTime
+  , slotToUTCTime
   , decodeLedgerPeerSnapshot
 
     -- * Convenience functions

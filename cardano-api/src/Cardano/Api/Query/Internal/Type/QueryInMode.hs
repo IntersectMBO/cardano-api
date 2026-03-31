@@ -58,6 +58,7 @@ module Cardano.Api.Query.Internal.Type.QueryInMode
   , LedgerState (..)
   , getProgress
   , getSlotForRelativeTime
+  , slotToUTCTime
   , decodeLedgerPeerSnapshot
 
     -- * Internal conversion functions
@@ -102,7 +103,7 @@ import Cardano.Ledger.Shelley.API qualified as Shelley
 import Cardano.Ledger.Shelley.Core qualified as Core
 import Cardano.Slotting.EpochInfo (hoistEpochInfo)
 import Cardano.Slotting.Slot (WithOrigin (..))
-import Cardano.Slotting.Time (SystemStart (..))
+import Cardano.Slotting.Time (SystemStart (..), fromRelativeTime)
 import Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLength)
 import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCrypto)
@@ -140,6 +141,7 @@ import Data.Set qualified as Set
 import Data.Singletons qualified as Singletons
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Time (UTCTime)
 import Data.Word (Word64)
 import GHC.Exts (IsList (..))
 import GHC.Stack
@@ -209,6 +211,17 @@ getSlotForRelativeTime
 getSlotForRelativeTime relTime (EraHistory interpreter) = do
   (slotNo, _, _) <- Qry.interpretQuery interpreter $ Qry.wallclockToSlot relTime
   pure slotNo
+
+-- | Convert a 'SlotNo' to a 'UTCTime' given the 'SystemStart' and 'EraHistory'.
+slotToUTCTime
+  :: ()
+  => SystemStart
+  -> EraHistory
+  -> SlotNo
+  -> Either Qry.PastHorizonException UTCTime
+slotToUTCTime systemStart eraHistory slotNo = do
+  (relTime, _slotLen) <- getProgress slotNo eraHistory
+  pure $ fromRelativeTime systemStart relTime
 
 newtype LedgerEpochInfo = LedgerEpochInfo {unLedgerEpochInfo :: Consensus.EpochInfo (Either Text)}
 

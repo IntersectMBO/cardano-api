@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -27,6 +28,7 @@ import RIO hiding (toList)
 
 import Data.Default
 import Data.ProtoLens (defMessage)
+import Data.Time.Clock (UTCTime)
 import GHC.IsList
 import Network.GRPC.Spec
 
@@ -44,15 +46,19 @@ readParamsMethod _req = do
   let sbe = convert eon
 
   let target = VolatileTip
-  (pparams, chainPoint, blockNo) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+  (pparams, chainPoint, blockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
     pparams <- throwEither =<< throwEither =<< queryProtocolParameters sbe
     chainPoint <- throwEither =<< queryChainPoint
     blockNo <- throwEither =<< queryChainBlockNo
-    pure (pparams, chainPoint, blockNo)
+    systemStart <- throwEither =<< querySystemStart
+    eraHistory <- throwEither =<< queryEraHistory
+    pure (pparams, chainPoint, blockNo, systemStart, eraHistory)
+
+  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
 
   pure $
     def
-      & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo
+      & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo timestamp
       & U5c.values . U5c.cardano .~ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
 
 readUtxosMethod
@@ -73,15 +79,19 @@ readUtxosMethod req = do
   eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
 
   let target = VolatileTip
-  (utxo, chainPoint, blockNo) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+  (utxo, chainPoint, blockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
     utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
     chainPoint <- throwEither =<< queryChainPoint
     blockNo <- throwEither =<< queryChainBlockNo
-    pure (utxo, chainPoint, blockNo)
+    systemStart <- throwEither =<< querySystemStart
+    eraHistory <- throwEither =<< queryEraHistory
+    pure (utxo, chainPoint, blockNo, systemStart, eraHistory)
+
+  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
 
   pure $
     defMessage
-      & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo
+      & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo timestamp
       & U5c.items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
  where
   txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
@@ -93,3 +103,13 @@ readUtxosMethod req = do
 -- readAddress :: MonadRpc e m => ByteString -> m AddressAny
 -- readAddress =
 --   throwEither . first stringException . P.runParser parseAddressAny <=< throwEither . T.decodeUtf8'
+
+slotToTimestamp
+  :: HasCallStack
+  => MonadIO m
+  => SystemStart -> EraHistory -> ChainPoint -> m UTCTime
+slotToTimestamp systemStart eraHistory = \case
+  ChainPointAtGenesis ->
+    let SystemStart t = systemStart in pure t
+  ChainPoint slotNo _ ->
+    throwEither $ slotToUTCTime systemStart eraHistory slotNo
