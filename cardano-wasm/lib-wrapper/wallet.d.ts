@@ -6,6 +6,8 @@
 declare interface Wallet {
     /**
      * The type of the object, used for identification (the "Wallet" string).
+     * Other types of objects would be:
+     * "CardanoApi", "GrpcConnection", "SignedTx", and "UnsignedTx"
      */
     objectType: string;
 

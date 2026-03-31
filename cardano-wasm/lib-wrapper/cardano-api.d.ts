@@ -12,6 +12,8 @@ import Wallet from './wallet';
 declare interface CardanoApi {
     /**
      * The type of the object, used for identification (the "CardanoApi" string).
+     * Other types of objects would be:
+     * "GrpcConnection", "SignedTx", "UnsignedTx", and "Wallet"
      */
     objectType: string;
 

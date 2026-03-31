@@ -6,6 +6,8 @@
 declare interface GrpcConnection {
     /**
      * The type of the object, used for identification (the "GrpcConnection" string).
+     * Other types of objects would be:
+     * "CardanoApi", "SignedTx", "UnsignedTx", and "Wallet"
      */
     objectType: string;
 

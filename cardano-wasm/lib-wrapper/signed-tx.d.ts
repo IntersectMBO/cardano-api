@@ -6,6 +6,8 @@
 declare interface SignedTx {
     /**
      * The type of the object, used for identification (the "SignedTx" string).
+     * Other types of objects would be:
+     * "CardanoApi", "GrpcConnection", "UnsignedTx", and "Wallet"
      */
     objectType: string;
 

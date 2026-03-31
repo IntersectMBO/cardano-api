@@ -8,6 +8,8 @@ import SignedTx from './signed-tx';
 declare interface UnsignedTx {
     /**
      * The type of the object, used for identification (the "UnsignedTx" string).
+     * Other types of objects would be:
+     * "CardanoApi", "GrpcConnection", "SignedTx", and "Wallet"
      */
     objectType: string;
 

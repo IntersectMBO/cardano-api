@@ -16,6 +16,7 @@ apiInfoToTypeScriptFile apiInfo =
       { TypeScript.typeScriptFileName = Info.dashCaseName (Info.mainObject apiInfo) <> ".d.ts"
       , TypeScript.typeScriptFileContent =
           virtualObjectInfoToInterfaceDecs
+            mainObjectName
             False
             voMap
             (Info.mainObject apiInfo)
@@ -38,9 +39,11 @@ apiInfoToTypeScriptFile apiInfo =
     : virtualObjectInterfaces
  where
   virtualObjectInterfaces =
-    map (virtualObjectInfoToTypeScriptFile voMap) (Info.virtualObjects apiInfo)
+    map (virtualObjectInfoToTypeScriptFile mainObjectName voMap) (Info.virtualObjects apiInfo)
 
   voMap = Map.fromList [(Info.virtualObjectName vo, vo) | vo <- Info.virtualObjects apiInfo]
+
+  mainObjectName = Info.virtualObjectName $ Info.mainObject apiInfo
 
 importDeclaration :: Info.VirtualObjectInfo -> TypeScript.Declaration
 importDeclaration vo =
@@ -69,16 +72,27 @@ flattenMethods = concatMap flattenMethods'
   flattenMethods' (Info.MethodGroupEntry (Info.MethodGroup{Info.groupMethods = methods})) = flattenMethods methods
 
 virtualObjectInfoToTypeScriptFile
-  :: Map String Info.VirtualObjectInfo -> Info.VirtualObjectInfo -> TypeScript.TypeScriptFile
-virtualObjectInfoToTypeScriptFile voMap vo =
+  :: String -> Map String Info.VirtualObjectInfo -> Info.VirtualObjectInfo -> TypeScript.TypeScriptFile
+virtualObjectInfoToTypeScriptFile mainObjectName voMap vo =
   TypeScript.TypeScriptFile
     { TypeScript.typeScriptFileName = Info.dashCaseName vo <> ".d.ts"
-    , TypeScript.typeScriptFileContent = virtualObjectInfoToInterfaceDecs True voMap vo
+    , TypeScript.typeScriptFileContent = virtualObjectInfoToInterfaceDecs mainObjectName True voMap vo
     }
 
+oxfordCommaSeparatedList :: [String] -> String
+oxfordCommaSeparatedList [] = ""
+oxfordCommaSeparatedList [l] = l
+oxfordCommaSeparatedList [p, l] = p <> " and " <> l
+oxfordCommaSeparatedList [a, p, l] = a <> ", " <> p <> ", and " <> l
+oxfordCommaSeparatedList (h : t) = h <> ", " <> oxfordCommaSeparatedList t
+
 virtualObjectInfoToInterfaceDecs
-  :: Bool -> Map String Info.VirtualObjectInfo -> Info.VirtualObjectInfo -> [TypeScript.Declaration]
-virtualObjectInfoToInterfaceDecs isDefaultExport voMap vo =
+  :: String
+  -> Bool
+  -> Map String Info.VirtualObjectInfo
+  -> Info.VirtualObjectInfo
+  -> [TypeScript.Declaration]
+virtualObjectInfoToInterfaceDecs mainObjectName isDefaultExport voMap vo =
   importDeclarations voMap vo
     ++ [ TypeScript.Declaration
            [Info.virtualObjectDoc vo]
@@ -89,6 +103,17 @@ virtualObjectInfoToInterfaceDecs isDefaultExport voMap vo =
                        [ "The type of the object, used for identification (the \""
                            <> Info.virtualObjectName vo
                            <> "\" string)."
+                       , "Other types of objects would be:"
+                       , oxfordCommaSeparatedList
+                           ( ( if mainObjectName == Info.virtualObjectName vo
+                                 then id
+                                 else (show mainObjectName :)
+                             )
+                               [ show $ Info.virtualObjectName v
+                               | v <- Map.elems voMap
+                               , Info.virtualObjectName v /= Info.virtualObjectName vo
+                               ]
+                           )
                        ]
                        (TypeScript.InterfaceProperty "objectType" "string")
                  ]
