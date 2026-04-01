@@ -167,7 +167,7 @@ library
     network-mux,
     nothunks,
     ordered-containers,
-    ouroboros-consensus:{cardano, diffusion, ouroboros-consensus, protocol} ^>=1.0,
+    ouroboros-consensus:{cardano, diffusion, ouroboros-consensus, protocol} ^>=2.0,
     ouroboros-network:{api, framework, ouroboros-network, protocols} ^>=1.1,
     parsec,
     plutus-core ^>=1.59,
