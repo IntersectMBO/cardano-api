@@ -1,3 +1,15 @@
+-- |
+-- >>> findMnemonicWordsWithPrefix "cha"
+-- [("chair",302),("chalk",303),("champion",304),("change",305),("chaos",306),("chapter",307),("charge",308),("chase",309),("chat",310)]
+--
+-- >>> autocompleteMnemonicPrefix "ty"
+-- Just "typ"
+--
+-- >>> autocompleteMnemonicPrefix "vani"
+-- Just "vanish"
+--
+-- >>> autocompleteMnemonicPrefix "medo"
+-- Nothing
 module Cardano.Api.Key
   ( -- * The Key class
     Key (..)

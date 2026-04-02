@@ -295,9 +295,6 @@ signingKeyFromMnemonic keyRole mnemonicWords accNo = do
     accNo
 
 -- | Obtain the list of all mnemonic words that start with the given prefix and their index in the dictionary.
--- For example:
--- >>> findMnemonicWordsWithPrefix "cha"
--- [("chair",302),("chalk",303),("champion",304),("change",305),("chaos",306),("chapter",307),("charge",308),("chase",309),("chat",310)]
 findMnemonicWordsWithPrefix :: Text -> [(Text, Int)]
 findMnemonicWordsWithPrefix word = toList $ map (first decodeUtf8) $ Trie.toList matchingSubTrie
  where
@@ -307,21 +304,6 @@ findMnemonicWordsWithPrefix word = toList $ map (first decodeUtf8) $ Trie.toList
 -- | Autocomplete the prefix of the mnemonic word as much as possible.
 -- In other words, find the longest common prefix for all the words
 -- that start with the given prefix.
--- For example:
--- >>> autocompleteMnemonicPrefix "ty"
--- Just "typ"
---
--- Because "type" and "typical" are the only words that start with "ty".
---
--- >>> autocompleteMnemonicPrefix "vani"
--- Just "vanish"
---
--- Because "vanish" is the only word that starts with "vani".
---
--- >>> autocompleteMnemonicPrefix "medo"
--- Nothing
---
--- Because there are no words that start with "medo".
 autocompleteMnemonicPrefix :: Text -> Maybe Text
 autocompleteMnemonicPrefix word =
   let subtrie = matchingSubTrie word englishMnemonicTrie

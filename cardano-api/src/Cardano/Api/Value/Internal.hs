@@ -144,17 +144,9 @@ instance Monoid Quantity where
 parseQuantity :: P.Parser Quantity
 parseQuantity = Quantity <$> P.parseWord64
 
--- | Convert 'Lovelace' to 'Quantity'.
---
--- >>> lovelaceToQuantity 1_000_000
--- 1000000
 lovelaceToQuantity :: Lovelace -> Quantity
 lovelaceToQuantity (L.Coin x) = Quantity x
 
--- | Convert 'Quantity' to 'Lovelace'.
---
--- >>> quantityToLovelace (Quantity 1_000_000)
--- Coin 1000000
 quantityToLovelace :: Quantity -> Lovelace
 quantityToLovelace (Quantity x) = L.Coin x
 
@@ -294,19 +286,10 @@ valueToList :: Value -> [(AssetId, Quantity)]
 valueToList = toList
 
 -- | Check if the 'Value' consists of /only/ positive quantities.
---
--- >>> allPositive (lovelaceToValue 42)
--- True
---
--- >>> allPositive (negateValue (lovelaceToValue 42))
--- False
 allPositive :: Value -> Bool
 allPositive (Value m) = all (>= 0) (Map.elems m)
 
 -- | This lets you write @a - b@ as @a <> negateValue b@.
---
--- >>> negateValue (lovelaceToValue 1_000_000)
--- valueFromList [(AdaAssetId,-1000000)]
 negateValue :: Value -> Value
 negateValue (Value m) = Value (Map.map negate m)
 
@@ -321,31 +304,14 @@ negateLedgerValue sbe v =
 filterValue :: (AssetId -> Bool) -> Value -> Value
 filterValue p (Value m) = Value (Map.filterWithKey (\k _v -> p k) m)
 
--- | Select only the 'Lovelace' quantity from a 'Value', ignoring other assets.
---
--- >>> selectLovelace mempty
--- Coin 0
---
--- >>> selectLovelace (lovelaceToValue 42)
--- Coin 42
 selectLovelace :: Value -> Lovelace
 selectLovelace = quantityToLovelace . flip selectAsset AdaAssetId
 
--- | Create a 'Value' containing only the given 'Lovelace'.
---
--- >>> lovelaceToValue 1_000_000
--- valueFromList [(AdaAssetId,1000000)]
 lovelaceToValue :: Lovelace -> Value
 lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
 
 -- | Check if the 'Value' consists of /only/ 'Lovelace' and no other assets,
--- and if so then return the Lovelace.
---
--- >>> valueToLovelace (lovelaceToValue 42)
--- Just (Coin 42)
---
--- >>> valueToLovelace mempty
--- Just (Coin 0)
+-- and if so then return the Lovelace
 --
 -- See also 'selectLovelace' to select the Lovelace quantity from the Value,
 -- ignoring other assets.
@@ -534,12 +500,6 @@ instance FromJSON ValueNestedRep where
 --
 
 -- | Render a textual representation of a 'Value'.
---
--- >>> renderValue mempty
--- "0 lovelace"
---
--- >>> renderValue (lovelaceToValue 1_000_000)
--- "1000000 lovelace"
 renderValue :: Value -> Text
 renderValue = renderValueSep " + "
 

@@ -367,6 +367,14 @@ module Cardano.Api.Tx
   , fromLedgerTxValidityLowerBound
   , fromLedgerTxValidityUpperBound
   , renderTxIn
+    -- | Render a 'TxIn' as @\"txid#ix\"@.
+    --
+    -- >>> :set -XTypeApplications
+    -- >>> import Cardano.Api.Serialise.Raw (deserialiseFromRawBytesHex)
+    -- >>> import Data.Either (fromRight)
+    -- >>> let myTxId = fromRight (error "") (deserialiseFromRawBytesHex @TxId "0000000000000000000000000000000000000000000000000000000000000000")
+    -- >>> renderTxIn (TxIn myTxId (TxIx 0))
+    -- "0000000000000000000000000000000000000000000000000000000000000000#0"
 
     -- ** Misc helpers
   , calculateExecutionUnitsLovelace

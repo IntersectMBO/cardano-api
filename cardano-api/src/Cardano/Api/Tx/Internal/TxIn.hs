@@ -116,14 +116,6 @@ instance Pretty TxIn where
 parseTxIn :: P.Parser TxIn
 parseTxIn = TxIn <$> parseTxId <*> (P.char '#' *> parseTxIx)
 
--- | Render a 'TxIn' as @\"txid#ix\"@.
---
--- >>> :set -XOverloadedStrings -XTypeApplications
--- >>> import Cardano.Api.Serialise.Raw (deserialiseFromRawBytesHex)
--- >>> import Data.Either (fromRight)
--- >>> let myTxId = fromRight (error "") (deserialiseFromRawBytesHex @TxId "0000000000000000000000000000000000000000000000000000000000000000")
--- >>> renderTxIn (TxIn myTxId (TxIx 0))
--- "0000000000000000000000000000000000000000000000000000000000000000#0"
 renderTxIn :: TxIn -> Text
 renderTxIn = docToText . pretty
 

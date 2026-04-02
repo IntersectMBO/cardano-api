@@ -1,4 +1,40 @@
 -- | Currency values
+--
+-- >>> lovelaceToQuantity 1000000
+-- 1000000
+--
+-- >>> quantityToLovelace (Quantity 1000000)
+-- Coin 1000000
+--
+-- >>> lovelaceToValue 1000000
+-- valueFromList [(AdaAssetId,1000000)]
+--
+-- >>> selectLovelace mempty
+-- Coin 0
+--
+-- >>> selectLovelace (lovelaceToValue 42)
+-- Coin 42
+--
+-- >>> valueToLovelace (lovelaceToValue 42)
+-- Just (Coin 42)
+--
+-- >>> valueToLovelace mempty
+-- Just (Coin 0)
+--
+-- >>> allPositive (lovelaceToValue 42)
+-- True
+--
+-- >>> allPositive (negateValue (lovelaceToValue 42))
+-- False
+--
+-- >>> negateValue (lovelaceToValue 1000000)
+-- valueFromList [(AdaAssetId,-1000000)]
+--
+-- >>> renderValue mempty
+-- "0 lovelace"
+--
+-- >>> renderValue (lovelaceToValue 1000000)
+-- "1000000 lovelace"
 module Cardano.Api.Value
   ( Coin (..)
 

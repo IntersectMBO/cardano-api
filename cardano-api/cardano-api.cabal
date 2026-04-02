@@ -483,3 +483,17 @@ test-suite cardano-api-golden
     Test.Golden.Cardano.Api.Tx
     Test.Golden.Cardano.Api.Value
     Test.Golden.ErrorsSpec
+
+test-suite cardano-api-doctest
+  import: project-config
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test/cardano-api-doctest
+  main-is: cardano-api-doctest.hs
+
+  if arch(wasm32)
+    buildable: False
+  build-depends:
+    doctest-parallel >=0.3
+
+  ghc-options:
+    -threaded
