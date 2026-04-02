@@ -1,5 +1,46 @@
 # Changelog for cardano-api
 
+## 10.26.0.0
+
+- Add support for BLS proofs of possession
+  (feature)
+  [PR 1161](https://github.com/IntersectMBO/cardano-api/pull/1161)
+
+- Add serialiseAnyPlutusScriptToTextEnvelope and
+  deserialiseAnyPlutusScriptFromTextEnvelope for AnyPlutusScript,
+  following the existing ScriptInAnyLang pattern using FromSomeType
+  and deserialiseFromTextEnvelopeAnyOf.
+  (feature)
+  [PR 1156](https://github.com/IntersectMBO/cardano-api/pull/1156)
+
+- Remove GetCBOR wrapper from QueryLedgerPeerSnapshot query. Return
+  LedgerPeerSnapshot directly instead of Serialised LedgerPeerSnapshot.
+  (breaking)
+  [PR 1160](https://github.com/IntersectMBO/cardano-api/pull/1160)
+
+- Expose deserialiseFromTextEnvelopeJSON and deserialiseFromTextEnvelopeJSONAnyOf
+  which accept a raw ByteString, enabling text envelope deserialization without
+  file I/O.
+  (compatible)
+  [PR 1158](https://github.com/IntersectMBO/cardano-api/pull/1158)
+
+- Replace fromJust in votingScriptWitnessSingleton with proper Either-based
+  error handling via new VotingError sum type
+  (breaking, bugfix)
+  [PR 1153](https://github.com/IntersectMBO/cardano-api/pull/1153)
+
+- Restored `Show` and `Eq` instances by implementing them trivially.
+  (compatible)
+  [PR 1151](https://github.com/IntersectMBO/cardano-api/pull/1151)
+
+- Added support for BLS keys.
+  (feature)
+  [PR 1148](https://github.com/IntersectMBO/cardano-api/pull/1148)
+
+- Make `NoScriptDatum` uninhabitable by removing its constructor
+  (breaking)
+  [PR 1147](https://github.com/IntersectMBO/cardano-api/pull/1147)
+
 ## 10.25.0.0
 
 - Unify cert indexing via shared indexCertificatesWith helper. Fix
