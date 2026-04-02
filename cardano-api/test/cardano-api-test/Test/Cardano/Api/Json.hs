@@ -7,7 +7,11 @@ module Test.Cardano.Api.Json
 where
 
 import Cardano.Api
+import Cardano.Api.Experimental.Tx qualified as Exp
 
+import Cardano.Ledger.Core qualified as L
+
+import Control.Monad (forM_)
 import Data.Aeson (eitherDecode, encode)
 
 import Test.Gen.Cardano.Api (genAlonzoGenesis)
@@ -15,7 +19,7 @@ import Test.Gen.Cardano.Api.Typed
 
 import Test.Cardano.Api.Orphans ()
 
-import Hedgehog (Property, forAll, tripping)
+import Hedgehog (Property, forAll, tripping, (===))
 import Hedgehog qualified as H
 import Hedgehog.Gen qualified as Gen
 import Test.Tasty (TestTree, testGroup)
@@ -61,6 +65,37 @@ prop_roundtrip_praos_nonce_JSON = H.property $ do
   pNonce <- forAll $ Gen.just genMaybePraosNonce
   tripping pNonce encode eitherDecode
 
+-- | Verify that the new experimental 'TxOut' 'ToJSON' instance produces
+-- the same JSON as the legacy 'txOutToJsonValue' for UTxO outputs across
+-- all Shelley-based eras. Dijkstra is skipped because
+-- 'shelleyBasedEraConstraints' is not yet implemented for it.
+prop_new_txout_json_matches_legacy :: Property
+prop_new_txout_json_matches_legacy = H.property $ do
+  forM_ [minBound .. maxBound] $ \(AnyShelleyBasedEra sbe) ->
+    ( case sbe of
+        ShelleyBasedEraShelley -> go sbe
+        ShelleyBasedEraAllegra -> go sbe
+        ShelleyBasedEraMary -> go sbe
+        ShelleyBasedEraAlonzo -> go sbe
+        ShelleyBasedEraBabbage -> go sbe
+        ShelleyBasedEraConway -> go sbe
+        ShelleyBasedEraDijkstra -> pure () -- shelleyBasedEraConstraints not yet implemented
+    )
+      :: H.PropertyT IO ()
+
+go
+  :: ( IsCardanoEra era
+     , L.EraTxOut (ShelleyLedgerEra era)
+     , ToJSON (Exp.TxOut (ShelleyLedgerEra era))
+     )
+  => ShelleyBasedEra era
+  -> H.PropertyT IO ()
+go sbe = do
+  oldTxOut <- forAll $ genTxOutUTxOContext sbe
+  let ledgerTxOut = toShelleyTxOut sbe oldTxOut
+      newTxOut = Exp.TxOut ledgerTxOut
+  toJSON oldTxOut === toJSON newTxOut
+
 tests :: TestTree
 tests =
   testGroup
@@ -73,4 +108,5 @@ tests =
     , testProperty "json roundtrip txout utxo context" prop_json_roundtrip_txout_utxo_context
     , testProperty "json roundtrip scriptdata detailed json" prop_json_roundtrip_scriptdata_detailed_json
     , testProperty "json roundtrip praos nonce" prop_roundtrip_praos_nonce_JSON
+    , testProperty "new TxOut ToJSON matches legacy" prop_new_txout_json_matches_legacy
     ]

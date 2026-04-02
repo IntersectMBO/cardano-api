@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   ( TxCertificates (..)
@@ -104,8 +106,17 @@ import Cardano.Api.Governance.Internal.Action.VotingProcedure
 import Cardano.Api.Key.Internal
 import Cardano.Api.Ledger.Internal.Reexport (StrictMaybe (..))
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
+import Cardano.Api.Plutus.Internal.Script
+  ( PlutusScript (..)
+  , PlutusScriptVersion (..)
+  , ScriptInAnyLang (..)
+  , ScriptLanguage (..)
+  , fromAllegraTimelock
+  )
+import Cardano.Api.Plutus.Internal.Script qualified as OldScript
 import Cardano.Api.Plutus.Internal.ScriptData qualified as Api
 import Cardano.Api.Pretty
+import Cardano.Api.Serialise.Cbor (serialiseToCBOR)
 import Cardano.Api.Tx.Internal.Body
   ( CtxTx
   , TxIn
@@ -116,7 +127,15 @@ import Cardano.Api.Tx.Internal.Body
 import Cardano.Api.Tx.Internal.Output qualified as OldApi
 import Cardano.Api.Tx.Internal.Sign
 import Cardano.Api.Tx.Internal.TxMetadata
-import Cardano.Api.Value.Internal (PolicyAssets, PolicyId, Value, policyAssetsToValue, toMaryValue)
+import Cardano.Api.Value.Internal
+  ( PolicyAssets
+  , PolicyId
+  , Value
+  , fromMaryValue
+  , lovelaceToValue
+  , policyAssetsToValue
+  , toMaryValue
+  )
 
 import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Alonzo.Scripts qualified as L
@@ -126,9 +145,13 @@ import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Plutus.Language (PlutusBinary (..), plutusLanguage)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Control.Monad
+import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson qualified as Aeson
+import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Short qualified as SBS
 import Data.Functor
 import Data.List qualified as List
@@ -142,6 +165,8 @@ import Data.OSet.Strict qualified as OSet
 import Data.Sequence.Strict qualified as Seq
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Text.Encoding qualified as Text
+import Data.Typeable (cast)
 import GHC.Exts (IsList (..))
 import Lens.Micro
 
@@ -329,6 +354,118 @@ eraSpecificLedgerTxBody era ledgerbody bc =
 
 data TxOut era where
   TxOut :: L.EraTxOut era => L.TxOut era -> TxOut era
+
+-- | Pre-Alonzo eras have no datums or reference scripts, so the JSON
+-- output is just address and value.
+instance ToJSON (TxOut L.ShelleyEra) where
+  toJSON (TxOut o) = txOutBaseJson o
+
+instance ToJSON (TxOut L.AllegraEra) where
+  toJSON (TxOut o) = txOutBaseJson o
+
+instance ToJSON (TxOut L.MaryEra) where
+  toJSON (TxOut o) = txOutBaseJson o
+
+-- | Note: Unlike the legacy API's @TxOut@, this instance does not render
+-- supplemental datums. At the ledger level, a supplemental datum is not
+-- stored in the @TxOut@ — only its hash is. The full datum lives in the
+-- transaction witness set (@TxDats@). The legacy API bundled the full
+-- datum into @TxOut@ for convenience, but since this type wraps the
+-- ledger's @TxOut@ directly, supplemental datums are indistinguishable
+-- from hash-only datums here.
+instance
+  {-# OVERLAPPABLE #-}
+  (L.AnyEraTxOut era, L.AlonzoEraScript era)
+  => ToJSON (TxOut era)
+  where
+  toJSON (TxOut o) =
+    Aeson.object $
+      [ "address" .= addrToJson (o ^. L.addrTxOutL)
+      , "value" .= valueToJson (o ^. L.valueTxOutL)
+      ]
+        <> datumFields mDatum
+        <> inlineDatumFields isBabbagePlus mDatum
+        <> refScriptFields mRefScript
+   where
+    mDatum = o ^. L.datumTxOutG
+    mRefScript = o ^. L.referenceScriptTxOutG
+    isBabbagePlus = isJust mRefScript
+
+    datumFields Nothing = []
+    datumFields (Just L.NoDatum) =
+      ["datumhash" .= Aeson.Null, "datum" .= Aeson.Null]
+    datumFields (Just (L.DatumHash dh)) =
+      ["datumhash" .= dh, "datum" .= Aeson.Null]
+    datumFields (Just (L.Datum bd)) =
+      ["inlineDatumhash" .= L.hashBinaryData bd, "datum" .= Aeson.Null]
+
+    inlineDatumFields _ (Just (L.Datum bd)) =
+      let hsd = Api.fromAlonzoData (L.binaryDataToData bd)
+       in [ "inlineDatum" .= Api.scriptDataToJsonDetailedSchema hsd
+          , "inlineDatumRaw"
+              .= ( Aeson.String
+                     . Text.decodeUtf8
+                     . Base16.encode
+                     . serialiseToCBOR
+                     $ hsd
+                 )
+          ]
+    inlineDatumFields True _ =
+      ["inlineDatum" .= Aeson.Null, "inlineDatumRaw" .= Aeson.Null]
+    inlineDatumFields _ _ = []
+
+    refScriptFields Nothing = []
+    refScriptFields (Just Nothing) = ["referenceScript" .= Aeson.Null]
+    refScriptFields (Just (Just script)) =
+      ["referenceScript" .= ledgerScriptToScriptInAnyLang script]
+
+-- | Render just the base fields (address and value) shared by all eras.
+txOutBaseJson :: L.EraTxOut era => L.TxOut era -> Aeson.Value
+txOutBaseJson o =
+  Aeson.object
+    [ "address" .= addrToJson (o ^. L.addrTxOutL)
+    , "value" .= valueToJson (o ^. L.valueTxOutL)
+    ]
+
+-- | Convert a ledger 'L.Addr' to JSON using the same format as the legacy API
+-- (bech32 for Shelley addresses, base58 for Byron addresses).
+addrToJson :: L.Addr -> Aeson.Value
+addrToJson (L.Addr nw pc scr) = toJSON (ShelleyAddress nw pc scr)
+addrToJson (L.AddrBootstrap (L.BootstrapAddress addr)) = toJSON (ByronAddress addr)
+
+-- | Convert a ledger value to JSON using the cardano-api 'Value' format.
+-- Uses 'Typeable' to detect 'MaryValue' (multi-asset) vs 'Coin' (ada-only).
+valueToJson :: L.Val v => v -> Aeson.Value
+valueToJson v = case cast v of
+  Just (mv :: L.MaryValue) -> toJSON (fromMaryValue mv)
+  Nothing -> toJSON (lovelaceToValue (L.coin v))
+
+-- | Convert a ledger 'Script' to a cardano-api 'ScriptInAnyLang' without
+-- per-era pattern matching, using 'AlonzoEraScript' methods.
+ledgerScriptToScriptInAnyLang
+  :: L.AlonzoEraScript era => L.Script era -> ScriptInAnyLang
+ledgerScriptToScriptInAnyLang script =
+  case L.getNativeScript script of
+    Just ns ->
+      ScriptInAnyLang SimpleScriptLanguage (OldScript.SimpleScript (fromAllegraTimelock ns))
+    Nothing ->
+      case L.toPlutusScript script of
+        Just ps -> L.withPlutusScript ps $ \plutus ->
+          let sbs = unPlutusBinary (L.plutusBinary plutus)
+           in case plutusLanguage plutus of
+                Plutus.PlutusV1 ->
+                  ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1) $
+                    OldScript.PlutusScript PlutusScriptV1 (PlutusScriptSerialised sbs)
+                Plutus.PlutusV2 ->
+                  ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2) $
+                    OldScript.PlutusScript PlutusScriptV2 (PlutusScriptSerialised sbs)
+                Plutus.PlutusV3 ->
+                  ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV3) $
+                    OldScript.PlutusScript PlutusScriptV3 (PlutusScriptSerialised sbs)
+                Plutus.PlutusV4 ->
+                  ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV4) $
+                    OldScript.PlutusScript PlutusScriptV4 (PlutusScriptSerialised sbs)
+        Nothing -> error "ledgerScriptToScriptInAnyLang: script is neither native nor Plutus"
 
 deriving instance (Show (TxOut era))
 
