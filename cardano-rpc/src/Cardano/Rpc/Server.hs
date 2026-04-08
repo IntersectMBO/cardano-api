@@ -64,6 +64,7 @@ methodsUtxoRpcSubmit
 methodsUtxoRpcSubmit =
   Method (mkNonStreaming $ wrapInSpan TraceRpcSubmitSpan . submitTxMethod) NoMoreMethods
 
+-- | Starts gRPC server. If the server is disabled in the config, this function will do nothing.
 runRpcServer
   :: Tracer IO TraceRpc
   -> (RpcConfig, NetworkMagic)
