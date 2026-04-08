@@ -373,51 +373,55 @@ instance ToJSON (TxOut L.MaryEra) where
 -- datum into @TxOut@ for convenience, but since this type wraps the
 -- ledger's @TxOut@ directly, supplemental datums are indistinguishable
 -- from hash-only datums here.
-instance
-  {-# OVERLAPPABLE #-}
-  (L.AnyEraTxOut era, L.AlonzoEraScript era)
-  => ToJSON (TxOut era)
-  where
-  toJSON (TxOut o) =
-    Aeson.object $
-      [ "address" .= addrToJson (o ^. L.addrTxOutL)
-      , "value" .= valueToJson (o ^. L.valueTxOutL)
-      ]
-        <> datumFields mDatum
-        <> inlineDatumFields isBabbagePlus mDatum
-        <> refScriptFields mRefScript
-   where
-    mDatum = o ^. L.datumTxOutG
-    mRefScript = o ^. L.referenceScriptTxOutG
-    isBabbagePlus = isJust mRefScript
+instance ToJSON (TxOut L.AlonzoEra) where toJSON = alonzoOnwardsTxOutToJson
 
-    datumFields Nothing = []
-    datumFields (Just L.NoDatum) =
-      ["datumhash" .= Aeson.Null, "datum" .= Aeson.Null]
-    datumFields (Just (L.DatumHash dh)) =
-      ["datumhash" .= dh, "datum" .= Aeson.Null]
-    datumFields (Just (L.Datum bd)) =
-      ["inlineDatumhash" .= L.hashBinaryData bd, "datum" .= Aeson.Null]
+instance ToJSON (TxOut L.BabbageEra) where toJSON = alonzoOnwardsTxOutToJson
 
-    inlineDatumFields _ (Just (L.Datum bd)) =
-      let hsd = Api.fromAlonzoData (L.binaryDataToData bd)
-       in [ "inlineDatum" .= Api.scriptDataToJsonDetailedSchema hsd
-          , "inlineDatumRaw"
-              .= ( Aeson.String
-                     . Text.decodeUtf8
-                     . Base16.encode
-                     . serialiseToCBOR
-                     $ hsd
-                 )
-          ]
-    inlineDatumFields True _ =
-      ["inlineDatum" .= Aeson.Null, "inlineDatumRaw" .= Aeson.Null]
-    inlineDatumFields _ _ = []
+instance ToJSON (TxOut L.ConwayEra) where toJSON = alonzoOnwardsTxOutToJson
 
-    refScriptFields Nothing = []
-    refScriptFields (Just Nothing) = ["referenceScript" .= Aeson.Null]
-    refScriptFields (Just (Just script)) =
-      ["referenceScript" .= ledgerScriptToScriptInAnyLang script]
+alonzoOnwardsTxOutToJson
+  :: (L.AnyEraTxOut era, L.AlonzoEraScript era) => TxOut era -> Aeson.Value
+alonzoOnwardsTxOutToJson (TxOut o) =
+  Aeson.object $
+    [ "address" .= addrToJson (o ^. L.addrTxOutL)
+    , "value" .= valueToJson (o ^. L.valueTxOutL)
+    ]
+      <> datumFields mDatum
+      <> inlineDatumFields isBabbagePlus mDatum
+      <> refScriptFields mRefScript
+ where
+  mDatum = o ^. L.datumTxOutG
+  mRefScript = o ^. L.referenceScriptTxOutG
+  isBabbagePlus = isJust mRefScript
+
+  datumFields Nothing = []
+  datumFields (Just L.NoDatum) =
+    ["datumhash" .= Aeson.Null, "datum" .= Aeson.Null]
+  datumFields (Just (L.DatumHash dh)) =
+    ["datumhash" .= dh, "datum" .= Aeson.Null]
+  datumFields (Just (L.Datum _)) =
+    ["datum" .= Aeson.Null]
+
+  inlineDatumFields _ (Just (L.Datum bd)) =
+    let hsd = Api.fromAlonzoData (L.binaryDataToData bd)
+     in [ "inlineDatumhash" .= L.hashBinaryData bd
+        , "inlineDatum" .= Api.scriptDataToJsonDetailedSchema hsd
+        , "inlineDatumRaw"
+            .= ( Aeson.String
+                   . Text.decodeUtf8
+                   . Base16.encode
+                   . serialiseToCBOR
+                   $ hsd
+               )
+        ]
+  inlineDatumFields True _ =
+    ["inlineDatum" .= Aeson.Null, "inlineDatumRaw" .= Aeson.Null]
+  inlineDatumFields _ _ = []
+
+  refScriptFields Nothing = []
+  refScriptFields (Just Nothing) = ["referenceScript" .= Aeson.Null]
+  refScriptFields (Just (Just script)) =
+    ["referenceScript" .= ledgerScriptToScriptInAnyLang script]
 
 -- | Render just the base fields (address and value) shared by all eras.
 txOutBaseJson :: L.EraTxOut era => L.TxOut era -> Aeson.Value

@@ -11,7 +11,6 @@ import Cardano.Api.Experimental.Tx qualified as Exp
 
 import Cardano.Ledger.Core qualified as L
 
-import Control.Monad (forM_)
 import Data.Aeson (eitherDecode, encode)
 
 import Test.Gen.Cardano.Api (genAlonzoGenesis)
@@ -71,17 +70,15 @@ prop_roundtrip_praos_nonce_JSON = H.property $ do
 -- 'shelleyBasedEraConstraints' is not yet implemented for it.
 prop_new_txout_json_matches_legacy :: Property
 prop_new_txout_json_matches_legacy = H.property $ do
-  forM_ [minBound .. maxBound] $ \(AnyShelleyBasedEra sbe) ->
-    ( case sbe of
-        ShelleyBasedEraShelley -> go sbe
-        ShelleyBasedEraAllegra -> go sbe
-        ShelleyBasedEraMary -> go sbe
-        ShelleyBasedEraAlonzo -> go sbe
-        ShelleyBasedEraBabbage -> go sbe
-        ShelleyBasedEraConway -> go sbe
-        ShelleyBasedEraDijkstra -> pure () -- shelleyBasedEraConstraints not yet implemented
-    )
-      :: H.PropertyT IO ()
+  AnyShelleyBasedEra sbe <- forAll $ Gen.element [minBound .. maxBound]
+  case sbe of
+    ShelleyBasedEraShelley -> go sbe
+    ShelleyBasedEraAllegra -> go sbe
+    ShelleyBasedEraMary -> go sbe
+    ShelleyBasedEraAlonzo -> go sbe
+    ShelleyBasedEraBabbage -> go sbe
+    ShelleyBasedEraConway -> go sbe
+    ShelleyBasedEraDijkstra -> pure () -- shelleyBasedEraConstraints not yet implemented
 
 go
   :: ( IsCardanoEra era
