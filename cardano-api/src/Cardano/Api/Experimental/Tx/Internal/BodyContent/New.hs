@@ -24,6 +24,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , TxWithdrawals (..)
   , TxBodyContent (..)
   , Datum (..)
+  , MakeUnsignedTxError (..)
   , defaultTxBodyContent
   , extractDatumsAndHashes
   , getDatums
@@ -170,11 +171,27 @@ import Data.Typeable (cast)
 import GHC.Exts (IsList (..))
 import Lens.Micro
 
+-- | Error that can occur when constructing an unsigned transaction.
+data MakeUnsignedTxError
+  = -- | Plutus scripts are present in the transaction but no protocol
+    -- parameters were provided. Protocol parameters are required to
+    -- compute the script integrity hash (script_data_hash).
+    MakeUnsignedTxMissingProtocolParams
+  deriving (Eq, Show)
+
+instance Error MakeUnsignedTxError where
+  prettyError MakeUnsignedTxMissingProtocolParams =
+    mconcat
+      [ "Transaction uses Plutus scripts but no protocol parameters were provided. "
+      , "Protocol parameters are required to compute the script integrity hash "
+      , "(script_data_hash) from the cost models."
+      ]
+
 makeUnsignedTx
   :: forall era
    . Era era
   -> TxBodyContent (LedgerEra era)
-  -> UnsignedTx (LedgerEra era)
+  -> Either MakeUnsignedTxError (UnsignedTx (LedgerEra era))
 makeUnsignedTx DijkstraEra _ = error "makeUnsignedTx: Dijkstra era not supported yet"
 makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
   let TxScriptWitnessRequirements languages scripts datums redeemers = collectTxBodyScriptWitnessRequirements bc
@@ -197,12 +214,13 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
       totCollateral = unTxTotalCollateral <$> txTotalCollateral bc
       txAuxData = toAuxiliaryData (txMetadata bc) (txAuxScripts bc)
       scriptValidity = scriptValidityToIsValid $ txScriptValidity bc
-      scriptIntegrityHash =
-        convPParamsToScriptIntegrityHash
-          protocolParameters
-          redeemers
-          datums
-          languages
+
+  scriptIntegrityHash <-
+    convPParamsToScriptIntegrityHash
+      protocolParameters
+      redeemers
+      datums
+      languages
 
   let setMint = convMintValue apiMintValue
       setReqSignerHashes = convExtraKeyWitnesses apiExtraKeyWitnesses
@@ -235,11 +253,12 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
           & L.rdmrsTxWitsL .~ redeemers
 
   let eraSpecificTxBody = eraSpecificLedgerTxBody era ledgerTxBody bc
-  UnsignedTx $
-    L.mkBasicTx eraSpecificTxBody
-      & L.witsTxL .~ scriptWitnesses
-      & L.auxDataTxL .~ L.maybeToStrictMaybe (toAuxiliaryData (txMetadata bc) (txAuxScripts bc))
-      & L.isValidTxL .~ scriptValidity
+  Right $
+    UnsignedTx $
+      L.mkBasicTx eraSpecificTxBody
+        & L.witsTxL .~ scriptWitnesses
+        & L.auxDataTxL .~ L.maybeToStrictMaybe (toAuxiliaryData (txMetadata bc) (txAuxScripts bc))
+        & L.isValidTxL .~ scriptValidity
 
 convTxIns :: [(TxIn, AnyWitness era)] -> Set L.TxIn
 convTxIns inputs =
@@ -283,9 +302,8 @@ convPParamsToScriptIntegrityHash
   -> L.Redeemers (LedgerEra era)
   -> L.TxDats (LedgerEra era)
   -> Set Plutus.Language
-  -> StrictMaybe L.ScriptIntegrityHash
+  -> Either MakeUnsignedTxError (StrictMaybe L.ScriptIntegrityHash)
 convPParamsToScriptIntegrityHash mTxProtocolParams redeemers datums languages = obtainCommonConstraints (useEra @era) $ do
-  pp <- L.maybeToStrictMaybe mTxProtocolParams
   -- This logic is copied from ledger, because their code is not reusable
   -- c.f. https://github.com/IntersectMBO/cardano-ledger/commit/5a975d9af507c9ee835a86d3bb77f3e2670ad228#diff-8236dfec9688f22550b91fc9a87af9915523ab9c5bd817218ecceec8ca7a789bR282
   let shouldCalculateHash =
@@ -293,9 +311,14 @@ convPParamsToScriptIntegrityHash mTxProtocolParams redeemers datums languages = 
           null (redeemers ^. L.unRedeemersL)
             && null (datums ^. L.unTxDatsL)
             && null languages
-  guard shouldCalculateHash
-  let scriptIntegrity = L.ScriptIntegrity redeemers datums (Set.map (L.getLanguageView pp) languages)
-  pure $ L.hashScriptIntegrity scriptIntegrity
+  if shouldCalculateHash
+    then do
+      pp <- maybe (Left MakeUnsignedTxMissingProtocolParams) Right mTxProtocolParams
+      pure $
+        SJust $
+          L.hashScriptIntegrity $
+            L.ScriptIntegrity redeemers datums (Set.map (L.getLanguageView pp) languages)
+    else pure SNothing
 
 convProposalProcedures
   :: forall era

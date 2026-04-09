@@ -145,7 +145,9 @@ genFundedSimpleTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
-  return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
+  case Exp.makeUnsignedTx era txBodyContent of
+    Left err -> fail $ "makeUnsignedTx: " <> show err
+    Right tx -> return (tx, utxo, changeAddr)
 
 -- | Like 'genFundedSimpleTx' but the UTxO and output both carry native tokens.
 -- The output sends all tokens; the surplus ADA goes to the change output.
@@ -182,7 +184,9 @@ genFundedMultiAssetTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
-  return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
+  case Exp.makeUnsignedTx era txBodyContent of
+    Left err -> fail $ "makeUnsignedTx: " <> show err
+    Right tx -> return (tx, utxo, changeAddr)
 
 -- | Generates a simple lovelace-only transaction where the single output
 -- (5-10 ADA) greatly exceeds the UTxO funding (0.5-2 ADA).
@@ -215,7 +219,9 @@ genUnderfundedTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
-  return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
+  case Exp.makeUnsignedTx era txBodyContent of
+    Left err -> fail $ "makeUnsignedTx: " <> show err
+    Right tx -> return (tx, utxo, changeAddr)
 
 -- | Generates a transaction whose output demands a native token that does
 -- not exist in the UTxO (which is ADA-only). This guarantees a negative
@@ -255,7 +261,9 @@ genNonAdaUnbalancedTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
-  return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
+  case Exp.makeUnsignedTx era txBodyContent of
+    Left err -> fail $ "makeUnsignedTx: " <> show err
+    Right tx -> return (tx, utxo, changeAddr)
 
 -- | Generates a two-output transaction where the second output carries native
 -- tokens with only 1000 lovelace — well below the minimum UTxO for a
@@ -299,7 +307,9 @@ genMinUTxOViolatingTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut1, sendTxOut2]
           & Exp.setTxFee 0
-  return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
+  case Exp.makeUnsignedTx era txBodyContent of
+    Left err -> fail $ "makeUnsignedTx: " <> show err
+    Right tx -> return (tx, utxo, changeAddr)
 
 -- | Generates a transaction with inputs but no outputs. Once the fee
 -- converges (Case 3), the positive surplus triggers Case 2, and
@@ -327,7 +337,9 @@ genNoOutputsTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [] -- No outputs!
           & Exp.setTxFee 0
-  return (Exp.makeUnsignedTx era txBodyContent, utxo, changeAddr)
+  case Exp.makeUnsignedTx era txBodyContent of
+    Left err -> fail $ "makeUnsignedTx: " <> show err
+    Right tx -> return (tx, utxo, changeAddr)
 
 -- | Generates a transaction designed to trigger 'NotEnoughAdaForChangeOutput'.
 --
@@ -375,11 +387,14 @@ genTinySurplusTx era = Exp.obtainCommonConstraints era $ do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
-      unsignedTx = Exp.makeUnsignedTx era txBodyContent
-      -- Compute F1 via case match on UnsignedTx (needed to bring EraTx into scope)
-      L.Coin f1 = case unsignedTx of
-        Exp.UnsignedTx prelimLedgerTx ->
-          L.calcMinFeeTx prelimUtxo (exampleProtocolParamsEra era) prelimLedgerTx 0
+  unsignedTx <- case Exp.makeUnsignedTx era txBodyContent of
+    Left err -> fail $ "makeUnsignedTx: " <> show err
+    Right tx -> return tx
+  let
+    -- Compute F1 via case match on UnsignedTx (needed to bring EraTx into scope)
+    L.Coin f1 = case unsignedTx of
+      Exp.UnsignedTx prelimLedgerTx ->
+        L.calcMinFeeTx prelimUtxo (exampleProtocolParamsEra era) prelimLedgerTx 0
   -- Surplus just above F1 but well below F2 (≈ F1 + 23). This is enough
   -- to pass fee convergence but not survive adding a change output.
   surplus <- L.Coin <$> Gen.integral (Range.linear (f1 + 4) (f1 + 10))

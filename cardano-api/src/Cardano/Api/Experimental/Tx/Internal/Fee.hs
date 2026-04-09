@@ -138,6 +138,7 @@ data TxBodyErrorAutoBalance era
       -- ^ Total deposits
       L.MaryValue
       -- ^ Balance
+  | TxBodyErrorMakeUnsignedTx MakeUnsignedTxError
 
 deriving instance Show (TxBodyErrorAutoBalance era)
 
@@ -203,6 +204,8 @@ instance Error (TxBodyErrorAutoBalance era) where
         , "\nBalance (UTxO value - deposits): "
         , pshow balance
         ]
+    TxBodyErrorMakeUnsignedTx err ->
+      prettyError err
 
 -- | Use when you do not have access to the UTxOs you intend to spend
 estimateBalancedTxBody
@@ -254,12 +257,14 @@ estimateBalancedTxBody
 data TxFeeEstimationError era
   = TxFeeEstimationScriptExecutionError (TxBodyErrorAutoBalance (LedgerEra era))
   | TxFeeEstimationBalanceError (TxBodyErrorAutoBalance (LedgerEra era))
+  | TxFeeEstimationMakeUnsignedTxError MakeUnsignedTxError
   deriving Show
 
 instance Error (TxFeeEstimationError era) where
   prettyError = \case
     TxFeeEstimationScriptExecutionError e -> prettyError e
     TxFeeEstimationBalanceError e -> prettyError e
+    TxFeeEstimationMakeUnsignedTxError e -> prettyError e
 
 -- | Use when you do not have access to the UTxOs you intend to spend
 estimateBalancedTxBody'
@@ -365,17 +370,18 @@ estimateBalancedTxBody'
     -- Step 3. Create a tx body with out max lovelace fee. This is strictly for
     -- calculating our fee with evaluateTransactionFee.
     let maxLovelaceFee = L.Coin (2 ^ (32 :: Integer) - 1)
-    let txbody1ForFeeEstimateOnly =
-          makeUnsignedTx
-            useEra
-            txbodycontent1
-              { txFee = maxLovelaceFee
-              , txOuts =
-                  obtainCommonConstraints (useEra @era) (TxOut changeTxOut)
-                    : txOuts txbodycontent
-              , txReturnCollateral = mDummyReturnCollateral
-              , txTotalCollateral = mDummyTotalCollateral
-              }
+    txbody1ForFeeEstimateOnly <-
+      first TxFeeEstimationMakeUnsignedTxError $
+        makeUnsignedTx
+          useEra
+          txbodycontent1
+            { txFee = maxLovelaceFee
+            , txOuts =
+                obtainCommonConstraints (useEra @era) (TxOut changeTxOut)
+                  : txOuts txbodycontent
+            , txReturnCollateral = mDummyReturnCollateral
+            , txTotalCollateral = mDummyTotalCollateral
+            }
     let fee =
           evaluateTransactionFee
             pparams
@@ -400,8 +406,8 @@ estimateBalancedTxBody'
     --  1. The original outputs
     --  2. Tx fee
     --  3. Return and total collateral
-    let
-      txbody2 =
+    txbody2 <-
+      first TxFeeEstimationMakeUnsignedTxError $
         makeUnsignedTx
           useEra
           txbodycontent1
@@ -1420,10 +1426,11 @@ makeTransactionBodyAutoBalance
     -- 3. update tx with fees
     -- 4. balance the transaction and update tx change output
 
-    let txbodyForChange =
-          makeUnsignedTx
-            useEra
-            txbodycontent
+    txbodyForChange <-
+      first TxBodyErrorMakeUnsignedTx $
+        makeUnsignedTx
+          useEra
+          txbodycontent
 
     let initialChangeTxOutValue :: Ledger.Value (LedgerEra era) =
           evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo txbodyForChange
@@ -1441,13 +1448,14 @@ makeTransactionBodyAutoBalance
     -- scripts execution costs.
     -- TODO: The txbody is made (leder tx) so this
     -- is where the execution units map is made
-    let UnsignedTx txbody =
-          makeUnsignedTx
-            useEra
-            ( txbodycontent
-                & modTxOuts
-                  (<> [initialChangeTxOut])
-            )
+    UnsignedTx txbody <-
+      first TxBodyErrorMakeUnsignedTx $
+        makeUnsignedTx
+          useEra
+          ( txbodycontent
+              & modTxOuts
+                (<> [initialChangeTxOut])
+          )
     let exUnitsMapWithLogs =
           evaluateTransactionExecutionUnits
             systemstart
@@ -1479,17 +1487,18 @@ makeTransactionBodyAutoBalance
     let maxLovelaceFee = L.Coin (2 ^ (32 :: Integer) - 1)
     -- Make a txbody that we will use for calculating the fees.
     let (maybeDummyReturnTxCollateral, maybeDummyTotalTxCollateral) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
-    let txbody1 =
-          makeUnsignedTx
-            useEra
-            txbodycontent1
-              { txFee = maxLovelaceFee
-              , txReturnCollateral = maybeDummyReturnTxCollateral
-              , txTotalCollateral = maybeDummyTotalTxCollateral
-              , txOuts =
-                  txOuts txbodycontent
-                    <> [initialChangeTxOut]
-              }
+    txbody1 <-
+      first TxBodyErrorMakeUnsignedTx $
+        makeUnsignedTx
+          useEra
+          txbodycontent1
+            { txFee = maxLovelaceFee
+            , txReturnCollateral = maybeDummyReturnTxCollateral
+            , txTotalCollateral = maybeDummyTotalTxCollateral
+            , txOuts =
+                txOuts txbodycontent
+                  <> [initialChangeTxOut]
+            }
 
     -- NB: This has the potential to over estimate the fees because estimateTransactionKeyWitnessCount
     -- makes the conservative assumption that all inputs are from distinct
@@ -1521,14 +1530,15 @@ makeTransactionBodyAutoBalance
     -- does not matter, instead it's just the values of the fee and outputs.
     -- Here we do not want to start with any change output, since that's what
     -- we need to calculate.
-    let txbody2 =
-          makeUnsignedTx
-            useEra
-            txbodycontent1
-              { txFee = fee
-              , txReturnCollateral = maybeReturnTxCollateral
-              , txTotalCollateral = maybeTotalTxCollateral
-              }
+    txbody2 <-
+      first TxBodyErrorMakeUnsignedTx $
+        makeUnsignedTx
+          useEra
+          txbodycontent1
+            { txFee = fee
+            , txReturnCollateral = maybeReturnTxCollateral
+            , txTotalCollateral = maybeTotalTxCollateral
+            }
 
     case useEra @era of
       DijkstraEra -> error "makeTransactionBodyAutoBalance: DijkstraEra not supported"
@@ -1566,10 +1576,11 @@ makeTransactionBodyAutoBalance
                 , txReturnCollateral = maybeReturnTxCollateral
                 , txTotalCollateral = maybeTotalTxCollateral
                 }
-        let txbody3 =
-              makeUnsignedTx
-                useEra
-                finalTxBodyContent
+        txbody3 <-
+          first TxBodyErrorMakeUnsignedTx $
+            makeUnsignedTx
+              useEra
+              finalTxBodyContent
         return
           (txbody3, finalTxBodyContent)
 

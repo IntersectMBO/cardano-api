@@ -99,10 +99,11 @@ tx_canonical = H.propertyOnce $ do
             & Exp.setTxTotalCollateral txTotalColl
             & Exp.setTxFee (L.Coin 0)
 
-    let unsignedTx = Exp.makeUnsignedTx era txBodyContent'
-        tx = Exp.signTx era [] [] unsignedTx
-        Exp.SignedTx ledgerTx = tx
-        oldStyleTx = OldApi.ShelleyTx sbe ledgerTx
+    unsignedTx <- H.evalEither $ Exp.makeUnsignedTx era txBodyContent'
+    let
+      tx = Exp.signTx era [] [] unsignedTx
+      Exp.SignedTx ledgerTx = tx
+      oldStyleTx = OldApi.ShelleyTx sbe ledgerTx
 
     void . H.evalIO $ OldApi.writeTxFileTextEnvelope sbe (OldApi.File outFileNonCanonical) oldStyleTx
     void . H.evalIO $
