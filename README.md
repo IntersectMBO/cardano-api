@@ -10,7 +10,6 @@ See the [Contributing guide](CONTRIBUTING.md) for how to contribute to this proj
 ## Core maintainers
 
 * [Jordan Millar](https://github.com/Jimbo4350)
-* [John Ky](https://github.com/newhoggy)
 * [Mateusz Gałażyn](https://github.com/carbolymer)
 * [Pablo Lamela](https://github.com/palas)
 
