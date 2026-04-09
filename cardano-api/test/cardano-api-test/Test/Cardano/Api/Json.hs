@@ -93,6 +93,33 @@ go sbe = do
       newTxOut = Exp.TxOut ledgerTxOut
   toJSON oldTxOut === toJSON newTxOut
 
+-- | Verify that the new experimental 'TxOut' round-trips through JSON
+-- (encode then decode) for all Shelley-based eras.
+prop_new_txout_json_roundtrip :: Property
+prop_new_txout_json_roundtrip = H.property $ do
+  AnyShelleyBasedEra sbe <- forAll $ Gen.element [minBound .. maxBound]
+  case sbe of
+    ShelleyBasedEraShelley -> goRoundtrip sbe
+    ShelleyBasedEraAllegra -> goRoundtrip sbe
+    ShelleyBasedEraMary -> goRoundtrip sbe
+    ShelleyBasedEraAlonzo -> goRoundtrip sbe
+    ShelleyBasedEraBabbage -> goRoundtrip sbe
+    ShelleyBasedEraConway -> goRoundtrip sbe
+    ShelleyBasedEraDijkstra -> pure ()
+
+goRoundtrip
+  :: ( L.EraTxOut (ShelleyLedgerEra era)
+     , ToJSON (Exp.TxOut (ShelleyLedgerEra era))
+     , FromJSON (Exp.TxOut (ShelleyLedgerEra era))
+     )
+  => ShelleyBasedEra era
+  -> H.PropertyT IO ()
+goRoundtrip sbe = do
+  oldTxOut <- forAll $ genTxOutUTxOContext sbe
+  let ledgerTxOut = toShelleyTxOut sbe oldTxOut
+      newTxOut = Exp.TxOut ledgerTxOut
+  tripping newTxOut encode eitherDecode
+
 tests :: TestTree
 tests =
   testGroup
@@ -106,4 +133,5 @@ tests =
     , testProperty "json roundtrip scriptdata detailed json" prop_json_roundtrip_scriptdata_detailed_json
     , testProperty "json roundtrip praos nonce" prop_roundtrip_praos_nonce_JSON
     , testProperty "new TxOut ToJSON matches legacy" prop_new_txout_json_matches_legacy
+    , testProperty "new TxOut JSON roundtrip" prop_new_txout_json_roundtrip
     ]
