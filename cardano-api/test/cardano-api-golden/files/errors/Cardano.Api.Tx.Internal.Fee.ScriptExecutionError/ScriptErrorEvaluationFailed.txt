@@ -5,33 +5,33 @@ Script arguments:
    ScriptInfo: CertifyingScript 0 (TxCertRegStaking (ScriptCredential c61bfa1c138524b69f378bc69504322f39289ce554d549db4d1e2b50) (Just 400000))
    TxInfo:
      TxId: d87ed9269be7e0c12b12b01431d90c05587867beda0f72904fb811c9ec0f99d0
-     Inputs: [ a789d54c466c766fb4bc5e09cbcd7a0a46097567e4ff6062095562a7404b9cbf!0 -> - Value {getValue = Map {unMap = [(,Map {unMap = [("",5000000)]})]}} addressed to
+     Inputs: [ a789d54c466c766fb4bc5e09cbcd7a0a46097567e4ff6062095562a7404b9cbf!0 -> - Value {getValue = Map {unMap = [(,Map {unMap = [(0x,5000000)]})]}} addressed to
                                                                                        ScriptCredential: c61bfa1c138524b69f378bc69504322f39289ce554d549db4d1e2b50 (no staking credential)
                                                                                        with datum
                                                                                        datum hash:  03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314
                                                                                        with referenceScript
                                                                                         ]
      Reference inputs: []
-     Outputs: [ - Value {getValue = Map {unMap = [(,Map {unMap = [("",2000000)]}),(c61bfa1c138524b69f378bc69504322f39289ce554d549db4d1e2b50,Map {unMap = [("MillarCoin",5)]})]}} addressed to
+     Outputs: [ - Value {getValue = Map {unMap = [(,Map {unMap = [(0x,2000000)]}),(c61bfa1c138524b69f378bc69504322f39289ce554d549db4d1e2b50,Map {unMap = [(0x4d696c6c6172436f696e,5)]})]}} addressed to
                   PubKeyCredential: c5bcaf94f20751ab72ca6e62995883a72b70b0d874ea68ea09790e93 (no staking credential)
                   with datum
                   no datum
                   with referenceScript
 
-              , - Value {getValue = Map {unMap = [(,Map {unMap = [("",1000000)]})]}} addressed to
+              , - Value {getValue = Map {unMap = [(,Map {unMap = [(0x,1000000)]})]}} addressed to
                   PubKeyCredential: c5bcaf94f20751ab72ca6e62995883a72b70b0d874ea68ea09790e93 (no staking credential)
                   with datum
                   datum hash:  ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e25
                   with referenceScript
 
-              , - Value {getValue = Map {unMap = [(,Map {unMap = [("",15000005000000)]})]}} addressed to
+              , - Value {getValue = Map {unMap = [(,Map {unMap = [(0x,15000005000000)]})]}} addressed to
                   PubKeyCredential: 29233e5ff430dd25b9146f5f38de1235861deac704441ca0b06af912 (no staking credential)
                   with datum
                   no datum
                   with referenceScript
                    ]
      Fee: 0
-     Value minted: UnsafeMintValue {unMintValue = Map {unMap = [(c61bfa1c138524b69f378bc69504322f39289ce554d549db4d1e2b50,Map {unMap = [("MillarCoin",5)]})]}}
+     Value minted: UnsafeMintValue {unMintValue = Map {unMap = [(c61bfa1c138524b69f378bc69504322f39289ce554d549db4d1e2b50,Map {unMap = [(0x4d696c6c6172436f696e,5)]})]}}
      TxCerts: [ TxCertRegStaking (ScriptCredential c61bfa1c138524b69f378bc69504322f39289ce554d549db4d1e2b50) (Just 400000) ]
      Wdrl: []
      Valid range: (-∞ , +∞)
