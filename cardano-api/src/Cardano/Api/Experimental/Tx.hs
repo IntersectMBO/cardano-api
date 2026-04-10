@@ -78,7 +78,9 @@ module Cardano.Api.Experimental.Tx
     -- 'TxBodyContent' that we defined earlier:
     --
     -- @
-    -- let (Right unsignedTx) = Exp.makeUnsignedTx era txBodyContent
+    -- case Exp.makeUnsignedTx era txBodyContent of
+    --   Left err -> error (show err)
+    --   Right unsignedTx -> ...
     -- @
     --
     -- Next, use the key witness to sign the unsigned transaction with the 'makeKeyWitness' function:
@@ -117,6 +119,7 @@ module Cardano.Api.Experimental.Tx
     -- * Contents
     UnsignedTx (..)
   , SignedTx (..)
+  , MakeUnsignedTxError (..)
   , makeUnsignedTx
   , makeKeyWitness
   , signTx
