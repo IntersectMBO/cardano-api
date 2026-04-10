@@ -15,6 +15,10 @@ where
 
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.AnyScriptWitness
+  ( AnyPlutusScriptWitness (AnyPlutusSpendingScriptWitness)
+  , PlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV3)
+  )
 import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Genesis qualified as Genesis
@@ -32,6 +36,7 @@ import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Plutus.Data qualified as L
+import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
@@ -88,6 +93,12 @@ tests =
         [ testProperty
             "Roundtrip serialiseToCBOR/deserialiseFromCBOR AnyScript"
             prop_roundtrip_cbor_any_script
+        ]
+    , testGroup
+        "makeUnsignedTx"
+        [ testProperty
+            "Plutus scripts without protocol params returns MakeUnsignedTxMissingProtocolParams"
+            prop_makeUnsignedTx_plutus_without_pparams
         ]
     , testGroup
         "calcMinFeeRecursive"
@@ -578,6 +589,34 @@ prop_roundtrip_serialise_as_raw_bytes_signed_tx = H.withTests (H.TestLimit 20) $
       signedTx
       (Text.decodeUtf8 . Api.serialiseToRawBytesHex)
       (first show . Api.deserialiseFromRawBytesHex . Text.encodeUtf8)
+
+-- ---------------------------------------------------------------------------
+-- Regression test for makeUnsignedTx
+-- ---------------------------------------------------------------------------
+
+-- | Regression test: 'makeUnsignedTx' must return 'Left MakeUnsignedTxMissingProtocolParams'
+-- when the transaction body contains a Plutus script witness but no protocol parameters.
+-- Protocol parameters are required to compute the script integrity hash (script_data_hash).
+prop_makeUnsignedTx_plutus_without_pparams :: Property
+prop_makeUnsignedTx_plutus_without_pparams = H.propertyOnce $ do
+  srcTxIn <- getExampleSrcTxId
+  let dummyRedeemer = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor 0 []
+      plutusWit =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusSpendingScriptWitness $
+            PlutusSpendingScriptWitnessV3 $
+              Exp.PlutusScriptWitness
+                Plutus.SPlutusV3
+                (Exp.PReferenceScript srcTxIn)
+                Exp.NoScriptDatum
+                dummyRedeemer
+                (Script.ExecutionUnits 0 0)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(srcTxIn, plutusWit)]
+          & Exp.setTxFee 0
+  Exp.makeUnsignedTx Exp.ConwayEra txBodyContent
+    H.=== Left Exp.MakeUnsignedTxMissingProtocolParams
 
 -- ---------------------------------------------------------------------------
 -- Property tests for calcMinFeeRecursive
