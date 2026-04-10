@@ -15,12 +15,14 @@ import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Monad.Error (failEither)
 
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Tools qualified as L (calcMinFeeTx)
 
+import Data.Bifunctor (first)
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
 import Data.Sequence.Strict qualified as Seq
@@ -387,9 +389,8 @@ genTinySurplusTx era = Exp.obtainCommonConstraints era $ do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
-  unsignedTx <- case Exp.makeUnsignedTx era txBodyContent of
-    Left err -> fail $ "makeUnsignedTx: " <> show err
-    Right tx -> return tx
+  unsignedTx <-
+    failEither . first (("makeUnsignedTx: " <>) . show) $ Exp.makeUnsignedTx era txBodyContent
   let
     -- Compute F1 via case match on UnsignedTx (needed to bring EraTx into scope)
     L.Coin f1 = case unsignedTx of

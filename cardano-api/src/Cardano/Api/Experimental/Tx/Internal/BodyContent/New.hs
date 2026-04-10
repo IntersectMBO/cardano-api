@@ -107,6 +107,7 @@ import Cardano.Api.Governance.Internal.Action.VotingProcedure
 import Cardano.Api.Key.Internal
 import Cardano.Api.Ledger.Internal.Reexport (StrictMaybe (..))
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
+import Cardano.Api.Monad.Error (liftMaybe)
 import Cardano.Api.Plutus.Internal.Script
   ( PlutusScript (..)
   , PlutusScriptVersion (..)
@@ -313,7 +314,7 @@ convPParamsToScriptIntegrityHash mTxProtocolParams redeemers datums languages = 
             && null languages
   if shouldCalculateHash
     then do
-      pp <- maybe (Left MakeUnsignedTxMissingProtocolParams) Right mTxProtocolParams
+      pp <- liftMaybe MakeUnsignedTxMissingProtocolParams mTxProtocolParams
       pure $
         SJust $
           L.hashScriptIntegrity $
