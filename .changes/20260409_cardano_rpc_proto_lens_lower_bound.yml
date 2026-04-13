@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1149
+kind:
+  - compatible
+description: |
+  Add lower bound to proto-lens >= 0.7.1.6

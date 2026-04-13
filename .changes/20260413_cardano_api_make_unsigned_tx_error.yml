@@ -1,0 +1,9 @@
+project: cardano-api
+pr: 1181
+kind:
+  - breaking
+  - bugfix
+description: |
+  makeUnsignedTx now returns Either MakeUnsignedTxError and errors when
+  Plutus scripts are present but protocol parameters are missing, instead
+  of silently omitting the script integrity hash (script_data_hash).

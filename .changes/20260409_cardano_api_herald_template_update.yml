@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1164
+kind:
+  - maintenance
+description: |
+  Switch releasing process to herald

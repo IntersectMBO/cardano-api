@@ -1,0 +1,6 @@
+project: cardano-wasm
+pr: 1008
+kind:
+  - feature
+description: |
+  Add implementation for stake certificate creation in `cardano-wasm`

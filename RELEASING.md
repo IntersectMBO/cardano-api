@@ -2,101 +2,28 @@
 
 ## Release process
 
-When making a new release, firstly you have to decide on a new version number for the release.
+### Using Github Action
 
-### Version bumping
-`cardano-api` is using [Haskell Package Versioning Policy](https://pvp.haskell.org/) for numbering each release version.
+To release a new version of `cardano-api`, use the [Actions > Release](https://github.com/intersectmbo/cardano-api/actions/workflows/release.yml) workflow (or via CLI):
 
-In order to decide which version number needs to be bumped up, it is necessary to know what was the latest released version of a package of the specific series you are targeting (e.g., the latest 8.4.x release).
-
-Three simple ways are:
-* look at the latest version on [`cardano-haskell-packages` (aka **CHaP**)](https://chap.intersectmbo.org/index.html) - the most reliable way
-* current version in the changelog
-* look at the latest git tag for the version
-
-When you found out the current version of `cardano-api`, the next step is to find out if the changes within the scope of the release are breaking or not.
-To make this process easier, each pull request has information about that - [see the `compatibility` field in the example changelog here](https://github.com/IntersectMBO/cardano-api/pull/53).
-This information becomes available in the next step of the process, in the changelog preparation after executing `generate-pr-changelogs.sh` script.
-You can defer decision about the version bump to that point.
-
-In general, the [PVP decision tree](https://pvp.haskell.org/#decision-tree) may become useful in the process.
-For example, if the current version of cardano-api is `8.4.1.2`, you need to bump version to:
-* `8.4.1.3` - if there are only backwards-compatible bug-fixes
-* `8.4.2.0` - if there are only backwards-compatible features or bug-fixes
-* `8.5.0.0` - if there are any breaking changes
-* `9.0.0.0` - for major Cardano releases
-
-After deciding on the version number, set the correct `version` field in all cabal files in this repo.
-
-### Changelog preparation
-The changelog preparation workflow is using `cardano-updates` to gather all information and produce the changelog in markdown format.
-The full documentation for scripts is located in [`cardano-updates` repository](https://github.com/IntersectMBO/cardano-updates/blob/master/scripts/README.md).
-
-This part requires user to have the following tools installed on your local machine:
-* https://github.com/cli/cli
-* https://jqlang.github.io/jq/
-* https://mikefarah.gitbook.io/yq/
-
-Alternatively, you can enter the `cardano-api` nix-shell, where these tools are already available, by running
 ```bash
-nix develop
+gh workflow run release.yml -f package=cardano-api
 ```
-in `cardano-api` directory.
 
->:bulb: **Tip**
->
-> Steps which are only required when performing this process for the first time are marked with :four_leaf_clover: .
+To override the auto-computed version:
+```bash
+gh workflow run release.yml -f package=cardano-api -f version=8.5.0.0
+```
 
-In order to generate changelog files in markdown format use the following steps:
+The action ([`.github/workflows/release.yml`](.github/workflows/release.yml)) will:
+- Compute the next version from `.changes/` fragments (or use the explicit one)
+- Create a `release/<package>-<version>` branch
+- Run `herald batch` -- update changelog, bump `.cabal` version, remove consumed changelog fragments
+- Commit, tag, and push the branch and tag
+- Open a release PR against the target branch
+- Add a `release` changelog fragment for the next cycle
 
-1. :four_leaf_clover: Clone the `cardano-dev` repo at the same level as `cardano-api`:
-    ```bash
-    git clone https://github.com/input-output-hk/cardano-dev
-    ```
-    Check that you're authenticated to GitHub using GitHub CLI:
-    ```bash
-    gh auth status
-    ```
-    If you're not authenticated, follow the steps shown on the command output.
-
-1. Create a release branch in `cardano-api`, for example:
-    ```bash
-    git checkout -b release/cardano-api-8.3.0.0
-    ```
-    >:high_brightness: **Note**
-    >
-    >A separate branch needs to be created for every cabal package you're planning to release.
-    >For example if you'd like to release both `cardano-api` and `cardano-api-gen` you need to create two branches (with correct version numbers): `release/cardano-api-8.3.0.0` and `release/cardano-api-gen-8.1.0.0`.
-
-1. Download all PRs data from the `cardano-api` repo.
-    This will take some time if the number of all PRs is large. From `cardano-api` directory, run:
-    ```bash
-    ../cardano-dev/scripts/download-prs.sh IntersectMBO/cardano-api
-    ```
-    The downloaded PRs can be inspected in `~/.cache/cardano-updates/` directory.
-
-    >:high_brightness: **Note**
-    >
-    >It would be advisable to make changelog entries corrections in the descriptions of GitHub PRs itself, as this would let us use GitHub PRs as a single source of truth for the changelog generation process.
-    >This also means, that after making a change to a changelog in a PR description, the whole procedure needs to be restarted from this download step.
-    >The output changelog can be reviewed in the next step.
-
-1. Generate markdown changelogs from Yaml detail file providing the hash of the previous release tag in the command line argument.
-    For example for the changelog between the tag `cardano-api-8.2.0.0` and `HEAD`:
-    ```bash
-    ../cardano-dev/scripts/generate-pr-changelogs.sh IntersectMBO/cardano-api cardano-api-8.2.0.0..HEAD
-    ```
-    This will process downloaded PRs and use those marked with `feature` or `bug` to produce the changelog to the standard output.
-
-    >:bulb: **Tip**
-    >
-    >You can sort all tags ascendingly using: `git show-ref --tags --dereference | sort -V -t '/' -k 3,3`
-
-1. Add generated changelog in the previous step to `CHANGELOG.md` file in respective cabal package in `cardano-api` repository, near the top of the file, adding a new section for the version being prepared, for example: `## 8.3.0.0`.
-    After doing that, create a PR from a new branch back to `master`.
-    Make sure that the release PR contains:
-    * updated changelogs
-    * bumped version fields in cabal files
+The release PR URL will be printed at the end of the workflow execution.
 
 >:high_brightness: **Note**
 >
@@ -108,10 +35,26 @@ In order to generate changelog files in markdown format use the following steps:
 >
 >Hold off on tagging and merging of the release PR, until CHaP PR gets merged. See: p. 5 in [Releasing to `cardano-haskell-packages`](#releasing-to-cardano-haskell-packages).
 
->:bulb: **Tip**
->
->Avoid unnecessary rebasing of the release PR to prevent accidental inclusion of unwanted changes.
->The release PR should be merged using merge queue with an explicit merge commit.
+#### Manual release process
+
+In case one would like to have more manual control over the release process, it's possible to do what the GHA is doing by hand.
+
+1. Run herald to obtain the next version providing the released package name:
+```bash
+nix run github:input-output-hk/cardano-dev#herald -- next cardano-api
+```
+
+1. Create new branch e.g. `release/cardano-api-8.5.0.0`:
+```bash
+git checkout -b release/cardano-api-8.5.0.0
+```
+
+1. Run herald to generate changelog and release commit:
+```bash
+nix run github:input-output-hk/cardano-dev#herald -- batch --commit-tag
+```
+
+1. Push the branch, open a release PR.
 
 
 ### Releasing to `cardano-haskell-packages`
@@ -148,24 +91,8 @@ Briefly speaking, it requires executing of the following steps:
 >CHaP CI build can fail due to various reasons, like invalid haddock syntax.
 >Tagging and merging the release PR after CHaP PR allows to accommodate for potential issues which can arise here.
 
-### Tagging the release version
 
-After successful CI build in CHaP, the release PR (in the `cardano-api` repo) can be tagged and then enqueued to merge.
-
-1. Make sure that:
-   1. Your `HEAD` is on the commit you're going to tag - **this has to be the same commit which was released to CHaP**
-   1. Your `HEAD` is in `release/packagename-version.x` branch history on the `origin` remote (the `.x` suffix is optional).
-
-1. Use the following script to prepare the tag:
-   ```bash
-   ../cardano-dev/scripts/tag.sh
-   ```
-   This script will extract the version numbers from cabal files, create the tag and **push it to the `origin` remote**.
-   Please note that the tagging process will fail if either:
-   1. The tag already exists on the origin remote
-   1. The `packagename/CHANGELOG.md` does not contain an entry for the new version.
-
-#### GitHub release pipeline
+### GitHub releases pipeline
 
 If the repo has a release pipeline configured, it will be triggered on the tag push.
 
@@ -194,30 +121,20 @@ If a bug affecting a release is discovered long after that release has been made
 
 1. Identify the commit that introduced the issue and determine the list of affected releases by checking which tags include that commit (GitHub often displays this list under the commit title).
 
-2. Generate a new patch versions for each of the affected releases. New versions are typically calculated by incrementing the third digit of the latest release in each affected series (see the [Version bumping](./RELEASING.md#version-bumping) section for more information). By increasing the third or fourth digit, we ensure dependencies automatically pick up the fix.
+1. Generate a new patch versions for each of the affected releases. New versions are typically calculated by incrementing the third digit of the latest release in each affected series (see the [Version bumping](./RELEASING.md#version-bumping) section for more information). By increasing the third or fourth digit, we ensure dependencies automatically pick up the fix.
 
-3. For each version we decide to patch, create a branch starting from the tag of the unpatched version. For example, for `10.14.2.0`, we create a new branch `release/cardano-api-10.14.2.0` based on the tag `cardano-api-10.14.1.0`.
+1. For each version we decide to patch, create a branch starting from the tag of the unpatched version. For example, for `10.14.2.0`, we create a new branch `release/cardano-api-10.14.2.0` based on the tag `cardano-api-10.14.1.0`.
 
-4. From each of the release branches, create a dedicated branch for the backported fix, such as `backport/cardano-api-10.14/fix-bug`. Cherry-pick the bug fix onto this backport branch, resolving any conflicts that arise. And issue and merge a Pull Request (PR) from the backport branch to the patch release branch (e.g., `release/cardano-api-10.14.2.0`).
-
-   The reason we use a PR for the backport is to ensure the changelog gathering script works correctly in later steps. (Alternatively, commits can be added directly to the release branch, but this requires manually writing the changelog entries later.)
+1. From each of the release branches, create a dedicated branch for the backported fix, such as `backport/cardano-api-10.14/fix-bug`. Cherry-pick the bug fix onto this backport branch, resolving any conflicts that arise. And issue and merge a Pull Request (PR) from the backport branch to the patch release branch (e.g., `release/cardano-api-10.14.2.0`).
 
    This step can be repeated if multiple bugs need to be patched; create one PR per bug fix.
 
-5. Prepare the releases by generating the changelog entry running the same scripts used for normal releases:
+1. Trigger the **Release** workflow (see above how to do it). 
+  You can also manually create changelog using `herald` (see description above).
 
-   ```bash
-    ../cardano-dev/scripts/download-prs.sh IntersectMBO/cardano-api
-    ../cardano-dev/scripts/generate-pr-changelogs.sh IntersectMBO/cardano-api cardano-api-10.14.1.0..HEAD
-    ```
+1. Publish the releases to CHaP (Cardano Haskell Packages) in the same way than for normal releases (see [Releasing to `cardano-haskell-packages`](./RELEASING.md#releasing-to-cardano-haskell-packages) section): Use `add-from-github.sh` to create a CHaP entry for each of our new releases, open a PR in the CHaP repository, and once the build passes and is approved, we merge them.
 
-   Add the generated entry to the `CHANGELOG.md`, bump the version number in the `.cabal` file, and create a release PR targeting `master`.
-
-6. Publish the releases to CHaP (Cardano Haskell Packages) in the same way than for normal releases (see [Releasing to `cardano-haskell-packages`](./RELEASING.md#releasing-to-cardano-haskell-packages) section): Use `add-from-github.sh` to create a CHaP entry for each of our new releases, open a PR in the CHaP repository, and once the build passes and is approved, we merge them.
-
-7. Use `tag.sh` to create a release tag in the repo of the package we are fixing.
-
-8. Unlike in the release workflow for normal releases, for backports, we will **not** merge the release PR into `master` (assuming the backported fix is already there). Attempting to do so may cause issues with conflicts, CI errors, and the risk of the same changes being applied several times to `master`.
+1. Unlike in the release workflow for normal releases, for backports, we will **not** merge the release PR into `master` (assuming the backported fix is already there). Attempting to do so may cause issues with conflicts, CI errors, and the risk of the same changes being applied several times to `master`.
 
    Instead, we will just close the backport release PRs and open a new PR, directly forked from `master`, that will simply update the change-log for all the release PRs we haven't merged. This should be done just once for all the releases, after all the patches have been released.
 
@@ -241,7 +158,6 @@ If it is already set to the current date, you can add a suffix to it - the impor
 This issue happens due to frequent cache collisions in the [`cabal-cache`](https://github.com/haskell-works/cabal-cache).
 
 ## References
-1. https://github.com/input-output-hk/cardano-updates/tree/master/scripts
 1. https://github.com/IntersectMBO/cardano-ledger/blob/master/RELEASING.md
 1. https://chap.intersectmbo.org/index.html
 1. https://input-output-hk.github.io/cardano-engineering-handbook/policy/haskell/packaging/versioning.html
