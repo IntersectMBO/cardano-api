@@ -168,6 +168,7 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.OSet.Strict (OSet)
 import Data.OSet.Strict qualified as OSet
+import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict qualified as Seq
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -531,17 +532,28 @@ instance FromJSON (TxOut L.ConwayEra) where
   parseJSON = Aeson.withObject "TxOut" babbageOnwardsTxOutParseJson
 
 -- | Parse the base fields (address and value) shared by all eras.
-txOutBaseParseJson :: L.EraTxOut era => Aeson.Object -> Parser (L.TxOut era)
+txOutBaseParseJson :: forall era. L.EraTxOut era => Aeson.Object -> Parser (L.TxOut era)
 txOutBaseParseJson o = do
   addr <- addrFromJson =<< o .: "address"
   apiVal <- parseJSON =<< o .: "value"
-  let mv = toMaryValue apiVal
-  val <- case cast mv of
-    Just v -> pure v
-    Nothing -> case cast (L.coin mv) of
-      Just v -> pure v
-      Nothing -> fail "Unsupported value type for era"
+  val <- maryValueToEraValue (Proxy @era) $ toMaryValue apiVal
   pure $ L.mkBasicTxOut addr val
+
+-- | Convert a 'MaryValue' to the era-specific @'L.Value' era@ using runtime type
+-- checks via 'Data.Typeable.cast'.
+--
+-- The ledger's @Value@ type family resolves to different concrete types per era:
+-- 'Coin' for Shelley\/Allegra and 'MaryValue' for Mary onwards. Since 'MaryValue'
+-- subsumes 'Coin' (it separates lovelace from multi-asset), we can always produce
+-- the correct era type: first try casting the 'MaryValue' directly (succeeds in
+-- Mary+), then fall back to extracting the 'Coin' component (succeeds in
+-- Shelley\/Allegra).
+maryValueToEraValue :: L.EraTxOut era => Proxy era -> L.MaryValue -> Parser (L.Value era)
+maryValueToEraValue _proxy mv = case cast mv of
+  Just v -> pure v
+  Nothing -> case cast (L.coin mv) of
+    Just v -> pure v
+    Nothing -> fail "Unsupported value type for era"
 
 -- | Parse a ledger 'L.Addr' from JSON. Reverse of 'addrToJson'.
 addrFromJson :: Aeson.Value -> Parser L.Addr
