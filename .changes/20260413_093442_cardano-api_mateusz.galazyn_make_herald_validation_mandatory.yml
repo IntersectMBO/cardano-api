@@ -1,0 +1,5 @@
+description: Enable PR number validation in changelog fragments
+kind:
+- maintenance
+pr: 1183
+project: cardano-api

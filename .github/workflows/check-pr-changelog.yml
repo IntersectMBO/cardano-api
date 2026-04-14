@@ -28,6 +28,3 @@ jobs:
             accept-flake-config = true
 
       - uses: input-output-hk/cardano-dev/herald/.github/actions/validate@main
-        with:
-          # TODO: re-enable after backfill PR #1164 merges
-          pr: false
