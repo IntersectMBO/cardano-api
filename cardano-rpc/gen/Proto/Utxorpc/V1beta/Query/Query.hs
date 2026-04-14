@@ -3631,12 +3631,14 @@ instance Control.DeepSeq.NFData ReadUtxosResponse where
          * 'Proto.Utxorpc.V1beta.Query.Query_Fields.fieldMask' @:: Lens' SearchUtxosRequest Proto.Google.Protobuf.FieldMask.FieldMask@
          * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'fieldMask' @:: Lens' SearchUtxosRequest (Prelude.Maybe Proto.Google.Protobuf.FieldMask.FieldMask)@
          * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maxItems' @:: Lens' SearchUtxosRequest Data.Int.Int32@
-         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.startToken' @:: Lens' SearchUtxosRequest Data.Text.Text@ -}
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'maxItems' @:: Lens' SearchUtxosRequest (Prelude.Maybe Data.Int.Int32)@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.startToken' @:: Lens' SearchUtxosRequest Data.Text.Text@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'startToken' @:: Lens' SearchUtxosRequest (Prelude.Maybe Data.Text.Text)@ -}
 data SearchUtxosRequest
   = SearchUtxosRequest'_constructor {_SearchUtxosRequest'predicate :: !(Prelude.Maybe UtxoPredicate),
                                      _SearchUtxosRequest'fieldMask :: !(Prelude.Maybe Proto.Google.Protobuf.FieldMask.FieldMask),
-                                     _SearchUtxosRequest'maxItems :: !Data.Int.Int32,
-                                     _SearchUtxosRequest'startToken :: !Data.Text.Text,
+                                     _SearchUtxosRequest'maxItems :: !(Prelude.Maybe Data.Int.Int32),
+                                     _SearchUtxosRequest'startToken :: !(Prelude.Maybe Data.Text.Text),
                                      _SearchUtxosRequest'_unknownFields :: !Data.ProtoLens.FieldSet}
   deriving stock (Prelude.Eq, Prelude.Ord)
 instance Prelude.Show SearchUtxosRequest where
@@ -3679,8 +3681,22 @@ instance Data.ProtoLens.Field.HasField SearchUtxosRequest "maxItems" Data.Int.In
         (Lens.Family2.Unchecked.lens
            _SearchUtxosRequest'maxItems
            (\ x__ y__ -> x__ {_SearchUtxosRequest'maxItems = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault)
+instance Data.ProtoLens.Field.HasField SearchUtxosRequest "maybe'maxItems" (Prelude.Maybe Data.Int.Int32) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _SearchUtxosRequest'maxItems
+           (\ x__ y__ -> x__ {_SearchUtxosRequest'maxItems = y__}))
         Prelude.id
 instance Data.ProtoLens.Field.HasField SearchUtxosRequest "startToken" Data.Text.Text where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _SearchUtxosRequest'startToken
+           (\ x__ y__ -> x__ {_SearchUtxosRequest'startToken = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault)
+instance Data.ProtoLens.Field.HasField SearchUtxosRequest "maybe'startToken" (Prelude.Maybe Data.Text.Text) where
   fieldOf _
     = (Prelude..)
         (Lens.Family2.Unchecked.lens
@@ -3692,13 +3708,18 @@ instance Data.ProtoLens.Message SearchUtxosRequest where
     = Data.Text.pack "utxorpc.v1beta.query.SearchUtxosRequest"
   packedMessageDescriptor _
     = "\n\
-      \\DC2SearchUtxosRequest\DC2A\n\
-      \\tpredicate\CAN\SOH \SOH(\v2#.utxorpc.v1beta.query.UtxoPredicateR\tpredicate\DC29\n\
+      \\DC2SearchUtxosRequest\DC2F\n\
+      \\tpredicate\CAN\SOH \SOH(\v2#.utxorpc.v1beta.query.UtxoPredicateH\NULR\tpredicate\136\SOH\SOH\DC29\n\
       \\n\
-      \field_mask\CAN\STX \SOH(\v2\SUB.google.protobuf.FieldMaskR\tfieldMask\DC2\ESC\n\
-      \\tmax_items\CAN\ETX \SOH(\ENQR\bmaxItems\DC2\US\n\
-      \\vstart_token\CAN\EOT \SOH(\tR\n\
-      \startToken"
+      \field_mask\CAN\STX \SOH(\v2\SUB.google.protobuf.FieldMaskR\tfieldMask\DC2 \n\
+      \\tmax_items\CAN\ETX \SOH(\ENQH\SOHR\bmaxItems\136\SOH\SOH\DC2$\n\
+      \\vstart_token\CAN\EOT \SOH(\tH\STXR\n\
+      \startToken\136\SOH\SOHB\f\n\
+      \\n\
+      \_predicateB\f\n\
+      \\n\
+      \_max_itemsB\SO\n\
+      \\f_start_token"
   packedFileDescriptor _ = packedFileDescriptor
   fieldsByTag
     = let
@@ -3723,18 +3744,16 @@ instance Data.ProtoLens.Message SearchUtxosRequest where
               "max_items"
               (Data.ProtoLens.ScalarField Data.ProtoLens.Int32Field ::
                  Data.ProtoLens.FieldTypeDescriptor Data.Int.Int32)
-              (Data.ProtoLens.PlainField
-                 Data.ProtoLens.Optional
-                 (Data.ProtoLens.Field.field @"maxItems")) ::
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'maxItems")) ::
               Data.ProtoLens.FieldDescriptor SearchUtxosRequest
         startToken__field_descriptor
           = Data.ProtoLens.FieldDescriptor
               "start_token"
               (Data.ProtoLens.ScalarField Data.ProtoLens.StringField ::
                  Data.ProtoLens.FieldTypeDescriptor Data.Text.Text)
-              (Data.ProtoLens.PlainField
-                 Data.ProtoLens.Optional
-                 (Data.ProtoLens.Field.field @"startToken")) ::
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'startToken")) ::
               Data.ProtoLens.FieldDescriptor SearchUtxosRequest
       in
         Data.Map.fromList
@@ -3750,8 +3769,8 @@ instance Data.ProtoLens.Message SearchUtxosRequest where
     = SearchUtxosRequest'_constructor
         {_SearchUtxosRequest'predicate = Prelude.Nothing,
          _SearchUtxosRequest'fieldMask = Prelude.Nothing,
-         _SearchUtxosRequest'maxItems = Data.ProtoLens.fieldDefault,
-         _SearchUtxosRequest'startToken = Data.ProtoLens.fieldDefault,
+         _SearchUtxosRequest'maxItems = Prelude.Nothing,
+         _SearchUtxosRequest'startToken = Prelude.Nothing,
          _SearchUtxosRequest'_unknownFields = []}
   parseMessage
     = let
@@ -3852,33 +3871,31 @@ instance Data.ProtoLens.Message SearchUtxosRequest where
                                      (Data.ProtoLens.Encoding.Bytes.putBytes bs))
                              Data.ProtoLens.encodeMessage _v))
                 ((Data.Monoid.<>)
-                   (let
-                      _v = Lens.Family2.view (Data.ProtoLens.Field.field @"maxItems") _x
-                    in
-                      if (Prelude.==) _v Data.ProtoLens.fieldDefault then
-                          Data.Monoid.mempty
-                      else
-                          (Data.Monoid.<>)
-                            (Data.ProtoLens.Encoding.Bytes.putVarInt 24)
-                            ((Prelude..)
-                               Data.ProtoLens.Encoding.Bytes.putVarInt Prelude.fromIntegral _v))
+                   (case
+                        Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'maxItems") _x
+                    of
+                      Prelude.Nothing -> Data.Monoid.mempty
+                      (Prelude.Just _v)
+                        -> (Data.Monoid.<>)
+                             (Data.ProtoLens.Encoding.Bytes.putVarInt 24)
+                             ((Prelude..)
+                                Data.ProtoLens.Encoding.Bytes.putVarInt Prelude.fromIntegral _v))
                    ((Data.Monoid.<>)
-                      (let
-                         _v
-                           = Lens.Family2.view (Data.ProtoLens.Field.field @"startToken") _x
-                       in
-                         if (Prelude.==) _v Data.ProtoLens.fieldDefault then
-                             Data.Monoid.mempty
-                         else
-                             (Data.Monoid.<>)
-                               (Data.ProtoLens.Encoding.Bytes.putVarInt 34)
-                               ((Prelude..)
-                                  (\ bs
-                                     -> (Data.Monoid.<>)
-                                          (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                             (Prelude.fromIntegral (Data.ByteString.length bs)))
-                                          (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                                  Data.Text.Encoding.encodeUtf8 _v))
+                      (case
+                           Lens.Family2.view
+                             (Data.ProtoLens.Field.field @"maybe'startToken") _x
+                       of
+                         Prelude.Nothing -> Data.Monoid.mempty
+                         (Prelude.Just _v)
+                           -> (Data.Monoid.<>)
+                                (Data.ProtoLens.Encoding.Bytes.putVarInt 34)
+                                ((Prelude..)
+                                   (\ bs
+                                      -> (Data.Monoid.<>)
+                                           (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                              (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                           (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                                   Data.Text.Encoding.encodeUtf8 _v))
                       (Data.ProtoLens.Encoding.Wire.buildFieldSet
                          (Lens.Family2.view Data.ProtoLens.unknownFields _x)))))
 instance Control.DeepSeq.NFData SearchUtxosRequest where
@@ -3900,11 +3917,12 @@ instance Control.DeepSeq.NFData SearchUtxosRequest where
          * 'Proto.Utxorpc.V1beta.Query.Query_Fields.vec'items' @:: Lens' SearchUtxosResponse (Data.Vector.Vector AnyUtxoData)@
          * 'Proto.Utxorpc.V1beta.Query.Query_Fields.ledgerTip' @:: Lens' SearchUtxosResponse ChainPoint@
          * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'ledgerTip' @:: Lens' SearchUtxosResponse (Prelude.Maybe ChainPoint)@
-         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.nextToken' @:: Lens' SearchUtxosResponse Data.Text.Text@ -}
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.nextToken' @:: Lens' SearchUtxosResponse Data.Text.Text@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'nextToken' @:: Lens' SearchUtxosResponse (Prelude.Maybe Data.Text.Text)@ -}
 data SearchUtxosResponse
   = SearchUtxosResponse'_constructor {_SearchUtxosResponse'items :: !(Data.Vector.Vector AnyUtxoData),
                                       _SearchUtxosResponse'ledgerTip :: !(Prelude.Maybe ChainPoint),
-                                      _SearchUtxosResponse'nextToken :: !Data.Text.Text,
+                                      _SearchUtxosResponse'nextToken :: !(Prelude.Maybe Data.Text.Text),
                                       _SearchUtxosResponse'_unknownFields :: !Data.ProtoLens.FieldSet}
   deriving stock (Prelude.Eq, Prelude.Ord)
 instance Prelude.Show SearchUtxosResponse where
@@ -3949,6 +3967,13 @@ instance Data.ProtoLens.Field.HasField SearchUtxosResponse "nextToken" Data.Text
         (Lens.Family2.Unchecked.lens
            _SearchUtxosResponse'nextToken
            (\ x__ y__ -> x__ {_SearchUtxosResponse'nextToken = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault)
+instance Data.ProtoLens.Field.HasField SearchUtxosResponse "maybe'nextToken" (Prelude.Maybe Data.Text.Text) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _SearchUtxosResponse'nextToken
+           (\ x__ y__ -> x__ {_SearchUtxosResponse'nextToken = y__}))
         Prelude.id
 instance Data.ProtoLens.Message SearchUtxosResponse where
   messageName _
@@ -3958,9 +3983,10 @@ instance Data.ProtoLens.Message SearchUtxosResponse where
       \\DC3SearchUtxosResponse\DC27\n\
       \\ENQitems\CAN\SOH \ETX(\v2!.utxorpc.v1beta.query.AnyUtxoDataR\ENQitems\DC2?\n\
       \\n\
-      \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip\DC2\GS\n\
+      \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip\DC2\"\n\
       \\n\
-      \next_token\CAN\ETX \SOH(\tR\tnextToken"
+      \next_token\CAN\ETX \SOH(\tH\NULR\tnextToken\136\SOH\SOHB\r\n\
+      \\v_next_token"
   packedFileDescriptor _ = packedFileDescriptor
   fieldsByTag
     = let
@@ -3985,9 +4011,8 @@ instance Data.ProtoLens.Message SearchUtxosResponse where
               "next_token"
               (Data.ProtoLens.ScalarField Data.ProtoLens.StringField ::
                  Data.ProtoLens.FieldTypeDescriptor Data.Text.Text)
-              (Data.ProtoLens.PlainField
-                 Data.ProtoLens.Optional
-                 (Data.ProtoLens.Field.field @"nextToken")) ::
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'nextToken")) ::
               Data.ProtoLens.FieldDescriptor SearchUtxosResponse
       in
         Data.Map.fromList
@@ -4002,7 +4027,7 @@ instance Data.ProtoLens.Message SearchUtxosResponse where
     = SearchUtxosResponse'_constructor
         {_SearchUtxosResponse'items = Data.Vector.Generic.empty,
          _SearchUtxosResponse'ledgerTip = Prelude.Nothing,
-         _SearchUtxosResponse'nextToken = Data.ProtoLens.fieldDefault,
+         _SearchUtxosResponse'nextToken = Prelude.Nothing,
          _SearchUtxosResponse'_unknownFields = []}
   parseMessage
     = let
@@ -4105,21 +4130,21 @@ instance Data.ProtoLens.Message SearchUtxosResponse where
                                      (Data.ProtoLens.Encoding.Bytes.putBytes bs))
                              Data.ProtoLens.encodeMessage _v))
                 ((Data.Monoid.<>)
-                   (let
-                      _v = Lens.Family2.view (Data.ProtoLens.Field.field @"nextToken") _x
-                    in
-                      if (Prelude.==) _v Data.ProtoLens.fieldDefault then
-                          Data.Monoid.mempty
-                      else
-                          (Data.Monoid.<>)
-                            (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
-                            ((Prelude..)
-                               (\ bs
-                                  -> (Data.Monoid.<>)
-                                       (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                          (Prelude.fromIntegral (Data.ByteString.length bs)))
-                                       (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                               Data.Text.Encoding.encodeUtf8 _v))
+                   (case
+                        Lens.Family2.view
+                          (Data.ProtoLens.Field.field @"maybe'nextToken") _x
+                    of
+                      Prelude.Nothing -> Data.Monoid.mempty
+                      (Prelude.Just _v)
+                        -> (Data.Monoid.<>)
+                             (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
+                             ((Prelude..)
+                                (\ bs
+                                   -> (Data.Monoid.<>)
+                                        (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                           (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                        (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                                Data.Text.Encoding.encodeUtf8 _v))
                    (Data.ProtoLens.Encoding.Wire.buildFieldSet
                       (Lens.Family2.view Data.ProtoLens.unknownFields _x))))
 instance Control.DeepSeq.NFData SearchUtxosResponse where
@@ -4366,11 +4391,12 @@ instance Data.ProtoLens.Message UtxoPredicate where
   messageName _ = Data.Text.pack "utxorpc.v1beta.query.UtxoPredicate"
   packedMessageDescriptor _
     = "\n\
-      \\rUtxoPredicate\DC2:\n\
-      \\ENQmatch\CAN\SOH \SOH(\v2$.utxorpc.v1beta.query.AnyUtxoPatternR\ENQmatch\DC25\n\
+      \\rUtxoPredicate\DC2?\n\
+      \\ENQmatch\CAN\SOH \SOH(\v2$.utxorpc.v1beta.query.AnyUtxoPatternH\NULR\ENQmatch\136\SOH\SOH\DC25\n\
       \\ETXnot\CAN\STX \ETX(\v2#.utxorpc.v1beta.query.UtxoPredicateR\ETXnot\DC2:\n\
       \\ACKall_of\CAN\ETX \ETX(\v2#.utxorpc.v1beta.query.UtxoPredicateR\ENQallOf\DC2:\n\
-      \\ACKany_of\CAN\EOT \ETX(\v2#.utxorpc.v1beta.query.UtxoPredicateR\ENQanyOf"
+      \\ACKany_of\CAN\EOT \ETX(\v2#.utxorpc.v1beta.query.UtxoPredicateR\ENQanyOfB\b\n\
+      \\ACK_match"
   packedFileDescriptor _ = packedFileDescriptor
   fieldsByTag
     = let
@@ -4592,13 +4618,16 @@ data QueryService = QueryService {}
 instance Data.ProtoLens.Service.Types.Service QueryService where
   type ServiceName QueryService = "QueryService"
   type ServicePackage QueryService = "utxorpc.v1beta.query"
-  type ServiceMethods QueryService = '["readParams", "readUtxos"]
+  type ServiceMethods QueryService = '["readParams",
+                                       "readUtxos",
+                                       "searchUtxos"]
   packedServiceDescriptor _
     = "\n\
       \\fQueryService\DC2_\n\
       \\n\
       \ReadParams\DC2'.utxorpc.v1beta.query.ReadParamsRequest\SUB(.utxorpc.v1beta.query.ReadParamsResponse\DC2\\\n\
-      \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponse"
+      \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponse\DC2b\n\
+      \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponse"
 instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readParams" where
   type MethodName QueryService "readParams" = "ReadParams"
   type MethodInput QueryService "readParams" = ReadParamsRequest
@@ -4609,6 +4638,11 @@ instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readUtxos" whe
   type MethodInput QueryService "readUtxos" = ReadUtxosRequest
   type MethodOutput QueryService "readUtxos" = ReadUtxosResponse
   type MethodStreamingType QueryService "readUtxos" = 'Data.ProtoLens.Service.Types.NonStreaming
+instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "searchUtxos" where
+  type MethodName QueryService "searchUtxos" = "SearchUtxos"
+  type MethodInput QueryService "searchUtxos" = SearchUtxosRequest
+  type MethodOutput QueryService "searchUtxos" = SearchUtxosResponse
+  type MethodStreamingType QueryService "searchUtxos" = 'Data.ProtoLens.Service.Types.NonStreaming
 packedFileDescriptor :: Data.ByteString.ByteString
 packedFileDescriptor
   = "\n\
@@ -4652,12 +4686,13 @@ packedFileDescriptor
     \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip\"e\n\
     \\SOAnyUtxoPattern\DC2C\n\
     \\acardano\CAN\SOH \SOH(\v2'.utxorpc.v1beta.cardano.TxOutputPatternH\NULR\acardanoB\SO\n\
-    \\futxo_pattern\"\250\SOH\n\
-    \\rUtxoPredicate\DC2:\n\
-    \\ENQmatch\CAN\SOH \SOH(\v2$.utxorpc.v1beta.query.AnyUtxoPatternR\ENQmatch\DC25\n\
+    \\futxo_pattern\"\137\STX\n\
+    \\rUtxoPredicate\DC2?\n\
+    \\ENQmatch\CAN\SOH \SOH(\v2$.utxorpc.v1beta.query.AnyUtxoPatternH\NULR\ENQmatch\136\SOH\SOH\DC25\n\
     \\ETXnot\CAN\STX \ETX(\v2#.utxorpc.v1beta.query.UtxoPredicateR\ETXnot\DC2:\n\
     \\ACKall_of\CAN\ETX \ETX(\v2#.utxorpc.v1beta.query.UtxoPredicateR\ENQallOf\DC2:\n\
-    \\ACKany_of\CAN\EOT \ETX(\v2#.utxorpc.v1beta.query.UtxoPredicateR\ENQanyOf\"\244\SOH\n\
+    \\ACKany_of\CAN\EOT \ETX(\v2#.utxorpc.v1beta.query.UtxoPredicateR\ENQanyOfB\b\n\
+    \\ACK_match\"\244\SOH\n\
     \\vAnyUtxoData\DC2!\n\
     \\fnative_bytes\CAN\SOH \SOH(\fR\vnativeBytes\DC25\n\
     \\atxo_ref\CAN\STX \SOH(\v2\FS.utxorpc.v1beta.query.TxoRefR\ACKtxoRef\DC2<\n\
@@ -4671,20 +4706,26 @@ packedFileDescriptor
     \\DC1ReadUtxosResponse\DC27\n\
     \\ENQitems\CAN\SOH \ETX(\v2!.utxorpc.v1beta.query.AnyUtxoDataR\ENQitems\DC2?\n\
     \\n\
-    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip\"\208\SOH\n\
-    \\DC2SearchUtxosRequest\DC2A\n\
-    \\tpredicate\CAN\SOH \SOH(\v2#.utxorpc.v1beta.query.UtxoPredicateR\tpredicate\DC29\n\
+    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip\"\139\STX\n\
+    \\DC2SearchUtxosRequest\DC2F\n\
+    \\tpredicate\CAN\SOH \SOH(\v2#.utxorpc.v1beta.query.UtxoPredicateH\NULR\tpredicate\136\SOH\SOH\DC29\n\
     \\n\
-    \field_mask\CAN\STX \SOH(\v2\SUB.google.protobuf.FieldMaskR\tfieldMask\DC2\ESC\n\
-    \\tmax_items\CAN\ETX \SOH(\ENQR\bmaxItems\DC2\US\n\
-    \\vstart_token\CAN\EOT \SOH(\tR\n\
-    \startToken\"\174\SOH\n\
+    \field_mask\CAN\STX \SOH(\v2\SUB.google.protobuf.FieldMaskR\tfieldMask\DC2 \n\
+    \\tmax_items\CAN\ETX \SOH(\ENQH\SOHR\bmaxItems\136\SOH\SOH\DC2$\n\
+    \\vstart_token\CAN\EOT \SOH(\tH\STXR\n\
+    \startToken\136\SOH\SOHB\f\n\
+    \\n\
+    \_predicateB\f\n\
+    \\n\
+    \_max_itemsB\SO\n\
+    \\f_start_token\"\194\SOH\n\
     \\DC3SearchUtxosResponse\DC27\n\
     \\ENQitems\CAN\SOH \ETX(\v2!.utxorpc.v1beta.query.AnyUtxoDataR\ENQitems\DC2?\n\
     \\n\
-    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip\DC2\GS\n\
+    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip\DC2\"\n\
     \\n\
-    \next_token\CAN\ETX \SOH(\tR\tnextToken\"`\n\
+    \next_token\CAN\ETX \SOH(\tH\NULR\tnextToken\136\SOH\SOHB\r\n\
+    \\v_next_token\"`\n\
     \\SIReadDataRequest\DC2\DC2\n\
     \\EOTkeys\CAN\SOH \ETX(\fR\EOTkeys\DC29\n\
     \\n\
@@ -4711,14 +4752,15 @@ packedFileDescriptor
     \\SOReadTxResponse\DC20\n\
     \\STXtx\CAN\SOH \SOH(\v2 .utxorpc.v1beta.query.AnyChainTxR\STXtx\DC2?\n\
     \\n\
-    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip2\205\SOH\n\
+    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip2\177\STX\n\
     \\fQueryService\DC2_\n\
     \\n\
     \ReadParams\DC2'.utxorpc.v1beta.query.ReadParamsRequest\SUB(.utxorpc.v1beta.query.ReadParamsResponse\DC2\\\n\
-    \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponseB\152\SOH\n\
+    \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponse\DC2b\n\
+    \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponseB\152\SOH\n\
     \\CANcom.utxorpc.v1beta.queryB\n\
-    \QueryProtoP\SOH\162\STX\ETXUVQ\170\STX\DC4Utxorpc.V1beta.Query\202\STX\DC4Utxorpc\\V1beta\\Query\226\STX Utxorpc\\V1beta\\Query\\GPBMetadata\234\STX\SYNUtxorpc::V1beta::QueryJ\234\&9\n\
-    \\a\DC2\ENQ\STX\NUL\176\SOH\SOH\n\
+    \QueryProtoP\SOH\162\STX\ETXUVQ\170\STX\DC4Utxorpc.V1beta.Query\202\STX\DC4Utxorpc\\V1beta\\Query\226\STX Utxorpc\\V1beta\\Query\\GPBMetadata\234\STX\SYNUtxorpc::V1beta::QueryJ\144;\n\
+    \\a\DC2\ENQ\STX\NUL\177\SOH\SOH\n\
     \9\n\
     \\SOH\f\DC2\ETX\STX\NUL\DC22// A consistent view of the state of the ledger\n\
     \\n\
@@ -5002,14 +5044,17 @@ packedFileDescriptor
     \\n\
     \\ETX\EOT\v\SOH\DC2\ETXR\b\NAK\n\
     \8\n\
-    \\EOT\EOT\v\STX\NUL\DC2\ETXS\STX\ESC\"+ Predicate is true if tx exhibits pattern.\n\
+    \\EOT\EOT\v\STX\NUL\DC2\ETXS\STX$\"+ Predicate is true if tx exhibits pattern.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\v\STX\NUL\ACK\DC2\ETXS\STX\DLE\n\
+    \\ENQ\EOT\v\STX\NUL\EOT\DC2\ETXS\STX\n\
+    \\n\
     \\f\n\
-    \\ENQ\EOT\v\STX\NUL\SOH\DC2\ETXS\DC1\SYN\n\
+    \\ENQ\EOT\v\STX\NUL\ACK\DC2\ETXS\v\EM\n\
     \\f\n\
-    \\ENQ\EOT\v\STX\NUL\ETX\DC2\ETXS\EM\SUB\n\
+    \\ENQ\EOT\v\STX\NUL\SOH\DC2\ETXS\SUB\US\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\NUL\ETX\DC2\ETXS\"#\n\
     \?\n\
     \\EOT\EOT\v\STX\SOH\DC2\ETXT\STX!\"2 Predicate is true if tx doesn't exhibit pattern.\n\
     \\n\
@@ -5153,14 +5198,17 @@ packedFileDescriptor
     \\n\
     \\ETX\EOT\SI\SOH\DC2\ETXp\b\SUB\n\
     \)\n\
-    \\EOT\EOT\SI\STX\NUL\DC2\ETXq\STX\RS\"\FS Pattern to match UTxOs by.\n\
+    \\EOT\EOT\SI\STX\NUL\DC2\ETXq\STX'\"\FS Pattern to match UTxOs by.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\SI\STX\NUL\ACK\DC2\ETXq\STX\SI\n\
+    \\ENQ\EOT\SI\STX\NUL\EOT\DC2\ETXq\STX\n\
+    \\n\
     \\f\n\
-    \\ENQ\EOT\SI\STX\NUL\SOH\DC2\ETXq\DLE\EM\n\
+    \\ENQ\EOT\SI\STX\NUL\ACK\DC2\ETXq\v\CAN\n\
     \\f\n\
-    \\ENQ\EOT\SI\STX\NUL\ETX\DC2\ETXq\FS\GS\n\
+    \\ENQ\EOT\SI\STX\NUL\SOH\DC2\ETXq\EM\"\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\NUL\ETX\DC2\ETXq%&\n\
     \7\n\
     \\EOT\EOT\SI\STX\SOH\DC2\ETXr\STX+\"* Field mask to selectively return fields.\n\
     \\n\
@@ -5171,23 +5219,29 @@ packedFileDescriptor
     \\f\n\
     \\ENQ\EOT\SI\STX\SOH\ETX\DC2\ETXr)*\n\
     \5\n\
-    \\EOT\EOT\SI\STX\STX\DC2\ETXs\STX\SYN\"( The maximum number of items to return.\n\
+    \\EOT\EOT\SI\STX\STX\DC2\ETXs\STX\US\"( The maximum number of items to return.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\SI\STX\STX\ENQ\DC2\ETXs\STX\a\n\
+    \\ENQ\EOT\SI\STX\STX\EOT\DC2\ETXs\STX\n\
+    \\n\
     \\f\n\
-    \\ENQ\EOT\SI\STX\STX\SOH\DC2\ETXs\b\DC1\n\
+    \\ENQ\EOT\SI\STX\STX\ENQ\DC2\ETXs\v\DLE\n\
     \\f\n\
-    \\ENQ\EOT\SI\STX\STX\ETX\DC2\ETXs\DC4\NAK\n\
+    \\ENQ\EOT\SI\STX\STX\SOH\DC2\ETXs\DC1\SUB\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\STX\ETX\DC2\ETXs\GS\RS\n\
     \R\n\
-    \\EOT\EOT\SI\STX\ETX\DC2\ETXt\STX\EM\"E The next_page_token value returned from a previous request, if any.\n\
+    \\EOT\EOT\SI\STX\ETX\DC2\ETXt\STX\"\"E The next_page_token value returned from a previous request, if any.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\SI\STX\ETX\ENQ\DC2\ETXt\STX\b\n\
+    \\ENQ\EOT\SI\STX\ETX\EOT\DC2\ETXt\STX\n\
+    \\n\
     \\f\n\
-    \\ENQ\EOT\SI\STX\ETX\SOH\DC2\ETXt\t\DC4\n\
+    \\ENQ\EOT\SI\STX\ETX\ENQ\DC2\ETXt\v\DC1\n\
     \\f\n\
-    \\ENQ\EOT\SI\STX\ETX\ETX\DC2\ETXt\ETB\CAN\n\
+    \\ENQ\EOT\SI\STX\ETX\SOH\DC2\ETXt\DC2\GS\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\ETX\ETX\DC2\ETXt !\n\
     \O\n\
     \\STX\EOT\DLE\DC2\EOTx\NUL|\SOH\SUBC Response containing the UTxOs that match the requested addresses.\n\
     \\n\
@@ -5215,15 +5269,18 @@ packedFileDescriptor
     \\ENQ\EOT\DLE\STX\SOH\SOH\DC2\ETXz\r\ETB\n\
     \\f\n\
     \\ENQ\EOT\DLE\STX\SOH\ETX\DC2\ETXz\SUB\ESC\n\
-    \a\n\
-    \\EOT\EOT\DLE\STX\STX\DC2\ETX{\STX\CAN\"T Token to retrieve the next page of results, or empty if there are no more results.\n\
+    \_\n\
+    \\EOT\EOT\DLE\STX\STX\DC2\ETX{\STX!\"R Token to retrieve the next page of results, absent if there are no more results.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\DLE\STX\STX\ENQ\DC2\ETX{\STX\b\n\
+    \\ENQ\EOT\DLE\STX\STX\EOT\DC2\ETX{\STX\n\
+    \\n\
     \\f\n\
-    \\ENQ\EOT\DLE\STX\STX\SOH\DC2\ETX{\t\DC3\n\
+    \\ENQ\EOT\DLE\STX\STX\ENQ\DC2\ETX{\v\DC1\n\
     \\f\n\
-    \\ENQ\EOT\DLE\STX\STX\ETX\DC2\ETX{\SYN\ETB\n\
+    \\ENQ\EOT\DLE\STX\STX\SOH\DC2\ETX{\DC2\FS\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\STX\ETX\DC2\ETX{\US \n\
     \:\n\
     \\STX\EOT\DC1\DC2\ENQ\DEL\NUL\130\SOH\SOH\SUB- Request to get data (as in plural of datum)\n\
     \\n\
@@ -5394,7 +5451,7 @@ packedFileDescriptor
     \\r\n\
     \\ENQ\EOT\SYN\STX\SOH\ETX\DC2\EOT\165\SOH\SUB\ESC\n\
     \G\n\
-    \\STX\ACK\NUL\DC2\ACK\169\SOH\NUL\176\SOH\SOH\SUB9 Service definition for querying the state of the chain.\n\
+    \\STX\ACK\NUL\DC2\ACK\169\SOH\NUL\177\SOH\SOH\SUB9 Service definition for querying the state of the chain.\n\
     \\n\
     \\v\n\
     \\ETX\ACK\NUL\SOH\DC2\EOT\169\SOH\b\DC4\n\
@@ -5415,4 +5472,13 @@ packedFileDescriptor
     \\r\n\
     \\ENQ\ACK\NUL\STX\SOH\STX\DC2\EOT\171\SOH\DLE \n\
     \\r\n\
-    \\ENQ\ACK\NUL\STX\SOH\ETX\DC2\EOT\171\SOH+<b\ACKproto3"
+    \\ENQ\ACK\NUL\STX\SOH\ETX\DC2\EOT\171\SOH+<\n\
+    \3\n\
+    \\EOT\ACK\NUL\STX\STX\DC2\EOT\172\SOH\STXD\"% Search for UTxO based on a pattern.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\STX\SOH\DC2\EOT\172\SOH\ACK\DC1\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\STX\STX\DC2\EOT\172\SOH\DC2$\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\STX\ETX\DC2\EOT\172\SOH/Bb\ACKproto3"

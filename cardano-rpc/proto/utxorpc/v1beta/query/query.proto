@@ -81,7 +81,7 @@ message AnyUtxoPattern {
 
 // Represents a simple utxo predicate that can composed to create more complex ones
 message UtxoPredicate {
-  AnyUtxoPattern match = 1; // Predicate is true if tx exhibits pattern.
+  optional AnyUtxoPattern match = 1; // Predicate is true if tx exhibits pattern.
   repeated UtxoPredicate not = 2; // Predicate is true if tx doesn't exhibit pattern.
   repeated UtxoPredicate all_of = 3; // Predicate is true if utxo exhibits all of the patterns.
   repeated UtxoPredicate any_of = 4; // Predicate is true if utxo exhibits any of the patterns.
@@ -111,17 +111,17 @@ message ReadUtxosResponse {
 
 // Request to search for UTxO based on a pattern.
 message SearchUtxosRequest {
-  UtxoPredicate predicate = 1; // Pattern to match UTxOs by.
+  optional UtxoPredicate predicate = 1; // Pattern to match UTxOs by.
   google.protobuf.FieldMask field_mask = 2; // Field mask to selectively return fields.
-  int32 max_items = 3; // The maximum number of items to return.
-  string start_token = 4; // The next_page_token value returned from a previous request, if any.
+  optional int32 max_items = 3; // The maximum number of items to return.
+  optional string start_token = 4; // The next_page_token value returned from a previous request, if any.
 }
 
 // Response containing the UTxOs that match the requested addresses.
 message SearchUtxosResponse {
   repeated AnyUtxoData items = 1; // List of UTxOs.
   ChainPoint ledger_tip = 2; // The chain point that represent the ledger current position.
-  string next_token = 3; // Token to retrieve the next page of results, or empty if there are no more results.
+  optional string next_token = 3; // Token to retrieve the next page of results, absent if there are no more results.
 }
 
 // Request to get data (as in plural of datum)
@@ -170,6 +170,7 @@ message ReadTxResponse {
 service QueryService {
   rpc ReadParams(ReadParamsRequest) returns (ReadParamsResponse); // Get overall chain state.
   rpc ReadUtxos(ReadUtxosRequest) returns (ReadUtxosResponse); // Read specific UTxOs by reference.
+  rpc SearchUtxos(SearchUtxosRequest) returns (SearchUtxosResponse); // Search for UTxO based on a pattern.
 
   // TODO: decide if we want to expand the scope
   // rpc DumpUtxos(ReadUtxosRequest) returns (stream ReadUtxosResponse); // Dump all available utxos

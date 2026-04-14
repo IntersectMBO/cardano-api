@@ -856,6 +856,12 @@ maybe'asset ::
    Data.ProtoLens.Field.HasField s "maybe'asset" a) =>
   Lens.Family2.LensLike' f s a
 maybe'asset = Data.ProtoLens.Field.field @"maybe'asset"
+maybe'assetName ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'assetName" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'assetName = Data.ProtoLens.Field.field @"maybe'assetName"
 maybe'authCommitteeHotCert ::
   forall f s a.
   (Prelude.Functor f,
@@ -1023,6 +1029,13 @@ maybe'datum ::
    Data.ProtoLens.Field.HasField s "maybe'datum" a) =>
   Lens.Family2.LensLike' f s a
 maybe'datum = Data.ProtoLens.Field.field @"maybe'datum"
+maybe'delegationPart ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'delegationPart" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'delegationPart
+  = Data.ProtoLens.Field.field @"maybe'delegationPart"
 maybe'deltaCoin ::
   forall f s a.
   (Prelude.Functor f,
@@ -1073,6 +1086,13 @@ maybe'exUnits ::
    Data.ProtoLens.Field.HasField s "maybe'exUnits" a) =>
   Lens.Family2.LensLike' f s a
 maybe'exUnits = Data.ProtoLens.Field.field @"maybe'exUnits"
+maybe'exactAddress ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'exactAddress" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'exactAddress
+  = Data.ProtoLens.Field.field @"maybe'exactAddress"
 maybe'executionPrices ::
   forall f s a.
   (Prelude.Functor f,
@@ -1385,6 +1405,12 @@ maybe'payload ::
    Data.ProtoLens.Field.HasField s "maybe'payload" a) =>
   Lens.Family2.LensLike' f s a
 maybe'payload = Data.ProtoLens.Field.field @"maybe'payload"
+maybe'paymentPart ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'paymentPart" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'paymentPart = Data.ProtoLens.Field.field @"maybe'paymentPart"
 maybe'pledge ::
   forall f s a.
   (Prelude.Functor f,
@@ -1421,6 +1447,12 @@ maybe'plutusV4 ::
    Data.ProtoLens.Field.HasField s "maybe'plutusV4" a) =>
   Lens.Family2.LensLike' f s a
 maybe'plutusV4 = Data.ProtoLens.Field.field @"maybe'plutusV4"
+maybe'policyId ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'policyId" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'policyId = Data.ProtoLens.Field.field @"maybe'policyId"
 maybe'poolDeposit ::
   forall f s a.
   (Prelude.Functor f,
