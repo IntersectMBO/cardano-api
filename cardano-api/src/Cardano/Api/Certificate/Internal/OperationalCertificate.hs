@@ -37,6 +37,7 @@ import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.OCert qualified as Shelley
 
 import Data.Word
+import GHC.Stack (HasCallStack)
 
 -- ----------------------------------------------------------------------------
 -- Operational certificates
@@ -107,7 +108,8 @@ instance Error OperationalCertIssueError where
 -- TODO: include key ids
 
 issueOperationalCertificate
-  :: VerificationKey KesKey
+  :: HasCallStack
+  => VerificationKey KesKey
   -> Either
        AnyStakePoolSigningKey
        (SigningKey GenesisDelegateExtendedKey)

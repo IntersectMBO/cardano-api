@@ -1088,6 +1088,7 @@ data WitnessNetworkIdOrByronAddress
 makeShelleyBootstrapWitness
   :: forall era
    . ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> WitnessNetworkIdOrByronAddress
   -> TxBody era
@@ -1100,6 +1101,7 @@ makeShelleyBootstrapWitness sbe nwOrAddr txBody sk =
 makeShelleyBasedBootstrapWitness
   :: forall era
    . ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> WitnessNetworkIdOrByronAddress
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
@@ -1183,6 +1185,7 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
 makeShelleyKeyWitness
   :: forall era
    . ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> TxBody era
   -> ShelleyWitnessSigningKey
@@ -1193,6 +1196,7 @@ makeShelleyKeyWitness sbe (ShelleyTxBody _ txBody _ _ _ _) =
 makeShelleyKeyWitness'
   :: forall era
    . ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> L.TxBody L.TopTx (ShelleyLedgerEra era)
   -> ShelleyWitnessSigningKey
