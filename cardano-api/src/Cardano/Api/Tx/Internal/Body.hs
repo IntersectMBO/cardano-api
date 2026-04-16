@@ -1518,6 +1518,7 @@ maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 {-# DEPRECATED createAndValidateTransactionBody "Use createTransactionBody instead" #-}
 createAndValidateTransactionBody
   :: ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
@@ -2104,6 +2105,7 @@ mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData =
 makeShelleyTransactionBody
   :: forall era
    . ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
