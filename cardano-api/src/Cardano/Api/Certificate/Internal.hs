@@ -826,7 +826,7 @@ getAnchorDataFromCertificate c =
           Ledger.RetirePoolTxCert _ _ -> return Nothing
           Ledger.GenesisDelegTxCert{} -> return Nothing
           Ledger.MirTxCert _ -> return Nothing
-          _ -> error "dijkstra"
+          _ -> error "getAnchorDataFromCertificate: Dijkstra era not supported"
     ConwayCertificate ceo ccert ->
       conwayEraOnwardsConstraints ceo $
         case ccert of
@@ -843,7 +843,7 @@ getAnchorDataFromCertificate c =
           Ledger.UpdateDRepTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
           Ledger.AuthCommitteeHotKeyTxCert _ _ -> return Nothing
           Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
-          _ -> error "dijkstra"
+          _ -> error "getAnchorDataFromCertificate: Dijkstra era not supported"
  where
   anchorDataFromPoolMetadata
     :: MonadError AnchorDataFromCertificateError m

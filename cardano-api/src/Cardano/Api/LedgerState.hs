@@ -270,6 +270,7 @@ import Data.Word
 import Data.Yaml qualified as Yaml
 import Formatting.Buildable (build)
 import GHC.Exts (IsList (..))
+import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Network.Mux qualified as Mux
 import Network.TypedProtocol.Core (Nat (..))
@@ -458,7 +459,7 @@ data FoldStatus
 -- the node's tip where @k@ is the security parameter.
 foldBlocks
   :: forall a t m
-   . ()
+   . HasCallStack
   => Show a
   => MonadIOTransError FoldBlocksError t m
   => NodeConfigFile 'In
@@ -715,7 +716,8 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
 -- | Wrap a 'ChainSyncClient' with logic that tracks the ledger state.
 chainSyncClientWithLedgerState
   :: forall m a
-   . Monad m
+   . HasCallStack
+  => Monad m
   => Env
   -> LedgerState
   -- ^ Initial ledger state
@@ -859,7 +861,8 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
 -- | See 'chainSyncClientWithLedgerState'.
 chainSyncClientPipelinedWithLedgerState
   :: forall m a
-   . Monad m
+   . HasCallStack
+  => Monad m
   => Env
   -> LedgerState
   -> ValidationMode
@@ -2308,7 +2311,8 @@ getLedgerTablesUTxOValues sbe tbs =
 -- provide a termination epoch otherwise blocks would be applied indefinitely.
 foldEpochState
   :: forall t m s
-   . MonadIOTransError FoldBlocksError t m
+   . HasCallStack
+  => MonadIOTransError FoldBlocksError t m
   => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath

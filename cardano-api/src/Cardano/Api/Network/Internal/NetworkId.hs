@@ -25,6 +25,8 @@ import Cardano.Crypto.ProtocolMagic qualified as Byron
 import Cardano.Ledger.BaseTypes qualified as Shelley (Network (..))
 import Ouroboros.Network.Magic (NetworkMagic (..))
 
+import GHC.Stack (HasCallStack)
+
 -- ----------------------------------------------------------------------------
 -- NetworkId type
 --
@@ -74,7 +76,7 @@ toShelleyNetwork :: NetworkId -> Shelley.Network
 toShelleyNetwork Mainnet = Shelley.Mainnet
 toShelleyNetwork (Testnet _) = Shelley.Testnet
 
-fromShelleyNetwork :: Shelley.Network -> NetworkMagic -> NetworkId
+fromShelleyNetwork :: HasCallStack => Shelley.Network -> NetworkMagic -> NetworkId
 fromShelleyNetwork Shelley.Testnet nm = Testnet nm
 fromShelleyNetwork Shelley.Mainnet nm
   | nm == mainnetNetworkMagic = Mainnet

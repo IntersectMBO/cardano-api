@@ -22,6 +22,7 @@ import Cardano.Crypto.Seed qualified as Crypto
 
 import Control.Monad.IO.Class
 import Data.Kind (Type)
+import GHC.Stack (HasCallStack)
 import System.Random (StdGen)
 import System.Random qualified as Random
 
@@ -77,7 +78,8 @@ generateSigningKey keytype = do
   seedSize = deterministicSigningKeySeedSize keytype
 
 generateInsecureSigningKey
-  :: MonadIO m
+  :: HasCallStack
+  => MonadIO m
   => Key keyrole
   => SerialiseAsRawBytes (SigningKey keyrole)
   => StdGen

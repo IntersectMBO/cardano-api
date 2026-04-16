@@ -115,6 +115,7 @@ import Data.Text qualified as Text
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import Data.Validation qualified as Valid
 import GHC.Exts (IsList (..))
+import GHC.Stack (HasCallStack)
 import Lens.Micro
 
 -- ----------------------------------------------------------------------------
@@ -868,7 +869,8 @@ data ShelleySigningKey
     ShelleyExtendedSigningKey Crypto.HD.XPrv
 
 makeShelleySignature
-  :: Crypto.SignableRepresentation tosign
+  :: HasCallStack
+  => Crypto.SignableRepresentation tosign
   => tosign
   -> ShelleySigningKey
   -> (Crypto.SignedDSIGN Shelley.DSIGN) tosign
