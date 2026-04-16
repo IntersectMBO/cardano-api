@@ -751,7 +751,8 @@ instance Error FeeCalculationError where
 -- In practice convergence occurs within 2–3 iterations.
 calcMinFeeRecursive
   :: forall era
-   . IsEra era
+   . HasCallStack
+  => IsEra era
   => L.Addr
   -- ^ Change address. Any surplus value (ADA and/or native tokens) is
   -- sent to a new output at this address, appended at the end of the

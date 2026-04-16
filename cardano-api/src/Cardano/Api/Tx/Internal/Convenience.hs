@@ -34,6 +34,7 @@ import Data.Map.Strict qualified as Map
 import Data.Set (Set)
 import Data.Text qualified as Text
 import GHC.Exts (IsList (..))
+import GHC.Stack (HasCallStack)
 
 -- | Construct a balanced transaction.
 -- See Cardano.Api.Query.Internal.Convenience.queryStateForBalancedTx for a
@@ -41,6 +42,7 @@ import GHC.Exts (IsList (..))
 -- for constructBalancedTx.
 constructBalancedTx
   :: ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> AddressInEra era
