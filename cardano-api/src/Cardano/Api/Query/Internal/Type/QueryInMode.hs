@@ -545,6 +545,7 @@ fromShelleyRewardAccounts =
 toConsensusQuery
   :: forall block result
    . ()
+  => HasCallStack
   => Consensus.CardanoBlock StandardCrypto ~ block
   => QueryInMode result
   -> Some (Consensus.Query block)
