@@ -25,6 +25,7 @@ import Cardano.Slotting.Slot (EpochSize (..))
 
 import Data.Time (NominalDiffTime, UTCTime)
 import Data.Word (Word64)
+import GHC.Stack (HasCallStack)
 
 -- ----------------------------------------------------------------------------
 -- Genesis parameters
@@ -74,7 +75,7 @@ data GenesisParameters era
 -- Conversion functions
 --
 
-fromShelleyGenesis :: Shelley.ShelleyGenesis -> GenesisParameters ShelleyEra
+fromShelleyGenesis :: HasCallStack => Shelley.ShelleyGenesis -> GenesisParameters ShelleyEra
 fromShelleyGenesis
   sg@Shelley.ShelleyGenesis
     { Shelley.sgSystemStart
