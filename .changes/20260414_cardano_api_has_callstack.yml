@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1175
+kind:
+  - compatible
+description: |
+  Add `HasCallStack` constraints to standalone functions that call error directly or indirectly, improving stack traces. Dijkstra-era placeholder error messages are also improved.
