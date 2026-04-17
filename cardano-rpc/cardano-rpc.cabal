@@ -87,7 +87,7 @@ library
     generic-data,
     grapesy,
     grpc-spec,
-    proto-lens >=0.7.1.6,
+    proto-lens >=0.7.1.7,
     proto-lens-protobuf-types,
     random,
     rio,

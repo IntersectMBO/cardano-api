@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1185
+kind:
+  - breaking
+description: |
+  Bump `cardano-ledger-core` lower bound to `>=1.20` (required by `ouroboros-consensus-3.0.x`).

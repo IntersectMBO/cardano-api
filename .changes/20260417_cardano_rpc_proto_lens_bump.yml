@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1185
+kind:
+  - compatible
+description: |
+  Bump `proto-lens` lower bound to `>=0.7.1.7`.
