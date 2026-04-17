@@ -147,7 +147,7 @@ import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Control.Monad
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
-import Data.Aeson.Types (Parser)
+import Data.Aeson.Types (Pair, Parser)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Short qualified as SBS
 import Data.Functor
@@ -405,42 +405,44 @@ alonzoOnwardsTxOutToJson (TxOut o) =
     [ "address" .= addrToJson (o ^. L.addrTxOutL)
     , "value" .= valueToJson (o ^. L.valueTxOutL)
     ]
-      <> datumFields mDatum
-      <> inlineDatumFields isBabbagePlus mDatum
-      <> refScriptFields mRefScript
+      <> datumAndRefScriptFields (o ^. L.datumTxOutG) (o ^. L.referenceScriptTxOutG)
+
+-- | Emit the datum, inline-datum, and reference-script JSON fields appropriate
+-- for the era. Pre-Alonzo emits nothing; Alonzo emits @datumhash@ and @datum@;
+-- Babbage+ additionally emits @inlineDatum@, @inlineDatumRaw@, @inlineDatumhash@
+-- and @referenceScript@.
+datumAndRefScriptFields
+  :: L.AlonzoEraScript era
+  => Maybe (L.Datum era)
+  -> Maybe (Maybe (L.Script era))
+  -> [Pair]
+datumAndRefScriptFields mDatum mRefScript =
+  datumFields <> inlineDatumFields <> refScriptFields
  where
-  mDatum = o ^. L.datumTxOutG
-  mRefScript = o ^. L.referenceScriptTxOutG
   isBabbagePlus = isJust mRefScript
 
-  datumFields Nothing = []
-  datumFields (Just L.NoDatum) =
-    ["datumhash" .= Aeson.Null, "datum" .= Aeson.Null]
-  datumFields (Just (L.DatumHash dh)) =
-    ["datumhash" .= dh, "datum" .= Aeson.Null]
-  datumFields (Just (L.Datum _)) =
-    ["datum" .= Aeson.Null]
+  datumFields = case mDatum of
+    Nothing -> []
+    Just L.NoDatum -> ["datumhash" .= Aeson.Null, "datum" .= Aeson.Null]
+    Just (L.DatumHash dh) -> ["datumhash" .= dh, "datum" .= Aeson.Null]
+    Just (L.Datum _) -> ["datum" .= Aeson.Null]
 
-  inlineDatumFields _ (Just (L.Datum bd)) =
-    let hsd = Api.fromAlonzoData (L.binaryDataToData bd)
-     in [ "inlineDatumhash" .= L.hashBinaryData bd
-        , "inlineDatum" .= Api.scriptDataToJsonDetailedSchema hsd
-        , "inlineDatumRaw"
-            .= ( Aeson.String
-                   . Text.decodeUtf8
-                   . Base16.encode
-                   . serialiseToCBOR
-                   $ hsd
-               )
-        ]
-  inlineDatumFields True _ =
-    ["inlineDatum" .= Aeson.Null, "inlineDatumRaw" .= Aeson.Null]
-  inlineDatumFields _ _ = []
+  inlineDatumFields = case mDatum of
+    Just (L.Datum bd) ->
+      let hsd = Api.fromAlonzoData (L.binaryDataToData bd)
+       in [ "inlineDatumhash" .= L.hashBinaryData bd
+          , "inlineDatum" .= Api.scriptDataToJsonDetailedSchema hsd
+          , "inlineDatumRaw"
+              .= (Aeson.String . Text.decodeUtf8 . Base16.encode . serialiseToCBOR $ hsd)
+          ]
+    _
+      | isBabbagePlus -> ["inlineDatum" .= Aeson.Null, "inlineDatumRaw" .= Aeson.Null]
+      | otherwise -> []
 
-  refScriptFields Nothing = []
-  refScriptFields (Just Nothing) = ["referenceScript" .= Aeson.Null]
-  refScriptFields (Just (Just script)) =
-    ["referenceScript" .= ledgerScriptToScriptInAnyLang script]
+  refScriptFields = case mRefScript of
+    Nothing -> []
+    Just Nothing -> ["referenceScript" .= Aeson.Null]
+    Just (Just script) -> ["referenceScript" .= ledgerScriptToScriptInAnyLang script]
 
 -- | Render just the base fields (address and value) shared by all eras.
 txOutBaseJson :: L.EraTxOut era => L.TxOut era -> Aeson.Value
