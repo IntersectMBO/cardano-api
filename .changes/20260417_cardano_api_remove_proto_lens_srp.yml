@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1185
+kind:
+  - maintenance
+description: |
+  Remove `proto-lens` source-repository-package now that `proto-lens >=0.7.1.7` is on Hackage.
+  Move the `cardano-rpc` protobuf generation check to a dedicated CI job using the nix dev shell.

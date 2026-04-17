@@ -13,6 +13,9 @@ on:
   schedule:
     - cron: '0 0 */6 * *'
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ${{ matrix.sys.os }}
@@ -95,32 +98,6 @@ jobs:
         cabal-store: ${{ steps.setup-haskell.outputs.cabal-store }}
         cache-version: ${{ env.CABAL_CACHE_VERSION }}
 
-    - name: '[Linux] [cardano-rpc] Install buf tool'
-      if: runner.os == 'Linux'
-      run: |
-        curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-Linux-x86_64" -o "/usr/local/bin/buf"
-        chmod +x /usr/local/bin/buf
-
-    - name: '[Linux] [cardano-rpc] Install proto-lens-protoc tool'
-      if: runner.os == 'Linux'
-      run: cabal install proto-lens-protoc --installdir=$HOME/.local/bin
-
-    - name: '[Linux] [cardano-rpc] Generate protobuf code'
-      if: runner.os == 'Linux'
-      working-directory: cardano-rpc
-      run: buf generate proto
-
-    - name: '[Linux] [cardano-rpc] Check that generated files from proto definitions are up to date'
-      if: runner.os == 'Linux'
-      run: |
-        git add cardano-rpc/gen
-        if ! git diff --staged --quiet -- cardano-rpc/gen; then
-          echo "Generated files differ from repository files:"
-          git diff --staged --name-status -- cardano-rpc/gen
-          exit 1
-        fi
-        echo "All generated files match repository files"
-
     # Now we build.
     - name: Build all
       run: cabal build all --enable-tests
@@ -149,14 +126,40 @@ jobs:
     #   with:
     #      limit-access-to-actor: true
 
+  check-proto-gen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+
+      - uses: rrbutani/use-nix-shell-action@v1
+
+      - name: Regenerate protobuf code
+        working-directory: cardano-rpc
+        run: buf generate proto
+
+      - name: Check that generated files from proto definitions are up to date
+        run: |
+          git add cardano-rpc/gen
+          if ! git diff --staged --quiet -- cardano-rpc/gen; then
+            echo "Generated files differ from repository files:"
+            git diff --staged --name-status -- cardano-rpc/gen
+            exit 1
+          fi
+          echo "All generated files match repository files"
+
   build-complete:
-    needs: [build]
+    needs: [build, check-proto-gen]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
     - name: Check if any previous job failed
       run: |
-        if [[ "${{ needs.build.result }}" == "failure" ]]; then
+        if [[ "${{ needs.build.result }}" == "failure" || "${{ needs.check-proto-gen.result }}" == "failure" ]]; then
           # this ignores skipped dependencies
           echo 'Required jobs failed to build.'
           exit 1

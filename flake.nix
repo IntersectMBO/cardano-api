@@ -123,26 +123,6 @@
 
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
-        # Fetch proto-lens with submodules and fix symlinks for plan and build phases
-        protoLensSrc = nixpkgs.fetchgit {
-          url = "https://github.com/google/proto-lens";
-          rev = "9b41fe0e10e8fe12ec508a3b361d0f0c2217c491";
-          sha256 = "sha256-ruTbbUKVJBPANnm6puigtp26mmiVDd0jMpLfJLOuUpU=";
-          fetchSubmodules = true;
-        };
-        fixProtoLensSrc = nixpkgs.runCommand "proto-lens-fixed" {} ''
-          mkdir -p $out
-          cp -a ${protoLensSrc}/. $out/
-          chmod -R +w $out
-          # Fix proto-lens-imports symlink in proto-lens
-          rm -rf $out/proto-lens/proto-lens-imports/google
-          cp -r ${protoLensSrc}/google/protobuf/src/google $out/proto-lens/proto-lens-imports/
-          # Fix proto-src symlink in proto-lens-protobuf-types
-          rm -rf $out/proto-lens-protobuf-types/proto-src
-          cp -r ${protoLensSrc}/google/protobuf/src $out/proto-lens-protobuf-types/proto-src
-          chmod -R -w $out
-        '';
-
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
           src = ./.;
           name = "cardano-api";
@@ -160,7 +140,6 @@
           #
           inputMap = {
             "https://chap.intersectmbo.org/" = inputs.CHaP;
-            "https://github.com/google/proto-lens/9b41fe0e10e8fe12ec508a3b361d0f0c2217c491" = protoLensSrc;
           };
           # Also currently needed to make `nix flake lock --update-input CHaP` work.
           cabalProjectLocal = ''
@@ -189,6 +168,7 @@
               ghcid = "0.8.9";
               cabal-gild = "1.7.0.1";
               fourmolu = "0.18.0.0";
+              proto-lens-protoc = "latest";
               haskell-language-server = {
                 src = inputs.hls;
                 configureArgs = "--disable-benchmarks --disable-tests";
@@ -209,7 +189,10 @@
             shellcheck
             snappy
             protobuf
-            buf
+            # buf version must match `.github/workflows/haskell.yml` (buf is
+            # not backwards-compatible across minor versions for
+            # `buf generate` output).
+            unstable.buf
             blst
             inputs.cardano-dev.packages.${system}.herald
             (writeShellScriptBin "haskell-language-server-wrapper" ''exec haskell-language-server "$@"'')
@@ -228,34 +211,6 @@
           # package customizations as needed. Where cabal.project is not
           # specific enough, or doesn't allow setting these.
           modules = [
-            # TODO remove this module when removing proto-lens SRP
-            # Override proto-lens source to use fixed symlinks (inputMap provides the fixed
-            # source for plan computation; this module provides it for the build phase)
-            ({
-              lib,
-              config,
-              ...
-            }: let
-              protoLensPackages = [
-                "proto-lens"
-                "proto-lens-arbitrary"
-                "proto-lens-discrimination"
-                "proto-lens-optparse"
-                "proto-lens-protobuf-types"
-                "proto-lens-protoc"
-                "proto-lens-runtime"
-                "proto-lens-setup"
-                "proto-lens-tests-dep"
-                "proto-lens-tests"
-                "discrimination-ieee754"
-                "proto-lens-benchmarks"
-              ];
-            in {
-              packages =
-                lib.genAttrs
-                (builtins.filter (p: config.packages ? ${p}) protoLensPackages)
-                (p: {src = lib.mkForce (fixProtoLensSrc + "/${p}");});
-            })
             ({...}: {
               packages.cardano-api = {
                 configureFlags = ["--ghc-option=-Werror"];
