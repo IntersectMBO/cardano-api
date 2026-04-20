@@ -194,7 +194,7 @@ makeUnsignedTx
    . Era era
   -> TxBodyContent (LedgerEra era)
   -> Either MakeUnsignedTxError (UnsignedTx (LedgerEra era))
-makeUnsignedTx DijkstraEra _ = error "makeUnsignedTx: Dijkstra era not supported yet"
+makeUnsignedTx DijkstraEra _ = error "TODO Dijkstra: makeUnsignedTx: era not supported"
 makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
   let TxScriptWitnessRequirements languages scripts datums redeemers = collectTxBodyScriptWitnessRequirements bc
 
@@ -846,7 +846,7 @@ extractWitnessableVotes
 extractWitnessableVotes Nothing = []
 extractWitnessableVotes (Just txVoteProc) =
   case useEra @era of
-    DijkstraEra -> error "extractWitnessableVotes: Dijkstra era not supported"
+    DijkstraEra -> error "TODO Dijkstra: extractWitnessableVotes: era not supported"
     ConwayEra ->
       List.nub
         [ (WitVote vote, wit)

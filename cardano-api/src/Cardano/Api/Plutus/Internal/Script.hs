@@ -1426,7 +1426,7 @@ fromShelleyMultiSig = go
   go (Shelley.RequireAllOf s) = RequireAllOf (map go $ toList s)
   go (Shelley.RequireAnyOf s) = RequireAnyOf (map go $ toList s)
   go (Shelley.RequireMOf m s) = RequireMOf m (map go $ toList s)
-  go _ = error "fromShelleyMultiSig: Dijkstra era not supported"
+  go _ = error "TODO Dijkstra: fromShelleyMultiSig: era not supported"
 
 -- | Conversion for the 'Timelock.Timelock' language that is shared between the
 -- Allegra and Mary eras.
@@ -1460,7 +1460,7 @@ fromAllegraTimelock = go
   go (Shelley.RequireAllOf s) = RequireAllOf (map go (toList s))
   go (Shelley.RequireAnyOf s) = RequireAnyOf (map go (toList s))
   go (Shelley.RequireMOf i s) = RequireMOf i (map go (toList s))
-  go _ = error "fromAllegraTimelock: Dijkstra era not supported"
+  go _ = error "TODO Dijkstra: fromAllegraTimelock: era not supported"
 
 type family ToLedgerPlutusLanguage lang where
   ToLedgerPlutusLanguage PlutusScriptV1 = Plutus.PlutusV1

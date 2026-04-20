@@ -1165,7 +1165,7 @@ instance FromJSON NodeConfig where
         <*> parseAlonzoHardForkEpoch o
         <*> parseBabbageHardForkEpoch o
         <*> parseConwayHardForkEpoch o
-        <*> pure Consensus.CardanoTriggerHardForkAtDefaultVersion -- TODO: Dijkstra
+        <*> pure Consensus.CardanoTriggerHardForkAtDefaultVersion -- TODO Dijkstra
     parseShelleyHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseShelleyHardForkEpoch o =
       asum
@@ -1511,8 +1511,8 @@ readCardanoGenesisConfig enc = do
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
   alonzoGenesis <- readAlonzoGenesisConfig enc
   conwayGenesis <- readConwayGenesisConfig enc
-  -- TODO: Build dummy dijkstra genesis value
-  let dijkstraGenesis = exampleDijkstraGenesis -- TODO: Dijkstra - add plumbing to read Dijkstra genesis
+  -- TODO Dijkstra: build real genesis value
+  let dijkstraGenesis = exampleDijkstraGenesis -- TODO Dijkstra: add plumbing to read genesis
   let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
 

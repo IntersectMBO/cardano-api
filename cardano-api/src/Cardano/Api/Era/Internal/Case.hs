@@ -52,7 +52,7 @@ caseByronOrShelleyBasedEra l r = \case
   AlonzoEra -> r ShelleyBasedEraAlonzo
   BabbageEra -> r ShelleyBasedEraBabbage
   ConwayEra -> r ShelleyBasedEraConway
-  DijkstraEra -> error "caseByronOrShelleyBasedEra: DijkstraEra is not supported"
+  DijkstraEra -> error "TODO Dijkstra: caseByronOrShelleyBasedEra: era not supported"
 
 -- | @caseByronToAlonzoOrBabbageEraOnwards f g era@ applies @f@ to byron, shelley, allegra, mary, and alonzo;
 -- and @g@ to babbage and later eras.
@@ -70,7 +70,7 @@ caseByronToAlonzoOrBabbageEraOnwards l r = \case
   AlonzoEra -> l ByronToAlonzoEraAlonzo
   BabbageEra -> r BabbageEraOnwardsBabbage
   ConwayEra -> r BabbageEraOnwardsConway
-  DijkstraEra -> error "caseByronToAlonzoOrBabbageEraOnwards: DijkstraEra is not supported"
+  DijkstraEra -> error "TODO Dijkstra: caseByronToAlonzoOrBabbageEraOnwards: era not supported"
 
 -- | @caseShelleyEraOnlyOrAllegraEraOnwards f g era@ applies @f@ to shelley;
 -- and applies @g@ to allegra and later eras.
@@ -87,7 +87,7 @@ caseShelleyEraOnlyOrAllegraEraOnwards l r = \case
   ShelleyBasedEraAlonzo -> r AllegraEraOnwardsAlonzo
   ShelleyBasedEraBabbage -> r AllegraEraOnwardsBabbage
   ShelleyBasedEraConway -> r AllegraEraOnwardsConway
-  ShelleyBasedEraDijkstra -> error "caseShelleyEraOnlyOrAllegraEraOnwards: DijkstraEra is not supported"
+  ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyEraOnlyOrAllegraEraOnwards: era not supported"
 
 -- | @caseShelleyToAllegraOrMaryEraOnwards f g era@ applies @f@ to shelley and allegra;
 -- and applies @g@ to mary and later eras.
@@ -104,7 +104,7 @@ caseShelleyToAllegraOrMaryEraOnwards l r = \case
   ShelleyBasedEraAlonzo -> r MaryEraOnwardsAlonzo
   ShelleyBasedEraBabbage -> r MaryEraOnwardsBabbage
   ShelleyBasedEraConway -> r MaryEraOnwardsConway
-  ShelleyBasedEraDijkstra -> error "caseShelleyToAllegraOrMaryEraOnwards: DijkstraEra is not supported"
+  ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyToAllegraOrMaryEraOnwards: era not supported"
 
 -- | @caseShelleyToMaryOrAlonzoEraOnwards f g era@ applies @f@ to shelley, allegra, and mary;
 -- and applies @g@ to alonzo and later eras.
@@ -121,7 +121,7 @@ caseShelleyToMaryOrAlonzoEraOnwards l r = \case
   ShelleyBasedEraAlonzo -> r AlonzoEraOnwardsAlonzo
   ShelleyBasedEraBabbage -> r AlonzoEraOnwardsBabbage
   ShelleyBasedEraConway -> r AlonzoEraOnwardsConway
-  ShelleyBasedEraDijkstra -> error "caseShelleyToMaryOrAlonzoEraOnwards: DijkstraEra is not supported"
+  ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyToMaryOrAlonzoEraOnwards: era not supported"
 
 -- | @caseShelleyToAlonzoOrBabbageEraOnwards f g era@ applies @f@ to shelley, allegra, mary, and alonzo;
 -- and applies @g@ to babbage and later eras.
@@ -138,7 +138,7 @@ caseShelleyToAlonzoOrBabbageEraOnwards l r = \case
   ShelleyBasedEraAlonzo -> l ShelleyToAlonzoEraAlonzo
   ShelleyBasedEraBabbage -> r BabbageEraOnwardsBabbage
   ShelleyBasedEraConway -> r BabbageEraOnwardsConway
-  ShelleyBasedEraDijkstra -> error "caseShelleyToAlonzoOrBabbageEraOnwards: DijkstraEra is not supported"
+  ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyToAlonzoOrBabbageEraOnwards: era not supported"
 
 -- | @caseShelleyToBabbageOrConwayEraOnwards f g era@ applies @f@ to eras before conway;
 -- and applies @g@ to conway and later eras.
@@ -155,7 +155,7 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraAlonzo -> l ShelleyToBabbageEraAlonzo
   ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway -> r ConwayEraOnwardsConway
-  ShelleyBasedEraDijkstra -> error "caseShelleyToBabbageOrConwayEraOnwards: DijkstraEra is not supported"
+  ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyToBabbageOrConwayEraOnwards: era not supported"
 
 {-# DEPRECATED shelleyToAlonzoEraToShelleyToBabbageEra "Use convert instead" #-}
 shelleyToAlonzoEraToShelleyToBabbageEra

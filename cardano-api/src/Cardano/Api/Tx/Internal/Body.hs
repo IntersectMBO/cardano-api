@@ -2662,7 +2662,7 @@ makeShelleyTransactionBody
 
     txAuxData :: Maybe (L.TxAuxData E.ConwayEra)
     txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts
-makeShelleyTransactionBody ShelleyBasedEraDijkstra _ = error "makeShelleyTransactionBody: Dijkstra era not supported"
+makeShelleyTransactionBody ShelleyBasedEraDijkstra _ = error "TODO Dijkstra: makeShelleyTransactionBody: era not supported"
 
 -- ----------------------------------------------------------------------------
 -- Script witnesses within the tx body
@@ -3104,7 +3104,7 @@ extractWitnessableVotes
   :: ConwayEraOnwards era
   -> Maybe (Featured eon era (TxVotingProcedures BuildTx era))
   -> [(Witnessable VoterItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
-extractWitnessableVotes ConwayEraOnwardsDijkstra _ = error "extractWitnessableVotes: Dijkstra era not supported"
+extractWitnessableVotes ConwayEraOnwardsDijkstra _ = error "TODO Dijkstra: extractWitnessableVotes: era not supported"
 extractWitnessableVotes e@ConwayEraOnwardsConway txVotingProcedures =
   List.nub
     [ (conwayEraOnwardsConstraints e $ WitVote vote, BuildTxWith wit)

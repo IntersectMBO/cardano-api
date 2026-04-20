@@ -169,7 +169,7 @@ reqSignerHashesTxBodyL
 reqSignerHashesTxBodyL w@AlonzoEraOnwardsAlonzo = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
 reqSignerHashesTxBodyL w@AlonzoEraOnwardsBabbage = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
 reqSignerHashesTxBodyL w@AlonzoEraOnwardsConway = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
-reqSignerHashesTxBodyL AlonzoEraOnwardsDijkstra = error "reqSignerHashesTxBodyL: DijkstraEra not supported yet"
+reqSignerHashesTxBodyL AlonzoEraOnwardsDijkstra = error "TODO Dijkstra: reqSignerHashesTxBodyL: era not supported"
 
 referenceInputsTxBodyL
   :: BabbageEraOnwards era -> Lens' (LedgerTxBody era) (Set L.TxIn)
