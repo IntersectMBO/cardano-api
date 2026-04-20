@@ -264,7 +264,8 @@ hashTxBody
 hashTxBody = L.extractHash . L.hashAnnotated
 
 makeKeyWitness
-  :: Era era
+  :: HasCallStack
+  => Era era
   -> UnsignedTx (LedgerEra era)
   -> ShelleyWitnessSigningKey
   -> L.WitVKey L.Witness

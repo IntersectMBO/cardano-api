@@ -1185,7 +1185,7 @@ setTxTreasuryDonation
   :: Maybe (Featured ConwayEraOnwards era L.Coin) -> TxBodyContent build era -> TxBodyContent build era
 setTxTreasuryDonation v txBodyContent = txBodyContent{txTreasuryDonation = v}
 
-getTxIdByron :: Byron.ATxAux ByteString -> TxId
+getTxIdByron :: HasCallStack => Byron.ATxAux ByteString -> TxId
 getTxIdByron (Byron.ATxAux{Byron.aTaTx = txbody}) =
   TxId
     . fromMaybe impossible
@@ -1518,6 +1518,7 @@ maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 {-# DEPRECATED createAndValidateTransactionBody "Use createTransactionBody instead" #-}
 createAndValidateTransactionBody
   :: ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
@@ -2104,6 +2105,7 @@ mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData =
 makeShelleyTransactionBody
   :: forall era
    . ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
@@ -2660,7 +2662,7 @@ makeShelleyTransactionBody
 
     txAuxData :: Maybe (L.TxAuxData E.ConwayEra)
     txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts
-makeShelleyTransactionBody ShelleyBasedEraDijkstra _ = error "makeShelleyTransactionBody: Dijkstra is not  supported"
+makeShelleyTransactionBody ShelleyBasedEraDijkstra _ = error "makeShelleyTransactionBody: Dijkstra era not supported"
 
 -- ----------------------------------------------------------------------------
 -- Script witnesses within the tx body

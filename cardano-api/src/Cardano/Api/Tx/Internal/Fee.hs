@@ -124,7 +124,8 @@ instance Error (AutoBalanceError era) where
     AutoBalanceCalculationError e -> prettyError e
 
 estimateOrCalculateBalancedTxBody
-  :: ShelleyBasedEra era
+  :: HasCallStack
+  => ShelleyBasedEra era
   -> FeeEstimationMode era
   -> L.PParams (ShelleyLedgerEra era)
   -> TxBodyContent BuildTx era

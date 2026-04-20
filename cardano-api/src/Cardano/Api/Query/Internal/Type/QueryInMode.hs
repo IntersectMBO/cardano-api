@@ -545,6 +545,7 @@ fromShelleyRewardAccounts =
 toConsensusQuery
   :: forall block result
    . ()
+  => HasCallStack
   => Consensus.CardanoBlock StandardCrypto ~ block
   => QueryInMode result
   -> Some (Consensus.Query block)
@@ -572,7 +573,7 @@ toConsensusQuery QueryLedgerConfig = Some Consensus.DebugLedgerConfig
 
 toConsensusQueryShelleyBased
   :: forall era protocol block result
-   . ()
+   . HasCallStack
   => ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol (ShelleyLedgerEra era)
   => Consensus.CardanoBlock StandardCrypto ~ block
   => L.EraGov (ShelleyLedgerEra era)

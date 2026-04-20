@@ -122,6 +122,7 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Data.Tuple (uncurry)
 import GHC.Exts qualified as GHC
+import GHC.Stack (HasCallStack)
 import Text.Show
 
 newtype UTxO era = UTxO {unUTxO :: Map TxIn (TxOut CtxUTxO era)}
@@ -354,7 +355,8 @@ fromMap = UTxO
 --------------------------------------------------------------------}
 
 -- | Convert from a `cardano-api` `UTxO` to a `cardano-ledger` UTxO.
-toShelleyUTxO :: ShelleyBasedEra era -> UTxO era -> Ledger.UTxO (ShelleyLedgerEra era)
+toShelleyUTxO
+  :: HasCallStack => ShelleyBasedEra era -> UTxO era -> Ledger.UTxO (ShelleyLedgerEra era)
 toShelleyUTxO sbe =
   Ledger.UTxO . Map.foldMapWithKey f . unUTxO
  where

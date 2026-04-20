@@ -170,6 +170,7 @@ import Data.Set qualified as Set
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (cast)
 import GHC.Exts (IsList (..))
+import GHC.Stack (HasCallStack)
 import Lens.Micro
 
 -- | Error that can occur when constructing an unsigned transaction.
@@ -538,7 +539,8 @@ legacyDatumToDatum OldApi.TxOutDatumNone = Nothing
 
 fromLegacyTxOut
   :: forall era
-   . IsEra era
+   . HasCallStack
+  => IsEra era
   => OldApi.TxOut CtxTx era
   -> Either DatumDecodingError (TxOut (LedgerEra era), Map L.DataHash (L.Data (LedgerEra era)))
 fromLegacyTxOut tOut@(OldApi.TxOut _ _ d _) = do
