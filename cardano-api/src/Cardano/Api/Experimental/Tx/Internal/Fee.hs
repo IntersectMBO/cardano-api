@@ -76,6 +76,7 @@ import Cardano.Ledger.Credential as Ledger (Credential)
 import Cardano.Ledger.Val qualified as L
 
 import Control.Monad
+import Control.Monad.Except (throwError)
 import Data.Bifunctor
 import Data.Function (on, (&))
 import Data.List (sortBy)
@@ -1433,9 +1434,17 @@ makeTransactionBodyAutoBalance
           useEra
           txbodycontent
 
-    let initialChangeTxOutValue :: Ledger.Value (LedgerEra era) =
-          evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo txbodyForChange
-        initialChangeTxOut :: TxOut (LedgerEra era) =
+    -- Check the balance before constructing the TxOut. L.mkBasicTxOut calls toCompact, which throws an irrecoverable
+    -- error on negative Coin values, so checkNonNegative would never get to return Left for the negative case.
+    initialChangeTxOutValue :: Ledger.Value (LedgerEra era) <- do
+      let val = evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo txbodyForChange
+          L.MaryValue initialCoin initialMultiAsset = obtainCommonConstraints (useEra @era) val
+      val
+        <$ unless
+          (obtainCommonConstraints (useEra @era) $ L.pointwise (>=) val mempty)
+          (throwError $ TxBodyErrorBalanceNegative initialCoin initialMultiAsset)
+
+    let initialChangeTxOut :: TxOut (LedgerEra era) =
           obtainCommonConstraints (useEra @era) $
             TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) initialChangeTxOutValue)
 

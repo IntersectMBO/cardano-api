@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1186
+kind:
+  - bugfix
+  - test
+description: |
+  `makeTransactionBodyAutoBalance` now returns `TxBodyErrorBalanceNegative` when the transaction balance is negative, instead of crashing with an `Illegal Value in TxOut` runtime error from `toCompact` on a negative `Coin`. Added Hedgehog property tests covering withdrawal-funded transaction balancing for both success and failure cases.
