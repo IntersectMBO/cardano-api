@@ -1,5 +1,5 @@
 project: cardano-api
-pr: 0
+pr: 1187
 kind:
   - maintenance
 description: |
