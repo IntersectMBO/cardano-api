@@ -15,17 +15,20 @@ import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Monad.Error (failEither)
+import Cardano.Api.Monad.Error (failEitherWith)
 
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Tools qualified as L (calcMinFeeTx)
+import Cardano.Slotting.EpochInfo qualified as Slotting
+import Cardano.Slotting.Slot qualified as Slotting
+import Cardano.Slotting.Time qualified as Slotting
 
-import Data.Bifunctor (first)
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
 import Data.Sequence.Strict qualified as Seq
+import Data.Time.Clock.POSIX qualified as Time
 import Lens.Micro
 
 import Test.Gen.Cardano.Api.Typed (genAddressInEra, genStakeCredential, genTxIn)
@@ -34,6 +37,7 @@ import Test.Cardano.Api.Experimental (exampleProtocolParams, exampleProtocolPara
 
 import Hedgehog (Gen, Property)
 import Hedgehog qualified as H
+import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Test.Tasty (TestTree, testGroup)
@@ -91,6 +95,18 @@ tests =
         , testProperty
             "Tiny surplus consumed by fee increase yields NotEnoughAdaForChangeOutput"
             prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada
+        , testProperty
+            "withdrawal-funded transaction (output > input) succeeds"
+            prop_calcMinFeeRecursive_withdrawal_funded_succeeds
+        , testProperty
+            "withdrawal-funded transaction with tiny input fails gracefully"
+            prop_calcMinFeeRecursive_withdrawal_tiny_input_fails
+        ]
+    , testGroup
+        "makeTransactionBodyAutoBalance"
+        [ testProperty
+            "underfunded transaction fails with TxBodyErrorBalanceNegative"
+            prop_makeTransactionBodyAutoBalance_balance_negative
         ]
     ]
 
@@ -147,9 +163,8 @@ genFundedSimpleTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
-  case Exp.makeUnsignedTx era txBodyContent of
-    Left err -> fail $ "makeUnsignedTx: " <> show err
-    Right tx -> return (tx, utxo, changeAddr)
+  tx <- failEitherWith (("makeUnsignedTx: " <>) . show) $ Exp.makeUnsignedTx era txBodyContent
+  return (tx, utxo, changeAddr)
 
 -- | Like 'genFundedSimpleTx' but the UTxO and output both carry native tokens.
 -- The output sends all tokens; the surplus ADA goes to the change output.
@@ -186,9 +201,8 @@ genFundedMultiAssetTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
-  case Exp.makeUnsignedTx era txBodyContent of
-    Left err -> fail $ "makeUnsignedTx: " <> show err
-    Right tx -> return (tx, utxo, changeAddr)
+  tx <- failEitherWith (("makeUnsignedTx: " <>) . show) $ Exp.makeUnsignedTx era txBodyContent
+  return (tx, utxo, changeAddr)
 
 -- | Generates a simple lovelace-only transaction where the single output
 -- (5-10 ADA) greatly exceeds the UTxO funding (0.5-2 ADA).
@@ -221,9 +235,8 @@ genUnderfundedTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
-  case Exp.makeUnsignedTx era txBodyContent of
-    Left err -> fail $ "makeUnsignedTx: " <> show err
-    Right tx -> return (tx, utxo, changeAddr)
+  tx <- failEitherWith (("makeUnsignedTx: " <>) . show) $ Exp.makeUnsignedTx era txBodyContent
+  return (tx, utxo, changeAddr)
 
 -- | Generates a transaction whose output demands a native token that does
 -- not exist in the UTxO (which is ADA-only). This guarantees a negative
@@ -263,9 +276,8 @@ genNonAdaUnbalancedTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
-  case Exp.makeUnsignedTx era txBodyContent of
-    Left err -> fail $ "makeUnsignedTx: " <> show err
-    Right tx -> return (tx, utxo, changeAddr)
+  tx <- failEitherWith (("makeUnsignedTx: " <>) . show) $ Exp.makeUnsignedTx era txBodyContent
+  return (tx, utxo, changeAddr)
 
 -- | Generates a two-output transaction where the second output carries native
 -- tokens with only 1000 lovelace — well below the minimum UTxO for a
@@ -309,9 +321,8 @@ genMinUTxOViolatingTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [sendTxOut1, sendTxOut2]
           & Exp.setTxFee 0
-  case Exp.makeUnsignedTx era txBodyContent of
-    Left err -> fail $ "makeUnsignedTx: " <> show err
-    Right tx -> return (tx, utxo, changeAddr)
+  tx <- failEitherWith (("makeUnsignedTx: " <>) . show) $ Exp.makeUnsignedTx era txBodyContent
+  return (tx, utxo, changeAddr)
 
 -- | Generates a transaction with inputs but no outputs. Once the fee
 -- converges (Case 3), the positive surplus triggers Case 2, and
@@ -339,9 +350,8 @@ genNoOutputsTx era = do
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxOuts [] -- No outputs!
           & Exp.setTxFee 0
-  case Exp.makeUnsignedTx era txBodyContent of
-    Left err -> fail $ "makeUnsignedTx: " <> show err
-    Right tx -> return (tx, utxo, changeAddr)
+  tx <- failEitherWith (("makeUnsignedTx: " <>) . show) $ Exp.makeUnsignedTx era txBodyContent
+  return (tx, utxo, changeAddr)
 
 -- | Generates a transaction designed to trigger 'NotEnoughAdaForChangeOutput'.
 --
@@ -390,7 +400,7 @@ genTinySurplusTx era = Exp.obtainCommonConstraints era $ do
           & Exp.setTxOuts [sendTxOut]
           & Exp.setTxFee 0
   unsignedTx <-
-    failEither . first (("makeUnsignedTx: " <>) . show) $ Exp.makeUnsignedTx era txBodyContent
+    failEitherWith (("makeUnsignedTx: " <>) . show) $ Exp.makeUnsignedTx era txBodyContent
   let
     -- Compute F1 via case match on UnsignedTx (needed to bring EraTx into scope)
     L.Coin f1 = case unsignedTx of
@@ -405,6 +415,123 @@ genTinySurplusTx era = Exp.obtainCommonConstraints era $ do
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
   return (unsignedTx, utxo, changeAddr)
 
+-- | Smoke-test generator: the output exceeds the input, and a withdrawal
+-- covers the difference with some surplus. Exercises the withdrawal branch
+-- of 'evaluateTransactionBalance' inside 'calcMinFeeRecursive':
+-- @change = input + withdrawal - output - fee = surplus - fee@, which
+-- stays positive for the ranges chosen below.
+genWithdrawalFundedTx
+  :: Exp.Era era
+  -> Gen
+       ( Exp.UnsignedTx (Exp.LedgerEra era)
+       , L.UTxO (Exp.LedgerEra era)
+       , L.Addr
+       )
+genWithdrawalFundedTx era = do
+  let sbe = convert era
+  txIn <- genTxIn
+  addr <- Api.toShelleyAddr <$> genAddressInEra sbe
+  changeAddr <- Api.toShelleyAddr <$> genAddressInEra sbe
+  stakeCred <- genStakeCredential
+  fundingCoin <- L.Coin <$> Gen.integral (Range.linear 2_000_000 5_000_000)
+  deficit <- L.Coin <$> Gen.integral (Range.linear 1_000_000 5_000_000)
+  surplus <- L.Coin <$> Gen.integral (Range.linear 2_000_000 5_000_000)
+  let sendCoin = fundingCoin + deficit
+      withdrawalCoin = deficit + surplus
+      stakeAddr = Api.makeStakeAddress (Api.Testnet $ Api.NetworkMagic 1) stakeCred
+      ledgerTxIn = Api.toShelleyTxIn txIn
+      fundingTxOut =
+        Exp.obtainCommonConstraints era $
+          L.mkBasicTxOut addr (L.MaryValue fundingCoin mempty)
+      utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
+      sendTxOut =
+        Exp.obtainCommonConstraints era $
+          Exp.TxOut $
+            L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [sendTxOut]
+          & Exp.setTxWithdrawals (Exp.TxWithdrawals [(stakeAddr, withdrawalCoin, Exp.AnyKeyWitnessPlaceholder)])
+          & Exp.setTxFee 0
+  tx <- failEitherWith (("makeUnsignedTx: " <>) . show) $ Exp.makeUnsignedTx era txBodyContent
+  return (tx, utxo, changeAddr)
+
+-- | Like 'genUnderfundedTx' but returns the 'TxBodyContent' rather than an
+-- 'UnsignedTx', so it can feed 'makeTransactionBodyAutoBalance'. The output
+-- (5-10 ADA) greatly exceeds the UTxO funding (0.5-1 ADA) and no withdrawal
+-- makes up the difference, driving @input - output@ negative.
+genAutoBalanceNegativeTx
+  :: Exp.Era era
+  -> Gen
+       ( Exp.TxBodyContent (Exp.LedgerEra era)
+       , L.UTxO (Exp.LedgerEra era)
+       , Api.AddressInEra era
+       )
+genAutoBalanceNegativeTx era = do
+  let sbe = convert era
+  txIn <- genTxIn
+  addr <- genAddressInEra sbe
+  changeAddr <- genAddressInEra sbe
+  fundingCoin <- L.Coin <$> Gen.integral (Range.linear 500_000 1_000_000)
+  sendCoin <- L.Coin <$> Gen.integral (Range.linear 5_000_000 10_000_000)
+  let ledgerTxIn = Api.toShelleyTxIn txIn
+      shelleyAddr = Api.toShelleyAddr addr
+      fundingTxOut =
+        Exp.obtainCommonConstraints era $
+          L.mkBasicTxOut shelleyAddr (L.MaryValue fundingCoin mempty)
+      utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
+      sendTxOut =
+        Exp.obtainCommonConstraints era $
+          Exp.TxOut $
+            L.mkBasicTxOut shelleyAddr (L.MaryValue sendCoin mempty)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [sendTxOut]
+          & Exp.setTxFee 0
+  return (txBodyContent, utxo, changeAddr)
+
+-- | Like 'genWithdrawalFundedTx' but with a tiny input (100 lovelace), well
+-- below the minimum transaction fee, and no surplus over @output - input@.
+-- Initial @change = input + withdrawal - output = input = 100@ (fee is still
+-- 0 at this point), but once fee estimation runs, @change = input - fee@
+-- goes negative and 'calcMinFeeRecursive' returns a balancing error.
+genWithdrawalTinyInputTx
+  :: Exp.Era era
+  -> Gen
+       ( Exp.UnsignedTx (Exp.LedgerEra era)
+       , L.UTxO (Exp.LedgerEra era)
+       , L.Addr
+       )
+genWithdrawalTinyInputTx era = do
+  let sbe = convert era
+  txIn <- genTxIn
+  addr <- Api.toShelleyAddr <$> genAddressInEra sbe
+  changeAddr <- Api.toShelleyAddr <$> genAddressInEra sbe
+  stakeCred <- genStakeCredential
+  let inputCoin = L.Coin 100
+  withdrawalCoin <- L.Coin <$> Gen.integral (Range.linear 3_000_000 10_000_000)
+  let sendCoin = withdrawalCoin
+      stakeAddr = Api.makeStakeAddress (Api.Testnet $ Api.NetworkMagic 1) stakeCred
+      ledgerTxIn = Api.toShelleyTxIn txIn
+      fundingTxOut =
+        Exp.obtainCommonConstraints era $
+          L.mkBasicTxOut addr (L.MaryValue inputCoin mempty)
+      utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
+      sendTxOut =
+        Exp.obtainCommonConstraints era $
+          Exp.TxOut $
+            L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [sendTxOut]
+          & Exp.setTxWithdrawals (Exp.TxWithdrawals [(stakeAddr, withdrawalCoin, Exp.AnyKeyWitnessPlaceholder)])
+          & Exp.setTxFee 0
+  tx <- failEitherWith (("makeUnsignedTx: " <>) . show) $ Exp.makeUnsignedTx era txBodyContent
+  return (tx, utxo, changeAddr)
+
 -- ---------------------------------------------------------------------------
 -- Property tests
 -- ---------------------------------------------------------------------------
@@ -414,21 +541,21 @@ genTinySurplusTx era = Exp.obtainCommonConstraints era $ do
 prop_calcMinFeeRecursive_well_funded_succeeds :: Property
 prop_calcMinFeeRecursive_well_funded_succeeds = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genFundedSimpleTx Exp.ConwayEra
-  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
-    Left err -> H.annotateShow err >> H.failure
-    Right (Exp.UnsignedTx resultLedgerTx) -> do
-      let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
-      H.assert $ resultFee > L.Coin 0
-      -- The resulting transaction must be fully balanced (zero balance).
-      let balance =
-            UnexportedLedger.evalBalanceTxBody
-              exampleProtocolParams
-              (const Nothing)
-              (const Nothing)
-              (const False)
-              utxo
-              (resultLedgerTx ^. L.bodyTxL)
-      balance H.=== mempty
+  Exp.UnsignedTx resultLedgerTx <-
+    H.leftFail $
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+  let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
+  H.assertWith resultFee (> L.Coin 0)
+  -- The resulting transaction must be fully balanced (zero balance).
+  let balance =
+        UnexportedLedger.evalBalanceTxBody
+          exampleProtocolParams
+          (const Nothing)
+          (const Nothing)
+          (const False)
+          utxo
+          (resultLedgerTx ^. L.bodyTxL)
+  balance H.=== mempty
 
 -- | Like 'prop_calcMinFeeRecursive_well_funded_succeeds' but the UTxO and
 -- output carry native tokens. Verifies that surplus tokens are correctly
@@ -436,20 +563,20 @@ prop_calcMinFeeRecursive_well_funded_succeeds = H.property $ do
 prop_calcMinFeeRecursive_well_funded_multi_asset :: Property
 prop_calcMinFeeRecursive_well_funded_multi_asset = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genFundedMultiAssetTx Exp.ConwayEra
-  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
-    Left err -> H.annotateShow err >> H.failure
-    Right (Exp.UnsignedTx resultLedgerTx) -> do
-      let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
-      H.assert $ resultFee > L.Coin 0
-      let balance =
-            UnexportedLedger.evalBalanceTxBody
-              exampleProtocolParams
-              (const Nothing)
-              (const Nothing)
-              (const False)
-              utxo
-              (resultLedgerTx ^. L.bodyTxL)
-      balance H.=== mempty
+  Exp.UnsignedTx resultLedgerTx <-
+    H.leftFail $
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+  let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
+  H.assertWith resultFee (> L.Coin 0)
+  let balance =
+        UnexportedLedger.evalBalanceTxBody
+          exampleProtocolParams
+          (const Nothing)
+          (const Nothing)
+          (const False)
+          utxo
+          (resultLedgerTx ^. L.bodyTxL)
+  balance H.=== mempty
 
 -- | 'calcMinFeeRecursive' is idempotent: applying it to its own result
 -- yields the same 'UnsignedTx'.  This confirms the fee has reached a
@@ -457,13 +584,13 @@ prop_calcMinFeeRecursive_well_funded_multi_asset = H.property $ do
 prop_calcMinFeeRecursive_fee_fixpoint :: Property
 prop_calcMinFeeRecursive_fee_fixpoint = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genFundedSimpleTx Exp.ConwayEra
-  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
-    Left err -> H.annotateShow err >> H.failure
-    Right resultTx -> do
-      secondResult <-
-        H.evalEither $
-          Exp.calcMinFeeRecursive changeAddr resultTx utxo exampleProtocolParams mempty mempty mempty 0
-      resultTx H.=== secondResult
+  resultTx <-
+    H.leftFail $
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+  secondResult <-
+    H.leftFail $
+      Exp.calcMinFeeRecursive changeAddr resultTx utxo exampleProtocolParams mempty mempty mempty 0
+  resultTx H.=== secondResult
 
 -- | When the outputs exceed the UTxO value the function returns
 -- 'Left (NotEnoughAdaForNewOutput _)' with a negative deficit coin.
@@ -471,7 +598,7 @@ prop_calcMinFeeRecursive_insufficient_funds :: Property
 prop_calcMinFeeRecursive_insufficient_funds = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genUnderfundedTx Exp.ConwayEra
   case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
-    Left (Exp.NotEnoughAdaForNewOutput deficit) -> H.assert $ deficit < L.Coin 0
+    Left (Exp.NotEnoughAdaForNewOutput deficit) -> H.assertWith deficit (< L.Coin 0)
     Left Exp.NonAdaAssetsUnbalanced{} -> H.annotate "Unexpected NonAdaAssetsUnbalanced error" >> H.failure
     Left Exp.MinUTxONotMet{} -> H.annotate "Unexpected MinUTxONotMet error" >> H.failure
     Left Exp.FeeCalculationDidNotConverge -> H.annotate "Unexpected FeeCalculationDidNotConverge error" >> H.failure
@@ -498,9 +625,8 @@ prop_calcMinFeeRecursive_min_utxo_not_met :: Property
 prop_calcMinFeeRecursive_min_utxo_not_met = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genMinUTxOViolatingTx Exp.ConwayEra
   case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
-    Left (Exp.MinUTxONotMet actual required) -> do
-      H.annotate $ "Actual: " <> show actual <> ", Required: " <> show required
-      H.assert $ actual < required
+    Left (Exp.MinUTxONotMet actual required) ->
+      H.assertWith (actual, required) (uncurry (<))
     Left Exp.NotEnoughAdaForChangeOutput{} -> H.annotate "Unexpected NotEnoughAdaForChangeOutput" >> H.failure
     Left Exp.NotEnoughAdaForNewOutput{} -> H.annotate "Unexpected NotEnoughAdaForNewOutput" >> H.failure
     Left Exp.NonAdaAssetsUnbalanced{} -> H.annotate "Unexpected NonAdaAssetsUnbalanced" >> H.failure
@@ -512,12 +638,12 @@ prop_calcMinFeeRecursive_min_utxo_not_met = H.property $ do
 prop_calcMinFeeRecursive_no_tx_outs :: Property
 prop_calcMinFeeRecursive_no_tx_outs = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genNoOutputsTx Exp.ConwayEra
-  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
-    Left err -> H.annotateShow err >> H.failure
-    Right (Exp.UnsignedTx resultLedgerTx) -> do
-      let outs = toList $ resultLedgerTx ^. L.bodyTxL . L.outputsTxBodyL
-      -- The result should have exactly one output (the change output)
-      length outs H.=== 1
+  Exp.UnsignedTx resultLedgerTx <-
+    H.leftFail $
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+  let outs = toList $ resultLedgerTx ^. L.bodyTxL . L.outputsTxBodyL
+  -- The result should have exactly one output (the change output)
+  length outs H.=== 1
 
 -- | When the surplus is just barely enough to cover the initial fee but not
 -- the higher fee after adding a change output, the change output balance
@@ -526,17 +652,88 @@ prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada :: Property
 prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genTinySurplusTx Exp.ConwayEra
   case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
-    Left (Exp.NotEnoughAdaForChangeOutput deficit) -> do
-      H.annotate $ "Deficit: " <> show deficit
-      H.assert $ deficit < L.Coin 0
-    Left (Exp.MinUTxONotMet actual required) -> do
+    Left (Exp.NotEnoughAdaForChangeOutput deficit) ->
+      H.assertWith deficit (< L.Coin 0)
+    Left (Exp.MinUTxONotMet actual required) ->
       -- If surplus - F2 >= 0 (barely), we may land in MinUTxONotMet instead.
       -- This is also a valid failure for this border region.
-      H.annotate $ "Change output ADA: " <> show actual <> ", minUTxO: " <> show required
-      H.assert $ actual < required
+      H.assertWith (actual, required) (uncurry (<))
     Left err -> H.annotateShow err >> H.failure
     Right _ ->
       H.annotate "Expected NotEnoughAdaForChangeOutput or MinUTxONotMet but tx balanced successfully"
+        >> H.failure
+
+-- | Smoke test: when the output exceeds the input but a withdrawal covers
+-- the difference (plus some surplus), 'calcMinFeeRecursive' balances the
+-- transaction successfully and the result is zero-balance with a positive
+-- fee.
+prop_calcMinFeeRecursive_withdrawal_funded_succeeds :: Property
+prop_calcMinFeeRecursive_withdrawal_funded_succeeds = H.property $ do
+  (unsignedTx, utxo, changeAddr) <- H.forAll $ genWithdrawalFundedTx Exp.ConwayEra
+  Exp.UnsignedTx resultLedgerTx <-
+    H.leftFail $
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+  let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
+  H.assertWith resultFee (> L.Coin 0)
+  let balance =
+        UnexportedLedger.evalBalanceTxBody
+          exampleProtocolParams
+          (const Nothing)
+          (const Nothing)
+          (const False)
+          utxo
+          (resultLedgerTx ^. L.bodyTxL)
+  balance H.=== mempty
+
+-- | When the input is tiny (below the minimum fee) and the withdrawal only
+-- covers @output - input@ exactly, 'calcMinFeeRecursive' must fail
+-- gracefully after fee estimation with 'NotEnoughAdaForChangeOutput' /
+-- 'NotEnoughAdaForNewOutput' / 'MinUTxONotMet' - not a crash.
+prop_calcMinFeeRecursive_withdrawal_tiny_input_fails :: Property
+prop_calcMinFeeRecursive_withdrawal_tiny_input_fails = H.property $ do
+  (unsignedTx, utxo, changeAddr) <- H.forAll $ genWithdrawalTinyInputTx Exp.ConwayEra
+  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
+    Left (Exp.NotEnoughAdaForChangeOutput deficit) ->
+      H.assertWith deficit (< L.Coin 0)
+    Left (Exp.NotEnoughAdaForNewOutput deficit) ->
+      H.assertWith deficit (< L.Coin 0)
+    Left Exp.MinUTxONotMet{} -> H.success
+    Left err -> H.annotateShow err >> H.failure
+    Right _ ->
+      H.annotate "Expected failure (input < fee) but tx balanced successfully"
+        >> H.failure
+
+-- | Regression test for the 'Illegal Value in TxOut' crash: prior to the
+-- balance-check guard in 'makeTransactionBodyAutoBalance', an underfunded
+-- transaction (output > inputs + withdrawals) would reach
+-- 'L.mkBasicTxOut' with a negative 'Coin', which calls 'toCompact' and
+-- throws an unrecoverable error. The guard now returns
+-- 'TxBodyErrorBalanceNegative' with the negative balance instead.
+prop_makeTransactionBodyAutoBalance_balance_negative :: Property
+prop_makeTransactionBodyAutoBalance_balance_negative = H.property $ do
+  (txBodyContent, utxo, changeAddr) <-
+    H.forAllWith (const "<TxBodyContent, UTxO, AddressInEra>") $
+      genAutoBalanceNegativeTx Exp.ConwayEra
+  let systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
+      epochInfo =
+        Api.LedgerEpochInfo $
+          Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+  case Exp.makeTransactionBodyAutoBalance
+    systemStart
+    epochInfo
+    exampleProtocolParams
+    mempty
+    mempty
+    mempty
+    utxo
+    txBodyContent
+    changeAddr
+    Nothing of
+    Left (Exp.TxBodyErrorBalanceNegative coin _multiAsset) ->
+      H.assertWith coin (< L.Coin 0)
+    Left err -> H.annotateShow err >> H.failure
+    Right _ ->
+      H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
         >> H.failure
 
 -- | Regression test for the bug where 'mapScriptWitnessesCertificates' silently
