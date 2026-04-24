@@ -13,8 +13,16 @@
 #   2. Resolve + rewrite: for each discovered target, probe candidate
 #      doc-site URLs and rewrite HTML links in place (or mark unmapped
 #      CHaP packages as unclickable).
-#   3. Validate + annotate: HEAD each rewritten URL; replace dead ones
-#      with annotated plain-text spans so there are zero clickable 404s.
+#   2b. Re-export rewrite: extract (type, defining package, module) triples
+#       from each local page's Haddock-emitted "Source" cabal-store link,
+#       then rewrite the local re-export hrefs (e.g. a reference to
+#       cardano-ledger-byron's `Address` via `Cardano.Api.Byron`) to point
+#       at the upstream doc site instead of the local re-export page.
+#   3. Validate + annotate: HEAD each rewritten URL; for dead URLs try to
+#      rescue by probing doc-site subdirectories (api/, protocols/,
+#      framework/) and parent modules with #t: fragment reconstruction.
+#      URLs that can't be rescued become annotated plain-text spans so
+#      there are zero clickable 404s.
 #
 # When dead links are found (unmapped CHaP package or module-level 404),
 # the script prints an actionable summary — upstream module name, symbols
@@ -31,8 +39,14 @@ set -euo pipefail
 WEBSITE_DIR="${1:?Usage: $0 <website-directory>}"
 [ -d "$WEBSITE_DIR" ] || { echo "Error: $WEBSITE_DIR is not a directory" >&2; exit 1; }
 
-CHAP_PKGS_FILE="" URLS_FILE="" DEAD_URLS_FILE="" REWRITE_SCRIPT="" DEAD_SCRIPT=""
-trap 'rm -f "$CHAP_PKGS_FILE" "$URLS_FILE" "$DEAD_URLS_FILE" "$REWRITE_SCRIPT" "$DEAD_SCRIPT"' EXIT
+TMPFILES=()
+trap 'rm -f "${TMPFILES[@]}"' EXIT
+
+mktemp_tracked() {
+  local t; t=$(mktemp)
+  TMPFILES+=("$t")
+  printf '%s\n' "$t"
+}
 
 # ============================================================================
 # Configuration and helpers
@@ -61,6 +75,13 @@ IOG_DOC_BASES=(
   "https://ouroboros-network.cardano.intersectmbo.org"
   "https://input-output-hk.github.io/io-sim"
 )
+
+# Some doc sites organise module pages into subdirectories beneath the
+# package root (e.g. ouroboros-network publishes Ouroboros-Network-Magic.html
+# under ouroboros-network/api/, not ouroboros-network/ directly). When a
+# module page URL 404s at the flat path, the rescue logic retries under
+# each of these subdirectories.
+DOC_SUBDIRS=(api protocols framework)
 
 derive_name_candidates() {
   local name="$1"
@@ -135,7 +156,7 @@ for dir in "$WEBSITE_DIR"/*/; do
 done
 
 # Fetch CHaP index
-CHAP_PKGS_FILE=$(mktemp)
+CHAP_PKGS_FILE=$(mktemp_tracked)
 curl -sL https://chap.intersectmbo.org/01-index.tar.gz \
   | tar -tz | grep -oP '^[^/]+' | sort -u > "$CHAP_PKGS_FILE"
 declare -A CHAP_SET
@@ -172,9 +193,10 @@ echo "  Symlinks created:           $symlink_count"
 
 echo "Phase 2: Resolving doc sites and rewriting links..."
 
-REWRITE_SCRIPT=$(mktemp)
+REWRITE_SCRIPT=$(mktemp_tracked)
 UNMAPPED_CHAP=()   # CHaP packages we couldn't resolve to a doc site — gap in config
 NON_CHAP=()        # non-CHaP packages (bootlibs etc.) we don't bother linking to
+declare -A PKG_URL=()   # cached doc-site base URL per package (reused in Phase 2b)
 skipped=0 rewrote_docsite=0
 
 while IFS= read -r pkg; do
@@ -198,6 +220,7 @@ while IFS= read -r pkg; do
 
   is_chap="no"; [[ -v "CHAP_SET[$lookup]" ]] && is_chap="yes"
   url=$(resolve_url "$lookup" "$is_chap")
+  PKG_URL[$lookup]="$url"
 
   if [[ "$url" == "NONE" ]]; then
     UNMAPPED_CHAP+=("$lookup")
@@ -237,13 +260,148 @@ if [[ -s "$REWRITE_SCRIPT" ]]; then
 fi
 
 # ============================================================================
+# Phase 2b: Rewrite re-exported type links to the original defining package
+# ============================================================================
+#
+# Haddock resolves re-exports to the LOCAL re-export page (e.g. a reference
+# to cardano-ledger-byron's `Address` via `Cardano.Api.Byron` becomes
+# href="Cardano-Api-Byron.html#t:Address", not an external link). The
+# Haddock-emitted "Source" link, however, points to the cabal store for the
+# original defining package (file:///.../.cabal/store/PKG-VERSION/.../src/
+# Module.Name.html). We use that as the source of truth to rewrite these
+# local re-export hrefs to point at the upstream doc site.
+
+echo "Phase 2b: Rewriting re-exported type links..."
+
+REEXPORTS_FILE=$(mktemp_tracked)
+python3 - "$WEBSITE_DIR" <<'PYEOF' > "$REEXPORTS_FILE"
+import os, re, sys
+website = sys.argv[1]
+pattern = re.compile(
+    r'id="(t|v):([^"]+)" class="def">[^<]*</a>\s*<a href="file:///[^"]*?/([a-zA-Z][\w-]*)-\d+\.[^/]*/share/doc/html/src/([^"#]+)\.html'
+)
+for d in os.listdir(website):
+    if not d.endswith('-inplace') or not os.path.isdir(os.path.join(website, d)):
+        continue
+    dir_path = os.path.join(website, d)
+    for f in os.listdir(dir_path):
+        if not f.endswith('.html'):
+            continue
+        html = open(os.path.join(dir_path, f)).read()
+        for m in pattern.finditer(html):
+            atype, name, pkg, source_module = m.groups()
+            module_page = source_module.replace('.', '-') + '.html'
+            # Tab-separated: local_page, anchor, name, package, module_page
+            print('\t'.join([f, atype, name, pkg, module_page]))
+PYEOF
+
+reexport_total=$(wc -l < "$REEXPORTS_FILE" | tr -d ' ')
+echo "  Re-exports found: $reexport_total"
+
+reexport_rewritten=0
+reexport_unresolvable=0
+if [[ $reexport_total -gt 0 ]]; then
+  # Build candidate URLs: direct, then subdirs, then parent-stripped (with subdirs).
+  # Format: local_page \t anchor \t name \t candidate_url
+  REEXPORT_CANDIDATES=$(mktemp_tracked)
+  while IFS=$'\t' read -r local_page anchor name pkg module_page; do
+    [ -z "$local_page" ] && continue
+
+    # Resolve package base URL via the Phase 2 cache (fall back to resolve_url
+    # for packages not seen as cross-package targets in the HTML).
+    if [[ -v "PKG_URL[$pkg]" ]]; then
+      base="${PKG_URL[$pkg]}"
+    else
+      is_chap="no"; [[ -v "CHAP_SET[$pkg]" ]] && is_chap="yes"
+      base=$(resolve_url "$pkg" "$is_chap")
+      PKG_URL[$pkg]="$base"
+    fi
+
+    # Skip unresolvable (NONE) and non-CHaP (HACKAGE — we don't link there).
+    [[ "$base" == "NONE" || "$base" == "HACKAGE" ]] && continue
+
+    # Direct URL
+    echo "${local_page}	${anchor}	${name}	${base}/${pkg}/${module_page}" >> "$REEXPORT_CANDIDATES"
+
+    # Subdirectory variants (ouroboros-network layout)
+    for subdir in "${DOC_SUBDIRS[@]}"; do
+      echo "${local_page}	${anchor}	${name}	${base}/${pkg}/${subdir}/${module_page}" >> "$REEXPORT_CANDIDATES"
+    done
+
+    # Progressively stripped parent modules (+ subdir variants)
+    module_base="${module_page%.html}"
+    while [[ "$module_base" == *-* ]]; do
+      module_base="${module_base%-*}"
+      echo "${local_page}	${anchor}	${name}	${base}/${pkg}/${module_base}.html" >> "$REEXPORT_CANDIDATES"
+      for subdir in "${DOC_SUBDIRS[@]}"; do
+        echo "${local_page}	${anchor}	${name}	${base}/${pkg}/${subdir}/${module_base}.html" >> "$REEXPORT_CANDIDATES"
+      done
+    done
+  done < "$REEXPORTS_FILE"
+
+  # Probe all unique candidate URLs in parallel
+  REEXPORT_VALID_FILE=$(mktemp_tracked)
+  if [[ -s "$REEXPORT_CANDIDATES" ]]; then
+    # shellcheck disable=SC2016
+    awk -F'\t' '{print $4}' "$REEXPORT_CANDIDATES" | sort -u | \
+      xargs -P 16 -I{} sh -c \
+        'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "{}"); if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ]; then echo "{}"; fi' \
+        > "$REEXPORT_VALID_FILE" 2>/dev/null
+  fi
+
+  declare -A REEXPORT_VALID_SET=()
+  while IFS= read -r url; do
+    [ -z "$url" ] && continue
+    REEXPORT_VALID_SET["$url"]=1
+  done < "$REEXPORT_VALID_FILE"
+
+  # For each re-export, walk its candidates in order and pick the first
+  # that validated. First-hit-wins prefers the direct URL over subdir /
+  # parent fallbacks.
+  declare -A REEXPORT_RESOLVED=()   # "local_page|anchor|name" -> resolved_url
+  while IFS=$'\t' read -r local_page anchor name candidate; do
+    [ -z "$local_page" ] && continue
+    key="${local_page}|${anchor}|${name}"
+    [[ -v "REEXPORT_RESOLVED[$key]" ]] && continue
+    if [[ -v "REEXPORT_VALID_SET[$candidate]" ]]; then
+      REEXPORT_RESOLVED["$key"]="$candidate"
+    fi
+  done < "$REEXPORT_CANDIDATES"
+
+  # Build sed rewrite rules. We only rewrite the exact
+  # href="LOCAL_PAGE#ANCHOR:NAME" that we've proven is a re-export of a
+  # type documented at a reachable upstream URL; the LOCAL_PAGE#ANCHOR:NAME
+  # for local-only types (e.g. cardano-api's own Address GADT) is left
+  # untouched.
+  REEXPORT_SCRIPT=$(mktemp_tracked)
+  for key in "${!REEXPORT_RESOLVED[@]}"; do
+    IFS='|' read -r local_page anchor name <<< "$key"
+    resolved="${REEXPORT_RESOLVED[$key]}"
+    escaped_local=$(printf '%s' "$local_page" | sed 's|[&/\]|\\&|g; s|\.|\\.|g')
+    escaped_resolved=$(printf '%s' "$resolved" | sed 's|[&/\]|\\&|g')
+    printf 's|href="%s#%s:%s"|href="%s#%s:%s"|g\n' \
+      "$escaped_local" "$anchor" "$name" "$escaped_resolved" "$anchor" "$name" \
+      >> "$REEXPORT_SCRIPT"
+    reexport_rewritten=$((reexport_rewritten + 1))
+  done
+  reexport_unresolvable=$((reexport_total - reexport_rewritten))
+
+  if [[ -s "$REEXPORT_SCRIPT" ]]; then
+    find "$WEBSITE_DIR" -name '*.html' -print0 | xargs -0 -P "$(nproc)" sed -i -f "$REEXPORT_SCRIPT"
+  fi
+fi
+
+echo "  Rewritten:    $reexport_rewritten"
+echo "  Unresolvable: $reexport_unresolvable"
+
+# ============================================================================
 # Phase 3: Validate external URLs and annotate dead ones
 # ============================================================================
 
 echo "Phase 3: Validating external URLs..."
 
-URLS_FILE=$(mktemp)
-DEAD_URLS_FILE=$(mktemp)
+URLS_FILE=$(mktemp_tracked)
+DEAD_URLS_FILE=$(mktemp_tracked)
 grep -rohP 'href="\Khttps://[^"#]+\.html' "$WEBSITE_DIR" 2>/dev/null | sort -u > "$URLS_FILE"
 url_count=$(wc -l < "$URLS_FILE")
 
@@ -255,18 +413,107 @@ if [[ $url_count -gt 0 ]]; then
 fi
 dead_count=$(wc -l < "$DEAD_URLS_FILE" | tr -d ' ')
 
+# Phase 3a: rescue dead URLs by probing doc-site subdirectories (e.g.
+# ouroboros-network/api/) and parent modules. Haddock frequently links to
+# internal defining modules that don't publish as standalone pages — the
+# type is actually documented on a parent module (stripping the last
+# dash-separated segment). When we find a valid parent, we rewrite the
+# link to <parent>#t:<LastComponent> so the browser still scrolls to the
+# type definition instead of showing a greyed-out span.
+declare -A DEAD_TO_RESCUE=() DEAD_TO_FRAGMENT=()
+rescued_count=0
+if [[ $dead_count -gt 0 ]]; then
+  RESCUE_CANDIDATES=$(mktemp_tracked)
+  while IFS= read -r dead_url; do
+    [ -z "$dead_url" ] && continue
+    base_path="${dead_url%/*}"
+    module_file=$(basename "$dead_url" .html)
+
+    # Subdirectory variants at the same level. Use the last dash-component
+    # of the module name as the fragment suffix — harmless if the browser
+    # doesn't find it, useful for links emitted without a #fragment.
+    stripped_first="${module_file##*-}"
+    for subdir in "${DOC_SUBDIRS[@]}"; do
+      echo "${dead_url}	${base_path}/${subdir}/${module_file}.html	${stripped_first}" >> "$RESCUE_CANDIDATES"
+    done
+
+    # Progressively stripped parent modules (+ subdir variants).
+    remaining="$module_file"
+    parent_stripped_first=""
+    while [[ "$remaining" == *-* ]]; do
+      last="${remaining##*-}"
+      remaining="${remaining%-*}"
+      [[ -z "$parent_stripped_first" ]] && parent_stripped_first="$last"
+      echo "${dead_url}	${base_path}/${remaining}.html	${parent_stripped_first}" >> "$RESCUE_CANDIDATES"
+      for subdir in "${DOC_SUBDIRS[@]}"; do
+        echo "${dead_url}	${base_path}/${subdir}/${remaining}.html	${parent_stripped_first}" >> "$RESCUE_CANDIDATES"
+      done
+    done
+  done < "$DEAD_URLS_FILE"
+
+  RESCUE_VALID_FILE=$(mktemp_tracked)
+  if [[ -s "$RESCUE_CANDIDATES" ]]; then
+    # shellcheck disable=SC2016
+    awk -F'\t' '{print $2}' "$RESCUE_CANDIDATES" | sort -u | \
+      xargs -P 16 -I{} sh -c \
+        'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "{}"); if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ]; then echo "{}"; fi' \
+        > "$RESCUE_VALID_FILE" 2>/dev/null
+  fi
+
+  declare -A RESCUE_VALID_SET=()
+  while IFS= read -r url; do
+    [ -z "$url" ] && continue
+    RESCUE_VALID_SET["$url"]=1
+  done < "$RESCUE_VALID_FILE"
+
+  # First-match-wins: direct subdir hit preferred over deeper parents.
+  while IFS=$'\t' read -r dead cand stripped; do
+    [ -z "$dead" ] && continue
+    [[ -v "DEAD_TO_RESCUE[$dead]" ]] && continue
+    if [[ -v "RESCUE_VALID_SET[$cand]" ]]; then
+      DEAD_TO_RESCUE["$dead"]="$cand"
+      DEAD_TO_FRAGMENT["$dead"]="$stripped"
+    fi
+  done < "$RESCUE_CANDIDATES"
+
+  rescued_count=${#DEAD_TO_RESCUE[@]}
+
+  if [[ $rescued_count -gt 0 ]]; then
+    RESCUE_SCRIPT=$(mktemp_tracked)
+    for dead in "${!DEAD_TO_RESCUE[@]}"; do
+      rescue="${DEAD_TO_RESCUE[$dead]}"
+      stripped="${DEAD_TO_FRAGMENT[$dead]}"
+      escaped_dead=$(printf '%s' "$dead" | sed 's|[&/\]|\\&|g; s|\.|\\.|g')
+      escaped_rescue=$(printf '%s' "$rescue" | sed 's|[&/\]|\\&|g')
+      # href="DEAD"      -> href="RESCUE#t:<stripped>"  (bare URL, add fragment)
+      # href="DEAD#frag" -> href="RESCUE#frag"           (preserve fragment)
+      printf 's|href="%s"|href="%s#t:%s"|g\n' \
+        "$escaped_dead" "$escaped_rescue" "$stripped" >> "$RESCUE_SCRIPT"
+      printf 's|href="%s#|href="%s#|g\n' \
+        "$escaped_dead" "$escaped_rescue" >> "$RESCUE_SCRIPT"
+    done
+    find "$WEBSITE_DIR" -name '*.html' -print0 | xargs -0 -P "$(nproc)" sed -i -f "$RESCUE_SCRIPT"
+  fi
+fi
+
+dead_remaining=$((dead_count - rescued_count))
+
 echo "  URLs checked: $url_count"
 echo "  Valid:        $((url_count - dead_count))"
 echo "  Dead:         $dead_count"
+echo "  Rescued:      $rescued_count"
+echo "  Unrescuable:  $dead_remaining"
 
 # Per-URL context tables, populated BEFORE the <a>→<span> replacement so
 # the original anchor text and reference sites are still in the HTML.
 declare -A DEAD_PKG DEAD_MODULE DEAD_SYMBOLS DEAD_REFS
 
-DEAD_SCRIPT=$(mktemp)
-if [[ $dead_count -gt 0 ]]; then
+DEAD_SCRIPT=$(mktemp_tracked)
+if [[ $dead_remaining -gt 0 ]]; then
   while IFS= read -r dead_url; do
     [ -z "$dead_url" ] && continue
+    # Rescued URLs have already been rewritten; no unclickable annotation.
+    [[ -v "DEAD_TO_RESCUE[$dead_url]" ]] && continue
 
     # Package + Haskell module name (Haddock encodes dots as dashes)
     if [[ "$dead_url" == *"hackage.haskell.org"* ]]; then
@@ -313,13 +560,16 @@ echo "=== fix-haddock-links summary ==="
 echo "  Discovered:             $discovered_total"
 echo "  Local (skipped):        $skipped"
 echo "  Rewritten (doc site):   $rewrote_docsite"
+echo "  Re-exports rewritten:   $reexport_rewritten"
+echo "  Re-exports unresolved:  $reexport_unresolvable"
 echo "  Non-CHaP (unclickable): ${#NON_CHAP[@]}"
 echo "  Unmapped CHaP:          ${#UNMAPPED_CHAP[@]}"
 echo "  URLs validated:         $url_count"
-echo "  Dead links annotated:   $dead_count"
+echo "  Dead links rescued:     $rescued_count"
+echo "  Dead links annotated:   $dead_remaining"
 echo "================================="
 
-total_dead=$(( ${#UNMAPPED_CHAP[@]} + dead_count ))
+total_dead=$(( ${#UNMAPPED_CHAP[@]} + dead_remaining ))
 if [[ $total_dead -eq 0 ]]; then
   exit 0
 fi
@@ -341,11 +591,13 @@ if [[ ${#UNMAPPED_CHAP[@]} -gt 0 ]]; then
   echo "       to IOG_DOC_BASES in scripts/fix-haddock-links.sh and re-run."
 fi
 
-if [[ $dead_count -gt 0 ]]; then
+if [[ $dead_remaining -gt 0 ]]; then
   echo ""
-  echo "Module-level 404s (${dead_count}):"
+  echo "Module-level 404s (${dead_remaining}):"
   while IFS= read -r dead_url; do
     [ -z "$dead_url" ] && continue
+    # Skip rescued URLs — they were rewritten, not annotated.
+    [[ -v "DEAD_TO_RESCUE[$dead_url]" ]] && continue
     echo ""
     echo "  $dead_url"
     echo "    Upstream: ${DEAD_MODULE[$dead_url]} (in package ${DEAD_PKG[$dead_url]})"
