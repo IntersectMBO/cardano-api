@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1189
+kind:
+  - breaking
+description: |
+  Add ConwayEraGov, ConwayEraCertState, and GovState ~ ConwayGovState type equality to EraCommonConstraints. Both Conway and Dijkstra satisfy these constraints, so obtainCommonConstraints now provides governance-related constraints without needing conwayEraOnwardsConstraints.

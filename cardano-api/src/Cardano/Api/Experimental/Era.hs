@@ -53,9 +53,10 @@ import Cardano.Ledger.Alonzo.Plutus.Context qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Conway qualified as Ledger
+import Cardano.Ledger.Conway.Governance qualified as L
+import Cardano.Ledger.Conway.State qualified as L
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Hashes qualified as L
-import Cardano.Ledger.State qualified as L
 
 import Control.Monad.Error.Class
 import Data.Aeson (FromJSON (..), ToJSON, withText)
@@ -303,6 +304,8 @@ type EraCommonConstraints era =
   , L.AlonzoEraTx (LedgerEra era)
   , L.BabbageEraPParams (LedgerEra era)
   , L.BabbageEraTxBody (LedgerEra era)
+  , L.ConwayEraCertState (LedgerEra era)
+  , L.ConwayEraGov (LedgerEra era)
   , L.ConwayEraTxBody (LedgerEra era)
   , L.ConwayEraTxCert (LedgerEra era)
   , L.Era (LedgerEra era)
@@ -314,6 +317,7 @@ type EraCommonConstraints era =
   , L.EraUTxO (LedgerEra era)
   , HasTypeProxy era
   , Ord (L.PlutusPurpose L.AsIx (LedgerEra era))
+  , L.GovState (LedgerEra era) ~ L.ConwayGovState (LedgerEra era)
   , L.ScriptsNeeded (LedgerEra era) ~ L.AlonzoScriptsNeeded (LedgerEra era)
   , L.Val (L.Value (LedgerEra era))
   , L.Value (LedgerEra era) ~ L.MaryValue
