@@ -39,6 +39,10 @@ jobs:
           mkdir website
           cabal haddock-project --output=./website --internal --foreign-libraries
 
+      - name: Fix cross-package Haddock links
+        run: |
+          ./scripts/fix-haddock-links.sh ./website
+
       - name: Build typedoc documentation
         run: |
           nix build .#wasm-typedoc
