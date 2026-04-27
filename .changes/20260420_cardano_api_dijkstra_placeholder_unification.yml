@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1187
+kind:
+  - maintenance
+description: |
+  Unify Dijkstra-era placeholder `error` messages and `TODO` comments under a single greppable token `TODO Dijkstra:`, so `grep -r 'TODO Dijkstra'` finds every Dijkstra-era placeholder in one shot. No behaviour change.

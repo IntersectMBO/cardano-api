@@ -429,7 +429,7 @@ estimateBalancedTxBody'
           obtainCommonConstraints (useEra @era) $
             TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance)
     case useEra @era of
-      DijkstraEra -> error "estimateBalancedTxBody: DijkstraEra is not supported for fee estimation"
+      DijkstraEra -> error "TODO Dijkstra: estimateBalancedTxBody: era not supported for fee estimation"
       ConwayEra -> do
         when (coinBalance < 0) $
           Left $
@@ -1551,7 +1551,7 @@ makeTransactionBodyAutoBalance
             }
 
     case useEra @era of
-      DijkstraEra -> error "makeTransactionBodyAutoBalance: DijkstraEra not supported"
+      DijkstraEra -> error "TODO Dijkstra: makeTransactionBodyAutoBalance: era not supported"
       ConwayEra -> do
         let balance :: L.MaryValue = evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo txbody2
             adaBalance = getAda (useEra @era) balance

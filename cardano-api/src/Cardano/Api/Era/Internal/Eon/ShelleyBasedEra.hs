@@ -261,7 +261,7 @@ shelleyBasedEraConstraints = \case
   ShelleyBasedEraAlonzo -> id
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway -> id
-  ShelleyBasedEraDijkstra -> const $ error "shelleyBasedEraConstraints: Dijkstra is not yet supported"
+  ShelleyBasedEraDijkstra -> const $ error "TODO Dijkstra: shelleyBasedEraConstraints: era not supported"
 
 data AnyShelleyBasedEra where
   AnyShelleyBasedEra

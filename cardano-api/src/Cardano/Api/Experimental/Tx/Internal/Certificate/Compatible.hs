@@ -71,7 +71,7 @@ makeStakeAddressDelegationCertificate sCred delegatee =
     e@ShelleyBasedEraMary -> cert e delegatee
     e@ShelleyBasedEraAllegra -> cert e delegatee
     e@ShelleyBasedEraShelley -> cert e delegatee
-    ShelleyBasedEraDijkstra -> error "makeStakeAddressDelegationCertificate: Dijkstra era not supported"
+    ShelleyBasedEraDijkstra -> error "TODO Dijkstra: makeStakeAddressDelegationCertificate: era not supported"
  where
   cert
     :: Delegatee era ~ Api.Hash Api.StakePoolKey

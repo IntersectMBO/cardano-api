@@ -121,7 +121,7 @@ maryEraOnwardsConstraints = \case
   MaryEraOnwardsAlonzo -> id
   MaryEraOnwardsBabbage -> id
   MaryEraOnwardsConway -> id
-  MaryEraOnwardsDijkstra -> const $ error "maryEraOnwardsConstraints: Dijkstra era is not yet supported"
+  MaryEraOnwardsDijkstra -> const $ error "TODO Dijkstra: maryEraOnwardsConstraints: era not supported"
 
 {-# DEPRECATED maryEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 maryEraOnwardsToShelleyBasedEra :: MaryEraOnwards era -> ShelleyBasedEra era
