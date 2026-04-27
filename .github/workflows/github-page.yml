@@ -40,6 +40,7 @@ jobs:
           cabal haddock-project --output=./website --internal --foreign-libraries
 
       - name: Fix cross-package Haddock links
+        id: fix-haddock-links
         run: |
           ./scripts/fix-haddock-links.sh ./website
 
@@ -69,3 +70,158 @@ jobs:
           publish_dir: website
           cname: cardano-api.cardano.intersectmbo.org
           force_orphan: true
+
+      # ──────────────────────────────────────────────────────────────────
+      # Tracking-issue logic for post-merge dead-link failures.
+      #
+      # Why: when fix-haddock-links.sh exits 1 on master (because some
+      #   newly-introduced CHaP package has no entry in IOG_DOC_BASES /
+      #   KNOWN_UNDOCUMENTED), the Deploy step further down skips and the
+      #   docs site stays at its last good revision. Without this step, the
+      #   only signal that something is broken is a red Actions run that
+      #   nobody is necessarily watching. This step opens a GitHub issue
+      #   tagging whoever introduced the breakage, so it lands on someone's
+      #   board instead of going unnoticed.
+      #
+      # Behaviour summary: one rolling issue per outage period. First
+      #   failure opens a new issue. Subsequent failures (while the issue
+      #   is still open) append a comment instead of opening a duplicate.
+      #   Once a maintainer fixes the root cause and closes the issue, the
+      #   next failure opens a fresh one.
+      #
+      # The fire conditions on the `if:` line below — all three required:
+      #   - failure()                        → the job overall is failing
+      #   - steps.fix-haddock-links.outcome  → specifically the haddock-links
+      #     == 'failure'                       step failed (not e.g. cabal,
+      #                                        nix-shell, or the typedoc build)
+      #   - github.ref == 'refs/heads/master' → only on master pushes; not
+      #                                         on workflow_dispatch from
+      #                                         feature branches
+      - name: Open / update dead-link tracking issue
+        if: failure() && steps.fix-haddock-links.outcome == 'failure' && github.ref == 'refs/heads/master'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Marker label used to identify the rolling tracking issue.
+            // Looking up issues by label is more robust than by title (a
+            // title match would break the moment someone edits the title).
+            const labelName = 'haddock-ci-failure';
+            const titleText = 'Haddock dead-link CI failures on master';
+
+            // ─── 1. Ensure the marker label exists ──────────────────────
+            // First time this step ever fires, the label doesn't exist
+            // yet and createLabel returns 201. Every subsequent run, the
+            // API returns 422 ("name has already been taken") which we
+            // swallow so the step continues. Any other error (403 = no
+            // permission, 5xx = GitHub outage, etc.) re-throws and fails
+            // the step, leaving a stack trace for debugging.
+            try {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: labelName,
+                color: 'd93f0b',
+                description: 'Post-merge haddock-links CI failures (rolling tracking issue)',
+              });
+            } catch (e) {
+              if (e.status !== 422) throw e;
+            }
+
+            // ─── 2. Identify the breaker ────────────────────────────────
+            // We want to @-mention the *PR opener* (the author who wrote
+            // the change), not the merger (who clicked the merge button)
+            // or the committer (whose name might be set to a bot identity).
+            // listPullRequestsAssociatedWithCommit takes the new master
+            // HEAD's SHA and returns the PR(s) that produced it. Works for
+            // merge-commit, rebase, and squash-merge styles — GitHub
+            // records the commit→PR association regardless. We read
+            // pr.user.login from the result to get the PR opener.
+            //
+            // Fallback: in the unlikely case a master commit has no
+            // associated PR (direct push by a maintainer), use
+            // context.actor — the user who triggered the workflow run.
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+            });
+            const pr = prs[0];
+            const author = pr ? pr.user.login : context.actor;
+            const prRef = pr ? `#${pr.number}` : `commit ${context.sha.slice(0, 7)}`;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Body fragment used both as the comment body (when an issue
+            // already exists) and appended to the issue body (when we
+            // create a new one). Same content, two contexts.
+            const commentBody = [
+              `### New failure`,
+              ``,
+              `On master after ${prRef} (committed by @${author}).`,
+              ``,
+              `**Run:** ${runUrl}`,
+              ``,
+              `Open the run log and look for \`=== Actionable — fix these ===\` to see which package(s) the probe couldn't resolve.`,
+            ].join('\n');
+
+            // ─── 3. Look up the existing tracking issue ─────────────────
+            // Filter by `state: open` so a closed (i.e. already-fixed)
+            // tracking issue doesn't get reused — we want a fresh issue
+            // for the next outage period, not to reopen a stale one.
+            // per_page: 1 because we only need to know whether ANY exists.
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: labelName,
+              per_page: 1,
+            });
+
+            // ─── 4. Branch on whether one was found ─────────────────────
+            if (issues.length > 0) {
+              // Existing open issue → comment on it; don't open a duplicate.
+              // Also add the new breaker as an assignee (idempotent — if
+              // they're already assigned the API silently no-ops).
+              const existing = issues[0];
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: commentBody,
+              });
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                assignees: [author],
+              });
+              console.log(`Appended to existing issue #${existing.number}: ${existing.html_url}`);
+            } else {
+              // No open issue → create one. The body documents the fix
+              // recipe so the assignee doesn't need to find it elsewhere.
+              const issueBody = [
+                `Tracking issue for post-merge \`Update github pages\` workflow failures on the haddock-links check. The Deploy step skips on failure, so the published docs site stays at its last good revision until this issue is resolved.`,
+                ``,
+                `## How to fix`,
+                ``,
+                `For each package listed under \`=== Actionable — fix these ===\` in the failing run:`,
+                ``,
+                `1. Check the package's source repo for a published Haddocks site (gh-pages, CloudFront, etc.).`,
+                `2. If found: append the base URL to \`IOG_DOC_BASES\` in \`scripts/fix-haddock-links.sh\`.`,
+                `3. If genuinely unpublished: add the package name to \`KNOWN_UNDOCUMENTED\`.`,
+                ``,
+                `Then re-run the workflow from the Actions tab. Close this issue once the workflow goes green again.`,
+                ``,
+                `---`,
+                ``,
+                commentBody,
+              ].join('\n');
+              const created = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: titleText,
+                body: issueBody,
+                labels: [labelName],
+                assignees: [author],
+              });
+              console.log(`Opened tracking issue #${created.data.number}: ${created.data.html_url}`);
+            }
