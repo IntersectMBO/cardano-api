@@ -98,6 +98,7 @@
 # they surface in the job UI; unfixable ones are plain log lines.
 
 set -euo pipefail
+shopt -s nullglob   # empty-glob expands to nothing, not the literal pattern
 
 WEBSITE_DIR="${1:?Usage: $0 <website-directory>}"
 [ -d "$WEBSITE_DIR" ] || { echo "Error: $WEBSITE_DIR is not a directory" >&2; exit 1; }
@@ -190,11 +191,14 @@ resolve_url() {
 # non-clickable <span class="dead-link" title="TITLE">X</span>, to the
 # named script file. We use file-based sed (-f) rather than -e on the
 # command line because full-repo builds can produce thousands of
-# substitutions whose combined argv hits xargs's limit.
+# substitutions whose combined argv hits xargs's limit. The title is
+# escaped against sed-replacement specials (& and \) and the | delimiter
+# so future callers can pass arbitrary text without breaking the script.
 add_unclickable_cmd() {
-  local file="$1" href_pattern="$2" title="$3"
+  local file="$1" href_pattern="$2" title="$3" escaped_title
+  escaped_title=$(printf '%s' "$title" | sed 's/[&\\|]/\\&/g')
   printf 's|<a href="%s[^"]*"[^>]*>\\([^<]*\\)</a>|<span class="dead-link" title="%s">\\1</span>|g\n' \
-    "$href_pattern" "$title" >> "$file"
+    "$href_pattern" "$escaped_title" >> "$file"
 }
 
 # ============================================================================
@@ -230,10 +234,19 @@ for dir in "$WEBSITE_DIR"/*/; do
   [ -d "$dir" ] && LOCAL_SET["$(basename "$dir")"]=1
 done
 
-# Fetch CHaP index
+# Fetch CHaP index. --fail makes curl exit non-zero on HTTP errors so an
+# outage doesn't silently produce an empty index that masquerades as
+# "everything is non-CHaP".
 CHAP_PKGS_FILE=$(mktemp_tracked)
-curl -sL https://chap.intersectmbo.org/01-index.tar.gz \
-  | tar -tz | grep -oP '^[^/]+' | sort -u > "$CHAP_PKGS_FILE"
+if ! curl -sL --fail https://chap.intersectmbo.org/01-index.tar.gz \
+       | tar -tz | grep -oP '^[^/]+' | sort -u > "$CHAP_PKGS_FILE"; then
+  echo "Error: failed to fetch CHaP package index from https://chap.intersectmbo.org/01-index.tar.gz" >&2
+  exit 1
+fi
+if [[ ! -s "$CHAP_PKGS_FILE" ]]; then
+  echo "Error: CHaP package index is empty (fetch succeeded but produced no entries)" >&2
+  exit 1
+fi
 declare -A CHAP_SET
 while IFS= read -r pkg; do CHAP_SET["$pkg"]=1; done < "$CHAP_PKGS_FILE"
 
@@ -459,7 +472,11 @@ if [[ $reexport_total -gt 0 ]]; then
       >> "$REEXPORT_SCRIPT"
     reexport_rewritten=$((reexport_rewritten + 1))
   done
+  # Clamp to 0 in case Python emits duplicate (local_page, anchor, name)
+  # rows for a single key — reexport_total counts rows, reexport_rewritten
+  # counts unique resolved keys.
   reexport_unresolvable=$((reexport_total - reexport_rewritten))
+  [[ $reexport_unresolvable -lt 0 ]] && reexport_unresolvable=0
 
   if [[ -s "$REEXPORT_SCRIPT" ]]; then
     find "$WEBSITE_DIR" -name '*.html' -print0 | xargs -0 -P "$(nproc)" sed -i -f "$REEXPORT_SCRIPT"
@@ -477,7 +494,9 @@ echo "Phase 3: Validating external URLs..."
 
 URLS_FILE=$(mktemp_tracked)
 DEAD_URLS_FILE=$(mktemp_tracked)
-grep -rohP 'href="\Khttps://[^"#]+\.html' "$WEBSITE_DIR" 2>/dev/null | sort -u > "$URLS_FILE"
+# `|| true` because grep exits 1 on no-match, which under set -e + pipefail
+# would abort the script on a degenerate corpus with no absolute URLs.
+grep -rohP 'href="\Khttps://[^"#]+\.html' "$WEBSITE_DIR" 2>/dev/null | sort -u > "$URLS_FILE" || true
 url_count=$(wc -l < "$URLS_FILE")
 
 if [[ $url_count -gt 0 ]]; then
@@ -590,11 +609,17 @@ if [[ $dead_remaining -gt 0 ]]; then
     # Rescued URLs have already been rewritten; no unclickable annotation.
     [[ -v "DEAD_TO_RESCUE[$dead_url]" ]] && continue
 
-    # Package + Haskell module name (Haddock encodes dots as dashes)
+    # Package + Haskell module name (Haddock encodes dots as dashes).
+    # For non-Hackage URLs, strip any DOC_SUBDIRS segment first so a path
+    # like .../<pkg>/api/Module.html still extracts <pkg>, not "api".
     if [[ "$dead_url" == *"hackage.haskell.org"* ]]; then
       pkg=$(echo "$dead_url" | grep -oP 'package/\K[^/]+')
     else
-      pkg=$(echo "$dead_url" | grep -oP '[^/]+(?=/[^/]+\.html$)')
+      url_for_pkg="$dead_url"
+      for sub in "${DOC_SUBDIRS[@]}"; do
+        url_for_pkg="${url_for_pkg//\/${sub}\//\/}"
+      done
+      pkg=$(echo "$url_for_pkg" | grep -oP '[^/]+(?=/[^/]+\.html$)')
     fi
     module_file=$(basename "$dead_url" .html)
     DEAD_PKG[$dead_url]="$pkg"
@@ -620,10 +645,14 @@ if [[ $dead_remaining -gt 0 ]]; then
   fi
 fi
 
-# Inject dead-link CSS whenever any <span class="dead-link"> was produced
+# Inject dead-link CSS whenever any <span class="dead-link"> was produced.
+# The data-dead-link sentinel attribute makes the substitution idempotent:
+# the sed address /data-dead-link/! skips lines that already contain a
+# previous injection, so re-running the script doesn't accumulate duplicate
+# <style> blocks.
 if [[ ${#UNMAPPED_CHAP[@]} -gt 0 || ${#NON_CHAP[@]} -gt 0 || $dead_count -gt 0 ]]; then
   find "$WEBSITE_DIR" -name '*.html' -print0 | xargs -0 -P "$(nproc)" sed -i \
-    's|</head>|<style>.dead-link { border-bottom: 1px dotted \#888; color: \#888; cursor: help; }</style></head>|'
+    '/data-dead-link/!s|</head>|<style data-dead-link="1">.dead-link { border-bottom: 1px dotted \#888; color: \#888; cursor: help; }</style></head>|'
 fi
 
 # ============================================================================
