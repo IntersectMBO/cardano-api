@@ -163,46 +163,46 @@ toConsensusTxId
   => TxIdInMode
   -> Consensus.TxId (Consensus.GenTx block)
 toConsensusTxId (TxIdInMode ByronEra txid) =
-  Consensus.HardForkGenTxId . Consensus.OneEraGenTxId . Z $ Consensus.WrapGenTxId txid'
+  Consensus.HardForkGenTxId (toShelleyTxId txid) . Just . Consensus.OneEraGenTxId . Z $ Consensus.WrapGenTxId txid'
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.ByronBlock)
   txid' = Consensus.ByronTxId $ toByronTxId txid
 toConsensusTxId (TxIdInMode ShelleyEra txid) =
-  Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (Z (Consensus.WrapGenTxId txid'))))
+  Consensus.HardForkGenTxId (toShelleyTxId txid) (Just (Consensus.OneEraGenTxId (S (Z (Consensus.WrapGenTxId txid')))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardShelleyBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 toConsensusTxId (TxIdInMode AllegraEra txid) =
-  Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (Z (Consensus.WrapGenTxId txid')))))
+  Consensus.HardForkGenTxId (toShelleyTxId txid) (Just (Consensus.OneEraGenTxId (S (S (Z (Consensus.WrapGenTxId txid'))))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardAllegraBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 toConsensusTxId (TxIdInMode MaryEra txid) =
-  Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (S (Z (Consensus.WrapGenTxId txid'))))))
+  Consensus.HardForkGenTxId (toShelleyTxId txid) (Just (Consensus.OneEraGenTxId (S (S (S (Z (Consensus.WrapGenTxId txid')))))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardMaryBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 toConsensusTxId (TxIdInMode AlonzoEra txid) =
-  Consensus.HardForkGenTxId
-    (Consensus.OneEraGenTxId (S (S (S (S (Z (Consensus.WrapGenTxId txid')))))))
+  Consensus.HardForkGenTxId (toShelleyTxId txid)
+    (Just (Consensus.OneEraGenTxId (S (S (S (S (Z (Consensus.WrapGenTxId txid'))))))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardAlonzoBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 toConsensusTxId (TxIdInMode BabbageEra txid) =
-  Consensus.HardForkGenTxId
-    (Consensus.OneEraGenTxId (S (S (S (S (S (Z (Consensus.WrapGenTxId txid'))))))))
+  Consensus.HardForkGenTxId (toShelleyTxId txid)
+    (Just (Consensus.OneEraGenTxId (S (S (S (S (S (Z (Consensus.WrapGenTxId txid')))))))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardBabbageBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 toConsensusTxId (TxIdInMode ConwayEra txid) =
-  Consensus.HardForkGenTxId
-    (Consensus.OneEraGenTxId (S (S (S (S (S (S (Z (Consensus.WrapGenTxId txid')))))))))
+  Consensus.HardForkGenTxId (toShelleyTxId txid)
+    (Just (Consensus.OneEraGenTxId (S (S (S (S (S (S (Z (Consensus.WrapGenTxId txid'))))))))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardConwayBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 toConsensusTxId (TxIdInMode DijkstraEra txid) =
-  Consensus.HardForkGenTxId
-    (Consensus.OneEraGenTxId (S (S (S (S (S (S (S (Z (Consensus.WrapGenTxId txid'))))))))))
+  Consensus.HardForkGenTxId (toShelleyTxId txid)
+    (Just (Consensus.OneEraGenTxId (S (S (S (S (S (S (S (Z (Consensus.WrapGenTxId txid')))))))))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardDijkstraBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
