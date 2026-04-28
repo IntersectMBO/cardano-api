@@ -71,7 +71,6 @@ import Cardano.Ledger.Alonzo.Core qualified as Ledger
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
-import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Credential as Ledger (Credential)
 import Cardano.Ledger.Val qualified as L
 

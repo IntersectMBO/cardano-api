@@ -105,4 +105,5 @@ message WatchMempoolResponse {
 // Service definition for submitting transactions and checking their status.
 service SubmitService {
   rpc SubmitTx(SubmitTxRequest) returns (SubmitTxResponse); // Submit transactions to the blockchain.
+  rpc EvalTx(EvalTxRequest) returns (EvalTxResponse); // Evaluate a transaction without submitting it.
 }

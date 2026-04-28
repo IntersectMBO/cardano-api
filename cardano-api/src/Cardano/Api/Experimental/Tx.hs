@@ -239,7 +239,6 @@ import Cardano.Api.Tx.Internal.Body qualified as Api
 import Cardano.Api.Tx.Internal.Sign
 
 import Cardano.Crypto.Hash qualified as Hash
-import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger

@@ -14,11 +14,9 @@ import Proto.Utxorpc.V1beta.Submit.Submit
 import Proto.Utxorpc.V1beta.Submit.Submit_Fields hiding
   ( allOf
   , anyOf
-  , cardano
   , fieldMask
   , items
   , match
-  , maybe'cardano
   , maybe'chain
   , maybe'fieldMask
   , maybe'match
