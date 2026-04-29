@@ -188,12 +188,19 @@ jobs:
                 issue_number: existing.number,
                 body: commentBody,
               });
-              await github.rest.issues.addAssignees({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.number,
-                assignees: [author],
-              });
+              try {
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  assignees: [author],
+                });
+              } catch (e) {
+                // External contributors aren't repo collaborators, so the API
+                // returns 422 here. Log and continue rather than crashing the
+                // step — the comment was posted, which is the important part.
+                console.log(`Could not assign @${author} to #${existing.number} (likely not a repo collaborator): ${e.message}`);
+              }
               console.log(`Appended to existing issue #${existing.number}: ${existing.html_url}`);
             } else {
               // No open issue → create one. The body documents the fix
@@ -215,13 +222,25 @@ jobs:
                 ``,
                 commentBody,
               ].join('\n');
+              // Create the issue without assignees first — passing assignees
+              // to issues.create makes the whole call 422 for non-collaborator
+              // authors. We assign separately so the issue always lands.
               const created = await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: titleText,
                 body: issueBody,
                 labels: [labelName],
-                assignees: [author],
               });
+              try {
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: created.data.number,
+                  assignees: [author],
+                });
+              } catch (e) {
+                console.log(`Could not assign @${author} to #${created.data.number} (likely not a repo collaborator): ${e.message}`);
+              }
               console.log(`Opened tracking issue #${created.data.number}: ${created.data.html_url}`);
             }

@@ -165,12 +165,15 @@ derive_name_candidates() {
     printf '%s\n' "https://${name}.cardano.intersectmbo.org"
     [[ "$name" == *-* ]] || break
     name="${name%-*}"
+    [[ "$name" == *-* ]] || break
   done
 }
 
 probe_site() {
   local code
-  code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 \
+  code=$(curl -sI -o /dev/null -w "%{http_code}" \
+    --connect-timeout 5 --max-time 10 \
+    --retry 3 --retry-delay 2 --retry-all-errors \
     "${1}/${2}/doc-index.html" 2>/dev/null || echo "000")
   [[ "$code" == "200" || "$code" == "301" || "$code" == "302" || "$code" == "307" || "$code" == "308" ]]
 }
@@ -238,7 +241,8 @@ done
 # outage doesn't silently produce an empty index that masquerades as
 # "everything is non-CHaP".
 CHAP_PKGS_FILE=$(mktemp_tracked)
-if ! curl -sL --fail https://chap.intersectmbo.org/01-index.tar.gz \
+if ! curl -sL --fail --retry 3 --retry-delay 2 --retry-all-errors \
+       https://chap.intersectmbo.org/01-index.tar.gz \
        | tar -tz | grep -oP '^[^/]+' | sort -u > "$CHAP_PKGS_FILE"; then
   echo "Error: failed to fetch CHaP package index from https://chap.intersectmbo.org/01-index.tar.gz" >&2
   exit 1
@@ -433,7 +437,7 @@ if [[ $reexport_total -gt 0 ]]; then
     # shellcheck disable=SC2016
     awk -F'\t' '{print $4}' "$REEXPORT_CANDIDATES" | sort -u | \
       xargs -P 16 -I{} sh -c \
-        'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "{}"); if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ] || [ "$code" = "307" ] || [ "$code" = "308" ]; then echo "{}"; fi' \
+        'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 --retry 3 --retry-delay 2 --retry-all-errors "{}"); if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ] || [ "$code" = "307" ] || [ "$code" = "308" ]; then echo "{}"; fi' \
         > "$REEXPORT_VALID_FILE" 2>/dev/null
   fi
 
@@ -502,7 +506,7 @@ url_count=$(wc -l < "$URLS_FILE")
 if [[ $url_count -gt 0 ]]; then
   # shellcheck disable=SC2016 # single quotes intentional: expansions evaluated by inner sh -c
   xargs -P 16 -I{} sh -c \
-    'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "{}"); if [ "$code" != "200" ] && [ "$code" != "301" ] && [ "$code" != "302" ] && [ "$code" != "307" ] && [ "$code" != "308" ]; then echo "{}"; fi' \
+    'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 --retry 3 --retry-delay 2 --retry-all-errors "{}"); if [ "$code" != "200" ] && [ "$code" != "301" ] && [ "$code" != "302" ] && [ "$code" != "307" ] && [ "$code" != "308" ]; then echo "{}"; fi' \
     < "$URLS_FILE" > "$DEAD_URLS_FILE" 2>/dev/null
 fi
 dead_count=$(wc -l < "$DEAD_URLS_FILE" | tr -d ' ')
@@ -550,7 +554,7 @@ if [[ $dead_count -gt 0 ]]; then
     # shellcheck disable=SC2016
     awk -F'\t' '{print $2}' "$RESCUE_CANDIDATES" | sort -u | \
       xargs -P 16 -I{} sh -c \
-        'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "{}"); if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ] || [ "$code" = "307" ] || [ "$code" = "308" ]; then echo "{}"; fi' \
+        'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 --retry 3 --retry-delay 2 --retry-all-errors "{}"); if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ] || [ "$code" = "307" ] || [ "$code" = "308" ]; then echo "{}"; fi' \
         > "$RESCUE_VALID_FILE" 2>/dev/null
   fi
 
