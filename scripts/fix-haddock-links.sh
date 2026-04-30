@@ -437,7 +437,7 @@ if [[ $reexport_total -gt 0 ]]; then
     # shellcheck disable=SC2016
     awk -F'\t' '{print $4}' "$REEXPORT_CANDIDATES" | sort -u | \
       xargs -P 16 -I{} sh -c \
-        'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 --retry 3 --retry-delay 2 --retry-all-errors "{}"); if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ] || [ "$code" = "307" ] || [ "$code" = "308" ]; then echo "{}"; fi' \
+        'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 --retry 3 --retry-delay 2 --retry-all-errors "$1"); if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ] || [ "$code" = "307" ] || [ "$code" = "308" ]; then echo "$1"; fi' _ {} \
         > "$REEXPORT_VALID_FILE" 2>/dev/null
   fi
 
@@ -506,7 +506,7 @@ url_count=$(wc -l < "$URLS_FILE")
 if [[ $url_count -gt 0 ]]; then
   # shellcheck disable=SC2016 # single quotes intentional: expansions evaluated by inner sh -c
   xargs -P 16 -I{} sh -c \
-    'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 --retry 3 --retry-delay 2 --retry-all-errors "{}"); if [ "$code" != "200" ] && [ "$code" != "301" ] && [ "$code" != "302" ] && [ "$code" != "307" ] && [ "$code" != "308" ]; then echo "{}"; fi' \
+    'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 --retry 3 --retry-delay 2 --retry-all-errors "$1"); if [ "$code" != "200" ] && [ "$code" != "301" ] && [ "$code" != "302" ] && [ "$code" != "307" ] && [ "$code" != "308" ]; then echo "$1"; fi' _ {} \
     < "$URLS_FILE" > "$DEAD_URLS_FILE" 2>/dev/null
 fi
 dead_count=$(wc -l < "$DEAD_URLS_FILE" | tr -d ' ')
@@ -554,7 +554,7 @@ if [[ $dead_count -gt 0 ]]; then
     # shellcheck disable=SC2016
     awk -F'\t' '{print $2}' "$RESCUE_CANDIDATES" | sort -u | \
       xargs -P 16 -I{} sh -c \
-        'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 --retry 3 --retry-delay 2 --retry-all-errors "{}"); if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ] || [ "$code" = "307" ] || [ "$code" = "308" ]; then echo "{}"; fi' \
+        'code=$(curl -sI -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 --retry 3 --retry-delay 2 --retry-all-errors "$1"); if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ] || [ "$code" = "307" ] || [ "$code" = "308" ]; then echo "$1"; fi' _ {} \
         > "$RESCUE_VALID_FILE" 2>/dev/null
   fi
 
