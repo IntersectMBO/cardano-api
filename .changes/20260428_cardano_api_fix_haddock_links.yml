@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1180
+kind:
+  - bugfix
+  - documentation
+description: |
+  Fix broken cross-package Haddock links on the hosted documentation site. Links to dependency packages (cardano-ledger-*, plutus-*, cardano-base, etc.) were relative paths pointing to directories that don't exist on the site, resulting in 404s. A post-processing script now resolves each cross-package href via a name-suffix heuristic under *.cardano.intersectmbo.org plus a small fallback list of known IOG doc-site roots, and rewrites them to absolute URLs. Hrefs that don't resolve become annotated unclickable spans with tooltips. A follow-up GitHub Actions step opens or comments on a rolling tracking issue when the script reports actionable dead links on master, tagging the PR opener so the breakage lands on someone's board instead of going unnoticed.
