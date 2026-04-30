@@ -91,6 +91,13 @@
 #       c. Haddock-emitted absolute Hackage URLs that lack a package
 #          version (Hackage's routing requires one). A handful, out
 #          of our control, treated as noise.
+#       d. Master-vs-release drift between us and our dependencies.
+#          Our haddocks are built from cardano-api master, which pins
+#          specific releases of upstream packages. The linked upstream
+#          doc sites publish from their master, which may have moved
+#          or removed symbols since the release we pin. Our hrefs are
+#          correct against the pinned release but 404 against current
+#          master haddocks.
 #
 # Escape hatch: FIX_HADDOCK_LINKS_ALLOW_DEAD=1 exits 0 even if there
 # are actionable entries, e.g. to deploy while investigating. Under
