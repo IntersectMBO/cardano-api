@@ -1,5 +1,34 @@
 # Changelog for cardano-api
 
+## 11.0.0.0 -- 2026-04-30
+
+- Add ConwayEraGov, ConwayEraCertState, and GovState ~ ConwayGovState type equality to EraCommonConstraints. Both Conway and Dijkstra satisfy these constraints, so obtainCommonConstraints now provides governance-related constraints without needing conwayEraOnwardsConstraints.
+  (breaking)
+  [PR 1189](https://github.com/intersectmbo/cardano-api/pull/1189)
+
+- `makeTransactionBodyAutoBalance` now returns `TxBodyErrorBalanceNegative` when the transaction balance is negative, instead of crashing with an `Illegal Value in TxOut` runtime error from `toCompact` on a negative `Coin`. Added Hedgehog property tests covering withdrawal-funded transaction balancing for both success and failure cases.
+  (bugfix, test)
+  [PR 1186](https://github.com/intersectmbo/cardano-api/pull/1186)
+
+- Bump `cardano-ledger-core` lower bound to `>=1.20` (required by `ouroboros-consensus-3.0.x`).
+  (breaking)
+  [PR 1185](https://github.com/intersectmbo/cardano-api/pull/1185)
+
+- Bump ouroboros-consensus to ^>=3.0 and plutus to ^>=1.61.
+  The golden file changes come from upstream plutus changes to the TokenName Show instance.
+  (feature, breaking)
+  [PR 1182](https://github.com/intersectmbo/cardano-api/pull/1182)
+
+- makeUnsignedTx now returns Either MakeUnsignedTxError and errors when
+  Plutus scripts are present but protocol parameters are missing, instead
+  of silently omitting the script integrity hash (script_data_hash).
+  (breaking, bugfix)
+  [PR 1181](https://github.com/intersectmbo/cardano-api/pull/1181)
+
+- Add `HasCallStack` constraints to standalone functions that call error directly or indirectly, improving stack traces. Dijkstra-era placeholder error messages are also improved.
+  (compatible)
+  [PR 1175](https://github.com/intersectmbo/cardano-api/pull/1175)
+
 ## 10.26.0.0
 
 - Add support for BLS proofs of possession
