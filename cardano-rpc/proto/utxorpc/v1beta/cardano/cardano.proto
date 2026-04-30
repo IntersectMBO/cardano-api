@@ -516,15 +516,15 @@ message UpdateDRepCert {
 
 // Pattern of an address that can be used to evaluate matching predicates.
 message AddressPattern {
-  bytes exact_address = 1; // The address should match this exact address value.
-  bytes payment_part = 2; // The payment part of the address should match this value.
-  bytes delegation_part = 3; // The delegation part of the address should match this value.
+  optional bytes exact_address = 1; // The address should match this exact address value.
+  optional bytes payment_part = 2; // The payment part of the address should match this value.
+  optional bytes delegation_part = 3; // The delegation part of the address should match this value.
 }
 
 // Pattern of a native asset that can be used to evaluate matching predicates.
 message AssetPattern {
-  bytes policy_id = 1; // The asset should belong to this policy id
-  bytes asset_name = 2; // The asset should present this name
+  optional bytes policy_id = 1; // The asset should belong to this policy id
+  optional bytes asset_name = 2; // The asset should present this name
 }
 
 // Pattern of a certificate that can be used to evaluate matching predicates.
@@ -561,8 +561,8 @@ message PoolRetirementPattern {
 
 // Pattern of a tx output that can be used to evaluate matching predicates.
 message TxOutputPattern {
-  AddressPattern address = 1; // Match any address in the output that exhibits this pattern.
-  AssetPattern asset = 2; // Match any asset in the output that exhibits this pattern.
+  optional AddressPattern address = 1; // Match any address in the output that exhibits this pattern.
+  optional AssetPattern asset = 2; // Match any asset in the output that exhibits this pattern.
 }
 
 // Pattern of a Tx that can be used to evaluate matching predicates.

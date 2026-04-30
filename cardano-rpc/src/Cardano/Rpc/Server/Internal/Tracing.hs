@@ -27,6 +27,8 @@ data TraceRpcQuery
     TraceRpcQueryParamsSpan TraceSpanEvent
   | -- | Span trace marking ReadUtxos query
     TraceRpcQueryReadUtxosSpan TraceSpanEvent
+  | -- | Span trace marking SearchUtxos query
+    TraceRpcQuerySearchUtxosSpan TraceSpanEvent
   deriving Show
 
 instance Pretty TraceRpc where
@@ -53,6 +55,8 @@ instance Pretty TraceRpcQuery where
     TraceRpcQueryParamsSpan (SpanEnd _) -> "Finished query params method"
     TraceRpcQueryReadUtxosSpan (SpanBegin _) -> "Started query read UTXO method"
     TraceRpcQueryReadUtxosSpan (SpanEnd _) -> "Finished query read UTXO method"
+    TraceRpcQuerySearchUtxosSpan (SpanBegin _) -> "Started query search UTXO method"
+    TraceRpcQuerySearchUtxosSpan (SpanEnd _) -> "Finished query search UTXO method"
 
 instance Error TraceRpcQuery where
   prettyError = pretty

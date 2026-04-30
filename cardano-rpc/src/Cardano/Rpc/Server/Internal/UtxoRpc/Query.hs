@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,26 +13,35 @@
 module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   ( readParamsMethod
   , readUtxosMethod
+  , searchUtxosMethod
+  , paginateByTxIn
   )
 where
 
 import Cardano.Api
 import Cardano.Api.Experimental.Era
+import Cardano.Api.Parser.Text qualified as P
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Orphans ()
+import Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type
 
 import RIO hiding (toList)
 
+import Control.Error.Util (hush)
 import Data.Default
+import Data.List (sortBy)
 import Data.ProtoLens (defMessage)
 import Data.Time.Clock (UTCTime)
 import GHC.IsList
 import Network.GRPC.Spec
 
+-- | Handle the @ReadParams@ RPC method.
+-- Queries the node for current protocol parameters and returns them
+-- along with the ledger tip.
 readParamsMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadParamsRequest
@@ -61,6 +71,9 @@ readParamsMethod _req = do
       & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo timestamp
       & U5c.values . U5c.cardano .~ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
 
+-- | Handle the @ReadUtxos@ RPC method.
+-- Looks up specific UTxO entries by their 'TxIn' keys and returns them
+-- along with the ledger tip.
 readUtxosMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadUtxosRequest
@@ -69,9 +82,6 @@ readUtxosMethod req = do
   utxoFilter <-
     if not (null $ req ^. U5c.keys)
       then QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. U5c.keys)
-      -- TODO: reimplement this part as SearchUtxosRequest
-      -- \| Just addressesProto <- req ^. U5c.maybe'cardanoAddresses ->
-      --     QueryUTxOByAddress . fromList <$> mapM readAddress (addressesProto ^. U5c.items)
       else pure QueryUTxOWhole
 
   nodeConnInfo <- grab
@@ -99,10 +109,82 @@ readUtxosMethod req = do
     txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. U5c.hash
     pure $ TxIn txId' (TxIx . fromIntegral $ r ^. U5c.index)
 
--- TODO: reimplement this part as SearchUtxosRequest
--- readAddress :: MonadRpc e m => ByteString -> m AddressAny
--- readAddress =
---   throwEither . first stringException . P.runParser parseAddressAny <=< throwEither . T.decodeUtf8'
+-- | Handle the @SearchUtxos@ RPC method.
+-- Filters the UTxO set by a predicate and returns a paginated result.
+-- When the predicate contains exact address matches, the query is narrowed
+-- to those addresses; otherwise the entire UTxO set is fetched.
+searchUtxosMethod
+  :: MonadRpc e m
+  => Proto UtxoRpc.SearchUtxosRequest
+  -> m (Proto UtxoRpc.SearchUtxosResponse)
+searchUtxosMethod req = do
+  -- TODO: field masks are ignored for now (same as readParamsMethod)
+  let mPredicate = fmap getProto $ req ^. U5c.maybe'predicate
+      maxItems = req ^. U5c.maxItems
+      startToken = req ^. U5c.maybe'startToken
+
+  -- Determine query strategy: use address-based query if possible, otherwise fetch whole UTxO
+  let utxoFilter = case mPredicate >>= extractAddressesFromPredicate of
+        Just addrs -> QueryUTxOByAddress addrs
+        _ -> QueryUTxOWhole
+
+  nodeConnInfo <- grab
+  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
+  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+
+  let target = VolatileTip
+  (utxo, chainPoint, blockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+    utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
+    chainPoint <- throwEither =<< queryChainPoint
+    blockNo <- throwEither =<< queryChainBlockNo
+    systemStart <- throwEither =<< querySystemStart
+    eraHistory <- throwEither =<< queryEraHistory
+    pure (utxo, chainPoint, blockNo, systemStart, eraHistory)
+
+  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+
+  obtainCommonConstraints eon $ do
+    let filtered =
+          maybe id (\p -> filter $ matchesUtxoPredicate p . snd) mPredicate $
+            toList utxo
+
+    let (page, nextTok) = paginateByTxIn filtered startToken maxItems
+
+    pure $
+      defMessage
+        & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo timestamp
+        & U5c.items .~ map (uncurry txInTxOutToAnyUtxoData) page
+        & U5c.maybe'nextToken .~ nextTok
+
+-- | Paginate a list of UTxO entries using cursor-based pagination.
+-- Items are sorted by 'TxIn'\'s 'Ord' instance (lexicographic on 'TxId', then numeric on 'TxIx').
+-- The start token is the 'renderTxIn' of the last item on the previous page;
+-- all items up to and including it are skipped, so the next page begins
+-- immediately after that cursor.
+paginateByTxIn
+  :: [(TxIn, a)]
+  -- ^ UTxO entries to paginate
+  -> Maybe Text
+  -- ^ start token: the 'renderTxIn' of the last 'TxIn' from the previous page,
+  -- or 'Nothing' for the first page
+  -> Int32
+  -- ^ maximum number of items per page (0 defaults to 'defaultPageSize',
+  -- capped at 'maxPageSize')
+  -> ([(TxIn, a)], Maybe Text)
+  -- ^ page of results and the next start token ('Nothing' when there are no more pages)
+paginateByTxIn items startToken maxItems = (page, nextToken)
+ where
+  sorted = sortBy (compare `on` fst) items
+  afterToken = maybe sorted dropAfterCursor $ hush . P.runParser parseTxIn =<< startToken
+  dropAfterCursor cursor = dropWhile (\(txIn, _) -> txIn <= cursor) sorted
+  limit = min (if maxItems > 0 then fromIntegral maxItems else defaultPageSize) maxPageSize
+  page = take limit afterToken
+  hasMore = not . null $ drop limit afterToken
+  nextToken = do
+    guard hasMore
+    pure . renderTxIn . fst $ last page
+  defaultPageSize = 100
+  maxPageSize = 10_000
 
 slotToTimestamp
   :: HasCallStack

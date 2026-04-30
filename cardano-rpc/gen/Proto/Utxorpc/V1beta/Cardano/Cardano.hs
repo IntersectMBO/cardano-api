@@ -110,12 +110,15 @@ import qualified Data.ProtoLens.Runtime.Text.Read as Text.Read
 {- | Fields :
      
          * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.exactAddress' @:: Lens' AddressPattern Data.ByteString.ByteString@
+         * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.maybe'exactAddress' @:: Lens' AddressPattern (Prelude.Maybe Data.ByteString.ByteString)@
          * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.paymentPart' @:: Lens' AddressPattern Data.ByteString.ByteString@
-         * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.delegationPart' @:: Lens' AddressPattern Data.ByteString.ByteString@ -}
+         * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.maybe'paymentPart' @:: Lens' AddressPattern (Prelude.Maybe Data.ByteString.ByteString)@
+         * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.delegationPart' @:: Lens' AddressPattern Data.ByteString.ByteString@
+         * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.maybe'delegationPart' @:: Lens' AddressPattern (Prelude.Maybe Data.ByteString.ByteString)@ -}
 data AddressPattern
-  = AddressPattern'_constructor {_AddressPattern'exactAddress :: !Data.ByteString.ByteString,
-                                 _AddressPattern'paymentPart :: !Data.ByteString.ByteString,
-                                 _AddressPattern'delegationPart :: !Data.ByteString.ByteString,
+  = AddressPattern'_constructor {_AddressPattern'exactAddress :: !(Prelude.Maybe Data.ByteString.ByteString),
+                                 _AddressPattern'paymentPart :: !(Prelude.Maybe Data.ByteString.ByteString),
+                                 _AddressPattern'delegationPart :: !(Prelude.Maybe Data.ByteString.ByteString),
                                  _AddressPattern'_unknownFields :: !Data.ProtoLens.FieldSet}
   deriving stock (Prelude.Eq, Prelude.Ord)
 instance Prelude.Show AddressPattern where
@@ -130,8 +133,22 @@ instance Data.ProtoLens.Field.HasField AddressPattern "exactAddress" Data.ByteSt
         (Lens.Family2.Unchecked.lens
            _AddressPattern'exactAddress
            (\ x__ y__ -> x__ {_AddressPattern'exactAddress = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault)
+instance Data.ProtoLens.Field.HasField AddressPattern "maybe'exactAddress" (Prelude.Maybe Data.ByteString.ByteString) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _AddressPattern'exactAddress
+           (\ x__ y__ -> x__ {_AddressPattern'exactAddress = y__}))
         Prelude.id
 instance Data.ProtoLens.Field.HasField AddressPattern "paymentPart" Data.ByteString.ByteString where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _AddressPattern'paymentPart
+           (\ x__ y__ -> x__ {_AddressPattern'paymentPart = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault)
+instance Data.ProtoLens.Field.HasField AddressPattern "maybe'paymentPart" (Prelude.Maybe Data.ByteString.ByteString) where
   fieldOf _
     = (Prelude..)
         (Lens.Family2.Unchecked.lens
@@ -144,16 +161,26 @@ instance Data.ProtoLens.Field.HasField AddressPattern "delegationPart" Data.Byte
         (Lens.Family2.Unchecked.lens
            _AddressPattern'delegationPart
            (\ x__ y__ -> x__ {_AddressPattern'delegationPart = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault)
+instance Data.ProtoLens.Field.HasField AddressPattern "maybe'delegationPart" (Prelude.Maybe Data.ByteString.ByteString) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _AddressPattern'delegationPart
+           (\ x__ y__ -> x__ {_AddressPattern'delegationPart = y__}))
         Prelude.id
 instance Data.ProtoLens.Message AddressPattern where
   messageName _
     = Data.Text.pack "utxorpc.v1beta.cardano.AddressPattern"
   packedMessageDescriptor _
     = "\n\
-      \\SOAddressPattern\DC2#\n\
-      \\rexact_address\CAN\SOH \SOH(\fR\fexactAddress\DC2!\n\
-      \\fpayment_part\CAN\STX \SOH(\fR\vpaymentPart\DC2'\n\
-      \\SIdelegation_part\CAN\ETX \SOH(\fR\SOdelegationPart"
+      \\SOAddressPattern\DC2(\n\
+      \\rexact_address\CAN\SOH \SOH(\fH\NULR\fexactAddress\136\SOH\SOH\DC2&\n\
+      \\fpayment_part\CAN\STX \SOH(\fH\SOHR\vpaymentPart\136\SOH\SOH\DC2,\n\
+      \\SIdelegation_part\CAN\ETX \SOH(\fH\STXR\SOdelegationPart\136\SOH\SOHB\DLE\n\
+      \\SO_exact_addressB\SI\n\
+      \\r_payment_partB\DC2\n\
+      \\DLE_delegation_part"
   packedFileDescriptor _ = packedFileDescriptor
   fieldsByTag
     = let
@@ -162,27 +189,24 @@ instance Data.ProtoLens.Message AddressPattern where
               "exact_address"
               (Data.ProtoLens.ScalarField Data.ProtoLens.BytesField ::
                  Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
-              (Data.ProtoLens.PlainField
-                 Data.ProtoLens.Optional
-                 (Data.ProtoLens.Field.field @"exactAddress")) ::
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'exactAddress")) ::
               Data.ProtoLens.FieldDescriptor AddressPattern
         paymentPart__field_descriptor
           = Data.ProtoLens.FieldDescriptor
               "payment_part"
               (Data.ProtoLens.ScalarField Data.ProtoLens.BytesField ::
                  Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
-              (Data.ProtoLens.PlainField
-                 Data.ProtoLens.Optional
-                 (Data.ProtoLens.Field.field @"paymentPart")) ::
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'paymentPart")) ::
               Data.ProtoLens.FieldDescriptor AddressPattern
         delegationPart__field_descriptor
           = Data.ProtoLens.FieldDescriptor
               "delegation_part"
               (Data.ProtoLens.ScalarField Data.ProtoLens.BytesField ::
                  Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
-              (Data.ProtoLens.PlainField
-                 Data.ProtoLens.Optional
-                 (Data.ProtoLens.Field.field @"delegationPart")) ::
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'delegationPart")) ::
               Data.ProtoLens.FieldDescriptor AddressPattern
       in
         Data.Map.fromList
@@ -195,9 +219,9 @@ instance Data.ProtoLens.Message AddressPattern where
         (\ x__ y__ -> x__ {_AddressPattern'_unknownFields = y__})
   defMessage
     = AddressPattern'_constructor
-        {_AddressPattern'exactAddress = Data.ProtoLens.fieldDefault,
-         _AddressPattern'paymentPart = Data.ProtoLens.fieldDefault,
-         _AddressPattern'delegationPart = Data.ProtoLens.fieldDefault,
+        {_AddressPattern'exactAddress = Prelude.Nothing,
+         _AddressPattern'paymentPart = Prelude.Nothing,
+         _AddressPattern'delegationPart = Prelude.Nothing,
          _AddressPattern'_unknownFields = []}
   parseMessage
     = let
@@ -260,54 +284,50 @@ instance Data.ProtoLens.Message AddressPattern where
   buildMessage
     = \ _x
         -> (Data.Monoid.<>)
-             (let
-                _v
-                  = Lens.Family2.view (Data.ProtoLens.Field.field @"exactAddress") _x
-              in
-                if (Prelude.==) _v Data.ProtoLens.fieldDefault then
-                    Data.Monoid.mempty
-                else
-                    (Data.Monoid.<>)
-                      (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
-                      ((\ bs
-                          -> (Data.Monoid.<>)
-                               (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                  (Prelude.fromIntegral (Data.ByteString.length bs)))
-                               (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                         _v))
+             (case
+                  Lens.Family2.view
+                    (Data.ProtoLens.Field.field @"maybe'exactAddress") _x
+              of
+                Prelude.Nothing -> Data.Monoid.mempty
+                (Prelude.Just _v)
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                       ((\ bs
+                           -> (Data.Monoid.<>)
+                                (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                   (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          _v))
              ((Data.Monoid.<>)
-                (let
-                   _v
-                     = Lens.Family2.view (Data.ProtoLens.Field.field @"paymentPart") _x
-                 in
-                   if (Prelude.==) _v Data.ProtoLens.fieldDefault then
-                       Data.Monoid.mempty
-                   else
-                       (Data.Monoid.<>)
-                         (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
-                         ((\ bs
-                             -> (Data.Monoid.<>)
-                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
-                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                            _v))
+                (case
+                     Lens.Family2.view
+                       (Data.ProtoLens.Field.field @"maybe'paymentPart") _x
+                 of
+                   Prelude.Nothing -> Data.Monoid.mempty
+                   (Prelude.Just _v)
+                     -> (Data.Monoid.<>)
+                          (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
+                          ((\ bs
+                              -> (Data.Monoid.<>)
+                                   (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                      (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                   (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                             _v))
                 ((Data.Monoid.<>)
-                   (let
-                      _v
-                        = Lens.Family2.view
-                            (Data.ProtoLens.Field.field @"delegationPart") _x
-                    in
-                      if (Prelude.==) _v Data.ProtoLens.fieldDefault then
-                          Data.Monoid.mempty
-                      else
-                          (Data.Monoid.<>)
-                            (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
-                            ((\ bs
-                                -> (Data.Monoid.<>)
-                                     (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                        (Prelude.fromIntegral (Data.ByteString.length bs)))
-                                     (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                               _v))
+                   (case
+                        Lens.Family2.view
+                          (Data.ProtoLens.Field.field @"maybe'delegationPart") _x
+                    of
+                      Prelude.Nothing -> Data.Monoid.mempty
+                      (Prelude.Just _v)
+                        -> (Data.Monoid.<>)
+                             (Data.ProtoLens.Encoding.Bytes.putVarInt 26)
+                             ((\ bs
+                                 -> (Data.Monoid.<>)
+                                      (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                         (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                      (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                                _v))
                    (Data.ProtoLens.Encoding.Wire.buildFieldSet
                       (Lens.Family2.view Data.ProtoLens.unknownFields _x))))
 instance Control.DeepSeq.NFData AddressPattern where
@@ -636,10 +656,12 @@ instance Control.DeepSeq.NFData Asset where
 {- | Fields :
      
          * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.policyId' @:: Lens' AssetPattern Data.ByteString.ByteString@
-         * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.assetName' @:: Lens' AssetPattern Data.ByteString.ByteString@ -}
+         * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.maybe'policyId' @:: Lens' AssetPattern (Prelude.Maybe Data.ByteString.ByteString)@
+         * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.assetName' @:: Lens' AssetPattern Data.ByteString.ByteString@
+         * 'Proto.Utxorpc.V1beta.Cardano.Cardano_Fields.maybe'assetName' @:: Lens' AssetPattern (Prelude.Maybe Data.ByteString.ByteString)@ -}
 data AssetPattern
-  = AssetPattern'_constructor {_AssetPattern'policyId :: !Data.ByteString.ByteString,
-                               _AssetPattern'assetName :: !Data.ByteString.ByteString,
+  = AssetPattern'_constructor {_AssetPattern'policyId :: !(Prelude.Maybe Data.ByteString.ByteString),
+                               _AssetPattern'assetName :: !(Prelude.Maybe Data.ByteString.ByteString),
                                _AssetPattern'_unknownFields :: !Data.ProtoLens.FieldSet}
   deriving stock (Prelude.Eq, Prelude.Ord)
 instance Prelude.Show AssetPattern where
@@ -654,8 +676,22 @@ instance Data.ProtoLens.Field.HasField AssetPattern "policyId" Data.ByteString.B
         (Lens.Family2.Unchecked.lens
            _AssetPattern'policyId
            (\ x__ y__ -> x__ {_AssetPattern'policyId = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault)
+instance Data.ProtoLens.Field.HasField AssetPattern "maybe'policyId" (Prelude.Maybe Data.ByteString.ByteString) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _AssetPattern'policyId
+           (\ x__ y__ -> x__ {_AssetPattern'policyId = y__}))
         Prelude.id
 instance Data.ProtoLens.Field.HasField AssetPattern "assetName" Data.ByteString.ByteString where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _AssetPattern'assetName
+           (\ x__ y__ -> x__ {_AssetPattern'assetName = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.fieldDefault)
+instance Data.ProtoLens.Field.HasField AssetPattern "maybe'assetName" (Prelude.Maybe Data.ByteString.ByteString) where
   fieldOf _
     = (Prelude..)
         (Lens.Family2.Unchecked.lens
@@ -667,10 +703,13 @@ instance Data.ProtoLens.Message AssetPattern where
     = Data.Text.pack "utxorpc.v1beta.cardano.AssetPattern"
   packedMessageDescriptor _
     = "\n\
-      \\fAssetPattern\DC2\ESC\n\
-      \\tpolicy_id\CAN\SOH \SOH(\fR\bpolicyId\DC2\GS\n\
+      \\fAssetPattern\DC2 \n\
+      \\tpolicy_id\CAN\SOH \SOH(\fH\NULR\bpolicyId\136\SOH\SOH\DC2\"\n\
       \\n\
-      \asset_name\CAN\STX \SOH(\fR\tassetName"
+      \asset_name\CAN\STX \SOH(\fH\SOHR\tassetName\136\SOH\SOHB\f\n\
+      \\n\
+      \_policy_idB\r\n\
+      \\v_asset_name"
   packedFileDescriptor _ = packedFileDescriptor
   fieldsByTag
     = let
@@ -679,18 +718,16 @@ instance Data.ProtoLens.Message AssetPattern where
               "policy_id"
               (Data.ProtoLens.ScalarField Data.ProtoLens.BytesField ::
                  Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
-              (Data.ProtoLens.PlainField
-                 Data.ProtoLens.Optional
-                 (Data.ProtoLens.Field.field @"policyId")) ::
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'policyId")) ::
               Data.ProtoLens.FieldDescriptor AssetPattern
         assetName__field_descriptor
           = Data.ProtoLens.FieldDescriptor
               "asset_name"
               (Data.ProtoLens.ScalarField Data.ProtoLens.BytesField ::
                  Data.ProtoLens.FieldTypeDescriptor Data.ByteString.ByteString)
-              (Data.ProtoLens.PlainField
-                 Data.ProtoLens.Optional
-                 (Data.ProtoLens.Field.field @"assetName")) ::
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'assetName")) ::
               Data.ProtoLens.FieldDescriptor AssetPattern
       in
         Data.Map.fromList
@@ -702,8 +739,8 @@ instance Data.ProtoLens.Message AssetPattern where
         (\ x__ y__ -> x__ {_AssetPattern'_unknownFields = y__})
   defMessage
     = AssetPattern'_constructor
-        {_AssetPattern'policyId = Data.ProtoLens.fieldDefault,
-         _AssetPattern'assetName = Data.ProtoLens.fieldDefault,
+        {_AssetPattern'policyId = Prelude.Nothing,
+         _AssetPattern'assetName = Prelude.Nothing,
          _AssetPattern'_unknownFields = []}
   parseMessage
     = let
@@ -755,35 +792,34 @@ instance Data.ProtoLens.Message AssetPattern where
   buildMessage
     = \ _x
         -> (Data.Monoid.<>)
-             (let
-                _v = Lens.Family2.view (Data.ProtoLens.Field.field @"policyId") _x
-              in
-                if (Prelude.==) _v Data.ProtoLens.fieldDefault then
-                    Data.Monoid.mempty
-                else
-                    (Data.Monoid.<>)
-                      (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
-                      ((\ bs
-                          -> (Data.Monoid.<>)
-                               (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                  (Prelude.fromIntegral (Data.ByteString.length bs)))
-                               (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                         _v))
+             (case
+                  Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'policyId") _x
+              of
+                Prelude.Nothing -> Data.Monoid.mempty
+                (Prelude.Just _v)
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                       ((\ bs
+                           -> (Data.Monoid.<>)
+                                (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                   (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          _v))
              ((Data.Monoid.<>)
-                (let
-                   _v = Lens.Family2.view (Data.ProtoLens.Field.field @"assetName") _x
-                 in
-                   if (Prelude.==) _v Data.ProtoLens.fieldDefault then
-                       Data.Monoid.mempty
-                   else
-                       (Data.Monoid.<>)
-                         (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
-                         ((\ bs
-                             -> (Data.Monoid.<>)
-                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
-                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                            _v))
+                (case
+                     Lens.Family2.view
+                       (Data.ProtoLens.Field.field @"maybe'assetName") _x
+                 of
+                   Prelude.Nothing -> Data.Monoid.mempty
+                   (Prelude.Just _v)
+                     -> (Data.Monoid.<>)
+                          (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
+                          ((\ bs
+                              -> (Data.Monoid.<>)
+                                   (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                      (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                   (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                             _v))
                 (Data.ProtoLens.Encoding.Wire.buildFieldSet
                    (Lens.Family2.view Data.ProtoLens.unknownFields _x)))
 instance Control.DeepSeq.NFData AssetPattern where
@@ -27974,9 +28010,12 @@ instance Data.ProtoLens.Message TxOutputPattern where
     = Data.Text.pack "utxorpc.v1beta.cardano.TxOutputPattern"
   packedMessageDescriptor _
     = "\n\
-      \\SITxOutputPattern\DC2@\n\
-      \\aaddress\CAN\SOH \SOH(\v2&.utxorpc.v1beta.cardano.AddressPatternR\aaddress\DC2:\n\
-      \\ENQasset\CAN\STX \SOH(\v2$.utxorpc.v1beta.cardano.AssetPatternR\ENQasset"
+      \\SITxOutputPattern\DC2E\n\
+      \\aaddress\CAN\SOH \SOH(\v2&.utxorpc.v1beta.cardano.AddressPatternH\NULR\aaddress\136\SOH\SOH\DC2?\n\
+      \\ENQasset\CAN\STX \SOH(\v2$.utxorpc.v1beta.cardano.AssetPatternH\SOHR\ENQasset\136\SOH\SOHB\n\
+      \\n\
+      \\b_addressB\b\n\
+      \\ACK_asset"
   packedFileDescriptor _ = packedFileDescriptor
   fieldsByTag
     = let
@@ -31565,15 +31604,21 @@ packedFileDescriptor
     \\EOTcoin\CAN\STX \SOH(\v2\RS.utxorpc.v1beta.cardano.BigIntR\EOTcoin\"\154\SOH\n\
     \\SOUpdateDRepCert\DC2P\n\
     \\SIdrep_credential\CAN\SOH \SOH(\v2'.utxorpc.v1beta.cardano.StakeCredentialR\SOdrepCredential\DC26\n\
-    \\ACKanchor\CAN\STX \SOH(\v2\RS.utxorpc.v1beta.cardano.AnchorR\ACKanchor\"\129\SOH\n\
-    \\SOAddressPattern\DC2#\n\
-    \\rexact_address\CAN\SOH \SOH(\fR\fexactAddress\DC2!\n\
-    \\fpayment_part\CAN\STX \SOH(\fR\vpaymentPart\DC2'\n\
-    \\SIdelegation_part\CAN\ETX \SOH(\fR\SOdelegationPart\"J\n\
-    \\fAssetPattern\DC2\ESC\n\
-    \\tpolicy_id\CAN\SOH \SOH(\fR\bpolicyId\DC2\GS\n\
+    \\ACKanchor\CAN\STX \SOH(\v2\RS.utxorpc.v1beta.cardano.AnchorR\ACKanchor\"\199\SOH\n\
+    \\SOAddressPattern\DC2(\n\
+    \\rexact_address\CAN\SOH \SOH(\fH\NULR\fexactAddress\136\SOH\SOH\DC2&\n\
+    \\fpayment_part\CAN\STX \SOH(\fH\SOHR\vpaymentPart\136\SOH\SOH\DC2,\n\
+    \\SIdelegation_part\CAN\ETX \SOH(\fH\STXR\SOdelegationPart\136\SOH\SOHB\DLE\n\
+    \\SO_exact_addressB\SI\n\
+    \\r_payment_partB\DC2\n\
+    \\DLE_delegation_part\"q\n\
+    \\fAssetPattern\DC2 \n\
+    \\tpolicy_id\CAN\SOH \SOH(\fH\NULR\bpolicyId\136\SOH\SOH\DC2\"\n\
     \\n\
-    \asset_name\CAN\STX \SOH(\fR\tassetName\"\244\EOT\n\
+    \asset_name\CAN\STX \SOH(\fH\SOHR\tassetName\136\SOH\SOHB\f\n\
+    \\n\
+    \_policy_idB\r\n\
+    \\v_asset_name\"\244\EOT\n\
     \\DC2CertificatePattern\DC2X\n\
     \\DC2stake_registration\CAN\SOH \SOH(\v2'.utxorpc.v1beta.cardano.StakeCredentialH\NULR\DC1stakeRegistration\DC2\\\n\
     \\DC4stake_deregistration\CAN\STX \SOH(\v2'.utxorpc.v1beta.cardano.StakeCredentialH\NULR\DC3stakeDeregistration\DC2[\n\
@@ -31592,10 +31637,13 @@ packedFileDescriptor
     \\fpool_keyhash\CAN\STX \SOH(\fR\vpoolKeyhash\"P\n\
     \\NAKPoolRetirementPattern\DC2!\n\
     \\fpool_keyhash\CAN\SOH \SOH(\fR\vpoolKeyhash\DC2\DC4\n\
-    \\ENQepoch\CAN\STX \SOH(\EOTR\ENQepoch\"\143\SOH\n\
-    \\SITxOutputPattern\DC2@\n\
-    \\aaddress\CAN\SOH \SOH(\v2&.utxorpc.v1beta.cardano.AddressPatternR\aaddress\DC2:\n\
-    \\ENQasset\CAN\STX \SOH(\v2$.utxorpc.v1beta.cardano.AssetPatternR\ENQasset\"\193\ETX\n\
+    \\ENQepoch\CAN\STX \SOH(\EOTR\ENQepoch\"\175\SOH\n\
+    \\SITxOutputPattern\DC2E\n\
+    \\aaddress\CAN\SOH \SOH(\v2&.utxorpc.v1beta.cardano.AddressPatternH\NULR\aaddress\136\SOH\SOH\DC2?\n\
+    \\ENQasset\CAN\STX \SOH(\v2$.utxorpc.v1beta.cardano.AssetPatternH\SOHR\ENQasset\136\SOH\SOHB\n\
+    \\n\
+    \\b_addressB\b\n\
+    \\ACK_asset\"\193\ETX\n\
     \\tTxPattern\DC2C\n\
     \\bconsumes\CAN\SOH \SOH(\v2'.utxorpc.v1beta.cardano.TxOutputPatternR\bconsumes\DC2C\n\
     \\bproduces\CAN\STX \SOH(\v2'.utxorpc.v1beta.cardano.TxOutputPatternR\bproduces\DC2G\n\
@@ -31843,7 +31891,7 @@ packedFileDescriptor
     \\SYNMIR_SOURCE_UNSPECIFIED\DLE\NUL\DC2\ETB\n\
     \\DC3MIR_SOURCE_RESERVES\DLE\SOH\DC2\ETB\n\
     \\DC3MIR_SOURCE_TREASURY\DLE\STXB\164\SOH\n\
-    \\SUBcom.utxorpc.v1beta.cardanoB\fCardanoProtoP\SOH\162\STX\ETXUVC\170\STX\SYNUtxorpc.V1beta.Cardano\202\STX\SYNUtxorpc\\V1beta\\Cardano\226\STX\"Utxorpc\\V1beta\\Cardano\\GPBMetadata\234\STX\CANUtxorpc::V1beta::CardanoJ\171\173\STX\n\
+    \\SUBcom.utxorpc.v1beta.cardanoB\fCardanoProtoP\SOH\162\STX\ETXUVC\170\STX\SYNUtxorpc.V1beta.Cardano\202\STX\SYNUtxorpc\\V1beta\\Cardano\226\STX\"Utxorpc\\V1beta\\Cardano\\GPBMetadata\234\STX\CANUtxorpc::V1beta::CardanoJ\148\174\STX\n\
     \\a\DC2\ENQ\NUL\NUL\185\ACK\SOH\n\
     \\b\n\
     \\SOH\f\DC2\ETX\NUL\NUL\DC2\n\
@@ -34394,55 +34442,70 @@ packedFileDescriptor
     \\v\n\
     \\ETX\EOTF\SOH\DC2\EOT\133\EOT\b\SYN\n\
     \B\n\
-    \\EOT\EOTF\STX\NUL\DC2\EOT\134\EOT\STX\SUB\"4 The address should match this exact address value.\n\
+    \\EOT\EOTF\STX\NUL\DC2\EOT\134\EOT\STX#\"4 The address should match this exact address value.\n\
     \\n\
     \\r\n\
-    \\ENQ\EOTF\STX\NUL\ENQ\DC2\EOT\134\EOT\STX\a\n\
+    \\ENQ\EOTF\STX\NUL\EOT\DC2\EOT\134\EOT\STX\n\
+    \\n\
     \\r\n\
-    \\ENQ\EOTF\STX\NUL\SOH\DC2\EOT\134\EOT\b\NAK\n\
+    \\ENQ\EOTF\STX\NUL\ENQ\DC2\EOT\134\EOT\v\DLE\n\
     \\r\n\
-    \\ENQ\EOTF\STX\NUL\ETX\DC2\EOT\134\EOT\CAN\EM\n\
+    \\ENQ\EOTF\STX\NUL\SOH\DC2\EOT\134\EOT\DC1\RS\n\
+    \\r\n\
+    \\ENQ\EOTF\STX\NUL\ETX\DC2\EOT\134\EOT!\"\n\
     \H\n\
-    \\EOT\EOTF\STX\SOH\DC2\EOT\135\EOT\STX\EM\": The payment part of the address should match this value.\n\
+    \\EOT\EOTF\STX\SOH\DC2\EOT\135\EOT\STX\"\": The payment part of the address should match this value.\n\
     \\n\
     \\r\n\
-    \\ENQ\EOTF\STX\SOH\ENQ\DC2\EOT\135\EOT\STX\a\n\
+    \\ENQ\EOTF\STX\SOH\EOT\DC2\EOT\135\EOT\STX\n\
+    \\n\
     \\r\n\
-    \\ENQ\EOTF\STX\SOH\SOH\DC2\EOT\135\EOT\b\DC4\n\
+    \\ENQ\EOTF\STX\SOH\ENQ\DC2\EOT\135\EOT\v\DLE\n\
     \\r\n\
-    \\ENQ\EOTF\STX\SOH\ETX\DC2\EOT\135\EOT\ETB\CAN\n\
+    \\ENQ\EOTF\STX\SOH\SOH\DC2\EOT\135\EOT\DC1\GS\n\
+    \\r\n\
+    \\ENQ\EOTF\STX\SOH\ETX\DC2\EOT\135\EOT !\n\
     \K\n\
-    \\EOT\EOTF\STX\STX\DC2\EOT\136\EOT\STX\FS\"= The delegation part of the address should match this value.\n\
+    \\EOT\EOTF\STX\STX\DC2\EOT\136\EOT\STX%\"= The delegation part of the address should match this value.\n\
     \\n\
     \\r\n\
-    \\ENQ\EOTF\STX\STX\ENQ\DC2\EOT\136\EOT\STX\a\n\
+    \\ENQ\EOTF\STX\STX\EOT\DC2\EOT\136\EOT\STX\n\
+    \\n\
     \\r\n\
-    \\ENQ\EOTF\STX\STX\SOH\DC2\EOT\136\EOT\b\ETB\n\
+    \\ENQ\EOTF\STX\STX\ENQ\DC2\EOT\136\EOT\v\DLE\n\
     \\r\n\
-    \\ENQ\EOTF\STX\STX\ETX\DC2\EOT\136\EOT\SUB\ESC\n\
+    \\ENQ\EOTF\STX\STX\SOH\DC2\EOT\136\EOT\DC1 \n\
+    \\r\n\
+    \\ENQ\EOTF\STX\STX\ETX\DC2\EOT\136\EOT#$\n\
     \[\n\
     \\STX\EOTG\DC2\ACK\140\EOT\NUL\143\EOT\SOH\SUBM Pattern of a native asset that can be used to evaluate matching predicates.\n\
     \\n\
     \\v\n\
     \\ETX\EOTG\SOH\DC2\EOT\140\EOT\b\DC4\n\
     \9\n\
-    \\EOT\EOTG\STX\NUL\DC2\EOT\141\EOT\STX\SYN\"+ The asset should belong to this policy id\n\
+    \\EOT\EOTG\STX\NUL\DC2\EOT\141\EOT\STX\US\"+ The asset should belong to this policy id\n\
     \\n\
     \\r\n\
-    \\ENQ\EOTG\STX\NUL\ENQ\DC2\EOT\141\EOT\STX\a\n\
+    \\ENQ\EOTG\STX\NUL\EOT\DC2\EOT\141\EOT\STX\n\
+    \\n\
     \\r\n\
-    \\ENQ\EOTG\STX\NUL\SOH\DC2\EOT\141\EOT\b\DC1\n\
+    \\ENQ\EOTG\STX\NUL\ENQ\DC2\EOT\141\EOT\v\DLE\n\
     \\r\n\
-    \\ENQ\EOTG\STX\NUL\ETX\DC2\EOT\141\EOT\DC4\NAK\n\
+    \\ENQ\EOTG\STX\NUL\SOH\DC2\EOT\141\EOT\DC1\SUB\n\
+    \\r\n\
+    \\ENQ\EOTG\STX\NUL\ETX\DC2\EOT\141\EOT\GS\RS\n\
     \2\n\
-    \\EOT\EOTG\STX\SOH\DC2\EOT\142\EOT\STX\ETB\"$ The asset should present this name\n\
+    \\EOT\EOTG\STX\SOH\DC2\EOT\142\EOT\STX \"$ The asset should present this name\n\
     \\n\
     \\r\n\
-    \\ENQ\EOTG\STX\SOH\ENQ\DC2\EOT\142\EOT\STX\a\n\
+    \\ENQ\EOTG\STX\SOH\EOT\DC2\EOT\142\EOT\STX\n\
+    \\n\
     \\r\n\
-    \\ENQ\EOTG\STX\SOH\SOH\DC2\EOT\142\EOT\b\DC2\n\
+    \\ENQ\EOTG\STX\SOH\ENQ\DC2\EOT\142\EOT\v\DLE\n\
     \\r\n\
-    \\ENQ\EOTG\STX\SOH\ETX\DC2\EOT\142\EOT\NAK\SYN\n\
+    \\ENQ\EOTG\STX\SOH\SOH\DC2\EOT\142\EOT\DC1\ESC\n\
+    \\r\n\
+    \\ENQ\EOTG\STX\SOH\ETX\DC2\EOT\142\EOT\RS\US\n\
     \Z\n\
     \\STX\EOTH\DC2\ACK\146\EOT\NUL\157\EOT\SOH\SUBL Pattern of a certificate that can be used to evaluate matching predicates.\n\
     \\n\
@@ -34602,23 +34665,29 @@ packedFileDescriptor
     \\v\n\
     \\ETX\EOTL\SOH\DC2\EOT\178\EOT\b\ETB\n\
     \K\n\
-    \\EOT\EOTL\STX\NUL\DC2\EOT\179\EOT\STX\GS\"= Match any address in the output that exhibits this pattern.\n\
+    \\EOT\EOTL\STX\NUL\DC2\EOT\179\EOT\STX&\"= Match any address in the output that exhibits this pattern.\n\
     \\n\
     \\r\n\
-    \\ENQ\EOTL\STX\NUL\ACK\DC2\EOT\179\EOT\STX\DLE\n\
+    \\ENQ\EOTL\STX\NUL\EOT\DC2\EOT\179\EOT\STX\n\
+    \\n\
     \\r\n\
-    \\ENQ\EOTL\STX\NUL\SOH\DC2\EOT\179\EOT\DC1\CAN\n\
+    \\ENQ\EOTL\STX\NUL\ACK\DC2\EOT\179\EOT\v\EM\n\
     \\r\n\
-    \\ENQ\EOTL\STX\NUL\ETX\DC2\EOT\179\EOT\ESC\FS\n\
+    \\ENQ\EOTL\STX\NUL\SOH\DC2\EOT\179\EOT\SUB!\n\
+    \\r\n\
+    \\ENQ\EOTL\STX\NUL\ETX\DC2\EOT\179\EOT$%\n\
     \I\n\
-    \\EOT\EOTL\STX\SOH\DC2\EOT\180\EOT\STX\EM\"; Match any asset in the output that exhibits this pattern.\n\
+    \\EOT\EOTL\STX\SOH\DC2\EOT\180\EOT\STX\"\"; Match any asset in the output that exhibits this pattern.\n\
     \\n\
     \\r\n\
-    \\ENQ\EOTL\STX\SOH\ACK\DC2\EOT\180\EOT\STX\SO\n\
+    \\ENQ\EOTL\STX\SOH\EOT\DC2\EOT\180\EOT\STX\n\
+    \\n\
     \\r\n\
-    \\ENQ\EOTL\STX\SOH\SOH\DC2\EOT\180\EOT\SI\DC4\n\
+    \\ENQ\EOTL\STX\SOH\ACK\DC2\EOT\180\EOT\v\ETB\n\
     \\r\n\
-    \\ENQ\EOTL\STX\SOH\ETX\DC2\EOT\180\EOT\ETB\CAN\n\
+    \\ENQ\EOTL\STX\SOH\SOH\DC2\EOT\180\EOT\CAN\GS\n\
+    \\r\n\
+    \\ENQ\EOTL\STX\SOH\ETX\DC2\EOT\180\EOT !\n\
     \Q\n\
     \\STX\EOTM\DC2\ACK\184\EOT\NUL\191\EOT\SOH\SUBC Pattern of a Tx that can be used to evaluate matching predicates.\n\
     \\n\

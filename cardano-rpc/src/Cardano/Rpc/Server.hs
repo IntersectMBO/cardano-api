@@ -56,6 +56,7 @@ methodsUtxoRpc
 methodsUtxoRpc =
   Method (mkNonStreaming $ wrapInSpan TraceRpcQueryParamsSpan . readParamsMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadUtxosSpan . readUtxosMethod)
+    . Method (mkNonStreaming $ wrapInSpan TraceRpcQuerySearchUtxosSpan . searchUtxosMethod)
     $ NoMoreMethods
 
 methodsUtxoRpcSubmit

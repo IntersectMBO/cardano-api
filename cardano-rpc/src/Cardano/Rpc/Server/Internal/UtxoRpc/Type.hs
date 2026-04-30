@@ -12,6 +12,7 @@
 module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   ( utxoRpcPParamsToProtocolParams
   , utxoToUtxoRpcAnyUtxoData
+  , txInTxOutToAnyUtxoData
   , anyUtxoDataUtxoRpcToUtxo
   , txOutToUtxoRpcTxOutput
   , utxoRpcTxOutputToTxOut
@@ -485,17 +486,20 @@ scriptDataToUtxoRpcPlutusData = \case
     defMessage & U5c.constr .~ constr
 
 utxoToUtxoRpcAnyUtxoData :: forall era. IsEra era => UTxO era -> [Proto UtxoRpc.AnyUtxoData]
-utxoToUtxoRpcAnyUtxoData utxo =
-  toList utxo <&> \(txIn, txOut) -> do
-    let era = useEra @era
-        txOutCbor =
-          obtainCommonConstraints era $
-            CBOR.serialize' $
-              toShelleyTxOut (convert era) txOut
-    defMessage
-      & U5c.nativeBytes .~ txOutCbor
-      & U5c.txoRef .~ inject txIn
-      & U5c.cardano .~ txOutToUtxoRpcTxOutput txOut
+utxoToUtxoRpcAnyUtxoData = map (uncurry txInTxOutToAnyUtxoData) . toList
+
+txInTxOutToAnyUtxoData
+  :: forall era. IsEra era => TxIn -> TxOut CtxUTxO era -> Proto UtxoRpc.AnyUtxoData
+txInTxOutToAnyUtxoData txIn txOut = do
+  let era = useEra @era
+      txOutCbor =
+        obtainCommonConstraints era $
+          CBOR.serialize' $
+            toShelleyTxOut (convert era) txOut
+  defMessage
+    & U5c.nativeBytes .~ txOutCbor
+    & U5c.txoRef .~ inject txIn
+    & U5c.cardano .~ txOutToUtxoRpcTxOutput txOut
 
 anyUtxoDataUtxoRpcToUtxo
   :: forall era m

@@ -27,7 +27,10 @@ import Proto.Utxorpc.V1beta.Cardano.Cardano_Fields hiding
   , vec'values
   )
 import Proto.Utxorpc.V1beta.Query.Query
-import Proto.Utxorpc.V1beta.Query.Query_Fields
+import Proto.Utxorpc.V1beta.Query.Query_Fields hiding
+  ( maybe'tx
+  , tx
+  )
 
 type instance RequestMetadata (Protobuf QueryService meth) = NoMetadata
 

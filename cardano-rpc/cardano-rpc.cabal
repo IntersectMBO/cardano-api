@@ -58,6 +58,7 @@ library
     Cardano.Rpc.Server.Internal.Monad
     Cardano.Rpc.Server.Internal.Node
     Cardano.Rpc.Server.Internal.Tracing
+    Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
     Cardano.Rpc.Server.Internal.UtxoRpc.Submit
     Cardano.Rpc.Server.Internal.UtxoRpc.Type
@@ -121,6 +122,7 @@ test-suite cardano-rpc-test
   type: exitcode-stdio-1.0
   build-depends:
     base,
+    bytestring,
     cardano-api,
     cardano-api:gen,
     cardano-ledger-api,
@@ -130,9 +132,11 @@ test-suite cardano-rpc-test
     containers,
     hedgehog,
     hedgehog-extras,
+    proto-lens,
     rio,
     tasty,
     tasty-hedgehog,
+    text,
     time,
 
   ghc-options:
@@ -142,6 +146,8 @@ test-suite cardano-rpc-test
 
   build-tool-depends: tasty-discover:tasty-discover
   other-modules:
+    Test.Cardano.Rpc.Pagination
+    Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters
     Test.Cardano.Rpc.TxOutput
     Test.Cardano.Rpc.Type

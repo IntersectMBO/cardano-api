@@ -155,6 +155,18 @@ maybe'match ::
    Data.ProtoLens.Field.HasField s "maybe'match" a) =>
   Lens.Family2.LensLike' f s a
 maybe'match = Data.ProtoLens.Field.field @"maybe'match"
+maybe'maxItems ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'maxItems" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'maxItems = Data.ProtoLens.Field.field @"maybe'maxItems"
+maybe'nextToken ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'nextToken" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'nextToken = Data.ProtoLens.Field.field @"maybe'nextToken"
 maybe'params ::
   forall f s a.
   (Prelude.Functor f,
@@ -173,6 +185,12 @@ maybe'predicate ::
    Data.ProtoLens.Field.HasField s "maybe'predicate" a) =>
   Lens.Family2.LensLike' f s a
 maybe'predicate = Data.ProtoLens.Field.field @"maybe'predicate"
+maybe'startToken ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'startToken" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'startToken = Data.ProtoLens.Field.field @"maybe'startToken"
 maybe'summary ::
   forall f s a.
   (Prelude.Functor f,
