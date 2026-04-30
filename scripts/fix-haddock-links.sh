@@ -255,7 +255,7 @@ declare -A CHAP_SET
 while IFS= read -r pkg; do CHAP_SET["$pkg"]=1; done < "$CHAP_PKGS_FILE"
 
 # Single HTML scan for all cross-package link targets
-DISCOVERED_PKGS=$(grep -rohP 'href="\.\./(\.\./)?\K[a-zA-Z][a-zA-Z0-9_.-]*(?=/)' \
+DISCOVERED_PKGS=$(grep -rohP --include='*.html' 'href="\.\./(\.\./)?\K[a-zA-Z][a-zA-Z0-9_.-]*(?=/)' \
                     "$WEBSITE_DIR" 2>/dev/null | sort -u)
 discovered_total=$(echo "$DISCOVERED_PKGS" | grep -c . || true)
 
