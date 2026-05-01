@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1094
+kind:
+  - breaking
+description: |
+  Remove the deprecated `makeShelleyTransactionBody` and `createAndValidateTransactionBody` functions along with their supporting helpers. Use `createTransactionBody` instead.
