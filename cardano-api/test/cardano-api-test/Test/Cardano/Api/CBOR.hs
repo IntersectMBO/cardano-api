@@ -33,6 +33,7 @@ import Data.Text qualified as T
 import GHC.Stack qualified as GHC
 
 import Test.Gen.Cardano.Api.Hardcoded
+import Test.Gen.Cardano.Api.ProtocolParameters
 import Test.Gen.Cardano.Api.Typed
 
 import Test.Cardano.Api.Orphans ()
@@ -389,9 +390,10 @@ prop_roundtrip_ScriptData_CBOR = H.property $ do
 
 prop_roundtrip_UpdateProposal_CBOR :: Property
 prop_roundtrip_UpdateProposal_CBOR = H.property $ do
-  AnyCardanoEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  proposal <- H.forAll $ genUpdateProposal era
-  H.trippingCbor AsUpdateProposal proposal
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
+  proposal <- H.forAll $ genUpdateProposal (toCardanoEra era)
+  shelleyBasedEraConstraints era $
+    H.trippingCbor AsUpdateProposal proposal
 
 prop_Tx_cddlTypeToEra :: Property
 prop_Tx_cddlTypeToEra = H.property $ do
@@ -657,10 +659,8 @@ tests =
     , testProperty
         "cddlTypeToEra for TxWitness types"
         prop_TxWitness_cddlTypeToEra
-    , testProperty
-        "roundtrip UpdateProposal CBOR"
-        prop_roundtrip_UpdateProposal_CBOR
     , testProperty "roundtrip ScriptData CBOR" prop_roundtrip_ScriptData_CBOR
+    , testProperty "roundtrip UpdateProposal CBOR" prop_roundtrip_UpdateProposal_CBOR
     , testProperty "roundtrip TxWitness Cddl" prop_roundtrip_TxWitness_Cddl
     , testProperty "roundtrip tx CBOR" prop_roundtrip_tx_CBOR
     , testProperty "roundtrip tx out CBOR" prop_roundtrip_tx_out_CBOR

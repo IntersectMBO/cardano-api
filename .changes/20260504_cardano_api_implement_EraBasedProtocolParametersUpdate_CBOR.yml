@@ -1,0 +1,11 @@
+project: cardano-api
+pr: 1103
+kind:
+  - bugfix
+  - breaking
+description: |
+  Implement the previously-stubbed `ToCBOR`/`FromCBOR` instances for
+  `EraBasedProtocolParametersUpdate` by routing through the ledger's
+  `PParamsUpdate` encoding. The instance constraint changes from
+  `Typeable era` to `IsShelleyBasedEra era`, which propagates to the
+  `ToCBOR`, `FromCBOR` and `HasTextEnvelope` instances of `UpdateProposal`.

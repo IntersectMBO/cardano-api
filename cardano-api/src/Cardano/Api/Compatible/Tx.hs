@@ -50,7 +50,7 @@ import Lens.Micro hiding (ix)
 data AnyProtocolUpdate era where
   ProtocolUpdate
     :: ShelleyToBabbageEra era
-    -> UpdateProposal
+    -> UpdateProposal era
     -> AnyProtocolUpdate era
   ProposalProcedures
     :: ConwayEraOnwards era
@@ -84,8 +84,8 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
     (updateTxBody, extraScriptWitnesses) <-
       case anyProtocolUpdate of
         ProtocolUpdate shelleyToBabbageEra updateProposal -> do
-          ledgerPParamsUpdate <- toLedgerUpdate sbe updateProposal
-          let updateTxBody :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era)) =
+          let ledgerPParamsUpdate = toLedgerUpdate sbe updateProposal
+              updateTxBody :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era)) =
                 shelleyToBabbageEraConstraints shelleyToBabbageEra $
                   Endo $ \txb ->
                     txb & L.updateTxBodyL .~ SJust ledgerPParamsUpdate
