@@ -96,12 +96,6 @@ if arch(wasm32)
 
   source-repository-package
     type: git
-    location: https://github.com/palas/haskell-lmdb-mock.git
-    tag: c8d61e6eee03ee271e7768c0576110da885aec48
-    --sha256: sha256-+gB1MmM6qRApz1p7tFsdvKoAWDrYB4a+bJ9Djm6ieYI=
-
-  source-repository-package
-    type: git
     location: https://github.com/palas/double-conversion.git
     tag: b2030245727ee56de76507fe305e3741f6ce3260
     --sha256: sha256-kzwHHQzHPfPnIDtnSDAom7YGSzWjr0113x0zsfI/Tb0=

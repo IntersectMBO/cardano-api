@@ -294,6 +294,19 @@
                 src = nixpkgs.blst.src;
               });
           };
+          # Stub pkg-config file so the cabal solver can resolve
+          # cardano-lmdb (a transitive dependency of ouroboros-consensus
+          # that nothing in this project actually needs). Without this,
+          # the solver rejects cardano-lmdb because lmdb is not
+          # available for wasm. Per-component builds ensure it is never
+          # actually compiled.
+          lmdb-pkg-config-stub = wasm-pkgs.writeTextDir "lib/pkgconfig/lmdb.pc" ''
+            Name: lmdb
+            Description: Stub for cabal solver — not actually built
+            Version: 0.9.33
+            Libs: -llmdb
+            Cflags:
+          '';
         in
           lib.optionalAttrs (system != "x86_64-darwin") {
             wasm = wasm-pkgs.mkShell {
@@ -308,6 +321,7 @@
                   wasm.libsodium
                   wasm.secp256k1
                   wasm.blst
+                  lmdb-pkg-config-stub
                 ]
                 ++ lib.optional (system == "x86_64-linux" || system == "aarch64-linux") wasm-pkgs.envoy-bin;
             };

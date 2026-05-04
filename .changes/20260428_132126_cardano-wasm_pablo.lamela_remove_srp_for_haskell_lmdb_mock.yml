@@ -1,0 +1,5 @@
+description: Removed SRP for `haskell-lmdb-mock` which is no longer needed.
+kind:
+- maintenance
+pr: 1192
+project: cardano-wasm
