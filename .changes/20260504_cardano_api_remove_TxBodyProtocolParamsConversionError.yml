@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1103
+kind:
+  - breaking
+description: |
+  Remove the unused `TxBodyProtocolParamsConversionError` constructor of `TxBodyError`.

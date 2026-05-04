@@ -1219,7 +1219,6 @@ data TxBodyError
   | TxBodyMetadataError ![(Word64, TxMetadataRangeError)]
   | TxBodyInIxOverflow !TxIn
   | TxBodyMissingProtocolParams
-  | TxBodyProtocolParamsConversionError !ProtocolParametersConversionError
   deriving (Eq, Show)
 
 instance Error TxBodyError where
@@ -1253,8 +1252,6 @@ instance Error TxBodyError where
         <> "acceptable value is up to 2^32-1, "
         <> "in input "
         <> pretty txin
-    TxBodyProtocolParamsConversionError ppces ->
-      "Errors in protocol parameters conversion: " <> prettyError ppces
 
 createTransactionBody
   :: forall era
