@@ -5,4 +5,4 @@ kind:
 description: |
   Remove the deprecated `ProtocolParametersUpdate` type and the `toLedgerPParamsUpdate` conversion function. Use `EraBasedProtocolParametersUpdate` instead.
 
-  The `toLedgerUpdate`, `toLedgerProposedPPUpdates`, `fromLedgerProposedPPUpdates` and `fromLedgerPParamsUpdate` functions are kept but their signatures are now era-indexed: they operate on `UpdateProposal era` / `EraBasedProtocolParametersUpdate era` instead of the removed type, and require a `ShelleyBasedEra era` argument.
+  The `toLedgerUpdate`, `fromLedgerUpdate`, `toLedgerProposedPPUpdates`, `fromLedgerProposedPPUpdates` and `fromLedgerPParamsUpdate` functions are kept but their signatures are now era-indexed: they operate on `UpdateProposal era` / `EraBasedProtocolParametersUpdate era` instead of the removed type, and require a `ShelleyBasedEra era` argument.
