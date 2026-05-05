@@ -33,7 +33,6 @@ import Data.Text qualified as T
 import GHC.Stack qualified as GHC
 
 import Test.Gen.Cardano.Api.Hardcoded
-import Test.Gen.Cardano.Api.ProtocolParameters
 import Test.Gen.Cardano.Api.Typed
 
 import Test.Cardano.Api.Orphans ()

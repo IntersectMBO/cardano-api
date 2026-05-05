@@ -5,17 +5,12 @@ module Test.Gen.Cardano.Api.ProtocolParameters where
 import Cardano.Api
 import Cardano.Api.Ledger
 
-import Data.Maybe
-
-import Test.Gen.Cardano.Api.Internal.Shared
-
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 
-import Hedgehog (Gen, MonadGen)
+import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Gen.QuickCheck qualified as Q
-import Hedgehog.Range qualified as Range
 
 genStrictMaybe :: MonadGen m => m a -> m (StrictMaybe a)
 genStrictMaybe gen =
@@ -56,9 +51,9 @@ genShelleyToAlonzoPParams =
 
 genAlonzoOnwardsPParams :: MonadGen m => m (AlonzoOnwardsPParams era)
 genAlonzoOnwardsPParams =
-  AlonzoOnwardsPParams
-    <$> pure SNothing -- Cost models don't roundtrip through CBOR
-    <*> genStrictMaybe Q.arbitrary
+  -- Cost models don't roundtrip through CBOR, hence SNothing
+  AlonzoOnwardsPParams SNothing
+    <$> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
@@ -80,26 +75,6 @@ genIntroducedInConwayPParams =
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
-
-genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
-genTxUpdateProposal sbe =
-  Gen.choice $
-    catMaybes
-      [ Just $ pure TxUpdateProposalNone
-      , forEraInEon sbe Nothing $ \w ->
-          Just $ TxUpdateProposal w <$> genUpdateProposal (toCardanoEra w)
-      ]
-
-genUpdateProposal :: CardanoEra era -> Gen (UpdateProposal era)
-genUpdateProposal era =
-  UpdateProposal
-    <$> Gen.map
-      (Range.constant 1 3)
-      ( (,)
-          <$> genVerificationKeyHash AsGenesisKey
-          <*> genEraBasedProtocolParametersUpdate era
-      )
-    <*> genEpochNo
 
 genEraBasedProtocolParametersUpdate
   :: MonadGen m

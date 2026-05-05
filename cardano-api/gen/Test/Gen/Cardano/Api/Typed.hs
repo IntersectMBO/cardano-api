@@ -28,6 +28,7 @@ module Test.Gen.Cardano.Api.Typed
   , genCostModels
   , genMaybePraosNonce
   , genTxUpdateProposal
+  , genUpdateProposal
   , genPraosNonce
   , genValidProtocolParameters
   , genValueNestedRep
@@ -164,6 +165,7 @@ import Cardano.Api.Tx qualified as A
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as CRYPTO
+import Cardano.Crypto.Seed qualified as Crypto
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
@@ -188,12 +190,12 @@ import Numeric.Natural (Natural)
 
 import Test.Gen.Cardano.Api.Era (conwayEraOnwardsTestConstraints, shelleyBasedEraTestConstraints)
 import Test.Gen.Cardano.Api.Hardcoded
-import Test.Gen.Cardano.Api.Internal.Shared
 import Test.Gen.Cardano.Api.Metadata (genTxMetadata)
-import Test.Gen.Cardano.Api.ProtocolParameters (genTxUpdateProposal)
+import Test.Gen.Cardano.Api.ProtocolParameters (genEraBasedProtocolParametersUpdate)
 
 import Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
+import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 
@@ -1632,3 +1634,58 @@ genChainPoint =
 genChainPointAt :: SlotNo -> Gen ChainPoint
 genChainPointAt s =
   ChainPoint s <$> genBlockHeaderHash
+
+genEpochNo :: Gen EpochNo
+genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 10)
+
+genCostModels :: MonadGen m => m Alonzo.CostModels
+genCostModels = Q.arbitrary
+
+genVerificationKeyHash
+  :: ()
+  => HasTypeProxy keyrole
+  => Key keyrole
+  => AsType keyrole
+  -> Gen (Hash keyrole)
+genVerificationKeyHash roletoken =
+  verificationKeyHash <$> genVerificationKey roletoken
+
+genVerificationKey
+  :: ()
+  => HasTypeProxy keyrole
+  => Key keyrole
+  => AsType keyrole
+  -> Gen (VerificationKey keyrole)
+genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
+
+genSigningKey :: Key keyrole => AsType keyrole -> Gen (SigningKey keyrole)
+genSigningKey roletoken = do
+  seed <- genSeed (fromIntegral seedSize)
+  let sk = deterministicSigningKey roletoken seed
+  return sk
+ where
+  seedSize :: Word
+  seedSize = deterministicSigningKeySeedSize roletoken
+
+genSeed :: Int -> Gen Crypto.Seed
+genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
+
+genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
+genTxUpdateProposal sbe =
+  Gen.choice $
+    catMaybes
+      [ Just $ pure TxUpdateProposalNone
+      , forEraInEon sbe Nothing $ \w ->
+          Just $ TxUpdateProposal w <$> genUpdateProposal (toCardanoEra w)
+      ]
+
+genUpdateProposal :: CardanoEra era -> Gen (UpdateProposal era)
+genUpdateProposal era =
+  UpdateProposal
+    <$> Gen.map
+      (Range.constant 1 3)
+      ( (,)
+          <$> genVerificationKeyHash AsGenesisKey
+          <*> genEraBasedProtocolParametersUpdate era
+      )
+    <*> genEpochNo
