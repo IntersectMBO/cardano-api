@@ -1,9 +1,9 @@
+{-# LANGUAGE GADTs #-}
+
 module Test.Gen.Cardano.Api.ProtocolParameters where
 
 import Cardano.Api
 import Cardano.Api.Ledger
-
-import Test.Gen.Cardano.Api.Typed (genCostModels)
 
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -51,9 +51,9 @@ genShelleyToAlonzoPParams =
 
 genAlonzoOnwardsPParams :: MonadGen m => m (AlonzoOnwardsPParams era)
 genAlonzoOnwardsPParams =
-  AlonzoOnwardsPParams
-    <$> genStrictMaybe genCostModels
-    <*> genStrictMaybe Q.arbitrary
+  -- Cost models don't roundtrip through CBOR, hence SNothing
+  AlonzoOnwardsPParams SNothing
+    <$> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
@@ -75,6 +75,24 @@ genIntroducedInConwayPParams =
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
+
+genEraBasedProtocolParametersUpdate
+  :: MonadGen m
+  => CardanoEra era
+  -> m (EraBasedProtocolParametersUpdate era)
+genEraBasedProtocolParametersUpdate era =
+  case era of
+    ByronEra ->
+      error
+        "genEraBasedProtocolParametersUpdate: ByronEra does not support \
+        \protocol parameter updates"
+    ShelleyEra -> genShelleyEraBasedProtocolParametersUpdate
+    AllegraEra -> genAllegraEraBasedProtocolParametersUpdate
+    MaryEra -> genMaryEraBasedProtocolParametersUpdate
+    AlonzoEra -> genAlonzoEraBasedProtocolParametersUpdate
+    BabbageEra -> genBabbageEraBasedProtocolParametersUpdate
+    ConwayEra -> genConwayEraBasedProtocolParametersUpdate
+    DijkstraEra -> error "TODO Dijkstra: genEraBasedProtocolParametersUpdate: era not supported"
 
 genShelleyEraBasedProtocolParametersUpdate
   :: MonadGen m => m (EraBasedProtocolParametersUpdate ShelleyEra)

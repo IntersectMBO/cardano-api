@@ -8,7 +8,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -43,9 +42,6 @@ module Cardano.Api.ProtocolParameters
   , createEraBasedProtocolParamUpdate
   , createPParams
 
-    -- * Deprecated
-  , ProtocolParametersUpdate (..)
-
     -- * Errors
   , ProtocolParametersError (..)
   , ProtocolParametersConversionError (..)
@@ -71,7 +67,6 @@ module Cardano.Api.ProtocolParameters
   , fromLedgerUpdate
   , toLedgerProposedPPUpdates
   , fromLedgerProposedPPUpdates
-  , toLedgerPParamsUpdate
   , fromLedgerPParamsUpdate
   , toAlonzoPrices
   , fromAlonzoPrices
@@ -95,7 +90,6 @@ import Cardano.Api.Era
 import Cardano.Api.Error
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Orphans ()
-import Cardano.Api.Internal.Utils
 import Cardano.Api.Key.Internal
 import Cardano.Api.Plutus.Internal.Script
 import Cardano.Api.Pretty
@@ -115,10 +109,8 @@ import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Api.Era qualified as Ledger
 import Cardano.Ledger.Api.PParams
 import Cardano.Ledger.Babbage.Core qualified as Ledger
-import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Compactible qualified as Ledger
 import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.Hashes (HASH)
 import Cardano.Ledger.Plutus.CostModels qualified as Plutus
@@ -127,7 +119,6 @@ import Cardano.Ledger.Shelley.API qualified as Ledger
 import Cardano.Slotting.Slot (EpochNo (..))
 import PlutusLedgerApi.Common (CostModelApplyError)
 
-import Control.Monad
 import Data.Aeson
   ( FromJSON (..)
   , ToJSON (..)
@@ -146,6 +137,7 @@ import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Typeable
 import Data.Word
 import GHC.Exts (IsList (..))
 import GHC.Generics
@@ -225,6 +217,18 @@ data EraBasedProtocolParametersUpdate era where
 
 deriving instance Show (EraBasedProtocolParametersUpdate era)
 
+deriving instance Eq (EraBasedProtocolParametersUpdate era)
+
+instance IsShelleyBasedEra era => ToCBOR (EraBasedProtocolParametersUpdate era) where
+  toCBOR =
+    shelleyBasedEraConstraints (shelleyBasedEra @era) $
+      toCBOR . createEraBasedProtocolParamUpdate shelleyBasedEra
+
+instance IsShelleyBasedEra era => FromCBOR (EraBasedProtocolParametersUpdate era) where
+  fromCBOR =
+    shelleyBasedEraConstraints (shelleyBasedEra @era) $
+      fromLedgerPParamsUpdate shelleyBasedEra <$> fromCBOR
+
 data IntroducedInConwayPParams era
   = IntroducedInConwayPParams
   { icPoolVotingThresholds :: StrictMaybe Ledger.PoolVotingThresholds
@@ -237,7 +241,7 @@ data IntroducedInConwayPParams era
   , icDRepActivity :: StrictMaybe Ledger.EpochInterval
   , icMinFeeRefScriptCostPerByte :: StrictMaybe Ledger.NonNegativeInterval
   }
-  deriving Show
+  deriving (Eq, Show)
 
 createIntroducedInConwayPParams
   :: Ledger.ConwayEraPParams ledgerera
@@ -254,6 +258,23 @@ createIntroducedInConwayPParams IntroducedInConwayPParams{..} =
     & Ledger.ppuDRepDepositL .~ icDRepDeposit
     & Ledger.ppuDRepActivityL .~ icDRepActivity
     & Ledger.ppuMinFeeRefScriptCostPerByteL .~ icMinFeeRefScriptCostPerByte
+
+pparamsUpdateToIntroducedInConwayPParams
+  :: Ledger.ConwayEraPParams ledgerera
+  => Ledger.PParamsUpdate ledgerera
+  -> IntroducedInConwayPParams ledgerera
+pparamsUpdateToIntroducedInConwayPParams ppupdate =
+  IntroducedInConwayPParams
+    { icPoolVotingThresholds = ppupdate ^. Ledger.ppuPoolVotingThresholdsL
+    , icDRepVotingThresholds = ppupdate ^. Ledger.ppuDRepVotingThresholdsL
+    , icMinCommitteeSize = ppupdate ^. Ledger.ppuCommitteeMinSizeL
+    , icCommitteeTermLength = ppupdate ^. Ledger.ppuCommitteeMaxTermLengthL
+    , icGovActionLifetime = ppupdate ^. Ledger.ppuGovActionLifetimeL
+    , icGovActionDeposit = ppupdate ^. Ledger.ppuGovActionDepositL
+    , icDRepDeposit = ppupdate ^. Ledger.ppuDRepDepositL
+    , icDRepActivity = ppupdate ^. Ledger.ppuDRepActivityL
+    , icMinFeeRefScriptCostPerByte = ppupdate ^. Ledger.ppuMinFeeRefScriptCostPerByteL
+    }
 
 createEraBasedProtocolParamUpdate
   :: ShelleyBasedEra era
@@ -316,7 +337,7 @@ data CommonProtocolParametersUpdate
   , cppMonetaryExpansion :: StrictMaybe Ledger.UnitInterval
   , cppMinPoolCost :: StrictMaybe Ledger.Coin
   }
-  deriving Show
+  deriving (Eq, Show)
 
 -- | Create a protocol parameters update with parameters common to all eras
 createCommonPParamsUpdate
@@ -337,6 +358,26 @@ createCommonPParamsUpdate CommonProtocolParametersUpdate{..} =
     & Ledger.ppuRhoL .~ cppMonetaryExpansion
     & Ledger.ppuMinPoolCostL .~ cppMinPoolCost
 
+pparamsUpdateToCommonParametersUpdate
+  :: ShelleyBasedEra era -> Ledger.PParamsUpdate (ShelleyLedgerEra era) -> CommonProtocolParametersUpdate
+pparamsUpdateToCommonParametersUpdate sbe pparamsUpdate =
+  shelleyBasedEraConstraints sbe $
+    CommonProtocolParametersUpdate
+      { cppTxFeePerByteL = pparamsUpdate ^. Ledger.ppuTxFeePerByteL
+      , cppTxFeeFixedL = pparamsUpdate ^. Ledger.ppuTxFeeFixedL
+      , cppMaxBlockBodySize = pparamsUpdate ^. Ledger.ppuMaxBBSizeL
+      , cppMaxTxSize = pparamsUpdate ^. Ledger.ppuMaxTxSizeL
+      , cppMaxBlockHeaderSize = pparamsUpdate ^. Ledger.ppuMaxBHSizeL
+      , cppKeyDeposit = pparamsUpdate ^. Ledger.ppuKeyDepositL
+      , cppPoolDeposit = pparamsUpdate ^. Ledger.ppuPoolDepositL
+      , cppPoolRetireMaxEpoch = pparamsUpdate ^. Ledger.ppuEMaxL
+      , cppStakePoolTargetNum = pparamsUpdate ^. Ledger.ppuNOptL
+      , cppPoolPledgeInfluence = pparamsUpdate ^. Ledger.ppuA0L
+      , cppTreasuryExpansion = pparamsUpdate ^. Ledger.ppuTauL
+      , cppMonetaryExpansion = pparamsUpdate ^. Ledger.ppuRhoL
+      , cppMinPoolCost = pparamsUpdate ^. Ledger.ppuMinPoolCostL
+      }
+
 -- | Updating protocol version with PParamUpdate is being prevented in Conway
 -- (via the `ProtVerAtMost era 8` constraint in `ppuProtocolVersionL`).
 -- As a consequence, ppuProtocolVersionL cannot be used in `createCommonPParamsUpdate`,
@@ -350,15 +391,27 @@ createPreConwayProtocolVersionUpdate
 createPreConwayProtocolVersionUpdate (DeprecatedAfterBabbagePParams cppProtocolVersion) =
   Ledger.emptyPParamsUpdate & Ledger.ppuProtocolVersionL .~ cppProtocolVersion
 
-newtype DeprecatedAfterMaryPParams ledgerera
-  = DeprecatedAfterMaryPParams (StrictMaybe Ledger.Coin) -- Minimum UTxO value
-  deriving Show
-
 newtype DeprecatedAfterBabbagePParams ledgerera
   = DeprecatedAfterBabbagePParams (StrictMaybe Ledger.ProtVer)
-  deriving Show
+  deriving (Eq, Show)
+
+type MaxBabbageEra ledgerera = Ledger.ProtVerAtMost ledgerera 8
+
+pparamsUpdateToDeprecatedAfterBabbagePParams
+  :: MaxBabbageEra (ShelleyLedgerEra era)
+  => EraPParams (ShelleyLedgerEra era)
+  => ShelleyBasedEra era
+  -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+  -> DeprecatedAfterBabbagePParams ShelleyEra
+pparamsUpdateToDeprecatedAfterBabbagePParams _ ppupdate =
+  DeprecatedAfterBabbagePParams $
+    ppupdate ^. Ledger.ppuProtocolVersionL
 
 type MaxMaryEra ledgerera = Ledger.ProtVerAtMost ledgerera 4
+
+newtype DeprecatedAfterMaryPParams ledgerera
+  = DeprecatedAfterMaryPParams (StrictMaybe Ledger.Coin) -- Minimum UTxO value
+  deriving (Eq, Show)
 
 createDeprecatedAfterMaryPParams
   :: EraPParams (ShelleyLedgerEra era)
@@ -367,13 +420,21 @@ createDeprecatedAfterMaryPParams
 createDeprecatedAfterMaryPParams _ (DeprecatedAfterMaryPParams minUtxoVal) =
   Ledger.emptyPParamsUpdate & Ledger.ppuMinUTxOValueL .~ minUtxoVal
 
+pparamsUpdateToDeprecatedAfterMaryPParams
+  :: MaxMaryEra (ShelleyLedgerEra era)
+  => EraPParams (ShelleyLedgerEra era)
+  => ShelleyBasedEra era -> Ledger.PParamsUpdate (ShelleyLedgerEra era) -> DeprecatedAfterMaryPParams era
+pparamsUpdateToDeprecatedAfterMaryPParams _ ppupdate =
+  DeprecatedAfterMaryPParams $
+    ppupdate ^. Ledger.ppuMinUTxOValueL
+
 data ShelleyToAlonzoPParams ledgerera
   = ShelleyToAlonzoPParams
       (StrictMaybe Ledger.Nonce)
       -- ^ Extra entropy
       (StrictMaybe Ledger.UnitInterval)
       -- ^ Decentralization parameter
-  deriving Show
+  deriving (Eq, Show)
 
 type MaxAlonzoEra ledgerera = Ledger.ProtVerAtMost ledgerera 6
 
@@ -388,6 +449,17 @@ createDeprecatedAfterAlonzoPParams _ (ShelleyToAlonzoPParams extraEntropy decent
     & Ledger.ppuExtraEntropyL .~ extraEntropy
     & Ledger.ppuDL .~ decentralization
 
+pparamsUpdateToShelleyToAlonzoPParams
+  :: EraPParams (ShelleyLedgerEra era)
+  => MaxAlonzoEra (ShelleyLedgerEra era)
+  => ShelleyBasedEra era
+  -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+  -> ShelleyToAlonzoPParams era
+pparamsUpdateToShelleyToAlonzoPParams _ pparamUpdate =
+  ShelleyToAlonzoPParams
+    (pparamUpdate ^. Ledger.ppuExtraEntropyL)
+    (pparamUpdate ^. Ledger.ppuDL)
+
 data AlonzoOnwardsPParams ledgerera
   = AlonzoOnwardsPParams
   { alCostModels :: StrictMaybe Alonzo.CostModels
@@ -398,7 +470,7 @@ data AlonzoOnwardsPParams ledgerera
   , alCollateralPercentage :: StrictMaybe Word16
   , alMaxCollateralInputs :: StrictMaybe Word16
   }
-  deriving Show
+  deriving (Eq, Show)
 
 createPParamsUpdateIntroducedInAlonzo
   :: ()
@@ -416,11 +488,27 @@ createPParamsUpdateIntroducedInAlonzo w (AlonzoOnwardsPParams{..}) =
       & Ledger.ppuCollateralPercentageL .~ alCollateralPercentage
       & Ledger.ppuMaxCollateralInputsL .~ alMaxCollateralInputs
 
+pparamsUpdateToAlonzoOnwardsPParams
+  :: AlonzoEraOnwards era
+  -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+  -> AlonzoOnwardsPParams era
+pparamsUpdateToAlonzoOnwardsPParams w ppupdate =
+  alonzoEraOnwardsConstraints w $
+    AlonzoOnwardsPParams
+      { alCostModels = ppupdate ^. Ledger.ppuCostModelsL
+      , alPrices = ppupdate ^. Ledger.ppuPricesL
+      , alMaxTxExUnits = ppupdate ^. Ledger.ppuMaxTxExUnitsL
+      , alMaxBlockExUnits = ppupdate ^. Ledger.ppuMaxBlockExUnitsL
+      , alMaxValSize = ppupdate ^. Ledger.ppuMaxValSizeL
+      , alCollateralPercentage = ppupdate ^. Ledger.ppuCollateralPercentageL
+      , alMaxCollateralInputs = ppupdate ^. Ledger.ppuMaxCollateralInputsL
+      }
+
 newtype IntroducedInBabbagePParams era
   = -- | Coins per UTxO byte
     IntroducedInBabbagePParams
       (StrictMaybe CoinPerByte)
-  deriving Show
+  deriving (Eq, Show)
 
 createIntroducedInBabbagePParams
   :: ()
@@ -430,6 +518,14 @@ createIntroducedInBabbagePParams
 createIntroducedInBabbagePParams w (IntroducedInBabbagePParams coinsPerUTxOByte) =
   babbageEraOnwardsConstraints w $
     Ledger.emptyPParamsUpdate & Ledger.ppuCoinsPerUTxOByteL .~ coinsPerUTxOByte
+
+pparamsUpdateToIntroducedInBabbagePParams
+  :: BabbageEraOnwards era
+  -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+  -> IntroducedInBabbagePParams era
+pparamsUpdateToIntroducedInBabbagePParams w ppupdate =
+  babbageEraOnwardsConstraints w $
+    IntroducedInBabbagePParams (ppupdate ^. Ledger.ppuCoinsPerUTxOByteL)
 
 -- | The values of the set of /updatable/ protocol parameters. At any
 -- particular point on the chain there is a current set of parameters in use.
@@ -629,258 +725,6 @@ instance ToJSON ProtocolParameters where
       ]
 
 -- ----------------------------------------------------------------------------
--- Updates to the protocol parameters
---
-
--- | The representation of a change in the 'ProtocolParameters'.
-data ProtocolParametersUpdate
-  = ProtocolParametersUpdate
-  { protocolUpdateProtocolVersion :: Maybe (Natural, Natural)
-  -- ^ Protocol version, major and minor. Updating the major version is
-  -- used to trigger hard forks.
-  , protocolUpdateDecentralization :: Maybe Rational
-  -- ^ The decentralization parameter. This is fraction of slots that
-  -- belong to the BFT overlay schedule, rather than the Praos schedule.
-  -- So 1 means fully centralised, while 0 means fully decentralised.
-  --
-  -- This is the \"d\" parameter from the design document.
-  , protocolUpdateExtraPraosEntropy :: Maybe (Maybe PraosNonce)
-  -- ^ Extra entropy for the Praos per-epoch nonce.
-  --
-  -- This can be used to add extra entropy during the decentralisation
-  -- process. If the extra entropy can be demonstrated to be generated
-  -- randomly then this method can be used to show that the initial
-  -- federated operators did not subtly bias the initial schedule so that
-  -- they retain undue influence after decentralisation.
-  , protocolUpdateMaxBlockHeaderSize :: Maybe Word16
-  -- ^ The maximum permitted size of a block header.
-  --
-  -- This must be at least as big as the largest legitimate block headers
-  -- but should not be too much larger, to help prevent DoS attacks.
-  --
-  -- Caution: setting this to be smaller than legitimate block headers is
-  -- a sure way to brick the system!
-  , protocolUpdateMaxBlockBodySize :: Maybe Word32
-  -- ^ The maximum permitted size of the block body (that is, the block
-  -- payload, without the block header).
-  --
-  -- This should be picked with the Praos network delta security parameter
-  -- in mind. Making this too large can severely weaken the Praos
-  -- consensus properties.
-  --
-  -- Caution: setting this to be smaller than a transaction that can
-  -- change the protocol parameters is a sure way to brick the system!
-  , protocolUpdateMaxTxSize :: Maybe Word32
-  -- ^ The maximum permitted size of a transaction.
-  --
-  -- Typically this should not be too high a fraction of the block size,
-  -- otherwise wastage from block fragmentation becomes a problem, and
-  -- the current implementation does not use any sophisticated box packing
-  -- algorithm.
-  , protocolUpdateTxFeeFixed :: Maybe L.Coin
-  -- ^ The constant factor for the minimum fee calculation.
-  , protocolUpdateTxFeePerByte :: Maybe L.Coin -- TODO: consider using Ledger.CoinPerByte
-
-  -- ^ The linear factor for the minimum fee calculation.
-  , protocolUpdateMinUTxOValue :: Maybe L.Coin
-  -- ^ The minimum permitted value for new UTxO entries, ie for
-  -- transaction outputs.
-  , protocolUpdateStakeAddressDeposit :: Maybe L.Coin
-  -- ^ The deposit required to register a stake address.
-  , protocolUpdateStakePoolDeposit :: Maybe L.Coin
-  -- ^ The deposit required to register a stake pool.
-  , protocolUpdateMinPoolCost :: Maybe L.Coin
-  -- ^ The minimum value that stake pools are permitted to declare for
-  -- their cost parameter.
-  , protocolUpdatePoolRetireMaxEpoch :: Maybe Ledger.EpochInterval
-  -- ^ The maximum number of epochs into the future that stake pools
-  -- are permitted to schedule a retirement.
-  , protocolUpdateStakePoolTargetNum :: Maybe Word16
-  -- ^ The equilibrium target number of stake pools.
-  --
-  -- This is the \"k\" incentives parameter from the design document.
-  , protocolUpdatePoolPledgeInfluence :: Maybe Rational
-  -- ^ The influence of the pledge in stake pool rewards.
-  --
-  -- This is the \"a_0\" incentives parameter from the design document.
-  , protocolUpdateMonetaryExpansion :: Maybe Rational
-  -- ^ The monetary expansion rate. This determines the fraction of the
-  -- reserves that are added to the fee pot each epoch.
-  --
-  -- This is the \"rho\" incentives parameter from the design document.
-  , protocolUpdateTreasuryCut :: Maybe Rational
-  -- ^ The fraction of the fee pot each epoch that goes to the treasury.
-  --
-  -- This is the \"tau\" incentives parameter from the design document.
-  , -- Introduced in Alonzo,
-
-    protocolUpdateCostModels :: Map AnyPlutusScriptVersion CostModel
-  -- ^ Cost models for script languages that use them.
-  --
-  -- /Introduced in Alonzo/
-  , protocolUpdatePrices :: Maybe ExecutionUnitPrices
-  -- ^ Price of execution units for script languages that use them.
-  --
-  -- /Introduced in Alonzo/
-  , protocolUpdateMaxTxExUnits :: Maybe ExecutionUnits
-  -- ^ Max total script execution resources units allowed per tx
-  --
-  -- /Introduced in Alonzo/
-  , protocolUpdateMaxBlockExUnits :: Maybe ExecutionUnits
-  -- ^ Max total script execution resources units allowed per block
-  --
-  -- /Introduced in Alonzo/
-  , protocolUpdateMaxValueSize :: Maybe Word32
-  -- ^ Max size of a 'Value' in a tx output.
-  --
-  -- /Introduced in Alonzo/
-  , protocolUpdateCollateralPercent :: Maybe Word16
-  -- ^ The percentage of the script contribution to the txfee that must be
-  -- provided as collateral inputs when including Plutus scripts.
-  --
-  -- /Introduced in Alonzo/
-  , protocolUpdateMaxCollateralInputs :: Maybe Word16
-  -- ^ The maximum number of collateral inputs allowed in a transaction.
-  --
-  -- /Introduced in Alonzo/
-  , protocolUpdateUTxOCostPerByte :: Maybe L.Coin
-  -- ^ Cost in ada per byte of UTxO storage.
-  --
-  -- /Introduced in Babbage/
-  }
-  deriving (Eq, Show)
-
-instance Semigroup ProtocolParametersUpdate where
-  ppu1 <> ppu2 =
-    ProtocolParametersUpdate
-      { protocolUpdateProtocolVersion = merge protocolUpdateProtocolVersion
-      , protocolUpdateDecentralization = merge protocolUpdateDecentralization
-      , protocolUpdateExtraPraosEntropy = merge protocolUpdateExtraPraosEntropy
-      , protocolUpdateMaxBlockHeaderSize = merge protocolUpdateMaxBlockHeaderSize
-      , protocolUpdateMaxBlockBodySize = merge protocolUpdateMaxBlockBodySize
-      , protocolUpdateMaxTxSize = merge protocolUpdateMaxTxSize
-      , protocolUpdateTxFeeFixed = merge protocolUpdateTxFeeFixed
-      , protocolUpdateTxFeePerByte = merge protocolUpdateTxFeePerByte
-      , protocolUpdateMinUTxOValue = merge protocolUpdateMinUTxOValue
-      , protocolUpdateStakeAddressDeposit = merge protocolUpdateStakeAddressDeposit
-      , protocolUpdateStakePoolDeposit = merge protocolUpdateStakePoolDeposit
-      , protocolUpdateMinPoolCost = merge protocolUpdateMinPoolCost
-      , protocolUpdatePoolRetireMaxEpoch = merge protocolUpdatePoolRetireMaxEpoch
-      , protocolUpdateStakePoolTargetNum = merge protocolUpdateStakePoolTargetNum
-      , protocolUpdatePoolPledgeInfluence = merge protocolUpdatePoolPledgeInfluence
-      , protocolUpdateMonetaryExpansion = merge protocolUpdateMonetaryExpansion
-      , protocolUpdateTreasuryCut = merge protocolUpdateTreasuryCut
-      , -- Introduced in Alonzo below.
-        protocolUpdateCostModels = mergeMap protocolUpdateCostModels
-      , protocolUpdatePrices = merge protocolUpdatePrices
-      , protocolUpdateMaxTxExUnits = merge protocolUpdateMaxTxExUnits
-      , protocolUpdateMaxBlockExUnits = merge protocolUpdateMaxBlockExUnits
-      , protocolUpdateMaxValueSize = merge protocolUpdateMaxValueSize
-      , protocolUpdateCollateralPercent = merge protocolUpdateCollateralPercent
-      , protocolUpdateMaxCollateralInputs = merge protocolUpdateMaxCollateralInputs
-      , -- Introduced in Babbage below.
-        protocolUpdateUTxOCostPerByte = merge protocolUpdateUTxOCostPerByte
-      }
-   where
-    -- prefer the right hand side:
-    merge :: (ProtocolParametersUpdate -> Maybe a) -> Maybe a
-    merge f = f ppu2 `mplus` f ppu1
-
-    -- prefer the right hand side:
-    mergeMap :: Ord k => (ProtocolParametersUpdate -> Map k a) -> Map k a
-    mergeMap f = f ppu2 `Map.union` f ppu1
-
-instance Monoid ProtocolParametersUpdate where
-  mempty =
-    ProtocolParametersUpdate
-      { protocolUpdateProtocolVersion = Nothing
-      , protocolUpdateDecentralization = Nothing
-      , protocolUpdateExtraPraosEntropy = Nothing
-      , protocolUpdateMaxBlockHeaderSize = Nothing
-      , protocolUpdateMaxBlockBodySize = Nothing
-      , protocolUpdateMaxTxSize = Nothing
-      , protocolUpdateTxFeeFixed = Nothing
-      , protocolUpdateTxFeePerByte = Nothing
-      , protocolUpdateMinUTxOValue = Nothing
-      , protocolUpdateStakeAddressDeposit = Nothing
-      , protocolUpdateStakePoolDeposit = Nothing
-      , protocolUpdateMinPoolCost = Nothing
-      , protocolUpdatePoolRetireMaxEpoch = Nothing
-      , protocolUpdateStakePoolTargetNum = Nothing
-      , protocolUpdatePoolPledgeInfluence = Nothing
-      , protocolUpdateMonetaryExpansion = Nothing
-      , protocolUpdateTreasuryCut = Nothing
-      , protocolUpdateCostModels = mempty
-      , protocolUpdatePrices = Nothing
-      , protocolUpdateMaxTxExUnits = Nothing
-      , protocolUpdateMaxBlockExUnits = Nothing
-      , protocolUpdateMaxValueSize = Nothing
-      , protocolUpdateCollateralPercent = Nothing
-      , protocolUpdateMaxCollateralInputs = Nothing
-      , protocolUpdateUTxOCostPerByte = Nothing
-      }
-
-instance ToCBOR ProtocolParametersUpdate where
-  toCBOR :: ProtocolParametersUpdate -> CBOR.Encoding
-  toCBOR ProtocolParametersUpdate{..} =
-    CBOR.encodeListLen 26
-      <> toCBOR protocolUpdateProtocolVersion
-      <> toCBOR protocolUpdateDecentralization
-      <> toCBOR protocolUpdateExtraPraosEntropy
-      <> toCBOR protocolUpdateMaxBlockHeaderSize
-      <> toCBOR protocolUpdateMaxBlockBodySize
-      <> toCBOR protocolUpdateMaxTxSize
-      <> toCBOR protocolUpdateTxFeeFixed
-      <> toCBOR protocolUpdateTxFeePerByte
-      <> toCBOR protocolUpdateMinUTxOValue
-      <> toCBOR protocolUpdateStakeAddressDeposit
-      <> toCBOR protocolUpdateStakePoolDeposit
-      <> toCBOR protocolUpdateMinPoolCost
-      <> toCBOR protocolUpdatePoolRetireMaxEpoch
-      <> toCBOR protocolUpdateStakePoolTargetNum
-      <> toCBOR protocolUpdatePoolPledgeInfluence
-      <> toCBOR protocolUpdateMonetaryExpansion
-      <> toCBOR protocolUpdateTreasuryCut
-      <> toCBOR protocolUpdateCostModels
-      <> toCBOR protocolUpdatePrices
-      <> toCBOR protocolUpdateMaxTxExUnits
-      <> toCBOR protocolUpdateMaxBlockExUnits
-      <> toCBOR protocolUpdateMaxValueSize
-      <> toCBOR protocolUpdateCollateralPercent
-      <> toCBOR protocolUpdateMaxCollateralInputs
-      <> toCBOR protocolUpdateUTxOCostPerByte
-
-instance FromCBOR ProtocolParametersUpdate where
-  fromCBOR = do
-    CBOR.enforceSize "ProtocolParametersUpdate" 26
-    ProtocolParametersUpdate
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-
--- ----------------------------------------------------------------------------
 -- Praos nonce
 --
 
@@ -908,10 +752,6 @@ makePraosNonce = PraosNonce . Crypto.hashWith id
 toLedgerNonce :: Maybe PraosNonce -> Ledger.Nonce
 toLedgerNonce Nothing = Ledger.NeutralNonce
 toLedgerNonce (Just (PraosNonce h)) = Ledger.Nonce (Crypto.castHash h)
-
-fromLedgerNonce :: Ledger.Nonce -> Maybe PraosNonce
-fromLedgerNonce Ledger.NeutralNonce = Nothing
-fromLedgerNonce (Ledger.Nonce h) = Just (PraosNonce (Crypto.castHash h))
 
 -- ----------------------------------------------------------------------------
 -- Script execution unit prices and cost models
@@ -1042,38 +882,38 @@ fromAlonzoCostModel m = CostModel $ Alonzo.getCostModelParams m
 -- Proposals embedded in transactions to update protocol parameters
 --
 
-data UpdateProposal
+data UpdateProposal era
   = UpdateProposal
-      !(Map (Hash GenesisKey) ProtocolParametersUpdate)
+      !(Map (Hash GenesisKey) (EraBasedProtocolParametersUpdate era))
       !EpochNo
   deriving stock (Eq, Show)
   deriving anyclass SerialiseAsCBOR
 
-instance HasTypeProxy UpdateProposal where
-  data AsType UpdateProposal = AsUpdateProposal
+instance Typeable era => HasTypeProxy (UpdateProposal era) where
+  data AsType (UpdateProposal era) = AsUpdateProposal
   proxyToAsType _ = AsUpdateProposal
 
-instance HasTextEnvelope UpdateProposal where
+instance IsShelleyBasedEra era => HasTextEnvelope (UpdateProposal era) where
   textEnvelopeType _ = "UpdateProposalShelley"
 
-instance ToCBOR UpdateProposal where
+instance IsShelleyBasedEra era => ToCBOR (UpdateProposal era) where
   toCBOR (UpdateProposal ppup epochno) =
     CBOR.encodeListLen 2
       <> toCBOR ppup
       <> toCBOR epochno
 
-instance FromCBOR UpdateProposal where
+instance IsShelleyBasedEra era => FromCBOR (UpdateProposal era) where
   fromCBOR = do
-    CBOR.enforceSize "ProtocolParametersUpdate" 2
+    CBOR.enforceSize "UpdateProposal" 2
     UpdateProposal
       <$> fromCBOR
       <*> fromCBOR
 
 makeShelleyUpdateProposal
-  :: ProtocolParametersUpdate
+  :: EraBasedProtocolParametersUpdate era
   -> [Hash GenesisKey]
   -> EpochNo
-  -> UpdateProposal
+  -> UpdateProposal era
 makeShelleyUpdateProposal params genesisKeyHashes =
   -- TODO decide how to handle parameter validation
   --     for example we need to validate the Rational values can convert
@@ -1084,193 +924,6 @@ makeShelleyUpdateProposal params genesisKeyHashes =
 -- Conversion functions: updates to ledger types
 --
 
-toLedgerUpdate
-  :: ()
-  => ShelleyBasedEra era
-  -> UpdateProposal
-  -> Either ProtocolParametersConversionError (Ledger.Update (ShelleyLedgerEra era))
-toLedgerUpdate sbe (UpdateProposal ppup epochno) =
-  (`Ledger.Update` epochno) <$> toLedgerProposedPPUpdates sbe ppup
-
-toLedgerProposedPPUpdates
-  :: ()
-  => ShelleyBasedEra era
-  -> Map (Hash GenesisKey) ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (Ledger.ProposedPPUpdates (ShelleyLedgerEra era))
-toLedgerProposedPPUpdates sbe m =
-  shelleyBasedEraConstraints sbe $
-    Ledger.ProposedPPUpdates . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
-      <$> traverse (toLedgerPParamsUpdate sbe) m
-
-toLedgerPParamsUpdate
-  :: ShelleyBasedEra era
-  -> ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (PParamsUpdate (ShelleyLedgerEra era))
-toLedgerPParamsUpdate ShelleyBasedEraShelley = toShelleyPParamsUpdate
-toLedgerPParamsUpdate ShelleyBasedEraAllegra = toShelleyPParamsUpdate
-toLedgerPParamsUpdate ShelleyBasedEraMary = toShelleyPParamsUpdate
-toLedgerPParamsUpdate ShelleyBasedEraAlonzo = toAlonzoPParamsUpdate
-toLedgerPParamsUpdate ShelleyBasedEraBabbage = toBabbagePParamsUpdate
-toLedgerPParamsUpdate ShelleyBasedEraConway = toConwayPParamsUpdate
-toLedgerPParamsUpdate ShelleyBasedEraDijkstra = toConwayPParamsUpdate
-
-toShelleyCommonPParamsUpdate
-  :: EraPParams ledgerera
-  => ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
-toShelleyCommonPParamsUpdate
-  ProtocolParametersUpdate
-    { protocolUpdateMaxBlockHeaderSize
-    , protocolUpdateMaxBlockBodySize
-    , protocolUpdateMaxTxSize
-    , protocolUpdateTxFeeFixed
-    , protocolUpdateTxFeePerByte
-    , protocolUpdateStakeAddressDeposit
-    , protocolUpdateStakePoolDeposit
-    , protocolUpdateMinPoolCost
-    , protocolUpdatePoolRetireMaxEpoch
-    , protocolUpdateStakePoolTargetNum
-    , protocolUpdatePoolPledgeInfluence
-    , protocolUpdateMonetaryExpansion
-    , protocolUpdateTreasuryCut
-    } = do
-    a0 <- mapM (boundRationalEither "A0") protocolUpdatePoolPledgeInfluence
-    rho <- mapM (boundRationalEither "Rho") protocolUpdateMonetaryExpansion
-    tau <- mapM (boundRationalEither "Tau") protocolUpdateTreasuryCut
-    let ppuCommon =
-          emptyPParamsUpdate
-            & ppuTxFeePerByteL .~ noInlineMaybeToStrictMaybe (unsafeToCoinPerByte <$> protocolUpdateTxFeePerByte)
-            & ppuTxFeeFixedL .~ noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed
-            & ppuMaxBBSizeL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxBlockBodySize
-            & ppuMaxTxSizeL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxTxSize
-            & ppuMaxBHSizeL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxBlockHeaderSize
-            & ppuKeyDepositL .~ noInlineMaybeToStrictMaybe protocolUpdateStakeAddressDeposit
-            & ppuPoolDepositL .~ noInlineMaybeToStrictMaybe protocolUpdateStakePoolDeposit
-            & ppuEMaxL .~ noInlineMaybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
-            & ppuNOptL .~ noInlineMaybeToStrictMaybe protocolUpdateStakePoolTargetNum
-            & ppuA0L .~ noInlineMaybeToStrictMaybe a0
-            & ppuRhoL .~ noInlineMaybeToStrictMaybe rho
-            & ppuTauL .~ noInlineMaybeToStrictMaybe tau
-            & ppuMinPoolCostL .~ noInlineMaybeToStrictMaybe protocolUpdateMinPoolCost
-    pure ppuCommon
-   where
-    -- TODO: instead, use 'CoinPerByte' in 'ProtocolParametersUpdate'
-    unsafeToCoinPerByte = Ledger.CoinPerByte . Ledger.toCompactPartial
-
-toShelleyPParamsUpdate
-  :: ( EraPParams ledgerera
-     , Ledger.AtMostEra "Mary" ledgerera
-     , Ledger.AtMostEra "Alonzo" ledgerera
-     , Ledger.AtMostEra "Babbage" ledgerera
-     )
-  => ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
-toShelleyPParamsUpdate
-  protocolParametersUpdate@ProtocolParametersUpdate
-    { protocolUpdateProtocolVersion
-    , protocolUpdateDecentralization
-    , protocolUpdateExtraPraosEntropy
-    , protocolUpdateMinUTxOValue
-    } = do
-    ppuCommon <- toShelleyCommonPParamsUpdate protocolParametersUpdate
-    d <- mapM (boundRationalEither "D") protocolUpdateDecentralization
-    protVer <- mapM mkProtVer protocolUpdateProtocolVersion
-    let ppuShelley =
-          ppuCommon
-            & ppuDL .~ noInlineMaybeToStrictMaybe d
-            & ppuExtraEntropyL
-              .~ (toLedgerNonce <$> noInlineMaybeToStrictMaybe protocolUpdateExtraPraosEntropy)
-            & ppuMinUTxOValueL .~ noInlineMaybeToStrictMaybe protocolUpdateMinUTxOValue
-            & ppuProtocolVersionL .~ noInlineMaybeToStrictMaybe protVer
-    pure ppuShelley
-
-toAlonzoCommonPParamsUpdate
-  :: AlonzoEraPParams ledgerera
-  => ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
-toAlonzoCommonPParamsUpdate
-  protocolParametersUpdate@ProtocolParametersUpdate
-    { protocolUpdateCostModels
-    , protocolUpdatePrices
-    , protocolUpdateMaxTxExUnits
-    , protocolUpdateMaxBlockExUnits
-    , protocolUpdateMaxValueSize
-    , protocolUpdateCollateralPercent
-    , protocolUpdateMaxCollateralInputs
-    } = do
-    ppuShelleyCommon <- toShelleyCommonPParamsUpdate protocolParametersUpdate
-    costModels <-
-      if Map.null protocolUpdateCostModels
-        then pure SNothing
-        else SJust <$> toAlonzoCostModels protocolUpdateCostModels
-    prices <- mapM toAlonzoPrices protocolUpdatePrices
-    let ppuAlonzoCommon =
-          ppuShelleyCommon
-            & ppuCostModelsL .~ costModels
-            & ppuPricesL .~ noInlineMaybeToStrictMaybe prices
-            & ppuMaxTxExUnitsL
-              .~ (toAlonzoExUnits <$> noInlineMaybeToStrictMaybe protocolUpdateMaxTxExUnits)
-            & ppuMaxBlockExUnitsL
-              .~ (toAlonzoExUnits <$> noInlineMaybeToStrictMaybe protocolUpdateMaxBlockExUnits)
-            & ppuMaxValSizeL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxValueSize
-            & ppuCollateralPercentageL .~ noInlineMaybeToStrictMaybe protocolUpdateCollateralPercent
-            & ppuMaxCollateralInputsL .~ noInlineMaybeToStrictMaybe protocolUpdateMaxCollateralInputs
-    pure ppuAlonzoCommon
-
-toAlonzoPParamsUpdate
-  :: ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (PParamsUpdate Ledger.AlonzoEra)
-toAlonzoPParamsUpdate
-  protocolParametersUpdate@ProtocolParametersUpdate
-    { protocolUpdateProtocolVersion
-    , protocolUpdateDecentralization
-    } = do
-    ppuAlonzoCommon <- toAlonzoCommonPParamsUpdate protocolParametersUpdate
-    d <- mapM (boundRationalEither "D") protocolUpdateDecentralization
-    protVer <- mapM mkProtVer protocolUpdateProtocolVersion
-    let ppuAlonzo =
-          ppuAlonzoCommon
-            & ppuDL .~ noInlineMaybeToStrictMaybe d
-            & ppuProtocolVersionL .~ noInlineMaybeToStrictMaybe protVer
-    pure ppuAlonzo
-
-toBabbageCommonPParamsUpdate
-  :: BabbageEraPParams ledgerera
-  => ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (Ledger.PParamsUpdate ledgerera)
-toBabbageCommonPParamsUpdate
-  protocolParametersUpdate@ProtocolParametersUpdate
-    { protocolUpdateUTxOCostPerByte
-    } = do
-    ppuAlonzoCommon <- toAlonzoCommonPParamsUpdate protocolParametersUpdate
-    let ppuBabbage =
-          ppuAlonzoCommon
-            & ppuCoinsPerUTxOByteL
-              .~ fmap (CoinPerByte . unsafeToCompact) (noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte)
-    pure ppuBabbage
-   where
-    -- TODO: instead, use CompactCoin in ProtocolParametersUpdate
-    unsafeToCompact = Ledger.toCompactPartial
-
-toBabbagePParamsUpdate
-  :: ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (Ledger.PParamsUpdate Ledger.BabbageEra)
-toBabbagePParamsUpdate
-  protocolParametersUpdate@ProtocolParametersUpdate
-    { protocolUpdateProtocolVersion
-    } = do
-    ppuBabbageCommon <- toBabbageCommonPParamsUpdate protocolParametersUpdate
-    protVer <- mapM mkProtVer protocolUpdateProtocolVersion
-    let ppuBabbage =
-          ppuBabbageCommon
-            & ppuProtocolVersionL .~ noInlineMaybeToStrictMaybe protVer
-    pure ppuBabbage
-
-mkProtVer :: (Natural, Natural) -> Either ProtocolParametersConversionError Ledger.ProtVer
-mkProtVer (majorProtVer, minorProtVer) =
-  maybeToRight (PpceVersionInvalid majorProtVer) $
-    (`Ledger.ProtVer` minorProtVer) <$> Ledger.mkVersion majorProtVer
-
 boundRationalEither
   :: Ledger.BoundedRational b
   => String
@@ -1278,12 +931,23 @@ boundRationalEither
   -> Either ProtocolParametersConversionError b
 boundRationalEither name r = maybeToRight (PpceOutOfBounds name r) $ Ledger.boundRational r
 
--- Conway uses the same PParams as Babbage for now.
-toConwayPParamsUpdate
-  :: BabbageEraPParams ledgerera
-  => ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
-toConwayPParamsUpdate = toBabbageCommonPParamsUpdate
+toLedgerUpdate
+  :: ()
+  => ShelleyBasedEra era
+  -> UpdateProposal era
+  -> Ledger.Update (ShelleyLedgerEra era)
+toLedgerUpdate sbe (UpdateProposal ppup epochno) =
+  Ledger.Update (toLedgerProposedPPUpdates sbe ppup) epochno
+
+toLedgerProposedPPUpdates
+  :: ()
+  => ShelleyBasedEra era
+  -> Map (Hash GenesisKey) (EraBasedProtocolParametersUpdate era)
+  -> Ledger.ProposedPPUpdates (ShelleyLedgerEra era)
+toLedgerProposedPPUpdates sbe m =
+  Ledger.ProposedPPUpdates $
+    Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh) $
+      Map.map (createEraBasedProtocolParamUpdate sbe) m
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions: updates from ledger types
@@ -1294,7 +958,7 @@ fromLedgerUpdate
    . ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> Ledger.Update ledgerera
-  -> UpdateProposal
+  -> UpdateProposal era
 fromLedgerUpdate sbe (Ledger.Update ppup epochno) =
   UpdateProposal (fromLedgerProposedPPUpdates sbe ppup) epochno
 
@@ -1303,7 +967,7 @@ fromLedgerProposedPPUpdates
    . ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> Ledger.ProposedPPUpdates ledgerera
-  -> Map (Hash GenesisKey) ProtocolParametersUpdate
+  -> Map (Hash GenesisKey) (EraBasedProtocolParametersUpdate era)
 fromLedgerProposedPPUpdates sbe =
   Map.map (fromLedgerPParamsUpdate sbe)
     . Map.mapKeysMonotonic GenesisKeyHash
@@ -1312,132 +976,42 @@ fromLedgerProposedPPUpdates sbe =
 fromLedgerPParamsUpdate
   :: ShelleyBasedEra era
   -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
-  -> ProtocolParametersUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraShelley = fromShelleyPParamsUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraAllegra = fromShelleyPParamsUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraMary = fromShelleyPParamsUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraAlonzo = fromAlonzoPParamsUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraBabbage = fromBabbagePParamsUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraConway = fromConwayPParamsUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraDijkstra = fromConwayPParamsUpdate
-
-fromShelleyCommonPParamsUpdate
-  :: EraPParams ledgerera
-  => PParamsUpdate ledgerera
-  -> ProtocolParametersUpdate
-fromShelleyCommonPParamsUpdate ppu =
-  ProtocolParametersUpdate
-    { protocolUpdateProtocolVersion = Nothing
-    , protocolUpdateMaxBlockHeaderSize = strictMaybeToMaybe (ppu ^. ppuMaxBHSizeL)
-    , protocolUpdateMaxBlockBodySize = strictMaybeToMaybe (ppu ^. ppuMaxBBSizeL)
-    , protocolUpdateMaxTxSize = strictMaybeToMaybe (ppu ^. ppuMaxTxSizeL)
-    , protocolUpdateTxFeeFixed = strictMaybeToMaybe (ppu ^. ppuTxFeeFixedL)
-    , protocolUpdateTxFeePerByte =
-        Ledger.fromCompact . unCoinPerByte <$> strictMaybeToMaybe (ppu ^. ppuTxFeePerByteL)
-    , protocolUpdateStakeAddressDeposit = strictMaybeToMaybe (ppu ^. ppuKeyDepositL)
-    , protocolUpdateStakePoolDeposit = strictMaybeToMaybe (ppu ^. ppuPoolDepositL)
-    , protocolUpdateMinPoolCost = strictMaybeToMaybe (ppu ^. ppuMinPoolCostL)
-    , protocolUpdatePoolRetireMaxEpoch = strictMaybeToMaybe (ppu ^. ppuEMaxL)
-    , protocolUpdateStakePoolTargetNum = strictMaybeToMaybe (ppu ^. ppuNOptL)
-    , protocolUpdatePoolPledgeInfluence = Ledger.unboundRational <$> strictMaybeToMaybe (ppu ^. ppuA0L)
-    , protocolUpdateMonetaryExpansion = Ledger.unboundRational <$> strictMaybeToMaybe (ppu ^. ppuRhoL)
-    , protocolUpdateTreasuryCut = Ledger.unboundRational <$> strictMaybeToMaybe (ppu ^. ppuTauL)
-    , protocolUpdateCostModels = mempty
-    , protocolUpdatePrices = Nothing
-    , protocolUpdateMaxTxExUnits = Nothing
-    , protocolUpdateMaxBlockExUnits = Nothing
-    , protocolUpdateMaxValueSize = Nothing
-    , protocolUpdateCollateralPercent = Nothing
-    , protocolUpdateMaxCollateralInputs = Nothing
-    , protocolUpdateUTxOCostPerByte = Nothing
-    , protocolUpdateDecentralization = Nothing
-    , protocolUpdateExtraPraosEntropy = Nothing
-    , protocolUpdateMinUTxOValue = Nothing
-    }
-
-fromShelleyPParamsUpdate
-  :: ( EraPParams ledgerera
-     , Ledger.AtMostEra "Mary" ledgerera
-     , Ledger.AtMostEra "Alonzo" ledgerera
-     , Ledger.AtMostEra "Babbage" ledgerera
-     )
-  => PParamsUpdate ledgerera
-  -> ProtocolParametersUpdate
-fromShelleyPParamsUpdate ppu =
-  (fromShelleyCommonPParamsUpdate ppu)
-    { protocolUpdateProtocolVersion =
-        (\(Ledger.ProtVer a b) -> (Ledger.getVersion a, b))
-          <$> strictMaybeToMaybe (ppu ^. ppuProtocolVersionL)
-    , protocolUpdateDecentralization =
-        Ledger.unboundRational
-          <$> strictMaybeToMaybe (ppu ^. ppuDL)
-    , protocolUpdateExtraPraosEntropy =
-        fromLedgerNonce
-          <$> strictMaybeToMaybe (ppu ^. ppuExtraEntropyL)
-    , protocolUpdateMinUTxOValue = strictMaybeToMaybe (ppu ^. ppuMinUTxOValueL)
-    }
-
-fromAlonzoCommonPParamsUpdate
-  :: AlonzoEraPParams ledgerera
-  => PParamsUpdate ledgerera
-  -> ProtocolParametersUpdate
-fromAlonzoCommonPParamsUpdate ppu =
-  (fromShelleyCommonPParamsUpdate ppu)
-    { protocolUpdateCostModels =
-        maybe
-          mempty
-          fromAlonzoCostModels
-          (strictMaybeToMaybe (ppu ^. ppuCostModelsL))
-    , protocolUpdatePrices =
-        fromAlonzoPrices
-          <$> strictMaybeToMaybe (ppu ^. ppuPricesL)
-    , protocolUpdateMaxTxExUnits =
-        fromAlonzoExUnits
-          <$> strictMaybeToMaybe (ppu ^. ppuMaxTxExUnitsL)
-    , protocolUpdateMaxBlockExUnits =
-        fromAlonzoExUnits
-          <$> strictMaybeToMaybe (ppu ^. ppuMaxBlockExUnitsL)
-    , protocolUpdateMaxValueSize = strictMaybeToMaybe (ppu ^. ppuMaxValSizeL)
-    , protocolUpdateCollateralPercent = strictMaybeToMaybe (ppu ^. ppuCollateralPercentageL)
-    , protocolUpdateMaxCollateralInputs = strictMaybeToMaybe (ppu ^. ppuMaxCollateralInputsL)
-    , protocolUpdateUTxOCostPerByte = Nothing
-    }
-
-fromAlonzoPParamsUpdate
-  :: PParamsUpdate Ledger.AlonzoEra
-  -> ProtocolParametersUpdate
-fromAlonzoPParamsUpdate ppu =
-  (fromAlonzoCommonPParamsUpdate ppu)
-    { protocolUpdateProtocolVersion =
-        (\(Ledger.ProtVer a b) -> (Ledger.getVersion a, b))
-          <$> strictMaybeToMaybe (ppu ^. ppuProtocolVersionL)
-    }
-
-fromBabbageCommonPParamsUpdate
-  :: BabbageEraPParams ledgerera
-  => PParamsUpdate ledgerera
-  -> ProtocolParametersUpdate
-fromBabbageCommonPParamsUpdate ppu =
-  (fromAlonzoCommonPParamsUpdate ppu)
-    { protocolUpdateUTxOCostPerByte =
-        Ledger.fromCompact . unCoinPerByte <$> strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
-    }
-
-fromBabbagePParamsUpdate
-  :: PParamsUpdate Ledger.BabbageEra
-  -> ProtocolParametersUpdate
-fromBabbagePParamsUpdate ppu =
-  (fromBabbageCommonPParamsUpdate ppu)
-    { protocolUpdateProtocolVersion =
-        (\(Ledger.ProtVer a b) -> (Ledger.getVersion a, b))
-          <$> strictMaybeToMaybe (ppu ^. ppuProtocolVersionL)
-    }
-
-fromConwayPParamsUpdate
-  :: BabbageEraPParams ledgerera
-  => PParamsUpdate ledgerera
-  -> ProtocolParametersUpdate
-fromConwayPParamsUpdate = fromBabbageCommonPParamsUpdate
+  -> EraBasedProtocolParametersUpdate era
+fromLedgerPParamsUpdate sbe ppup =
+  let common = pparamsUpdateToCommonParametersUpdate sbe ppup
+   in case sbe of
+        ShelleyBasedEraShelley ->
+          let depAfterMary = pparamsUpdateToDeprecatedAfterMaryPParams sbe ppup
+              sToAPParamsUpdate = pparamsUpdateToShelleyToAlonzoPParams sbe ppup
+              depAfterBabbage = pparamsUpdateToDeprecatedAfterBabbagePParams sbe ppup
+           in ShelleyEraBasedProtocolParametersUpdate common depAfterMary depAfterBabbage sToAPParamsUpdate
+        ShelleyBasedEraAllegra ->
+          let depAfterMary = pparamsUpdateToDeprecatedAfterMaryPParams sbe ppup
+              sToAPParamsUpdate = pparamsUpdateToShelleyToAlonzoPParams sbe ppup
+              depAfterBabbage = pparamsUpdateToDeprecatedAfterBabbagePParams sbe ppup
+           in AllegraEraBasedProtocolParametersUpdate common depAfterMary sToAPParamsUpdate depAfterBabbage
+        ShelleyBasedEraMary ->
+          let depAfterMary = pparamsUpdateToDeprecatedAfterMaryPParams sbe ppup
+              sToAPParamsUpdate = pparamsUpdateToShelleyToAlonzoPParams sbe ppup
+              depAfterBabbage = pparamsUpdateToDeprecatedAfterBabbagePParams sbe ppup
+           in MaryEraBasedProtocolParametersUpdate common depAfterMary sToAPParamsUpdate depAfterBabbage
+        ShelleyBasedEraAlonzo ->
+          let sToAPParamsUpdate = pparamsUpdateToShelleyToAlonzoPParams sbe ppup
+              depAfterBabbage = pparamsUpdateToDeprecatedAfterBabbagePParams sbe ppup
+              introInAlonzo = pparamsUpdateToAlonzoOnwardsPParams AlonzoEraOnwardsAlonzo ppup
+           in AlonzoEraBasedProtocolParametersUpdate common sToAPParamsUpdate introInAlonzo depAfterBabbage
+        ShelleyBasedEraBabbage ->
+          let depAfterBabbage = pparamsUpdateToDeprecatedAfterBabbagePParams sbe ppup
+              introInAlonzo = pparamsUpdateToAlonzoOnwardsPParams AlonzoEraOnwardsBabbage ppup
+              introInBabbage = pparamsUpdateToIntroducedInBabbagePParams BabbageEraOnwardsBabbage ppup
+           in BabbageEraBasedProtocolParametersUpdate common introInAlonzo depAfterBabbage introInBabbage
+        ShelleyBasedEraConway ->
+          let introInAlonzo = pparamsUpdateToAlonzoOnwardsPParams AlonzoEraOnwardsConway ppup
+              introInBabbage = pparamsUpdateToIntroducedInBabbagePParams BabbageEraOnwardsConway ppup
+              introInConway = pparamsUpdateToIntroducedInConwayPParams ppup
+           in ConwayEraBasedProtocolParametersUpdate common introInAlonzo introInBabbage introInConway
+        ShelleyBasedEraDijkstra ->
+          error "TODO Dijkstra: fromLedgerPParamsUpdate: era not supported"
 
 data ProtocolParametersError
   = PParamsErrorMissingMinUTxoValue !AnyCardanoEra

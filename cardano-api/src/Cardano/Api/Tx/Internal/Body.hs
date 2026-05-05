@@ -657,7 +657,8 @@ indexTxCertificates (TxCertificates _ certsWits) =
 
 data TxUpdateProposal era where
   TxUpdateProposalNone :: TxUpdateProposal era
-  TxUpdateProposal :: ShelleyToBabbageEra era -> UpdateProposal -> TxUpdateProposal era
+  TxUpdateProposal
+    :: ShelleyToBabbageEra era -> UpdateProposal era -> TxUpdateProposal era
 
 deriving instance Eq (TxUpdateProposal era)
 
@@ -1217,7 +1218,6 @@ data TxBodyError
   | TxBodyMetadataError ![(Word64, TxMetadataRangeError)]
   | TxBodyInIxOverflow !TxIn
   | TxBodyMissingProtocolParams
-  | TxBodyProtocolParamsConversionError !ProtocolParametersConversionError
   deriving (Eq, Show)
 
 instance Error TxBodyError where
@@ -1251,8 +1251,6 @@ instance Error TxBodyError where
         <> "acceptable value is up to 2^32-1, "
         <> "in input "
         <> pretty txin
-    TxBodyProtocolParamsConversionError ppces ->
-      "Errors in protocol parameters conversion: " <> prettyError ppces
 
 createTransactionBody
   :: forall era
@@ -1311,7 +1309,7 @@ createTransactionBody sbe bc =
         treasuryDonation = maybe 0 unFeatured $ txTreasuryDonation bc
 
     setUpdateProposal <- monoidForEraInEonA era $ \w ->
-      Endo . (A.updateTxBodyL w .~) <$> convTxUpdateProposal sbe (txUpdateProposal bc)
+      pure . Endo $ A.updateTxBodyL w .~ convTxUpdateProposal sbe (txUpdateProposal bc)
 
     setInvalidBefore <- monoidForEraInEonA era $ \w ->
       pure $ Endo $ A.invalidBeforeTxBodyL w .~ convValidityLowerBound (txValidityLowerBound bc)
@@ -1840,12 +1838,12 @@ convTxUpdateProposal
   :: ()
   => ShelleyBasedEra era
   -> TxUpdateProposal era
-  -> Either TxBodyError (StrictMaybe (Ledger.Update (ShelleyLedgerEra era)))
-  -- ^ 'Left' when there's protocol params conversion error, 'Right' otherwise, 'Right SNothing' means that
-  -- there's no update proposal
+  -> StrictMaybe (Ledger.Update (ShelleyLedgerEra era))
 convTxUpdateProposal sbe = \case
-  TxUpdateProposalNone -> Right SNothing
-  TxUpdateProposal _ p -> bimap TxBodyProtocolParamsConversionError pure $ toLedgerUpdate sbe p
+  TxUpdateProposalNone -> SNothing
+  TxUpdateProposal _ (UpdateProposal m eNum) ->
+    let proposedPPUpdates = toLedgerProposedPPUpdates sbe m
+     in SJust $ Ledger.Update proposedPPUpdates eNum
 
 convMintValue :: TxMintValue build era -> MultiAsset
 convMintValue txMintValue = do
