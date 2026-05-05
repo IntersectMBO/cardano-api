@@ -1,0 +1,5 @@
+description: The project is no longer built for x86_64-darwin.
+kind:
+- maintenance
+pr: 1197
+project: cardano-api
