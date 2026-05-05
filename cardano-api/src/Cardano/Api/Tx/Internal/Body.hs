@@ -205,7 +205,6 @@ module Cardano.Api.Tx.Internal.Body
   , mkCommonTxBody
   , toAuxiliaryData
   , toByronTxId
-  , toLedgerUpdate
   , toShelleyTxId
   , toShelleyTxIn
   , toShelleyTxOut
@@ -1845,24 +1844,6 @@ convTxUpdateProposal sbe = \case
   TxUpdateProposal _ (UpdateProposal m eNum) ->
     let proposedPPUpdates = toLedgerProposedPPUpdates sbe m
      in SJust $ Ledger.Update proposedPPUpdates eNum
-
-toLedgerUpdate
-  :: ()
-  => ShelleyBasedEra era
-  -> UpdateProposal era
-  -> Ledger.Update (ShelleyLedgerEra era)
-toLedgerUpdate sbe (UpdateProposal ppup epochno) =
-  (`Ledger.Update` epochno) $ toLedgerProposedPPUpdates sbe ppup
-
-toLedgerProposedPPUpdates
-  :: ()
-  => ShelleyBasedEra era
-  -> Map (Hash GenesisKey) (EraBasedProtocolParametersUpdate era)
-  -> Ledger.ProposedPPUpdates (ShelleyLedgerEra era)
-toLedgerProposedPPUpdates sbe m =
-  Ledger.ProposedPPUpdates $
-    Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh) $
-      Map.map (createEraBasedProtocolParamUpdate sbe) m
 
 convMintValue :: TxMintValue build era -> MultiAsset
 convMintValue txMintValue = do

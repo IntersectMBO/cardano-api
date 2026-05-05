@@ -63,6 +63,11 @@ module Cardano.Api.ProtocolParameters
 
     -- * Internal conversion functions
   , toLedgerNonce
+  , toLedgerUpdate
+  , fromLedgerUpdate
+  , toLedgerProposedPPUpdates
+  , fromLedgerProposedPPUpdates
+  , fromLedgerPParamsUpdate
   , toAlonzoPrices
   , fromAlonzoPrices
   , toAlonzoScriptLanguage
@@ -70,7 +75,6 @@ module Cardano.Api.ProtocolParameters
   , toAlonzoCostModel
   , fromAlonzoCostModel
   , toAlonzoCostModels
-  , fromLedgerUpdate
 
     -- * Data family instances
   , AsType (..)
@@ -926,6 +930,24 @@ boundRationalEither
   -> Rational
   -> Either ProtocolParametersConversionError b
 boundRationalEither name r = maybeToRight (PpceOutOfBounds name r) $ Ledger.boundRational r
+
+toLedgerUpdate
+  :: ()
+  => ShelleyBasedEra era
+  -> UpdateProposal era
+  -> Ledger.Update (ShelleyLedgerEra era)
+toLedgerUpdate sbe (UpdateProposal ppup epochno) =
+  Ledger.Update (toLedgerProposedPPUpdates sbe ppup) epochno
+
+toLedgerProposedPPUpdates
+  :: ()
+  => ShelleyBasedEra era
+  -> Map (Hash GenesisKey) (EraBasedProtocolParametersUpdate era)
+  -> Ledger.ProposedPPUpdates (ShelleyLedgerEra era)
+toLedgerProposedPPUpdates sbe m =
+  Ledger.ProposedPPUpdates $
+    Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh) $
+      Map.map (createEraBasedProtocolParamUpdate sbe) m
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions: updates from ledger types
