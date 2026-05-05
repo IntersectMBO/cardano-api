@@ -79,9 +79,9 @@ protocolParamsToUtxoRpcPParams era pparams = obtainCommonConstraints era $ do
     & U5c.coinsPerUtxoByte
       .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.fromCompact . to inject
     & U5c.maxTxSize .~ pparams ^. L.ppMaxTxSizeL . to fromIntegral
-    & U5c.minFeeCoefficient .~ pparams ^. L.ppTxFeeFixedL . to inject
-    & U5c.minFeeConstant
+    & U5c.minFeeCoefficient
       .~ pparams ^. L.ppTxFeePerByteL . to L.unCoinPerByte . to L.fromCompact . to inject
+    & U5c.minFeeConstant .~ pparams ^. L.ppTxFeeFixedL . to inject
     & U5c.maxBlockBodySize .~ pparams ^. L.ppMaxBBSizeL . to fromIntegral
     & U5c.maxBlockHeaderSize .~ pparams ^. L.ppMaxBHSizeL . to fromIntegral
     & U5c.stakeKeyDeposit .~ pparams ^. L.ppKeyDepositL . to inject
@@ -162,12 +162,12 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
       , \r -> do
           minFeeCoeff <-
             pp ^. U5c.minFeeCoefficient . to utxoRpcBigIntToInteger ?! "Invalid minFeeCoefficient"
-          pure $ set L.ppTxFeeFixedL (L.Coin minFeeCoeff) r
+          minFeeCoeffCompact <-
+            note "Could not convert minFeeCoefficient to compact form." $ L.toCompact (L.Coin minFeeCoeff)
+          pure $ set L.ppTxFeePerByteL (L.CoinPerByte minFeeCoeffCompact) r
       , \r -> do
           minFeeConst <- pp ^. U5c.minFeeConstant . to utxoRpcBigIntToInteger ?! "Invalid minFeeConstant"
-          minFeeConstCompact <-
-            note "Could not convert minFeeConstant to compact form." $ L.toCompact (L.Coin minFeeConst)
-          pure $ set L.ppTxFeePerByteL (L.CoinPerByte minFeeConstCompact) r
+          pure $ set L.ppTxFeeFixedL (L.Coin minFeeConst) r
       , pure . (L.ppMaxBBSizeL .~ pp ^. U5c.maxBlockBodySize . to fromIntegral)
       , pure . (L.ppMaxBHSizeL .~ pp ^. U5c.maxBlockHeaderSize . to fromIntegral)
       , \r -> do
