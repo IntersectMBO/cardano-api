@@ -31,7 +31,7 @@
     };
 
     hls = {
-      url = "github:haskell/haskell-language-server/2.13.0.0";
+      url = "github:haskell/haskell-language-server/2.14.0.0";
       flake = false;
     };
 
@@ -54,7 +54,7 @@
     # this is used to build cardano-node on linux, so we test against it
     stableCompiler = "ghc967";
     # this is our main compiler for development
-    defaultCompiler = "ghc9122";
+    defaultCompiler = "ghc9124";
     # Used for cross compilation for windows.
     crossCompilerVersion = defaultCompiler;
     # Used for haddock generation (avoids GHC 9.12 tyConStupidTheta panic)
@@ -172,10 +172,6 @@
               haskell-language-server = {
                 src = inputs.hls;
                 configureArgs = "--disable-benchmarks --disable-tests";
-                cabalProjectLocal = ''
-                  allow-newer: haddock-library:base
-                '';
-                sha256map."https://github.com/snowleopard/alga"."d4e43fb42db05413459fb2df493361d5a666588a" = "0s1mlnl64wj7pkg3iipv5bb4syy3bhxwqzqv93zqlvkyfn64015i";
               };
               hlint = "3.10";
             };
