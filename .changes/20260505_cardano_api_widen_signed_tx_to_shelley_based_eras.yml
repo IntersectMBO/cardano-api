@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 0
+kind:
+  - compatible
+description: |
+  Widen `Cardano.Api.Experimental.SignedTx era` to all Shelley-based eras (Shelley through Dijkstra) by reparameterising it on `ShelleyLedgerEra era` instead of `LedgerEra era`. This allows deserialising `SignedTx` for any Shelley-based era via `SerialiseAsRawBytes` without widening the `LedgerEra` family or its Conway-onwards constraint surface.

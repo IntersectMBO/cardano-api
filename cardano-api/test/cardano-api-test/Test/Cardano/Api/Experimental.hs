@@ -149,7 +149,7 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
   exampleTransactionExperimentalWay
     :: H.MonadTest m
     => Exp.Era Exp.ConwayEra
-    -> m (Ledger.Tx L.TopTx (Exp.LedgerEra Exp.ConwayEra))
+    -> m (Ledger.Tx L.TopTx (Api.ShelleyLedgerEra Exp.ConwayEra))
   exampleTransactionExperimentalWay era = do
     txBodyContent <- exampleTxBodyContentExperimental era
     signingKey <- exampleSigningKey
@@ -160,7 +160,7 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
     let bootstrapWitnesses = []
         keyWitnesses = [witness]
 
-    let Exp.SignedTx (signedTx :: Ledger.Tx L.TopTx (Exp.LedgerEra Exp.ConwayEra)) = Exp.signTx era bootstrapWitnesses keyWitnesses unsignedTx
+    let Exp.SignedTx (signedTx :: Ledger.Tx L.TopTx (Api.ShelleyLedgerEra Exp.ConwayEra)) = Exp.signTx era bootstrapWitnesses keyWitnesses unsignedTx
     return signedTx
 
 prop_balance_transaction_two_ways :: Property
