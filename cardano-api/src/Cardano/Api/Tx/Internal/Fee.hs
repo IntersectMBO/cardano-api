@@ -10,6 +10,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 -- | Calculating fees.
 module Cardano.Api.Tx.Internal.Fee
@@ -959,6 +960,8 @@ handleExUnitsErrors ScriptValid failuresMap exUnitsMap =
 handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
   | null failuresMap = Left TxBodyScriptBadScriptValidity
   | otherwise = Right $ Map.map (\_ -> ExecutionUnits 0 0) failuresMap <> exUnitsMap
+
+{-# DEPRECATED BalancedTxBody "Use 'Cardano.Api.Experimental' transaction balancing instead." #-}
 
 data BalancedTxBody era
   = BalancedTxBody
