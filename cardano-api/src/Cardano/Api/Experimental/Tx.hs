@@ -281,7 +281,7 @@ makeKeyWitness era (UnsignedTx unsignedTx) wsk =
 
 -- | A transaction that has been witnesssed
 data SignedTx era
-  = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx Ledger.TopTx (LedgerEra era))
+  = L.EraTx (ShelleyLedgerEra era) => SignedTx (Ledger.Tx Ledger.TopTx (ShelleyLedgerEra era))
 
 deriving instance Eq (SignedTx era)
 
@@ -294,16 +294,16 @@ instance HasTypeProxy era => HasTypeProxy (SignedTx era) where
 
 instance
   ( HasTypeProxy era
-  , L.EraTx (LedgerEra era)
+  , L.EraTx (ShelleyLedgerEra era)
   )
   => SerialiseAsRawBytes (SignedTx era)
   where
   serialiseToRawBytes (SignedTx tx) =
-    Ledger.serialize' (Ledger.eraProtVerHigh @(LedgerEra era)) tx
+    Ledger.serialize' (Ledger.eraProtVerHigh @(ShelleyLedgerEra era)) tx
   deserialiseFromRawBytes _ =
     bimap wrapError SignedTx
       . Ledger.decodeFullAnnotator
-        (Ledger.eraProtVerHigh @(LedgerEra era))
+        (Ledger.eraProtVerHigh @(ShelleyLedgerEra era))
         "SignedTx"
         Ledger.decCBOR
       . fromStrict
