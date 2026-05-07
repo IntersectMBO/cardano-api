@@ -1,5 +1,37 @@
 # Changelog for cardano-api
 
+## 11.1.0.0 -- 2026-05-07
+
+- Widen `Cardano.Api.Experimental.SignedTx era` to all Shelley-based eras (Shelley through Dijkstra) by reparameterising it on `ShelleyLedgerEra era` instead of `LedgerEra era`. This allows deserialising `SignedTx` for any Shelley-based era via `SerialiseAsRawBytes` without widening the `LedgerEra` family or its Conway-onwards constraint surface.
+  (compatible)
+  [PR 1199](https://github.com/intersectmbo/cardano-api/pull/1199)
+
+- Fix broken cross-package Haddock links on the hosted documentation site. Links to dependency packages (cardano-ledger-*, plutus-*, cardano-base, etc.) were relative paths pointing to directories that don't exist on the site, resulting in 404s. A post-processing script now resolves each cross-package href via a name-suffix heuristic under *.cardano.intersectmbo.org plus a small fallback list of known IOG doc-site roots, and rewrites them to absolute URLs. Hrefs that don't resolve become annotated unclickable spans with tooltips. A follow-up GitHub Actions step opens or comments on a rolling tracking issue when the script reports actionable dead links on master, tagging the PR opener so the breakage lands on someone's board instead of going unnoticed.
+  (bugfix, documentation)
+  [PR 1180](https://github.com/intersectmbo/cardano-api/pull/1180)
+
+- Remove the deprecated `ProtocolParametersUpdate` type and the `toLedgerPParamsUpdate` conversion function. Use `EraBasedProtocolParametersUpdate` instead.
+  
+  The `toLedgerUpdate`, `fromLedgerUpdate`, `toLedgerProposedPPUpdates`, `fromLedgerProposedPPUpdates` and `fromLedgerPParamsUpdate` functions are kept but their signatures are now era-indexed: they operate on `UpdateProposal era` / `EraBasedProtocolParametersUpdate era` instead of the removed type, and require a `ShelleyBasedEra era` argument.
+  (breaking)
+  [PR 1103](https://github.com/intersectmbo/cardano-api/pull/1103)
+
+- Implement the previously-stubbed `ToCBOR`/`FromCBOR` instances for
+  `EraBasedProtocolParametersUpdate` by routing through the ledger's
+  `PParamsUpdate` encoding. The instance constraint changes from
+  `Typeable era` to `IsShelleyBasedEra era`, which propagates to the
+  `ToCBOR`, `FromCBOR` and `HasTextEnvelope` instances of `UpdateProposal`.
+  (bugfix, breaking)
+  [PR 1103](https://github.com/intersectmbo/cardano-api/pull/1103)
+
+- Remove the unused `TxBodyProtocolParamsConversionError` constructor of `TxBodyError`.
+  (breaking)
+  [PR 1103](https://github.com/intersectmbo/cardano-api/pull/1103)
+
+- Remove the deprecated `makeShelleyTransactionBody` and `createAndValidateTransactionBody` functions along with their supporting helpers. Use `createTransactionBody` instead.
+  (breaking)
+  [PR 1094](https://github.com/intersectmbo/cardano-api/pull/1094)
+
 ## 11.0.0.0 -- 2026-04-30
 
 - Add ConwayEraGov, ConwayEraCertState, and GovState ~ ConwayGovState type equality to EraCommonConstraints. Both Conway and Dijkstra satisfy these constraints, so obtainCommonConstraints now provides governance-related constraints without needing conwayEraOnwardsConstraints.
