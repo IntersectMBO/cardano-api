@@ -1,0 +1,14 @@
+project: cardano-api
+pr: 1200
+kind:
+  - compatible
+description: |
+  Deprecate the old-API transaction body surface in favour of `Cardano.Api.Experimental`. The following are now annotated with `{-# DEPRECATED #-}`:
+
+  - `TxBody` (data type), `ShelleyTxBody` (constructor)
+  - `TxBodyContent` (type/constructor)
+  - `createTransactionBody`, `defaultTxBodyContent`
+  - `getTxBody`, `getTxBodyContent`
+  - `BalancedTxBody`
+
+  Internal modules that still consume these symbols are annotated with `-Wno-deprecations` so `-Werror` stays green; they will be migrated in a follow-up alongside the setter family. The pre-existing `TxBody` pattern-synonym deprecation message is updated for consistency.
