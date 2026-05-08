@@ -1,6 +1,0 @@
-project: cardano-api
-pr: 1198
-kind:
-  - maintenance
-description: |
-  Update Haskell Language Server to 2.14.0.0 and GHC to 9.12.4. in the development shell.
