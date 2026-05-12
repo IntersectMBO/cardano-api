@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Api.Tx.Internal.Body
   ( -- * Contents
@@ -861,6 +862,8 @@ indexWitnessedTxProposalProcedures (TxProposalProcedures proposals) = do
 -- If you extend this type, consider updating:
 -- - the 'makeShelleyTransactionBody' function of the relevant era below, and
 -- - the @friendly*@ family of functions in cardano-cli.
+{-# DEPRECATED TxBodyContent "Use 'TxBodyContent' from 'Cardano.Api.Experimental.Tx' instead." #-}
+
 data TxBodyContent build era
   = TxBodyContent
   { txIns :: TxIns build era
@@ -890,6 +893,7 @@ data TxBodyContent build era
   }
   deriving (Eq, Show)
 
+{-# DEPRECATED defaultTxBodyContent "Use 'defaultTxBodyContent' from 'Cardano.Api.Experimental.Tx' instead." #-}
 defaultTxBodyContent
   :: ()
   => ShelleyBasedEra era
@@ -1252,6 +1256,7 @@ instance Error TxBodyError where
         <> "in input "
         <> pretty txin
 
+{-# DEPRECATED createTransactionBody "Use 'makeUnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
 createTransactionBody
   :: forall era
    . HasCallStack
@@ -1434,12 +1439,13 @@ txBodyContentHasTxIns txIns = guard (not (null txIns)) ?! TxBodyEmptyTxIns
 maxShelleyTxInIx :: Word
 maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 
-{-# DEPRECATED TxBody "Use getTxBodyContent $ getTxBody instead" #-}
+{-# DEPRECATED TxBody "Use 'UnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
 pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
 pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
 
 {-# COMPLETE TxBody #-}
 
+{-# DEPRECATED getTxBodyContent "Use 'UnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
 getTxBodyContent :: TxBody era -> TxBodyContent ViewTx era
 getTxBodyContent = \case
   ShelleyTxBody sbe body _scripts scriptdata mAux scriptValidity ->

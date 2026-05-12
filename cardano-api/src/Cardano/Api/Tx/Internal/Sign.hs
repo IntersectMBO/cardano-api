@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -246,6 +247,7 @@ deserialiseShelleyBasedTx mkTx bs =
 -- NB: This is called in getTxBodyAndWitnesses which is fine as
 -- getTxBodyAndWitnesses is only called in the context of a
 -- shelley based era anyways. ByronTx will eventually be removed.
+{-# DEPRECATED getTxBody "Use 'UnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
 getTxBody :: Tx era -> TxBody era
 getTxBody (ShelleyTx sbe tx) =
   caseShelleyToMaryOrAlonzoEraOnwards
@@ -294,6 +296,10 @@ instance IsShelleyBasedEra era => HasTextEnvelope (Tx era) where
 --
 -- TODO: We can use Ledger.Tx era here however we would need to rename TxBody
 -- as technically it is not strictly a transaction body.
+{-# DEPRECATED TxBody "Use 'UnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
+
+{-# DEPRECATED ShelleyTxBody "Use 'UnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
+
 data TxBody era where
   ShelleyTxBody
     :: ShelleyBasedEra era

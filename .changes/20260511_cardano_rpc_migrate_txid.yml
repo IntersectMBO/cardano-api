@@ -1,0 +1,8 @@
+project: cardano-rpc
+pr: 1200
+kind:
+  - refactoring
+description: |
+  Migrate the UtxoRpc submit handler off the deprecated `getTxBody` /
+  `getTxId` chain. The transaction id is now computed directly from the
+  ledger transaction via `Cardano.Ledger.Core.txIdTx`.
