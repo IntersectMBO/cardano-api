@@ -1,0 +1,20 @@
+project: cardano-api
+pr: 1209
+kind:
+  - breaking
+description: |
+  Remove legacy `TxOut ctx era` from the Compatible and Experimental APIs.
+
+  `createCompatibleTx` now takes `[Exp.TxOut (ShelleyLedgerEra era)]` plus an explicit `Map L.DataHash (L.Data (ShelleyLedgerEra era))` for supplemental datums, mirroring how it already takes `Exp.TxCertificates` / `Exp.TxVotingProcedures` / `Exp.TxProposalProcedures`. The legacy `TxOut CtxTx era` bundled supplemental datums inside outputs; `Exp.TxOut` only carries the datum hash (the full datum lives in the witness set), so callers now thread them in explicitly.
+
+  Deletes the legacy bridge helpers re-exported from `Cardano.Api.Experimental.Tx`:
+
+  - `fromLegacyTxOut`
+  - `legacyDatumToDatum`
+  - `supplementalDatumFromLegacy`
+  - `toLedgerDatum`
+  - `DatumDecodingError`
+
+  These existed solely to convert legacy `TxOut CtxTx era` / `TxOutDatum CtxTx era` values into the experimental world. With the Compatible API no longer accepting the legacy type, they had no remaining in-repo callers. They are not re-exported from top-level `Cardano.Api`.
+
+  The legacy `TxOut ctx era` type itself is unchanged — `UTxO`, `Tx` body construction, fee/balancing, `LedgerState`, and Byron all still depend on it.
