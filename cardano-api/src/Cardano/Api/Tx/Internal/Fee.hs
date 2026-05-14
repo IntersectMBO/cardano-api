@@ -86,7 +86,6 @@ import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
-import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Credential as Ledger (Credential)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Ouroboros.Consensus.HardFork.History qualified as Consensus

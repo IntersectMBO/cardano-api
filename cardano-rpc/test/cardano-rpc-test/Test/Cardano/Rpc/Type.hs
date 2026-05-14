@@ -4,7 +4,7 @@
 
 module Test.Cardano.Rpc.Type where
 
-import Cardano.Api (BlockNo (..), ChainPoint (..), SlotNo (..))
+import Cardano.Api (BlockNo (..), ChainPoint (..), SlotNo (..), getScriptData)
 import Cardano.Api.Experimental.Era
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type
 
@@ -14,7 +14,7 @@ import RIO
 
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
-import Test.Gen.Cardano.Api.Typed (genBlockHeaderHash)
+import Test.Gen.Cardano.Api.Typed (genBlockHeaderHash, genHashableScriptData)
 
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
@@ -72,6 +72,15 @@ genWithOriginBlockNo =
     [ pure Origin
     , At . BlockNo <$> H.word64 (H.linear 1 maxBound)
     ]
+
+-- | 'ScriptData' roundtrips through proto 'PlutusData'.
+hprop_roundtrip_plutusData :: Property
+hprop_roundtrip_plutusData = H.property $ do
+  scriptData <- getScriptData <$> forAll genHashableScriptData
+  H.tripping
+    scriptData
+    scriptDataToUtxoRpcPlutusData
+    (first @Either displayException . utxoRpcPlutusDataToScriptData)
 
 -- generate integer for each of the BigInt proto type constructors
 genLargeInteger :: Gen Integer

@@ -145,7 +145,6 @@ import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Language (PlutusBinary (..), plutusLanguage)
 import Cardano.Ledger.Plutus.Language qualified as Plutus

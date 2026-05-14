@@ -662,20 +662,23 @@ message EraSummaries {
 // EVALUATION
 // ==========
 
-message EvalError {
-  string msg = 1;
+// A single evaluation report entry, used for script errors, execution traces,
+// and transaction-level evaluation errors (e.g. balance mismatches). When the
+// entry relates to a specific redeemer, purpose and index identify which one;
+// for transaction-level errors these fields are absent.
+message EvalReport {
+  string msg = 1; // Human-readable message.
+  optional RedeemerPurpose purpose = 2; // Purpose of the redeemer that produced this entry.
+  optional uint32 index = 3; // Index of the redeemer within its purpose.
 }
 
-message EvalTrace {
-  string msg = 1;
-}
-
+// Result of evaluating a transaction against the current ledger state.
 message TxEval {
-  BigInt fee = 1;
-  ExUnits ex_units = 2;
-  repeated EvalError errors = 3;
-  repeated EvalTrace traces = 4;
-  repeated Redeemer redeemers = 5;
+  BigInt fee = 1; // Computed minimum fee for the transaction.
+  ExUnits ex_units = 2; // Total execution units consumed across all redeemers.
+  repeated EvalReport errors = 3; // Script execution and transaction-level evaluation errors.
+  repeated EvalReport traces = 4; // Per-redeemer script execution traces.
+  repeated Redeemer redeemers = 5; // Redeemers with evaluated execution units.
 }
 
 // GENESIS CONFIGS

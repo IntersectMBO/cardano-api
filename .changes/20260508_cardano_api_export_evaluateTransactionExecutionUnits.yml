@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1193
+kind:
+  - compatible
+description: |
+  Export `evaluateTransactionExecutionUnits` from `Cardano.Api.Experimental`. Re-export `EraTxBody(..)` from `Cardano.Api.Ledger`.

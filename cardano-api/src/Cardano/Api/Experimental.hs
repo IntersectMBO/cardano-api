@@ -20,7 +20,9 @@ module Cardano.Api.Experimental
   , EraCommonConstraints
   , obtainConwayConstraints
   , obtainCommonConstraints
+  , eraProtVerHigh
   , hashTxBody
+  , evaluateTransactionExecutionUnits
   , evaluateTransactionExecutionUnitsShelley
   , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate

@@ -1179,6 +1179,12 @@ maybe'header ::
    Data.ProtoLens.Field.HasField s "maybe'header" a) =>
   Lens.Family2.LensLike' f s a
 maybe'header = Data.ProtoLens.Field.field @"maybe'header"
+maybe'index ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'index" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'index = Data.ProtoLens.Field.field @"maybe'index"
 maybe'infoAction ::
   forall f s a.
   (Prelude.Functor f,
@@ -1568,6 +1574,12 @@ maybe'protocolVersion ::
   Lens.Family2.LensLike' f s a
 maybe'protocolVersion
   = Data.ProtoLens.Field.field @"maybe'protocolVersion"
+maybe'purpose ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'purpose" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'purpose = Data.ProtoLens.Field.field @"maybe'purpose"
 maybe'quantity ::
   forall f s a.
   (Prelude.Functor f,

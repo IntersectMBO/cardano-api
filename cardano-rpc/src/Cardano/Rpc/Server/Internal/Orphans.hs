@@ -31,8 +31,6 @@ import Network.GRPC.Spec
 
 -- It's easier to use 'Proto a' wrappers for RPC types, because it makes lens automatically available.
 
--- x = U5c.numerator :: _
-
 instance Inject (Proto U5c.RationalNumber) Rational where
   inject r = r ^. U5c.numerator . to fromIntegral % r ^. U5c.denominator . to fromIntegral
 

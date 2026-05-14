@@ -58,6 +58,7 @@ library
     Cardano.Rpc.Server.Internal.Monad
     Cardano.Rpc.Server.Internal.Node
     Cardano.Rpc.Server.Internal.Tracing
+    Cardano.Rpc.Server.Internal.UtxoRpc.Eval
     Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
     Cardano.Rpc.Server.Internal.UtxoRpc.Submit
@@ -130,6 +131,7 @@ test-suite cardano-rpc-test
     cardano-ledger-core >=1.19,
     cardano-rpc,
     containers,
+    grpc-spec,
     hedgehog,
     hedgehog-extras,
     proto-lens,
@@ -146,6 +148,7 @@ test-suite cardano-rpc-test
 
   build-tool-depends: tasty-discover:tasty-discover
   other-modules:
+    Test.Cardano.Rpc.Eval
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters

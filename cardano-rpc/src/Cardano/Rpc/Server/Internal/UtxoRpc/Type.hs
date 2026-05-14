@@ -21,6 +21,12 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   , utxoRpcBigIntToInteger
   , mkChainPointMsg
   , utxoRpcChainPointMsgToChainPoint
+  , scriptDataToUtxoRpcPlutusData
+  , utxoRpcPlutusDataToScriptData
+  , scriptWitnessIndexToRedeemerPurpose
+  , scriptExecutionErrorToEvalReport
+  , mkProtoRedeemer
+  , mkProtoTxEval
   )
 where
 
@@ -79,9 +85,9 @@ protocolParamsToUtxoRpcPParams era pparams = obtainCommonConstraints era $ do
     & U5c.coinsPerUtxoByte
       .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.fromCompact . to inject
     & U5c.maxTxSize .~ pparams ^. L.ppMaxTxSizeL . to fromIntegral
-    & U5c.minFeeCoefficient .~ pparams ^. L.ppTxFeeFixedL . to inject
-    & U5c.minFeeConstant
+    & U5c.minFeeCoefficient
       .~ pparams ^. L.ppTxFeePerByteL . to L.unCoinPerByte . to L.fromCompact . to inject
+    & U5c.minFeeConstant .~ pparams ^. L.ppTxFeeFixedL . to inject
     & U5c.maxBlockBodySize .~ pparams ^. L.ppMaxBBSizeL . to fromIntegral
     & U5c.maxBlockHeaderSize .~ pparams ^. L.ppMaxBHSizeL . to fromIntegral
     & U5c.stakeKeyDeposit .~ pparams ^. L.ppKeyDepositL . to inject
@@ -162,12 +168,12 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
       , \r -> do
           minFeeCoeff <-
             pp ^. U5c.minFeeCoefficient . to utxoRpcBigIntToInteger ?! "Invalid minFeeCoefficient"
-          pure $ set L.ppTxFeeFixedL (L.Coin minFeeCoeff) r
+          minFeeCoeffCompact <-
+            note "Could not convert minFeeCoefficient to compact form." $ L.toCompact (L.Coin minFeeCoeff)
+          pure $ set L.ppTxFeePerByteL (L.CoinPerByte minFeeCoeffCompact) r
       , \r -> do
           minFeeConst <- pp ^. U5c.minFeeConstant . to utxoRpcBigIntToInteger ?! "Invalid minFeeConstant"
-          minFeeConstCompact <-
-            note "Could not convert minFeeConstant to compact form." $ L.toCompact (L.Coin minFeeConst)
-          pure $ set L.ppTxFeePerByteL (L.CoinPerByte minFeeConstCompact) r
+          pure $ set L.ppTxFeeFixedL (L.Coin minFeeConst) r
       , pure . (L.ppMaxBBSizeL .~ pp ^. U5c.maxBlockBodySize . to fromIntegral)
       , pure . (L.ppMaxBHSizeL .~ pp ^. U5c.maxBlockHeaderSize . to fromIntegral)
       , \r -> do
@@ -485,6 +491,39 @@ scriptDataToUtxoRpcPlutusData = \case
             & U5c.fields .~ map scriptDataToUtxoRpcPlutusData args
     defMessage & U5c.constr .~ constr
 
+utxoRpcPlutusDataToScriptData
+  :: HasCallStack
+  => MonadThrow m
+  => Proto UtxoRpc.PlutusData
+  -> m ScriptData
+utxoRpcPlutusDataToScriptData pd
+  | Just bs <- pd ^. U5c.maybe'boundedBytes =
+      pure $ ScriptDataBytes bs
+  | Just bigInt <- pd ^. U5c.maybe'bigInt =
+      ScriptDataNumber <$> utxoRpcBigIntToInteger bigInt
+  | Just arr <- pd ^. U5c.maybe'array =
+      ScriptDataList <$> traverse utxoRpcPlutusDataToScriptData (arr ^. U5c.items)
+  | Just m <- pd ^. U5c.maybe'map = do
+      let convertPair pair = do
+            k <- utxoRpcPlutusDataToScriptData $ pair ^. U5c.key
+            v <- utxoRpcPlutusDataToScriptData $ pair ^. U5c.value
+            pure (k, v)
+      ScriptDataMap <$> traverse convertPair (m ^. U5c.pairs)
+  | Just constr <- pd ^. U5c.maybe'constr = do
+      let tag = constr ^. U5c.tag
+          anyC = constr ^. U5c.anyConstructor
+          -- Inverse of scriptDataToUtxoRpcPlutusData: tag 102 signals that the
+          -- real constructor index lives in anyConstructor (for values > maxBound @Word32).
+          -- See: https://github.com/IntersectMBO/plutus/blob/fc78c36b545ee287ae8796a0c1a7d04cf31f4cee/plutus-core/plutus-core/src/PlutusCore/Data.hs#L72
+          resolvedTag =
+            if tag == 102 && anyC /= 0
+              then fromIntegral anyC
+              else fromIntegral tag
+      fields <- traverse utxoRpcPlutusDataToScriptData $ constr ^. U5c.fields
+      pure $ ScriptDataConstructor resolvedTag fields
+  | otherwise =
+      throwM . stringException $ "utxoRpcPlutusDataToScriptData: no PlutusData variant set"
+
 utxoToUtxoRpcAnyUtxoData :: forall era. IsEra era => UTxO era -> [Proto UtxoRpc.AnyUtxoData]
 utxoToUtxoRpcAnyUtxoData = map (uncurry txInTxOutToAnyUtxoData) . toList
 
@@ -636,3 +675,97 @@ utxoRpcBigIntToInteger bigInt
   | Just bytes <- bigInt ^. U5c.maybe'bigUInt =
       fmap fromIntegral . liftEitherError $ deserialiseFromRawBytes AsNatural bytes
   | otherwise = pure 0 -- assume default value
+
+-- | Assemble a proto 'TxEval' response from the computed fee, per-redeemer
+-- evaluation results, and redeemer Plutus data from the transaction witness set.
+mkProtoTxEval
+  :: L.Coin
+  -- ^ Computed minimum fee
+  -> Map ScriptWitnessIndex (Either ScriptExecutionError ([Text], ExecutionUnits))
+  -- ^ Per-redeemer evaluation results: script traces and execution units on
+  -- success, or a script execution error on failure
+  -> Map ScriptWitnessIndex (ScriptData, ByteString)
+  -- ^ Redeemer Plutus data extracted from the transaction witness set, keyed
+  -- by script witness index, with decoded payload and CBOR bytes.
+  -> Proto UtxoRpc.TxEval
+mkProtoTxEval fee evalMap redeemerLookup = do
+  let (failures, successes) = M.mapEither id evalMap
+      totalSteps = sum [executionSteps units | (_, units) <- M.elems successes]
+      totalMemory = sum [executionMemory units | (_, units) <- M.elems successes]
+      protoExecutionUnits =
+        defMessage
+          & U5c.steps .~ fromIntegral totalSteps
+          & U5c.memory .~ fromIntegral totalMemory
+      protoRedeemers =
+        [ mkProtoRedeemer witness units $ M.lookup witness redeemerLookup
+        | (witness, (_, units)) <- toList successes
+        ]
+      protoErrors =
+        [ scriptExecutionErrorToEvalReport witness err
+        | (witness, err) <- toList failures
+        ]
+      protoTraces =
+        [ do
+            let (purpose, idx) = scriptWitnessIndexToRedeemerPurpose witness
+            Proto $
+              defMessage
+                & U5c.msg .~ traceLine
+                & U5c.purpose .~ purpose
+                & U5c.index .~ idx
+        | (witness, (traces, _)) <- toList successes
+        , traceLine <- traces
+        ]
+  Proto $
+    defMessage
+      & U5c.fee .~ getProto (inject fee)
+      & U5c.exUnits .~ protoExecutionUnits
+      & U5c.redeemers .~ map getProto protoRedeemers
+      & U5c.errors .~ map getProto protoErrors
+      & U5c.traces .~ map getProto protoTraces
+
+-- | Assemble a proto 'Redeemer' from evaluation results and transaction
+-- witness data.
+mkProtoRedeemer
+  :: ScriptWitnessIndex
+  -- ^ Redeemer purpose and index
+  -> ExecutionUnits
+  -- ^ Execution units consumed
+  -> Maybe (ScriptData, ByteString)
+  -- ^ Plutus data payload and its CBOR bytes
+  -> Proto UtxoRpc.Redeemer
+mkProtoRedeemer swi exUnits redeemerDatum = do
+  let (purpose, idx) = scriptWitnessIndexToRedeemerPurpose swi
+      protoExUnits =
+        defMessage
+          & U5c.steps .~ fromIntegral (executionSteps exUnits)
+          & U5c.memory .~ fromIntegral (executionMemory exUnits)
+  Proto $
+    defMessage
+      & U5c.purpose .~ purpose
+      & U5c.index .~ idx
+      & U5c.exUnits .~ protoExUnits
+      & U5c.maybe'payload .~ fmap (getProto . scriptDataToUtxoRpcPlutusData . fst) redeemerDatum
+      & U5c.originalCbor .~ maybe mempty snd redeemerDatum
+
+-- | Convert a 'ScriptExecutionError' into a proto 'EvalReport' with the
+-- redeemer purpose and 0-based index that produced the error.
+scriptExecutionErrorToEvalReport
+  :: ScriptWitnessIndex -> ScriptExecutionError -> Proto UtxoRpc.EvalReport
+scriptExecutionErrorToEvalReport swi err = do
+  let (purpose, idx) = scriptWitnessIndexToRedeemerPurpose swi
+  Proto $
+    defMessage
+      & U5c.msg .~ tshow err
+      & U5c.purpose .~ purpose
+      & U5c.index .~ idx
+
+-- | Map a 'ScriptWitnessIndex' to the corresponding proto 'RedeemerPurpose'
+-- and the numeric index within that purpose.
+scriptWitnessIndexToRedeemerPurpose :: ScriptWitnessIndex -> (UtxoRpc.RedeemerPurpose, Word32)
+scriptWitnessIndexToRedeemerPurpose = \case
+  ScriptWitnessIndexTxIn i -> (UtxoRpc.REDEEMER_PURPOSE_SPEND, i)
+  ScriptWitnessIndexMint i -> (UtxoRpc.REDEEMER_PURPOSE_MINT, i)
+  ScriptWitnessIndexCertificate i -> (UtxoRpc.REDEEMER_PURPOSE_CERT, i)
+  ScriptWitnessIndexWithdrawal i -> (UtxoRpc.REDEEMER_PURPOSE_REWARD, i)
+  ScriptWitnessIndexVoting i -> (UtxoRpc.REDEEMER_PURPOSE_VOTE, i)
+  ScriptWitnessIndexProposing i -> (UtxoRpc.REDEEMER_PURPOSE_PROPOSE, i)
