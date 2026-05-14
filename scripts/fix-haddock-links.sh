@@ -132,8 +132,8 @@ mktemp_tracked() {
 #      ouroboros-*, plutus-*).
 #   2. IOG_DOC_BASES — known doc-site roots for irregular-subdomain
 #      families (cardano-base at base.cardano…, network-mux at
-#      ouroboros-network.cardano…, io-classes at input-output-hk.github.io/
-#      io-sim, etc.).
+#      ouroboros-network.cardano…, io-sim/io-classes/typed-protocols at
+#      intersectmbo.github.io, etc.).
 #
 # Adding a new IOG doc site = one line in IOG_DOC_BASES. Packages on
 # existing sites need no edit.
@@ -144,8 +144,8 @@ IOG_DOC_BASES=(
   "https://plutus.cardano.intersectmbo.org/haddock/latest"
   "https://ouroboros-consensus.cardano.intersectmbo.org/haddocks"
   "https://ouroboros-network.cardano.intersectmbo.org"
-  "https://input-output-hk.github.io/io-sim"
-  "https://input-output-hk.github.io/typed-protocols"
+  "https://intersectmbo.github.io/io-sim"
+  "https://intersectmbo.github.io/typed-protocols"
 )
 
 # CHaP packages we've confirmed have no public Haddocks anywhere (no
