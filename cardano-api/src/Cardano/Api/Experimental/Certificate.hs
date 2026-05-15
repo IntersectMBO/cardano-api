@@ -35,7 +35,7 @@ module Cardano.Api.Experimental.Certificate
   , fromShelleyPoolParams
 
     -- * Data family instances
-  , AsType (AsCertificate)
+  , AsType (AsCertificate, AsOperationalCertificate, AsOperationalCertificateIssueCounter)
 
     -- * DRep and Stake Pool Ids
   , Hash (..)
