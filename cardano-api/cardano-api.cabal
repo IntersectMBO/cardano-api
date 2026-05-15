@@ -72,7 +72,6 @@ library
     Cardano.Api.Address
     Cardano.Api.Block
     Cardano.Api.Byron
-    Cardano.Api.Certificate
     Cardano.Api.Compatible
     Cardano.Api.Compatible.Certificate
     Cardano.Api.Compatible.Tx

@@ -157,6 +157,12 @@ import Cardano.Api qualified as Api
 import Cardano.Api.Byron qualified as Byron
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.AnyScriptWitness
+import Cardano.Api.Experimental.Certificate
+  ( KESPeriod (..)
+  , OperationalCertificate (..)
+  , OperationalCertificateIssueCounter (..)
+  , issueOperationalCertificate
+  )
 import Cardano.Api.Experimental.Plutus qualified as Exp
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Parser.Text qualified as P
