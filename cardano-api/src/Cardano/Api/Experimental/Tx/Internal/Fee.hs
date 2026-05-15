@@ -118,7 +118,6 @@ data TxBodyErrorAutoBalance era
       -- ^ Offending TxOut
       L.Coin
       -- ^ Minimum UTXO
-  | TxBodyErrorNonAdaAssetsUnbalanced Value
   | TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
       ScriptWitnessIndex
       (Map ScriptWitnessIndex ExecutionUnits)
@@ -180,8 +179,6 @@ instance Error (TxBodyErrorAutoBalance era) where
         [ "Minimum UTxO threshold not met for tx output: " <> pretty (show txout) <> "\n"
         , "Minimum required UTxO: " <> pretty minUTxO
         ]
-    TxBodyErrorNonAdaAssetsUnbalanced val ->
-      "Non-Ada assets are unbalanced: " <> pretty (renderValue val)
     TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap sIndex eUnitsMap ->
       mconcat
         [ "ScriptWitnessIndex (redeemer pointer): " <> pshow sIndex <> " is missing from the execution "

@@ -731,7 +731,6 @@ module Cardano.Api.Tx
   , evaluateTransactionExecutionUnits
   , evaluateTransactionExecutionUnitsShelley
   , ScriptExecutionError (..)
-  , TransactionValidityError (..)
 
     -- ** Transaction balance
   , evaluateTransactionBalance
