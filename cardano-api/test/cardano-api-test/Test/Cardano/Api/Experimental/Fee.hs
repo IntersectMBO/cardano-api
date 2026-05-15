@@ -775,7 +775,7 @@ prop_createCompatibleTx_preserves_all_certs = H.property $ do
   let sbe = convert Exp.ConwayEra
       inputCerts = Exp.mkTxCertificates Exp.ConwayEra allCerts
   Api.ShelleyTx _ ledgerTx <-
-    H.evalEither $ createCompatibleTx sbe [] [] 0 (NoPParamsUpdate sbe) NoVotes inputCerts
+    H.evalEither $ createCompatibleTx sbe [] [] mempty 0 (NoPParamsUpdate sbe) NoVotes inputCerts
   let bodyCerts = ledgerTx ^. L.bodyTxL . L.certsTxBodyL
   Seq.length bodyCerts H.=== expectedCount
 

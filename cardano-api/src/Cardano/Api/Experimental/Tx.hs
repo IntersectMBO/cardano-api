@@ -158,12 +158,6 @@ module Cardano.Api.Experimental.Tx
   , setTxVotingProcedures
   , setTxWithdrawals
 
-    -- * Legacy Conversions
-  , DatumDecodingError (..)
-  , legacyDatumToDatum
-  , fromLegacyTxOut
-  , supplementalDatumFromLegacy
-
     -- * TxBodyContent sub type
   , TxCertificates (..)
   , TxMintValue (..)

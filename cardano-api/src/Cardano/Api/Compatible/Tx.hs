@@ -37,6 +37,7 @@ import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Core qualified as L
 
+import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Maybe.Strict
@@ -44,7 +45,6 @@ import Data.Monoid
 import Data.OSet.Strict (OSet)
 import Data.Sequence.Strict qualified as Seq
 import GHC.Exts (IsList (..))
-import GHC.Stack
 import Lens.Micro hiding (ix)
 
 data AnyProtocolUpdate era where
@@ -72,14 +72,19 @@ createCompatibleTx
   :: forall era
    . ShelleyBasedEra era
   -> [TxIn]
-  -> [TxOut CtxTx era]
+  -> [Exp.TxOut (ShelleyLedgerEra era)]
+  -> Map L.DataHash (L.Data (ShelleyLedgerEra era))
+  -- ^ Supplemental datums to include in the witness set. Use 'mempty' if
+  -- none are required. The legacy 'TxOut CtxTx era' bundled supplemental
+  -- datums inside outputs; 'Exp.TxOut' only carries the datum hash, so
+  -- callers thread the full datum bodies in here explicitly.
   -> Lovelace
   -- ^ Fee
   -> AnyProtocolUpdate era
   -> AnyVote era
   -> Exp.TxCertificates (ShelleyLedgerEra era)
   -> Either ProtocolParametersConversionError (Tx era)
-createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates' =
+createCompatibleTx sbe ins outs extraDatums txFee' anyProtocolUpdate anyVote txCertificates' =
   shelleyBasedEraConstraints sbe $ do
     (updateTxBody, extraScriptWitnesses) <-
       case anyProtocolUpdate of
@@ -186,7 +191,7 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
       [ monoidForEraInEon
           era
           ( \aeo -> alonzoEraOnwardsConstraints aeo $ Endo $ do
-              let sData = convScriptData' sbe outs scriptWitnesses
+              let sData = convScriptData' sbe extraDatums scriptWitnesses
               let (datums, redeemers) = case sData of
                     TxBodyScriptData _ ds rs -> (ds, rs)
                     TxBodyNoScriptData -> (mempty, L.Redeemers mempty)
@@ -223,25 +228,16 @@ convCertificates (Exp.TxCertificates cs) =
 
 convScriptData'
   :: ShelleyBasedEra era
-  -> [TxOut CtxTx era]
+  -> Map L.DataHash (L.Data (ShelleyLedgerEra era))
   -> [(ScriptWitnessIndex, AnyWitness (ShelleyLedgerEra era))]
   -> TxBodyScriptData era
-convScriptData' sbe txOuts' scriptWitnesses =
+convScriptData' sbe extraDatums scriptWitnesses =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const TxBodyNoScriptData)
     ( \w ->
         let redeemers = getAnyPlutusScriptWitnessRedeemerPointerMap w scriptWitnesses
-
             datums = mconcat [getAnyWitnessScriptData wit | (_, wit) <- scriptWitnesses]
-
-            supplementalDatums =
-              let ds = [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts']
-               in Alonzo.TxDats $
-                    fromList
-                      [ (L.hashData d', d')
-                      | d <- ds
-                      , let d' = toAlonzoData d
-                      ]
+            supplementalDatums = alonzoEraOnwardsConstraints w $ Alonzo.TxDats extraDatums
          in TxBodyScriptData w (datums <> supplementalDatums) redeemers
     )
     sbe
@@ -268,17 +264,16 @@ getAnyPlutusScriptWitnessRedeemerPointerMap w wits =
         ]
 
 createCommonTxBody
-  :: HasCallStack
-  => ShelleyBasedEra era
+  :: ShelleyBasedEra era
   -> [TxIn]
-  -> [TxOut ctx era]
+  -> [Exp.TxOut (ShelleyLedgerEra era)]
   -> Lovelace
   -> L.TxBody L.TopTx (ShelleyLedgerEra era)
 createCommonTxBody era ins outs txFee' =
-  let txIns' = map toShelleyTxIn ins
-      txOuts' = map (toShelleyTxOutAny era) outs
-   in shelleyBasedEraConstraints era $
-        L.mkBasicTxBody
+  shelleyBasedEraConstraints era $
+    let txIns' = map toShelleyTxIn ins
+        txOuts' = map (\(Exp.TxOut o) -> o) outs
+     in L.mkBasicTxBody
           & L.inputsTxBodyL
             .~ fromList txIns'
           & L.outputsTxBodyL
