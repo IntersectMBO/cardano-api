@@ -26,6 +26,7 @@ import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Era
 import Cardano.Api.Error
 import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.Tx.Internal.Certificate (filterUnRegCreds, filterUnRegDRepCreds)
 import Cardano.Api.IO
 import Cardano.Api.Monad.Error
 import Cardano.Api.Network.IPC

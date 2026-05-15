@@ -69,8 +69,6 @@ module Cardano.Api.Certificate.Internal
   , AsType (AsCertificate, AsTxId)
 
     -- * Internal functions
-  , filterUnRegCreds
-  , filterUnRegDRepCreds
   , isDRepRegOrUpdateCert
   )
 where
@@ -80,7 +78,6 @@ import Cardano.Api.Certificate.Internal.DRepMetadata
 import Cardano.Api.Certificate.Internal.StakePoolMetadata
 import Cardano.Api.Era
 import Cardano.Api.Error (Error (..))
-import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)
@@ -95,7 +92,6 @@ import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.State qualified as Ledger
 
-import Control.Monad
 import Control.Monad.Except (MonadError (..))
 import Data.Array.Byte (ByteArray)
 import Data.ByteString (ByteString)
@@ -611,23 +607,6 @@ selectStakeCredentialWitness = \case
   ConwayCertificate cEra conwayCert ->
     conwayEraOnwardsConstraints cEra $
       getTxCertWitness (convert cEra) conwayCert
-
-filterUnRegCreds
-  :: ShelleyBasedEra era -> Exp.Certificate (ShelleyLedgerEra era) -> Maybe StakeCredential
-filterUnRegCreds sbe (Exp.Certificate cert) =
-  fmap fromShelleyStakeCredential $
-    shelleyBasedEraConstraints sbe $
-      Ledger.lookupUnRegStakeTxCert cert
-
-filterUnRegDRepCreds
-  :: ShelleyBasedEra era
-  -> Exp.Certificate (ShelleyLedgerEra era)
-  -> Maybe (Ledger.Credential Ledger.DRepRole)
-filterUnRegDRepCreds sbe (Exp.Certificate cert) =
-  join $ forEraInEonMaybe (toCardanoEra sbe) $ \w ->
-    conwayEraOnwardsConstraints w $
-      fst
-        <$> Ledger.getUnRegDRepTxCert cert
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions

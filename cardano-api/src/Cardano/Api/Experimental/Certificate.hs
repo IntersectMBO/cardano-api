@@ -26,6 +26,10 @@ module Cardano.Api.Experimental.Certificate
   , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate
 
+    -- * Filtering helpers
+  , filterUnRegCreds
+  , filterUnRegDRepCreds
+
     -- * Internal conversion functions
   , toShelleyPoolParams
   , fromShelleyPoolParams
