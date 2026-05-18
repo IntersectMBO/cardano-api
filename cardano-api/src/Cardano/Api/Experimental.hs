@@ -22,11 +22,16 @@ module Cardano.Api.Experimental
   , obtainCommonConstraints
   , eraProtVerHigh
   , hashTxBody
-  , evaluateTransactionExecutionUnits
-  , evaluateTransactionExecutionUnitsShelley
   , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate
   , mkTxCertificates
+
+    -- ** Transaction evaluation
+  , evaluateTransaction
+  , evaluateSignedTx
+  , TxEvaluationResult (..)
+  , evaluateTransactionExecutionUnits
+  , evaluateTransactionExecutionUnitsShelley
 
     -- ** Transaction fee related
   , FeeCalculationError (..)

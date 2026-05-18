@@ -82,35 +82,18 @@ evalTxMethod request = do
   obtainCommonConstraints eon $ do
     let ledgerUtxo = toLedgerUTxO (convert eon) utxo
         epochInfo = toLedgerEpochInfo eraHistory
-        evalResults =
-          Exp.evaluateTransactionExecutionUnits
+        drepDeposits = Map.map (L.fromCompact . L.drepDeposit) drepStates
+        poolIdSet = Map.keysSet registeredPools
+        Exp.TxEvaluationResult fee evalUnits balance =
+          Exp.evaluateTransaction
             systemStart
             epochInfo
             protocolParams
+            poolIdSet
+            stakeDelegDeposits
+            drepDeposits
             ledgerUtxo
             ledgerTx
-        evaluatedExUnitsMap =
-          Map.fromList
-            [ (purpose, L.ExUnits (executionMemory units) (executionSteps units))
-            | (swi, Right (_, units)) <- Map.toList evalResults
-            , Just purpose <- [fromScriptWitnessIndex (convert eon) swi]
-            ]
-        -- Failed redeemers keep the client-supplied ex-units, so the computed
-        -- fee may vary with the client's guess. This is acceptable because a
-        -- failed evaluation means the tx cannot be submitted anyway.
-        txWithEvaluatedExUnits =
-          ledgerTx
-            & L.witsTxL . L.rdmrsTxWitsL
-              %~ \rdmrs ->
-                L.Redeemers $
-                  Map.mapWithKey
-                    ( \purpose (datum, oldExUnits) ->
-                        (datum, Map.findWithDefault oldExUnits purpose evaluatedExUnitsMap)
-                    )
-                    (L.unRedeemers rdmrs)
-        fee =
-          L.setMinFeeTxUtxo protocolParams txWithEvaluatedExUnits ledgerUtxo
-            ^. L.bodyTxL . L.feeTxBodyL
         redeemerData =
           Map.fromList
             [ ( toScriptIndex (convert eon) purpose
@@ -122,22 +105,7 @@ evalTxMethod request = do
             | (purpose, (datum, _exUnits)) <-
                 toList . L.unRedeemers $ ledgerTx ^. L.witsTxL . L.rdmrsTxWitsL
             ]
-        txEval = mkProtoTxEval fee evalResults redeemerData
-
-        lookupStakeDeposit credential =
-          Map.lookup (fromShelleyStakeCredential credential) stakeDelegDeposits
-        lookupDRepDeposit credential =
-          L.fromCompact . L.drepDeposit <$> Map.lookup credential drepStates
-        isRegPool poolKeyHash =
-          StakePoolKeyHash poolKeyHash `Map.member` registeredPools
-        balance =
-          L.evalBalanceTxBody
-            protocolParams
-            lookupStakeDeposit
-            lookupDRepDeposit
-            isRegPool
-            ledgerUtxo
-            (txWithEvaluatedExUnits ^. L.bodyTxL)
+        txEval = mkProtoTxEval fee evalUnits redeemerData
         balanceErrors
           | balance == mempty = []
           | otherwise =

@@ -193,9 +193,14 @@ module Cardano.Api.Experimental.Tx
   , getTxScriptWitnessesRequirements
   , obtainMonoidConstraint
 
+    -- * Transaction evaluation
+  , evaluateTransaction
+  , evaluateSignedTx
+  , TxEvaluationResult (..)
+  , evaluateTransactionExecutionUnits
+
     -- * Balancing transactions
   , calculateMinimumUTxO
-  , evaluateTransactionExecutionUnits
   , makeTransactionBodyAutoBalance
   , TxBodyErrorAutoBalance (..)
   , TxFeeEstimationError (..)
@@ -212,6 +217,8 @@ module Cardano.Api.Experimental.Tx
   )
 where
 
+import Cardano.Api.Address (StakeCredential)
+import Cardano.Api.Certificate.Internal (PoolId)
 import Cardano.Api.Era.Internal.Core qualified as Api
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Experimental.Era
@@ -225,6 +232,7 @@ import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal.Script qualified as Api
 import Cardano.Api.Pretty (docToString, pretty)
 import Cardano.Api.ProtocolParameters
+import Cardano.Api.Query.Internal.Type.QueryInMode (LedgerEpochInfo, SystemStart)
 import Cardano.Api.Serialise.Raw
   ( SerialiseAsRawBytes (..)
   , SerialiseAsRawBytesError (SerialiseAsRawBytesError)
@@ -233,9 +241,10 @@ import Cardano.Api.Tx.Internal.Body qualified as Api
 import Cardano.Api.Tx.Internal.Sign
 
 import Cardano.Crypto.Hash qualified as Hash
+import Cardano.Ledger.Alonzo.Core qualified as Ledger
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
-import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Credential qualified as Ledger (Credential)
 import Cardano.Ledger.Hashes qualified as L hiding (Hash)
 
 import Control.Exception (displayException)
@@ -243,6 +252,7 @@ import Data.Bifunctor (bimap)
 import Data.ByteString.Lazy (fromStrict)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Stack
 import Lens.Micro
@@ -324,6 +334,41 @@ signTx era bootstrapWits shelleyKeyWits (UnsignedTx unsigned) =
                 .~ Set.fromList bootstrapWits
         signedTx = unsigned & L.witsTxL .~ (keyWits <> currentScriptWitnesses)
      in SignedTx signedTx
+
+-- | Like 'evaluateTransaction' but accepts a 'SignedTx' directly.
+evaluateSignedTx
+  :: forall era
+   . IsEra era
+  => SystemStart
+  -- ^ Start time of the blockchain
+  -> LedgerEpochInfo
+  -- ^ Epoch info for slot/time conversions
+  -> L.PParams (LedgerEra era)
+  -- ^ Protocol parameters
+  -> Set PoolId
+  -- ^ Registered stake pools
+  -> Map StakeCredential L.Coin
+  -- ^ Stake delegation deposits
+  -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
+  -- ^ DRep delegation deposits
+  -> L.UTxO (LedgerEra era)
+  -- ^ UTxO set for the transaction inputs
+  -> SignedTx era
+  -- ^ Signed transaction to evaluate
+  -> TxEvaluationResult (LedgerEra era)
+evaluateSignedTx systemStart epochInfo protocolParams poolIds stakeDelegDeposits drepDelegDeposits utxo (SignedTx tx) =
+  -- obtainCommonConstraints is needed here to bring ShelleyLedgerEra era ~ LedgerEra era
+  -- into scope, unifying SignedTx's ShelleyLedgerEra with evaluateTransaction's LedgerEra.
+  obtainCommonConstraints (useEra @era) $
+    evaluateTransaction
+      systemStart
+      epochInfo
+      protocolParams
+      poolIds
+      stakeDelegDeposits
+      drepDelegDeposits
+      utxo
+      tx
 
 -- Compatibility related. Will be removed once the old api has been deprecated and deleted.
 
