@@ -1,6 +1,0 @@
-project: cardano-api
-pr: 1205
-kind:
-  - feature
-description: |
-  Add `evaluateTransaction` and `evaluateSignedTx` to `Cardano.Api.Experimental`, composing script evaluation, fee computation, and balance checking into a single pure function for signed transactions.
