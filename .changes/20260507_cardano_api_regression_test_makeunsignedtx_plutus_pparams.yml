@@ -1,6 +1,0 @@
-project: cardano-api
-pr: 1201
-kind:
-  - test
-description: |
-  Add a regression test in `Test.Cardano.Api.Experimental` (`prop_makeUnsignedTx_plutus_without_pparams`) covering the fix from #1181: `makeUnsignedTx` must return `Left MakeUnsignedTxMissingProtocolParams` when the transaction body contains a Plutus script witness but no protocol parameters.

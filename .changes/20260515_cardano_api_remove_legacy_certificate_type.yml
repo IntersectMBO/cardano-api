@@ -1,8 +1,0 @@
-project: cardano-api
-pr: 1210
-kind:
-  - breaking
-description: |
-  Remove the deprecated `data Certificate era` GADT, its `ShelleyRelatedCertificate`/`ConwayCertificate` constructors, all `make*Certificate` functions, all `*Requirements` GADTs, and the public `Cardano.Api.Certificate` module. Consumers should use the certificate API exposed via `Cardano.Api.Experimental.Certificate` (era-polymorphic, Conway onwards) or `Cardano.Api.Compatible.Certificate` (covers all Shelley-based eras).
-
-  Pool-related types (`PoolId`, `StakePoolParameters`, `StakePoolRelay`, `StakePoolMetadataReference`) and their conversion helpers remain in `Cardano.Api.Certificate.Internal` and are re-exported by `Cardano.Api.Experimental.Certificate`.

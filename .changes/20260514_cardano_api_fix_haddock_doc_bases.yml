@@ -1,6 +1,0 @@
-project: cardano-api
-pr: 1208
-kind:
-  - documentation
-description: |
-  Fix haddock dead-link CI failures by updating IOG_DOC_BASES in fix-haddock-links.sh: io-sim and typed-protocols GitHub Pages moved from input-output-hk.github.io to intersectmbo.github.io after the repos migrated to the IntersectMBO org. This resolves the unmapped CHaP package errors for io-sim, io-classes, and typed-protocols.
