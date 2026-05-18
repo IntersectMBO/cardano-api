@@ -30,6 +30,10 @@ module Test.Golden.ErrorsSpec
 where
 
 import Cardano.Api
+import Cardano.Api.Experimental.Certificate
+  ( OperationalCertIssueError (..)
+  , StakePoolMetadataValidationError (..)
+  )
 
 import Cardano.Binary as CBOR
 import Cardano.Crypto.Seed qualified as Crypto

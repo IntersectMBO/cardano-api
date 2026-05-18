@@ -20,7 +20,6 @@ where
 
 import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
-import Cardano.Api.Certificate.Internal
 import Cardano.Api.Error
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Key.Internal

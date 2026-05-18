@@ -33,12 +33,18 @@ module Cardano.Api.Experimental.Tx.Internal.Certificate
   , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate
 
+    -- * Filtering helpers
+  , filterUnRegCreds
+  , filterUnRegDRepCreds
+
     -- * Data family instances
   , AsType (..)
   )
 where
 
 import Cardano.Api.Address
+import Cardano.Api.Era.Internal.Core (forEraInEonMaybe, toCardanoEra)
+import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards (conwayEraOnwardsConstraints)
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error
 import Cardano.Api.Experimental.Era
@@ -54,6 +60,7 @@ import Cardano.Api.Serialise.TextEnvelope.Internal
 
 import Cardano.Ledger.BaseTypes (strictMaybe)
 
+import Control.Monad (join)
 import Control.Monad.Except (MonadError (..))
 import Data.Array.Byte (ByteArray)
 import Data.ByteString.Short qualified as SBS
@@ -250,3 +257,22 @@ instance Error AnchorDataFromCertificateError where
   prettyError :: AnchorDataFromCertificateError -> Doc ann
   prettyError (InvalidPoolMetadataHashError url hash) =
     "Invalid pool metadata hash for URL " <> pretty url <> ": " <> fromString (show hash)
+
+-- -------------------------------------
+
+filterUnRegCreds
+  :: ShelleyBasedEra era -> Certificate (ShelleyLedgerEra era) -> Maybe StakeCredential
+filterUnRegCreds sbe (Certificate cert) =
+  fmap fromShelleyStakeCredential $
+    shelleyBasedEraConstraints sbe $
+      Ledger.lookupUnRegStakeTxCert cert
+
+filterUnRegDRepCreds
+  :: ShelleyBasedEra era
+  -> Certificate (ShelleyLedgerEra era)
+  -> Maybe (Ledger.Credential Ledger.DRepRole)
+filterUnRegDRepCreds sbe (Certificate cert) =
+  join $ forEraInEonMaybe (toCardanoEra sbe) $ \w ->
+    conwayEraOnwardsConstraints w $
+      fst
+        <$> Ledger.getUnRegDRepTxCert cert

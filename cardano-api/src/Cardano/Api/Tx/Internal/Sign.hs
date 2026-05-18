@@ -9,7 +9,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -76,7 +75,6 @@ where
 
 import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
-import Cardano.Api.Certificate.Internal
 import Cardano.Api.Era
 import Cardano.Api.Error
 import Cardano.Api.HasTypeProxy
@@ -85,6 +83,7 @@ import Cardano.Api.Key.Internal.Class
 import Cardano.Api.Network.Internal.NetworkId
 import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.TextEnvelope.Internal
+import Cardano.Api.Tx.Internal.TxIn (AsType (AsTxId))
 
 import Cardano.Chain.Common qualified as Byron
 import Cardano.Chain.UTxO qualified as Byron

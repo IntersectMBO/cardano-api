@@ -238,7 +238,6 @@ where
 
 import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
-import Cardano.Api.Certificate
 import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.AllegraEraOnwards

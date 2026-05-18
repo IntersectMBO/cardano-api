@@ -14,6 +14,9 @@ where
 
 import Cardano.Api
 import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.Certificate
+  ( AsType (AsOperationalCertificate, AsOperationalCertificateIssueCounter)
+  )
 import Cardano.Api.Ledger qualified as Ledger
 
 import Cardano.Binary qualified as CBOR
