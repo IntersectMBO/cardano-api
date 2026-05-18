@@ -22,7 +22,6 @@ module Test.Golden.ErrorsSpec
   , test_StakePoolMetadataValidationError
   , test_TextEnvelopeCddlError
   , test_TextEnvelopeError
-  , test_TransactionValidityError
   , test_TxBodyError
   , test_TxBodyErrorAutoBalance
   , test_TxMetadataJsonError
@@ -389,28 +388,6 @@ test_TextEnvelopeError =
 testPastHorizonValue :: Ledger.AlonzoContextError Ledger.AlonzoEra
 testPastHorizonValue = Ledger.TimeTranslationPastHorizon text
 
-test_TransactionValidityError :: TestTree
-test_TransactionValidityError =
-  testAllErrorMessages_
-    "Cardano.Api.Tx.Internal.Fee"
-    "TransactionValidityError"
-    [
-      ( "TransactionValidityCostModelError"
-      , TransactionValidityCostModelError
-          (fromList [(AnyPlutusScriptVersion PlutusScriptV2, costModel)])
-          string
-      )
-      -- TODO Implement this when we get access to data constructors of PastHorizon or its fields' types' constructors
-      -- or we get a dummy value for such purposes.
-      --
-      -- , ("TransactionValidityIntervalError", TransactionValidityIntervalError $
-      --     Qry.PastHorizon
-      --     { Qry.pastHorizonCallStack = GHC.callStack
-      --     , Qry.pastHorizonExpression = error "" -- Some $ Qry.ClosedExpr $ Qry.ELit 0
-      --     , Qry.pastHorizonSummary = []
-      --     })
-    ]
-
 test_TxBodyError :: TestTree
 test_TxBodyError =
   testAllErrorMessages_
@@ -439,13 +416,7 @@ test_TxBodyErrorAutoBalance =
     , ("TxBodyScriptBadScriptValidity", TxBodyScriptBadScriptValidity)
     , ("TxBodyErrorBalanceNegative", TxBodyErrorBalanceNegative (-1) mempty)
     , ("TxBodyErrorAdaBalanceTooSmall", TxBodyErrorAdaBalanceTooSmall txOutInAnyEra1 0 1)
-    , ("TxBodyErrorByronEraNotSupported", TxBodyErrorByronEraNotSupported)
-    , ("TxBodyErrorMissingParamMinUTxO", TxBodyErrorMissingParamMinUTxO)
     , ("TxBodyErrorMinUTxONotMet", TxBodyErrorMinUTxONotMet txOutInAnyEra1 1)
-    ,
-      ( "TxBodyErrorNonAdaAssetsUnbalanced"
-      , TxBodyErrorNonAdaAssetsUnbalanced (fromList [(AdaAssetId, Quantity 1)])
-      )
     ,
       ( "TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap"
       , TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap

@@ -25,7 +25,6 @@ module Cardano.Api.Tx.Internal.Fee
   , evaluateTransactionExecutionUnits
   , evaluateTransactionExecutionUnitsShelley
   , ScriptExecutionError (..)
-  , TransactionValidityError (..)
 
     -- ** Transaction balance
   , evaluateTransactionBalance
@@ -88,7 +87,6 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
 import Cardano.Ledger.Credential as Ledger (Credential)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
-import Ouroboros.Consensus.HardFork.History qualified as Consensus
 
 import Data.Bifunctor (bimap, first, second)
 import Data.Bitraversable (bitraverse)
@@ -179,8 +177,7 @@ estimateOrCalculateBalancedTxBody era feeEstMode pparams txBodyContent poolids s
           )
 
 data TxFeeEstimationError era
-  = TxFeeEstimationTransactionTranslationError (TransactionValidityError era)
-  | TxFeeEstimationScriptExecutionError (TxBodyErrorAutoBalance era)
+  = TxFeeEstimationScriptExecutionError (TxBodyErrorAutoBalance era)
   | TxFeeEstimationBalanceError (TxBodyErrorAutoBalance era)
   | TxFeeEstimationxBodyError TxBodyError
   | TxFeeEstimationFinalConstructionError TxBodyError
@@ -189,7 +186,6 @@ data TxFeeEstimationError era
 
 instance Error (TxFeeEstimationError era) where
   prettyError = \case
-    TxFeeEstimationTransactionTranslationError e -> prettyError e
     TxFeeEstimationScriptExecutionError e -> prettyError e
     TxFeeEstimationBalanceError e -> prettyError e
     TxFeeEstimationxBodyError e -> prettyError e
@@ -638,61 +634,6 @@ instance Error ScriptExecutionError where
     ScriptErrorTranslationError e ->
       "Error translating the transaction context: " <> pshow e
 
-data TransactionValidityError era where
-  -- | The transaction validity interval is too far into the future.
-  --
-  -- Transactions containing Plutus scripts must have a validity interval that is
-  -- not excessively far in the future. This ensures that the UTC
-  -- corresponding to the validity interval expressed in slot numbers,
-  -- can be reliably determined.
-  --
-  -- Plutus scripts are given the transaction validity interval in UTC to
-  -- prevent sensitivity to variations in slot lengths.
-  --
-  -- If either end of the validity interval exceeds the \"time horizon\", the
-  -- consensus algorithm cannot reliably establish the relationship between
-  -- slots and time.
-  --
-  -- This error occurs when thevalidity interval exceeds the time horizon.
-  -- For the Cardano mainnet, the time horizon is set to 36 hours beyond the
-  -- current time. This effectively restricts the submission and validation
-  -- of transactions that include Plutus scripts if the end of their validity
-  -- interval extends more than 36 hours into the future.
-  TransactionValidityIntervalError
-    :: Consensus.PastHorizonException -> TransactionValidityError era
-  TransactionValidityCostModelError
-    :: (Map AnyPlutusScriptVersion CostModel) -> String -> TransactionValidityError era
-
-deriving instance Show (TransactionValidityError era)
-
-instance Error (TransactionValidityError era) where
-  prettyError = \case
-    TransactionValidityIntervalError pastTimeHorizon ->
-      mconcat
-        [ "The transaction validity interval is too far in the future. "
-        , "For this network it must not be more than "
-        , pretty (timeHorizonSlots pastTimeHorizon)
-        , "slots ahead of the current time slot. "
-        , "(Transactions with Plutus scripts must have validity intervals that "
-        , "are close enough in the future that we can reliably turn the slot "
-        , "numbers into UTC wall clock times.)"
-        ]
-     where
-      timeHorizonSlots :: Consensus.PastHorizonException -> Word
-      timeHorizonSlots Consensus.PastHorizon{Consensus.pastHorizonSummary}
-        | eraSummaries@(_ : _) <- pastHorizonSummary
-        , Consensus.StandardSafeZone slots <-
-            (Consensus.eraSafeZone . Consensus.eraParams . last) eraSummaries =
-            fromIntegral slots
-        | otherwise =
-            0 -- This should be impossible.
-    TransactionValidityCostModelError cModels err ->
-      mconcat
-        [ "An error occurred while converting from the cardano-api cost"
-        , " models to the cardano-ledger cost models. Error: " <> pretty err
-        , " Cost models: " <> pshow cModels
-        ]
-
 -- | Compute the 'ExecutionUnits' required for each script in the transaction.
 --
 -- This process involves executing all scripts and counting the actual execution units
@@ -874,18 +815,12 @@ data TxBodyErrorAutoBalance era
       -- ^ Minimum UTxO
       L.Coin
       -- ^ Tx balance
-  | -- | 'makeTransactionBodyAutoBalance' does not yet support the Byron era.
-    TxBodyErrorByronEraNotSupported
-  | -- | The 'ProtocolParameters' must provide the value for the min utxo
-    -- parameter, for eras that use this parameter.
-    TxBodyErrorMissingParamMinUTxO
   | -- | The minimum spendable UTxO threshold has not been met.
     TxBodyErrorMinUTxONotMet
       TxOutInAnyEra
       -- ^ Offending TxOut
       L.Coin
       -- ^ Minimum UTXO
-  | TxBodyErrorNonAdaAssetsUnbalanced Value
   | TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
       ScriptWitnessIndex
       (Map ScriptWitnessIndex ExecutionUnits)
@@ -926,17 +861,11 @@ instance Error (TxBodyErrorAutoBalance era) where
         , "The usual solution is to provide more inputs, or inputs with more ada to "
         , "meet the minimum UTxO threshold"
         ]
-    TxBodyErrorByronEraNotSupported ->
-      "The Byron era is not yet supported by makeTransactionBodyAutoBalance"
-    TxBodyErrorMissingParamMinUTxO ->
-      "The minUTxOValue protocol parameter is required but missing"
     TxBodyErrorMinUTxONotMet txout minUTxO ->
       mconcat
         [ "Minimum UTxO threshold not met for tx output: " <> pretty (prettyRenderTxOut txout) <> "\n"
         , "Minimum required UTxO: " <> pretty minUTxO
         ]
-    TxBodyErrorNonAdaAssetsUnbalanced val ->
-      "Non-Ada assets are unbalanced: " <> pretty (renderValue val)
     TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap sIndex eUnitsMap ->
       mconcat
         [ "ScriptWitnessIndex (redeemer pointer): " <> pshow sIndex <> " is missing from the execution "
