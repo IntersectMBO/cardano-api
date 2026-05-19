@@ -1,0 +1,9 @@
+project: cardano-api
+pr: 1179
+kind:
+  - feature
+description: |
+  Add per-era ToJSON and FromJSON instances for the experimental TxOut
+  type. Pre-Alonzo eras serialise address and value; Alonzo adds datum
+  hash; Babbage+ adds inline datum (with hex-encoded CBOR) and reference
+  script support.

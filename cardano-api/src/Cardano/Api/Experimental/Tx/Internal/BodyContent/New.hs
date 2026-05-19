@@ -9,6 +9,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   ( TxCertificates (..)
@@ -108,6 +109,7 @@ import Cardano.Api.Plutus.Internal.Script
   , ScriptInAnyLang (..)
   , ScriptLanguage (..)
   , fromAllegraTimelock
+  , toAllegraTimelock
   )
 import Cardano.Api.Plutus.Internal.Script qualified as OldScript
 import Cardano.Api.Plutus.Internal.ScriptData qualified as Api
@@ -132,6 +134,7 @@ import Cardano.Api.Value.Internal
   )
 
 import Cardano.Binary qualified as CBOR
+import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Scripts qualified as L
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Alonzo.TxBody qualified as L
@@ -142,8 +145,9 @@ import Cardano.Ledger.Plutus.Language (PlutusBinary (..), plutusLanguage)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Control.Monad
-import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
+import Data.Aeson.Types (Pair, Parser)
 import Data.ByteString.Base16 qualified as Base16
 import Data.Functor
 import Data.List qualified as List
@@ -154,6 +158,7 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.OSet.Strict (OSet)
 import Data.OSet.Strict qualified as OSet
+import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict qualified as Seq
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -400,42 +405,44 @@ alonzoOnwardsTxOutToJson (TxOut o) =
     [ "address" .= addrToJson (o ^. L.addrTxOutL)
     , "value" .= valueToJson (o ^. L.valueTxOutL)
     ]
-      <> datumFields mDatum
-      <> inlineDatumFields isBabbagePlus mDatum
-      <> refScriptFields mRefScript
+      <> datumAndRefScriptFields (o ^. L.datumTxOutG) (o ^. L.referenceScriptTxOutG)
+
+-- | Emit the datum, inline-datum, and reference-script JSON fields appropriate
+-- for the era. Pre-Alonzo emits nothing; Alonzo emits @datumhash@ and @datum@;
+-- Babbage+ additionally emits @inlineDatum@, @inlineDatumRaw@, @inlineDatumhash@
+-- and @referenceScript@.
+datumAndRefScriptFields
+  :: L.AlonzoEraScript era
+  => Maybe (L.Datum era)
+  -> Maybe (Maybe (L.Script era))
+  -> [Pair]
+datumAndRefScriptFields mDatum mRefScript =
+  datumFields <> inlineDatumFields <> refScriptFields
  where
-  mDatum = o ^. L.datumTxOutG
-  mRefScript = o ^. L.referenceScriptTxOutG
   isBabbagePlus = isJust mRefScript
 
-  datumFields Nothing = []
-  datumFields (Just L.NoDatum) =
-    ["datumhash" .= Aeson.Null, "datum" .= Aeson.Null]
-  datumFields (Just (L.DatumHash dh)) =
-    ["datumhash" .= dh, "datum" .= Aeson.Null]
-  datumFields (Just (L.Datum _)) =
-    ["datum" .= Aeson.Null]
+  datumFields = case mDatum of
+    Nothing -> []
+    Just L.NoDatum -> ["datumhash" .= Aeson.Null, "datum" .= Aeson.Null]
+    Just (L.DatumHash dh) -> ["datumhash" .= dh, "datum" .= Aeson.Null]
+    Just (L.Datum _) -> ["datum" .= Aeson.Null]
 
-  inlineDatumFields _ (Just (L.Datum bd)) =
-    let hsd = Api.fromAlonzoData (L.binaryDataToData bd)
-     in [ "inlineDatumhash" .= L.hashBinaryData bd
-        , "inlineDatum" .= Api.scriptDataToJsonDetailedSchema hsd
-        , "inlineDatumRaw"
-            .= ( Aeson.String
-                   . Text.decodeUtf8
-                   . Base16.encode
-                   . serialiseToCBOR
-                   $ hsd
-               )
-        ]
-  inlineDatumFields True _ =
-    ["inlineDatum" .= Aeson.Null, "inlineDatumRaw" .= Aeson.Null]
-  inlineDatumFields _ _ = []
+  inlineDatumFields = case mDatum of
+    Just (L.Datum bd) ->
+      let hsd = Api.fromAlonzoData (L.binaryDataToData bd)
+       in [ "inlineDatumhash" .= L.hashBinaryData bd
+          , "inlineDatum" .= Api.scriptDataToJsonDetailedSchema hsd
+          , "inlineDatumRaw"
+              .= (Aeson.String . Text.decodeUtf8 . Base16.encode . serialiseToCBOR $ hsd)
+          ]
+    _
+      | isBabbagePlus -> ["inlineDatum" .= Aeson.Null, "inlineDatumRaw" .= Aeson.Null]
+      | otherwise -> []
 
-  refScriptFields Nothing = []
-  refScriptFields (Just Nothing) = ["referenceScript" .= Aeson.Null]
-  refScriptFields (Just (Just script)) =
-    ["referenceScript" .= ledgerScriptToScriptInAnyLang script]
+  refScriptFields = case mRefScript of
+    Nothing -> []
+    Just Nothing -> ["referenceScript" .= Aeson.Null]
+    Just (Just script) -> ["referenceScript" .= ledgerScriptToScriptInAnyLang script]
 
 -- | Render just the base fields (address and value) shared by all eras.
 txOutBaseJson :: L.EraTxOut era => L.TxOut era -> Aeson.Value
@@ -488,6 +495,133 @@ ledgerScriptToScriptInAnyLang script =
 deriving instance (Show (TxOut era))
 
 deriving instance (Eq (TxOut era))
+
+-- | Pre-Alonzo eras have no datums or reference scripts, so parsing
+-- only needs address and value.
+instance FromJSON (TxOut L.ShelleyEra) where
+  parseJSON = Aeson.withObject "TxOut" $ fmap TxOut . txOutBaseParseJson
+
+instance FromJSON (TxOut L.AllegraEra) where
+  parseJSON = Aeson.withObject "TxOut" $ fmap TxOut . txOutBaseParseJson
+
+instance FromJSON (TxOut L.MaryEra) where
+  parseJSON = Aeson.withObject "TxOut" $ fmap TxOut . txOutBaseParseJson
+
+-- | Alonzo supports datum hashes but not inline datums or reference scripts.
+instance FromJSON (TxOut L.AlonzoEra) where
+  parseJSON = Aeson.withObject "TxOut" $ \o -> do
+    baseTxOut <- txOutBaseParseJson o
+    mDatumHash <- o .:? "datumhash"
+    pure . TxOut $ case mDatumHash of
+      Nothing -> baseTxOut
+      Just dh -> baseTxOut & L.dataHashTxOutL .~ SJust dh
+
+-- | Babbage and later eras support inline datums and reference scripts.
+instance FromJSON (TxOut L.BabbageEra) where
+  parseJSON = Aeson.withObject "TxOut" babbageOnwardsTxOutParseJson
+
+instance FromJSON (TxOut L.ConwayEra) where
+  parseJSON = Aeson.withObject "TxOut" babbageOnwardsTxOutParseJson
+
+-- | Parse the base fields (address and value) shared by all eras.
+txOutBaseParseJson :: forall era. L.EraTxOut era => Aeson.Object -> Parser (L.TxOut era)
+txOutBaseParseJson o = do
+  addr <- addrFromJson =<< o .: "address"
+  apiVal <- parseJSON =<< o .: "value"
+  val <- maryValueToEraValue (Proxy @era) $ toMaryValue apiVal
+  pure $ L.mkBasicTxOut addr val
+
+-- | Convert a 'MaryValue' to the era-specific @'L.Value' era@ using runtime type
+-- checks via 'Data.Typeable.cast'.
+--
+-- The ledger's @Value@ type family resolves to different concrete types per era:
+-- 'Coin' for Shelley\/Allegra and 'MaryValue' for Mary onwards. Since 'MaryValue'
+-- subsumes 'Coin' (it separates lovelace from multi-asset), we can always produce
+-- the correct era type: first try casting the 'MaryValue' directly (succeeds in
+-- Mary+), then fall back to extracting the 'Coin' component (succeeds in
+-- Shelley\/Allegra).
+maryValueToEraValue :: L.EraTxOut era => Proxy era -> L.MaryValue -> Parser (L.Value era)
+maryValueToEraValue _proxy mv = case cast mv of
+  Just v -> pure v
+  Nothing -> case cast (L.coin mv) of
+    Just v -> pure v
+    Nothing -> fail "Unsupported value type for era"
+
+-- | Parse a ledger 'L.Addr' from JSON. Reverse of 'addrToJson'.
+addrFromJson :: Aeson.Value -> Parser L.Addr
+addrFromJson = Aeson.withText "Address" $ \txt ->
+  case deserialiseAddress AsAddressAny txt of
+    Nothing -> fail "Invalid address"
+    Just addrAny -> pure $ case addrAny of
+      AddressByron (ByronAddress addr) -> L.AddrBootstrap (L.BootstrapAddress addr)
+      AddressShelley (ShelleyAddress nw pc scr) -> L.Addr nw pc scr
+
+-- | Parse a Babbage+ TxOut with datum and reference script support.
+babbageOnwardsTxOutParseJson
+  :: forall era
+   . ( L.BabbageEraTxOut era
+     , L.NativeScript era ~ Timelock era
+     )
+  => Aeson.Object -> Parser (TxOut era)
+babbageOnwardsTxOutParseJson o = do
+  baseTxOut <- txOutBaseParseJson o
+  -- Parse datum fields
+  mDatumHash <- o .:? "datumhash"
+  mInlineDatumRaw <- o .:? "inlineDatumRaw"
+  mInlineDatumHash <- o .:? "inlineDatumhash"
+  -- Parse reference script
+  mRefScript <- o .:? "referenceScript"
+  -- Determine datum
+  datum <- case mInlineDatumRaw of
+    Just rawHex -> do
+      expectedHash <- case mInlineDatumHash of
+        Nothing -> fail "inlineDatumRaw present without inlineDatumhash"
+        Just h -> pure h
+      rawBytes <- case Base16.decode (Text.encodeUtf8 rawHex) of
+        Left err -> fail $ "Error decoding inlineDatumRaw hex: " <> show err
+        Right bs -> pure bs
+      binaryData <- case L.makeBinaryData (SBS.toShort rawBytes) of
+        Left err -> fail $ "Error decoding inlineDatumRaw CBOR: " <> err
+        Right bd -> pure bd
+      when (L.hashBinaryData binaryData /= expectedHash) $
+        fail "Inline datum hash does not match inlineDatumRaw"
+      pure $ L.Datum binaryData
+    Nothing -> case mDatumHash of
+      Just dh -> pure $ L.DatumHash dh
+      Nothing -> pure L.NoDatum
+  -- Determine reference script
+  refScript <- case mRefScript of
+    Nothing -> pure SNothing
+    Just script -> SJust <$> scriptInAnyLangToLedgerScript script
+  -- Construct TxOut
+  pure . TxOut $
+    baseTxOut
+      & L.datumTxOutL .~ datum
+      & L.referenceScriptTxOutL .~ refScript
+
+-- | Convert a 'ScriptInAnyLang' to a ledger 'L.Script'. Reverse of 'ledgerScriptToScriptInAnyLang'.
+scriptInAnyLangToLedgerScript
+  :: forall era
+   . ( L.AlonzoEraScript era
+     , L.NativeScript era ~ Timelock era
+     )
+  => ScriptInAnyLang -> Parser (L.Script era)
+scriptInAnyLangToLedgerScript (ScriptInAnyLang lang script) =
+  case (lang, script) of
+    (SimpleScriptLanguage, OldScript.SimpleScript ss) ->
+      pure $ L.fromNativeScript (toAllegraTimelock ss)
+    (PlutusScriptLanguage PlutusScriptV1, OldScript.PlutusScript _ (PlutusScriptSerialised sbs)) ->
+      L.fromPlutusScript
+        <$> L.mkPlutusScript (Plutus.Plutus (PlutusBinary sbs) :: Plutus.Plutus 'Plutus.PlutusV1)
+    (PlutusScriptLanguage PlutusScriptV2, OldScript.PlutusScript _ (PlutusScriptSerialised sbs)) ->
+      L.fromPlutusScript
+        <$> L.mkPlutusScript (Plutus.Plutus (PlutusBinary sbs) :: Plutus.Plutus 'Plutus.PlutusV2)
+    (PlutusScriptLanguage PlutusScriptV3, OldScript.PlutusScript _ (PlutusScriptSerialised sbs)) ->
+      L.fromPlutusScript
+        <$> L.mkPlutusScript (Plutus.Plutus (PlutusBinary sbs) :: Plutus.Plutus 'Plutus.PlutusV3)
+    (PlutusScriptLanguage PlutusScriptV4, OldScript.PlutusScript _ (PlutusScriptSerialised sbs)) ->
+      L.fromPlutusScript
+        <$> L.mkPlutusScript (Plutus.Plutus (PlutusBinary sbs) :: Plutus.Plutus 'Plutus.PlutusV4)
 
 data Datum ctx era where
   TxOutDatumHash
