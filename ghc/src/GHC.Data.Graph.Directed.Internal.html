@@ -1,0 +1,236 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html"><span class="hs-identifier">GHC.Data.Graph.Directed.Internal</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../array-0.5.8.0-inplace/src/Data.Array.html"><span class="hs-identifier">Data.Array</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html"><span class="hs-identifier">Data.Graph</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">G</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html"><span class="hs-identifier">Data.Graph</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#Vertex"><span class="hs-identifier">Vertex</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#SCC"><span class="hs-identifier">SCC</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- Used in the underlying representation</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Tree.html"><span class="hs-identifier">Data.Tree</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">data</span><span> </span><span id="Graph"><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Graph"><span class="hs-identifier hs-var">Graph</span></a></span></span><span> </span><span id="local-6989586621682670286"><span class="annot"><a href="#local-6989586621682670286"><span class="hs-identifier hs-type">node</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Graph"><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Graph"><span class="hs-identifier hs-var">Graph</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-12"></span><span>    </span><span id="gr_int_graph"><span class="annot"><span class="annottext">forall node. Graph node -&gt; IntGraph
+</span><a href="GHC.Data.Graph.Directed.Internal.html#gr_int_graph"><span class="hs-identifier hs-var hs-var">gr_int_graph</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#IntGraph"><span class="hs-identifier hs-type">IntGraph</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>    </span><span id="gr_vertex_to_node"><span class="annot"><span class="annottext">forall node. Graph node -&gt; Vertex -&gt; node
+</span><a href="GHC.Data.Graph.Directed.Internal.html#gr_vertex_to_node"><span class="hs-identifier hs-var hs-var">gr_vertex_to_node</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#Vertex"><span class="hs-identifier hs-type">Vertex</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682670286"><span class="hs-identifier hs-type">node</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span id="gr_node_to_vertex"><span class="annot"><span class="annottext">forall node. Graph node -&gt; node -&gt; Maybe Vertex
+</span><a href="GHC.Data.Graph.Directed.Internal.html#gr_node_to_vertex"><span class="hs-identifier hs-var hs-var">gr_node_to_vertex</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621682670286"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#Vertex"><span class="hs-identifier hs-type">Vertex</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-special">}</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">data</span><span> </span><span id="Edge"><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Edge"><span class="hs-identifier hs-var">Edge</span></a></span></span><span> </span><span id="local-6989586621682670304"><span class="annot"><a href="#local-6989586621682670304"><span class="hs-identifier hs-type">node</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Edge"><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Edge"><span class="hs-identifier hs-var">Edge</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621682670304"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670304"><span class="hs-identifier hs-type">node</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">------------------------------------------------------------</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- Nodes and Edges</span><span>
+</span><span id="line-21"></span><span class="hs-comment">------------------------------------------------------------</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span id="local-6989586621682670292"><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#verticesG"><span class="hs-identifier hs-type">verticesG</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Graph"><span class="hs-identifier hs-type">Graph</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670292"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621682670292"><span class="hs-identifier hs-type">node</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-24"></span><span id="verticesG"><span class="annot"><span class="annottext">verticesG :: forall node. Graph node -&gt; [node]
+</span><a href="GHC.Data.Graph.Directed.Internal.html#verticesG"><span class="hs-identifier hs-var hs-var">verticesG</span></a></span></span><span> </span><span id="local-6989586621682670348"><span class="annot"><span class="annottext">Graph node
+</span><a href="#local-6989586621682670348"><span class="hs-identifier hs-var">graph</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Vertex -&gt; node) -&gt; [Vertex] -&gt; [node]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Graph node -&gt; Vertex -&gt; node
+forall node. Graph node -&gt; Vertex -&gt; node
+</span><a href="GHC.Data.Graph.Directed.Internal.html#gr_vertex_to_node"><span class="hs-identifier hs-var">gr_vertex_to_node</span></a></span><span> </span><span class="annot"><span class="annottext">Graph node
+</span><a href="#local-6989586621682670348"><span class="hs-identifier hs-var">graph</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Vertex] -&gt; [node]) -&gt; [Vertex] -&gt; [node]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IntGraph -&gt; [Vertex]
+</span><a href="../../containers-0.8-inplace/src/Data.Graph.html#vertices"><span class="hs-identifier hs-var">G.vertices</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Graph node -&gt; IntGraph
+forall node. Graph node -&gt; IntGraph
+</span><a href="GHC.Data.Graph.Directed.Internal.html#gr_int_graph"><span class="hs-identifier hs-var">gr_int_graph</span></a></span><span> </span><span class="annot"><span class="annottext">Graph node
+</span><a href="#local-6989586621682670348"><span class="hs-identifier hs-var">graph</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span id="local-6989586621682670300"><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#edgesG"><span class="hs-identifier hs-type">edgesG</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Graph"><span class="hs-identifier hs-type">Graph</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670300"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Edge"><span class="hs-identifier hs-type">Edge</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670300"><span class="hs-identifier hs-type">node</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-27"></span><span id="edgesG"><span class="annot"><span class="annottext">edgesG :: forall node. Graph node -&gt; [Edge node]
+</span><a href="GHC.Data.Graph.Directed.Internal.html#edgesG"><span class="hs-identifier hs-var hs-var">edgesG</span></a></span></span><span> </span><span id="local-6989586621682670351"><span class="annot"><span class="annottext">Graph node
+</span><a href="#local-6989586621682670351"><span class="hs-identifier hs-var">graph</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Edge -&gt; Edge node) -&gt; [Edge] -&gt; [Edge node]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621682670352"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670352"><span class="hs-identifier hs-var">v1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682670353"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670353"><span class="hs-identifier hs-var">v2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">node -&gt; node -&gt; Edge node
+forall node. node -&gt; node -&gt; Edge node
+</span><a href="GHC.Data.Graph.Directed.Internal.html#Edge"><span class="hs-identifier hs-var">Edge</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670354"><span class="hs-identifier hs-var">v2n</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670352"><span class="hs-identifier hs-var">v1</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670354"><span class="hs-identifier hs-var">v2n</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670353"><span class="hs-identifier hs-var">v2</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Edge] -&gt; [Edge node]) -&gt; [Edge] -&gt; [Edge node]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IntGraph -&gt; [Edge]
+</span><a href="../../containers-0.8-inplace/src/Data.Graph.html#edges"><span class="hs-identifier hs-var">G.edges</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Graph node -&gt; IntGraph
+forall node. Graph node -&gt; IntGraph
+</span><a href="GHC.Data.Graph.Directed.Internal.html#gr_int_graph"><span class="hs-identifier hs-var">gr_int_graph</span></a></span><span> </span><span class="annot"><span class="annottext">Graph node
+</span><a href="#local-6989586621682670351"><span class="hs-identifier hs-var">graph</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682670354"><span class="annot"><span class="annottext">v2n :: Vertex -&gt; node
+</span><a href="#local-6989586621682670354"><span class="hs-identifier hs-var hs-var">v2n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Graph node -&gt; Vertex -&gt; node
+forall node. Graph node -&gt; Vertex -&gt; node
+</span><a href="GHC.Data.Graph.Directed.Internal.html#gr_vertex_to_node"><span class="hs-identifier hs-var">gr_vertex_to_node</span></a></span><span> </span><span class="annot"><span class="annottext">Graph node
+</span><a href="#local-6989586621682670351"><span class="hs-identifier hs-var">graph</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">------------------------------------------------------------</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- Showing Graphs</span><span>
+</span><span id="line-32"></span><span class="hs-comment">------------------------------------------------------------</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682670309"><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670309"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Graph"><span class="hs-identifier hs-type">Graph</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670309"><span class="hs-identifier hs-type">node</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>    </span><span id="local-6989586621682670371"><span class="annot"><span class="annottext">ppr :: Graph node -&gt; SDoc
+</span><a href="#local-6989586621682670371"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span id="local-6989586621682670373"><span class="annot"><span class="annottext">Graph node
+</span><a href="#local-6989586621682670373"><span class="hs-identifier hs-var">graph</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[SDoc] -&gt; SDoc
+forall doc. IsDoc doc =&gt; [doc] -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#vcat"><span class="hs-identifier hs-var">vcat</span></a></span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-36"></span><span>                  </span><span class="annot"><span class="annottext">SDoc -&gt; Vertex -&gt; SDoc -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#hang"><span class="hs-identifier hs-var">hang</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Vertices:&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[SDoc] -&gt; SDoc
+forall doc. IsDoc doc =&gt; [doc] -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#vcat"><span class="hs-identifier hs-var">vcat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(node -&gt; SDoc) -&gt; [node] -&gt; [SDoc]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">node -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">([node] -&gt; [SDoc]) -&gt; [node] -&gt; [SDoc]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Graph node -&gt; [node]
+forall node. Graph node -&gt; [node]
+</span><a href="GHC.Data.Graph.Directed.Internal.html#verticesG"><span class="hs-identifier hs-var">verticesG</span></a></span><span> </span><span class="annot"><span class="annottext">Graph node
+</span><a href="#local-6989586621682670373"><span class="hs-identifier hs-var">graph</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>                  </span><span class="annot"><span class="annottext">SDoc -&gt; Vertex -&gt; SDoc -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#hang"><span class="hs-identifier hs-var">hang</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Edges:&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[SDoc] -&gt; SDoc
+forall doc. IsDoc doc =&gt; [doc] -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#vcat"><span class="hs-identifier hs-var">vcat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Edge node -&gt; SDoc) -&gt; [Edge node] -&gt; [SDoc]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Edge node -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">([Edge node] -&gt; [SDoc]) -&gt; [Edge node] -&gt; [SDoc]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Graph node -&gt; [Edge node]
+forall node. Graph node -&gt; [Edge node]
+</span><a href="GHC.Data.Graph.Directed.Internal.html#edgesG"><span class="hs-identifier hs-var">edgesG</span></a></span><span> </span><span class="annot"><span class="annottext">Graph node
+</span><a href="#local-6989586621682670373"><span class="hs-identifier hs-var">graph</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682670312"><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670312"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Edge"><span class="hs-identifier hs-type">Edge</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670312"><span class="hs-identifier hs-type">node</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>    </span><span id="local-6989586621682670384"><span class="annot"><span class="annottext">ppr :: Edge node -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Edge"><span class="hs-identifier hs-type">Edge</span></a></span><span> </span><span id="local-6989586621682670385"><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670385"><span class="hs-identifier hs-var">from</span></a></span></span><span> </span><span id="local-6989586621682670386"><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670386"><span class="hs-identifier hs-var">to</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">node -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670385"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;-&gt;&quot;</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">node -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670386"><span class="hs-identifier hs-var">to</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">{-
+************************************************************************
+*                                                                      *
+*      IntGraphs
+*                                                                      *
+************************************************************************
+-}</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">type</span><span> </span><span id="IntGraph"><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#IntGraph"><span class="hs-identifier hs-var">IntGraph</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#Graph"><span class="hs-identifier hs-type">G.Graph</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">------------------------------------------------------------</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- Depth first search numbering</span><span>
+</span><span id="line-55"></span><span class="hs-comment">------------------------------------------------------------</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- Data.Tree has flatten for Tree, but nothing for Forest</span><span>
+</span><span id="line-58"></span><span id="local-6989586621682670316"><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#preorderF"><span class="hs-identifier hs-type">preorderF</span></a></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Tree.html#Forest"><span class="hs-identifier hs-type">Forest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670316"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621682670316"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-59"></span><span id="preorderF"><span class="annot"><span class="annottext">preorderF :: forall a. Forest a -&gt; [a]
+</span><a href="GHC.Data.Graph.Directed.Internal.html#preorderF"><span class="hs-identifier hs-var hs-var">preorderF</span></a></span></span><span> </span><span id="local-6989586621682670391"><span class="annot"><span class="annottext">Forest a
+</span><a href="#local-6989586621682670391"><span class="hs-identifier hs-var">ts</span></a></span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Tree a -&gt; [a]) -&gt; Forest a -&gt; [a]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">Tree a -&gt; [a]
+forall a. Tree a -&gt; [a]
+</span><a href="../../containers-0.8-inplace/src/Data.Tree.html#flatten"><span class="hs-identifier hs-var">flatten</span></a></span><span> </span><span class="annot"><span class="annottext">Forest a
+</span><a href="#local-6989586621682670391"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">------------------------------------------------------------</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- Finding reachable vertices</span><span>
+</span><span id="line-63"></span><span class="hs-comment">------------------------------------------------------------</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- This generalizes reachable which was found in Data.Graph</span><span>
+</span><span id="line-66"></span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#reachable"><span class="hs-identifier hs-type">reachable</span></a></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#IntGraph"><span class="hs-identifier hs-type">IntGraph</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#Vertex"><span class="hs-identifier hs-type">Vertex</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#Vertex"><span class="hs-identifier hs-type">Vertex</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-67"></span><span id="reachable"><span class="annot"><span class="annottext">reachable :: IntGraph -&gt; [Vertex] -&gt; [Vertex]
+</span><a href="GHC.Data.Graph.Directed.Internal.html#reachable"><span class="hs-identifier hs-var hs-var">reachable</span></a></span></span><span> </span><span id="local-6989586621682670395"><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670395"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span id="local-6989586621682670396"><span class="annot"><span class="annottext">[Vertex]
+</span><a href="#local-6989586621682670396"><span class="hs-identifier hs-var">vs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Forest Vertex -&gt; [Vertex]
+forall a. Forest a -&gt; [a]
+</span><a href="GHC.Data.Graph.Directed.Internal.html#preorderF"><span class="hs-identifier hs-var">preorderF</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IntGraph -&gt; [Vertex] -&gt; Forest Vertex
+</span><a href="../../containers-0.8-inplace/src/Data.Graph.html#dfs"><span class="hs-identifier hs-var">G.dfs</span></a></span><span> </span><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670395"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">[Vertex]
+</span><a href="#local-6989586621682670396"><span class="hs-identifier hs-var">vs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#scc"><span class="hs-identifier hs-type">scc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#IntGraph"><span class="hs-identifier hs-type">IntGraph</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#SCC"><span class="hs-identifier hs-type">SCC</span></a></span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#Vertex"><span class="hs-identifier hs-type">Vertex</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span><span id="scc"><span class="annot"><span class="annottext">scc :: IntGraph -&gt; [SCC Vertex]
+</span><a href="GHC.Data.Graph.Directed.Internal.html#scc"><span class="hs-identifier hs-var hs-var">scc</span></a></span></span><span> </span><span id="local-6989586621682670399"><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670399"><span class="hs-identifier hs-var">graph</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Tree Vertex -&gt; SCC Vertex) -&gt; Forest Vertex -&gt; [SCC Vertex]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Tree Vertex -&gt; SCC Vertex
+</span><a href="#local-6989586621682670400"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">Forest Vertex
+</span><a href="#local-6989586621682670401"><span class="hs-identifier hs-var">forest</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621682670401"><span class="annot"><span class="annottext">forest :: Forest Vertex
+</span><a href="#local-6989586621682670401"><span class="hs-identifier hs-var hs-var">forest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-pragma">{-# SCC</span><span> </span><span class="hs-pragma">&quot;Digraph.scc&quot;</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="annot"><span class="annottext">IntGraph -&gt; Forest Vertex
+</span><a href="../../containers-0.8-inplace/src/Data.Graph.html#scc"><span class="hs-identifier hs-var">G.scc</span></a></span><span> </span><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670399"><span class="hs-identifier hs-var">graph</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621682670400"><span class="annot"><span class="annottext">decode :: Tree Vertex -&gt; SCC Vertex
+</span><a href="#local-6989586621682670400"><span class="hs-identifier hs-var hs-var">decode</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Tree.html#Node"><span class="hs-identifier hs-type">Node</span></a></span><span> </span><span id="local-6989586621682670404"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670404"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; Bool
+</span><a href="#local-6989586621682670405"><span class="hs-identifier hs-var">mentions_itself</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670404"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Vertex] -&gt; SCC Vertex
+forall vertex. [vertex] -&gt; SCC vertex
+</span><a href="../../containers-0.8-inplace/src/Data.Graph.html#CyclicSCC"><span class="hs-identifier hs-var">CyclicSCC</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670404"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>                       </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; SCC Vertex
+forall vertex. vertex -&gt; SCC vertex
+</span><a href="../../containers-0.8-inplace/src/Data.Graph.html#AcyclicSCC"><span class="hs-identifier hs-var">AcyclicSCC</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670404"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><a href="#local-6989586621682670400"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span id="local-6989586621682670408"><span class="annot"><span class="annottext">Tree Vertex
+</span><a href="#local-6989586621682670408"><span class="hs-identifier hs-var">other</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Vertex] -&gt; SCC Vertex
+forall vertex. [vertex] -&gt; SCC vertex
+</span><a href="../../containers-0.8-inplace/src/Data.Graph.html#CyclicSCC"><span class="hs-identifier hs-var">CyclicSCC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tree Vertex -&gt; [Vertex] -&gt; [Vertex]
+forall {a}. Tree a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621682670409"><span class="hs-identifier hs-var">dec</span></a></span><span> </span><span class="annot"><span class="annottext">Tree Vertex
+</span><a href="#local-6989586621682670408"><span class="hs-identifier hs-var">other</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>      </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682670409"><span class="annot"><span class="annottext">dec :: Tree a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621682670409"><span class="hs-identifier hs-var hs-var">dec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Tree.html#Node"><span class="hs-identifier hs-type">Node</span></a></span><span> </span><span id="local-6989586621682670411"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682670411"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621682670412"><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621682670412"><span class="hs-identifier hs-var">ts</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682670413"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621682670413"><span class="hs-identifier hs-var">vs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682670411"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">(Tree a -&gt; [a] -&gt; [a]) -&gt; [a] -&gt; [Tree a] -&gt; [a]
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">Tree a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621682670409"><span class="hs-identifier hs-var">dec</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621682670413"><span class="hs-identifier hs-var">vs</span></a></span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621682670412"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span id="local-6989586621682670405"><span class="annot"><span class="annottext">mentions_itself :: Vertex -&gt; Bool
+</span><a href="#local-6989586621682670405"><span class="hs-identifier hs-var hs-var">mentions_itself</span></a></span></span><span> </span><span id="local-6989586621682670415"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670415"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670415"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; [Vertex] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670399"><span class="hs-identifier hs-var">graph</span></a></span><span> </span><span class="annot"><span class="annottext">IntGraph -&gt; Vertex -&gt; [Vertex]
+forall i e. Ix i =&gt; Array i e -&gt; i -&gt; e
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#%21"><span class="hs-operator hs-var">!</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670415"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span></pre></body></html>

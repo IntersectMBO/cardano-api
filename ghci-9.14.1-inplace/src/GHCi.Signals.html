@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHCi.Signals.html"><span class="hs-identifier">GHCi.Signals</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHCi.Signals.html#installSignalHandlers"><span class="hs-identifier">installSignalHandlers</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-comment">-- See note [Why do we import Prelude here?]</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/System.Mem.Weak.html"><span class="hs-identifier">System.Mem.Weak</span></a></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Weak.html#deRefWeak"><span class="hs-identifier">deRefWeak</span></a></span><span> </span><span class="hs-special">)</span><span class="hs-cpp">
+
+#if defined(wasm32_HOST_ARCH)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">GHC.Wasm.Prim</span><span class="hs-cpp">
+#elif !defined(mingw32_HOST_OS)
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.Signals.html"><span class="hs-identifier">System.Posix.Signals</span></a></span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">
+#if defined(mingw32_HOST_OS)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">GHC.ConsoleHandler</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | Install standard signal handlers for catching ^C, which just throw an</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--   exception in the target thread.  The current target thread is the</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--   thread at the head of the list in the MVar passed to</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--   installSignalHandlers.</span><span class="hs-cpp">
+#if defined(wasm32_HOST_ARCH)
+</span><span class="hs-identifier">installSignalHandlers</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">JSVal</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-identifier">installSignalHandlers</span><span> </span><span class="hs-identifier">cb_sig</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span class="hs-cpp">
+#else
+</span><span class="annot"><a href="GHCi.Signals.html#installSignalHandlers"><span class="hs-identifier hs-type">installSignalHandlers</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span id="installSignalHandlers"><span class="annot"><span class="annottext">installSignalHandlers :: IO ()
+</span><a href="GHCi.Signals.html#installSignalHandlers"><span class="hs-identifier hs-var hs-var">installSignalHandlers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span class="hs-cpp">
+#endif
+</span><span>  </span><span id="local-6989586621679119533"><span class="annot"><a href="#local-6989586621679119533"><span class="hs-identifier hs-var">main_thread</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ThreadId
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Conc.Sync.html#myThreadId"><span class="hs-identifier hs-var">myThreadId</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679119535"><span class="annot"><a href="#local-6989586621679119535"><span class="hs-identifier hs-var">wtid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Conc.Sync.html#mkWeakThreadId"><span class="hs-identifier hs-type">mkWeakThreadId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119533"><span class="hs-identifier hs-type">main_thread</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679119541"><span class="annot"><a href="#local-6989586621679119541"><span class="hs-identifier hs-var hs-var">interrupt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-34"></span><span>        </span><span id="local-6989586621679119542"><span class="annot"><a href="#local-6989586621679119542"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Weak ThreadId -&gt; IO (Maybe ThreadId)
+forall v. Weak v -&gt; IO (Maybe v)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Weak.html#deRefWeak"><span class="hs-identifier hs-var">deRefWeak</span></a></span><span> </span><span class="annot"><span class="annottext">Weak ThreadId
+</span><a href="#local-6989586621679119535"><span class="hs-identifier hs-var">wtid</span></a></span><span>
+</span><span id="line-35"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621679119542"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-36"></span><span>          </span><span class="annot"><span class="annottext">Maybe ThreadId
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>          </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679119543"><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621679119543"><span class="hs-identifier hs-var">t</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ThreadId -&gt; AsyncException -&gt; IO ()
+forall e. Exception e =&gt; ThreadId -&gt; e -&gt; IO ()
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Conc.Sync.html#throwTo"><span class="hs-identifier hs-var">throwTo</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621679119543"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">AsyncException
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IO.Exception.html#UserInterrupt"><span class="hs-identifier hs-var">UserInterrupt</span></a></span><span class="hs-cpp">
+
+#if defined(wasm32_HOST_ARCH)
+</span><span>  </span><span class="hs-identifier">cb_sig</span><span> </span><span class="hs-operator">=&lt;&lt;</span><span> </span><span class="hs-identifier">js_export_signal_handler</span><span> </span><span class="hs-identifier">interrupt</span><span class="hs-cpp">
+#elif !defined(mingw32_HOST_OS)
+</span><span>  </span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.Signals.html#installHandler"><span class="hs-identifier hs-type">installHandler</span></a></span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.Signals.html#sigQUIT"><span class="hs-identifier hs-type">sigQUIT</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.Signals.html#Catch"><span class="hs-identifier hs-type">Catch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119541"><span class="hs-identifier hs-type">interrupt</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-type">Nothing</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.Signals.html#installHandler"><span class="hs-identifier hs-type">installHandler</span></a></span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.Signals.html#sigINT"><span class="hs-identifier hs-type">sigINT</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.Signals.html#Catch"><span class="hs-identifier hs-type">Catch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119541"><span class="hs-identifier hs-type">interrupt</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-type">Nothing</span></a></span><span class="hs-cpp">
+#else
+</span><span>  </span><span class="hs-comment">-- GHC 6.3+ has support for console events on Windows</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-comment">-- NOTE: running GHCi under a bash shell for some reason requires</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-comment">-- you to press Ctrl-Break rather than Ctrl-C to provoke</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-comment">-- an interrupt.  Ctrl-C is getting blocked somewhere, I don't know</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-comment">-- why --SDM 17/12/2004</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-identifier">sig_handler</span><span> </span><span class="hs-identifier">ControlC</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">interrupt</span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-identifier">sig_handler</span><span> </span><span class="hs-identifier">Break</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">interrupt</span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-identifier">sig_handler</span><span> </span><span class="hs-identifier">_</span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">return</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier">installHandler</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Catch</span><span> </span><span class="hs-identifier">sig_handler</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-cpp">
+
+#if defined(wasm32_HOST_ARCH)
+</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- Note [wasm ghci signal handlers]</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- For native ghc with -fexternal-interpreter, when you press ^C,</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- SIGINT is delivered to both ghc/iserv. iserv SIGINT handler raises</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- an async UserInterrupt exception in the main thread, which might</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- handle it right away, or later since it's doing I/O under</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- uninterruptibleMask.</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- wasm is no different here. The node process needs to catch the same</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- signals. Instead of calling process.on('SIGINT', handler) in</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- Haskell via JSFFI, we pass a JS callback that registers the handler</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- from iserv main, export the Haskell handler to JS, then invoke the</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- callback to register the handler. This allows iserv to be run in</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- non-nodejs environments as well, and the dyld script can pass a</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- handler register callback other than process.on().</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- IMPORTANT: THE SIGNAL HANDLER MUST BE EXPORTED AS ASYNC!!!!!!!</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- Otherwise, throwTo may block the handler thread, so the handler</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- thread is removed from the run queue. Since the main thread may</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- also be absent from the run queue (e.g. blocked on waiting for</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- input message), the run queue is empty and then the RTS scheduler</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- panics.</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">foreign</span><span> </span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">javascript</span><span> </span><span class="hs-string">&quot;wrapper&quot;</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-identifier">js_export_signal_handler</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-identifier">JSVal</span><span class="hs-cpp">
+
+#endif
+</span></pre></body></html>

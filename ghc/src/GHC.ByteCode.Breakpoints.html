@@ -1,0 +1,728 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- | Breakpoint information constructed during ByteCode generation.</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- Specifically, code-generation breakpoints are referred to as &quot;internal</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- breakpoints&quot;, the internal breakpoint data for a module is stored in</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- 'InternalModBreaks', and is uniquely identified at runtime by an</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- 'InternalBreakpointId'.</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- See Note [ModBreaks vs InternalModBreaks] and Note [Breakpoint identifiers]</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html"><span class="hs-identifier">GHC.ByteCode.Breakpoints</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Internal Mod Breaks</span></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier">InternalModBreaks</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#CgBreakInfo"><span class="hs-identifier">CgBreakInfo</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#mkInternalModBreaks"><span class="hs-identifier">mkInternalModBreaks</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_module"><span class="hs-identifier">imodBreaks_module</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Internal breakpoint identifier</span></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier">InternalBreakpointId</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#BreakInfoIndex"><span class="hs-identifier">BreakInfoIndex</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakLoc"><span class="hs-identifier">InternalBreakLoc</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Operations</span></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Internal-level operations</span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getInternalBreak"><span class="hs-identifier">getInternalBreak</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Source-level information operations</span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakLoc"><span class="hs-identifier">getBreakLoc</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakVars"><span class="hs-identifier">getBreakVars</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakDecls"><span class="hs-identifier">getBreakDecls</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakCCS"><span class="hs-identifier">getBreakCCS</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakSourceId"><span class="hs-identifier">getBreakSourceId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakSourceMod"><span class="hs-identifier">getBreakSourceMod</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Utils</span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#seqInternalModBreaks"><span class="hs-identifier">seqInternalModBreaks</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html"><span class="hs-identifier">GHC.Types.SrcLoc</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.Occurrence.html"><span class="hs-identifier">GHC.Types.Name.Occurrence</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntMap.Strict.html"><span class="hs-identifier">Data.IntMap.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#IntMap"><span class="hs-identifier">IntMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntMap.Strict.html"><span class="hs-identifier">Data.IntMap.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IM</span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html"><span class="hs-identifier">GHC.HsToCore.Breakpoints</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Iface.Syntax.html"><span class="hs-identifier">GHC.Iface.Syntax</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.html"><span class="hs-identifier">GHC.Unit.Module</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier">Module</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Panic.html"><span class="hs-identifier">GHC.Utils.Panic</span></a></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../array-0.5.8.0-inplace/src/Data.Array.html"><span class="hs-identifier">Data.Array</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">{-
+Note [ModBreaks vs InternalModBreaks]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'ModBreaks' and 'BreakpointId's must not to be confused with
+'InternalModBreaks' and 'InternalBreakId's.
+
+'ModBreaks' is constructed once during HsToCore from the information attached
+to source-level breakpoint ticks and is never changed afterwards. A 'ModBreaks'
+can be queried using 'BreakpointId's, which uniquely identifies a breakpoint
+within the list of breakpoint information for a given module's 'ModBreaks'.
+
+'InternalModBreaks' are constructed during bytecode generation and are indexed
+by a 'InternalBreakpointId'. They contain all the information relevant to a
+breakpoint for code generation that can be accessed during runtime execution
+(such as a 'BreakArray' for triggering breakpoints). 'InternalBreakpointId's
+are used at runtime to trigger and inspect breakpoints -- a 'BRK_FUN'
+instruction receives 'InternalBreakpointId' as an argument.
+
+We keep a mapping from 'InternalModBreaks' to a 'BreakpointId', which can then be used
+to get source-level information about a breakpoint via the corresponding 'ModBreaks'.
+
+Notably, 'InternalModBreaks' can contain entries for so-called internal
+breakpoints, which do not necessarily have a source-level location attached to
+it (i.e. do not have a matching entry in 'ModBreaks'). We may leverage this to
+introduce breakpoints during code generation for features such as stepping-out.
+
+Note [Breakpoint identifiers]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Before optimization a breakpoint is identified uniquely with a tick module
+and a tick index. See 'BreakpointId'. A tick module contains an array, indexed
+with the tick indexes, which indicates breakpoint status.
+
+When we generate ByteCode, we collect information for every breakpoint at
+their *occurrence sites* (see CgBreakInfo) and these info
+are stored in the ModIface of the occurrence module. Because of inlining, we
+can't reuse the tick index to uniquely identify an occurrence; because of
+cross-module inlining, we can't assume that the occurrence module is the same
+as the tick module (#24712).
+
+So every breakpoint occurrence gets assigned a module-unique *info index* and
+we store it alongside the occurrence module (*info module*) in the
+'InternalBreakpointId' datatype. This is the index that we use at runtime to
+identify a breakpoint.
+
+When the internal breakpoint has a matching tick-level breakpoint we can fetch
+the related tick-level information by first looking up a mapping
+@'InternalBreakpointId' -&gt; 'BreakpointId'@ in @'CgBreakInfo'@.
+-}</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-101"></span><span class="annot"><span class="hs-comment">-- * Internal breakpoint identifiers</span></span><span>
+</span><span id="line-102"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="annot"><span class="hs-comment">-- | Internal breakpoint info index</span></span><span>
+</span><span id="line-105"></span><span class="hs-keyword">type</span><span> </span><span id="BreakInfoIndex"><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#BreakInfoIndex"><span class="hs-identifier hs-var">BreakInfoIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- | Internal breakpoint identifier</span><span>
+</span><span id="line-108"></span><span class="hs-comment">--</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- Indexes into the structures in the @'InternalModBreaks'@ produced during ByteCode generation.</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- See Note [Breakpoint identifiers]</span><span>
+</span><span id="line-111"></span><span class="hs-keyword">data</span><span> </span><span id="InternalBreakpointId"><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-var">InternalBreakpointId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="InternalBreakpointId"><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-var">InternalBreakpointId</span></a></span></span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="ibi_info_mod"><span class="annot"><span class="annottext">InternalBreakpointId -&gt; Module
+</span><a href="GHC.ByteCode.Breakpoints.html#ibi_info_mod"><span class="hs-identifier hs-var hs-var">ibi_info_mod</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span>         </span><span class="annot"><span class="hs-comment">-- ^ Breakpoint info module</span></span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ibi_info_index"><span class="annot"><span class="annottext">InternalBreakpointId -&gt; BreakInfoIndex
+</span><a href="GHC.ByteCode.Breakpoints.html#ibi_info_index"><span class="hs-identifier hs-var hs-var">ibi_info_index</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#BreakInfoIndex"><span class="hs-identifier hs-type">BreakInfoIndex</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Breakpoint info index</span></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682933639"><span id="local-6989586621682933644"><span class="annot"><span class="annottext">InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+(InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool)
+-&gt; (InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool)
+-&gt; Eq InternalBreakpointId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+== :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+$c/= :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+/= :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682933651"><span id="local-6989586621682933658"><span id="local-6989586621682933663"><span id="local-6989586621682933667"><span id="local-6989586621682933670"><span id="local-6989586621682933673"><span id="local-6989586621682933676"><span class="annot"><span class="annottext">Eq InternalBreakpointId
+Eq InternalBreakpointId =&gt;
+(InternalBreakpointId -&gt; InternalBreakpointId -&gt; Ordering)
+-&gt; (InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool)
+-&gt; (InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool)
+-&gt; (InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool)
+-&gt; (InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool)
+-&gt; (InternalBreakpointId
+    -&gt; InternalBreakpointId -&gt; InternalBreakpointId)
+-&gt; (InternalBreakpointId
+    -&gt; InternalBreakpointId -&gt; InternalBreakpointId)
+-&gt; Ord InternalBreakpointId
+InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+InternalBreakpointId -&gt; InternalBreakpointId -&gt; Ordering
+InternalBreakpointId
+-&gt; InternalBreakpointId -&gt; InternalBreakpointId
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Ordering
+compare :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Ordering
+$c&lt; :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+&lt; :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+$c&lt;= :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+&lt;= :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+$c&gt; :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+&gt; :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+$c&gt;= :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+&gt;= :: InternalBreakpointId -&gt; InternalBreakpointId -&gt; Bool
+$cmax :: InternalBreakpointId
+-&gt; InternalBreakpointId -&gt; InternalBreakpointId
+max :: InternalBreakpointId
+-&gt; InternalBreakpointId -&gt; InternalBreakpointId
+$cmin :: InternalBreakpointId
+-&gt; InternalBreakpointId -&gt; InternalBreakpointId
+min :: InternalBreakpointId
+-&gt; InternalBreakpointId -&gt; InternalBreakpointId
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-118"></span><span class="annot"><span class="hs-comment">-- * Internal Mod Breaks</span></span><span>
+</span><span id="line-119"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- | Internal mod breaks store the runtime-relevant information of breakpoints.</span><span>
+</span><span id="line-122"></span><span class="hs-comment">--</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- Importantly, it maps 'InternalBreakpointId's to 'CgBreakInfo'.</span><span>
+</span><span id="line-124"></span><span class="hs-comment">--</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- 'InternalModBreaks' are constructed during bytecode generation and stored in</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- 'CompiledByteCode' afterwards.</span><span>
+</span><span id="line-127"></span><span class="hs-keyword">data</span><span> </span><span id="InternalModBreaks"><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-var">InternalModBreaks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="InternalModBreaks"><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-var">InternalModBreaks</span></a></span></span><span>
+</span><span id="line-128"></span><span>      </span><span class="hs-special">{</span><span> </span><span id="imodBreaks_breakInfo"><span class="annot"><span class="annottext">InternalModBreaks -&gt; IntMap CgBreakInfo
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_breakInfo"><span class="hs-identifier hs-var hs-var">imodBreaks_breakInfo</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#IntMap"><span class="hs-identifier hs-type">IntMap</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#CgBreakInfo"><span class="hs-identifier hs-type">CgBreakInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>        </span><span class="hs-comment">-- ^ Access code-gen time information about a breakpoint, indexed by</span><span>
+</span><span id="line-130"></span><span>        </span><span class="hs-comment">-- 'InternalBreakpointId'.</span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="imodBreaks_modBreaks"><span class="annot"><span class="annottext">InternalModBreaks -&gt; ModBreaks
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_modBreaks"><span class="hs-identifier hs-var hs-var">imodBreaks_modBreaks</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-type">ModBreaks</span></a></span><span>
+</span><span id="line-133"></span><span>        </span><span class="hs-comment">-- ^ Store the ModBreaks for this module</span><span>
+</span><span id="line-134"></span><span>        </span><span class="hs-comment">--</span><span>
+</span><span id="line-135"></span><span>        </span><span class="hs-comment">-- Recall Note [Breakpoint identifiers]: for some module A, an</span><span>
+</span><span id="line-136"></span><span>        </span><span class="hs-comment">-- *occurrence* of a breakpoint in A may have been inlined from some</span><span>
+</span><span id="line-137"></span><span>        </span><span class="hs-comment">-- breakpoint *defined* in module B.</span><span>
+</span><span id="line-138"></span><span>        </span><span class="hs-comment">--</span><span>
+</span><span id="line-139"></span><span>        </span><span class="hs-comment">-- This 'ModBreaks' contains information regarding all the breakpoints</span><span>
+</span><span id="line-140"></span><span>        </span><span class="hs-comment">-- defined in the module this 'InternalModBreaks' corresponds to. It</span><span>
+</span><span id="line-141"></span><span>        </span><span class="hs-comment">-- /does not/ necessarily have information regarding all the breakpoint</span><span>
+</span><span id="line-142"></span><span>        </span><span class="hs-comment">-- occurrences registered in 'imodBreaks_breakInfo'. Some of those</span><span>
+</span><span id="line-143"></span><span>        </span><span class="hs-comment">-- occurrences may refer breakpoints inlined from other modules.</span><span>
+</span><span id="line-144"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- | Construct an 'InternalModBreaks'.</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- INVARIANT: The given 'ModBreaks' correspond to the same module as this</span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- 'InternalModBreaks' module (the first argument) and its breakpoint infos</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- (the @IntMap CgBreakInfo@ argument)</span><span>
+</span><span id="line-151"></span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#mkInternalModBreaks"><span class="hs-identifier hs-type">mkInternalModBreaks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#IntMap"><span class="hs-identifier hs-type">IntMap</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#CgBreakInfo"><span class="hs-identifier hs-type">CgBreakInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-type">ModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span>
+</span><span id="line-152"></span><span id="mkInternalModBreaks"><span class="annot"><span class="annottext">mkInternalModBreaks :: Module -&gt; IntMap CgBreakInfo -&gt; ModBreaks -&gt; InternalModBreaks
+</span><a href="GHC.ByteCode.Breakpoints.html#mkInternalModBreaks"><span class="hs-identifier hs-var hs-var">mkInternalModBreaks</span></a></span></span><span> </span><span id="local-6989586621682933688"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933688"><span class="hs-identifier hs-var">mod</span></a></span></span><span> </span><span id="local-6989586621682933689"><span class="annot"><span class="annottext">IntMap CgBreakInfo
+</span><a href="#local-6989586621682933689"><span class="hs-identifier hs-var">im</span></a></span></span><span> </span><span id="local-6989586621682933690"><span class="annot"><span class="annottext">ModBreaks
+</span><a href="#local-6989586621682933690"><span class="hs-identifier hs-var">mbs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-153"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; SDoc -&gt; InternalModBreaks -&gt; InternalModBreaks
+forall a. HasCallStack =&gt; Bool -&gt; SDoc -&gt; a -&gt; a
+</span><a href="GHC.Utils.Panic.html#assertPpr"><span class="hs-identifier hs-var">assertPpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933688"><span class="hs-identifier hs-var">mod</span></a></span><span> </span><span class="annot"><span class="annottext">Module -&gt; Module -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ModBreaks -&gt; Module
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_module"><span class="hs-identifier hs-var">modBreaks_module</span></a></span><span> </span><span class="annot"><span class="annottext">ModBreaks
+</span><a href="#local-6989586621682933690"><span class="hs-identifier hs-var">mbs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Constructing InternalModBreaks with the ModBreaks of a different module!&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(InternalModBreaks -&gt; InternalModBreaks)
+-&gt; InternalModBreaks -&gt; InternalModBreaks
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-155"></span><span>      </span><span class="annot"><span class="annottext">IntMap CgBreakInfo -&gt; ModBreaks -&gt; InternalModBreaks
+</span><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-var">InternalModBreaks</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap CgBreakInfo
+</span><a href="#local-6989586621682933689"><span class="hs-identifier hs-var">im</span></a></span><span> </span><span class="annot"><span class="annottext">ModBreaks
+</span><a href="#local-6989586621682933690"><span class="hs-identifier hs-var">mbs</span></a></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="annot"><span class="hs-comment">-- | Get the module to which these 'InternalModBreaks' correspond</span></span><span>
+</span><span id="line-158"></span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_module"><span class="hs-identifier hs-type">imodBreaks_module</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span>
+</span><span id="line-159"></span><span id="imodBreaks_module"><span class="annot"><span class="annottext">imodBreaks_module :: InternalModBreaks -&gt; Module
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_module"><span class="hs-identifier hs-var hs-var">imodBreaks_module</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModBreaks -&gt; Module
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_module"><span class="hs-identifier hs-var">modBreaks_module</span></a></span><span> </span><span class="annot"><span class="annottext">(ModBreaks -&gt; Module)
+-&gt; (InternalModBreaks -&gt; ModBreaks) -&gt; InternalModBreaks -&gt; Module
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">InternalModBreaks -&gt; ModBreaks
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_modBreaks"><span class="hs-identifier hs-var">imodBreaks_modBreaks</span></a></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- | Information about a breakpoint that we know at code-generation time</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- In order to be used, this needs to be hydrated relative to the current HscEnv by</span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- 'hydrateCgBreakInfo'. Everything here can be fully forced and that's critical for</span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- preventing space leaks (see #22530)</span><span>
+</span><span id="line-165"></span><span class="hs-keyword">data</span><span> </span><span id="CgBreakInfo"><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#CgBreakInfo"><span class="hs-identifier hs-var">CgBreakInfo</span></a></span></span><span>
+</span><span id="line-166"></span><span>   </span><span class="hs-glyph">=</span><span> </span><span id="CgBreakInfo"><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#CgBreakInfo"><span class="hs-identifier hs-var">CgBreakInfo</span></a></span></span><span>
+</span><span id="line-167"></span><span>   </span><span class="hs-special">{</span><span> </span><span id="cgb_tyvars"><span class="annot"><span class="annottext">CgBreakInfo -&gt; [IfaceTvBndr]
+</span><a href="GHC.ByteCode.Breakpoints.html#cgb_tyvars"><span class="hs-identifier hs-var hs-var">cgb_tyvars</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="GHC.Iface.Type.html#IfaceTvBndr"><span class="hs-identifier hs-type">IfaceTvBndr</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-comment">-- ^ Type variables in scope at the breakpoint</span></span><span>
+</span><span id="line-168"></span><span>   </span><span class="hs-special">,</span><span> </span><span id="cgb_vars"><span class="annot"><span class="annottext">CgBreakInfo -&gt; [Maybe (IfaceIdBndr, Word)]
+</span><a href="GHC.ByteCode.Breakpoints.html#cgb_vars"><span class="hs-identifier hs-var hs-var">cgb_vars</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Iface.Type.html#IfaceIdBndr"><span class="hs-identifier hs-type">IfaceIdBndr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-169"></span><span>   </span><span class="hs-special">,</span><span> </span><span id="cgb_resty"><span class="annot"><span class="annottext">CgBreakInfo -&gt; IfaceType
+</span><a href="GHC.ByteCode.Breakpoints.html#cgb_resty"><span class="hs-identifier hs-var hs-var">cgb_resty</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Iface.Type.html#IfaceType"><span class="hs-identifier hs-type">IfaceType</span></a></span><span>
+</span><span id="line-170"></span><span>   </span><span class="hs-special">,</span><span> </span><span id="cgb_tick_id"><span class="annot"><span class="annottext">CgBreakInfo -&gt; Either InternalBreakLoc BreakpointId
+</span><a href="GHC.ByteCode.Breakpoints.html#cgb_tick_id"><span class="hs-identifier hs-var hs-var">cgb_tick_id</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakLoc"><span class="hs-identifier hs-type">InternalBreakLoc</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakpointId"><span class="hs-identifier hs-type">BreakpointId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>     </span><span class="hs-comment">-- ^ This field records the original breakpoint tick identifier for this</span><span>
+</span><span id="line-172"></span><span>     </span><span class="hs-comment">-- internal breakpoint info. It is used to convert a breakpoint</span><span>
+</span><span id="line-173"></span><span>     </span><span class="hs-comment">-- *occurrence* index ('InternalBreakpointId') into a *definition* index</span><span>
+</span><span id="line-174"></span><span>     </span><span class="hs-comment">-- ('BreakpointId').</span><span>
+</span><span id="line-175"></span><span>     </span><span class="hs-comment">--</span><span>
+</span><span id="line-176"></span><span>     </span><span class="hs-comment">-- The modules of breakpoint occurrence and breakpoint definition are not</span><span>
+</span><span id="line-177"></span><span>     </span><span class="hs-comment">-- necessarily the same: See Note [Breakpoint identifiers].</span><span>
+</span><span id="line-178"></span><span>     </span><span class="hs-comment">--</span><span>
+</span><span id="line-179"></span><span>     </span><span class="hs-comment">-- If there is no original tick identifier (that is, the breakpoint was</span><span>
+</span><span id="line-180"></span><span>     </span><span class="hs-comment">-- created during code generation), we re-use the BreakpointId of something else.</span><span>
+</span><span id="line-181"></span><span>     </span><span class="hs-comment">-- It would also be reasonable to have an @Either something BreakpointId@</span><span>
+</span><span id="line-182"></span><span>     </span><span class="hs-comment">-- for @cgb_tick_id@, but currently we can always re-use a source-level BreakpointId.</span><span>
+</span><span id="line-183"></span><span>     </span><span class="hs-comment">-- In the case of step-out, see Note [Debugger: Stepout internal break locs]</span><span>
+</span><span id="line-184"></span><span>   </span><span class="hs-special">}</span><span>
+</span><span id="line-185"></span><span class="hs-comment">-- See Note [Syncing breakpoint info] in GHC.Runtime.Eval</span><span>
+</span><span id="line-186"></span><span>
+</span><span id="line-187"></span><span class="hs-comment">-- | Breakpoints created during code generation don't have a source-level tick</span><span>
+</span><span id="line-188"></span><span class="hs-comment">-- location. Instead, we re-use an existing one.</span><span>
+</span><span id="line-189"></span><span class="hs-keyword">newtype</span><span> </span><span id="InternalBreakLoc"><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakLoc"><span class="hs-identifier hs-var">InternalBreakLoc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="InternalBreakLoc"><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakLoc"><span class="hs-identifier hs-var">InternalBreakLoc</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="internalBreakLoc"><span class="annot"><span class="annottext">InternalBreakLoc -&gt; BreakpointId
+</span><a href="GHC.ByteCode.Breakpoints.html#internalBreakLoc"><span class="hs-identifier hs-var hs-var">internalBreakLoc</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakpointId"><span class="hs-identifier hs-type">BreakpointId</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-190"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682933703"><span id="local-6989586621682933708"><span class="annot"><span class="annottext">InternalBreakLoc -&gt; InternalBreakLoc -&gt; Bool
+(InternalBreakLoc -&gt; InternalBreakLoc -&gt; Bool)
+-&gt; (InternalBreakLoc -&gt; InternalBreakLoc -&gt; Bool)
+-&gt; Eq InternalBreakLoc
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: InternalBreakLoc -&gt; InternalBreakLoc -&gt; Bool
+== :: InternalBreakLoc -&gt; InternalBreakLoc -&gt; Bool
+$c/= :: InternalBreakLoc -&gt; InternalBreakLoc -&gt; Bool
+/= :: InternalBreakLoc -&gt; InternalBreakLoc -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682933714"><span class="annot"><span class="annottext">InternalBreakLoc -&gt; ()
+(InternalBreakLoc -&gt; ()) -&gt; NFData InternalBreakLoc
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: InternalBreakLoc -&gt; ()
+rnf :: InternalBreakLoc -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682933720"><span class="annot"><span class="annottext">InternalBreakLoc -&gt; SDoc
+(InternalBreakLoc -&gt; SDoc) -&gt; Outputable InternalBreakLoc
+forall a. (a -&gt; SDoc) -&gt; Outputable a
+$cppr :: InternalBreakLoc -&gt; SDoc
+ppr :: InternalBreakLoc -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-var hs-var hs-var hs-var">Outputable</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-191"></span><span>
+</span><span id="line-192"></span><span class="annot"><span class="hs-comment">-- | Get an internal breakpoint info by 'InternalBreakpointId'</span></span><span>
+</span><span id="line-193"></span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getInternalBreak"><span class="hs-identifier hs-type">getInternalBreak</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#CgBreakInfo"><span class="hs-identifier hs-type">CgBreakInfo</span></a></span><span>
+</span><span id="line-194"></span><span id="getInternalBreak"><span class="annot"><span class="annottext">getInternalBreak :: InternalBreakpointId -&gt; InternalModBreaks -&gt; CgBreakInfo
+</span><a href="GHC.ByteCode.Breakpoints.html#getInternalBreak"><span class="hs-identifier hs-var hs-var">getInternalBreak</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span id="local-6989586621682933727"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933727"><span class="hs-identifier hs-var">mod</span></a></span></span><span> </span><span id="local-6989586621682933728"><span class="annot"><span class="annottext">BreakInfoIndex
+</span><a href="#local-6989586621682933728"><span class="hs-identifier hs-var">ix</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682933729"><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933729"><span class="hs-identifier hs-var">imbs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-195"></span><span>  </span><span class="annot"><span class="annottext">Module -&gt; Module -&gt; CgBreakInfo -&gt; CgBreakInfo
+forall a. Module -&gt; Module -&gt; a -&gt; a
+</span><a href="GHC.ByteCode.Breakpoints.html#assert_modules_match"><span class="hs-identifier hs-var">assert_modules_match</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933727"><span class="hs-identifier hs-var">mod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InternalModBreaks -&gt; Module
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_module"><span class="hs-identifier hs-var">imodBreaks_module</span></a></span><span> </span><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933729"><span class="hs-identifier hs-var">imbs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(CgBreakInfo -&gt; CgBreakInfo) -&gt; CgBreakInfo -&gt; CgBreakInfo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-196"></span><span>    </span><span class="annot"><span class="annottext">InternalModBreaks -&gt; IntMap CgBreakInfo
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_breakInfo"><span class="hs-identifier hs-var">imodBreaks_breakInfo</span></a></span><span> </span><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933729"><span class="hs-identifier hs-var">imbs</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap CgBreakInfo -&gt; BreakInfoIndex -&gt; CgBreakInfo
+forall a. IntMap a -&gt; BreakInfoIndex -&gt; a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#%21"><span class="hs-operator hs-var">IM.!</span></a></span><span> </span><span class="annot"><span class="annottext">BreakInfoIndex
+</span><a href="#local-6989586621682933728"><span class="hs-identifier hs-var">ix</span></a></span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span><span class="hs-comment">-- | Assert that the module in the 'InternalBreakpointId' and in</span><span>
+</span><span id="line-199"></span><span class="hs-comment">-- 'InternalModBreaks' match.</span><span>
+</span><span id="line-200"></span><span id="local-6989586621682933553"><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#assert_modules_match"><span class="hs-identifier hs-type">assert_modules_match</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682933553"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682933553"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-201"></span><span id="assert_modules_match"><span class="annot"><span class="annottext">assert_modules_match :: forall a. Module -&gt; Module -&gt; a -&gt; a
+</span><a href="GHC.ByteCode.Breakpoints.html#assert_modules_match"><span class="hs-identifier hs-var hs-var">assert_modules_match</span></a></span></span><span> </span><span id="local-6989586621682933743"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933743"><span class="hs-identifier hs-var">ibi_mod</span></a></span></span><span> </span><span id="local-6989586621682933744"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933744"><span class="hs-identifier hs-var">imbs_mod</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-202"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; SDoc -&gt; a -&gt; a
+forall a. HasCallStack =&gt; Bool -&gt; SDoc -&gt; a -&gt; a
+</span><a href="GHC.Utils.Panic.html#assertPpr"><span class="hs-identifier hs-var">assertPpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933743"><span class="hs-identifier hs-var">ibi_mod</span></a></span><span> </span><span class="annot"><span class="annottext">Module -&gt; Module -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933744"><span class="hs-identifier hs-var">imbs_mod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-203"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Tried to query the InternalModBreaks of module&quot;</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Module -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933744"><span class="hs-identifier hs-var">imbs_mod</span></a></span><span>
+</span><span id="line-204"></span><span>        </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;with an InternalBreakpointId for module&quot;</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Module -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933743"><span class="hs-identifier hs-var">ibi_mod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-205"></span><span>
+</span><span id="line-206"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- Tick-level Breakpoint information</span><span>
+</span><span id="line-208"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-209"></span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- | Get the source module and tick index for this breakpoint</span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- (as opposed to the module where this breakpoint occurs, which is in 'InternalBreakpointId')</span><span>
+</span><span id="line-212"></span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakSourceId"><span class="hs-identifier hs-type">getBreakSourceId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakpointId"><span class="hs-identifier hs-type">BreakpointId</span></a></span><span>
+</span><span id="line-213"></span><span id="getBreakSourceId"><span class="annot"><span class="annottext">getBreakSourceId :: InternalBreakpointId -&gt; InternalModBreaks -&gt; BreakpointId
+</span><a href="GHC.ByteCode.Breakpoints.html#getBreakSourceId"><span class="hs-identifier hs-var hs-var">getBreakSourceId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span id="local-6989586621682933746"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933746"><span class="hs-identifier hs-var">ibi_mod</span></a></span></span><span> </span><span id="local-6989586621682933747"><span class="annot"><span class="annottext">BreakInfoIndex
+</span><a href="#local-6989586621682933747"><span class="hs-identifier hs-var">ibi_ix</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682933748"><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933748"><span class="hs-identifier hs-var">imbs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-214"></span><span>  </span><span class="annot"><span class="annottext">Module -&gt; Module -&gt; BreakpointId -&gt; BreakpointId
+forall a. Module -&gt; Module -&gt; a -&gt; a
+</span><a href="GHC.ByteCode.Breakpoints.html#assert_modules_match"><span class="hs-identifier hs-var">assert_modules_match</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933746"><span class="hs-identifier hs-var">ibi_mod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InternalModBreaks -&gt; Module
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_module"><span class="hs-identifier hs-var">imodBreaks_module</span></a></span><span> </span><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933748"><span class="hs-identifier hs-var">imbs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(BreakpointId -&gt; BreakpointId) -&gt; BreakpointId -&gt; BreakpointId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-215"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621682933749"><span class="annot"><span class="annottext">cgb :: CgBreakInfo
+</span><a href="#local-6989586621682933749"><span class="hs-identifier hs-var hs-var">cgb</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InternalModBreaks -&gt; IntMap CgBreakInfo
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_breakInfo"><span class="hs-identifier hs-var">imodBreaks_breakInfo</span></a></span><span> </span><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933748"><span class="hs-identifier hs-var">imbs</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap CgBreakInfo -&gt; BreakInfoIndex -&gt; CgBreakInfo
+forall a. IntMap a -&gt; BreakInfoIndex -&gt; a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#%21"><span class="hs-operator hs-var">IM.!</span></a></span><span> </span><span class="annot"><span class="annottext">BreakInfoIndex
+</span><a href="#local-6989586621682933747"><span class="hs-identifier hs-var">ibi_ix</span></a></span><span>
+</span><span id="line-216"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(InternalBreakLoc -&gt; BreakpointId)
+-&gt; (BreakpointId -&gt; BreakpointId)
+-&gt; Either InternalBreakLoc BreakpointId
+-&gt; BreakpointId
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">InternalBreakLoc -&gt; BreakpointId
+</span><a href="GHC.ByteCode.Breakpoints.html#internalBreakLoc"><span class="hs-identifier hs-var">internalBreakLoc</span></a></span><span> </span><span class="annot"><span class="annottext">BreakpointId -&gt; BreakpointId
+forall a. a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CgBreakInfo -&gt; Either InternalBreakLoc BreakpointId
+</span><a href="GHC.ByteCode.Breakpoints.html#cgb_tick_id"><span class="hs-identifier hs-var">cgb_tick_id</span></a></span><span> </span><span class="annot"><span class="annottext">CgBreakInfo
+</span><a href="#local-6989586621682933749"><span class="hs-identifier hs-var">cgb</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-217"></span><span>
+</span><span id="line-218"></span><span class="annot"><span class="hs-comment">-- | Get the source module for this breakpoint (where the breakpoint is defined)</span></span><span>
+</span><span id="line-219"></span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakSourceMod"><span class="hs-identifier hs-type">getBreakSourceMod</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span>
+</span><span id="line-220"></span><span id="getBreakSourceMod"><span class="annot"><span class="annottext">getBreakSourceMod :: InternalBreakpointId -&gt; InternalModBreaks -&gt; Module
+</span><a href="GHC.ByteCode.Breakpoints.html#getBreakSourceMod"><span class="hs-identifier hs-var hs-var">getBreakSourceMod</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span id="local-6989586621682933752"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933752"><span class="hs-identifier hs-var">ibi_mod</span></a></span></span><span> </span><span id="local-6989586621682933753"><span class="annot"><span class="annottext">BreakInfoIndex
+</span><a href="#local-6989586621682933753"><span class="hs-identifier hs-var">ibi_ix</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682933754"><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933754"><span class="hs-identifier hs-var">imbs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-221"></span><span>  </span><span class="annot"><span class="annottext">Module -&gt; Module -&gt; Module -&gt; Module
+forall a. Module -&gt; Module -&gt; a -&gt; a
+</span><a href="GHC.ByteCode.Breakpoints.html#assert_modules_match"><span class="hs-identifier hs-var">assert_modules_match</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933752"><span class="hs-identifier hs-var">ibi_mod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InternalModBreaks -&gt; Module
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_module"><span class="hs-identifier hs-var">imodBreaks_module</span></a></span><span> </span><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933754"><span class="hs-identifier hs-var">imbs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Module -&gt; Module) -&gt; Module -&gt; Module
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-222"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621682933755"><span class="annot"><span class="annottext">cgb :: CgBreakInfo
+</span><a href="#local-6989586621682933755"><span class="hs-identifier hs-var hs-var">cgb</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InternalModBreaks -&gt; IntMap CgBreakInfo
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_breakInfo"><span class="hs-identifier hs-var">imodBreaks_breakInfo</span></a></span><span> </span><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933754"><span class="hs-identifier hs-var">imbs</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap CgBreakInfo -&gt; BreakInfoIndex -&gt; CgBreakInfo
+forall a. IntMap a -&gt; BreakInfoIndex -&gt; a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#%21"><span class="hs-operator hs-var">IM.!</span></a></span><span> </span><span class="annot"><span class="annottext">BreakInfoIndex
+</span><a href="#local-6989586621682933753"><span class="hs-identifier hs-var">ibi_ix</span></a></span><span>
+</span><span id="line-223"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(InternalBreakLoc -&gt; Module)
+-&gt; (BreakpointId -&gt; Module)
+-&gt; Either InternalBreakLoc BreakpointId
+-&gt; Module
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BreakpointId -&gt; Module
+</span><a href="GHC.Types.Tickish.html#bi_tick_mod"><span class="hs-identifier hs-var">bi_tick_mod</span></a></span><span> </span><span class="annot"><span class="annottext">(BreakpointId -&gt; Module)
+-&gt; (InternalBreakLoc -&gt; BreakpointId) -&gt; InternalBreakLoc -&gt; Module
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">InternalBreakLoc -&gt; BreakpointId
+</span><a href="GHC.ByteCode.Breakpoints.html#internalBreakLoc"><span class="hs-identifier hs-var">internalBreakLoc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">BreakpointId -&gt; Module
+</span><a href="GHC.Types.Tickish.html#bi_tick_mod"><span class="hs-identifier hs-var">bi_tick_mod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CgBreakInfo -&gt; Either InternalBreakLoc BreakpointId
+</span><a href="GHC.ByteCode.Breakpoints.html#cgb_tick_id"><span class="hs-identifier hs-var">cgb_tick_id</span></a></span><span> </span><span class="annot"><span class="annottext">CgBreakInfo
+</span><a href="#local-6989586621682933755"><span class="hs-identifier hs-var">cgb</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-224"></span><span>
+</span><span id="line-225"></span><span class="annot"><span class="hs-comment">-- | Get the source span for this breakpoint</span></span><span>
+</span><span id="line-226"></span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakLoc"><span class="hs-identifier hs-type">getBreakLoc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-type">ModBreaks</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html#SrcSpan"><span class="hs-identifier hs-type">SrcSpan</span></a></span><span>
+</span><span id="line-227"></span><span id="getBreakLoc"><span class="annot"><span class="annottext">getBreakLoc :: (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId -&gt; InternalModBreaks -&gt; IO SrcSpan
+</span><a href="GHC.ByteCode.Breakpoints.html#getBreakLoc"><span class="hs-identifier hs-var hs-var">getBreakLoc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ModBreaks -&gt; Array BreakInfoIndex SrcSpan)
+-&gt; (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId
+-&gt; InternalModBreaks
+-&gt; IO SrcSpan
+forall a.
+(ModBreaks -&gt; Array BreakInfoIndex a)
+-&gt; (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId
+-&gt; InternalModBreaks
+-&gt; IO a
+</span><a href="GHC.ByteCode.Breakpoints.html#getBreakXXX"><span class="hs-identifier hs-var">getBreakXXX</span></a></span><span> </span><span class="annot"><span class="annottext">ModBreaks -&gt; Array BreakInfoIndex SrcSpan
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_locs"><span class="hs-identifier hs-var">modBreaks_locs</span></a></span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span class="annot"><span class="hs-comment">-- | Get the vars for this breakpoint</span></span><span>
+</span><span id="line-230"></span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakVars"><span class="hs-identifier hs-type">getBreakVars</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-type">ModBreaks</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Name.Occurrence.html#OccName"><span class="hs-identifier hs-type">OccName</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-231"></span><span id="getBreakVars"><span class="annot"><span class="annottext">getBreakVars :: (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId -&gt; InternalModBreaks -&gt; IO [OccName]
+</span><a href="GHC.ByteCode.Breakpoints.html#getBreakVars"><span class="hs-identifier hs-var hs-var">getBreakVars</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ModBreaks -&gt; Array BreakInfoIndex [OccName])
+-&gt; (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId
+-&gt; InternalModBreaks
+-&gt; IO [OccName]
+forall a.
+(ModBreaks -&gt; Array BreakInfoIndex a)
+-&gt; (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId
+-&gt; InternalModBreaks
+-&gt; IO a
+</span><a href="GHC.ByteCode.Breakpoints.html#getBreakXXX"><span class="hs-identifier hs-var">getBreakXXX</span></a></span><span> </span><span class="annot"><span class="annottext">ModBreaks -&gt; Array BreakInfoIndex [OccName]
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_vars"><span class="hs-identifier hs-var">modBreaks_vars</span></a></span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span class="annot"><span class="hs-comment">-- | Get the decls for this breakpoint</span></span><span>
+</span><span id="line-234"></span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakDecls"><span class="hs-identifier hs-type">getBreakDecls</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-type">ModBreaks</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-235"></span><span id="getBreakDecls"><span class="annot"><span class="annottext">getBreakDecls :: (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId -&gt; InternalModBreaks -&gt; IO [String]
+</span><a href="GHC.ByteCode.Breakpoints.html#getBreakDecls"><span class="hs-identifier hs-var hs-var">getBreakDecls</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ModBreaks -&gt; Array BreakInfoIndex [String])
+-&gt; (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId
+-&gt; InternalModBreaks
+-&gt; IO [String]
+forall a.
+(ModBreaks -&gt; Array BreakInfoIndex a)
+-&gt; (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId
+-&gt; InternalModBreaks
+-&gt; IO a
+</span><a href="GHC.ByteCode.Breakpoints.html#getBreakXXX"><span class="hs-identifier hs-var">getBreakXXX</span></a></span><span> </span><span class="annot"><span class="annottext">ModBreaks -&gt; Array BreakInfoIndex [String]
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_decls"><span class="hs-identifier hs-var">modBreaks_decls</span></a></span><span>
+</span><span id="line-236"></span><span>
+</span><span id="line-237"></span><span class="annot"><span class="hs-comment">-- | Get the decls for this breakpoint</span></span><span>
+</span><span id="line-238"></span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakCCS"><span class="hs-identifier hs-type">getBreakCCS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-type">ModBreaks</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span id="getBreakCCS"><span class="annot"><span class="annottext">getBreakCCS :: (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId -&gt; InternalModBreaks -&gt; IO (String, String)
+</span><a href="GHC.ByteCode.Breakpoints.html#getBreakCCS"><span class="hs-identifier hs-var hs-var">getBreakCCS</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ModBreaks -&gt; Array BreakInfoIndex (String, String))
+-&gt; (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId
+-&gt; InternalModBreaks
+-&gt; IO (String, String)
+forall a.
+(ModBreaks -&gt; Array BreakInfoIndex a)
+-&gt; (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId
+-&gt; InternalModBreaks
+-&gt; IO a
+</span><a href="GHC.ByteCode.Breakpoints.html#getBreakXXX"><span class="hs-identifier hs-var">getBreakXXX</span></a></span><span> </span><span class="annot"><span class="annottext">ModBreaks -&gt; Array BreakInfoIndex (String, String)
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_ccs"><span class="hs-identifier hs-var">modBreaks_ccs</span></a></span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- | Internal utility to access a ModBreaks field at a particular breakpoint index</span><span>
+</span><span id="line-242"></span><span class="hs-comment">--</span><span>
+</span><span id="line-243"></span><span class="hs-comment">-- Recall Note [Breakpoint identifiers]: the internal breakpoint module (the</span><span>
+</span><span id="line-244"></span><span class="hs-comment">-- *occurrence* module) doesn't necessarily match the module where the</span><span>
+</span><span id="line-245"></span><span class="hs-comment">-- tick breakpoint was defined with the relevant 'ModBreaks'.</span><span>
+</span><span id="line-246"></span><span class="hs-comment">--</span><span>
+</span><span id="line-247"></span><span class="hs-comment">-- When the tick module is the same as the internal module, we use the stored</span><span>
+</span><span id="line-248"></span><span class="hs-comment">-- 'ModBreaks'. When the tick module is different, we need to look up the</span><span>
+</span><span id="line-249"></span><span class="hs-comment">-- 'ModBreaks' in the HUG for that other module.</span><span>
+</span><span id="line-250"></span><span class="hs-comment">--</span><span>
+</span><span id="line-251"></span><span class="hs-comment">-- When there is no tick module (the breakpoint was generated at codegen), use</span><span>
+</span><span id="line-252"></span><span class="hs-comment">-- the function on internal mod breaks.</span><span>
+</span><span id="line-253"></span><span class="hs-comment">--</span><span>
+</span><span id="line-254"></span><span class="hs-comment">-- To avoid cyclic dependencies, we instead receive a function that looks up</span><span>
+</span><span id="line-255"></span><span class="hs-comment">-- the 'ModBreaks' given a 'Module'</span><span>
+</span><span id="line-256"></span><span id="local-6989586621682933562"><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#getBreakXXX"><span class="hs-identifier hs-type">getBreakXXX</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-type">ModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#Array"><span class="hs-identifier hs-type">Array</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakTickIndex"><span class="hs-identifier hs-type">BreakTickIndex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682933562"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-type">ModBreaks</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682933562"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-257"></span><span id="getBreakXXX"><span class="annot"><span class="annottext">getBreakXXX :: forall a.
+(ModBreaks -&gt; Array BreakInfoIndex a)
+-&gt; (Module -&gt; IO ModBreaks)
+-&gt; InternalBreakpointId
+-&gt; InternalModBreaks
+-&gt; IO a
+</span><a href="GHC.ByteCode.Breakpoints.html#getBreakXXX"><span class="hs-identifier hs-var hs-var">getBreakXXX</span></a></span></span><span> </span><span id="local-6989586621682933771"><span class="annot"><span class="annottext">ModBreaks -&gt; Array BreakInfoIndex a
+</span><a href="#local-6989586621682933771"><span class="hs-identifier hs-var">view</span></a></span></span><span> </span><span id="local-6989586621682933772"><span class="annot"><span class="annottext">Module -&gt; IO ModBreaks
+</span><a href="#local-6989586621682933772"><span class="hs-identifier hs-var">lookupModule</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span id="local-6989586621682933773"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933773"><span class="hs-identifier hs-var">ibi_mod</span></a></span></span><span> </span><span id="local-6989586621682933774"><span class="annot"><span class="annottext">BreakInfoIndex
+</span><a href="#local-6989586621682933774"><span class="hs-identifier hs-var">ibi_ix</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682933775"><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933775"><span class="hs-identifier hs-var">imbs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-258"></span><span>  </span><span class="annot"><span class="annottext">Module -&gt; Module -&gt; IO a -&gt; IO a
+forall a. Module -&gt; Module -&gt; a -&gt; a
+</span><a href="GHC.ByteCode.Breakpoints.html#assert_modules_match"><span class="hs-identifier hs-var">assert_modules_match</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933773"><span class="hs-identifier hs-var">ibi_mod</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InternalModBreaks -&gt; Module
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_module"><span class="hs-identifier hs-var">imodBreaks_module</span></a></span><span> </span><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933775"><span class="hs-identifier hs-var">imbs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-259"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621682933776"><span class="annot"><span class="annottext">cgb :: CgBreakInfo
+</span><a href="#local-6989586621682933776"><span class="hs-identifier hs-var hs-var">cgb</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InternalModBreaks -&gt; IntMap CgBreakInfo
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_breakInfo"><span class="hs-identifier hs-var">imodBreaks_breakInfo</span></a></span><span> </span><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933775"><span class="hs-identifier hs-var">imbs</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap CgBreakInfo -&gt; BreakInfoIndex -&gt; CgBreakInfo
+forall a. IntMap a -&gt; BreakInfoIndex -&gt; a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#%21"><span class="hs-operator hs-var">IM.!</span></a></span><span> </span><span class="annot"><span class="annottext">BreakInfoIndex
+</span><a href="#local-6989586621682933774"><span class="hs-identifier hs-var">ibi_ix</span></a></span><span>
+</span><span id="line-260"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">(InternalBreakLoc -&gt; BreakpointId)
+-&gt; (BreakpointId -&gt; BreakpointId)
+-&gt; Either InternalBreakLoc BreakpointId
+-&gt; BreakpointId
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">InternalBreakLoc -&gt; BreakpointId
+</span><a href="GHC.ByteCode.Breakpoints.html#internalBreakLoc"><span class="hs-identifier hs-var">internalBreakLoc</span></a></span><span> </span><span class="annot"><span class="annottext">BreakpointId -&gt; BreakpointId
+forall a. a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CgBreakInfo -&gt; Either InternalBreakLoc BreakpointId
+</span><a href="GHC.ByteCode.Breakpoints.html#cgb_tick_id"><span class="hs-identifier hs-var">cgb_tick_id</span></a></span><span> </span><span class="annot"><span class="annottext">CgBreakInfo
+</span><a href="#local-6989586621682933776"><span class="hs-identifier hs-var">cgb</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-261"></span><span>      </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakpointId"><span class="hs-identifier hs-type">BreakpointId</span></a></span><span class="hs-special">{</span><span id="local-6989586621682933777"><span class="annot"><span class="annottext">Module
+bi_tick_mod :: BreakpointId -&gt; Module
+bi_tick_mod :: Module
+</span><a href="GHC.Types.Tickish.html#bi_tick_mod"><span class="hs-identifier hs-var hs-var">bi_tick_mod</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682933778"><span class="annot"><span class="annottext">BreakInfoIndex
+bi_tick_index :: BreakInfoIndex
+bi_tick_index :: BreakpointId -&gt; BreakInfoIndex
+</span><a href="#local-6989586621682933778"><span class="hs-identifier hs-var hs-var">bi_tick_index</span></a></span></span><span class="hs-special">}</span><span>
+</span><span id="line-262"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933777"><span class="hs-identifier hs-var">bi_tick_mod</span></a></span><span> </span><span class="annot"><span class="annottext">Module -&gt; Module -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933773"><span class="hs-identifier hs-var">ibi_mod</span></a></span><span>
+</span><span id="line-263"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-264"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621682933780"><span class="annot"><span class="annottext">these_mbs :: ModBreaks
+</span><a href="#local-6989586621682933780"><span class="hs-identifier hs-var hs-var">these_mbs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InternalModBreaks -&gt; ModBreaks
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_modBreaks"><span class="hs-identifier hs-var">imodBreaks_modBreaks</span></a></span><span> </span><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621682933775"><span class="hs-identifier hs-var">imbs</span></a></span><span>
+</span><span id="line-265"></span><span>          </span><span class="annot"><span class="annottext">a -&gt; IO a
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; IO a) -&gt; a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ModBreaks -&gt; Array BreakInfoIndex a
+</span><a href="#local-6989586621682933771"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">ModBreaks
+</span><a href="#local-6989586621682933780"><span class="hs-identifier hs-var">these_mbs</span></a></span><span> </span><span class="annot"><span class="annottext">Array BreakInfoIndex a -&gt; BreakInfoIndex -&gt; a
+forall i e. Ix i =&gt; Array i e -&gt; i -&gt; e
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#%21"><span class="hs-operator hs-var">!</span></a></span><span> </span><span class="annot"><span class="annottext">BreakInfoIndex
+</span><a href="#local-6989586621682933778"><span class="hs-identifier hs-var">bi_tick_index</span></a></span><span>
+</span><span id="line-266"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>
+</span><span id="line-267"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-268"></span><span>          </span><span id="local-6989586621682933782"><span class="annot"><a href="#local-6989586621682933782"><span class="hs-identifier hs-var">other_mbs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Module -&gt; IO ModBreaks
+</span><a href="#local-6989586621682933772"><span class="hs-identifier hs-var">lookupModule</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933777"><span class="hs-identifier hs-var">bi_tick_mod</span></a></span><span>
+</span><span id="line-269"></span><span>          </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682933771"><span class="hs-identifier hs-type">view</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682933782"><span class="hs-identifier hs-type">other_mbs</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#%21"><span class="hs-operator hs-type">!</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682933778"><span class="hs-identifier hs-type">bi_tick_index</span></a></span><span>
+</span><span id="line-270"></span><span>
+</span><span id="line-271"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-272"></span><span class="hs-comment">-- Instances</span><span>
+</span><span id="line-273"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-274"></span><span>
+</span><span id="line-275"></span><span class="annot"><span class="hs-comment">-- | Fully force an 'InternalModBreaks' value</span></span><span>
+</span><span id="line-276"></span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#seqInternalModBreaks"><span class="hs-identifier hs-type">seqInternalModBreaks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-277"></span><span id="seqInternalModBreaks"><span class="annot"><span class="annottext">seqInternalModBreaks :: InternalModBreaks -&gt; ()
+</span><a href="GHC.ByteCode.Breakpoints.html#seqInternalModBreaks"><span class="hs-identifier hs-var hs-var">seqInternalModBreaks</span></a></span></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span class="hs-special">{</span><span id="local-6989586621682933783"><span id="local-6989586621682933784"><span class="annot"><span class="annottext">IntMap CgBreakInfo
+ModBreaks
+imodBreaks_breakInfo :: InternalModBreaks -&gt; IntMap CgBreakInfo
+imodBreaks_modBreaks :: InternalModBreaks -&gt; ModBreaks
+imodBreaks_breakInfo :: IntMap CgBreakInfo
+imodBreaks_modBreaks :: ModBreaks
+</span><a href="GHC.ByteCode.Breakpoints.html#imodBreaks_breakInfo"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-278"></span><span>    </span><span class="annot"><span class="annottext">IntMap () -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(CgBreakInfo -&gt; ()) -&gt; IntMap CgBreakInfo -&gt; IntMap ()
+forall a b. (a -&gt; b) -&gt; IntMap a -&gt; IntMap b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">CgBreakInfo -&gt; ()
+</span><a href="#local-6989586621682933785"><span class="hs-identifier hs-var">seqCgBreakInfo</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap CgBreakInfo
+</span><a href="#local-6989586621682933783"><span class="hs-identifier hs-var">imodBreaks_breakInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-279"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-280"></span><span>    </span><span class="annot"><a href="#local-6989586621682933785"><span class="hs-identifier hs-type">seqCgBreakInfo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#CgBreakInfo"><span class="hs-identifier hs-type">CgBreakInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-281"></span><span>    </span><span id="local-6989586621682933785"><span class="annot"><span class="annottext">seqCgBreakInfo :: CgBreakInfo -&gt; ()
+</span><a href="#local-6989586621682933785"><span class="hs-identifier hs-var hs-var">seqCgBreakInfo</span></a></span></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#CgBreakInfo"><span class="hs-identifier hs-type">CgBreakInfo</span></a></span><span class="hs-special">{</span><span id="local-6989586621682933786"><span id="local-6989586621682933787"><span id="local-6989586621682933788"><span id="local-6989586621682933789"><span class="annot"><span class="annottext">[Maybe (IfaceIdBndr, Word)]
+[IfaceTvBndr]
+Either InternalBreakLoc BreakpointId
+IfaceType
+cgb_tyvars :: CgBreakInfo -&gt; [IfaceTvBndr]
+cgb_vars :: CgBreakInfo -&gt; [Maybe (IfaceIdBndr, Word)]
+cgb_resty :: CgBreakInfo -&gt; IfaceType
+cgb_tick_id :: CgBreakInfo -&gt; Either InternalBreakLoc BreakpointId
+cgb_tyvars :: [IfaceTvBndr]
+cgb_vars :: [Maybe (IfaceIdBndr, Word)]
+cgb_resty :: IfaceType
+cgb_tick_id :: Either InternalBreakLoc BreakpointId
+</span><a href="GHC.ByteCode.Breakpoints.html#cgb_tyvars"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-282"></span><span>        </span><span class="annot"><span class="annottext">[IfaceTvBndr] -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">[IfaceTvBndr]
+</span><a href="#local-6989586621682933786"><span class="hs-identifier hs-var">cgb_tyvars</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span>
+</span><span id="line-283"></span><span>        </span><span class="annot"><span class="annottext">[Maybe (IfaceIdBndr, Word)] -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">[Maybe (IfaceIdBndr, Word)]
+</span><a href="#local-6989586621682933787"><span class="hs-identifier hs-var">cgb_vars</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span>
+</span><span id="line-284"></span><span>        </span><span class="annot"><span class="annottext">IfaceType -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">IfaceType
+</span><a href="#local-6989586621682933788"><span class="hs-identifier hs-var">cgb_resty</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span>
+</span><span id="line-285"></span><span>        </span><span class="annot"><span class="annottext">Either InternalBreakLoc BreakpointId -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">Either InternalBreakLoc BreakpointId
+</span><a href="#local-6989586621682933789"><span class="hs-identifier hs-var">cgb_tick_id</span></a></span><span>
+</span><span id="line-286"></span><span>
+</span><span id="line-287"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-288"></span><span>  </span><span id="local-6989586621682933798"><span class="annot"><span class="annottext">ppr :: InternalBreakpointId -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span class="hs-special">{</span><span id="local-6989586621682933799"><span id="local-6989586621682933800"><span class="annot"><span class="annottext">BreakInfoIndex
+Module
+ibi_info_mod :: InternalBreakpointId -&gt; Module
+ibi_info_index :: InternalBreakpointId -&gt; BreakInfoIndex
+ibi_info_mod :: Module
+ibi_info_index :: BreakInfoIndex
+</span><a href="GHC.ByteCode.Breakpoints.html#ibi_info_mod"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-289"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;InternalBreakpointId&quot;</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Module -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933799"><span class="hs-identifier hs-var">ibi_info_mod</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">BreakInfoIndex -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">BreakInfoIndex
+</span><a href="#local-6989586621682933800"><span class="hs-identifier hs-var">ibi_info_index</span></a></span><span>
+</span><span id="line-290"></span><span>
+</span><span id="line-291"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-292"></span><span>  </span><span id="local-6989586621682933807"><span class="annot"><span class="annottext">rnf :: InternalBreakpointId -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span class="hs-special">{</span><span id="local-6989586621682933808"><span id="local-6989586621682933809"><span class="annot"><span class="annottext">BreakInfoIndex
+Module
+ibi_info_mod :: InternalBreakpointId -&gt; Module
+ibi_info_index :: InternalBreakpointId -&gt; BreakInfoIndex
+ibi_info_mod :: Module
+ibi_info_index :: BreakInfoIndex
+</span><a href="GHC.ByteCode.Breakpoints.html#ibi_info_mod"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-293"></span><span>    </span><span class="annot"><span class="annottext">Module -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933808"><span class="hs-identifier hs-var">ibi_info_mod</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span> </span><span class="annot"><span class="annottext">BreakInfoIndex -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">BreakInfoIndex
+</span><a href="#local-6989586621682933809"><span class="hs-identifier hs-var">ibi_info_index</span></a></span><span>
+</span><span id="line-294"></span><span>
+</span><span id="line-295"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#CgBreakInfo"><span class="hs-identifier hs-type">CgBreakInfo</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-296"></span><span>   </span><span id="local-6989586621682933837"><span class="annot"><span class="annottext">ppr :: CgBreakInfo -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span id="local-6989586621682933838"><span class="annot"><span class="annottext">CgBreakInfo
+</span><a href="#local-6989586621682933838"><span class="hs-identifier hs-var">info</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CgBreakInfo&quot;</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span>
+</span><span id="line-297"></span><span>              </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#parens"><span class="hs-identifier hs-var">parens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Maybe (IfaceIdBndr, Word)] -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CgBreakInfo -&gt; [Maybe (IfaceIdBndr, Word)]
+</span><a href="GHC.ByteCode.Breakpoints.html#cgb_vars"><span class="hs-identifier hs-var">cgb_vars</span></a></span><span> </span><span class="annot"><span class="annottext">CgBreakInfo
+</span><a href="#local-6989586621682933838"><span class="hs-identifier hs-var">info</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span>
+</span><span id="line-298"></span><span>                      </span><span class="annot"><span class="annottext">IfaceType -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CgBreakInfo -&gt; IfaceType
+</span><a href="GHC.ByteCode.Breakpoints.html#cgb_resty"><span class="hs-identifier hs-var">cgb_resty</span></a></span><span> </span><span class="annot"><span class="annottext">CgBreakInfo
+</span><a href="#local-6989586621682933838"><span class="hs-identifier hs-var">info</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span>
+</span><span id="line-299"></span><span>                      </span><span class="annot"><span class="annottext">Either InternalBreakLoc BreakpointId -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CgBreakInfo -&gt; Either InternalBreakLoc BreakpointId
+</span><a href="GHC.ByteCode.Breakpoints.html#cgb_tick_id"><span class="hs-identifier hs-var">cgb_tick_id</span></a></span><span> </span><span class="annot"><span class="annottext">CgBreakInfo
+</span><a href="#local-6989586621682933838"><span class="hs-identifier hs-var">info</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-300"></span></pre></body></html>
