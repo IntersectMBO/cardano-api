@@ -53,9 +53,9 @@ jobs:
         f+${{ matrix.sys.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
-    - uses: cachix/install-nix-action@v30
+    - uses: cachix/install-nix-action@v31
       with:
         extra_nix_config: |
           accept-flake-config = true
