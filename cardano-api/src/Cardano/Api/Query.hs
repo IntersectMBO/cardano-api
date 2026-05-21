@@ -89,6 +89,8 @@ module Cardano.Api.Query
   , queryProposals
   , queryStakePoolDefaultVote
   , queryLedgerConfig
+  , queryValidateTx
+  , QueryValidateTxError (..)
   , DelegationsAndRewards (..)
   , mergeDelegsAndRewards
 
@@ -99,6 +101,7 @@ module Cardano.Api.Query
   )
 where
 
+import Cardano.Api.Experimental.Tx.Internal.Validate
 import Cardano.Api.Query.Internal.Convenience
 import Cardano.Api.Query.Internal.Expr
 import Cardano.Api.Query.Internal.Type.DebugLedgerState
