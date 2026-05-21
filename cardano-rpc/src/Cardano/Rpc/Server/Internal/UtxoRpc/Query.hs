@@ -74,35 +74,36 @@ readParamsMethod _req = do
 -- | Handle the @ReadUtxos@ RPC method.
 -- Looks up specific UTxO entries by their 'TxIn' keys and returns them
 -- along with the ledger tip.
+-- Returns an empty response when no keys are provided, matching other
+-- UTxO RPC implementations (Dolos, cardano-node-api, Dingo).
 readUtxosMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadUtxosRequest
   -> m (Proto UtxoRpc.ReadUtxosResponse)
-readUtxosMethod req = do
-  utxoFilter <-
-    if not (null $ req ^. U5c.keys)
-      then QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. U5c.keys)
-      else pure QueryUTxOWhole
+readUtxosMethod req
+  | null $ req ^. U5c.keys = pure defMessage
+  | otherwise = do
+      utxoFilter <- QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. U5c.keys)
 
-  nodeConnInfo <- grab
-  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+      nodeConnInfo <- grab
+      AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
+      eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
 
-  let target = VolatileTip
-  (utxo, chainPoint, blockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-    utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-    chainPoint <- throwEither =<< queryChainPoint
-    blockNo <- throwEither =<< queryChainBlockNo
-    systemStart <- throwEither =<< querySystemStart
-    eraHistory <- throwEither =<< queryEraHistory
-    pure (utxo, chainPoint, blockNo, systemStart, eraHistory)
+      let target = VolatileTip
+      (utxo, chainPoint, blockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+        utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
+        chainPoint <- throwEither =<< queryChainPoint
+        blockNo <- throwEither =<< queryChainBlockNo
+        systemStart <- throwEither =<< querySystemStart
+        eraHistory <- throwEither =<< queryEraHistory
+        pure (utxo, chainPoint, blockNo, systemStart, eraHistory)
 
-  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+      timestamp <- slotToTimestamp systemStart eraHistory chainPoint
 
-  pure $
-    defMessage
-      & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo timestamp
-      & U5c.items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
+      pure $
+        defMessage
+          & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo timestamp
+          & U5c.items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
  where
   txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
   txoRefToTxIn r = do
@@ -111,8 +112,8 @@ readUtxosMethod req = do
 
 -- | Handle the @SearchUtxos@ RPC method.
 -- Filters the UTxO set by a predicate and returns a paginated result.
--- When the predicate contains exact address matches, the query is narrowed
--- to those addresses; otherwise the entire UTxO set is fetched.
+-- The predicate must contain exact address matches so the query can be
+-- narrowed; broad predicates are rejected with @INVALID_ARGUMENT@.
 searchUtxosMethod
   :: MonadRpc e m
   => Proto UtxoRpc.SearchUtxosRequest
@@ -123,10 +124,12 @@ searchUtxosMethod req = do
       maxItems = req ^. U5c.maxItems
       startToken = req ^. U5c.maybe'startToken
 
-  -- Determine query strategy: use address-based query if possible, otherwise fetch whole UTxO
-  let utxoFilter = case mPredicate >>= extractAddressesFromPredicate of
-        Just addrs -> QueryUTxOByAddress addrs
-        _ -> QueryUTxOWhole
+  utxoFilter <- case mPredicate >>= extractAddressesFromPredicate of
+    Just addrs -> pure $ QueryUTxOByAddress addrs
+    Nothing ->
+      throwGrpcErrorWithMessage
+        GrpcInvalidArgument
+        "predicate too broad: must contain exact address match to avoid fetching the entire UTxO set"
 
   nodeConnInfo <- grab
   AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
