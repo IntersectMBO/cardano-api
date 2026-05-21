@@ -205,6 +205,11 @@ module Cardano.Api.Experimental.Tx
   , TxBodyErrorAutoBalance (..)
   , TxFeeEstimationError (..)
 
+    -- * Validation
+  , TxValidationResult (..)
+  , QueryValidateTxError (..)
+  , validateTx
+
     -- ** Internal functions
   , extractExecutionUnits
   , getTxScriptWitnessRequirements
@@ -225,16 +230,31 @@ import Cardano.Api.Experimental.Tx.Internal.BodyContent.New
 import Cardano.Api.Experimental.Tx.Internal.Fee
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Experimental.Tx.Internal.Type
+import Cardano.Api.Experimental.Tx.Internal.Validate (QueryValidateTxError (..), queryValidateTx)
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
+import Cardano.Api.Network.IPC (LocalStateQueryExpr)
 import Cardano.Api.Plutus.Internal.Script qualified as Api
 import Cardano.Api.Pretty (docToString, pretty)
 import Cardano.Api.ProtocolParameters
+import Cardano.Api.Query.Internal.Expr
+  ( queryEraHistory
+  , queryProtocolParameters
+  , querySystemStart
+  , queryUtxo
+  )
+import Cardano.Api.Query.Internal.Type.QueryInMode
+  ( QueryInMode
+  , QueryUTxOFilter (..)
+  , toLedgerEpochInfo
+  , toLedgerUTxO
+  )
 import Cardano.Api.Serialise.Raw
   ( SerialiseAsRawBytes (..)
   , SerialiseAsRawBytesError (SerialiseAsRawBytesError)
   )
 import Cardano.Api.Tx.Internal.Body qualified as Api
+import Cardano.Api.Tx.Internal.Fee (EvalTxExecutionUnitsLog, ScriptExecutionError)
 import Cardano.Api.Tx.Internal.Sign
 
 import Cardano.Crypto.Hash qualified as Hash
@@ -243,9 +263,10 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Hashes qualified as L hiding (Hash)
+import Cardano.Ledger.Shelley.API (ApplyTxError)
 
 import Control.Exception (displayException)
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (bimap, first)
 import Data.ByteString.Lazy (fromStrict)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -380,3 +401,59 @@ purposeAsIxItemToAsIx
   -> L.PlutusPurpose L.AsIx (LedgerEra era)
 purposeAsIxItemToAsIx purpose =
   obtainCommonConstraints (useEra @era) $ L.hoistPlutusPurpose L.toAsIx purpose
+
+data TxValidationResult era = TxValidationResult
+  { phase1Result :: Either (ApplyTxError (ShelleyLedgerEra era)) ()
+  , phase2Result :: Map Api.ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, Api.ExecutionUnits))
+  }
+
+deriving instance Show (ApplyTxError (ShelleyLedgerEra era)) => Show (TxValidationResult era)
+
+validateTx
+  :: forall era block point r
+   . ShelleyBasedEra era
+  -> Tx era
+  -> LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       (Either QueryValidateTxError (TxValidationResult era))
+validateTx sbe tx@(ShelleyTx _sbe ledgerTx) =
+  Api.forEraInEon
+    (Api.toCardanoEra sbe)
+    (error $ "validateTx: unsupported era " <> docToString (pretty sbe))
+    ( \expEra -> obtainCommonConstraints expEra $ do
+        ePhase1 <- queryValidateTx sbe tx
+
+        eSystemStart <- querySystemStart
+        eEraHistory <- queryEraHistory
+        ePparams <- queryProtocolParameters sbe
+        let relevantTxIns =
+              Set.map Api.fromShelleyTxIn (ledgerTx ^. L.bodyTxL . L.allInputsTxBodyF)
+        eUtxo <- queryUtxo sbe (QueryUTxOByTxIn relevantTxIns)
+
+        return $ do
+          phase1 <- ePhase1
+          systemStart <- first QueryValidateTxUnsupportedNtcVersion eSystemStart
+          eraHistory <- first QueryValidateTxUnsupportedNtcVersion eEraHistory
+          pparams <-
+            first QueryValidateTxUnsupportedNtcVersion ePparams
+              >>= first QueryValidateTxEraMismatch
+          utxo <-
+            first QueryValidateTxUnsupportedNtcVersion eUtxo
+              >>= first QueryValidateTxEraMismatch
+
+          let ledgerUtxo = toLedgerUTxO sbe utxo
+              ledgerEpochInfo = toLedgerEpochInfo eraHistory
+              phase2 =
+                evaluateTransactionExecutionUnits
+                  systemStart
+                  ledgerEpochInfo
+                  pparams
+                  ledgerUtxo
+                  ledgerTx
+
+          Right $ TxValidationResult phase1 phase2
+    )
