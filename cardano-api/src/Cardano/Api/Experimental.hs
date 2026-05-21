@@ -95,6 +95,11 @@ module Cardano.Api.Experimental
   , makeDrepUpdateCertificate
   , makeStakeAddressAndDRepDelegationCertificate
 
+    -- ** Validation
+  , TxValidationResult (..)
+  , QueryValidateTxError (..)
+  , validateTx
+
     -- * Data family instances
   , AsType (..)
 
