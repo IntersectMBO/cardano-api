@@ -46,6 +46,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   -- Core
   , Addr
   , Coin (..)
+  , DeltaCoin (..)
   , Compactible (..)
   , partialCompactFL
   , toCompactPartial
@@ -71,6 +72,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , Val (..)
   , addDeltaCoin
   , castSafeHash
+  , coinTxOutL
   , getScriptsNeeded
   , mkBasicTxOut
   , toDeltaCoin
@@ -84,6 +86,22 @@ module Cardano.Api.Ledger.Internal.Reexport
   -- Dijkstra
   , DijkstraPlutusPurpose (..)
   -- Conway
+  , ApplyTxError (..)
+  , ConwayLedgerPredFailure (..)
+  , ConwayUtxowPredFailure (..)
+  , ConwayUtxoPredFailure (..)
+  , ConwayCertsPredFailure (..)
+  , ConwayCertPredFailure (..)
+  , ConwayDelegPredFailure (..)
+  , ConwayGovCertPredFailure (..)
+  , ConwayGovPredFailure (..)
+  , ConwayUtxosPredFailure (..)
+  , ShelleyPoolPredFailure (..)
+  , TagMismatchDescription (..)
+  , FailureDescription (..)
+  , CollectError (..)
+  , IsValid (..)
+  , Withdrawals (..)
   , Anchor (..)
   , Committee (..)
   , Delegatee (..)
@@ -148,6 +166,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , AlonzoEraTxWits (..)
   , AlonzoPlutusPurpose (..)
   , AlonzoScriptsNeeded (..)
+  , AsItem (..)
   , AsIx (..)
   , CoinPerWord (..)
   , Data (..)
@@ -179,6 +198,8 @@ module Cardano.Api.Ledger.Internal.Reexport
   , showTimelock
   , toAsIx
   -- Base
+  , Mismatch (..)
+  , Relation (..)
   , boundRational
   , unboundRational
   , DnsName
@@ -201,12 +222,16 @@ module Cardano.Api.Ledger.Internal.Reexport
   -- Crypto
   , hashToBytes
   , hashFromBytes
+  , hashToTextAsHex
   , Crypto
   , StandardCrypto
   , ADDRHASH
   -- Slotting
   , EpochNo (..)
   -- SafeHash
+  , ScriptHash (..)
+  , DataHash
+  , TxAuxDataHash (..)
   , SafeHash
   , unsafeMakeSafeHash
   , extractHash
@@ -215,13 +240,14 @@ module Cardano.Api.Ledger.Internal.Reexport
   )
 where
 
-import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
-import Cardano.Ledger.Address (AccountAddress (..), Addr (..))
+import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes, hashToTextAsHex)
+import Cardano.Ledger.Address (AccountAddress (..), Addr (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), Timelock (..), showTimelock)
 import Cardano.Ledger.Alonzo.Core
   ( AlonzoEraScript (..)
   , AlonzoEraTxBody (..)
   , AlonzoEraTxWits (..)
+  , AsItem (..)
   , AsIx (..)
   , AsIxItem (AsIxItem)
   , CoinPerWord (..)
@@ -244,6 +270,9 @@ import Cardano.Ledger.Alonzo.Scripts
   , plutusScriptLanguage
   , toAsIx
   )
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
+import Cardano.Ledger.Alonzo.Rules (FailureDescription (..), TagMismatchDescription (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Api
@@ -276,9 +305,11 @@ import Cardano.Ledger.BaseTypes
   , DnsName
   , EpochInterval (..)
   , Inject (..)
+  , Mismatch (..)
   , Network (..)
   , NonNegativeInterval
   , ProtVer (..)
+  , Relation (..)
   , StrictMaybe (..)
   , UnitInterval
   , Url
@@ -306,7 +337,7 @@ import Cardano.Ledger.Binary
   , toPlainDecoder
   )
 import Cardano.Ledger.Binary.Plain (Decoder, serializeAsHexText)
-import Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Core
   ( DRepVotingThresholds (..)
@@ -317,7 +348,19 @@ import Cardano.Ledger.Conway.Core
   , dvtPPTechnicalGroupL
   , dvtUpdateToConstitutionL
   )
+import Cardano.Ledger.Conway (ApplyTxError (..))
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import Cardano.Ledger.Conway.Rules
+  ( ConwayCertPredFailure (..)
+  , ConwayCertsPredFailure (..)
+  , ConwayDelegPredFailure (..)
+  , ConwayGovCertPredFailure (..)
+  , ConwayGovPredFailure (..)
+  , ConwayLedgerPredFailure (..)
+  , ConwayUtxoPredFailure (..)
+  , ConwayUtxosPredFailure (..)
+  , ConwayUtxowPredFailure (..)
+  )
 import Cardano.Ledger.Conway.Governance
   ( Anchor (..)
   , Committee (..)
@@ -350,6 +393,7 @@ import Cardano.Ledger.Core
   , PoolCert (..)
   , TxOut
   , Value
+  , coinTxOutL
   , fromEraCBOR
   , mkBasicTxOut
   , ppMinFeeAL
@@ -362,7 +406,10 @@ import Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Hashes
   ( ADDRHASH
+  , DataHash
   , SafeHash
+  , ScriptHash (..)
+  , TxAuxDataHash (..)
   , castSafeHash
   , extractHash
   , unsafeMakeSafeHash
@@ -394,6 +441,7 @@ import Cardano.Ledger.Shelley.API
   , WitVKey (..)
   , hashKey
   )
+import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
 import Cardano.Ledger.Shelley.Genesis
   ( ShelleyGenesisStaking (..)
   , secondsToNominalDiffTimeMicro
