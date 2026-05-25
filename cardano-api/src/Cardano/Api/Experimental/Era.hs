@@ -20,6 +20,7 @@ module Cardano.Api.Experimental.Era
   , Era (..)
   , IsEra (..)
   , Some (..)
+  , InAnyEra (..)
   , Inject (..)
   , Convert (..)
   , LedgerEra
@@ -92,6 +93,11 @@ data Some (f :: k -> Type) where
      . (Typeable a, Typeable (f a))
     => f a
     -> Some f
+
+-- | Pair an era witness with a value indexed by that era,
+-- hiding the era type parameter existentially.
+data InAnyEra f where
+  InAnyEra :: IsEra era => Era era -> f era -> InAnyEra f
 
 -- | Represents the latest Cardano blockchain eras, including
 -- the one currently on mainnet and the upcoming one.

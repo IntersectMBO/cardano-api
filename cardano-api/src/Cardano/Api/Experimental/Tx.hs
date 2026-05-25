@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -232,12 +231,10 @@ import Cardano.Api.Experimental.Tx.Internal.Fee
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.Experimental.Tx.Internal.Validate (QueryValidateTxError (..), queryValidateTx)
-import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Network.IPC (LocalStateQueryExpr)
 import Cardano.Api.Plutus.Internal.Script qualified as Api
 import Cardano.Api.Pretty (docToString, pretty)
-import Cardano.Api.ProtocolParameters
 import Cardano.Api.Query.Internal.Expr
   ( queryEraHistory
   , queryProtocolParameters
@@ -250,30 +247,18 @@ import Cardano.Api.Query.Internal.Type.QueryInMode
   , toLedgerEpochInfo
   , toLedgerUTxO
   )
-import Cardano.Api.Serialise.Raw
-  ( SerialiseAsRawBytes (..)
-  , SerialiseAsRawBytesError (SerialiseAsRawBytesError)
-  )
 import Cardano.Api.Tx.Internal.Body qualified as Api
 import Cardano.Api.Tx.Internal.Fee (EvalTxExecutionUnitsLog, ScriptExecutionError)
 import Cardano.Api.Tx.Internal.Sign
 
 import Cardano.Crypto.Hash qualified as Hash
-import Cardano.Ledger.Alonzo qualified as LAlonzo
-import Cardano.Ledger.Alonzo.Rules qualified as LAlonzo
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Babbage qualified as LBabbage
-import Cardano.Ledger.Babbage.Rules qualified as LBabbage
-import Cardano.Ledger.Binary qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Hashes qualified as L hiding (Hash)
 import Cardano.Ledger.Shelley.API (ApplyTxError)
-import Cardano.Ledger.Shelley.Rules qualified as LShelley
 
-import Control.Exception (displayException)
 import Data.Bifunctor (bimap, first)
-import Data.ByteString.Lazy (fromStrict)
 import Data.List.NonEmpty qualified as NE
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -306,39 +291,6 @@ makeKeyWitness era (UnsignedTx unsignedTx) wsk =
         vk = getShelleyKeyWitnessVerificationKey sk
         signature = makeShelleySignature txhash sk
      in L.WitVKey vk signature
-
--- | A transaction that has been witnesssed
-data SignedTx era
-  = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx Ledger.TopTx (LedgerEra era))
-
-deriving instance Eq (SignedTx era)
-
-deriving instance Show (SignedTx era)
-
-instance HasTypeProxy era => HasTypeProxy (SignedTx era) where
-  data AsType (SignedTx era) = AsSignedTx (AsType era)
-  proxyToAsType :: Proxy (SignedTx era) -> AsType (SignedTx era)
-  proxyToAsType _ = AsSignedTx (asType @era)
-
-instance
-  ( HasTypeProxy era
-  , L.EraTx (LedgerEra era)
-  )
-  => SerialiseAsRawBytes (SignedTx era)
-  where
-  serialiseToRawBytes (SignedTx tx) =
-    Ledger.serialize' (Ledger.eraProtVerHigh @(LedgerEra era)) tx
-  deserialiseFromRawBytes _ =
-    bimap wrapError SignedTx
-      . Ledger.decodeFullAnnotator
-        (Ledger.eraProtVerHigh @(LedgerEra era))
-        "SignedTx"
-        Ledger.decCBOR
-      . fromStrict
-   where
-    wrapError
-      :: Ledger.DecoderError -> SerialiseAsRawBytesError
-    wrapError = SerialiseAsRawBytesError . displayException
 
 signTx
   :: Era era
@@ -410,16 +362,19 @@ purposeAsIxItemToAsIx purpose =
   obtainCommonConstraints (useEra @era) $ L.hoistPlutusPurpose L.toAsIx purpose
 
 data TxValidationResult era = TxValidationResult
-  { phase1Result :: Either (ApplyTxError (ShelleyLedgerEra era)) ()
-  , phase2Result :: Map Api.ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, Api.ExecutionUnits))
+  { phase1Result :: Either (ApplyTxError (LedgerEra era)) ()
+  , phase2Result
+      :: Map
+           Api.ScriptWitnessIndex
+           (Either ScriptExecutionError (EvalTxExecutionUnitsLog, Api.ExecutionUnits))
   }
 
-deriving instance Show (ApplyTxError (ShelleyLedgerEra era)) => Show (TxValidationResult era)
+deriving instance Show (ApplyTxError (LedgerEra era)) => Show (TxValidationResult era)
 
 validateTx
   :: forall era block point r
-   . ShelleyBasedEra era
-  -> Tx era
+   . IsEra era
+  => SignedTx era
   -> LocalStateQueryExpr
        block
        point
@@ -427,87 +382,63 @@ validateTx
        r
        IO
        (Either QueryValidateTxError (TxValidationResult era))
-validateTx sbe tx@(ShelleyTx _sbe ledgerTx) =
-  Api.forEraInEon
-    (Api.toCardanoEra sbe)
-    (error $ "validateTx: unsupported era " <> docToString (pretty sbe))
-    ( \expEra -> obtainCommonConstraints expEra $ do
-        ePhase1 <- queryValidateTx sbe tx
+validateTx stx@(SignedTx ledgerTx) =
+  obtainCommonConstraints (useEra @era) $ do
+    let sbe = convert (useEra @era)
+    ePhase1 <- queryValidateTx stx
 
-        eSystemStart <- querySystemStart
-        eEraHistory <- queryEraHistory
-        ePparams <- queryProtocolParameters sbe
-        let relevantTxIns =
-              Set.map Api.fromShelleyTxIn (ledgerTx ^. L.bodyTxL . L.allInputsTxBodyF)
-        eUtxo <- queryUtxo sbe (QueryUTxOByTxIn relevantTxIns)
+    eSystemStart <- querySystemStart
+    eEraHistory <- queryEraHistory
+    ePparams <- queryProtocolParameters sbe
+    let relevantTxIns =
+          Set.map Api.fromShelleyTxIn (ledgerTx ^. L.bodyTxL . L.allInputsTxBodyF)
+    eUtxo <- queryUtxo sbe (QueryUTxOByTxIn relevantTxIns)
 
-        return $ do
-          phase1 <- ePhase1
-          systemStart <- first QueryValidateTxUnsupportedNtcVersion eSystemStart
-          eraHistory <- first QueryValidateTxUnsupportedNtcVersion eEraHistory
-          pparams <-
-            first QueryValidateTxUnsupportedNtcVersion ePparams
-              >>= first QueryValidateTxEraMismatch
-          utxo <-
-            first QueryValidateTxUnsupportedNtcVersion eUtxo
-              >>= first QueryValidateTxEraMismatch
+    return $ do
+      phase1 <- ePhase1
+      systemStart <- first QueryValidateTxUnsupportedNtcVersion eSystemStart
+      eraHistory <- first QueryValidateTxUnsupportedNtcVersion eEraHistory
+      pparams <-
+        first QueryValidateTxUnsupportedNtcVersion ePparams
+          >>= first QueryValidateTxEraMismatch
+      utxo <-
+        first QueryValidateTxUnsupportedNtcVersion eUtxo
+          >>= first QueryValidateTxEraMismatch
 
-          let ledgerUtxo = toLedgerUTxO sbe utxo
-              ledgerEpochInfo = toLedgerEpochInfo eraHistory
-              phase2 =
-                evaluateTransactionExecutionUnits
-                  systemStart
-                  ledgerEpochInfo
-                  pparams
-                  ledgerUtxo
-                  ledgerTx
+      let ledgerUtxo = toLedgerUTxO sbe utxo
+          ledgerEpochInfo = toLedgerEpochInfo eraHistory
+          phase2 =
+            evaluateTransactionExecutionUnits
+              systemStart
+              ledgerEpochInfo
+              pparams
+              ledgerUtxo
+              ledgerTx
 
-          let phase1Filtered = filterScriptFailures sbe phase1
-          Right $ TxValidationResult phase1Filtered phase2
-    )
+      let phase1Filtered = filterScriptFailures (useEra @era) phase1
+      Right $ TxValidationResult phase1Filtered phase2
 
 filterScriptFailures
-  :: ShelleyBasedEra era
-  -> Either (ApplyTxError (ShelleyLedgerEra era)) ()
-  -> Either (ApplyTxError (ShelleyLedgerEra era)) ()
-filterScriptFailures sbe = \case
+  :: Era era
+  -> Either (ApplyTxError (LedgerEra era)) ()
+  -> Either (ApplyTxError (LedgerEra era)) ()
+filterScriptFailures era = \case
   Right () -> Right ()
-  Left err -> case sbe of
-    ShelleyBasedEraShelley -> Left err
-    ShelleyBasedEraAllegra -> Left err
-    ShelleyBasedEraMary -> Left err
-    ShelleyBasedEraAlonzo ->
-      let LAlonzo.AlonzoApplyTxError failures = err
-          isScript = \case
-            LShelley.UtxowFailure (LAlonzo.ShelleyInAlonzoUtxowPredFailure (LShelley.UtxoFailure (LAlonzo.UtxosFailure {}))) -> True
-            LShelley.UtxowFailure {} -> False
-            LShelley.DelegsFailure {} -> False
-            LShelley.ShelleyWithdrawalsMissingAccounts {} -> False
-            LShelley.ShelleyIncompleteWithdrawals {} -> False
-       in filterFailures LAlonzo.AlonzoApplyTxError isScript failures
-    ShelleyBasedEraBabbage ->
-      let LBabbage.BabbageApplyTxError failures = err
-          isScript = \case
-            LShelley.UtxowFailure (LBabbage.UtxoFailure (LBabbage.AlonzoInBabbageUtxoPredFailure (LAlonzo.UtxosFailure {}))) -> True
-            LShelley.UtxowFailure {} -> False
-            LShelley.DelegsFailure {} -> False
-            LShelley.ShelleyWithdrawalsMissingAccounts {} -> False
-            LShelley.ShelleyIncompleteWithdrawals {} -> False
-       in filterFailures LBabbage.BabbageApplyTxError isScript failures
-    ShelleyBasedEraDijkstra -> error "TODO Dijkstra: filterScriptFailures"
-    ShelleyBasedEraConway ->
+  Left err -> case era of
+    DijkstraEra -> error "TODO Dijkstra: filterScriptFailures"
+    ConwayEra ->
       let L.ConwayApplyTxError failures = err
           isScript = \case
-            L.ConwayUtxowFailure (L.UtxoFailure (L.UtxosFailure {})) -> True
-            L.ConwayUtxowFailure {} -> False
-            L.ConwayCertsFailure {} -> False
-            L.ConwayGovFailure {} -> False
-            L.ConwayWdrlNotDelegatedToDRep {} -> False
-            L.ConwayTreasuryValueMismatch {} -> False
-            L.ConwayTxRefScriptsSizeTooBig {} -> False
-            L.ConwayMempoolFailure {} -> False
-            L.ConwayWithdrawalsMissingAccounts {} -> False
-            L.ConwayIncompleteWithdrawals {} -> False
+            L.ConwayUtxowFailure (L.UtxoFailure (L.UtxosFailure{})) -> True
+            L.ConwayUtxowFailure{} -> False
+            L.ConwayCertsFailure{} -> False
+            L.ConwayGovFailure{} -> False
+            L.ConwayWdrlNotDelegatedToDRep{} -> False
+            L.ConwayTreasuryValueMismatch{} -> False
+            L.ConwayTxRefScriptsSizeTooBig{} -> False
+            L.ConwayMempoolFailure{} -> False
+            L.ConwayWithdrawalsMissingAccounts{} -> False
+            L.ConwayIncompleteWithdrawals{} -> False
        in filterFailures L.ConwayApplyTxError isScript failures
 
 filterFailures

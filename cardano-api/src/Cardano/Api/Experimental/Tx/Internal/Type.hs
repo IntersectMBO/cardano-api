@@ -14,10 +14,12 @@
 
 module Cardano.Api.Experimental.Tx.Internal.Type
   ( UnsignedTx (..)
+  , SignedTx (..)
   )
 where
 
 import Cardano.Api.Era.Internal.Core qualified as Api
+import Cardano.Api.Experimental.Era (LedgerEra)
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), asType)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.ProtocolParameters
@@ -97,5 +99,38 @@ instance
     wrapError = SerialiseAsRawBytesError . displayException
 
 deriving instance Eq (UnsignedTx era)
+
+-- | A transaction that has been witnessed
+data SignedTx era
+  = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx Ledger.TopTx (LedgerEra era))
+
+deriving instance Eq (SignedTx era)
+
+deriving instance Show (SignedTx era)
+
+instance HasTypeProxy era => HasTypeProxy (SignedTx era) where
+  data AsType (SignedTx era) = AsSignedTx (AsType era)
+  proxyToAsType :: Proxy (SignedTx era) -> AsType (SignedTx era)
+  proxyToAsType _ = AsSignedTx (asType @era)
+
+instance
+  ( HasTypeProxy era
+  , L.EraTx (LedgerEra era)
+  )
+  => SerialiseAsRawBytes (SignedTx era)
+  where
+  serialiseToRawBytes (SignedTx tx) =
+    Ledger.serialize' (Ledger.eraProtVerHigh @(LedgerEra era)) tx
+  deserialiseFromRawBytes _ =
+    bimap wrapError SignedTx
+      . Ledger.decodeFullAnnotator
+        (Ledger.eraProtVerHigh @(LedgerEra era))
+        "SignedTx"
+        Ledger.decCBOR
+      . fromStrict
+   where
+    wrapError
+      :: Ledger.DecoderError -> SerialiseAsRawBytesError
+    wrapError = SerialiseAsRawBytesError . displayException
 
 deriving instance Show (UnsignedTx era)

@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Api.Experimental.Tx.Internal.Validate
   ( queryValidateTx
@@ -11,6 +12,8 @@ where
 
 import Cardano.Api.Block (ChainPoint (..))
 import Cardano.Api.Era
+import Cardano.Api.Experimental.Era (IsEra, LedgerEra, obtainCommonConstraints, useEra)
+import Cardano.Api.Experimental.Tx.Internal.Type (SignedTx (..))
 import Cardano.Api.Genesis.Internal (shelleyGenesisDefaults)
 import Cardano.Api.Genesis.Internal.Parameters
 import Cardano.Api.Network.IPC (LocalStateQueryExpr)
@@ -18,10 +21,7 @@ import Cardano.Api.Network.IPC.Internal.Version (UnsupportedNtcVersionError)
 import Cardano.Api.Network.Internal.NetworkId (NetworkMagic (..), toNetworkMagic, toShelleyNetwork)
 import Cardano.Api.Query.Internal.Expr
 import Cardano.Api.Query.Internal.Type.QueryInMode
-import Cardano.Api.Tx.Internal.Sign (Tx (..))
 import Cardano.Api.Tx.Internal.TxIn (fromShelleyTxIn)
-
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 
 import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.BaseTypes (boundRational)
@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), mkShelleyGlobals)
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL)
 import Cardano.Ledger.State (utxoL)
 import Cardano.Slotting.Slot (SlotNo (..))
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 
 import Control.Monad (void)
 import Data.Bifunctor (first)
@@ -53,16 +54,17 @@ data QueryValidateTxError
 -- signature as a normal local state query.
 queryValidateTx
   :: forall era block point r
-   . ShelleyBasedEra era
-  -> Tx era
+   . IsEra era
+  => SignedTx era
   -> LocalStateQueryExpr
        block
        point
        QueryInMode
        r
        IO
-       (Either QueryValidateTxError (Either (ApplyTxError (ShelleyLedgerEra era)) ()))
-queryValidateTx sbe (ShelleyTx _sbe ledgerTx) = do
+       (Either QueryValidateTxError (Either (ApplyTxError (LedgerEra era)) ()))
+queryValidateTx (SignedTx ledgerTx) = obtainCommonConstraints (useEra @era) $ do
+  let sbe = convert (useEra @era)
   eGenParams <- queryGenesisParameters sbe
   eSerEpochState <- queryCurrentEpochState sbe
   eEraHistory <- queryEraHistory
@@ -71,8 +73,9 @@ queryValidateTx sbe (ShelleyTx _sbe ledgerTx) = do
   -- returned epoch state has empty UTxO tables.  We query the relevant
   -- UTxOs separately and inject them before running applyTx.
   let relevantTxIns =
-        Set.map fromShelleyTxIn
-          (shelleyBasedEraConstraints sbe $ ledgerTx ^. bodyTxL . allInputsTxBodyF)
+        Set.map
+          fromShelleyTxIn
+          (ledgerTx ^. bodyTxL . allInputsTxBodyF)
   eUtxo <- queryUtxo sbe (QueryUTxOByTxIn relevantTxIns)
   return $ do
     genParams <-
@@ -86,24 +89,26 @@ queryValidateTx sbe (ShelleyTx _sbe ledgerTx) = do
     utxo <-
       first QueryValidateTxUnsupportedNtcVersion eUtxo
         >>= first QueryValidateTxEraMismatch
-    epochState <- first QueryValidateTxEpochStateDecodeError $
-      decodeCurrentEpochState sbe serEpochState
+    epochState <-
+      first QueryValidateTxEpochStateDecodeError $
+        decodeCurrentEpochState sbe serEpochState
     let CurrentEpochState es = epochState
         LedgerEpochInfo epochInfo = toLedgerEpochInfo eraHistory
         globals = mkShelleyGlobals (toShelleyGenesis genParams) epochInfo
         slotNo = chainPointToSlotNo chainPoint
-    Right $ shelleyBasedEraConstraints sbe $
-      let esWithUtxo = set utxoL (toLedgerUTxO sbe utxo) es
-       in void $ applyTx globals (mkMempoolEnv sbe esWithUtxo slotNo) (esLState esWithUtxo) ledgerTx
+    Right $
+      shelleyBasedEraConstraints sbe $
+        let esWithUtxo = set utxoL (toLedgerUTxO sbe utxo) es
+         in void $ applyTx globals (mkMempoolEnv @era esWithUtxo slotNo) (esLState esWithUtxo) ledgerTx
 
 chainPointToSlotNo :: ChainPoint -> SlotNo
 chainPointToSlotNo ChainPointAtGenesis = SlotNo 0
 chainPointToSlotNo (ChainPoint slotNo _) = slotNo
 
 mkMempoolEnv
-  :: ShelleyBasedEra era -> EpochState (ShelleyLedgerEra era) -> SlotNo -> LedgerEnv (ShelleyLedgerEra era)
-mkMempoolEnv sbe epochState slotNo =
-  shelleyBasedEraConstraints sbe $
+  :: forall era. IsEra era => EpochState (LedgerEra era) -> SlotNo -> LedgerEnv (LedgerEra era)
+mkMempoolEnv epochState slotNo =
+  obtainCommonConstraints (useEra @era) $
     LedgerEnv
       { ledgerSlotNo = slotNo
       , ledgerEpochNo = Nothing

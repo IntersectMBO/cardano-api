@@ -40,6 +40,7 @@ module Cardano.Api.Experimental
   , Era (..)
   , IsEra (..)
   , Some (..)
+  , InAnyEra (..)
   , LedgerEra
   , DeprecatedEra (..)
   , eraToSbe
