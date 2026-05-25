@@ -1,0 +1,10 @@
+description: |
+  `Cardano.Rpc.Server.Internal.UtxoRpc.Type.txInTxOutToAnyUtxoData` now
+  serialises the UTxO RPC `nativeBytes` for tx outputs using the era's ledger
+  CBOR (`L.serialize' (eraProtVerHigh era)`) instead of the unversioned
+  `Cardano.Binary.serialize'`. Downstream gRPC consumers will see the era's
+  canonical encoding rather than the previous era-agnostic bytes.
+kind:
+  - bugfix
+pr: 1221
+project: cardano-rpc

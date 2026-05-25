@@ -40,17 +40,18 @@ import Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
 import Ouroboros.Consensus.Util.IOLike (IOLike)
 
 import Control.Tracer qualified as Tracer
-import Data.Bifunctor (bimap)
+import System.FS.API (SomeHasFS)
 
 import Type.Reflection ((:~:) (..))
 
 class (RunNode blk, IOLike m) => Protocol m blk where
-  data ProtocolInfoArgs blk
+  data ProtocolInfoArgs m blk
   protocolInfo
-    :: ProtocolInfoArgs blk
-    -> ( ProtocolInfo blk
-       , Tracer.Tracer m KESAgentClientTrace -> m [MkBlockForging m blk]
-       )
+    :: ProtocolInfoArgs m blk
+    -> m
+         ( ProtocolInfo blk
+         , Tracer.Tracer m KESAgentClientTrace -> m [MkBlockForging m blk]
+         )
 
 -- | Node client support for each consensus protocol.
 --
@@ -62,22 +63,27 @@ class RunNode blk => ProtocolClient blk where
 
 -- | Run PBFT against the Byron ledger
 instance IOLike m => Protocol m ByronBlockHFC where
-  data ProtocolInfoArgs ByronBlockHFC = ProtocolInfoArgsByron ProtocolParamsByron
+  data ProtocolInfoArgs m ByronBlockHFC = ProtocolInfoArgsByron ProtocolParamsByron
   protocolInfo (ProtocolInfoArgsByron params) =
-    ( inject $ protocolInfoByron params
-    , \_ -> pure . map (MkBlockForging . pure . inject) $ blockForgingByron params
-    )
+    pure
+      ( inject $ protocolInfoByron params
+      , \_ -> pure . map (MkBlockForging . pure . inject) $ blockForgingByron params
+      )
 
 instance
-  (CardanoHardForkConstraints StandardCrypto, IOLike m, MonadKESAgent m)
+  ( CardanoHardForkConstraints StandardCrypto
+  , IOLike m
+  , MonadKESAgent m
+  )
   => Protocol m (CardanoBlock StandardCrypto)
   where
-  data ProtocolInfoArgs (CardanoBlock StandardCrypto)
+  data ProtocolInfoArgs m (CardanoBlock StandardCrypto)
     = ProtocolInfoArgsCardano
+        (SomeHasFS m)
         (CardanoProtocolParams StandardCrypto)
 
-  protocolInfo (ProtocolInfoArgsCardano paramsCardano) =
-    protocolInfoCardano paramsCardano
+  protocolInfo (ProtocolInfoArgsCardano fs paramsCardano) =
+    protocolInfoCardano fs paramsCardano
 
 instance ProtocolClient ByronBlockHFC where
   data ProtocolClientInfoArgs ByronBlockHFC
@@ -102,14 +108,15 @@ instance
   )
   => Protocol m (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) ShelleyEra)
   where
-  data ProtocolInfoArgs (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) ShelleyEra)
+  data ProtocolInfoArgs m (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) ShelleyEra)
     = ProtocolInfoArgsShelley
+        (SomeHasFS m)
         ShelleyGenesis
         (ProtocolParamsShelleyBased StandardCrypto)
         ProtVer
-  protocolInfo (ProtocolInfoArgsShelley genesis paramsShelleyBased_ paramsShelley_) =
-    bimap inject (fmap $ fmap $ map inject) $
-      protocolInfoShelley genesis paramsShelleyBased_ paramsShelley_
+  protocolInfo (ProtocolInfoArgsShelley fs genesis paramsShelleyBased_ paramsShelley_) = do
+    (pinfo, bf) <- protocolInfoShelley fs genesis paramsShelleyBased_ paramsShelley_
+    pure (inject pinfo, \tr -> map inject <$> bf tr)
 
 instance
   Consensus.LedgerSupportsProtocol

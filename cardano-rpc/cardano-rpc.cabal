@@ -76,7 +76,6 @@ library
     base,
     bytestring,
     cardano-api >=11.2,
-    cardano-binary,
     cardano-ledger-api,
     cardano-ledger-conway,
     cardano-ledger-core >=1.19,

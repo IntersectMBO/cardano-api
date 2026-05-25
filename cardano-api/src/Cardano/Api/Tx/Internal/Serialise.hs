@@ -87,7 +87,7 @@ deserialiseWitnessLedger sbe te =
       "Key BootstrapWitness ShelleyEra" -> do
         w <-
           first TextEnvelopeDecodeError $
-            CBOR.decodeFullAnnotator
+            CBOR.decodeFullDecoder
               (eraProtVerHigh sbe)
               "Shelley Witness"
               CBOR.decCBOR
@@ -96,7 +96,7 @@ deserialiseWitnessLedger sbe te =
       "Key Witness ShelleyEra" -> do
         w <-
           first TextEnvelopeDecodeError $
-            CBOR.decodeFullAnnotator
+            CBOR.decodeFullDecoder
               (eraProtVerHigh sbe)
               "Shelley Witness"
               CBOR.decCBOR
