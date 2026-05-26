@@ -1,6 +1,0 @@
-project: cardano-api
-pr: 1213
-kind:
-  - maintenance
-description: |
-  Pin herald GitHub Actions to tagged versions instead of tracking main branch.

@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 11.3.0.0 -- 2026-05-26
+
+- Bump plutus-core and plutus-ledger-api from ^>=1.61 to ^>=1.65. No ledger API changes ([releases](https://github.com/IntersectMBO/plutus/releases/tag/1.65.0.0)); bump driven by plutus-core fixes.
+  (breaking)
+  [PR 1215](https://github.com/intersectmbo/cardano-api/pull/1215)
+
 ## 11.2.0.0 -- 2026-05-18
 
 - Remove unreachable error constructors. None of these were produced anywhere in the repo — only defined, pretty-printed, and listed in golden fixtures.
