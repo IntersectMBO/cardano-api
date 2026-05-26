@@ -1,0 +1,5 @@
+description: Bumped plutus to version 1.65.0.0
+kind:
+- maintenance
+pr: 1223
+project: cardano-api
