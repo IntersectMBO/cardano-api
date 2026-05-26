@@ -1,6 +1,0 @@
-project: cardano-rpc
-pr: 1205
-kind:
-  - refactoring
-description: |
-  Refactor `evalTxMethod` to use the new `Exp.evaluateTransaction` from cardano-api instead of inlining the script evaluation, fee computation, and balance checking pipeline.

@@ -1,6 +1,6 @@
 cabal-version: 3.8
 name: cardano-rpc
-version: 10.2.0.0
+version: 10.3.0.0
 synopsis: A gRPC server and client for interacting with the Cardano node
 description:
   A Haskell library providing a gRPC-based RPC interface for the Cardano node,

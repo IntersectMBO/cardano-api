@@ -1,5 +1,31 @@
 # Changelog for cardano-rpc
 
+## 10.3.0.0 -- 2026-05-26
+
+- gRPC: Guard against fetching the entire UTxO set. ReadUtxos now returns an empty response when no keys are provided. SearchUtxos now rejects predicates that cannot be narrowed to specific addresses with INVALID_ARGUMENT, instead of falling back to QueryUTxOWhole.
+  (breaking)
+  [PR 1214](https://github.com/intersectmbo/cardano-api/pull/1214)
+
+- Add evalTx gRPC method to the UTxO RPC submit service, evaluating a CBOR-serialised transaction against the current ledger state and returning per-redeemer execution units, computed minimum fee, script evaluation errors, and balance check results without submitting.
+  (feature)
+  [PR 1193](https://github.com/intersectmbo/cardano-api/pull/1193)
+
+- Bump `proto-lens` lower bound to `>=0.7.1.7`.
+  (compatible)
+  [PR 1185](https://github.com/intersectmbo/cardano-api/pull/1185)
+
+- Add lower bound to proto-lens >= 0.7.1.6
+  (compatible)
+  [PR 1149](https://github.com/intersectmbo/cardano-api/pull/1149)
+
+- gRPC: add tip timestamp to ChainPoint response
+  (bugfix)
+  [PR 1134](https://github.com/intersectmbo/cardano-api/pull/1134)
+
+- Add searchUtxos gRPC method to the UTxO RPC query service, implementing predicate-based UTxO filtering with address, asset, and boolean combinators, plus cursor-based pagination.
+  (feature)
+  [PR 1123](https://github.com/intersectmbo/cardano-api/pull/1123)
+
 ## 10.2.0.0
 
 - Integrate new Ledger and Consensus packages for Node 10.7.
