@@ -1,6 +1,0 @@
-project: cardano-rpc
-pr: 1214
-kind:
-  - breaking
-description: |
-  gRPC: Guard against fetching the entire UTxO set. ReadUtxos now returns an empty response when no keys are provided. SearchUtxos now rejects predicates that cannot be narrowed to specific addresses with INVALID_ARGUMENT, instead of falling back to QueryUTxOWhole.

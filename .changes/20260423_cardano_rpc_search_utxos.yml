@@ -1,6 +1,0 @@
-project: cardano-rpc
-pr: 1123
-kind:
-  - feature
-description: |
-  Add searchUtxos gRPC method to the UTxO RPC query service, implementing predicate-based UTxO filtering with address, asset, and boolean combinators, plus cursor-based pagination.
