@@ -43,6 +43,7 @@ module Cardano.Api.Query.Internal.Expr
   , queryStakePoolDefaultVote
   , queryLedgerConfig
   , queryDRepDelegations
+  , querySbe
   )
 where
 

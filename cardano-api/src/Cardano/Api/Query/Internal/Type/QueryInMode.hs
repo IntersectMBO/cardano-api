@@ -87,6 +87,7 @@ import Cardano.Api.Serialise.TextEnvelope.Internal
   , TextEnvelopeType
   )
 import Cardano.Api.Tx.Internal.Body
+import Cardano.Api.Tx.Internal.Sign (Tx (..))
 import Cardano.Api.UTxO (UTxO (..))
 
 import Cardano.Binary qualified as CBOR
@@ -342,6 +343,9 @@ data QueryInShelleyBasedEra era result where
   GetDRepDelegations
     :: Set Ledger.DRep
     -> QueryInShelleyBasedEra era (Map Ledger.DRep (Set (Ledger.Credential Ledger.Staking)))
+  QueryValidateTx
+    :: Tx era
+    -> QueryInShelleyBasedEra era (Either (Ledger.ApplyTxError (ShelleyLedgerEra era)) ())
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -576,7 +580,7 @@ toConsensusQueryShelleyBased
    . HasCallStack
   => ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol (ShelleyLedgerEra era)
   => Consensus.CardanoBlock StandardCrypto ~ block
-  => L.EraGov (ShelleyLedgerEra era)
+  => Consensus.ShelleyCompatible protocol (ShelleyLedgerEra era)
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
   -> Some (Consensus.Query block)
@@ -746,6 +750,8 @@ toConsensusQueryShelleyBased sbe = \case
             (consensusQueryInEraInMode era (Consensus.GetDRepDelegations dreps))
       )
       sbe
+  QueryValidateTx (ShelleyTx _ tx) ->
+    Some (consensusQueryInEraInMode era (Consensus.ValidateTx (Consensus.mkShelleyTx tx)))
  where
   era = toCardanoEra sbe
 
@@ -1073,6 +1079,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     GetDRepDelegations{} ->
       case q' of
         Consensus.GetDRepDelegations{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryValidateTx{} ->
+      case q' of
+        Consensus.ValidateTx{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
 

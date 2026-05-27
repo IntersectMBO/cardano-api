@@ -11,7 +11,6 @@ import Cardano.Api
 import Cardano.Api.Ledger qualified as L
 
 import Cardano.Ledger.Api.Governance qualified as Gov
-import Cardano.Ledger.Core qualified as L
 
 import Data.Text qualified as T
 import GHC.Stack
