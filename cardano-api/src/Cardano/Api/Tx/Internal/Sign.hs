@@ -777,20 +777,17 @@ decodeShelleyBasedWitness
   -> ByteString
   -> Either CBOR.DecoderError (KeyWitness era)
 decodeShelleyBasedWitness sbe bs =
-  let e =
-        Valid.toEither $
-          mconcat $
-            map
-              (Valid.liftError return)
-              [ bootstrapWitnessDecoder bs
-              , shelleyKeyWitnessDecoder bs
-              , legacyKeyWitnessDecoder bs
-              ]
-   in case e of
-        Left errs ->
-          let allErrs = Text.unlines $ map renderBuildable errs
-           in Left $ CBOR.DecoderErrorCustom "Failed to deserialise key witness" allErrs
-        Right res -> return res
+  case mconcat $
+    map
+      (either (Valid.Failure . pure) Valid.Success)
+      [ bootstrapWitnessDecoder bs
+      , shelleyKeyWitnessDecoder bs
+      , legacyKeyWitnessDecoder bs
+      ] of
+    Valid.Failure errs ->
+      let allErrs = Text.unlines $ map renderBuildable errs
+       in Left $ CBOR.DecoderErrorCustom "Failed to deserialise key witness" allErrs
+    Valid.Success res -> return res
  where
   shelleyKeyWitnessDecoder b =
     ShelleyKeyWitness sbe

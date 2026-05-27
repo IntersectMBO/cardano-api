@@ -84,4 +84,5 @@ cardano-wasm/examples/*/cardano-api.js
 cardano-wasm/examples/*/main.js
 cardano-wasm/examples/*/cardano_node_grpc_web_pb.js
 .ghc-wasm/
+.serena/
 

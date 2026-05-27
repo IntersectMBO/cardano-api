@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1227
+kind:
+  - maintenance
+description: |
+  Migrate to validation >= 1.2 API, replacing removed toEither and liftError with direct pattern matching on Failure/Success constructors. Bump hackage index-state to 2026-05-27.
