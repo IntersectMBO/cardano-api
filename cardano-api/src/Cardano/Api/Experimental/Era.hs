@@ -158,6 +158,7 @@ instance FromJSON (Some Era) where
 instance Eon Era where
   inEonForEra v f = \case
     Api.ConwayEra -> f ConwayEra
+    Api.DijkstraEra -> f DijkstraEra
     _ -> v
 
 -- | A temporary compatibility instance for easier conversion between the experimental and old APIs.

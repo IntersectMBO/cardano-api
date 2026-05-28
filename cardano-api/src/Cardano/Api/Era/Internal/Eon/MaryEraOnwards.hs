@@ -99,8 +99,9 @@ type MaryEraOnwardsConstraints era =
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody L.TopTx (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.MaryEraTxBody (ShelleyLedgerEra era)
-  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
-  , L.Value (ShelleyLedgerEra era) ~ L.MaryValue
+  , -- L.ShelleyEraTxCert dropped: Dijkstra cannot satisfy AtMostEra "Conway".
+    -- Callsites that need it must add it explicitly.
+    L.Value (ShelleyLedgerEra era) ~ L.MaryValue
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
@@ -121,7 +122,7 @@ maryEraOnwardsConstraints = \case
   MaryEraOnwardsAlonzo -> id
   MaryEraOnwardsBabbage -> id
   MaryEraOnwardsConway -> id
-  MaryEraOnwardsDijkstra -> const $ error "TODO Dijkstra: maryEraOnwardsConstraints: era not supported"
+  MaryEraOnwardsDijkstra -> id
 
 {-# DEPRECATED maryEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 maryEraOnwardsToShelleyBasedEra :: MaryEraOnwards era -> ShelleyBasedEra era

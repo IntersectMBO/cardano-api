@@ -104,7 +104,7 @@ caseShelleyToAllegraOrMaryEraOnwards l r = \case
   ShelleyBasedEraAlonzo -> r MaryEraOnwardsAlonzo
   ShelleyBasedEraBabbage -> r MaryEraOnwardsBabbage
   ShelleyBasedEraConway -> r MaryEraOnwardsConway
-  ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyToAllegraOrMaryEraOnwards: era not supported"
+  ShelleyBasedEraDijkstra -> r MaryEraOnwardsDijkstra
 
 -- | @caseShelleyToMaryOrAlonzoEraOnwards f g era@ applies @f@ to shelley, allegra, and mary;
 -- and applies @g@ to alonzo and later eras.

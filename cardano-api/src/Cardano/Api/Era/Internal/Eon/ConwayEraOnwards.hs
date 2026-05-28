@@ -145,7 +145,6 @@ conwayEraOnwardsConstraints
   -> a
 conwayEraOnwardsConstraints = \case
   ConwayEraOnwardsConway -> id
-  _ -> const $ error "TODO Dijkstra: conwayEraOnwardsConstraints: era not supported"
 
 {-# DEPRECATED conwayEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 conwayEraOnwardsToShelleyBasedEra :: ConwayEraOnwards era -> ShelleyBasedEra era

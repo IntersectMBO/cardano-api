@@ -910,6 +910,23 @@ fromShelleyTxOut sbe ledgerTxOut = shelleyBasedEraConstraints sbe $ do
      where
       datum = ledgerTxOut ^. L.datumTxOutL
       mRefScript = ledgerTxOut ^. L.referenceScriptTxOutL
+    ShelleyBasedEraDijkstra ->
+      TxOut
+        addressInEra
+        txOutValue
+        ( fromBabbageTxOutDatum
+            AlonzoEraOnwardsDijkstra
+            BabbageEraOnwardsDijkstra
+            datum
+        )
+        ( case mRefScript of
+            SNothing -> ReferenceScriptNone
+            SJust refScript ->
+              fromShelleyScriptToReferenceScript ShelleyBasedEraDijkstra refScript
+        )
+     where
+      datum = ledgerTxOut ^. L.datumTxOutL
+      mRefScript = ledgerTxOut ^. L.referenceScriptTxOutL
 
 -- ----------------------------------------------------------------------------
 -- Transaction output values (era-dependent)

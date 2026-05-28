@@ -74,7 +74,9 @@ makeStakeAddressDelegationCertificate sCred delegatee =
     ShelleyBasedEraDijkstra -> error "TODO Dijkstra: makeStakeAddressDelegationCertificate: era not supported"
  where
   cert
-    :: Delegatee era ~ Api.Hash Api.StakePoolKey
+    :: ( Delegatee era ~ Api.Hash Api.StakePoolKey
+       , Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
+       )
     => ShelleyBasedEra era -> Delegatee era -> Certificate (ShelleyLedgerEra era)
   cert e delegatee' =
     shelleyBasedEraConstraints e $
@@ -125,7 +127,9 @@ makeStakeAddressRegistrationCertificate scred =
 
 makeStakeAddressUnregistrationCertificate
   :: forall era
-   . IsShelleyBasedEra era
+   . ( IsShelleyBasedEra era
+     , Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
+     )
   => StakeCredential -> Certificate (ShelleyLedgerEra era)
 makeStakeAddressUnregistrationCertificate scred =
   shelleyBasedEraConstraints (shelleyBasedEra @era) $
