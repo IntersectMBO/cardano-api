@@ -56,13 +56,6 @@ constraints:
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8
 
-if impl(ghc >= 9.12)
-  allow-newer:
-    -- we need newer io-classes: https://github.com/input-output-hk/typed-protocols/tree/coot/io-classes-1.9
-    , io-classes:time
-    , ouroboros-network:time
-    , nothunks:time
-    , network-mux:time
 
 -- WASM compilation specific
 
