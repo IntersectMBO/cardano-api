@@ -282,7 +282,7 @@ instance Eq AnyShelleyBasedEra where
 
 instance Bounded AnyShelleyBasedEra where
   minBound = AnyShelleyBasedEra ShelleyBasedEraShelley
-  maxBound = AnyShelleyBasedEra ShelleyBasedEraConway
+  maxBound = AnyShelleyBasedEra ShelleyBasedEraDijkstra
 
 instance Enum AnyShelleyBasedEra where
   enumFrom e = enumFromTo e maxBound
@@ -303,6 +303,7 @@ instance Enum AnyShelleyBasedEra where
     4 -> AnyShelleyBasedEra ShelleyBasedEraAlonzo
     5 -> AnyShelleyBasedEra ShelleyBasedEraBabbage
     6 -> AnyShelleyBasedEra ShelleyBasedEraConway
+    7 -> AnyShelleyBasedEra ShelleyBasedEraDijkstra
     n ->
       error $
         "AnyShelleyBasedEra.toEnum: "

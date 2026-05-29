@@ -141,3 +141,6 @@ instance IsAlonzoBasedEra BabbageEra where
 
 instance IsAlonzoBasedEra ConwayEra where
   alonzoBasedEra = AlonzoEraOnwardsConway
+
+instance IsAlonzoBasedEra DijkstraEra where
+  alonzoBasedEra = AlonzoEraOnwardsDijkstra
