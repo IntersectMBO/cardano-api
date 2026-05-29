@@ -137,3 +137,6 @@ instance IsMaryBasedEra BabbageEra where
 
 instance IsMaryBasedEra ConwayEra where
   maryBasedEra = MaryEraOnwardsConway
+
+instance IsMaryBasedEra DijkstraEra where
+  maryBasedEra = MaryEraOnwardsDijkstra
