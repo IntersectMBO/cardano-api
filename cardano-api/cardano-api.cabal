@@ -324,7 +324,7 @@ library gen
     Test.Hedgehog.Roundtrip.CBOR
 
   build-depends:
-    QuickCheck <2.18,
+    QuickCheck,
     aeson >=1.5.6.0,
     base16-bytestring,
     bytestring,
@@ -359,7 +359,7 @@ test-suite cardano-api-test
     buildable: False
   build-depends:
     FailT,
-    QuickCheck <2.18,
+    QuickCheck,
     aeson >=1.5.6.0,
     base16-bytestring,
     bytestring,
