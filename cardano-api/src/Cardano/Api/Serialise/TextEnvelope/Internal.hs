@@ -179,12 +179,14 @@ legacyComparison (TextEnvelopeType expectedType) (TextEnvelopeType actualType) =
     ("Tx AlonzoEra", "Witnessed Tx AlonzoEra") -> True
     ("Tx BabbageEra", "Witnessed Tx BabbageEra") -> True
     ("Tx ConwayEra", "Witnessed Tx ConwayEra") -> True
+    ("Tx DijkstraEra", "Witnessed Tx DijkstraEra") -> True
     ("TxSignedShelley", "Unwitnessed Tx ShelleyEra") -> True
     ("Tx AllegraEra", "Unwitnessed Tx AllegraEra") -> True
     ("Tx MaryEra", "Unwitnessed Tx MaryEra") -> True
     ("Tx AlonzoEra", "Unwitnessed Tx AlonzoEra") -> True
     ("Tx BabbageEra", "Unwitnessed Tx BabbageEra") -> True
     ("Tx ConwayEra", "Unwitnessed Tx ConwayEra") -> True
+    ("Tx DijkstraEra", "Unwitnessed Tx DijkstraEra") -> True
     ("Certificate", "CertificateConway") -> True
     ("Certificate", "CertificateShelley") -> True
     (expectedOther, expectedActual) -> expectedOther == expectedActual
@@ -350,22 +352,26 @@ textEnvelopeTypeToEra =
     "Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
     "Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
     "Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "Tx DijkstraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraDijkstra
     "Witnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
     "Witnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
     "Witnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
     "Witnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
     "Witnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
     "Witnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "Witnessed Tx DijkstraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraDijkstra
     "Unwitnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
     "Unwitnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
     "Unwitnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
     "Unwitnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
     "Unwitnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
     "Unwitnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "Unwitnessed Tx DijkstraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraDijkstra
     "TxWitness ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
     "TxWitness AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
     "TxWitness MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
     "TxWitness AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
     "TxWitness BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
     "TxWitness ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "TxWitness DijkstraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraDijkstra
     unknownCddlType -> Left $ TextEnvelopeUnknownType unknownCddlType

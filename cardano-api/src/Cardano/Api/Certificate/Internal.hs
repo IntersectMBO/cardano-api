@@ -843,7 +843,7 @@ getAnchorDataFromCertificate c =
           Ledger.UpdateDRepTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
           Ledger.AuthCommitteeHotKeyTxCert _ _ -> return Nothing
           Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
-          _ -> error "TODO Dijkstra: getAnchorDataFromCertificate: era not supported"
+          _ -> return Nothing
  where
   anchorDataFromPoolMetadata
     :: MonadError AnchorDataFromCertificateError m

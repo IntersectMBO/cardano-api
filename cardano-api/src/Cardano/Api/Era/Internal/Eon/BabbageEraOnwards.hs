@@ -116,7 +116,8 @@ type BabbageEraOnwardsConstraints era =
   , L.MaryEraTxBody (ShelleyLedgerEra era)
   , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
   , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
-  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
+  , -- L.ShelleyEraTxCert dropped: gated by AtMostEra "Conway" in the ledger.
+    L.EraTxCert (ShelleyLedgerEra era)
   , L.TxOut (ShelleyLedgerEra era) ~ L.BabbageTxOut (ShelleyLedgerEra era)
   , L.Value (ShelleyLedgerEra era) ~ L.MaryValue
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
@@ -137,7 +138,7 @@ babbageEraOnwardsConstraints
 babbageEraOnwardsConstraints = \case
   BabbageEraOnwardsBabbage -> id
   BabbageEraOnwardsConway -> id
-  BabbageEraOnwardsDijkstra -> const $ error "TODO Dijkstra: babbageEraOnwardsConstraints: era not supported"
+  BabbageEraOnwardsDijkstra -> id
 
 {-# DEPRECATED babbageEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 babbageEraOnwardsToShelleyBasedEra :: BabbageEraOnwards era -> ShelleyBasedEra era
@@ -151,3 +152,6 @@ instance IsBabbageBasedEra BabbageEra where
 
 instance IsBabbageBasedEra ConwayEra where
   babbageBasedEra = BabbageEraOnwardsConway
+
+instance IsBabbageBasedEra DijkstraEra where
+  babbageBasedEra = BabbageEraOnwardsDijkstra
