@@ -155,16 +155,21 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
         & onLeft (left . QceUnsupportedNtcVersion)
         & onLeft (left . QueryEraMismatch)
 
+  -- Empty 'drepCreds' to 'queryDRepState' means "every DRep", not a
+  -- no-op, so the short-circuit lives at the caller.
   drepDelegDeposits <-
-    monoidForEraInEonA era $ \con ->
-      Map.map drepDeposit
-        <$> ( lift (queryDRepState con drepCreds)
-                & onLeft (left . QceUnsupportedNtcVersion)
-                & onLeft (left . QueryEraMismatch)
-            )
+    if null drepCreds
+      then pure mempty
+      else
+        monoidForEraInEonA era $ \con ->
+          Map.map drepDeposit
+            <$> ( lift (queryDRepState con drepCreds)
+                    & onLeft (left . QceUnsupportedNtcVersion)
+                    & onLeft (left . QueryEraMismatch)
+                )
 
   featuredTxTreasuryValueM <-
-    caseShelleyToBabbageOrConwayEraOnwards
+    caseShelleyToBabbageOrConwayOrDijkstra
       (const $ pure Nothing)
       ( \cOnwards -> do
           ChainAccountState{casTreasury} <-

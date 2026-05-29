@@ -130,7 +130,7 @@ data TxBodyErrorAutoBalance era
   | BalanceIsNegative
       L.Coin
       -- ^ Negative balance
-      (UnsignedTx (LedgerEra ConwayEra))
+      (UnsignedTx era)
       -- ^ The transaction body
   | NotEnoughAdaInUTxO
       L.MaryValue
@@ -428,8 +428,9 @@ estimateBalancedTxBody'
         balanceTxOut =
           obtainCommonConstraints (useEra @era) $
             TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance)
+    -- Per-era arms required so 'L.mkBasicTxOut's protocol-version
+    -- bounds resolve under a concrete era.
     case useEra @era of
-      DijkstraEra -> error "TODO Dijkstra: estimateBalancedTxBody: era not supported for fee estimation"
       ConwayEra -> do
         when (coinBalance < 0) $
           Left $
@@ -455,6 +456,29 @@ estimateBalancedTxBody'
         -- fit within the encoding size we picked above when calculating the fee.
         -- Yes this could be an over-estimate by a few bytes if the fee or change
         -- would fit within 2^16-1. That's a possible optimisation.
+        let finalTxBodyContent =
+              txbodycontent1
+                { txFee = fee
+                , txOuts = finalTxOuts
+                , txReturnCollateral = maybeReturnTxCollateral
+                , txTotalCollateral = maybeTotalTxCollateral
+                }
+
+        return finalTxBodyContent
+      DijkstraEra -> do
+        when (coinBalance < 0) $
+          Left $
+            TxFeeEstimationBalanceError $
+              BalanceIsNegative coinBalance txbody2
+
+        first (TxFeeEstimationBalanceError . uncurry TxBodyErrorMinUTxONotMet)
+          . mapM_ (checkMinUTxOValue pparams)
+          $ txOuts txbodycontent1
+
+        finalTxOuts <-
+          first TxFeeEstimationBalanceError $
+            checkAndIncludeChange pparams balanceTxOut (txOuts txbodycontent1)
+
         let finalTxBodyContent =
               txbodycontent1
                 { txFee = fee
@@ -1550,8 +1574,10 @@ makeTransactionBodyAutoBalance
             , txTotalCollateral = maybeTotalTxCollateral
             }
 
+    -- Per-era arms required so 'L.mkBasicTxOut's protocol-version
+    -- bounds resolve under a concrete era; those bounds are not part
+    -- of 'EraCommonConstraints'.
     case useEra @era of
-      DijkstraEra -> error "TODO Dijkstra: makeTransactionBodyAutoBalance: era not supported"
       ConwayEra -> do
         let balance :: L.MaryValue = evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo txbody2
             adaBalance = getAda (useEra @era) balance
@@ -1579,6 +1605,37 @@ makeTransactionBodyAutoBalance
         -- fit within the encoding size we picked above when calculating the fee.
         -- Yes this could be an over-estimate by a few bytes if the fee or change
         -- would fit within 2^16-1. That's a possible optimisation.
+        let finalTxBodyContent =
+              txbodycontent1
+                { txFee = fee
+                , txOuts = finalTxOuts
+                , txReturnCollateral = maybeReturnTxCollateral
+                , txTotalCollateral = maybeTotalTxCollateral
+                }
+        txbody3 <-
+          first TxBodyErrorMakeUnsignedTx $
+            makeUnsignedTx
+              useEra
+              finalTxBodyContent
+        return
+          (txbody3, finalTxBodyContent)
+      DijkstraEra -> do
+        let balance :: L.MaryValue = evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo txbody2
+            adaBalance = getAda (useEra @era) balance
+        when (adaBalance < 0) $
+          Left $
+            BalanceIsNegative adaBalance txbodyForChange
+
+        let
+          balanceTxOut :: TxOut (LedgerEra era) =
+            obtainCommonConstraints (useEra @era) $
+              TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance)
+        first (uncurry TxBodyErrorMinUTxONotMet)
+          . mapM_ (checkMinUTxOValue pp)
+          $ txOuts txbodycontent1
+
+        finalTxOuts <- checkAndIncludeChange pp balanceTxOut (txOuts txbodycontent1)
+
         let finalTxBodyContent =
               txbodycontent1
                 { txFee = fee

@@ -251,6 +251,7 @@ import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
 import Cardano.Api.Era.Internal.Feature
 import Cardano.Api.Error
+import Cardano.Api.Experimental.Era (conwayEraOnwardsCommonConstraints)
 import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
   ( Witnessable (..)
   , WitnessableItem (..)
@@ -1576,7 +1577,7 @@ fromLedgerProposalProcedures
   -> Maybe (Featured ConwayEraOnwards era (TxProposalProcedures ViewTx era))
 fromLedgerProposalProcedures sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
-    conwayEraOnwardsConstraints w $
+    conwayEraOnwardsCommonConstraints w $
       Featured w $
         mkTxProposalProcedures
           (fmap (,Nothing) . toList $ body ^. L.proposalProceduresTxBodyL)
@@ -1588,7 +1589,7 @@ fromLedgerVotingProcedures
   -> Maybe (Featured ConwayEraOnwards era (TxVotingProcedures ViewTx era))
 fromLedgerVotingProcedures sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
-    conwayEraOnwardsConstraints w $
+    conwayEraOnwardsCommonConstraints w $
       Featured w $
         TxVotingProcedures
           (body ^. L.votingProceduresTxBodyL)
@@ -1600,7 +1601,7 @@ fromLedgerCurrentTreasuryValue
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (Maybe Coin))
 fromLedgerCurrentTreasuryValue sbe body = forEraInEonMaybe (toCardanoEra sbe) $ \ceo ->
-  conwayEraOnwardsConstraints ceo $
+  conwayEraOnwardsCommonConstraints ceo $
     Featured ceo . Ledger.strictMaybeToMaybe $
       body ^. L.currentTreasuryValueTxBodyL
 
@@ -1611,7 +1612,7 @@ fromLedgerTreasuryDonation
   -> Maybe (Featured ConwayEraOnwards era Coin)
 fromLedgerTreasuryDonation sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
-    conwayEraOnwardsConstraints w $
+    conwayEraOnwardsCommonConstraints w $
       Featured w (body ^. L.treasuryDonationTxBodyL)
 
 fromLedgerTxIns
@@ -1820,7 +1821,7 @@ maybeFromLedgerTxUpdateProposal
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxUpdateProposal era
 maybeFromLedgerTxUpdateProposal sbe body =
-  caseShelleyToBabbageOrConwayEraOnwards
+  caseShelleyToBabbageOrConwayOrDijkstra
     ( \w ->
         case body ^. L.updateTxBodyL of
           SNothing -> TxUpdateProposalNone
@@ -3130,7 +3131,7 @@ collectTxBodyScriptWitnessRequirements
             extractWitnessableMints aEon txMintValue
 
       txVotingWits <-
-        caseShelleyToBabbageOrConwayEraOnwards
+        caseShelleyToBabbageOrConwayOrDijkstra
           ( \w ->
               shelleyToBabbageEraConstraints w $ Right $ TxScriptWitnessRequirements mempty mempty mempty mempty
           )
@@ -3141,7 +3142,7 @@ collectTxBodyScriptWitnessRequirements
           )
           sbe
       txProposalWits <-
-        caseShelleyToBabbageOrConwayEraOnwards
+        caseShelleyToBabbageOrConwayOrDijkstra
           (const $ Right $ TxScriptWitnessRequirements mempty mempty mempty mempty)
           ( \eon ->
               first TxBodyPlutusScriptDecodeError $
@@ -3245,8 +3246,10 @@ extractWitnessableVotes
   :: ConwayEraOnwards era
   -> Maybe (Featured eon era (TxVotingProcedures BuildTx era))
   -> [(Witnessable VoterItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
-extractWitnessableVotes ConwayEraOnwardsDijkstra _ = error "TODO Dijkstra: extractWitnessableVotes: era not supported"
-extractWitnessableVotes e@ConwayEraOnwardsConway txVotingProcedures =
+-- 'conwayEraOnwardsConstraints e' below is forced only when the list
+-- comprehension yields, so the 'TxVotingProceduresNone' case is safe
+-- on Dijkstra.
+extractWitnessableVotes e txVotingProcedures =
   List.nub
     [ (conwayEraOnwardsConstraints e $ WitVote vote, BuildTxWith wit)
     | (vote, wit) <- getVotes $ maybe TxVotingProceduresNone unFeatured txVotingProcedures

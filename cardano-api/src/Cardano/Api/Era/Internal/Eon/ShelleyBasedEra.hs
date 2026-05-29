@@ -160,6 +160,7 @@ instance TestEquality ShelleyBasedEra where
   testEquality ShelleyBasedEraAlonzo ShelleyBasedEraAlonzo = Just Refl
   testEquality ShelleyBasedEraBabbage ShelleyBasedEraBabbage = Just Refl
   testEquality ShelleyBasedEraConway ShelleyBasedEraConway = Just Refl
+  testEquality ShelleyBasedEraDijkstra ShelleyBasedEraDijkstra = Just Refl
   testEquality _ _ = Nothing
 
 instance Eon ShelleyBasedEra where

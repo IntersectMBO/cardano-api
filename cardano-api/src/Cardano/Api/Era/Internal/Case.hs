@@ -13,6 +13,7 @@ module Cardano.Api.Era.Internal.Case
   , caseShelleyToMaryOrAlonzoEraOnwards
   , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
+  , caseShelleyToBabbageOrConwayOrDijkstra
   -- Conversions
   , shelleyToAlonzoEraToShelleyToBabbageEra
   , alonzoEraOnwardsToMaryEraOnwards
@@ -160,6 +161,25 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   -- not type-correct; callers must handle Dijkstra separately.
   ShelleyBasedEraDijkstra ->
     error "TODO Dijkstra: caseShelleyToBabbageOrConwayEraOnwards: Dijkstra requires a separate cert path"
+
+-- | Like 'caseShelleyToBabbageOrConwayEraOnwards' but the right arm
+-- carries only the 'ConwayEraOnwards' value and admits Dijkstra.
+-- 'ConwayEraOnwardsConstraints' is not derivable for Dijkstra
+-- (requires 'TxCert ~ ConwayTxCert' and 'ShelleyEraTxCert').
+caseShelleyToBabbageOrConwayOrDijkstra
+  :: ()
+  => (ShelleyToBabbageEraConstraints era => ShelleyToBabbageEra era -> a)
+  -> (ConwayEraOnwards era -> a)
+  -> ShelleyBasedEra era
+  -> a
+caseShelleyToBabbageOrConwayOrDijkstra l r = \case
+  ShelleyBasedEraShelley -> l ShelleyToBabbageEraShelley
+  ShelleyBasedEraAllegra -> l ShelleyToBabbageEraAllegra
+  ShelleyBasedEraMary -> l ShelleyToBabbageEraMary
+  ShelleyBasedEraAlonzo -> l ShelleyToBabbageEraAlonzo
+  ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
+  ShelleyBasedEraConway -> r ConwayEraOnwardsConway
+  ShelleyBasedEraDijkstra -> r ConwayEraOnwardsDijkstra
 
 {-# DEPRECATED shelleyToAlonzoEraToShelleyToBabbageEra "Use convert instead" #-}
 shelleyToAlonzoEraToShelleyToBabbageEra
