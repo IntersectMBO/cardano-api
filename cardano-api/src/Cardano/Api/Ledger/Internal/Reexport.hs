@@ -83,6 +83,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , valueFromList
   -- Dijkstra
   , DijkstraPlutusPurpose (..)
+  , DijkstraTxCert (..)
   -- Conway
   , Anchor (..)
   , Committee (..)
@@ -360,6 +361,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credToText)
 import Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
+import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCert (..))
 import Cardano.Ledger.Hashes
   ( ADDRHASH
   , SafeHash
