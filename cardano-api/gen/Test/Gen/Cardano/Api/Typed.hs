@@ -1002,7 +1002,7 @@ genTxBodyContent sbe = do
   txIns <-
     map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txInsCollateral <- genTxInsCollateral era
-  txInsReference <- genTxInsReference era
+  txInsReference <- genTxInsReference sbe
   txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext sbe)
   txTotalCollateral <- genTxTotalCollateral era
   txReturnCollateral <- genTxReturnCollateral sbe
@@ -1062,10 +1062,10 @@ genTxInsCollateral =
 
 genTxInsReference
   :: Applicative (BuildTxWith build)
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> Gen (TxInsReference build era)
 genTxInsReference =
-  caseByronToAlonzoOrBabbageEraOnwards
+  caseShelleyToAlonzoOrBabbageEraOnwards
     (const (pure TxInsReferenceNone))
     ( \w -> do
         txIns <- Gen.list (Range.linear 0 10) genTxIn
