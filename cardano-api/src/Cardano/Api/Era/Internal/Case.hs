@@ -13,11 +13,6 @@ module Cardano.Api.Era.Internal.Case
   , caseShelleyToMaryOrAlonzoEraOnwards
   , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
-  -- Conversions
-  , shelleyToAlonzoEraToShelleyToBabbageEra
-  , alonzoEraOnwardsToMaryEraOnwards
-  , babbageEraOnwardsToMaryEraOnwards
-  , babbageEraOnwardsToAlonzoEraOnwards
   )
 where
 
@@ -156,45 +151,3 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway -> r ConwayEraOnwardsConway
   ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyToBabbageOrConwayEraOnwards: era not supported"
-
-{-# DEPRECATED shelleyToAlonzoEraToShelleyToBabbageEra "Use convert instead" #-}
-shelleyToAlonzoEraToShelleyToBabbageEra
-  :: ()
-  => ShelleyToAlonzoEra era
-  -> ShelleyToBabbageEra era
-shelleyToAlonzoEraToShelleyToBabbageEra = \case
-  ShelleyToAlonzoEraShelley -> ShelleyToBabbageEraShelley
-  ShelleyToAlonzoEraAllegra -> ShelleyToBabbageEraAllegra
-  ShelleyToAlonzoEraMary -> ShelleyToBabbageEraMary
-  ShelleyToAlonzoEraAlonzo -> ShelleyToBabbageEraAlonzo
-
-{-# DEPRECATED alonzoEraOnwardsToMaryEraOnwards "Use convert instead" #-}
-alonzoEraOnwardsToMaryEraOnwards
-  :: ()
-  => AlonzoEraOnwards era
-  -> MaryEraOnwards era
-alonzoEraOnwardsToMaryEraOnwards = \case
-  AlonzoEraOnwardsAlonzo -> MaryEraOnwardsAlonzo
-  AlonzoEraOnwardsBabbage -> MaryEraOnwardsBabbage
-  AlonzoEraOnwardsConway -> MaryEraOnwardsConway
-  AlonzoEraOnwardsDijkstra -> MaryEraOnwardsDijkstra
-
-{-# DEPRECATED babbageEraOnwardsToMaryEraOnwards "Use convert instead" #-}
-babbageEraOnwardsToMaryEraOnwards
-  :: ()
-  => BabbageEraOnwards era
-  -> MaryEraOnwards era
-babbageEraOnwardsToMaryEraOnwards = \case
-  BabbageEraOnwardsBabbage -> MaryEraOnwardsBabbage
-  BabbageEraOnwardsConway -> MaryEraOnwardsConway
-  BabbageEraOnwardsDijkstra -> MaryEraOnwardsDijkstra
-
-{-# DEPRECATED babbageEraOnwardsToAlonzoEraOnwards "Use convert instead" #-}
-babbageEraOnwardsToAlonzoEraOnwards
-  :: ()
-  => BabbageEraOnwards era
-  -> AlonzoEraOnwards era
-babbageEraOnwardsToAlonzoEraOnwards = \case
-  BabbageEraOnwardsBabbage -> AlonzoEraOnwardsBabbage
-  BabbageEraOnwardsConway -> AlonzoEraOnwardsConway
-  BabbageEraOnwardsDijkstra -> AlonzoEraOnwardsDijkstra

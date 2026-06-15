@@ -12,7 +12,6 @@
 module Cardano.Api.Era.Internal.Eon.MaryEraOnwards
   ( MaryEraOnwards (..)
   , maryEraOnwardsConstraints
-  , maryEraOnwardsToShelleyBasedEra
   , MaryEraOnwardsConstraints
   , IsMaryBasedEra (..)
   )
@@ -122,10 +121,6 @@ maryEraOnwardsConstraints = \case
   MaryEraOnwardsBabbage -> id
   MaryEraOnwardsConway -> id
   MaryEraOnwardsDijkstra -> const $ error "TODO Dijkstra: maryEraOnwardsConstraints: era not supported"
-
-{-# DEPRECATED maryEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
-maryEraOnwardsToShelleyBasedEra :: MaryEraOnwards era -> ShelleyBasedEra era
-maryEraOnwardsToShelleyBasedEra = convert
 
 class IsAllegraBasedEra era => IsMaryBasedEra era where
   maryBasedEra :: MaryEraOnwards era

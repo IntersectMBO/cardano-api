@@ -981,7 +981,7 @@ genTxMintValue =
       policies <- Gen.list (Range.constant 1 3) genPolicyId
       assets <- forM policies $ \policy -> do
         mintValue <- genPolicyAssets
-        witness <- genScriptWitnessForMint (maryEraOnwardsToShelleyBasedEra w)
+        witness <- genScriptWitnessForMint (convert w)
         pure (policy, (mintValue, pure witness))
 
       Gen.choice

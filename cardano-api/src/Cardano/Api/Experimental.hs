@@ -49,8 +49,6 @@ module Cardano.Api.Experimental
   , Some (..)
   , LedgerEra
   , DeprecatedEra (..)
-  , eraToSbe
-  , eraToBabbageEraOnwards
   , sbeToEra
 
     -- ** Witness related
