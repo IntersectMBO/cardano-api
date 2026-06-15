@@ -12,7 +12,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-#if __GLASGOW_HASKELL__ >= 910
+#if __GLASGOW_HASKELL__ >= 908
 {-# OPTIONS_GHC -Wno-x-ord-preserving-coercions #-}
 #endif
 
