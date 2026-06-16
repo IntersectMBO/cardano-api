@@ -1,0 +1,9 @@
+project: cardano-api
+
+pr: 1235
+
+kind:
+  - maintenance
+
+description: |
+  In getLedgerTablesUTxOValues, replace coerceMapKeys with Shelley.getOriginalTxIn for TxIn key conversion, removing the Wno-x-ord-preserving-coercions suppression pragma.
