@@ -164,7 +164,6 @@ library
     extra,
     filepath,
     formatting,
-    groups,
     iproute,
     memory,
     mempack,

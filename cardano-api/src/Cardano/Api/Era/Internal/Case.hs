@@ -6,7 +6,6 @@
 module Cardano.Api.Era.Internal.Case
   ( -- Case on CardanoEra
     caseByronOrShelleyBasedEra
-  , caseByronToAlonzoOrBabbageEraOnwards
   -- Case on ShelleyBasedEra
   , caseShelleyEraOnlyOrAllegraEraOnwards
   , caseShelleyToAllegraOrMaryEraOnwards
@@ -20,7 +19,6 @@ import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
-import Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
@@ -48,24 +46,6 @@ caseByronOrShelleyBasedEra l r = \case
   BabbageEra -> r ShelleyBasedEraBabbage
   ConwayEra -> r ShelleyBasedEraConway
   DijkstraEra -> error "TODO Dijkstra: caseByronOrShelleyBasedEra: era not supported"
-
--- | @caseByronToAlonzoOrBabbageEraOnwards f g era@ applies @f@ to byron, shelley, allegra, mary, and alonzo;
--- and @g@ to babbage and later eras.
-caseByronToAlonzoOrBabbageEraOnwards
-  :: ()
-  => (ByronToAlonzoEraConstraints era => ByronToAlonzoEra era -> a)
-  -> (BabbageEraOnwardsConstraints era => BabbageEraOnwards era -> a)
-  -> CardanoEra era
-  -> a
-caseByronToAlonzoOrBabbageEraOnwards l r = \case
-  ByronEra -> l ByronToAlonzoEraByron
-  ShelleyEra -> l ByronToAlonzoEraShelley
-  AllegraEra -> l ByronToAlonzoEraAllegra
-  MaryEra -> l ByronToAlonzoEraMary
-  AlonzoEra -> l ByronToAlonzoEraAlonzo
-  BabbageEra -> r BabbageEraOnwardsBabbage
-  ConwayEra -> r BabbageEraOnwardsConway
-  DijkstraEra -> error "TODO Dijkstra: caseByronToAlonzoOrBabbageEraOnwards: era not supported"
 
 -- | @caseShelleyEraOnlyOrAllegraEraOnwards f g era@ applies @f@ to shelley;
 -- and applies @g@ to allegra and later eras.
