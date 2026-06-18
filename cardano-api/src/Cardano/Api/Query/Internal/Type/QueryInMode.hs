@@ -678,8 +678,8 @@ toConsensusQueryShelleyBased sbe = \case
     caseShelleyToBabbageOrConwayOrDijkstra
       (const $ error "toConsensusQueryShelleyBased: QueryDRepState is only available in the Conway era")
       ( \w ->
-          Some
-            (consensusQueryInEraInMode era (conwayEraOnwardsCommonConstraints w $ Consensus.GetDRepState creds))
+          conwayEraOnwardsCommonConstraints w $
+            Some (consensusQueryInEraInMode era (Consensus.GetDRepState creds))
       )
       sbe
   QueryDRepStakeDistr dreps ->
