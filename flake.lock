@@ -439,11 +439,19 @@
     "hackageNix": {
       "flake": false,
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1785728842,
         "narHash": "sha256-3R5qunuAddR7849eVthkALRrKcXLPMd2LeQVPH/+lRs=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
         "rev": "a69c841fe2cbb3571739018f9efb7f533279fb15",
+=======
+        "lastModified": 1781711964,
+        "narHash": "sha256-1aRfn73gvcqTJESflph/Hcah3aqOjqfFulRcZCifEC0=",
+        "owner": "input-output-hk",
+        "repo": "hackage.nix",
+        "rev": "fb52363b13b1548ec9addc2ce443264e18b4ed11",
+>>>>>>> 34016a335 (Fix Dijkstra era query dispatch)
         "type": "github"
       },
       "original": {
