@@ -2056,7 +2056,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         stabilityWindowSlots :: SlotNo
         stabilityWindowSlots = fromIntegral @Word64 $ floor $ fromRational @Double stabilityWindowR
         stableStakeDistribSlot = currentEpochLastSlot - stabilityWindowSlots
-        stabilityWindowConst = caseShelleyToBabbageOrConwayEraOnwards (const 3) (const 4) sbe
+        stabilityWindowConst = caseShelleyToBabbageOrConwayOrDijkstra (const 3) (const 4) sbe
 
     case cTip of
       ChainTipAtGenesis -> Left LeaderErrGenesisSlot
