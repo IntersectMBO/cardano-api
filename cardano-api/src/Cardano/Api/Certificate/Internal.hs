@@ -80,6 +80,7 @@ import Cardano.Api.Certificate.Internal.DRepMetadata
 import Cardano.Api.Certificate.Internal.StakePoolMetadata
 import Cardano.Api.Era
 import Cardano.Api.Error (Error (..))
+import Cardano.Api.Experimental.Era (obtainCommonConstraints)
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.HasTypeProxy
@@ -624,8 +625,8 @@ filterUnRegDRepCreds
   -> Exp.Certificate (ShelleyLedgerEra era)
   -> Maybe (Ledger.Credential Ledger.DRepRole)
 filterUnRegDRepCreds sbe (Exp.Certificate cert) =
-  join $ forEraInEonMaybe (toCardanoEra sbe) $ \w ->
-    conwayEraOnwardsConstraints w $
+  join $ forEraInEonMaybe @ConwayEraOnwards (toCardanoEra sbe) $ \w ->
+    obtainCommonConstraints (convert w) $
       fst
         <$> Ledger.getUnRegDRepTxCert cert
 

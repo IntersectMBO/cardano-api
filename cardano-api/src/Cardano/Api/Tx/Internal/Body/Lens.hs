@@ -48,12 +48,14 @@ import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Era.Internal.Eon.Convert (Convert (convert))
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Eon.ShelleyEraOnly
 import Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
+import Cardano.Api.Experimental.Era (obtainCommonConstraints)
 import Cardano.Api.Internal.Orphans ()
 
 import Cardano.Ledger.Allegra.Core qualified as L
@@ -188,18 +190,18 @@ certsTxBodyL w = shelleyBasedEraConstraints w $ txBodyL . L.certsTxBodyL
 
 votingProceduresTxBodyL
   :: ConwayEraOnwards era -> Lens' (LedgerTxBody era) (L.VotingProcedures (ShelleyLedgerEra era))
-votingProceduresTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.votingProceduresTxBodyL
+votingProceduresTxBodyL w = obtainCommonConstraints (convert w) $ txBodyL . L.votingProceduresTxBodyL
 
 proposalProceduresTxBodyL
   :: ConwayEraOnwards era
   -> Lens' (LedgerTxBody era) (L.OSet (L.ProposalProcedure (ShelleyLedgerEra era)))
-proposalProceduresTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.proposalProceduresTxBodyL
+proposalProceduresTxBodyL w = obtainCommonConstraints (convert w) $ txBodyL . L.proposalProceduresTxBodyL
 
 currentTreasuryValueTxBodyL :: ConwayEraOnwards era -> Lens' (LedgerTxBody era) (StrictMaybe L.Coin)
-currentTreasuryValueTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.currentTreasuryValueTxBodyL
+currentTreasuryValueTxBodyL w = obtainCommonConstraints (convert w) $ txBodyL . L.currentTreasuryValueTxBodyL
 
 treasuryDonationTxBodyL :: ConwayEraOnwards era -> Lens' (LedgerTxBody era) L.Coin
-treasuryDonationTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.treasuryDonationTxBodyL
+treasuryDonationTxBodyL w = obtainCommonConstraints (convert w) $ txBodyL . L.treasuryDonationTxBodyL
 
 mkAdaOnlyTxOut
   :: ShelleyBasedEra era

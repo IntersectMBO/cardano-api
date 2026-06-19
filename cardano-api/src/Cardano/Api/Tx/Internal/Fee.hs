@@ -67,6 +67,7 @@ import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Feature
 import Cardano.Api.Error
+import Cardano.Api.Experimental.Era (obtainCommonConstraints)
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus
@@ -1594,7 +1595,7 @@ substituteExecutionUnits
       pure $
         Just $
           Featured era $
-            conwayEraOnwardsConstraints era $
+            obtainCommonConstraints (convert era) $
               mkTxProposalProcedures substitutedExecutionUnits
 
     mapScriptWitnessesMinting

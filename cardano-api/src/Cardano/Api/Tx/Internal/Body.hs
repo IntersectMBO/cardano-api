@@ -251,7 +251,7 @@ import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
 import Cardano.Api.Era.Internal.Feature
 import Cardano.Api.Error
-import Cardano.Api.Experimental.Era (conwayEraOnwardsCommonConstraints)
+import Cardano.Api.Experimental.Era (obtainCommonConstraints)
 import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
   ( Witnessable (..)
   , WitnessableItem (..)
@@ -1577,7 +1577,7 @@ fromLedgerProposalProcedures
   -> Maybe (Featured ConwayEraOnwards era (TxProposalProcedures ViewTx era))
 fromLedgerProposalProcedures sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
-    conwayEraOnwardsCommonConstraints w $
+    obtainCommonConstraints (convert w) $
       Featured w $
         mkTxProposalProcedures
           (fmap (,Nothing) . toList $ body ^. L.proposalProceduresTxBodyL)
@@ -1589,7 +1589,7 @@ fromLedgerVotingProcedures
   -> Maybe (Featured ConwayEraOnwards era (TxVotingProcedures ViewTx era))
 fromLedgerVotingProcedures sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
-    conwayEraOnwardsCommonConstraints w $
+    obtainCommonConstraints (convert w) $
       Featured w $
         TxVotingProcedures
           (body ^. L.votingProceduresTxBodyL)
@@ -1601,7 +1601,7 @@ fromLedgerCurrentTreasuryValue
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (Maybe Coin))
 fromLedgerCurrentTreasuryValue sbe body = forEraInEonMaybe (toCardanoEra sbe) $ \ceo ->
-  conwayEraOnwardsCommonConstraints ceo $
+  obtainCommonConstraints (convert ceo) $
     Featured ceo . Ledger.strictMaybeToMaybe $
       body ^. L.currentTreasuryValueTxBodyL
 
@@ -1612,7 +1612,7 @@ fromLedgerTreasuryDonation
   -> Maybe (Featured ConwayEraOnwards era Coin)
 fromLedgerTreasuryDonation sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
-    conwayEraOnwardsCommonConstraints w $
+    obtainCommonConstraints (convert w) $
       Featured w (body ^. L.treasuryDonationTxBodyL)
 
 fromLedgerTxIns
@@ -2693,7 +2693,12 @@ makeShelleyTransactionBody
     let bOn = BabbageEraOnwardsDijkstra
     validateTxBodyContent sbe txbodycontent
     let scriptIntegrityHash =
-          convPParamsToScriptIntegrityHash AlonzoEraOnwardsDijkstra txProtocolParams redeemers datums languages
+          convPParamsToScriptIntegrityHash
+            AlonzoEraOnwardsDijkstra
+            txProtocolParams
+            redeemers
+            datums
+            languages
     let txbody =
           ( mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
               & A.collateralInputsTxBodyL azOn
@@ -3246,12 +3251,11 @@ extractWitnessableVotes
   :: ConwayEraOnwards era
   -> Maybe (Featured eon era (TxVotingProcedures BuildTx era))
   -> [(Witnessable VoterItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
--- 'conwayEraOnwardsConstraints e' below is forced only when the list
--- comprehension yields, so the 'TxVotingProceduresNone' case is safe
--- on Dijkstra.
+-- 'obtainCommonConstraints' is Dijkstra-safe (no Conway cert
+-- equality), so both the 'TxVotingProceduresNone' and non-empty cases work.
 extractWitnessableVotes e txVotingProcedures =
   List.nub
-    [ (conwayEraOnwardsConstraints e $ WitVote vote, BuildTxWith wit)
+    [ (obtainCommonConstraints (convert e) $ WitVote vote, BuildTxWith wit)
     | (vote, wit) <- getVotes $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
     ]
  where
@@ -3274,7 +3278,7 @@ extractWitnessableProposals
   -> [(Witnessable ProposalItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
 extractWitnessableProposals e txProposalProcedures =
   List.nub
-    [ (conwayEraOnwardsConstraints e $ WitProposal prop, BuildTxWith wit)
+    [ (obtainCommonConstraints (convert e) $ WitProposal prop, BuildTxWith wit)
     | (Proposal prop, wit) <-
         getProposals e $ maybe TxProposalProceduresNone unFeatured txProposalProcedures
     ]
@@ -3285,7 +3289,7 @@ extractWitnessableProposals e txProposalProcedures =
     -> [(Proposal era, Witness WitCtxStake era)]
   getProposals _ TxProposalProceduresNone = []
   getProposals w (TxProposalProcedures txps) =
-    [ (conwayEraOnwardsConstraints w $ Proposal p, wit)
+    [ (obtainCommonConstraints (convert w) $ Proposal p, wit)
     | (p, BuildTxWith mScriptWit) <- toList txps
     , let wit = case mScriptWit of
             Just sWit -> ScriptWitness ScriptWitnessForStakeAddr sWit

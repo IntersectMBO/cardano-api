@@ -18,6 +18,7 @@ where
 import Cardano.Api.Address (StakeCredential)
 import Cardano.Api.Era
 import Cardano.Api.Experimental.AnyScriptWitness
+import Cardano.Api.Experimental.Era (obtainCommonConstraints)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness qualified as Exp
@@ -109,7 +110,7 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
                 ]
               -- append proposal reference inputs & set proposal procedures
               updateTxBody :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era)) =
-                conwayEraOnwardsConstraints conwayOnwards $
+                obtainCommonConstraints (convert conwayOnwards) $
                   Endo $
                     (L.referenceInputsTxBodyL %~ (<> fromList referenceInputs))
                       . (L.proposalProceduresTxBodyL .~ proposals)
@@ -166,7 +167,7 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
     -> L.Tx L.TopTx (ShelleyLedgerEra era)
     -> L.Tx L.TopTx (ShelleyLedgerEra era)
   overwriteVotingProcedures conwayOnwards votingProcedures =
-    conwayEraOnwardsConstraints conwayOnwards $
+    obtainCommonConstraints (convert conwayOnwards) $
       (L.bodyTxL . L.votingProceduresTxBodyL) .~ votingProcedures
 
   indexedTxCerts
@@ -323,7 +324,7 @@ indexWitnessedTxProposalProcedures
        )
      ]
 indexWitnessedTxProposalProcedures cOnwards (Exp.TxProposalProcedures proposals) = do
-  let allProposalsList = zip [0 ..] $ conwayEraOnwardsConstraints cOnwards $ toList proposals
+  let allProposalsList = zip [0 ..] $ obtainCommonConstraints (convert cOnwards) $ toList proposals
   [ (proposal, (ScriptWitnessIndexProposing ix, anyWitness))
     | (ix, (proposal, anyWitness)) <- allProposalsList
     ]
