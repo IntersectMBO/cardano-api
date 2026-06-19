@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1237
+kind:
+  - bugfix
+description: |
+  Fix PlutusV4 scripts being mislabelled as V3 in several conversion functions, causing silent hash mismatches for V4 reference scripts. Fix `toShelleyScript` and `getPlutusDatum` crashing for V4. Fix scrambled `ToPlutusScriptPurpose` type family.

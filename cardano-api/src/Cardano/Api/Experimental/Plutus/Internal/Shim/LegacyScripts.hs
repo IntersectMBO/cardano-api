@@ -75,11 +75,11 @@ toAnyWitness eon (witnessable, BuildTxWith (Old.ScriptWitness _ oldApiPlutusScri
 
 type family ToPlutusScriptPurpose witnessable = (purpose :: PlutusScriptPurpose) | purpose -> witnessable where
   ToPlutusScriptPurpose TxInItem = SpendingScript
-  ToPlutusScriptPurpose CertItem = MintingScript
-  ToPlutusScriptPurpose MintItem = CertifyingScript
+  ToPlutusScriptPurpose CertItem = CertifyingScript
+  ToPlutusScriptPurpose MintItem = MintingScript
   ToPlutusScriptPurpose WithdrawalItem = WithdrawingScript
-  ToPlutusScriptPurpose VoterItem = ProposingScript
-  ToPlutusScriptPurpose ProposalItem = VotingScript
+  ToPlutusScriptPurpose VoterItem = VotingScript
+  ToPlutusScriptPurpose ProposalItem = ProposingScript
 
 convertToNewScriptWitness
   :: AlonzoEraOnwards era
