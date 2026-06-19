@@ -288,17 +288,6 @@ obtainCommonConstraints = \case
   ConwayEra -> id
   DijkstraEra -> id
 
--- | 'obtainCommonConstraints' for callers holding a 'ConwayEraOnwards'
--- witness. Unlike 'conwayEraOnwardsConstraints' it is Dijkstra-safe:
--- 'EraCommonConstraints' has no Conway cert equality.
-conwayEraOnwardsCommonConstraints
-  :: ConwayEraOnwards era
-  -> (EraCommonConstraints era => a)
-  -> a
-conwayEraOnwardsCommonConstraints = \case
-  ConwayEraOnwardsConway -> id
-  ConwayEraOnwardsDijkstra -> id
-
 obtainConwayConstraints :: Era ConwayEra -> (EraConwayConstraints => a) -> a
 obtainConwayConstraints ConwayEra a = a
 
