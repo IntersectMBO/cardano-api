@@ -1576,7 +1576,7 @@ fromLedgerProposalProcedures
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (TxProposalProcedures ViewTx era))
 fromLedgerProposalProcedures sbe body =
-  forShelleyBasedEraInEonMaybe sbe $ \w ->
+  forShelleyBasedEraInEonMaybe @ConwayEraOnwards sbe $ \w ->
     obtainCommonConstraints (convert w) $
       Featured w $
         mkTxProposalProcedures
@@ -1588,7 +1588,7 @@ fromLedgerVotingProcedures
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (TxVotingProcedures ViewTx era))
 fromLedgerVotingProcedures sbe body =
-  forShelleyBasedEraInEonMaybe sbe $ \w ->
+  forShelleyBasedEraInEonMaybe @ConwayEraOnwards sbe $ \w ->
     obtainCommonConstraints (convert w) $
       Featured w $
         TxVotingProcedures
@@ -1600,7 +1600,7 @@ fromLedgerCurrentTreasuryValue
   => ShelleyBasedEra era
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (Maybe Coin))
-fromLedgerCurrentTreasuryValue sbe body = forEraInEonMaybe (toCardanoEra sbe) $ \ceo ->
+fromLedgerCurrentTreasuryValue sbe body = forEraInEonMaybe @ConwayEraOnwards (toCardanoEra sbe) $ \ceo ->
   obtainCommonConstraints (convert ceo) $
     Featured ceo . Ledger.strictMaybeToMaybe $
       body ^. L.currentTreasuryValueTxBodyL
@@ -1611,7 +1611,7 @@ fromLedgerTreasuryDonation
   -> L.TxBody L.TopTx (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era Coin)
 fromLedgerTreasuryDonation sbe body =
-  forShelleyBasedEraInEonMaybe sbe $ \w ->
+  forShelleyBasedEraInEonMaybe @ConwayEraOnwards sbe $ \w ->
     obtainCommonConstraints (convert w) $
       Featured w (body ^. L.treasuryDonationTxBodyL)
 
