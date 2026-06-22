@@ -1257,7 +1257,7 @@ data LedgerState = LedgerState
   { clsState :: Consensus.CardanoLedgerState Consensus.StandardCrypto Ledger.EmptyMK
   , clsTables
       :: Ledger.LedgerTables
-           (Consensus.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
+           (Consensus.LedgerState (Consensus.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto)))
            Ledger.ValuesMK
   }
   deriving Show
@@ -1435,7 +1435,7 @@ type LedgerStateEvents = (LedgerState, [LedgerEvent])
 
 toLedgerStateEvents
   :: Ledger.LedgerResult
-       (Consensus.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
+       (Consensus.LedgerState (Consensus.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto)))
        LedgerState
   -> LedgerStateEvents
 toLedgerStateEvents lr = (ledgerState, ledgerEvents)
@@ -1869,7 +1869,7 @@ tickThenReapplyCheckHash cfg block (LedgerState st tbs) =
       let
         keys
           :: Ledger.LedgerTables
-               (Consensus.CardanoBlock Consensus.StandardCrypto)
+               (Consensus.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
                Ledger.KeysMK
         keys = Ledger.getBlockKeySets block
 
@@ -1930,7 +1930,7 @@ tickThenApply cfg block (LedgerState st tbs) =
   let
     keys
       :: Ledger.LedgerTables
-           (Consensus.CardanoBlock Consensus.StandardCrypto)
+           (Consensus.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
            Ledger.KeysMK
     keys = Ledger.getBlockKeySets block
 
@@ -2283,7 +2283,7 @@ data AnyNewEpochState where
     :: ShelleyBasedEra era
     -> ShelleyAPI.NewEpochState (ShelleyLedgerEra era)
     -> Ledger.LedgerTables
-         (Consensus.CardanoBlock Consensus.StandardCrypto)
+         (Consensus.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
          Ledger.ValuesMK
     -> AnyNewEpochState
 
@@ -2295,7 +2295,7 @@ getLedgerTablesUTxOValues
   :: forall era
    . ShelleyBasedEra era
   -> Ledger.LedgerTables
-       (Consensus.CardanoBlock Consensus.StandardCrypto)
+       (Consensus.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
        Ledger.ValuesMK
   -> Map TxIn (TxOut CtxUTxO era)
 getLedgerTablesUTxOValues sbe tbs =
