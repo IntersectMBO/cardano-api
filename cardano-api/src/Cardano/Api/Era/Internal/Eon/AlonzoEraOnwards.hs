@@ -12,7 +12,6 @@
 module Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
   ( AlonzoEraOnwards (..)
   , alonzoEraOnwardsConstraints
-  , alonzoEraOnwardsToShelleyBasedEra
   , AlonzoEraOnwardsConstraints
   , IsAlonzoBasedEra (..)
   )
@@ -129,10 +128,6 @@ alonzoEraOnwardsConstraints = \case
   AlonzoEraOnwardsBabbage -> id
   AlonzoEraOnwardsConway -> id
   AlonzoEraOnwardsDijkstra -> id
-
-{-# DEPRECATED alonzoEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
-alonzoEraOnwardsToShelleyBasedEra :: AlonzoEraOnwards era -> ShelleyBasedEra era
-alonzoEraOnwardsToShelleyBasedEra = convert
 
 class IsMaryBasedEra era => IsAlonzoBasedEra era where
   alonzoBasedEra :: AlonzoEraOnwards era

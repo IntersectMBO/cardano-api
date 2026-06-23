@@ -79,7 +79,6 @@ import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Plutus.Internal.Script
 import Cardano.Api.Serialise.Raw
 import Cardano.Api.Serialise.SerialiseUsing
-import Cardano.Api.Tx.Internal.Body.Lens qualified as A
 
 import Cardano.Chain.Common qualified as Byron
 import Cardano.Ledger.Allegra.Core qualified as L
@@ -88,6 +87,7 @@ import Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Mary.Value qualified as L
 import Cardano.Ledger.Mary.Value qualified as Mary
+import Cardano.Ledger.Val qualified as L
 
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
 import Data.Aeson qualified as Aeson
@@ -99,8 +99,6 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as Short
 import Data.Data (Data)
-import Data.Function ((&))
-import Data.Group (invert)
 import Data.List qualified as List
 import Data.Map.Merge.Strict qualified as Map
 import Data.Map.Strict (Map)
@@ -109,7 +107,6 @@ import Data.MonoTraversable
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Exts (IsList (..))
-import Lens.Micro ((%~))
 
 toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
 toByronLovelace (L.Coin x) =
@@ -295,11 +292,7 @@ negateValue (Value m) = Value (Map.map negate m)
 
 negateLedgerValue
   :: ShelleyBasedEra era -> L.Value (ShelleyLedgerEra era) -> L.Value (ShelleyLedgerEra era)
-negateLedgerValue sbe v =
-  caseShelleyToAllegraOrMaryEraOnwards
-    (\_ -> v & A.adaAssetL sbe %~ L.Coin . negate . L.unCoin)
-    (\w -> v & A.multiAssetL w %~ invert)
-    sbe
+negateLedgerValue sbe v = shelleyBasedEraConstraints sbe $ L.invert v
 
 filterValue :: (AssetId -> Bool) -> Value -> Value
 filterValue p (Value m) = Value (Map.filterWithKey (\k _v -> p k) m)

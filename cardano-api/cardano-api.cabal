@@ -166,7 +166,6 @@ library
     filepath,
     formatting,
     fs-api ^>=0.4,
-    groups,
     iproute,
     memory,
     mempack,

@@ -12,7 +12,6 @@
 module Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra
   ( ShelleyToAllegraEra (..)
   , shelleyToAllegraEraConstraints
-  , shelleyToAllegraEraToShelleyBasedEra
   , ShelleyToAllegraEraConstraints
   )
 where
@@ -113,7 +112,3 @@ shelleyToAllegraEraConstraints
 shelleyToAllegraEraConstraints = \case
   ShelleyToAllegraEraShelley -> id
   ShelleyToAllegraEraAllegra -> id
-
-{-# DEPRECATED shelleyToAllegraEraToShelleyBasedEra "Use 'convert' instead." #-}
-shelleyToAllegraEraToShelleyBasedEra :: ShelleyToAllegraEra era -> ShelleyBasedEra era
-shelleyToAllegraEraToShelleyBasedEra = convert

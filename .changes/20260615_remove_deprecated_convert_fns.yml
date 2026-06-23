@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1234
+kind:
+  - breaking
+description: |
+  Remove deprecated era conversion functions that were superseded by 'convert': shelleyToAlonzoEraToShelleyToBabbageEra, alonzoEraOnwardsToMaryEraOnwards, babbageEraOnwardsToMaryEraOnwards, babbageEraOnwardsToAlonzoEraOnwards, eraToSbe, eraToBabbageEraOnwards, shelleyToMaryEraToShelleyBasedEra, conwayEraOnwardsToShelleyBasedEra, conwayEraOnwardsToBabbageEraOnwards, maryEraOnwardsToShelleyBasedEra, babbageEraOnwardsToShelleyBasedEra, shelleyEraOnlyToShelleyBasedEra, alonzoEraOnwardsToShelleyBasedEra, shelleyToBabbageEraToShelleyBasedEra, allegraEraOnwardsToShelleyBasedEra, shelleyToAllegraEraToShelleyBasedEra. Use 'convert' instead.

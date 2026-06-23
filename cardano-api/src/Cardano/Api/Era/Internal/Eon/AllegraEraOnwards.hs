@@ -12,7 +12,6 @@
 module Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
   ( AllegraEraOnwards (..)
   , allegraEraOnwardsConstraints
-  , allegraEraOnwardsToShelleyBasedEra
   , AllegraEraOnwardsConstraints
   , IsAllegraBasedEra (..)
   )
@@ -121,10 +120,6 @@ allegraEraOnwardsConstraints = \case
   AllegraEraOnwardsBabbage -> id
   AllegraEraOnwardsConway -> id
   _ -> const $ error "TODO Dijkstra: allegraEraOnwardsConstraints: era not supported"
-
-{-# DEPRECATED allegraEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
-allegraEraOnwardsToShelleyBasedEra :: AllegraEraOnwards era -> ShelleyBasedEra era
-allegraEraOnwardsToShelleyBasedEra = convert
 
 class IsShelleyBasedEra era => IsAllegraBasedEra era where
   allegraBasedEra :: AllegraEraOnwards era

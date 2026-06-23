@@ -1,0 +1,9 @@
+project: cardano-api
+
+pr: 1236
+
+kind:
+  - maintenance
+
+description: |
+  Remove caseByronToAlonzoOrBabbageEraOnwards, replacing usages with caseShelleyToAlonzoOrBabbageEraOnwards. Simplify adaAssetL, mkAdaValue, and negateLedgerValue using the Val typeclass (coin, modifyCoin, invert), dropping the groups dependency.
