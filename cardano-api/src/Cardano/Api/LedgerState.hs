@@ -349,7 +349,7 @@ instance Error LedgerStateError where
 initialLedgerState
   :: MonadIOTransError InitialLedgerStateError t m
   => SomeHasFS IO
-  -- ^ Filesystem capability used by consensus for testing/benchmarking,
+  -- ^ Filesystem capability used by Ledger for testing/benchmarking,
   -- to stream Shelley/Conway genesis data from the extraConfig.
   -> NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
@@ -461,7 +461,7 @@ foldBlocks
   => Show a
   => MonadIOTransError FoldBlocksError t m
   => SomeHasFS IO
-  -- ^ Filesystem capability used by consensus for testing/benchmarking,
+  -- ^ Filesystem capability used by Ledger for testing/benchmarking,
   -- to stream Shelley/Conway genesis data from the extraConfig.
   -> NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
@@ -2315,7 +2315,7 @@ foldEpochState
    . HasCallStack
   => MonadIOTransError FoldBlocksError t m
   => SomeHasFS IO
-  -- ^ Filesystem capability used by consensus for testing/benchmarking,
+  -- ^ Filesystem capability used by Ledger for testing/benchmarking,
   -- to stream Shelley/Conway genesis data from the extraConfig.
   -> NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
