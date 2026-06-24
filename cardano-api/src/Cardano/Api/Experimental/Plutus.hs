@@ -19,6 +19,7 @@ module Cardano.Api.Experimental.Plutus
   , legacyWitnessConversion
   , toPlutusSLanguage
   , fromPlutusSLanguage
+  , obtainLangConstraints
   , mkLegacyPolicyId
 
     -- * Plutus Script Witness

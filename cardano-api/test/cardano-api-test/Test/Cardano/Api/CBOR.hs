@@ -325,32 +325,14 @@ prop_decode_only_double_wrapped_plutus_script_bytes_CBOR = H.property $ do
     alwaysSucceedsDoubleEncoded
     Ledger.SPlutusV3
 
-prop_decode_only_wrapped_plutus_script_V1_CBOR :: Property
-prop_decode_only_wrapped_plutus_script_V1_CBOR = H.property $ do
-  PlutusScriptSerialised shortBs <- H.forAll $ genPlutusScript PlutusScriptV1
-  H.decodeOnlyPlutusScriptBytes
-    ShelleyBasedEraConway
-    PlutusScriptV1
-    (SBS.fromShort shortBs)
-    (AsScript AsPlutusScriptV1)
-
-  H.assertValidPlutusScriptBytesExperimental
-    Exp.ConwayEra
-    (SBS.fromShort shortBs)
-    Ledger.SPlutusV1
-
-prop_decode_only_wrapped_plutus_script_V2_CBOR :: Property
-prop_decode_only_wrapped_plutus_script_V2_CBOR = H.property $ do
-  PlutusScriptSerialised shortBs <- H.forAll $ genPlutusScript PlutusScriptV2
-  H.decodeOnlyPlutusScriptBytes
-    ShelleyBasedEraConway
-    PlutusScriptV2
-    (SBS.fromShort shortBs)
-    (AsScript AsPlutusScriptV2)
-  H.assertValidPlutusScriptBytesExperimental
-    Exp.ConwayEra
-    (SBS.fromShort shortBs)
-    Ledger.SPlutusV2
+mkPlutusScriptCBORTest :: Exp.Some Exp.Era -> AnyPlutusScriptVersion -> Property
+mkPlutusScriptCBORTest (Exp.Some era) (AnyPlutusScriptVersion version) = Exp.obtainCommonConstraints era $ H.property $ do
+  PlutusScriptSerialised shortBs <- H.forAll $ genPlutusScript version
+  let scriptBytes = SBS.fromShort shortBs
+  let sLang = Exp.toPlutusSLanguage version
+  Exp.obtainLangConstraints sLang $ do
+    H.decodeOnlyPlutusScriptBytes (convert era) version scriptBytes (AsScript asType)
+    H.assertValidPlutusScriptBytesExperimental era scriptBytes sLang
 
 prop_decode_only_wrapped_plutus_script_V2_ByteStringToInteger_CBOR :: Property
 prop_decode_only_wrapped_plutus_script_V2_ByteStringToInteger_CBOR = H.property $ do
@@ -364,20 +346,6 @@ prop_decode_only_wrapped_plutus_script_V2_ByteStringToInteger_CBOR = H.property 
     Exp.ConwayEra
     v2Special
     Ledger.SPlutusV2
-
-prop_decode_only_wrapped_plutus_script_V3_CBOR :: Property
-prop_decode_only_wrapped_plutus_script_V3_CBOR = H.property $ do
-  PlutusScriptSerialised shortBs <- H.forAll $ genPlutusScript PlutusScriptV3
-  H.decodeOnlyPlutusScriptBytes
-    ShelleyBasedEraConway
-    PlutusScriptV3
-    (SBS.fromShort shortBs)
-    (AsScript AsPlutusScriptV3)
-
-  H.assertValidPlutusScriptBytesExperimental
-    Exp.ConwayEra
-    (SBS.fromShort shortBs)
-    Ledger.SPlutusV3
 
 prop_double_encoded_sanity_check :: Property
 prop_double_encoded_sanity_check = H.propertyOnce $ do
@@ -560,8 +528,7 @@ prop_canonicalise_cbor = property $ do
 
 tests :: TestTree
 tests =
-  testGroup
-    "Test.Cardano.Api.Typed.CBOR"
+  testGroup "Test.Cardano.Api.Typed.CBOR" $
     [ testGroup
         "canonicalise CBOR"
         [ testProperty "unit canonicalise map" unit_canonicalise_map
@@ -640,36 +607,38 @@ tests =
     , testProperty
         "decode only double wrapped plutus script bytes CBOR"
         prop_decode_only_double_wrapped_plutus_script_bytes_CBOR
-    , testProperty
-        "decode only wrapped plutus script V1 CBOR"
-        prop_decode_only_wrapped_plutus_script_V1_CBOR
-    , testProperty
-        "decode only wrapped plutus script V2 CBOR"
-        prop_decode_only_wrapped_plutus_script_V2_CBOR
-    , testProperty
-        "decode only wrapped plutus script V2 special CBOR"
-        prop_decode_only_wrapped_plutus_script_V2_ByteStringToInteger_CBOR
-    , testProperty
-        "decode only wrapped plutus script V3 CBOR"
-        prop_decode_only_wrapped_plutus_script_V3_CBOR
-    , testProperty
-        "double encoded sanity check"
-        prop_double_encoded_sanity_check
-    , testProperty
-        "cddlTypeToEra for Tx types"
-        prop_Tx_cddlTypeToEra
-    , testProperty
-        "cddlTypeToEra for TxWitness types"
-        prop_TxWitness_cddlTypeToEra
-    , testProperty "roundtrip ScriptData CBOR" prop_roundtrip_ScriptData_CBOR
-    , testProperty "roundtrip UpdateProposal CBOR" prop_roundtrip_UpdateProposal_CBOR
-    , testProperty "roundtrip TxWitness Cddl" prop_roundtrip_TxWitness_Cddl
-    , testProperty "roundtrip tx CBOR" prop_roundtrip_tx_CBOR
-    , testProperty "roundtrip tx out CBOR" prop_roundtrip_tx_out_CBOR
-    , testProperty
-        "roundtrip GovernancePoll CBOR"
-        prop_roundtrip_GovernancePoll_CBOR
-    , testProperty
-        "roundtrip GovernancePollAnswer CBOR"
-        prop_roundtrip_GovernancePollAnswer_CBOR
     ]
+      <> [ testProperty
+             ("decode only wrapped plutus script " <> show (pretty version) <> " CBOR")
+             (mkPlutusScriptCBORTest someEra version)
+         | (someEra, version) <-
+             [ (Exp.Some Exp.ConwayEra, AnyPlutusScriptVersion PlutusScriptV1)
+             , (Exp.Some Exp.ConwayEra, AnyPlutusScriptVersion PlutusScriptV2)
+             , (Exp.Some Exp.ConwayEra, AnyPlutusScriptVersion PlutusScriptV3)
+             , (Exp.Some Exp.DijkstraEra, AnyPlutusScriptVersion PlutusScriptV4)
+             ]
+         ]
+      <> [ testProperty
+             "decode only wrapped plutus script V2 special CBOR"
+             prop_decode_only_wrapped_plutus_script_V2_ByteStringToInteger_CBOR
+         , testProperty
+             "double encoded sanity check"
+             prop_double_encoded_sanity_check
+         , testProperty
+             "cddlTypeToEra for Tx types"
+             prop_Tx_cddlTypeToEra
+         , testProperty
+             "cddlTypeToEra for TxWitness types"
+             prop_TxWitness_cddlTypeToEra
+         , testProperty "roundtrip ScriptData CBOR" prop_roundtrip_ScriptData_CBOR
+         , testProperty "roundtrip UpdateProposal CBOR" prop_roundtrip_UpdateProposal_CBOR
+         , testProperty "roundtrip TxWitness Cddl" prop_roundtrip_TxWitness_Cddl
+         , testProperty "roundtrip tx CBOR" prop_roundtrip_tx_CBOR
+         , testProperty "roundtrip tx out CBOR" prop_roundtrip_tx_out_CBOR
+         , testProperty
+             "roundtrip GovernancePoll CBOR"
+             prop_roundtrip_GovernancePoll_CBOR
+         , testProperty
+             "roundtrip GovernancePollAnswer CBOR"
+             prop_roundtrip_GovernancePollAnswer_CBOR
+         ]

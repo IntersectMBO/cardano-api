@@ -125,7 +125,7 @@ getPlutusDatum
 getPlutusDatum L.SPlutusV1 (SpendingScriptDatum d) = Just d
 getPlutusDatum L.SPlutusV2 (SpendingScriptDatum d) = Just d
 getPlutusDatum L.SPlutusV3 (SpendingScriptDatum d) = d
-getPlutusDatum L.SPlutusV4 (SpendingScriptDatum _d) = error "TODO Dijkstra: getPlutusDatum: era not supported"
+getPlutusDatum L.SPlutusV4 (SpendingScriptDatum d) = d
 getPlutusDatum _ InlineDatum = Nothing
 getPlutusDatum _ NoScriptDatum = Nothing
 

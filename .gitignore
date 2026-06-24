@@ -77,6 +77,8 @@ cardano-tracer/cardano-tracer-test
 # IntellIJ project folder
 .idea/
 
+.serena/
+
 cardano-wasm/examples/*/cardano-wasm.wasm
 cardano-wasm/examples/*/cardano-wasm.js
 cardano-wasm/examples/*/*.d.ts
