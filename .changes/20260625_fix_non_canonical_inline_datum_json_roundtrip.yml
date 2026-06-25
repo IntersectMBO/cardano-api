@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1238
+kind:
+  - bugfix
+description: |
+  FromJSON (TxOut) no longer crashes when parsing a TxOut whose inline datum was encoded with non-canonical CBOR bytes (e.g. definite-length arrays instead of the indefinite-length form Plutus normally emits).

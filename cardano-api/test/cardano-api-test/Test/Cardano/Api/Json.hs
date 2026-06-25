@@ -54,6 +54,22 @@ prop_json_roundtrip_txout_utxo_context = H.property $ do
   txOut <- forAll $ genTxOutUTxOContext ShelleyBasedEraBabbage
   tripping txOut encode eitherDecode
 
+-- | Round-trips a 'TxOut' whose inline datum uses non-canonical CBOR bytes
+-- (definite-length array instead of the canonical indefinite-length form).
+prop_json_roundtrip_txout_noncanonical_inline_datum :: Property
+prop_json_roundtrip_txout_noncanonical_inline_datum = H.property $ do
+  hsd <- forAll genNonCanonicalHashableScriptData
+  addr <- forAll $ genAddressInEra ShelleyBasedEraConway
+  val <- forAll $ genTxOutValue ShelleyBasedEraConway
+  let txOutUTxO =
+        TxOut addr val (TxOutDatumInline BabbageEraOnwardsConway hsd) ReferenceScriptNone
+          :: TxOut CtxUTxO ConwayEra
+      txOutTx =
+        TxOut addr val (TxOutDatumInline BabbageEraOnwardsConway hsd) ReferenceScriptNone
+          :: TxOut CtxTx ConwayEra
+  tripping txOutUTxO encode eitherDecode
+  tripping txOutTx encode eitherDecode
+
 prop_json_roundtrip_scriptdata_detailed_json :: Property
 prop_json_roundtrip_scriptdata_detailed_json = H.property $ do
   sData <- forAll genHashableScriptData
@@ -131,6 +147,9 @@ tests =
     , testProperty "json roundtrip txoutvalue" prop_json_roundtrip_txoutvalue
     , testProperty "json roundtrip txout tx context" prop_json_roundtrip_txout_tx_context
     , testProperty "json roundtrip txout utxo context" prop_json_roundtrip_txout_utxo_context
+    , testProperty
+        "json roundtrip txout noncanonical inline datum"
+        prop_json_roundtrip_txout_noncanonical_inline_datum
     , testProperty "json roundtrip scriptdata detailed json" prop_json_roundtrip_scriptdata_detailed_json
     , testProperty "json roundtrip praos nonce" prop_roundtrip_praos_nonce_JSON
     , testProperty "new TxOut ToJSON matches legacy" prop_new_txout_json_matches_legacy
