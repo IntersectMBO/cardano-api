@@ -152,6 +152,7 @@ if impl(ghc >=9.14)
     , serialise:base
     , serialise:containers
     , serialise:time
+    , tdigest:base
     , time-locale-compat:time
     , with-utf8:base
 -- cabal-allow-newer end
