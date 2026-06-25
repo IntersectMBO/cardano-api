@@ -44,6 +44,7 @@ module Test.Gen.Cardano.Api.Typed
 
     -- * Scripts
   , genHashableScriptData
+  , genNonCanonicalHashableScriptData
   , genReferenceScript
   , genScript
   , genValidScript
@@ -188,7 +189,7 @@ import Data.Int (Int64)
 import Data.Maybe
 import Data.Ratio (Ratio, (%))
 import Data.String
-import Data.Word (Word32, Word64)
+import Data.Word (Word32, Word64, Word8)
 import GHC.Exts (IsList (..))
 import GHC.Stack
 import Numeric.Natural (Natural)
@@ -390,6 +391,26 @@ genHashableScriptData = do
   case deserialiseFromCBOR AsHashableScriptData $ serialiseToCBOR sd of
     Left e -> error $ "genHashableScriptData: " <> show e
     Right r -> return r
+
+-- | Generate 'HashableScriptData' whose CBOR uses a definite-length array
+-- instead of the canonical indefinite-length form that Plutus normally emits.
+-- This means 'hashScriptDataBytes' of the result differs from
+-- 'hashScriptDataBytes' of its canonical re-encoding, exposing any JSON
+-- round-trip that reconstructs CBOR rather than preserving original bytes.
+genNonCanonicalHashableScriptData :: HasCallStack => Gen HashableScriptData
+genNonCanonicalHashableScriptData = do
+  constrIdx <- Gen.integral (Range.linear 0 6 :: Range.Range Int)
+  args <- Gen.list (Range.linear 1 5) (Gen.integral (Range.linear 0 23 :: Range.Range Int))
+  -- Plutus constructor n uses CBOR tag 121+n.
+  -- Canonical encoding wraps fields in an indefinite-length array (0x9f..0xff).
+  -- We use a definite-length array (0x80+len) to produce non-canonical bytes.
+  let tagBytes = [0xd8, fromIntegral (0x79 + constrIdx)] :: [Word8]
+      arrayHdr = [fromIntegral (0x80 + length args)] :: [Word8]
+      argBytes = map fromIntegral args :: [Word8]
+      bytes = BS.pack (tagBytes <> arrayHdr <> argBytes)
+  case deserialiseFromCBOR AsHashableScriptData bytes of
+    Left e -> error $ "genNonCanonicalHashableScriptData: " <> show e
+    Right r -> pure r
 
 {-# DEPRECATED genScriptData "Use genHashableScriptData" #-}
 genScriptData :: Gen ScriptData
