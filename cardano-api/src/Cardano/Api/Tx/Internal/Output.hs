@@ -431,6 +431,26 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
       ReferenceScript _ s -> toJSON s
       ReferenceScriptNone -> Aeson.Null
 
+-- | Parse 'HashableScriptData' from a JSON object, preferring the raw CBOR
+-- bytes in @inlineDatumRaw@ when present to preserve non-canonical encodings,
+-- falling back to the supplied parser for JSON that lacks the field.
+parseInlineDatum
+  :: Aeson.Object
+  -> Aeson.Value
+  -> Hash ScriptData
+  -> (Aeson.Value -> Aeson.Parser HashableScriptData)
+  -> Aeson.Parser HashableScriptData
+parseInlineDatum o dVal h fallback = do
+  mRaw <- o .:? "inlineDatumRaw"
+  hashableData <- case mRaw of
+    Just rawHex -> do
+      rawBytes <- either fail pure $ Base16.decode (Text.encodeUtf8 rawHex)
+      either (fail . show) pure $ deserialiseFromCBOR AsHashableScriptData rawBytes
+    Nothing -> fallback dVal
+  if hashScriptDataBytes hashableData /= h
+    then fail "Inline datum not equivalent to inline datum hash"
+    else pure hashableData
+
 instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
   parseJSON = withObject "TxOut" $ \o -> do
     case shelleyBasedEra :: ShelleyBasedEra era of
@@ -462,13 +482,12 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
             (Just dVal, Just h) -> do
-              case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right hashableData -> do
-                  if hashScriptDataBytes hashableData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
+              hashableData <-
+                parseInlineDatum o dVal h $ \v ->
+                  case scriptDataJsonToHashable ScriptDataJsonDetailedSchema v of
+                    Left err -> fail $ "Error parsing TxOut JSON: " <> displayError err
+                    Right hsd -> pure hsd
+              return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
@@ -485,14 +504,13 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
         inlineDatum <- o .:? "inlineDatum"
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsConway sData
+            (Just dVal, Just h) -> do
+              hashableData <-
+                parseInlineDatum o dVal h $ \v ->
+                  case scriptDataFromJson ScriptDataJsonDetailedSchema v of
+                    Left err -> fail $ "Error parsing TxOut JSON: " <> displayError err
+                    Right sData -> pure sData
+              return $ TxOutDatumInline BabbageEraOnwardsConway hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
@@ -509,14 +527,13 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
         inlineDatum <- o .:? "inlineDatum"
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsDijkstra sData
+            (Just dVal, Just h) -> do
+              hashableData <-
+                parseInlineDatum o dVal h $ \v ->
+                  case scriptDataFromJson ScriptDataJsonDetailedSchema v of
+                    Left err -> fail $ "Error parsing TxOut JSON: " <> displayError err
+                    Right sData -> pure sData
+              return $ TxOutDatumInline BabbageEraOnwardsDijkstra hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
@@ -645,13 +662,12 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
             (Just dVal, Just h) -> do
-              case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right hashableData -> do
-                  if hashScriptDataBytes hashableData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
+              hashableData <-
+                parseInlineDatum o dVal h $ \v ->
+                  case scriptDataJsonToHashable ScriptDataJsonDetailedSchema v of
+                    Left err -> fail $ "Error parsing TxOut JSON: " <> displayError err
+                    Right hsd -> pure hsd
+              return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
@@ -669,14 +685,13 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
         inlineDatum <- o .:? "inlineDatum"
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsConway sData
+            (Just dVal, Just h) -> do
+              hashableData <-
+                parseInlineDatum o dVal h $ \v ->
+                  case scriptDataFromJson ScriptDataJsonDetailedSchema v of
+                    Left err -> fail $ "Error parsing TxOut JSON: " <> displayError err
+                    Right sData -> pure sData
+              return $ TxOutDatumInline BabbageEraOnwardsConway hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
@@ -694,14 +709,13 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
         inlineDatum <- o .:? "inlineDatum"
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsDijkstra sData
+            (Just dVal, Just h) -> do
+              hashableData <-
+                parseInlineDatum o dVal h $ \v ->
+                  case scriptDataFromJson ScriptDataJsonDetailedSchema v of
+                    Left err -> fail $ "Error parsing TxOut JSON: " <> displayError err
+                    Right sData -> pure sData
+              return $ TxOutDatumInline BabbageEraOnwardsDijkstra hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
