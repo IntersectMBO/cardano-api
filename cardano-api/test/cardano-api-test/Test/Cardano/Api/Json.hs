@@ -61,10 +61,14 @@ prop_json_roundtrip_txout_noncanonical_inline_datum = H.property $ do
   hsd <- forAll genNonCanonicalHashableScriptData
   addr <- forAll $ genAddressInEra ShelleyBasedEraConway
   val <- forAll $ genTxOutValue ShelleyBasedEraConway
-  let txOut =
+  let txOutUTxO =
         TxOut addr val (TxOutDatumInline BabbageEraOnwardsConway hsd) ReferenceScriptNone
           :: TxOut CtxUTxO ConwayEra
-  tripping txOut encode eitherDecode
+      txOutTx =
+        TxOut addr val (TxOutDatumInline BabbageEraOnwardsConway hsd) ReferenceScriptNone
+          :: TxOut CtxTx ConwayEra
+  tripping txOutUTxO encode eitherDecode
+  tripping txOutTx encode eitherDecode
 
 prop_json_roundtrip_scriptdata_detailed_json :: Property
 prop_json_roundtrip_scriptdata_detailed_json = H.property $ do
