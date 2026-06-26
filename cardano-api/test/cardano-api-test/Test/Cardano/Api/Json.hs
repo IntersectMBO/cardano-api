@@ -94,7 +94,8 @@ go sbe = do
   toJSON oldTxOut === toJSON newTxOut
 
 -- | Verify that the new experimental 'TxOut' round-trips through JSON
--- (encode then decode) for all Shelley-based eras.
+-- (encode then decode) for all Shelley-based eras except Dijkstra, for which
+-- 'shelleyBasedEraConstraints' is not yet implemented.
 prop_new_txout_json_roundtrip :: Property
 prop_new_txout_json_roundtrip = H.property $ do
   AnyShelleyBasedEra sbe <- forAll $ Gen.element [minBound .. maxBound]
@@ -105,7 +106,7 @@ prop_new_txout_json_roundtrip = H.property $ do
     ShelleyBasedEraAlonzo -> goRoundtrip sbe
     ShelleyBasedEraBabbage -> goRoundtrip sbe
     ShelleyBasedEraConway -> goRoundtrip sbe
-    ShelleyBasedEraDijkstra -> pure ()
+    ShelleyBasedEraDijkstra -> pure () -- shelleyBasedEraConstraints not yet implemented
 
 goRoundtrip
   :: ( L.EraTxOut (ShelleyLedgerEra era)
