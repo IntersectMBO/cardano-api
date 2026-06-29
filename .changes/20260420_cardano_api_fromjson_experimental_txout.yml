@@ -3,4 +3,4 @@ pr: 1179
 kind:
   - feature
 description: |
-  Add FromJSON instances for the new experimental TxOut type, matching the JSON format produced by the corresponding ToJSON instances. Inline datums are parsed from inlineDatumRaw with hash validation against inlineDatumhash. Reference scripts are parsed via the existing FromJSON ScriptInAnyLang instance and converted to ledger scripts. Supplemental datums are deliberately unsupported since the ledger TxOut does not carry them.
+  Add `FromJSON` instances for the new experimental `TxOut` type.

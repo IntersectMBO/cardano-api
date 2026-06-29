@@ -556,9 +556,9 @@ txOutParseJson sbe o = do
         Nothing -> base
         Just dh -> base & L.dataHashTxOutL .~ SJust dh
     ShelleyBasedEraBabbage ->
-      babbageOnwardsTxOutParseJson (L.mkBasicTxOut addr mv :: L.TxOut L.BabbageEra) o
+      babbageOnwardsTxOutParseJson (L.mkBasicTxOut addr mv) o
     ShelleyBasedEraConway ->
-      babbageOnwardsTxOutParseJson (L.mkBasicTxOut addr mv :: L.TxOut L.ConwayEra) o
+      babbageOnwardsTxOutParseJson (L.mkBasicTxOut addr mv) o
     ShelleyBasedEraDijkstra -> error "TODO Dijkstra: txOutParseJson: era not supported"
 
 -- | Parse a ledger 'L.Addr' from JSON. Reverse of 'addrToJson'.
