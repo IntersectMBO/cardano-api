@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1179
+kind:
+  - feature
+description: |
+  Add `FromJSON` instances for the new experimental `TxOut` type.
