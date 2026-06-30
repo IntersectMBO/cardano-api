@@ -1,5 +1,102 @@
 # Changelog for cardano-api
 
+## 11.3.0.0 -- 2026-05-26
+
+- Bump plutus-core and plutus-ledger-api from ^>=1.61 to ^>=1.65. No ledger API changes ([releases](https://github.com/IntersectMBO/plutus/releases/tag/1.65.0.0)); bump driven by plutus-core fixes.
+  (breaking)
+  [PR 1215](https://github.com/intersectmbo/cardano-api/pull/1215)
+
+## 11.2.0.0 -- 2026-05-18
+
+- Remove unreachable error constructors. None of these were produced anywhere in the repo — only defined, pretty-printed, and listed in golden fixtures.
+  
+  Removed:
+  
+  - `TransactionValidityError` (entire type, both constructors `TransactionValidityIntervalError` and `TransactionValidityCostModelError`).
+  - `TxFeeEstimationTransactionTranslationError`, the `TxFeeEstimationError` constructor that wrapped the now-removed `TransactionValidityError`.
+  - `TxBodyErrorByronEraNotSupported`, `TxBodyErrorMissingParamMinUTxO`, and `TxBodyErrorNonAdaAssetsUnbalanced` from the legacy `Cardano.Api.Tx.Internal.Fee.TxBodyErrorAutoBalance`.
+  - `TxBodyErrorNonAdaAssetsUnbalanced` from the experimental `Cardano.Api.Experimental.Tx.Internal.Fee.TxBodyErrorAutoBalance`.
+  
+  The corresponding `test_TransactionValidityError` golden test, the three dead `TxBodyErrorAutoBalance` fixture entries, and their expected `.txt` files are dropped too. The `Ouroboros.Consensus.HardFork.History` import in `Fee.hs` becomes unused and is removed.
+  (breaking)
+  [PR 1211](https://github.com/intersectmbo/cardano-api/pull/1211)
+
+- Remove the deprecated `data Certificate era` GADT, its `ShelleyRelatedCertificate`/`ConwayCertificate` constructors, all `make*Certificate` functions, all `*Requirements` GADTs, and the public `Cardano.Api.Certificate` module. Consumers should use the certificate API exposed via `Cardano.Api.Experimental.Certificate` (era-polymorphic, Conway onwards) or `Cardano.Api.Compatible.Certificate` (covers all Shelley-based eras).
+  
+  Pool-related types (`PoolId`, `StakePoolParameters`, `StakePoolRelay`, `StakePoolMetadataReference`) and their conversion helpers remain in `Cardano.Api.Certificate.Internal` and are re-exported by `Cardano.Api.Experimental.Certificate`.
+  (breaking)
+  [PR 1210](https://github.com/intersectmbo/cardano-api/pull/1210)
+
+- Remove legacy `TxOut ctx era` from the Compatible and Experimental APIs.
+  
+  `createCompatibleTx` now takes `[Exp.TxOut (ShelleyLedgerEra era)]` plus an explicit `Map L.DataHash (L.Data (ShelleyLedgerEra era))` for supplemental datums, mirroring how it already takes `Exp.TxCertificates` / `Exp.TxVotingProcedures` / `Exp.TxProposalProcedures`. The legacy `TxOut CtxTx era` bundled supplemental datums inside outputs; `Exp.TxOut` only carries the datum hash (the full datum lives in the witness set), so callers now thread them in explicitly.
+  
+  Deletes the legacy bridge helpers re-exported from `Cardano.Api.Experimental.Tx`:
+  
+  - `fromLegacyTxOut`
+  - `legacyDatumToDatum`
+  - `supplementalDatumFromLegacy`
+  - `toLedgerDatum`
+  - `DatumDecodingError`
+  
+  These existed solely to convert legacy `TxOut CtxTx era` / `TxOutDatum CtxTx era` values into the experimental world. With the Compatible API no longer accepting the legacy type, they had no remaining in-repo callers. They are not re-exported from top-level `Cardano.Api`.
+  
+  The legacy `TxOut ctx era` type itself is unchanged — `UTxO`, `Tx` body construction, fee/balancing, `LedgerState`, and Byron all still depend on it.
+  (breaking)
+  [PR 1209](https://github.com/intersectmbo/cardano-api/pull/1209)
+
+- Add `evaluateTransaction` and `evaluateSignedTx` to `Cardano.Api.Experimental`, composing script evaluation, fee computation, and balance checking into a single pure function for signed transactions.
+  (feature)
+  [PR 1205](https://github.com/intersectmbo/cardano-api/pull/1205)
+
+- Deprecate the old-API transaction body surface in favour of `Cardano.Api.Experimental`. The following are now annotated with `{-# DEPRECATED #-}`:
+  
+  - `TxBody` (data type), `ShelleyTxBody` (constructor)
+  - `TxBodyContent` (type/constructor)
+  - `createTransactionBody`, `defaultTxBodyContent`
+  - `getTxBody`, `getTxBodyContent`
+  - `BalancedTxBody`
+  
+  Internal modules that still consume these symbols are annotated with `-Wno-deprecations` so `-Werror` stays green; they will be migrated in a follow-up alongside the setter family. The pre-existing `TxBody` pattern-synonym deprecation message is updated for consistency.
+  (compatible)
+  [PR 1200](https://github.com/intersectmbo/cardano-api/pull/1200)
+
+- Export `evaluateTransactionExecutionUnits` from `Cardano.Api.Experimental`. Re-export `EraTxBody(..)` from `Cardano.Api.Ledger`.
+  (compatible)
+  [PR 1193](https://github.com/intersectmbo/cardano-api/pull/1193)
+
+## 11.1.0.0 -- 2026-05-07
+
+- Widen `Cardano.Api.Experimental.SignedTx era` to all Shelley-based eras (Shelley through Dijkstra) by reparameterising it on `ShelleyLedgerEra era` instead of `LedgerEra era`. This allows deserialising `SignedTx` for any Shelley-based era via `SerialiseAsRawBytes` without widening the `LedgerEra` family or its Conway-onwards constraint surface.
+  (compatible)
+  [PR 1199](https://github.com/intersectmbo/cardano-api/pull/1199)
+
+- Fix broken cross-package Haddock links on the hosted documentation site. Links to dependency packages (cardano-ledger-*, plutus-*, cardano-base, etc.) were relative paths pointing to directories that don't exist on the site, resulting in 404s. A post-processing script now resolves each cross-package href via a name-suffix heuristic under *.cardano.intersectmbo.org plus a small fallback list of known IOG doc-site roots, and rewrites them to absolute URLs. Hrefs that don't resolve become annotated unclickable spans with tooltips. A follow-up GitHub Actions step opens or comments on a rolling tracking issue when the script reports actionable dead links on master, tagging the PR opener so the breakage lands on someone's board instead of going unnoticed.
+  (bugfix, documentation)
+  [PR 1180](https://github.com/intersectmbo/cardano-api/pull/1180)
+
+- Remove the deprecated `ProtocolParametersUpdate` type and the `toLedgerPParamsUpdate` conversion function. Use `EraBasedProtocolParametersUpdate` instead.
+  
+  The `toLedgerUpdate`, `fromLedgerUpdate`, `toLedgerProposedPPUpdates`, `fromLedgerProposedPPUpdates` and `fromLedgerPParamsUpdate` functions are kept but their signatures are now era-indexed: they operate on `UpdateProposal era` / `EraBasedProtocolParametersUpdate era` instead of the removed type, and require a `ShelleyBasedEra era` argument.
+  (breaking)
+  [PR 1103](https://github.com/intersectmbo/cardano-api/pull/1103)
+
+- Implement the previously-stubbed `ToCBOR`/`FromCBOR` instances for
+  `EraBasedProtocolParametersUpdate` by routing through the ledger's
+  `PParamsUpdate` encoding. The instance constraint changes from
+  `Typeable era` to `IsShelleyBasedEra era`, which propagates to the
+  `ToCBOR`, `FromCBOR` and `HasTextEnvelope` instances of `UpdateProposal`.
+  (bugfix, breaking)
+  [PR 1103](https://github.com/intersectmbo/cardano-api/pull/1103)
+
+- Remove the unused `TxBodyProtocolParamsConversionError` constructor of `TxBodyError`.
+  (breaking)
+  [PR 1103](https://github.com/intersectmbo/cardano-api/pull/1103)
+
+- Remove the deprecated `makeShelleyTransactionBody` and `createAndValidateTransactionBody` functions along with their supporting helpers. Use `createTransactionBody` instead.
+  (breaking)
+  [PR 1094](https://github.com/intersectmbo/cardano-api/pull/1094)
+
 ## 11.0.0.0 -- 2026-04-30
 
 - Add ConwayEraGov, ConwayEraCertState, and GovState ~ ConwayGovState type equality to EraCommonConstraints. Both Conway and Dijkstra satisfy these constraints, so obtainCommonConstraints now provides governance-related constraints without needing conwayEraOnwardsConstraints.

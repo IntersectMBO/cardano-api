@@ -53,7 +53,6 @@ import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Eon.ShelleyEraOnly
-import Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
 import Cardano.Api.Experimental.Era (obtainCommonConstraints)
 import Cardano.Api.Internal.Orphans ()
@@ -66,6 +65,7 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Mary.Value qualified as L
 import Cardano.Ledger.Shelley.PParams qualified as L
 import Cardano.Ledger.TxIn qualified as L
+import Cardano.Ledger.Val qualified as L
 
 import Data.OSet.Strict qualified as L
 import Data.Sequence.Strict qualified as L
@@ -221,29 +221,15 @@ mkBasicTxOut sbe addr value =
 
 mkAdaValue :: ShelleyBasedEra era -> L.Coin -> L.Value (ShelleyLedgerEra era)
 mkAdaValue sbe coin =
-  caseShelleyToAllegraOrMaryEraOnwards
-    (const coin)
-    (const (L.MaryValue coin mempty))
-    sbe
+  shelleyBasedEraConstraints sbe $
+    L.modifyCoin (const coin) mempty
 
 adaAssetL :: ShelleyBasedEra era -> Lens' (L.Value (ShelleyLedgerEra era)) L.Coin
 adaAssetL sbe =
-  caseShelleyToAllegraOrMaryEraOnwards
-    adaAssetShelleyToAllegraEraL
-    adaAssetMaryEraOnwardsL
-    sbe
-
-adaAssetShelleyToAllegraEraL
-  :: ShelleyToAllegraEra era -> Lens' (L.Value (ShelleyLedgerEra era)) L.Coin
-adaAssetShelleyToAllegraEraL w =
-  shelleyToAllegraEraConstraints w $ lens id const
-
-adaAssetMaryEraOnwardsL :: MaryEraOnwards era -> Lens' L.MaryValue L.Coin
-adaAssetMaryEraOnwardsL w =
-  maryEraOnwardsConstraints w $
+  shelleyBasedEraConstraints sbe $
     lens
-      (\(L.MaryValue c _) -> c)
-      (\(L.MaryValue _ ma) c -> L.MaryValue c ma)
+      L.coin
+      (\v c -> L.modifyCoin (const c) v)
 
 multiAssetL
   :: MaryEraOnwards era -> Lens' L.MaryValue L.MultiAsset

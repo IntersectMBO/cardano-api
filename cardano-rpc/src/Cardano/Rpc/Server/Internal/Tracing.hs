@@ -9,6 +9,7 @@ import Cardano.Api.Era (Inject (..))
 import Cardano.Api.Error
 import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Cbor (DecoderError)
+import Cardano.Api.Serialise.Raw (SerialiseAsRawBytesError)
 import Cardano.Api.Serialise.SerialiseUsing
 
 import Control.Exception
@@ -71,12 +72,19 @@ data TraceRpcSubmit
     TraceRpcSubmitTxValidationError TxValidationErrorInCardanoMode
   | -- | Transaction submission span
     TraceRpcSubmitSpan TraceSpanEvent
+  | -- | Transaction evaluation deserialisation error
+    TraceRpcEvalTxDecodingError SerialiseAsRawBytesError
+  | -- | Transaction evaluation span
+    TraceRpcEvalTxSpan TraceSpanEvent
   deriving Show
 
 instance Pretty TraceRpcSubmit where
   pretty = \case
     TraceRpcSubmitSpan (SpanBegin _) -> "Started submit method"
     TraceRpcSubmitSpan (SpanEnd _) -> "Finished submit method"
+    TraceRpcEvalTxSpan (SpanBegin _) -> "Started eval tx method"
+    TraceRpcEvalTxSpan (SpanEnd _) -> "Finished eval tx method"
+    TraceRpcEvalTxDecodingError e -> "Failed to decode transaction for evaluation: " <> pshow e
     TraceRpcSubmitN2cConnectionError e -> "N2C connection error while trying to submit a transaction: " <> prettyException e
     TraceRpcSubmitTxDecodingError e -> "Failed to decode transaction: " <> pshow e
     TraceRpcSubmitTxValidationError e -> "Failed to submit transaction: " <> pshow e

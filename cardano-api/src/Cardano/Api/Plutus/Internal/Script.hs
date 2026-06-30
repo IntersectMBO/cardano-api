@@ -1662,16 +1662,20 @@ deriving instance Eq (ReferenceScript era)
 
 deriving instance Show (ReferenceScript era)
 
-instance IsCardanoEra era => ToJSON (ReferenceScript era) where
+-- IsShelleyBasedEra constraint is incorrect. Deprecation and removal of this
+-- entire module in favour of the experimental api is the long term solution to this problem.
+instance IsShelleyBasedEra era => ToJSON (ReferenceScript era) where
   toJSON (ReferenceScript _ s) = object ["referenceScript" .= s]
   toJSON ReferenceScriptNone = Aeson.Null
 
-instance IsCardanoEra era => FromJSON (ReferenceScript era) where
+-- IsShelleyBasedEra constraint is incorrect. Deprecation and removal of this
+-- entire module in favour of the experimental api is the long term solution to this problem.
+instance IsShelleyBasedEra era => FromJSON (ReferenceScript era) where
   parseJSON = Aeson.withObject "ReferenceScript" $ \o ->
-    caseByronToAlonzoOrBabbageEraOnwards
+    caseShelleyToAlonzoOrBabbageEraOnwards
       (const (pure ReferenceScriptNone))
       (\w -> ReferenceScript w <$> o .: "referenceScript")
-      (cardanoEra :: CardanoEra era)
+      (shelleyBasedEra :: ShelleyBasedEra era)
 
 refScriptToShelleyScript
   :: ShelleyBasedEra era

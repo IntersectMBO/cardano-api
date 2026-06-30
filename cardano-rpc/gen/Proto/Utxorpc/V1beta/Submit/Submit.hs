@@ -2416,16 +2416,22 @@ data SubmitService = SubmitService {}
 instance Data.ProtoLens.Service.Types.Service SubmitService where
   type ServiceName SubmitService = "SubmitService"
   type ServicePackage SubmitService = "utxorpc.v1beta.submit"
-  type ServiceMethods SubmitService = '["submitTx"]
+  type ServiceMethods SubmitService = '["evalTx", "submitTx"]
   packedServiceDescriptor _
     = "\n\
       \\rSubmitService\DC2[\n\
-      \\bSubmitTx\DC2&.utxorpc.v1beta.submit.SubmitTxRequest\SUB'.utxorpc.v1beta.submit.SubmitTxResponse"
+      \\bSubmitTx\DC2&.utxorpc.v1beta.submit.SubmitTxRequest\SUB'.utxorpc.v1beta.submit.SubmitTxResponse\DC2U\n\
+      \\ACKEvalTx\DC2$.utxorpc.v1beta.submit.EvalTxRequest\SUB%.utxorpc.v1beta.submit.EvalTxResponse"
 instance Data.ProtoLens.Service.Types.HasMethodImpl SubmitService "submitTx" where
   type MethodName SubmitService "submitTx" = "SubmitTx"
   type MethodInput SubmitService "submitTx" = SubmitTxRequest
   type MethodOutput SubmitService "submitTx" = SubmitTxResponse
   type MethodStreamingType SubmitService "submitTx" = 'Data.ProtoLens.Service.Types.NonStreaming
+instance Data.ProtoLens.Service.Types.HasMethodImpl SubmitService "evalTx" where
+  type MethodName SubmitService "evalTx" = "EvalTx"
+  type MethodInput SubmitService "evalTx" = EvalTxRequest
+  type MethodOutput SubmitService "evalTx" = EvalTxResponse
+  type MethodStreamingType SubmitService "evalTx" = 'Data.ProtoLens.Service.Types.NonStreaming
 packedFileDescriptor :: Data.ByteString.ByteString
 packedFileDescriptor
   = "\n\
@@ -2478,11 +2484,12 @@ packedFileDescriptor
     \\DC2STAGE_ACKNOWLEDGED\DLE\SOH\DC2\DC1\n\
     \\rSTAGE_MEMPOOL\DLE\STX\DC2\DC1\n\
     \\rSTAGE_NETWORK\DLE\ETX\DC2\DC3\n\
-    \\SISTAGE_CONFIRMED\DLE\EOT2l\n\
+    \\SISTAGE_CONFIRMED\DLE\EOT2\195\SOH\n\
     \\rSubmitService\DC2[\n\
-    \\bSubmitTx\DC2&.utxorpc.v1beta.submit.SubmitTxRequest\SUB'.utxorpc.v1beta.submit.SubmitTxResponseB\158\SOH\n\
-    \\EMcom.utxorpc.v1beta.submitB\vSubmitProtoP\SOH\162\STX\ETXUVS\170\STX\NAKUtxorpc.V1beta.Submit\202\STX\NAKUtxorpc\\V1beta\\Submit\226\STX!Utxorpc\\V1beta\\Submit\\GPBMetadata\234\STX\ETBUtxorpc::V1beta::SubmitJ\148!\n\
-    \\ACK\DC2\EOT\NUL\NULk\SOH\n\
+    \\bSubmitTx\DC2&.utxorpc.v1beta.submit.SubmitTxRequest\SUB'.utxorpc.v1beta.submit.SubmitTxResponse\DC2U\n\
+    \\ACKEvalTx\DC2$.utxorpc.v1beta.submit.EvalTxRequest\SUB%.utxorpc.v1beta.submit.EvalTxResponseB\158\SOH\n\
+    \\EMcom.utxorpc.v1beta.submitB\vSubmitProtoP\SOH\162\STX\ETXUVS\170\STX\NAKUtxorpc.V1beta.Submit\202\STX\NAKUtxorpc\\V1beta\\Submit\226\STX!Utxorpc\\V1beta\\Submit\\GPBMetadata\234\STX\ETBUtxorpc::V1beta::SubmitJ\252!\n\
+    \\ACK\DC2\EOT\NUL\NULl\SOH\n\
     \\b\n\
     \\SOH\f\DC2\ETX\NUL\NUL\DC2\n\
     \\b\n\
@@ -2867,7 +2874,7 @@ packedFileDescriptor
     \\f\n\
     \\ENQ\EOT\SO\STX\NUL\ETX\DC2\ETXe\DC3\DC4\n\
     \W\n\
-    \\STX\ACK\NUL\DC2\EOTi\NULk\SOH\SUBK Service definition for submitting transactions and checking their status.\n\
+    \\STX\ACK\NUL\DC2\EOTi\NULl\SOH\SUBK Service definition for submitting transactions and checking their status.\n\
     \\n\
     \\n\
     \\n\
@@ -2880,4 +2887,13 @@ packedFileDescriptor
     \\f\n\
     \\ENQ\ACK\NUL\STX\NUL\STX\DC2\ETXj\SI\RS\n\
     \\f\n\
-    \\ENQ\ACK\NUL\STX\NUL\ETX\DC2\ETXj)9b\ACKproto3"
+    \\ENQ\ACK\NUL\STX\NUL\ETX\DC2\ETXj)9\n\
+    \<\n\
+    \\EOT\ACK\NUL\STX\SOH\DC2\ETXk\STX5\"/ Evaluate a transaction without submitting it.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\ACK\NUL\STX\SOH\SOH\DC2\ETXk\ACK\f\n\
+    \\f\n\
+    \\ENQ\ACK\NUL\STX\SOH\STX\DC2\ETXk\r\SUB\n\
+    \\f\n\
+    \\ENQ\ACK\NUL\STX\SOH\ETX\DC2\ETXk%3b\ACKproto3"

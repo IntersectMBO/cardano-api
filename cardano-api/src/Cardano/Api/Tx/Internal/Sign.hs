@@ -75,7 +75,6 @@ where
 
 import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
-import Cardano.Api.Certificate.Internal
 import Cardano.Api.Era
 import Cardano.Api.Error
 import Cardano.Api.HasTypeProxy
@@ -84,6 +83,7 @@ import Cardano.Api.Key.Internal.Class
 import Cardano.Api.Network.Internal.NetworkId
 import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.TextEnvelope.Internal
+import Cardano.Api.Tx.Internal.TxIn (AsType (AsTxId))
 
 import Cardano.Chain.Common qualified as Byron
 import Cardano.Chain.UTxO qualified as Byron
@@ -107,9 +107,11 @@ import Cardano.Ledger.Keys qualified as Shelley
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Short qualified as SBS
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
@@ -246,6 +248,7 @@ deserialiseShelleyBasedTx mkTx bs =
 -- NB: This is called in getTxBodyAndWitnesses which is fine as
 -- getTxBodyAndWitnesses is only called in the context of a
 -- shelley based era anyways. ByronTx will eventually be removed.
+{-# DEPRECATED getTxBody "Use 'UnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
 getTxBody :: Tx era -> TxBody era
 getTxBody (ShelleyTx sbe tx) =
   caseShelleyToMaryOrAlonzoEraOnwards
@@ -294,6 +297,10 @@ instance IsShelleyBasedEra era => HasTextEnvelope (Tx era) where
 --
 -- TODO: We can use Ledger.Tx era here however we would need to rename TxBody
 -- as technically it is not strictly a transaction body.
+{-# DEPRECATED TxBody "Use 'UnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
+
+{-# DEPRECATED ShelleyTxBody "Use 'UnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
+
 data TxBody era where
   ShelleyTxBody
     :: ShelleyBasedEra era
@@ -773,10 +780,10 @@ decodeShelleyBasedWitness
   -> Either CBOR.DecoderError (KeyWitness era)
 decodeShelleyBasedWitness sbe bs =
   let e =
-        Valid.toEither $
+        Valid.foldValidation Left Right $
           mconcat $
             map
-              (Valid.liftError return)
+              (either (Valid.Failure . (: [])) Valid.Success)
               [ bootstrapWitnessDecoder bs
               , shelleyKeyWitnessDecoder bs
               , legacyKeyWitnessDecoder bs
@@ -789,7 +796,7 @@ decodeShelleyBasedWitness sbe bs =
  where
   shelleyKeyWitnessDecoder b =
     ShelleyKeyWitness sbe
-      <$> CBOR.decodeFullAnnotator
+      <$> CBOR.decodeFullDecoder
         (L.eraProtVerHigh @(ShelleyLedgerEra era))
         "Shelley Witness"
         CBOR.decCBOR
@@ -797,27 +804,27 @@ decodeShelleyBasedWitness sbe bs =
 
   bootstrapWitnessDecoder b =
     ShelleyBootstrapWitness sbe
-      <$> CBOR.decodeFullAnnotator
+      <$> CBOR.decodeFullDecoder
         (L.eraProtVerHigh @(ShelleyLedgerEra era))
         "Shelley Witness"
         CBOR.decCBOR
         (LBS.fromStrict b)
 
   legacyKeyWitnessDecoder b =
-    CBOR.decodeFullAnnotator
+    CBOR.decodeFullDecoder
       (L.eraProtVerHigh @(ShelleyLedgerEra era))
       "Shelley Witness"
       decodeLegacy
       (LBS.fromStrict b)
 
   -- Non-CDDL compliant legacy decoder.
-  decodeLegacy :: CBOR.Decoder s (CBOR.Annotator (KeyWitness era))
+  decodeLegacy :: CBOR.Decoder s (KeyWitness era)
   decodeLegacy = do
     CBOR.decodeListLenOf 2
     t <- CBOR.decodeWord
     case t of
-      0 -> fmap (fmap (ShelleyKeyWitness sbe)) CBOR.decCBOR
-      1 -> fmap (fmap (ShelleyBootstrapWitness sbe)) CBOR.decCBOR
+      0 -> ShelleyKeyWitness sbe <$> CBOR.decCBOR
+      1 -> ShelleyBootstrapWitness sbe <$> CBOR.decCBOR
       _ ->
         CBOR.cborError $
           CBOR.DecoderErrorUnknownTag
@@ -1114,7 +1121,7 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
       { Shelley.bwKey = vk
       , Shelley.bwSignature = signature
       , Shelley.bwChainCode = chainCode
-      , Shelley.bwAttributes = attributes
+      , Shelley.bwAttributes = byteArrayFromShortByteString (SBS.toShort attributes)
       }
  where
   -- Starting with the easy bits: we /can/ convert the Byron verification key

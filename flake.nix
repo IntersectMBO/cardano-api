@@ -31,7 +31,7 @@
     };
 
     hls = {
-      url = "github:haskell/haskell-language-server/2.13.0.0";
+      url = "github:haskell/haskell-language-server/2.14.0.0";
       flake = false;
     };
 
@@ -45,7 +45,6 @@
   outputs = inputs: let
     supportedSystems = [
       "x86_64-linux"
-      "x86_64-darwin"
       "aarch64-linux"
       "aarch64-darwin"
     ];
@@ -54,7 +53,7 @@
     # this is used to build cardano-node on linux, so we test against it
     stableCompiler = "ghc967";
     # this is our main compiler for development
-    defaultCompiler = "ghc9122";
+    defaultCompiler = "ghc9124";
     # Used for cross compilation for windows.
     crossCompilerVersion = defaultCompiler;
     # Used for haddock generation (avoids GHC 9.12 tyConStupidTheta panic)
@@ -172,10 +171,6 @@
               haskell-language-server = {
                 src = inputs.hls;
                 configureArgs = "--disable-benchmarks --disable-tests";
-                cabalProjectLocal = ''
-                  allow-newer: haddock-library:base
-                '';
-                sha256map."https://github.com/snowleopard/alga"."d4e43fb42db05413459fb2df493361d5a666588a" = "0s1mlnl64wj7pkg3iipv5bb4syy3bhxwqzqv93zqlvkyfn64015i";
               };
               hlint = "3.10";
             };
@@ -294,6 +289,19 @@
                 src = nixpkgs.blst.src;
               });
           };
+          # Stub pkg-config file so the cabal solver can resolve
+          # cardano-lmdb (a transitive dependency of ouroboros-consensus
+          # that nothing in this project actually needs). Without this,
+          # the solver rejects cardano-lmdb because lmdb is not
+          # available for wasm. Per-component builds ensure it is never
+          # actually compiled.
+          lmdb-pkg-config-stub = wasm-pkgs.writeTextDir "lib/pkgconfig/lmdb.pc" ''
+            Name: lmdb
+            Description: Stub for cabal solver — not actually built
+            Version: 0.9.33
+            Libs: -llmdb
+            Cflags:
+          '';
         in
           lib.optionalAttrs (system != "x86_64-darwin") {
             wasm = wasm-pkgs.mkShell {
@@ -308,6 +316,7 @@
                   wasm.libsodium
                   wasm.secp256k1
                   wasm.blst
+                  lmdb-pkg-config-stub
                 ]
                 ++ lib.optional (system == "x86_64-linux" || system == "aarch64-linux") wasm-pkgs.envoy-bin;
             };

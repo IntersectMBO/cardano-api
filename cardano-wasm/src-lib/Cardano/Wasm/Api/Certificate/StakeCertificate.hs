@@ -18,7 +18,6 @@ where
 import Cardano.Api
   ( Coin (..)
   , Hash
-  , PoolId
   , StakeKey
   , serialiseToCBOR
   , unStakePoolKeyHash
@@ -26,7 +25,7 @@ import Cardano.Api
 import Cardano.Api.Address (StakeCredential (..))
 import Cardano.Api.Experimental (Era (..), obtainCommonConstraints)
 import Cardano.Api.Experimental qualified as Exp
-import Cardano.Api.Experimental.Certificate (Certificate (..))
+import Cardano.Api.Experimental.Certificate (Certificate (..), PoolId)
 import Cardano.Api.Serialise.Raw qualified as Api
 
 import Cardano.Ledger.Api (Delegatee (DelegStake))

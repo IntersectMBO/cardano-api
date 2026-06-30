@@ -1,0 +1,6 @@
+project: cardano-wasm
+pr: 1210
+kind:
+  - maintenance
+description: |
+  Switch the `PoolId` import in `Cardano.Wasm.Api.Certificate.StakeCertificate` from `Cardano.Api` to `Cardano.Api.Experimental.Certificate` after the legacy `Cardano.Api.Certificate` re-export module was removed upstream.

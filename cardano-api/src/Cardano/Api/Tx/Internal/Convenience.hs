@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 -- | Convenience transaction construction functions
 module Cardano.Api.Tx.Internal.Convenience

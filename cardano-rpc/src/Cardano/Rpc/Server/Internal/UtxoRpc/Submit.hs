@@ -21,6 +21,8 @@ import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.Tracing
 
+import Cardano.Ledger.Core qualified as L
+
 import RIO hiding (toList)
 
 import Data.Default
@@ -61,7 +63,9 @@ submitTxMethod req = do
       submitTxToNodeLocal nodeConnInfo (TxInMode sbe tx) <&> \case
         TxSubmitError e -> Left $ TraceRpcSubmitN2cConnectionError e
         TxSubmitFail reason -> Left $ TraceRpcSubmitTxValidationError reason
-        TxSubmitSuccess -> Right $ getTxId $ getTxBody tx
+        TxSubmitSuccess ->
+          let ShelleyTx _ ledgerTx = tx
+           in Right $ shelleyBasedEraConstraints sbe $ fromShelleyTxId (L.txIdTx ledgerTx)
     putTraceThrowEither result
 
   putTraceThrowEither v = withFrozenCallStack $ do

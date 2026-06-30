@@ -20,11 +20,18 @@ module Cardano.Api.Experimental
   , EraCommonConstraints
   , obtainConwayConstraints
   , obtainCommonConstraints
+  , eraProtVerHigh
   , hashTxBody
-  , evaluateTransactionExecutionUnitsShelley
   , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate
   , mkTxCertificates
+
+    -- ** Transaction evaluation
+  , evaluateTransaction
+  , evaluateSignedTx
+  , TxEvaluationResult (..)
+  , evaluateTransactionExecutionUnits
+  , evaluateTransactionExecutionUnitsShelley
 
     -- ** Transaction fee related
   , FeeCalculationError (..)
@@ -42,8 +49,6 @@ module Cardano.Api.Experimental
   , Some (..)
   , LedgerEra
   , DeprecatedEra (..)
-  , eraToSbe
-  , eraToBabbageEraOnwards
   , sbeToEra
 
     -- ** Witness related

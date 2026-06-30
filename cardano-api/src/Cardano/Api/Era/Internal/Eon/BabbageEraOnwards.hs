@@ -13,7 +13,6 @@
 module Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
   ( BabbageEraOnwards (..)
   , babbageEraOnwardsConstraints
-  , babbageEraOnwardsToShelleyBasedEra
   , BabbageEraOnwardsConstraints
   , IsBabbageBasedEra (..)
   )
@@ -139,10 +138,6 @@ babbageEraOnwardsConstraints = \case
   BabbageEraOnwardsBabbage -> id
   BabbageEraOnwardsConway -> id
   BabbageEraOnwardsDijkstra -> id
-
-{-# DEPRECATED babbageEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
-babbageEraOnwardsToShelleyBasedEra :: BabbageEraOnwards era -> ShelleyBasedEra era
-babbageEraOnwardsToShelleyBasedEra = convert
 
 class IsAlonzoBasedEra era => IsBabbageBasedEra era where
   babbageBasedEra :: BabbageEraOnwards era

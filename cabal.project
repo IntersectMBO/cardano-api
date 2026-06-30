@@ -13,12 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-05-27T06:20:37Z
-  , cardano-haskell-packages 2026-06-01T00:05:45Z
-
-active-repositories:
-  , :rest
-  , cardano-haskell-packages:override
+  , hackage.haskell.org 2026-05-28T20:13:41Z
+  , cardano-haskell-packages 2026-05-28T08:12:31Z
 
 packages:
     cardano-api
@@ -56,27 +52,10 @@ constraints:
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8
 
-if impl(ghc >= 9.12)
-  allow-newer:
-    -- we need newer io-classes: https://github.com/input-output-hk/typed-protocols/tree/coot/io-classes-1.9
-    , io-classes:time
-    , ouroboros-network:time
-    , nothunks:time
-    , network-mux:time
 
 -- WASM compilation specific
 
 if arch(wasm32)
-  source-repository-package
-    type: git
-    location: https://github.com/intersectmbo/plutus.git
-    tag: d1684df33d1b7226dfa5f2247aa67a46c2d5453b
-    subdir:
-      plutus-core
-      plutus-ledger-api
-      plutus-tx
-    --sha256: sha256-MsWo1QORm/3c9X5wS9DJWFoBTmUPJyPUkemDDn399ok=
-
   package plutus-core
     flags: +do-not-build-plutus-exec
 
@@ -93,12 +72,6 @@ if arch(wasm32)
     subdir:
       criterion-measurement
     --sha256: sha256-wzEwOUTeFL0C3QnS25/3X1ue2tUuedrLqtT0h1JZW6c=
-
-  source-repository-package
-    type: git
-    location: https://github.com/palas/haskell-lmdb-mock.git
-    tag: c8d61e6eee03ee271e7768c0576110da885aec48
-    --sha256: sha256-+gB1MmM6qRApz1p7tFsdvKoAWDrYB4a+bJ9Djm6ieYI=
 
   source-repository-package
     type: git
@@ -148,122 +121,104 @@ if arch(wasm32)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
--- cabal-allow-newer
-if impl(ghc >= 9.14)
+-- cabal-allow-newer begin
+if impl(ghc >=9.14)
   allow-newer:
-    , aeson:QuickCheck
-    , aeson:containers
-    , aeson:template-haskell
-    , aeson:time
-    , bin:QuickCheck
-    , bin:base
-    , binary:containers
-    , binary-orphans:base
-    , blockio:base
-    , blockio:io-classes
-    , boring:base
     , bytestring-trie:base
     , canonical-json:containers
-    , cardano-addresses:containers
-    , cardano-addresses:template-haskell
-    , cardano-diffusion:io-classes
-    , cardano-prelude:canonical-json
     , cborg:base
     , cborg:containers
     , cborg-json:base
     , compact:base
-    , config-ini:containers
-    , constraints:boring
-    , constraints-extras:template-haskell
-    , criterion:microstache
-    , data-elevator:base
-    , dec:base
     , dependent-map:containers
     , dictionary-sharing:containers
     , diff-containers:base
-    , discrimination:ghc-bignum
-    , discrimination-ieee754:base
-    , fin:QuickCheck
-    , fin:base
-    , fin:universe-base
     , fs-sim:QuickCheck
-    , ghc:binary
-    , ghc:time
     , grapesy:base
     , grapesy:containers
+    , grapesy:tls
     , grpc-spec:base
     , grpc-spec:containers
-    , hedgehog-extras:base
     , hedgehog-quickcheck:QuickCheck
-    , http-api-data:text-iso8601
-    , indexed-traversable:base
-    , indexed-traversable:containers
-    , indexed-traversable-instances:base
-    , io-classes:base
-    , io-sim:io-classes
-    , lens-family:base
+    , http2-tls:tls
     , lens-family:containers
-    , lens-family:lens-family-core
     , lens-family-core:containers
-    , lsm-tree:base
-    , lsm-tree:cborg
-    , lsm-tree:containers
-    , lsm-tree:io-classes
-    , microstache:base
-    , microstache:containers
-    , network-mux:io-classes
-    , nonempty-vector:base
+    , lsm-tree:data-elevator
+    , newtype-generics:base
     , ordered-containers:containers
-    , ouroboros-consensus:cborg
-    , ouroboros-consensus:fs-sim
-    , ouroboros-consensus:io-classes
-    , ouroboros-consensus:quickcheck-state-machine
-    , ouroboros-network:io-classes
-    , parsec:base
-    , plutus-core:dependent-map
-    , plutus-ledger-api:plutus-core
-    , proto-lens:base
-    , proto-lens:lens-family
-    , proto-lens-arbitrary:base
-    , proto-lens-discrimination:base
-    , proto-lens-optparse:base
-    , proto-lens-protobuf-types:base
-    , proto-lens-protoc:base
-    , proto-lens-protoc:ghc
-    , proto-lens-runtime:base
-    , proto-lens-setup:base
-    , quickcheck-instances:QuickCheck
-    , quickcheck-instances:array
-    , quickcheck-instances:base
-    , quickcheck-instances:containers
-    , quickcheck-instances:uuid-types
-    , quickcheck-state-machine:QuickCheck
-    , ral:QuickCheck
-    , ral:base
-    , ral:fin
-    , ral:indexed-traversable
+    , partial-order:containers
     , safe-wild-cards:template-haskell
-    , semialign:base
-    , semialign:containers
     , serdoc-core:template-haskell
     , serialise:base
     , serialise:containers
     , serialise:time
-    , text:array
-    , text:base
-    , text:template-haskell
-    , text-iso8601:time
-    , these:base
-    , time-compat:time
-    , trace-dispatcher:aeson
-    , tree-diff:QuickCheck
-    , tree-diff:base
-    , tree-diff:containers
-    , tree-diff:semialign
-    , tree-diff:time
-    , typed-protocols:io-classes
-    , universe-base:base
-    , universe-base:containers
-    , unix:time
-    , uuid-types:template-haskell
+    , tdigest:base
+    , time-locale-compat:time
     , with-utf8:base
+-- cabal-allow-newer end
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: 8dc1c431e06db2c8b5d44fb4b3cca6419197d763
+  --sha256: sha256-xKtgNFxjbJE6UWGvTioGX81NgvlKH3mHEaYMWDm8/UA=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley-ma/test-suite
+    eras/shelley/impl
+    eras/shelley/test-suite
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/vector-map
+
+source-repository-package
+  type: git
+  location: https://github.com/f-f/kes-agent.git
+  tag: 32c1ed675d22a30735d9f22f7afa436a3ef3e64a
+  --sha256: sha256-o7hFX1JnraS6Xq0WoXQwd9Z8GsPPv0Ls2DWvZ08o0ZU=
+  subdir:
+    kes-agent
+    kes-agent-crypto
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: e6fad063078894cefece2a535a2e2b4d9a092e73
+  --sha256: sha256-SPtbQ1+zN4uYiVx3rej2kMasbpfhSAyjRD5bdrnK3Rs=
+  subdir:
+    .
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: d7736b7c4c51f7328bd9462dc75df0c04a7b06d0
+  --sha256: sha256-9sWmBNESHApZmwOi0CpSwn619NIw6/msvV5vH57eqx8=
+  subdir:
+    ./cardano-diffusion
+    ./monoidal-synchronisation
+    ./network-mux
+    ./ouroboros-network
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/plutus.git
+  tag: b1db04cc425fab303ac3b79d7140dc2a17f29e6d
+  --sha256: sha256-XtYzjNVx4+IGWpgm+p/YTf56DrJtK0I98umZCTE3U80=
+  subdir:
+    plutus-core
+    plutus-ledger-api
+    plutus-tx

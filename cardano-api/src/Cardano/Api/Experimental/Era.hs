@@ -10,6 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -26,9 +27,8 @@ module Cardano.Api.Experimental.Era
   , DeprecatedEra (..)
   , EraCommonConstraints
   , obtainCommonConstraints
+  , eraProtVerHigh
   , obtainConwayConstraints
-  , eraToSbe
-  , eraToBabbageEraOnwards
   , sbeToEra
   )
 where
@@ -209,12 +209,6 @@ eraFromStringLike = \case
 -- instance IsEra ConwayEra where
 --   useEra = ConwayEra
 -- @
-{-# DEPRECATED eraToSbe "Use 'convert' instead." #-}
-eraToSbe
-  :: Era era
-  -> ShelleyBasedEra era
-eraToSbe = convert
-
 instance Convert Era Api.CardanoEra where
   convert = \case
     ConwayEra -> Api.ConwayEra
@@ -271,10 +265,6 @@ sbeToEra e@ShelleyBasedEraAlonzo = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraMary = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraAllegra = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraShelley = throwError $ DeprecatedEra e
-
-{-# DEPRECATED eraToBabbageEraOnwards "Use 'convert' instead." #-}
-eraToBabbageEraOnwards :: Era era -> BabbageEraOnwards era
-eraToBabbageEraOnwards = convert
 
 -------------------------------------------------------------------------
 
@@ -339,3 +329,8 @@ type EraConwayConstraints =
   , L.ShelleyEraTxCert (LedgerEra ConwayEra)
   , L.NativeScript (ShelleyLedgerEra ConwayEra) ~ L.Timelock (ShelleyLedgerEra ConwayEra)
   )
+
+-- | Lookup the lower major protocol version for the era. In other words
+-- this is the major protocol version that the era has started in.
+eraProtVerHigh :: forall era. Era era -> L.Version
+eraProtVerHigh eon = obtainCommonConstraints eon $ L.eraProtVerHigh @(LedgerEra era)

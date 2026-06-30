@@ -16,8 +16,6 @@
 module Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
   ( ConwayEraOnwards (..)
   , conwayEraOnwardsConstraints
-  , conwayEraOnwardsToShelleyBasedEra
-  , conwayEraOnwardsToBabbageEraOnwards
   , ConwayEraOnwardsConstraints
   , IsConwayBasedEra (..)
   )
@@ -155,14 +153,6 @@ conwayEraOnwardsConstraints = \case
   -- code on Dijkstra fails at runtime here.
   ConwayEraOnwardsDijkstra ->
     const $ error "TODO Dijkstra: conwayEraOnwardsConstraints: Dijkstra cert path not yet implemented"
-
-{-# DEPRECATED conwayEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
-conwayEraOnwardsToShelleyBasedEra :: ConwayEraOnwards era -> ShelleyBasedEra era
-conwayEraOnwardsToShelleyBasedEra = convert
-
-{-# DEPRECATED conwayEraOnwardsToBabbageEraOnwards "Use 'convert' instead." #-}
-conwayEraOnwardsToBabbageEraOnwards :: ConwayEraOnwards era -> BabbageEraOnwards era
-conwayEraOnwardsToBabbageEraOnwards = convert
 
 class IsBabbageBasedEra era => IsConwayBasedEra era where
   conwayBasedEra :: ConwayEraOnwards era

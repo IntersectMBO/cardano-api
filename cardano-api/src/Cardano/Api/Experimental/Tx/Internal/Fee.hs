@@ -20,6 +20,8 @@ module Cardano.Api.Experimental.Tx.Internal.Fee
   , calcMinFeeRecursive
   , collectTxBodyScriptWitnesses
   , estimateBalancedTxBody
+  , evaluateTransaction
+  , TxEvaluationResult (..)
   , evaluateTransactionExecutionUnits
   , evaluateTransactionFee
   , indexWitnessedTxProposalProcedures
@@ -45,7 +47,7 @@ import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.Key.Internal qualified as Api
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal
-import Cardano.Api.Plutus.Internal.Script (fromAlonzoExUnits)
+import Cardano.Api.Plutus.Internal.Script (fromAlonzoExUnits, toAlonzoExUnits)
 import Cardano.Api.Plutus.Internal.Script qualified as Old
 import Cardano.Api.Plutus.Internal.ScriptData
 import Cardano.Api.Pretty
@@ -53,6 +55,7 @@ import Cardano.Api.ProtocolParameters
 import Cardano.Api.Query.Internal.Type.QueryInMode
 import Cardano.Api.Tx.Internal.Body
   ( ScriptWitnessIndex (..)
+  , fromScriptWitnessIndex
   , indexCertificatesWith
   , renderScriptWitnessIndex
   , toScriptIndex
@@ -71,7 +74,6 @@ import Cardano.Ledger.Alonzo.Core qualified as Ledger
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
-import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Credential as Ledger (Credential)
 import Cardano.Ledger.Val qualified as L
 
@@ -94,7 +96,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Exts (IsList (..))
 import GHC.Stack
-import Lens.Micro ((.~), (^.))
+import Lens.Micro ((%~), (.~), (^.))
 import Prettyprinter (punctuate)
 
 data TxBodyErrorAutoBalance era
@@ -119,7 +121,6 @@ data TxBodyErrorAutoBalance era
       -- ^ Offending TxOut
       L.Coin
       -- ^ Minimum UTXO
-  | TxBodyErrorNonAdaAssetsUnbalanced Value
   | TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
       ScriptWitnessIndex
       (Map ScriptWitnessIndex ExecutionUnits)
@@ -181,8 +182,6 @@ instance Error (TxBodyErrorAutoBalance era) where
         [ "Minimum UTxO threshold not met for tx output: " <> pretty (show txout) <> "\n"
         , "Minimum required UTxO: " <> pretty minUTxO
         ]
-    TxBodyErrorNonAdaAssetsUnbalanced val ->
-      "Non-Ada assets are unbalanced: " <> pretty (renderValue val)
     TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap sIndex eUnitsMap ->
       mconcat
         [ "ScriptWitnessIndex (redeemer pointer): " <> pshow sIndex <> " is missing from the execution "
@@ -556,6 +555,86 @@ calculateMinimumUTxO
 calculateMinimumUTxO pp (TxOut txout) =
   let txOutWithMinCoin = L.setMinCoinTxOut pp txout
    in txOutWithMinCoin ^. L.coinTxOutL
+
+-- | Result of evaluating a signed transaction against the current ledger state.
+data TxEvaluationResult era = Show (L.Value era) => TxEvaluationResult
+  { txEvalFee :: L.Coin
+  -- ^ Computed minimum fee for the transaction
+  , txEvalExecutionUnits
+      :: Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
+  -- ^ Per-redeemer execution units or script errors
+  , txEvalBalance :: L.Value era
+  -- ^ Remaining balance (consumed - produced); mempty when balanced
+  }
+
+deriving instance Show (TxEvaluationResult era)
+
+-- | Run all scripts, compute the minimum fee, and check the balance.
+evaluateTransaction
+  :: forall era
+   . IsEra era
+  => SystemStart
+  -- ^ Start time of the blockchain
+  -> LedgerEpochInfo
+  -- ^ Epoch info for slot/time conversions
+  -> L.PParams (LedgerEra era)
+  -- ^ Protocol parameters
+  -> Set PoolId
+  -- ^ Registered stake pools
+  -> Map StakeCredential L.Coin
+  -- ^ Stake delegation deposits
+  -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
+  -- ^ DRep delegation deposits
+  -> L.UTxO (LedgerEra era)
+  -- ^ UTxO set for the transaction inputs
+  -> L.Tx L.TopTx (LedgerEra era)
+  -- ^ Signed transaction to evaluate
+  -> TxEvaluationResult (LedgerEra era)
+evaluateTransaction systemStart epochInfo protocolParams poolIds stakeDelegDeposits drepDelegDeposits utxo tx =
+  obtainCommonConstraints (useEra @era) $ do
+    let txEvalExecutionUnits =
+          evaluateTransactionExecutionUnits systemStart epochInfo protocolParams utxo tx
+        evaluatedExUnitsMap =
+          Map.fromList
+            [ (purpose, toAlonzoExUnits units)
+            | (scriptWitnessIndex, Right (_, units)) <- Map.toList txEvalExecutionUnits
+            , Just purpose <- [fromScriptWitnessIndex (convert $ useEra @era) scriptWitnessIndex]
+            ]
+        txWithEvaluatedExUnits =
+          tx
+            & L.witsTxL . L.rdmrsTxWitsL
+              %~ \redeemers ->
+                L.Redeemers
+                  . Map.mapWithKey
+                    ( \purpose (datum, oldExUnits) ->
+                        (datum, Map.findWithDefault oldExUnits purpose evaluatedExUnitsMap)
+                    )
+                  $ L.unRedeemers redeemers
+        txEvalFee =
+          L.setMinFeeTxUtxo protocolParams txWithEvaluatedExUnits utxo
+            ^. L.bodyTxL . L.feeTxBodyL
+        txEvalBalance =
+          L.evalBalanceTxBody
+            protocolParams
+            lookupDelegDeposit
+            lookupDRepDeposit
+            isRegPool
+            utxo
+            $ txWithEvaluatedExUnits ^. L.bodyTxL
+    TxEvaluationResult{txEvalFee, txEvalExecutionUnits, txEvalBalance}
+ where
+  isRegPool :: Ledger.KeyHash Ledger.StakePool -> Bool
+  isRegPool keyHash = Api.StakePoolKeyHash keyHash `Set.member` poolIds
+
+  lookupDelegDeposit
+    :: Ledger.Credential Ledger.Staking -> Maybe L.Coin
+  lookupDelegDeposit stakeCred =
+    Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
+
+  lookupDRepDeposit
+    :: Ledger.Credential Ledger.DRepRole -> Maybe L.Coin
+  lookupDRepDeposit drepCred =
+    Map.lookup drepCred drepDelegDeposits
 
 -- | Compute the total balance of the proposed transaction. Ultimately, a valid
 -- transaction must be fully balanced, which means that it has a total value

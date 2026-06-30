@@ -50,7 +50,6 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.Binary (FromCBOR)
 import Cardano.Ledger.Core qualified as L
-import Cardano.Ledger.Shelley.Rules qualified as L
 import Cardano.Ledger.State qualified as L
 import Cardano.Protocol.Crypto qualified as L
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
@@ -58,6 +57,7 @@ import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
 
 import Control.DeepSeq
+import Control.State.Transition.Extended qualified as L (PredicateFailure)
 import Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import Data.Text qualified as Text
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl), type (==))

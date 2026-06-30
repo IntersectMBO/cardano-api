@@ -69,12 +69,6 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , extractWitnessableWithdrawals
   , extractWitnessableVotes
   , extractWitnessableProposals
-
-    -- * Legacy conversions
-  , DatumDecodingError (..)
-  , legacyDatumToDatum
-  , fromLegacyTxOut
-  , supplementalDatumFromLegacy
   )
 where
 
@@ -117,7 +111,6 @@ import Cardano.Api.Plutus.Internal.Script
   )
 import Cardano.Api.Plutus.Internal.Script qualified as OldScript
 import Cardano.Api.Plutus.Internal.ScriptData qualified as Api
-import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Cbor (serialiseToCBOR)
 import Cardano.Api.Tx.Internal.Body
   ( CtxTx
@@ -126,7 +119,6 @@ import Cardano.Api.Tx.Internal.Body
   , toShelleyTxIn
   , toShelleyWithdrawal
   )
-import Cardano.Api.Tx.Internal.Output qualified as OldApi
 import Cardano.Api.Tx.Internal.Sign
 import Cardano.Api.Tx.Internal.TxMetadata
 import Cardano.Api.Value.Internal
@@ -145,7 +137,6 @@ import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Language (PlutusBinary (..), plutusLanguage)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
@@ -154,7 +145,6 @@ import Control.Monad
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Base16 qualified as Base16
-import Data.ByteString.Short qualified as SBS
 import Data.Functor
 import Data.List qualified as List
 import Data.Map.Ordered.Strict (OMap)
@@ -170,7 +160,6 @@ import Data.Set qualified as Set
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (cast)
 import GHC.Exts (IsList (..))
-import GHC.Stack (HasCallStack)
 import Lens.Micro
 
 -- | Error that can occur when constructing an unsigned transaction.
@@ -525,63 +514,6 @@ extractDatumsAndHashes :: Datum ctx era -> Maybe (L.DataHash, L.Data era)
 extractDatumsAndHashes TxOutDatumHash{} = Nothing
 extractDatumsAndHashes (TxOutSupplementalDatum h d) = Just (h, d)
 extractDatumsAndHashes (TxOutDatumInline h d) = Just (h, d)
-
-hashableScriptDatumToDatumAndHash :: L.Era era => Api.HashableScriptData -> (L.DataHash, L.Data era)
-hashableScriptDatumToDatumAndHash sd =
-  (Api.unScriptDataHash $ Api.hashScriptDataBytes sd, Api.toAlonzoData sd)
-
-legacyDatumToDatum
-  :: forall era. IsEra era => OldApi.TxOutDatum CtxTx era -> Maybe (Datum CtxTx (LedgerEra era))
-legacyDatumToDatum (OldApi.TxOutDatumHash _ h) = Just (TxOutDatumHash $ Api.unScriptDataHash h)
-legacyDatumToDatum (OldApi.TxOutSupplementalDatum _ hd) = do
-  let (hash, d) = obtainCommonConstraints (useEra @era) $ hashableScriptDatumToDatumAndHash hd
-  Just (TxOutSupplementalDatum hash d)
-legacyDatumToDatum (OldApi.TxOutDatumInline _ hd) = do
-  let (hash, d) = obtainCommonConstraints (useEra @era) $ hashableScriptDatumToDatumAndHash hd
-  Just (TxOutDatumInline hash d)
-legacyDatumToDatum OldApi.TxOutDatumNone = Nothing
-
-fromLegacyTxOut
-  :: forall era
-   . HasCallStack
-  => IsEra era
-  => OldApi.TxOut CtxTx era
-  -> Either DatumDecodingError (TxOut (LedgerEra era), Map L.DataHash (L.Data (LedgerEra era)))
-fromLegacyTxOut tOut@(OldApi.TxOut _ _ d _) = do
-  let o = OldApi.toShelleyTxOutAny (convert $ useEra @era) tOut
-  newDatum :: L.Datum (LedgerEra era) <- obtainCommonConstraints (useEra @era) $ toLedgerDatum d
-  let txOut = obtainCommonConstraints (useEra @era) $ TxOut $ o & L.datumTxOutL .~ newDatum
-      suppDats = obtainCommonConstraints (useEra @era) $ supplementalDatumFromLegacy d
-  return (txOut, suppDats)
-
--- | Extract supplemental datum data from a legacy 'TxOutDatum'.
--- Returns 'mempty' for non-supplemental datums.
-supplementalDatumFromLegacy
-  :: L.Era (LedgerEra era)
-  => OldApi.TxOutDatum CtxTx era
-  -> Map L.DataHash (L.Data (LedgerEra era))
-supplementalDatumFromLegacy (OldApi.TxOutSupplementalDatum _ h) =
-  let ledgerData = Api.toAlonzoData h
-   in fromList [(L.hashData ledgerData, ledgerData)]
-supplementalDatumFromLegacy _ = mempty
-
-newtype DatumDecodingError = DatumDecodingError String
-  deriving (Show, Eq)
-
-instance Error DatumDecodingError where
-  prettyError (DatumDecodingError msg) = "Datum decoding error: " <> pshow msg
-
-toLedgerDatum
-  :: L.Era (LedgerEra era)
-  => OldApi.TxOutDatum CtxTx era -> Either DatumDecodingError (L.Datum (LedgerEra era))
-toLedgerDatum OldApi.TxOutDatumNone = Right L.NoDatum
-toLedgerDatum (OldApi.TxOutDatumHash _ (Api.ScriptDataHash h)) = Right $ L.DatumHash h
-toLedgerDatum (OldApi.TxOutSupplementalDatum _ h) =
-  Right $ L.DatumHash (Api.unScriptDataHash $ Api.hashScriptDataBytes h)
-toLedgerDatum (OldApi.TxOutDatumInline _ h) =
-  case L.makeBinaryData $ SBS.toShort $ Api.getOriginalScriptDataBytes h of
-    Left e -> Left $ DatumDecodingError e
-    Right bd -> Right $ L.Datum bd
 
 data TxInsReference era = TxInsReference [TxIn] (Set (Datum CtxTx era))
 

@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -52,7 +51,6 @@ import Cardano.Ledger.Alonzo.Rules qualified as Alonzo
 import Cardano.Ledger.Alonzo.Rules qualified as L
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Api.State.Query qualified as Ledger
 import Cardano.Ledger.Babbage qualified as Babbage (ApplyTxError (..))
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
 import Cardano.Ledger.Babbage.Rules qualified as Babbage
@@ -129,11 +127,8 @@ import Data.Kind (Constraint, Type)
 import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
 import Data.Map.NonEmpty (NonEmptyMap)
-import Data.Map.NonEmpty qualified as NonEmptyMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid
-import Data.Set.NonEmpty (NonEmptySet)
-import Data.Set.NonEmpty qualified as NonEmptySet
 import Data.Text qualified as T
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -212,12 +207,6 @@ deriving anyclass instance ToJSON L.Voting.Error
 deriving anyclass instance ToJSON L.VotingPeriod
 
 deriving anyclass instance ToJSON L.Withdrawals
-
-instance (ToJSONKey k, ToJSON v) => ToJSON (NonEmptyMap k v) where
-  toJSON = toJSON . NonEmptyMap.toMap
-
-instance ToJSON v => ToJSON (NonEmptySet v) where
-  toJSON = toJSON . NonEmptySet.toSet
 
 deriving anyclass instance
   ( ToJSON (L.PredicateFailure (L.EraRule "UTXOW" ledgerera))
@@ -336,47 +325,6 @@ instance Pretty L.PolicyID where
 
 instance Pretty L.AssetName where
   pretty = pretty . L.assetNameToTextAsHex
-
--- Orphan instances involved in the JSON output of the API queries.
--- We will remove/replace these as we provide more API wrapper types
-
-instance ToJSON Ledger.StakeSnapshots where
-  toJSON = object . stakeSnapshotsToPair
-  toEncoding = pairs . mconcat . stakeSnapshotsToPair
-
-stakeSnapshotsToPair
-  :: Aeson.KeyValue e a => Ledger.StakeSnapshots -> [a]
-stakeSnapshotsToPair
-  Ledger.StakeSnapshots
-    { Ledger.ssStakeSnapshots
-    , Ledger.ssMarkTotal
-    , Ledger.ssSetTotal
-    , Ledger.ssGoTotal
-    } =
-    [ "pools" .= ssStakeSnapshots
-    , "total"
-        .= object
-          [ "stakeMark" .= ssMarkTotal
-          , "stakeSet" .= ssSetTotal
-          , "stakeGo" .= ssGoTotal
-          ]
-    ]
-
-instance ToJSON Ledger.StakeSnapshot where
-  toJSON = object . stakeSnapshotToPair
-  toEncoding = pairs . mconcat . stakeSnapshotToPair
-
-stakeSnapshotToPair :: Aeson.KeyValue e a => Ledger.StakeSnapshot -> [a]
-stakeSnapshotToPair
-  Ledger.StakeSnapshot
-    { Ledger.ssMarkPool
-    , Ledger.ssSetPool
-    , Ledger.ssGoPool
-    } =
-    [ "stakeMark" .= ssMarkPool
-    , "stakeSet" .= ssSetPool
-    , "stakeGo" .= ssGoPool
-    ]
 
 instance ToJSON (OneEraHash xs) where
   toJSON =

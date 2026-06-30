@@ -85,8 +85,6 @@ import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Core qualified as Core
-import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Data qualified as Plutus
 
 import Data.Aeson (object, withObject, (.:), (.:?), (.=))
@@ -186,13 +184,13 @@ convTxOuts
   => ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> [TxOut ctx era]
-  -> Seq.StrictSeq (Ledger.TxOut ledgerera)
+  -> Seq.StrictSeq (L.TxOut ledgerera)
 convTxOuts sbe txOuts = fromList $ map (toShelleyTxOutAny sbe) txOuts
 
 fromLedgerTxOuts
   :: forall era
    . ShelleyBasedEra era
-  -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
+  -> L.TxBody L.TopTx (ShelleyLedgerEra era)
   -> TxBodyScriptData era
   -> [TxOut CtxTx era]
 fromLedgerTxOuts sbe body scriptdata =
@@ -792,7 +790,7 @@ toShelleyTxOut
   => ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> TxOut CtxUTxO era
-  -> Ledger.TxOut ledgerera
+  -> L.TxOut ledgerera
 toShelleyTxOut sbe = shelleyBasedEraConstraints sbe $ \case
   TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
     caseShelleyToMaryOrAlonzoEraOnwards
@@ -832,7 +830,7 @@ toShelleyTxOutAny
   => ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> TxOut ctx era
-  -> Ledger.TxOut ledgerera
+  -> L.TxOut ledgerera
 toShelleyTxOutAny sbe = shelleyBasedEraConstraints sbe $ \case
   TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
     caseShelleyToMaryOrAlonzoEraOnwards
@@ -867,7 +865,7 @@ fromShelleyTxOut
   :: forall era ctx
    . ()
   => ShelleyBasedEra era
-  -> Core.TxOut (ShelleyLedgerEra era)
+  -> L.TxOut (ShelleyLedgerEra era)
   -> TxOut ctx era
 fromShelleyTxOut sbe ledgerTxOut = shelleyBasedEraConstraints sbe $ do
   let txOutValue = TxOutValueShelleyBased sbe $ ledgerTxOut ^. A.valueTxOutL sbe
@@ -949,8 +947,8 @@ data TxOutValue era where
     :: L.Coin
     -> TxOutValue ByronEra
   TxOutValueShelleyBased
-    :: ( Eq (Ledger.Value (ShelleyLedgerEra era))
-       , Show (Ledger.Value (ShelleyLedgerEra era))
+    :: ( Eq (L.Value (ShelleyLedgerEra era))
+       , Show (L.Value (ShelleyLedgerEra era))
        )
     => ShelleyBasedEra era
     -> L.Value (ShelleyLedgerEra era)

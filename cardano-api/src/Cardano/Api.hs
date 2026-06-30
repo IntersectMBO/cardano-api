@@ -11,9 +11,6 @@ module Cardano.Api
   ( -- * Address
     module Cardano.Api.Address
 
-    -- * Certificate
-  , module Cardano.Api.Certificate
-
     -- * Genesis
   , module Cardano.Api.Genesis
 
@@ -78,7 +75,6 @@ where
 
 import Cardano.Api.Address
 import Cardano.Api.Block
-import Cardano.Api.Certificate
 import Cardano.Api.Consensus
 import Cardano.Api.Era
 import Cardano.Api.Error

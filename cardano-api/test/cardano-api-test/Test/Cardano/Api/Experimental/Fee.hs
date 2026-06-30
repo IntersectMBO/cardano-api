@@ -108,6 +108,18 @@ tests =
             "underfunded transaction fails with TxBodyErrorBalanceNegative"
             prop_makeTransactionBodyAutoBalance_balance_negative
         ]
+    , testGroup
+        "evaluateTransaction"
+        [ testProperty
+            "well-funded simple tx returns positive fee"
+            prop_evaluateTransaction_positive_fee
+        , testProperty
+            "script-free tx returns empty execution units map"
+            prop_evaluateTransaction_no_scripts_empty_exunits
+        , testProperty
+            "balanced tx has mempty balance"
+            prop_evaluateSignedTx_balanced_mempty
+        ]
     ]
 
 -- ---------------------------------------------------------------------------
@@ -736,6 +748,73 @@ prop_makeTransactionBodyAutoBalance_balance_negative = H.property $ do
       H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
         >> H.failure
 
+-- | A well-funded transaction returns a positive fee from 'evaluateTransaction'.
+prop_evaluateTransaction_positive_fee :: Property
+prop_evaluateTransaction_positive_fee = H.property $ do
+  (result, _utxo, _unsignedTx, _changeAddr) <- H.forAll evalSimpleTx
+  H.assertWith (Exp.txEvalFee result) (> L.Coin 0)
+
+-- | A script-free transaction returns an empty execution units map.
+prop_evaluateTransaction_no_scripts_empty_exunits :: Property
+prop_evaluateTransaction_no_scripts_empty_exunits = H.property $ do
+  (result, _utxo, _unsignedTx, _changeAddr) <- H.forAll evalSimpleTx
+  H.assertWith (Exp.txEvalExecutionUnits result) Map.null
+
+-- | A transaction whose fee was set by 'calcMinFeeRecursive' has mempty
+-- balance when checked by 'evaluateSignedTx', because the generator
+-- produces a tx whose inputs exactly cover outputs plus the computed fee.
+-- Witnesses are irrelevant for balance checking, so we wrap the ledger tx
+-- directly in 'SignedTx' without calling 'signTx'.
+prop_evaluateSignedTx_balanced_mempty :: Property
+prop_evaluateSignedTx_balanced_mempty = H.property $ do
+  (unsignedTx, utxo, changeAddr) <- H.forAll $ genFundedSimpleTx Exp.ConwayEra
+  Exp.UnsignedTx balancedLedgerTx <-
+    H.leftFail $
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+  let signedTx = Exp.SignedTx balancedLedgerTx
+      systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
+      epochInfo =
+        Api.LedgerEpochInfo $
+          Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+      result =
+        Exp.evaluateSignedTx
+          systemStart
+          epochInfo
+          exampleProtocolParams
+          mempty
+          mempty
+          mempty
+          utxo
+          signedTx
+  Exp.txEvalBalance result H.=== mempty
+
+-- | Evaluate a simple signed transaction, returning the result and UTxO.
+evalSimpleTx
+  :: Gen
+       ( Exp.TxEvaluationResult (Exp.LedgerEra Exp.ConwayEra)
+       , L.UTxO (Exp.LedgerEra Exp.ConwayEra)
+       , Exp.UnsignedTx (Exp.LedgerEra Exp.ConwayEra)
+       , L.Addr
+       )
+evalSimpleTx = do
+  (unsignedTx, utxo, changeAddr) <- genFundedSimpleTx Exp.ConwayEra
+  let signedTx = Exp.signTx Exp.ConwayEra [] [] unsignedTx
+      systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
+      epochInfo =
+        Api.LedgerEpochInfo $
+          Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+      result =
+        Exp.evaluateSignedTx
+          systemStart
+          epochInfo
+          exampleProtocolParams
+          mempty
+          mempty
+          mempty
+          utxo
+          signedTx
+  pure (result, utxo, unsignedTx, changeAddr)
+
 -- | Regression test for the bug where 'mapScriptWitnessesCertificates' silently
 -- dropped certs stored with a @Nothing@ witness (e.g. shelley stake registration
 -- certificates) when rebuilding 'TxCertificates' during fee balancing.
@@ -775,7 +854,7 @@ prop_createCompatibleTx_preserves_all_certs = H.property $ do
   let sbe = convert Exp.ConwayEra
       inputCerts = Exp.mkTxCertificates Exp.ConwayEra allCerts
   Api.ShelleyTx _ ledgerTx <-
-    H.evalEither $ createCompatibleTx sbe [] [] 0 (NoPParamsUpdate sbe) NoVotes inputCerts
+    H.evalEither $ createCompatibleTx sbe [] [] mempty 0 (NoPParamsUpdate sbe) NoVotes inputCerts
   let bodyCerts = ledgerTx ^. L.bodyTxL . L.certsTxBodyL
   Seq.length bodyCerts H.=== expectedCount
 
