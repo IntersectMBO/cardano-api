@@ -41,6 +41,7 @@ import Control.Monad.Catch (MonadThrow)
 import Data.Aeson (ToJSON (toJSON), (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types qualified as Aeson
+import Data.ByteString.Base16 qualified as Base16
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
 import Data.Text qualified as Text
@@ -137,9 +138,9 @@ appendCertificateToTxImpl (UnsignedTxObject era (Exp.UnsignedTx tx)) certCbor = 
   deserialiseCertificate
     :: (HasCallStack, MonadThrow m) => Exp.Era era -> String -> m (Exp.Certificate (Exp.LedgerEra era))
   deserialiseCertificate era' certCbor' =
-    obtainCommonConstraints era' $
-      rightOrError $
-        Api.deserialiseFromCBOR Exp.AsCertificate (Text.encodeUtf8 $ Text.pack certCbor')
+    obtainCommonConstraints era' $ do
+      rawCbor <- rightOrError $ Base16.decode (Text.encodeUtf8 $ Text.pack certCbor')
+      rightOrError $ Api.deserialiseFromCBOR Exp.AsCertificate rawCbor
 
 -- | Set the fee for an unsigned transaction object.
 setFeeImpl :: UnsignedTxObject -> Ledger.Coin -> UnsignedTxObject

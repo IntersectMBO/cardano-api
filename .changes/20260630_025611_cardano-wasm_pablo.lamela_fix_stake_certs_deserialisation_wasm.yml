@@ -1,0 +1,6 @@
+description: Fixed `appendCertificateTx` to decode base16 and not assume it gets CBOR
+  directly.
+kind:
+- bugfix
+pr: 1239
+project: cardano-wasm
