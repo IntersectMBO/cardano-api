@@ -125,6 +125,18 @@ if arch(wasm32)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+-- Needed for all ghc versions due to added aeson >= 2.3 bound.
+allow-newer:
+  , cborg-json:aeson
+  , criterion-measurement:aeson
+  , deriving-aeson:aeson
+  , grapesy:aeson
+  , grpc-spec:aeson
+  , hedgehog-extras:aeson
+  , microstache:aeson
+  , monad-control:transformers
+  , http-api-data:text-iso8601
+
 -- cabal-allow-newer begin
 if impl(ghc >=9.14)
   allow-newer:
