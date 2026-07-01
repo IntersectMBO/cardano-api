@@ -1,0 +1,8 @@
+description: Added `signWithStakeKey` and `alsoSignWithStakeKey` to the `cardano-wasm`
+  API (on `UnsignedTx` and `SignedTx`), allowing transactions to be witnessed with
+  a stake key. This makes stake delegation and (de)registration transactions submittable,
+  as they require a witness from the stake credential.
+kind:
+- feature
+pr: 1240
+project: cardano-wasm

@@ -7,6 +7,7 @@ module Cardano.Wasi.Internal.Conversion
   , cstrToInt
   , txIdToString
   , stringToSigningKey
+  , stringToStakeSigningKey
   )
 where
 
@@ -57,5 +58,10 @@ txIdToString txIdCString = do
 
 stringToSigningKey :: CString -> IO (Api.SigningKey Api.PaymentKey)
 stringToSigningKey signingKeyCString = do
+  string <- peekCString signingKeyCString
+  rightOrError $ Api.deserialiseFromBech32 (Text.pack string)
+
+stringToStakeSigningKey :: CString -> IO (Api.SigningKey Api.StakeKey)
+stringToStakeSigningKey signingKeyCString = do
   string <- peekCString signingKeyCString
   rightOrError $ Api.deserialiseFromBech32 (Text.pack string)

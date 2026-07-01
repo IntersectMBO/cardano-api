@@ -59,6 +59,13 @@ declare interface UnsignedTx {
      * @returns A promise that resolves to a `SignedTx` object.
      */
     signWithPaymentKey(signingKey: string): Promise<SignedTx>;
+
+    /**
+     * Signs the transaction with a stake key.
+     * @param signingKey The signing key to witness the transaction.
+     * @returns A promise that resolves to a `SignedTx` object.
+     */
+    signWithStakeKey(signingKey: string): Promise<SignedTx>;
 }
 
 export default UnsignedTx;

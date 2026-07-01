@@ -20,7 +20,9 @@ module Cardano.Wasm.Api.Tx
   , estimateMinFeeImpl
   , setFeeImpl
   , signWithPaymentKeyImpl
+  , signWithStakeKeyImpl
   , alsoSignWithPaymentKeyImpl
+  , alsoSignWithStakeKeyImpl
   , toCborImpl
   )
 where
@@ -167,6 +169,24 @@ signWithPaymentKeyImpl (UnsignedTxObject era fullUnsignedTx@(Exp.UnsignedTx tx))
           era
           (Exp.SignedTx txWithWits)
 
+-- | Sign an unsigned transaction using a stake key.
+signWithStakeKeyImpl
+  :: UnsignedTxObject -> Api.SigningKey Api.StakeKey -> SignedTxObject
+signWithStakeKeyImpl (UnsignedTxObject era fullUnsignedTx@(Exp.UnsignedTx tx)) signingKey =
+  obtainCommonConstraints era $
+    let witness = Exp.makeKeyWitness era fullUnsignedTx . Api.WitnessStakeKey $ signingKey
+        txWits =
+          Ledger.mkBasicTxWits
+            & Ledger.addrTxWitsL
+              .~ Set.fromList [witness]
+        txWithWits =
+          obtainCommonConstraints
+            era
+            (tx & Ledger.witsTxL .~ txWits)
+     in SignedTxObject
+          era
+          (Exp.SignedTx txWithWits)
+
 newtype ProtocolParamsJSON = ProtocolParamsJSON String
 
 -- | Estimate min fees for an unsigned transaction object.
@@ -232,6 +252,24 @@ alsoSignWithPaymentKeyImpl
 alsoSignWithPaymentKeyImpl (SignedTxObject era (Exp.SignedTx tx)) signingKey =
   obtainCommonConstraints era $
     let witness = Exp.makeKeyWitness era (Exp.UnsignedTx tx) . Api.WitnessPaymentKey $ signingKey
+        txWits =
+          Ledger.mkBasicTxWits
+            & Ledger.addrTxWitsL
+              .~ Set.fromList [witness]
+        txWithWits =
+          obtainCommonConstraints
+            era
+            (tx & Ledger.witsTxL <>~ txWits)
+     in SignedTxObject
+          era
+          (Exp.SignedTx txWithWits)
+
+-- | Add an extra signature to an already signed transaction using a stake key.
+alsoSignWithStakeKeyImpl
+  :: SignedTxObject -> Api.SigningKey Api.StakeKey -> SignedTxObject
+alsoSignWithStakeKeyImpl (SignedTxObject era (Exp.SignedTx tx)) signingKey =
+  obtainCommonConstraints era $
+    let witness = Exp.makeKeyWitness era (Exp.UnsignedTx tx) . Api.WitnessStakeKey $ signingKey
         txWits =
           Ledger.mkBasicTxWits
             & Ledger.addrTxWitsL

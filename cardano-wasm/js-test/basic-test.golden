@@ -17,6 +17,7 @@
     setFee: function (lovelaceAmount) 
     estimateMinFee: function (protocolParams,numKeyWitnesses,numByronKeyWitnesses,totalRefScriptSize) 
     signWithPaymentKey: function (signingKey) 
+    signWithStakeKey: function (signingKey) 
   }
 > "Estimated fee:"
 > 164005n
@@ -24,6 +25,7 @@
 > [object] {
     objectType: SignedTx
     alsoSignWithPaymentKey: function (signingKey) 
+    alsoSignWithStakeKey: function (signingKey) 
     txToCbor: function () 
   }
 > "Tx CBOR:"

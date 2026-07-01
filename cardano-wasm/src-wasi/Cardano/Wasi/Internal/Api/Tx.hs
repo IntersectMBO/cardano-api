@@ -9,7 +9,9 @@ module Cardano.Wasi.Internal.Api.Tx
   , setFee
   , estimateMinFee
   , signWithPaymentKey
+  , signWithStakeKey
   , alsoSignWithPaymentKey
+  , alsoSignWithStakeKey
   , toCbor
   )
 where
@@ -21,6 +23,7 @@ import Cardano.Wasi.Internal.Conversion
   , fromCJSON
   , intToCStr
   , stringToSigningKey
+  , stringToStakeSigningKey
   , toCJSON
   , txIdToString
   )
@@ -58,6 +61,9 @@ foreign export ccall "estimateMinFee"
 
 foreign export ccall "signWithPaymentKey"
   signWithPaymentKey :: UnsignedTxObjectJSON -> CString -> IO SignedTxObjectJSON
+
+foreign export ccall "signWithStakeKey"
+  signWithStakeKey :: UnsignedTxObjectJSON -> CString -> IO SignedTxObjectJSON
 
 #endif
 
@@ -125,12 +131,23 @@ signWithPaymentKey unsignedTxObject signingKeyBech32 =
             <*> stringToSigningKey signingKeyBech32
         )
 
+signWithStakeKey :: UnsignedTxObjectJSON -> CString -> IO SignedTxObjectJSON
+signWithStakeKey unsignedTxObject signingKeyBech32 =
+  toCJSON
+    =<< ( signWithStakeKeyImpl
+            <$> fromCJSON True "UnsignedTx" unsignedTxObject
+            <*> stringToStakeSigningKey signingKeyBech32
+        )
+
 -- * SignedTxObject
 
 #if defined(wasm32_HOST_ARCH)
 
 foreign export ccall "alsoSignWithPaymentKey"
   alsoSignWithPaymentKey :: SignedTxObjectJSON -> CString -> IO SignedTxObjectJSON
+
+foreign export ccall "alsoSignWithStakeKey"
+  alsoSignWithStakeKey :: SignedTxObjectJSON -> CString -> IO SignedTxObjectJSON
 
 foreign export ccall "toCbor"
   toCbor :: SignedTxObjectJSON -> IO CString
@@ -145,6 +162,14 @@ alsoSignWithPaymentKey signedTxObject signingKeyBech32 =
     =<< ( alsoSignWithPaymentKeyImpl
             <$> fromCJSON True "SignedTx" signedTxObject
             <*> stringToSigningKey signingKeyBech32
+        )
+
+alsoSignWithStakeKey :: SignedTxObjectJSON -> CString -> IO SignedTxObjectJSON
+alsoSignWithStakeKey signedTxObject signingKeyBech32 =
+  toCJSON
+    =<< ( alsoSignWithStakeKeyImpl
+            <$> fromCJSON True "SignedTx" signedTxObject
+            <*> stringToStakeSigningKey signingKeyBech32
         )
 
 toCbor :: SignedTxObjectJSON -> IO CString
