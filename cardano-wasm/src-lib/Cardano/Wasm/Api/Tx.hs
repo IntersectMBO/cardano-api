@@ -151,12 +151,12 @@ setFeeImpl (UnsignedTxObject era (Exp.UnsignedTx tx)) fee =
     let tx' = tx & Ledger.bodyTxL . Ledger.feeTxBodyL .~ fee
      in UnsignedTxObject era $ Exp.UnsignedTx tx'
 
--- | Sign an unsigned transaction using a payment key.
-signWithPaymentKeyImpl
-  :: UnsignedTxObject -> Api.SigningKey Api.PaymentKey -> SignedTxObject
-signWithPaymentKeyImpl (UnsignedTxObject era fullUnsignedTx@(Exp.UnsignedTx tx)) signingKey =
+-- | Sign an unsigned transaction using any witness signing key.
+signWithKeyImpl
+  :: UnsignedTxObject -> Api.ShelleyWitnessSigningKey -> SignedTxObject
+signWithKeyImpl (UnsignedTxObject era fullUnsignedTx@(Exp.UnsignedTx tx)) witnessSigningKey =
   obtainCommonConstraints era $
-    let witness = Exp.makeKeyWitness era fullUnsignedTx . Api.WitnessPaymentKey $ signingKey
+    let witness = Exp.makeKeyWitness era fullUnsignedTx witnessSigningKey
         txWits =
           Ledger.mkBasicTxWits
             & Ledger.addrTxWitsL
@@ -169,23 +169,15 @@ signWithPaymentKeyImpl (UnsignedTxObject era fullUnsignedTx@(Exp.UnsignedTx tx))
           era
           (Exp.SignedTx txWithWits)
 
+-- | Sign an unsigned transaction using a payment key.
+signWithPaymentKeyImpl
+  :: UnsignedTxObject -> Api.SigningKey Api.PaymentKey -> SignedTxObject
+signWithPaymentKeyImpl unsignedTxObject = signWithKeyImpl unsignedTxObject . Api.WitnessPaymentKey
+
 -- | Sign an unsigned transaction using a stake key.
 signWithStakeKeyImpl
   :: UnsignedTxObject -> Api.SigningKey Api.StakeKey -> SignedTxObject
-signWithStakeKeyImpl (UnsignedTxObject era fullUnsignedTx@(Exp.UnsignedTx tx)) signingKey =
-  obtainCommonConstraints era $
-    let witness = Exp.makeKeyWitness era fullUnsignedTx . Api.WitnessStakeKey $ signingKey
-        txWits =
-          Ledger.mkBasicTxWits
-            & Ledger.addrTxWitsL
-              .~ Set.fromList [witness]
-        txWithWits =
-          obtainCommonConstraints
-            era
-            (tx & Ledger.witsTxL .~ txWits)
-     in SignedTxObject
-          era
-          (Exp.SignedTx txWithWits)
+signWithStakeKeyImpl unsignedTxObject = signWithKeyImpl unsignedTxObject . Api.WitnessStakeKey
 
 newtype ProtocolParamsJSON = ProtocolParamsJSON String
 
@@ -246,12 +238,12 @@ instance FromJSON SignedTxObject where
       return $
         SignedTxObject era decodedTx
 
--- | Add an extra signature to an already signed transaction using a payment key.
-alsoSignWithPaymentKeyImpl
-  :: SignedTxObject -> Api.SigningKey Api.PaymentKey -> SignedTxObject
-alsoSignWithPaymentKeyImpl (SignedTxObject era (Exp.SignedTx tx)) signingKey =
+-- | Add an extra signature to an already signed transaction using any witness signing key.
+alsoSignWithKeyImpl
+  :: SignedTxObject -> Api.ShelleyWitnessSigningKey -> SignedTxObject
+alsoSignWithKeyImpl (SignedTxObject era (Exp.SignedTx tx)) witnessSigningKey =
   obtainCommonConstraints era $
-    let witness = Exp.makeKeyWitness era (Exp.UnsignedTx tx) . Api.WitnessPaymentKey $ signingKey
+    let witness = Exp.makeKeyWitness era (Exp.UnsignedTx tx) witnessSigningKey
         txWits =
           Ledger.mkBasicTxWits
             & Ledger.addrTxWitsL
@@ -264,23 +256,15 @@ alsoSignWithPaymentKeyImpl (SignedTxObject era (Exp.SignedTx tx)) signingKey =
           era
           (Exp.SignedTx txWithWits)
 
+-- | Add an extra signature to an already signed transaction using a payment key.
+alsoSignWithPaymentKeyImpl
+  :: SignedTxObject -> Api.SigningKey Api.PaymentKey -> SignedTxObject
+alsoSignWithPaymentKeyImpl signedTxObject = alsoSignWithKeyImpl signedTxObject . Api.WitnessPaymentKey
+
 -- | Add an extra signature to an already signed transaction using a stake key.
 alsoSignWithStakeKeyImpl
   :: SignedTxObject -> Api.SigningKey Api.StakeKey -> SignedTxObject
-alsoSignWithStakeKeyImpl (SignedTxObject era (Exp.SignedTx tx)) signingKey =
-  obtainCommonConstraints era $
-    let witness = Exp.makeKeyWitness era (Exp.UnsignedTx tx) . Api.WitnessStakeKey $ signingKey
-        txWits =
-          Ledger.mkBasicTxWits
-            & Ledger.addrTxWitsL
-              .~ Set.fromList [witness]
-        txWithWits =
-          obtainCommonConstraints
-            era
-            (tx & Ledger.witsTxL <>~ txWits)
-     in SignedTxObject
-          era
-          (Exp.SignedTx txWithWits)
+alsoSignWithStakeKeyImpl signedTxObject = alsoSignWithKeyImpl signedTxObject . Api.WitnessStakeKey
 
 -- | Convert a signed transaction object to a base16 encoded string of its CBOR representation.
 toCborImpl :: SignedTxObject -> String
