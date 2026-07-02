@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Cardano.Wasi.Internal.Conversion
   ( toCJSON
@@ -7,7 +8,6 @@ module Cardano.Wasi.Internal.Conversion
   , cstrToInt
   , txIdToString
   , stringToSigningKey
-  , stringToStakeSigningKey
   )
 where
 
@@ -56,12 +56,8 @@ txIdToString txIdCString = do
   txId <- peekCString txIdCString
   rightOrError $ Api.deserialiseFromRawBytesHex (fromString txId)
 
-stringToSigningKey :: CString -> IO (Api.SigningKey Api.PaymentKey)
+stringToSigningKey
+  :: Api.SerialiseAsBech32 (Api.SigningKey keyrole) => CString -> IO (Api.SigningKey keyrole)
 stringToSigningKey signingKeyCString = do
-  string <- peekCString signingKeyCString
-  rightOrError $ Api.deserialiseFromBech32 (Text.pack string)
-
-stringToStakeSigningKey :: CString -> IO (Api.SigningKey Api.StakeKey)
-stringToStakeSigningKey signingKeyCString = do
   string <- peekCString signingKeyCString
   rightOrError $ Api.deserialiseFromBech32 (Text.pack string)

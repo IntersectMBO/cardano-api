@@ -23,7 +23,6 @@ import Cardano.Wasi.Internal.Conversion
   , fromCJSON
   , intToCStr
   , stringToSigningKey
-  , stringToStakeSigningKey
   , toCJSON
   , txIdToString
   )
@@ -136,7 +135,7 @@ signWithStakeKey unsignedTxObject signingKeyBech32 =
   toCJSON
     =<< ( signWithStakeKeyImpl
             <$> fromCJSON True "UnsignedTx" unsignedTxObject
-            <*> stringToStakeSigningKey signingKeyBech32
+            <*> stringToSigningKey signingKeyBech32
         )
 
 -- * SignedTxObject
@@ -169,7 +168,7 @@ alsoSignWithStakeKey signedTxObject signingKeyBech32 =
   toCJSON
     =<< ( alsoSignWithStakeKeyImpl
             <$> fromCJSON True "SignedTx" signedTxObject
-            <*> stringToStakeSigningKey signingKeyBech32
+            <*> stringToSigningKey signingKeyBech32
         )
 
 toCbor :: SignedTxObjectJSON -> IO CString
