@@ -56,19 +56,19 @@ readParamsMethod _req = do
   let sbe = convert eon
 
   let target = VolatileTip
-  (pparams, chainPoint, blockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+  (pparams, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
     pparams <- throwEither =<< throwEither =<< queryProtocolParameters sbe
     chainPoint <- throwEither =<< queryChainPoint
-    blockNo <- throwEither =<< queryChainBlockNo
+    chainBlockNo <- throwEither =<< queryChainBlockNo
     systemStart <- throwEither =<< querySystemStart
     eraHistory <- throwEither =<< queryEraHistory
-    pure (pparams, chainPoint, blockNo, systemStart, eraHistory)
+    pure (pparams, chainPoint, chainBlockNo, systemStart, eraHistory)
 
   timestamp <- slotToTimestamp systemStart eraHistory chainPoint
 
   pure $
     def
-      & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo timestamp
+      & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
       & U5c.values . U5c.cardano .~ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
 
 -- | Handle the @ReadUtxos@ RPC method.
@@ -90,19 +90,19 @@ readUtxosMethod req
       eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
 
       let target = VolatileTip
-      (utxo, chainPoint, blockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+      (utxo, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
         utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
         chainPoint <- throwEither =<< queryChainPoint
-        blockNo <- throwEither =<< queryChainBlockNo
+        chainBlockNo <- throwEither =<< queryChainBlockNo
         systemStart <- throwEither =<< querySystemStart
         eraHistory <- throwEither =<< queryEraHistory
-        pure (utxo, chainPoint, blockNo, systemStart, eraHistory)
+        pure (utxo, chainPoint, chainBlockNo, systemStart, eraHistory)
 
       timestamp <- slotToTimestamp systemStart eraHistory chainPoint
 
       pure $
         defMessage
-          & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo timestamp
+          & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
           & U5c.items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
  where
   txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
@@ -136,13 +136,13 @@ searchUtxosMethod req = do
   eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
 
   let target = VolatileTip
-  (utxo, chainPoint, blockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+  (utxo, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
     utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
     chainPoint <- throwEither =<< queryChainPoint
-    blockNo <- throwEither =<< queryChainBlockNo
+    chainBlockNo <- throwEither =<< queryChainBlockNo
     systemStart <- throwEither =<< querySystemStart
     eraHistory <- throwEither =<< queryEraHistory
-    pure (utxo, chainPoint, blockNo, systemStart, eraHistory)
+    pure (utxo, chainPoint, chainBlockNo, systemStart, eraHistory)
 
   timestamp <- slotToTimestamp systemStart eraHistory chainPoint
 
@@ -155,7 +155,7 @@ searchUtxosMethod req = do
 
     pure $
       defMessage
-        & U5c.ledgerTip .~ mkChainPointMsg chainPoint blockNo timestamp
+        & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
         & U5c.items .~ map (uncurry txInTxOutToAnyUtxoData) page
         & U5c.maybe'nextToken .~ nextTok
 
