@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1242
+kind:
+  - compatible
+description: |
+  Re-export more consensus types from Cardano.Api.Consensus for node kernel access: getCurrentLedger, TopLevelConfig, configLedger, configBlock, ledgerState, HasHardForkHistory(..), ConfigSupportsNode, mkInterpreter. Add nodeSystemStart helper extracting SystemStart from TopLevelConfig.

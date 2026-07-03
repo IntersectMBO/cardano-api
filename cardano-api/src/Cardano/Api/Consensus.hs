@@ -45,6 +45,7 @@ module Cardano.Api.Consensus
   , ProtocolInfoArgs (..)
   , ProtocolClient (..)
   , ProtocolClientInfoArgs (..)
+  , nodeSystemStart
 
     -- * Reexports from @ouroboros-consensus@
   , BlockComponent (..)
@@ -52,9 +53,12 @@ module Cardano.Api.Consensus
   , CardanoBlock
   , ChainDB.ChainDB
   , ChainDB.getBlockComponent
+  , ChainDB.getCurrentLedger
+  , ConfigSupportsNode
   , ChainDepState
   , GenTx (..)
   , EraMismatch (..)
+  , HasHardForkHistory (..)
   , HasHeader
   , HeaderHash
   , NodeKernel (..)
@@ -65,11 +69,16 @@ module Cardano.Api.Consensus
   , RealPoint (..)
   , ShelleyGenesisStaking (..)
   , StandardCrypto
+  , TopLevelConfig
+  , ledgerState
   , blockNo
   , byronIdTx
+  , configBlock
+  , configLedger
   , condense
   , getOpCertCounters
   , interpreterToEpochInfo
+  , mkInterpreter
   , unsafeExtendSafeZone
   , txId
   )
