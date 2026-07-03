@@ -24,6 +24,7 @@ where
 import Cardano.Api
 import Cardano.Rpc.Server.Internal.Env
 import Cardano.Rpc.Server.Internal.Tracing
+import Cardano.Rpc.Server.NodeKernelAccess.Type (NodeKernelAccess)
 
 import RIO
 
@@ -40,6 +41,9 @@ instance Has a a where
 
 instance Has LocalNodeConnectInfo RpcEnv where
   obtain RpcEnv{rpcLocalNodeConnectInfo} = rpcLocalNodeConnectInfo
+
+instance Has (IORef (Maybe NodeKernelAccess)) RpcEnv where
+  obtain RpcEnv{rpcNodeKernelAccess} = rpcNodeKernelAccess
 
 instance MonadIO m => Has (Tracer m TraceRpc) RpcEnv where
   obtain RpcEnv{tracer} = tracer
@@ -92,6 +96,7 @@ wrapInSpan spanConstructor act = do
 type MonadRpc e m =
   ( Has (Tracer m TraceRpc) e
   , Has LocalNodeConnectInfo e
+  , Has (IORef (Maybe NodeKernelAccess)) e
   , HasCallStack
   , MonadReader e m
   , MonadUnliftIO m

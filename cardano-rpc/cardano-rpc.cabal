@@ -51,6 +51,7 @@ library
     Cardano.Rpc.Proto.Api.Node
     Cardano.Rpc.Proto.Api.UtxoRpc.Query
     Cardano.Rpc.Proto.Api.UtxoRpc.Submit
+    Cardano.Rpc.Proto.Api.UtxoRpc.Sync
     Cardano.Rpc.Server
     Cardano.Rpc.Server.Config
     Cardano.Rpc.Server.Internal.Env
@@ -62,7 +63,10 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
     Cardano.Rpc.Server.Internal.UtxoRpc.Submit
+    Cardano.Rpc.Server.Internal.UtxoRpc.Sync
     Cardano.Rpc.Server.Internal.UtxoRpc.Type
+    Cardano.Rpc.Server.NodeKernelAccess
+    Cardano.Rpc.Server.NodeKernelAccess.Type
 
   other-modules:
     Cardano.Rpc.Server.Internal.Orphans
@@ -111,6 +115,8 @@ library gen
     Proto.Utxorpc.V1beta.Query.Query_Fields
     Proto.Utxorpc.V1beta.Submit.Submit
     Proto.Utxorpc.V1beta.Submit.Submit_Fields
+    Proto.Utxorpc.V1beta.Sync.Sync
+    Proto.Utxorpc.V1beta.Sync.Sync_Fields
 
   build-depends:
     proto-lens-protobuf-types,

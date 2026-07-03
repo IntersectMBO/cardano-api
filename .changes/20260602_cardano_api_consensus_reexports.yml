@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1232
+kind:
+  - compatible
+description: |
+  Re-export consensus types from Cardano.Api.Consensus for node kernel access: NodeKernel, ChainDB, BlockComponent, RealPoint, OneEraHash, HeaderHash, HasHeader, BlockType, StandardCrypto, CardanoBlock, blockNo.

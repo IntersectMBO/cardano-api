@@ -1,0 +1,7 @@
+project: cardano-rpc
+pr: 1232
+kind:
+  - feature
+  - breaking
+description: |
+  Implement FetchBlock SyncService method via node kernel access. Fetches blocks from ChainDB with raw CBOR bytes and cardano block header (slot, hash, height). Breaking: `runRpcServer` signature now takes `IORef (Maybe NodeKernelAccess)` for node kernel access.
