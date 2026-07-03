@@ -52,9 +52,13 @@ module Cardano.Api.Consensus
   , CardanoBlock
   , ChainDB.ChainDB
   , ChainDB.getBlockComponent
+  , ChainDB.getCurrentLedger
+  , ConfigSupportsNode
+  , nodeSystemStart
   , ChainDepState
   , GenTx (..)
   , EraMismatch (..)
+  , HasHardForkHistory (..)
   , HasHeader
   , HeaderHash
   , NodeKernel (..)
@@ -65,11 +69,16 @@ module Cardano.Api.Consensus
   , RealPoint (..)
   , ShelleyGenesisStaking (..)
   , StandardCrypto
+  , TopLevelConfig
+  , ledgerState
   , blockNo
   , byronIdTx
+  , configBlock
+  , configLedger
   , condense
   , getOpCertCounters
   , interpreterToEpochInfo
+  , mkInterpreter
   , unsafeExtendSafeZone
   , txId
   )
