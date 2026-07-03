@@ -182,6 +182,11 @@ instance FromJSVal JSSigningKey (Api.SigningKey Api.PaymentKey) where
   fromJSVal jsString = do
     rightOrError $ Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
 
+instance FromJSVal JSSigningKey (Api.SigningKey Api.StakeKey) where
+  fromJSVal :: HasCallStack => JSSigningKey -> IO (Api.SigningKey Api.StakeKey)
+  fromJSVal jsString = do
+    rightOrError $ Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
+
 instance FromJSVal JSTxId Api.TxId where
   fromJSVal :: HasCallStack => JSTxId -> IO Api.TxId
   fromJSVal jsString = do
@@ -382,6 +387,9 @@ foreign export javascript "estimateMinFee"
 foreign export javascript "signWithPaymentKey"
   signWithPaymentKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
 
+foreign export javascript "signWithStakeKey"
+  signWithStakeKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
+
 -- | Create a new unsigned transaction in the current era.
 newTx :: HasCallStack => IO JSUnsignedTx
 newTx = toJSVal Wasm.newTxImpl
@@ -511,10 +519,22 @@ signWithPaymentKey jsUnsignedTx jsSigningKey =
             <*> fromJSVal jsSigningKey
         )
 
+-- | Sign an unsigned transaction with a stake key.
+signWithStakeKey :: HasCallStack => JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
+signWithStakeKey jsUnsignedTx jsSigningKey =
+  toJSVal
+    =<< ( Wasm.signWithStakeKeyImpl
+            <$> fromJSVal jsUnsignedTx
+            <*> fromJSVal jsSigningKey
+        )
+
 -- * SignedTxObject
 
 foreign export javascript "alsoSignWithPaymentKey"
   alsoSignWithPaymentKey :: JSSignedTx -> JSSigningKey -> IO JSSignedTx
+
+foreign export javascript "alsoSignWithStakeKey"
+  alsoSignWithStakeKey :: JSSignedTx -> JSSigningKey -> IO JSSignedTx
 
 foreign export javascript "txToCbor"
   txToCbor :: JSSignedTx -> IO JSString
@@ -524,6 +544,15 @@ alsoSignWithPaymentKey :: HasCallStack => JSSignedTx -> JSSigningKey -> IO JSSig
 alsoSignWithPaymentKey jsSignedTx jsSigningKey =
   toJSVal
     =<< ( Wasm.alsoSignWithPaymentKeyImpl
+            <$> fromJSVal jsSignedTx
+            <*> fromJSVal jsSigningKey
+        )
+
+-- | Add an extra signature to a signed transaction with a stake key.
+alsoSignWithStakeKey :: HasCallStack => JSSignedTx -> JSSigningKey -> IO JSSignedTx
+alsoSignWithStakeKey jsSignedTx jsSigningKey =
+  toJSVal
+    =<< ( Wasm.alsoSignWithStakeKeyImpl
             <$> fromJSVal jsSignedTx
             <*> fromJSVal jsSigningKey
         )

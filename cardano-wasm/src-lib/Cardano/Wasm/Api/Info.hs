@@ -365,6 +365,15 @@ apiInfo =
                     , methodReturnType = NewObject (virtualObjectName signedTxObj)
                     , methodReturnDoc = "A promise that resolves to a `SignedTx` object."
                     }
+              , MethodInfoEntry $
+                  MethodInfo
+                    { methodName = "signWithStakeKey"
+                    , methodSimpleName = Nothing
+                    , methodDoc = "Signs the transaction with a stake key."
+                    , methodParams = [ParamInfo "signingKey" TSString "The signing key to witness the transaction."]
+                    , methodReturnType = NewObject (virtualObjectName signedTxObj)
+                    , methodReturnDoc = "A promise that resolves to a `SignedTx` object."
+                    }
               ]
           }
 
@@ -378,6 +387,15 @@ apiInfo =
                     { methodName = "alsoSignWithPaymentKey"
                     , methodSimpleName = Nothing
                     , methodDoc = "Adds an extra signature to the transaction with a payment key."
+                    , methodParams = [ParamInfo "signingKey" TSString "The signing key to witness the transaction."]
+                    , methodReturnType = Fluent
+                    , methodReturnDoc = "The `SignedTx` object with the additional signature."
+                    }
+              , MethodInfoEntry $
+                  MethodInfo
+                    { methodName = "alsoSignWithStakeKey"
+                    , methodSimpleName = Nothing
+                    , methodDoc = "Adds an extra signature to the transaction with a stake key."
                     , methodParams = [ParamInfo "signingKey" TSString "The signing key to witness the transaction."]
                     , methodReturnType = Fluent
                     , methodReturnDoc = "The `SignedTx` object with the additional signature."

@@ -19,6 +19,13 @@ declare interface SignedTx {
     alsoSignWithPaymentKey(signingKey: string): SignedTx;
 
     /**
+     * Adds an extra signature to the transaction with a stake key.
+     * @param signingKey The signing key to witness the transaction.
+     * @returns The `SignedTx` object with the additional signature.
+     */
+    alsoSignWithStakeKey(signingKey: string): SignedTx;
+
+    /**
      * Converts the signed transaction to its CBOR representation.
      * @returns A promise that resolves to the CBOR representation of the transaction as a hex string.
      */
