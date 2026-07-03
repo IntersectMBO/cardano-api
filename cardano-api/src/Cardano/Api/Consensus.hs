@@ -47,14 +47,25 @@ module Cardano.Api.Consensus
   , ProtocolClientInfoArgs (..)
 
     -- * Reexports from @ouroboros-consensus@
+  , BlockComponent (..)
   , ByronBlock
+  , CardanoBlock
+  , ChainDB.ChainDB
+  , ChainDB.getBlockComponent
   , ChainDepState
   , GenTx (..)
   , EraMismatch (..)
+  , HasHeader
+  , HeaderHash
+  , NodeKernel (..)
+  , OneEraHash (..)
   , PastHorizonException
   , PraosProtocolSupportsNode
   , PraosProtocolSupportsNodeCrypto
+  , RealPoint (..)
   , ShelleyGenesisStaking (..)
+  , StandardCrypto
+  , blockNo
   , byronIdTx
   , condense
   , getOpCertCounters
@@ -68,3 +79,5 @@ import Cardano.Api.Consensus.Internal.InMode
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Consensus.Internal.Protocol
 import Cardano.Api.Consensus.Internal.Reexport
+
+import Ouroboros.Consensus.Storage.ChainDB qualified as ChainDB
