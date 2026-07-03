@@ -4,6 +4,7 @@
 -- | Provides datatypes used in tracing
 module Cardano.Rpc.Server.Internal.Tracing where
 
+import Cardano.Api (SlotNo)
 import Cardano.Api.Consensus (TxValidationErrorInCardanoMode)
 import Cardano.Api.Era (Inject (..))
 import Cardano.Api.Error
@@ -19,6 +20,7 @@ import Data.Word (Word64)
 data TraceRpc
   = TraceRpcQuery TraceRpcQuery
   | TraceRpcSubmit TraceRpcSubmit
+  | TraceRpcSync TraceRpcSync
   | TraceRpcError SomeException
   | TraceRpcFatalError SomeException
 
@@ -36,6 +38,7 @@ instance Pretty TraceRpc where
   pretty = \case
     TraceRpcQuery t -> pretty t
     TraceRpcSubmit t -> pretty t
+    TraceRpcSync t -> pretty t
     TraceRpcError e -> "Exception when processing RPC request:\n" <> prettyException e
     TraceRpcFatalError e -> "RPC server fatal error: " <> prettyException e
 
@@ -64,7 +67,7 @@ instance Error TraceRpcQuery where
 
 -- | Traces used in SubmitTx service
 data TraceRpcSubmit
-  = -- | Node-to-client exception
+  = -- | Node-to-client connection error during submission
     TraceRpcSubmitN2cConnectionError SomeException
   | -- | Transaction deserialisation error
     TraceRpcSubmitTxDecodingError DecoderError
@@ -92,8 +95,34 @@ instance Pretty TraceRpcSubmit where
 instance Error TraceRpcSubmit where
   prettyError = pretty
 
+-- | Traces used in SyncService (FetchBlock, FollowTip)
+data TraceRpcSync
+  = -- | FetchBlock span
+    TraceRpcFetchBlockSpan TraceSpanEvent
+  | -- | Requested block was not found
+    TraceRpcFetchBlockNotFound SlotNo
+  | -- | Node kernel access is not yet available
+    TraceRpcNodeKernelAccessUnavailable
+  | -- | Ledger forker error
+    TraceRpcForkerError String
+  deriving Show
+
+instance Pretty TraceRpcSync where
+  pretty = \case
+    TraceRpcFetchBlockSpan (SpanBegin _) -> "Started FetchBlock method"
+    TraceRpcFetchBlockSpan (SpanEnd _) -> "Finished FetchBlock method"
+    TraceRpcFetchBlockNotFound slot -> "Block not found at slot " <> pshow slot
+    TraceRpcNodeKernelAccessUnavailable -> "Node kernel access not yet initialised"
+    TraceRpcForkerError e -> "Ledger forker error: " <> pretty e
+
+instance Error TraceRpcSync where
+  prettyError = pretty
+
 instance Inject TraceRpcSubmit TraceRpc where
   inject = TraceRpcSubmit
 
 instance Inject TraceRpcQuery TraceRpc where
   inject = TraceRpcQuery
+
+instance Inject TraceRpcSync TraceRpc where
+  inject = TraceRpcSync
