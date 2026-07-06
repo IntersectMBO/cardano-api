@@ -13,8 +13,10 @@ Enter the Nix shell by writing `nix develop .#wasm` on a shell in this folder an
 For the installation we will need some dependencies. In Debian based distros we can install them using apt like this:
 
 ```bash
-sudo apt install happy pkgconf libtool git wget curl jq unzip zstd tar gzip
+sudo apt install happy pkgconf libtool make automake autoconf file git wget curl jq unzip zstd tar gzip
 ```
+
+(`jq`, `unzip`, `zstd`, `wget` and `curl` are needed by ghc-wasm-meta's installer rather than by the build itself, and `happy` is needed by some Haskell dependencies during the build.)
 
 #### Installing `ghc` for wasm
 
@@ -40,7 +42,17 @@ And that should not return:
 wasm32-wasi-ghc: command not found
 ```
 
+If the reported version is not 9.10.x, double-check the `FLAVOUR` used above before continuing: with a different `base` version the build will only fail much later, with confusing dependency resolution errors.
+
 Then we need to compile three libraries to WASM: `libblst`, `libsodium`, and `libsecp256k1`.
+
+The script [`scripts/wasm-without-nix/build-wasm-libs.sh`](../scripts/wasm-without-nix/build-wasm-libs.sh) automates all the steps in this section: it builds the same pinned versions of the libraries as the Nix build, installs them into a prefix of your choice, verifies the results are really wasm, and generates a `cabal.project` fragment that points the build at them. From the root of this repository run:
+
+```bash
+PREFIX=wasm-libs SRC_ROOT=wasm-libs-src ./scripts/wasm-without-nix/build-wasm-libs.sh
+```
+
+and then follow the instructions it prints at the end (in particular, exporting `PKG_CONFIG_PATH`). In that case you can skip straight to the [Compiling `cardano-wasm` section](#compiling-cardano-wasm). The rest of this section explains the equivalent manual steps.
 
 In order to not interfere with the system library installation, we will create a folder to serve as our prefix:
 
