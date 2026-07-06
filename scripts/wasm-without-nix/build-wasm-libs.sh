@@ -249,7 +249,7 @@ verify_wasm() {
     local tmp
     tmp="$(mktemp -d)"
     ( cd "$tmp" && ar x "$archive" && \
-      first_obj="$(ls *.o 2>/dev/null | head -1)" && \
+      first_obj="$(find . -maxdepth 1 -name '*.o' -print -quit)" && \
       [ -n "$first_obj" ] && file "$first_obj" | grep -q WebAssembly )
     local rc=$?
     rm -rf "$tmp"
