@@ -1,0 +1,7 @@
+project: cardano-wasm
+pr: 1194
+kind:
+  - maintenance
+description: |
+  Add `scripts/wasm-without-nix/build-wasm-libs.sh` for building the wasm32-wasi
+  C library dependencies (libsodium, libsecp256k1, libblst) without Nix
