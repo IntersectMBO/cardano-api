@@ -15,6 +15,8 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   , txInTxOutToAnyUtxoData
   , anyUtxoDataUtxoRpcToUtxo
   , txOutToUtxoRpcTxOutput
+  , txToUtxoRpcTx
+  , txoRefUtxoRpcToTxIn
   , utxoRpcTxOutputToTxOut
   , protocolParamsToUtxoRpcPParams
   , simpleScriptToUtxoRpcNativeScript
@@ -46,13 +48,17 @@ import Cardano.Api.Value
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Orphans ()
+import Cardano.Rpc.Server.Internal.UtxoRpc.Certificate (txCertToUtxoRpcCertificate)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Governance (proposalProcedureToUtxoRpcProposal)
 
 import Cardano.Binary qualified as CBOR
+import Cardano.Crypto.DSIGN.Class qualified as DSIGN
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (WithOrigin (..))
 import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Conway.PParams qualified as L
+import Cardano.Ledger.Keys.Bootstrap qualified as L
 import Cardano.Ledger.Plutus qualified as L
 
 import RIO hiding (toList)
@@ -428,17 +434,22 @@ utxoRpcNativeScriptToSimpleScript scriptRpc
 referenceScriptToUtxoRpcScript :: ReferenceScript era -> Proto UtxoRpc.Script
 referenceScriptToUtxoRpcScript ReferenceScriptNone = defMessage
 referenceScriptToUtxoRpcScript (ReferenceScript _ (ScriptInAnyLang _ script)) =
-  case script of
-    SimpleScript ss ->
-      defMessage & U5c.native .~ simpleScriptToUtxoRpcNativeScript ss
-    PlutusScript PlutusScriptV1 ps ->
-      defMessage & U5c.plutusV1 .~ serialiseToRawBytes ps
-    PlutusScript PlutusScriptV2 ps ->
-      defMessage & U5c.plutusV2 .~ serialiseToRawBytes ps
-    PlutusScript PlutusScriptV3 ps ->
-      defMessage & U5c.plutusV3 .~ serialiseToRawBytes ps
-    PlutusScript PlutusScriptV4 ps ->
-      defMessage & U5c.plutusV4 .~ serialiseToRawBytes ps
+  scriptToUtxoRpcScript script
+
+-- | Convert a script to the UTxO RPC 'UtxoRpc.Script' message, dispatching on
+-- the script language to select the corresponding oneof field.
+scriptToUtxoRpcScript :: Script lang -> Proto UtxoRpc.Script
+scriptToUtxoRpcScript = \case
+  SimpleScript ss ->
+    defMessage & U5c.native .~ simpleScriptToUtxoRpcNativeScript ss
+  PlutusScript PlutusScriptV1 ps ->
+    defMessage & U5c.plutusV1 .~ serialiseToRawBytes ps
+  PlutusScript PlutusScriptV2 ps ->
+    defMessage & U5c.plutusV2 .~ serialiseToRawBytes ps
+  PlutusScript PlutusScriptV3 ps ->
+    defMessage & U5c.plutusV3 .~ serialiseToRawBytes ps
+  PlutusScript PlutusScriptV4 ps ->
+    defMessage & U5c.plutusV4 .~ serialiseToRawBytes ps
 
 utxoRpcScriptToReferenceScript
   :: forall era m
@@ -538,7 +549,7 @@ txInTxOutToAnyUtxoData txIn txOut = do
   defMessage
     & U5c.nativeBytes .~ txOutCbor
     & U5c.txoRef .~ inject txIn
-    & U5c.cardano .~ txOutToUtxoRpcTxOutput txOut
+    & U5c.cardano .~ txOutToUtxoRpcTxOutput (convert era) txOut
 
 anyUtxoDataUtxoRpcToUtxo
   :: forall era m
@@ -571,26 +582,28 @@ txoRefUtxoRpcToTxIn txoRef = do
         txoRef ^. U5c.hash
   pure $ TxIn txId' (TxIx . fromIntegral $ txoRef ^. U5c.index)
 
-txOutToUtxoRpcTxOutput
-  :: forall era
-   . IsEra era
-  => TxOut CtxUTxO era
-  -> Proto UtxoRpc.TxOutput
-txOutToUtxoRpcTxOutput (TxOut addressInEra txOutValue datum script) = do
-  let multiAsset =
-        fromList $
-          toList (valueToPolicyAssets $ txOutValueToValue txOutValue) <&> \(pId, policyAssets) -> do
-            let assets =
-                  toList policyAssets <&> \(assetName, Quantity qty) -> do
-                    defMessage
-                      & U5c.name .~ serialiseToRawBytes assetName
-                      -- we don't have access to info if the coin was minted in the transaction,
-                      -- maybe we should add it later
-                      -- & U5c.maybe'mintCoin .~ Nothing
-                      & U5c.quantity .~ inject qty
+-- | Convert per-policy asset bundles to UTxO RPC 'UtxoRpc.Multiasset' messages.
+policyAssetsToUtxoRpcMultiassets :: Map PolicyId PolicyAssets -> [Proto UtxoRpc.Multiasset]
+policyAssetsToUtxoRpcMultiassets policyAssetsMap =
+  toList policyAssetsMap <&> \(pId, policyAssets) -> do
+    let assets =
+          toList policyAssets <&> \(assetName, Quantity qty) -> do
             defMessage
-              & U5c.policyId .~ serialiseToRawBytes pId
-              & U5c.assets .~ assets
+              & U5c.name .~ serialiseToRawBytes assetName
+              -- we don't have access to info if the coin was minted in the transaction,
+              -- maybe we should add it later
+              -- & U5c.maybe'mintCoin .~ Nothing
+              & U5c.quantity .~ inject qty
+    defMessage
+      & U5c.policyId .~ serialiseToRawBytes pId
+      & U5c.assets .~ assets
+
+txOutToUtxoRpcTxOutput
+  :: ShelleyBasedEra era
+  -> TxOut CtxUTxO era
+  -> Proto UtxoRpc.TxOutput
+txOutToUtxoRpcTxOutput sbe (TxOut addressInEra txOutValue datum script) = do
+  let multiAsset = policyAssetsToUtxoRpcMultiassets . valueToPolicyAssets $ txOutValueToValue txOutValue
       datumRpc = case datum of
         TxOutDatumNone ->
           Nothing
@@ -608,7 +621,7 @@ txOutToUtxoRpcTxOutput (TxOut addressInEra txOutValue datum script) = do
               & U5c.originalCbor .~ getOriginalScriptDataBytes hashableScriptData
 
   defMessage
-    & U5c.address .~ T.encodeUtf8 (obtainCommonConstraints (useEra @era) $ serialiseAddress addressInEra)
+    & U5c.address .~ T.encodeUtf8 (shelleyBasedEraConstraints sbe $ serialiseAddress addressInEra)
     & U5c.coin .~ inject (L.unCoin (txOutValueToLovelace txOutValue))
     & U5c.assets .~ multiAsset
     & U5c.maybe'datum .~ datumRpc
@@ -660,6 +673,253 @@ utxoRpcTxOutputToTxOut txOutput = do
       )
       datum
       referenceScript
+
+-- | Convert a transaction from a fetched block to the UTxO RPC 'UtxoRpc.Tx' message.
+-- Populates hash, fee, successful, inputs, outputs, reference inputs, validity,
+-- mint, withdrawals, collateral, certificates, witnesses, auxiliary data and
+-- governance proposals, with spending, withdrawal and certificate redeemers
+-- wired to their respective entries.
+txToUtxoRpcTx
+  :: ShelleyBasedEra era
+  -> Tx era
+  -> UtxoRpc.Tx
+txToUtxoRpcTx sbe (ShelleyTx _ ledgerTx) =
+  shelleyBasedEraConstraints sbe $ do
+    let body = ledgerTx ^. L.bodyTxL
+        wits = ledgerTx ^. L.witsTxL
+        -- reference inputs exist from Babbage onwards
+        referenceInputs = forShelleyBasedEraInEon sbe [] $ \beo ->
+          babbageEraOnwardsConstraints beo $
+            toList (body ^. L.referenceInputsTxBodyL)
+        -- Shelley has a plain TTL; Allegra onwards use a validity interval
+        validity =
+          forShelleyBasedEraInEon
+            sbe
+            ( forShelleyBasedEraInEon sbe defMessage $ \seo ->
+                shelleyEraOnlyConstraints seo $
+                  defMessage & U5c.ttl .~ body ^. L.ttlTxBodyL . to unSlotNo
+            )
+            ( \aeo -> allegraEraOnwardsConstraints aeo $ do
+                let L.ValidityInterval lowerBound upperBound = body ^. L.vldtTxBodyL
+                defMessage
+                  & U5c.start .~ L.strictMaybe 0 unSlotNo lowerBound
+                  & U5c.ttl .~ L.strictMaybe 0 unSlotNo upperBound
+            )
+        -- minting exists from Mary onwards
+        mint = forShelleyBasedEraInEon sbe mempty $ \meo ->
+          maryEraOnwardsConstraints meo $
+            multiAssetToPolicyAssets (body ^. L.mintTxBodyL)
+        -- the spending redeemer at index ix belongs to the input at position
+        -- ix in the sorted input set
+        inputs :: [UtxoRpc.TxInput]
+        inputs =
+          zip [0 ..] (toList (body ^. L.inputsTxBodyL)) <&> \(ix, txIn) ->
+            txInToUtxoRpcTxInput (fromShelleyTxIn txIn)
+              & U5c.maybe'redeemer
+                .~ fmap getProto (M.lookup (ScriptWitnessIndexTxIn ix) redeemersByIndex)
+        -- the withdrawal redeemer at index ix belongs to the withdrawal at
+        -- position ix in the sorted withdrawal map
+        withdrawals :: [UtxoRpc.Withdrawal]
+        withdrawals =
+          zip [0 ..] (M.toList (L.unWithdrawals (body ^. L.withdrawalsTxBodyL)))
+            <&> \(ix, (rewardAccount, coin)) ->
+              defMessage
+                & U5c.rewardAccount .~ serialiseToRawBytes (fromShelleyStakeAddr rewardAccount)
+                & U5c.coin .~ getProto (inject coin)
+                & U5c.maybe'redeemer
+                  .~ fmap getProto (M.lookup (ScriptWitnessIndexWithdrawal ix) redeemersByIndex)
+        -- collateral inputs exist from Alonzo onwards
+        collateralInputs = forShelleyBasedEraInEon sbe [] $ \aeo ->
+          alonzoEraOnwardsConstraints aeo $
+            toList (body ^. L.collateralInputsTxBodyL)
+        -- collateral return and total collateral exist from Babbage onwards
+        (collateralReturn, totalCollateral) =
+          forShelleyBasedEraInEon sbe (Nothing, Nothing) $ \beo ->
+            babbageEraOnwardsConstraints
+              beo
+              ( L.strictMaybeToMaybe (body ^. L.collateralReturnTxBodyL)
+              , L.strictMaybeToMaybe (body ^. L.totalCollateralTxBodyL)
+              )
+        collateral
+          | null collateralInputs
+          , Nothing <- collateralReturn
+          , Nothing <- totalCollateral =
+              Nothing
+          | otherwise =
+              Just $
+                defMessage
+                  & U5c.collateral .~ map (txInToUtxoRpcTxInput . fromShelleyTxIn) collateralInputs
+                  & U5c.maybe'collateralReturn
+                    .~ fmap (getProto . txOutToUtxoRpcTxOutput sbe . fromShelleyTxOut sbe) collateralReturn
+                  & U5c.maybe'totalCollateral .~ fmap (getProto . inject) totalCollateral
+        -- a transaction marked invalid during phase-2 validation consumes its
+        -- collateral instead of producing its outputs
+        L.IsValid isValid = forShelleyBasedEraInEon sbe (L.IsValid True) $ \aeo ->
+          alonzoEraOnwardsConstraints aeo $
+            ledgerTx ^. L.isValidTxL
+        vkeyWitnesses :: [UtxoRpc.VKeyWitness]
+        vkeyWitnesses =
+          toList (wits ^. L.addrTxWitsL) <&> \(L.WitVKey (L.VKey vkey) (DSIGN.SignedDSIGN signature)) ->
+            defMessage
+              & U5c.vkey .~ DSIGN.rawSerialiseVerKeyDSIGN vkey
+              & U5c.signature .~ DSIGN.rawSerialiseSigDSIGN signature
+        bootstrapWitnesses :: [UtxoRpc.BootstrapWitness]
+        bootstrapWitnesses =
+          toList (wits ^. L.bootAddrTxWitsL) <&> \bootstrapWitness -> do
+            let L.VKey bootstrapKey = L.bwKey bootstrapWitness
+                DSIGN.SignedDSIGN bootstrapSignature = L.bwSignature bootstrapWitness
+            defMessage
+              & U5c.vkey .~ DSIGN.rawSerialiseVerKeyDSIGN bootstrapKey
+              & U5c.signature .~ DSIGN.rawSerialiseSigDSIGN bootstrapSignature
+              & U5c.chainCode .~ L.unChainCode (L.bwChainCode bootstrapWitness)
+              & U5c.attributes .~ L.bwAttributes bootstrapWitness
+        scriptWitnesses :: [UtxoRpc.Script]
+        scriptWitnesses =
+          M.elems (wits ^. L.scriptTxWitsL) <&> \ledgerScript ->
+            case fromShelleyBasedScript sbe ledgerScript of
+              ScriptInEra _ script -> getProto $ scriptToUtxoRpcScript script
+        -- plutus datums exist from Alonzo onwards
+        plutusDatums :: [UtxoRpc.PlutusData]
+        plutusDatums = forShelleyBasedEraInEon sbe [] $ \aeo ->
+          alonzoEraOnwardsConstraints aeo $
+            M.elems (L.unTxDats (wits ^. L.datsTxWitsL)) <&> \datum ->
+              getProto . scriptDataToUtxoRpcPlutusData . getScriptData $ fromAlonzoData datum
+        -- redeemers exist from Alonzo onwards; they are keyed by script
+        -- witness index so that spending and withdrawal redeemers can be
+        -- attached to their inputs and withdrawals
+        redeemersByIndex :: Map ScriptWitnessIndex (Proto UtxoRpc.Redeemer)
+        redeemersByIndex = forShelleyBasedEraInEon sbe mempty $ \aeo ->
+          alonzoEraOnwardsConstraints aeo $
+            fromList
+              [ ( scriptWitnessIndex
+                , mkProtoRedeemer
+                    scriptWitnessIndex
+                    (fromAlonzoExUnits exUnits)
+                    (Just (getScriptData (fromAlonzoData datum), L.originalBytes datum))
+                )
+              | (purpose, (datum, exUnits)) <- toList . L.unRedeemers $ wits ^. L.rdmrsTxWitsL
+              , let scriptWitnessIndex = toScriptIndex aeo purpose
+              ]
+        witnessSet :: UtxoRpc.WitnessSet
+        witnessSet =
+          defMessage
+            & U5c.vkeywitness .~ vkeyWitnesses
+            & U5c.script .~ scriptWitnesses
+            & U5c.plutusDatums .~ plutusDatums
+            & U5c.redeemers .~ map getProto (M.elems redeemersByIndex)
+            & U5c.bootstrapWitnesses .~ bootstrapWitnesses
+        -- the certificate redeemer at index ix belongs to the certificate at
+        -- position ix in the certificate list
+        certificates :: [UtxoRpc.Certificate]
+        certificates =
+          zip [0 ..] (toList (body ^. L.certsTxBodyL)) <&> \(ix, cert) ->
+            txCertToUtxoRpcCertificate sbe cert
+              & U5c.maybe'redeemer
+                .~ fmap getProto (M.lookup (ScriptWitnessIndexCertificate ix) redeemersByIndex)
+        -- auxiliary data is only set when the transaction carries any; the
+        -- metadata map is uniformly accessible, the auxiliary scripts vary
+        -- per era family
+        auxiliary :: Maybe UtxoRpc.AuxData
+        auxiliary =
+          L.strictMaybeToMaybe (ledgerTx ^. L.auxDataTxL) <&> \auxData ->
+            defMessage
+              & U5c.metadata
+                .~ ( M.toList (auxData ^. L.metadataTxAuxDataL) <&> \(label, metadatum) ->
+                       defMessage
+                         & U5c.label .~ label
+                         & U5c.value .~ metadatumToUtxoRpcMetadatum metadatum
+                   )
+              & U5c.scripts
+                .~ ( txAuxDataScripts sbe auxData <&> \case
+                       ScriptInEra _ script -> getProto (scriptToUtxoRpcScript script)
+                   )
+        -- governance proposals exist from Conway onwards; matching on the
+        -- concrete eras avoids conwayEraOnwardsConstraints, which crashes at
+        -- runtime for Dijkstra
+        proposals :: [UtxoRpc.GovernanceActionProposal]
+        proposals =
+          case sbe of
+            ShelleyBasedEraShelley -> []
+            ShelleyBasedEraAllegra -> []
+            ShelleyBasedEraMary -> []
+            ShelleyBasedEraAlonzo -> []
+            ShelleyBasedEraBabbage -> []
+            ShelleyBasedEraConway ->
+              map proposalProcedureToUtxoRpcProposal . toList $ body ^. L.proposalProceduresTxBodyL
+            ShelleyBasedEraDijkstra ->
+              map proposalProcedureToUtxoRpcProposal . toList $ body ^. L.proposalProceduresTxBodyL
+    defMessage
+      & U5c.hash .~ serialiseToRawBytes (fromShelleyTxId (L.txIdTx ledgerTx))
+      & U5c.inputs .~ inputs
+      & U5c.outputs
+        .~ map
+          (getProto . txOutToUtxoRpcTxOutput sbe . fromShelleyTxOut sbe)
+          (toList (body ^. L.outputsTxBodyL))
+      & U5c.referenceInputs .~ map (txInToUtxoRpcTxInput . fromShelleyTxIn) referenceInputs
+      & U5c.certificates .~ certificates
+      & U5c.validity .~ validity
+      & U5c.mint .~ map getProto (policyAssetsToUtxoRpcMultiassets mint)
+      & U5c.withdrawals .~ withdrawals
+      & U5c.maybe'collateral .~ collateral
+      & U5c.witnesses .~ witnessSet
+      & U5c.fee .~ getProto (inject (body ^. L.feeTxBodyL))
+      & U5c.successful .~ isValid
+      & U5c.maybe'auxiliary .~ auxiliary
+      & U5c.proposals .~ proposals
+
+-- | Convert a 'TxIn' to the UTxO RPC 'UtxoRpc.TxInput' message.
+-- Only the transaction hash and output index are populated:
+-- resolving @as_output@ requires a UTxO lookup, and the caller attaches the
+-- spending @redeemer@ where one exists.
+txInToUtxoRpcTxInput :: TxIn -> UtxoRpc.TxInput
+txInToUtxoRpcTxInput (TxIn txId' (TxIx txIx)) =
+  defMessage
+    & U5c.txHash .~ serialiseToRawBytes txId'
+    & U5c.outputIndex .~ fromIntegral txIx
+
+-- | Convert a ledger metadatum to the UTxO RPC 'UtxoRpc.Metadatum' message.
+-- The UTxO RPC encoding only supports signed 64-bit metadata integers, so
+-- values outside of that range wrap around.
+metadatumToUtxoRpcMetadatum :: L.Metadatum -> UtxoRpc.Metadatum
+metadatumToUtxoRpcMetadatum = \case
+  L.I int -> defMessage & U5c.int .~ fromIntegral int
+  L.B bytes -> defMessage & U5c.bytes .~ bytes
+  L.S text -> defMessage & U5c.text .~ text
+  L.List elements ->
+    defMessage & U5c.array . U5c.items .~ map metadatumToUtxoRpcMetadatum elements
+  L.Map keyValuePairs ->
+    defMessage
+      & U5c.map . U5c.pairs
+        .~ ( keyValuePairs <&> \(key, value) ->
+               defMessage
+                 & U5c.key .~ metadatumToUtxoRpcMetadatum key
+                 & U5c.value .~ metadatumToUtxoRpcMetadatum value
+           )
+
+-- | Extract the auxiliary scripts of a transaction, lifted to 'ScriptInEra'.
+-- Shelley auxiliary data carries no scripts, Allegra and Mary carry timelock
+-- scripts, and Alonzo onwards additionally carry Plutus scripts. The dispatch
+-- matches on the concrete eras because the auxiliary data and script types of
+-- each era family only line up at concrete eras.
+txAuxDataScripts
+  :: ShelleyBasedEra era
+  -> L.TxAuxData (ShelleyLedgerEra era)
+  -> [ScriptInEra era]
+txAuxDataScripts sbe auxData =
+  case sbe of
+    ShelleyBasedEraShelley -> []
+    ShelleyBasedEraAllegra ->
+      map (fromShelleyBasedScript sbe) . toList $ auxData ^. L.nativeScriptsTxAuxDataL
+    ShelleyBasedEraMary ->
+      map (fromShelleyBasedScript sbe) . toList $ auxData ^. L.nativeScriptsTxAuxDataL
+    ShelleyBasedEraAlonzo ->
+      map (fromShelleyBasedScript sbe) . toList $ L.getAlonzoTxAuxDataScripts auxData
+    ShelleyBasedEraBabbage ->
+      map (fromShelleyBasedScript sbe) . toList $ L.getAlonzoTxAuxDataScripts auxData
+    ShelleyBasedEraConway ->
+      map (fromShelleyBasedScript sbe) . toList $ L.getAlonzoTxAuxDataScripts auxData
+    ShelleyBasedEraDijkstra ->
+      map (fromShelleyBasedScript sbe) . toList $ L.getAlonzoTxAuxDataScripts auxData
 
 utxoRpcBigIntToInteger
   :: forall m

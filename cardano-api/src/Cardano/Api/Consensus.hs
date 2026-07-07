@@ -72,6 +72,7 @@ module Cardano.Api.Consensus
   , TopLevelConfig
   , ledgerState
   , blockNo
+  , byronBlockRaw
   , byronIdTx
   , configBlock
   , configLedger

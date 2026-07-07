@@ -59,7 +59,10 @@ library
     Cardano.Rpc.Server.Internal.Monad
     Cardano.Rpc.Server.Internal.Node
     Cardano.Rpc.Server.Internal.Tracing
+    Cardano.Rpc.Server.Internal.UtxoRpc.Byron
+    Cardano.Rpc.Server.Internal.UtxoRpc.Certificate
     Cardano.Rpc.Server.Internal.UtxoRpc.Eval
+    Cardano.Rpc.Server.Internal.UtxoRpc.Governance
     Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
     Cardano.Rpc.Server.Internal.UtxoRpc.Submit
@@ -81,9 +84,15 @@ library
     bytestring,
     cardano-api >=11.2,
     cardano-binary,
+    cardano-crypto,
+    cardano-crypto-class,
+    cardano-crypto-wrapper,
     cardano-ledger-api,
+    cardano-ledger-binary,
+    cardano-ledger-byron,
     cardano-ledger-conway,
     cardano-ledger-core >=1.19,
+    cardano-ledger-dijkstra,
     cardano-rpc:gen,
     containers,
     contra-tracer,
@@ -93,6 +102,8 @@ library
     generic-data,
     grapesy,
     grpc-spec,
+    memory,
+    mempack,
     proto-lens >=0.7.1.7,
     proto-lens-protobuf-types,
     random,
@@ -132,7 +143,13 @@ test-suite cardano-rpc-test
     bytestring,
     cardano-api,
     cardano-api:gen,
+    cardano-crypto,
+    cardano-crypto-wrapper,
+    cardano-crypto-wrapper:testlib,
     cardano-ledger-api,
+    cardano-ledger-binary,
+    cardano-ledger-byron,
+    cardano-ledger-byron:testlib,
     cardano-ledger-conway,
     cardano-ledger-core >=1.19,
     cardano-rpc,
@@ -140,6 +157,7 @@ test-suite cardano-rpc-test
     grpc-spec,
     hedgehog,
     hedgehog-extras,
+    memory,
     proto-lens,
     rio,
     tasty,
@@ -154,7 +172,9 @@ test-suite cardano-rpc-test
 
   build-tool-depends: tasty-discover:tasty-discover
   other-modules:
+    Test.Cardano.Rpc.ByronTx
     Test.Cardano.Rpc.Eval
+    Test.Cardano.Rpc.FetchBlockTx
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters

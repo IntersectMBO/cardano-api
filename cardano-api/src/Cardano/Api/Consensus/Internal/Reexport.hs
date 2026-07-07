@@ -21,6 +21,7 @@ module Cardano.Api.Consensus.Internal.Reexport
   , TopLevelConfig
   , ledgerState
   , blockNo
+  , byronBlockRaw
   , byronIdTx
   , configBlock
   , configLedger
@@ -36,7 +37,7 @@ where
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Slotting.Time (SystemStart)
 import Ouroboros.Consensus.Block (HasHeader, HeaderHash, RealPoint (..), blockNo)
-import Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..), byronIdTx)
+import Ouroboros.Consensus.Byron.Ledger (ByronBlock (byronBlockRaw), GenTx (..), byronIdTx)
 import Ouroboros.Consensus.Cardano.Block (CardanoBlock, EraMismatch (..))
 import Ouroboros.Consensus.Config (TopLevelConfig, configBlock, configLedger)
 import Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (getSystemStart))
