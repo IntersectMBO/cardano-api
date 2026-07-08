@@ -11,6 +11,7 @@ module Cardano.Api.Serialise.TextEnvelope
   , deserialiseFromTextEnvelope
   , readFileTextEnvelope
   , writeFileTextEnvelope
+  , writeFileTextEnvelopeWithOwnerPermissions
   , readTextEnvelopeFromFile
   , readTextEnvelopeOfTypeFromFile
   , textEnvelopeToJSON

@@ -22,6 +22,7 @@ module Cardano.Api.Serialise.TextEnvelope.Internal
   , deserialiseFromTextEnvelope
   , readFileTextEnvelope
   , writeFileTextEnvelope
+  , writeFileTextEnvelopeWithOwnerPermissions
   , readTextEnvelopeFromFile
   , readTextEnvelopeOfTypeFromFile
   , textEnvelopeToJSON
@@ -280,6 +281,12 @@ deserialiseFromTextEnvelopeJSONAnyOf
 deserialiseFromTextEnvelopeJSONAnyOf types bs =
   decodeTextEnvelopeJSON bs >>= deserialiseFromTextEnvelopeAnyOf types
 
+-- | Write a value to a file in the text envelope format.
+--
+-- Note that this does /not/ set conservative file permissions: the file is
+-- created with the default permissions. When writing sensitive data such as
+-- signing keys, use 'writeFileTextEnvelopeWithOwnerPermissions' instead,
+-- which tries to restricts access to the file owner (depending on the platform).
 writeFileTextEnvelope
   :: HasTextEnvelope a
   => File content Out
@@ -288,6 +295,19 @@ writeFileTextEnvelope
   -> IO (Either (FileError ()) ())
 writeFileTextEnvelope outputFile mbDescr a =
   writeLazyByteStringFile outputFile (textEnvelopeToJSON mbDescr a)
+
+-- | Like 'writeFileTextEnvelope', but the file is created with owner-only
+-- permissions, i.e. it is readable and writable by the file owner only
+-- (depending on the platform).
+-- Use this when writing sensitive data such as signing keys.
+writeFileTextEnvelopeWithOwnerPermissions
+  :: HasTextEnvelope a
+  => File content Out
+  -> Maybe TextEnvelopeDescr
+  -> a
+  -> IO (Either (FileError ()) ())
+writeFileTextEnvelopeWithOwnerPermissions outputFile mbDescr a =
+  writeLazyByteStringFileWithOwnerPermissions outputFile (textEnvelopeToJSON mbDescr a)
 
 textEnvelopeToJSON :: HasTextEnvelope a => Maybe TextEnvelopeDescr -> a -> LBS.ByteString
 textEnvelopeToJSON mbDescr a =
