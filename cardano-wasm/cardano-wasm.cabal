@@ -30,6 +30,7 @@ library cardano-wasi-lib
     src-lib
 
   exposed-modules:
+    Cardano.Wasm.Api.Address
     Cardano.Wasm.Api.Certificate.StakeCertificate
     Cardano.Wasm.Api.GRPC
     Cardano.Wasm.Api.Info
@@ -80,8 +81,9 @@ executable cardano-wasi
   if arch(wasm32)
     ghc-options:
       -no-hs-main
-      "-optl-Wl,--strip-all,--export=hs_init,--export=newTx,--export=newUpcomingEraTx,--export=addTxInput,--export=addSimpleTxOut,--export=appendCertificateToTx,--export=setFee,--export=estimateMinFee,--export=signWithPaymentKey,--export=signWithStakeKey,--export=getUnsignedTxId,--export=alsoSignWithPaymentKey,--export=alsoSignWithStakeKey,--export=toCbor,--export=getSignedTxId,--export=makeStakeAddressStakeDelegationCertificate,--export=makeStakeAddressStakeDelegationCertificateUpcomingEra,--export=makeStakeAddressRegistrationCertificate,--export=makeStakeAddressRegistrationCertificateUpcomingEra,--export=makeStakeAddressUnregistrationCertificate,--export=makeStakeAddressUnregistrationCertificateUpcomingEra,--export=generatePaymentWallet,--export=generateStakeWallet,--export=restorePaymentWalletFromSigningKeyBech32,--export=restoreStakeWalletFromSigningKeyBech32,--export=generateTestnetPaymentWallet,--export=generateTestnetStakeWallet,--export=restoreTestnetPaymentWalletFromSigningKeyBech32,--export=restoreTestnetStakeWalletFromSigningKeyBech32,--export=getAddressBech32,--export=getBech32ForPaymentVerificationKey,--export=getBech32ForPaymentSigningKey,--export=getBech32ForStakeVerificationKey,--export=getBech32ForStakeSigningKey,--export=getBase16ForPaymentVerificationKeyHash,--export=getBase16ForStakeVerificationKeyHash,--export=mallocNBytes,--export=getStrLen,--export=freeMemory"
+      "-optl-Wl,--strip-all,--export=hs_init,--export=newTx,--export=newUpcomingEraTx,--export=addTxInput,--export=addSimpleTxOut,--export=appendCertificateToTx,--export=setFee,--export=estimateMinFee,--export=signWithPaymentKey,--export=signWithStakeKey,--export=getUnsignedTxId,--export=alsoSignWithPaymentKey,--export=alsoSignWithStakeKey,--export=toCbor,--export=getSignedTxId,--export=inspectAddress,--export=makeStakeAddressStakeDelegationCertificate,--export=makeStakeAddressStakeDelegationCertificateUpcomingEra,--export=makeStakeAddressRegistrationCertificate,--export=makeStakeAddressRegistrationCertificateUpcomingEra,--export=makeStakeAddressUnregistrationCertificate,--export=makeStakeAddressUnregistrationCertificateUpcomingEra,--export=generatePaymentWallet,--export=generateStakeWallet,--export=restorePaymentWalletFromSigningKeyBech32,--export=restoreStakeWalletFromSigningKeyBech32,--export=generateTestnetPaymentWallet,--export=generateTestnetStakeWallet,--export=restoreTestnetPaymentWalletFromSigningKeyBech32,--export=restoreTestnetStakeWalletFromSigningKeyBech32,--export=getAddressBech32,--export=getBech32ForPaymentVerificationKey,--export=getBech32ForPaymentSigningKey,--export=getBech32ForStakeVerificationKey,--export=getBech32ForStakeSigningKey,--export=getBase16ForPaymentVerificationKeyHash,--export=getBase16ForStakeVerificationKeyHash,--export=mallocNBytes,--export=getStrLen,--export=freeMemory"
   other-modules:
+    Cardano.Wasi.Internal.Api.Address
     Cardano.Wasi.Internal.Api.Certificate.StakeCertificate
     Cardano.Wasi.Internal.Api.GRPC
     Cardano.Wasi.Internal.Api.Memory

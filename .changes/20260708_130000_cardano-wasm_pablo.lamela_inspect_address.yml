@@ -1,0 +1,5 @@
+description: Added `inspectAddress` to the `cardano-wasm` API, which checks whether a string is a valid Shelley-era address. It resolves to an object with the `network` the address belongs to ("mainnet" or "testnet"), or to `null` if the address is invalid, and it never throws. This lets consumers reject mistyped recipients and mainnet/testnet mismatches at entry time, instead of failing at node submission. Note that an address cannot distinguish between different testnets (like preprod and preview), as they only differ in the network magic, which is not part of the address.
+kind:
+- feature
+pr: 1244
+project: cardano-wasm

@@ -16,6 +16,7 @@ module Cardano.Wasm.Internal.JavaScript.Bridge where
 import Cardano.Api qualified as Api
 import Cardano.Api.Ledger qualified as Ledger
 
+import Cardano.Wasm.Api.Address qualified as Wasm
 import Cardano.Wasm.Api.Certificate.StakeCertificate qualified as Wasm
 import Cardano.Wasm.Api.GRPC qualified as Wasm
 import Cardano.Wasm.Api.Info (apiInfo)
@@ -129,6 +130,8 @@ type JSCoin = JSVal
 type JSSigningKey = JSString
 
 type JSProtocolParams = JSVal
+
+type JSAddressInfo = JSVal
 
 type JSGrpc = JSGRPCClient
 
@@ -623,6 +626,16 @@ getUtxosForAddress grpcObject address =
 -- | Submit a transaction to the Cardano Node using GRPC-web.
 submitTx :: HasCallStack => JSGrpc -> JSString -> IO JSString
 submitTx grpcObject tx = toJSVal =<< join (Wasm.submitTxImpl js_submitTx <$> fromJSVal grpcObject <*> fromJSVal tx)
+
+-- * Address inspection
+
+foreign export javascript "inspectAddress"
+  inspectAddress :: JSString -> IO JSAddressInfo
+
+-- | Check whether a string is a valid Shelley-era address and which network it belongs to.
+inspectAddress :: HasCallStack => JSString -> IO JSAddressInfo
+inspectAddress jsAddress =
+  toJSVal . Wasm.inspectAddressImpl =<< fromJSVal jsAddress
 
 -- * API Information
 

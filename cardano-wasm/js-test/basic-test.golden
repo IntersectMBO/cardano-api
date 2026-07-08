@@ -2,6 +2,7 @@
 > [object] {
     objectType: cardano-api
     tx: [object Object]
+    inspectAddress: async function (...args) 
     newGrpcConnection: async function (...args) 
     certificate: [object Object]
     wallet: [object Object]

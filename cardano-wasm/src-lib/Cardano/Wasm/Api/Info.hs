@@ -34,6 +34,7 @@ data TSType
   | TSAny
   | TSUtxoList
   | TSUtxosForAddressList
+  | TSAddressInfo
   deriving (Show, Eq)
 
 tsTypeAsString :: TSType -> String
@@ -45,6 +46,7 @@ tsTypeAsString TSUtxoList =
   "{ address: string, txId: string, txIndex: number, lovelace: bigint, assets: any[], datum?: any, script?: any }[]"
 tsTypeAsString TSUtxosForAddressList =
   "{ txId: string, txIndex: number, lovelace: bigint, assets: any[], datum?: any, script?: any }[]"
+tsTypeAsString TSAddressInfo = "{ network: \"mainnet\" | \"testnet\" } | null"
 
 instance Aeson.ToJSON TSType where
   toJSON :: TSType -> Aeson.Value
@@ -536,6 +538,17 @@ apiInfo =
                                   , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
                                   }
                             ]
+                        }
+                  , MethodInfoEntry $
+                      MethodInfo
+                        { methodName = "inspectAddress"
+                        , methodSimpleName = Nothing
+                        , methodDoc =
+                            "Check whether a string is a valid Shelley-era address (like \"addr...\" or \"addr_test...\") and, if it is, get which network it belongs to. It never throws: for invalid addresses it resolves to `null`. Note that an address only encodes whether it belongs to mainnet or a testnet: it is not possible to tell different testnets (like preprod and preview) apart from an address alone, because they only differ in the network magic, which is not part of the address."
+                        , methodParams = [ParamInfo "address" TSString "The address to inspect."]
+                        , methodReturnType = OtherType TSAddressInfo
+                        , methodReturnDoc =
+                            "A promise that resolves to an object with the `network` the address belongs to (\"mainnet\" or \"testnet\"), or to `null` if the string is not a valid address."
                         }
                   , MethodInfoEntry $
                       MethodInfo
