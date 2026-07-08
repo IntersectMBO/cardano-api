@@ -61,9 +61,12 @@ module Cardano.Api.Experimental
 
     -- ** AnyScript related
   , AnyScript (..)
+  , AnyScriptDecodeError (..)
   , deserialiseAnyPlutusScriptOfLanguage
   , deserialiseAnySimpleScript
   , hashAnyScript
+  , readAnyScriptBytes
+  , readFileAnyScript
 
     -- ** Simple script related
   , SimpleScript (..)
@@ -72,6 +75,7 @@ module Cardano.Api.Experimental
   , hashSimpleScript
 
     -- ** Plutus related
+  , AnyPlutusScriptLanguage (..)
   , PlutusScriptInEra (..)
   , PlutusScriptOrReferenceInput (..)
   , serialiseAnyPlutusScriptToTextEnvelope
