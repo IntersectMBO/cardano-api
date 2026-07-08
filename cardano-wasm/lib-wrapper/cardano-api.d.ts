@@ -41,6 +41,13 @@ declare interface CardanoApi {
     }
 
     /**
+     * Check whether a string is a valid Shelley-era address (like "addr..." or "addr_test...") and, if it is, get which network it belongs to. It never throws: for invalid addresses it resolves to `null`. Note that an address only encodes whether it belongs to mainnet or a testnet: it is not possible to tell different testnets (like preprod and preview) apart from an address alone, because they only differ in the network magic, which is not part of the address.
+     * @param address The address to inspect.
+     * @returns A promise that resolves to an object with the `network` the address belongs to ("mainnet" or "testnet"), or to `null` if the string is not a valid address.
+     */
+    inspectAddress(address: string): Promise<{ network: "mainnet" | "testnet" } | null>;
+
+    /**
      * Create a new client connection for communicating with a Cardano node through gRPC-web.
      * @param webGrpcUrl The URL of the gRPC-web server.
      * @returns A promise that resolves to a new `GrpcConnection`.

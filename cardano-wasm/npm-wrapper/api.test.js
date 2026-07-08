@@ -154,4 +154,32 @@ describe('Cardano API', () => {
         expect(txCbor).toBe("84a400d9010281825820be6efd42a3d7b9a00d09d77a5d41e55ceaf0bd093a8aa8a893ce70d9caafd97800018182581d6082935e44937e8b530f32ce672b5d600d0a286b4e8a52c6555f659b871a004c4b400219271004d901028183028200581ca9461e687627cddc5f54ffc988bc44321189538c601f1ad1b7979d9b581cbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba100d9010282825820adfc1c30385916da87db1ba3328f0690a57ebb2a6ac9f6f86b2d97f943adae005840b5df44de4b1302d1b031363cfb9636be2f395561dcf083d1192656677506bfa401d988d745f2ee2d11ed9e563f35cc2dfbb605c7cd58a613e42377e5e2a8da01825820ee31f83c88a71219a6fcf9bee0da9bc22620588f5a15a6145553504df9649e5c58402a2a37f2391bdf3a1ff52a7ed2103473f35b43022ed101bddcb18a557f7e9f9eac75c3562b142cc15dc9ebd006da34f4076ff413914ec90e4359d757d73bfc06f5f6");
     });
 
+    // An address only encodes mainnet vs testnet (network id 1 vs 0). Different
+    // testnets (like preprod and preview) only differ by network magic, which is
+    // not part of the address, so they cannot be told apart here.
+    it('should validate addresses and detect their network', async () => {
+        // Payment-only (enterprise) and base (payment + stake) addresses, built
+        // from the payment and stake key hashes used in the other tests
+        const testnetAddress = "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v";
+        const mainnetAddress = "addr1vxpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpc83ps9f";
+        const testnetBaseAddress = "addr_test1qzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpafgc0xsa38ehw9748lexytc3pjzxy48rrqruddrduhnkdssekpmc";
+        const mainnetBaseAddress = "addr1qxpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpafgc0xsa38ehw9748lexytc3pjzxy48rrqruddrduhnkdsn0tph8";
+
+        expect(await api.inspectAddress(testnetAddress)).toEqual({ network: "testnet" });
+        expect(await api.inspectAddress(testnetBaseAddress)).toEqual({ network: "testnet" });
+        expect(await api.inspectAddress(mainnetAddress)).toEqual({ network: "mainnet" });
+        expect(await api.inspectAddress(mainnetBaseAddress)).toEqual({ network: "mainnet" });
+
+        // Invalid inputs do not throw, they resolve to null instead
+        const invalidAddresses = [
+            "",                                // empty
+            testnetAddress.slice(0, -1),       // truncated
+            testnetAddress.slice(0, -1) + "w", // bad checksum
+            "this is not an address",          // not an address at all
+        ];
+        for (const address of invalidAddresses) {
+            expect(await api.inspectAddress(address)).toBeNull();
+        }
+    });
+
 });
