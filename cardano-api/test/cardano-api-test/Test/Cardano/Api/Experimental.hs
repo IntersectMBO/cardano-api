@@ -44,6 +44,7 @@ import Cardano.Slotting.Time qualified as Slotting
 
 import Control.Monad.Identity (Identity)
 import Data.Bifunctor (first)
+import Data.ByteString qualified as BS
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
@@ -55,7 +56,13 @@ import Data.Time.Clock.POSIX qualified as Time
 import Lens.Micro
 
 import Test.Gen.Cardano.Api.Experimental (genAnyScript)
-import Test.Gen.Cardano.Api.Typed (genAddressInEra, genTx, genTxIn)
+import Test.Gen.Cardano.Api.Typed
+  ( genAddressInEra
+  , genPlutusScriptInEra
+  , genSimpleScript
+  , genTx
+  , genTxIn
+  )
 
 import Hedgehog (Gen, Property)
 import Hedgehog qualified as H
@@ -96,6 +103,21 @@ tests =
             prop_roundtrip_cbor_any_script
         ]
     , testGroup
+        "readAnyScriptBytes"
+        [ testProperty
+            "Roundtrip Plutus script text envelope"
+            prop_roundtrip_plutus_script_text_envelope
+        , testProperty
+            "Read old API simple script text envelope"
+            prop_read_old_api_simple_script_text_envelope
+        , testProperty
+            "Read legacy JSON simple script"
+            prop_read_legacy_json_simple_script
+        , testProperty
+            "Roundtrip readFileAnyScript"
+            prop_roundtrip_read_file_any_script
+        ]
+    , testGroup
         "makeUnsignedTx"
         [ testProperty
             "Plutus scripts without protocol params returns MakeUnsignedTxMissingProtocolParams"
@@ -131,6 +153,42 @@ prop_roundtrip_cbor_any_script :: Property
 prop_roundtrip_cbor_any_script = H.property $ do
   script <- H.forAll genAnyScript
   H.tripping script Api.serialiseToCBOR (Api.deserialiseFromCBOR Exp.AsAnyScript)
+
+prop_roundtrip_plutus_script_text_envelope :: Property
+prop_roundtrip_plutus_script_text_envelope = H.property $ do
+  ps <- H.forAll genPlutusScriptInEra
+  let envelopeJson = Api.serialiseToJSON $ Api.serialiseToTextEnvelope Nothing ps
+  script <- H.evalEither $ Exp.readAnyScriptBytes Exp.ConwayEra envelopeJson
+  script H.=== Exp.AnyPlutusScript ps
+
+-- | The experimental API has no text envelope format for simple scripts, but
+-- the old API produces one via its 'Api.Script' instance (type
+-- \"SimpleScript\", Allegra-era 'Timelock' CBOR), so the simple script arm of
+-- 'Exp.readAnyScriptBytes' is tested against what the old API writes.
+prop_read_old_api_simple_script_text_envelope :: Property
+prop_read_old_api_simple_script_text_envelope = H.property $ do
+  oldScript <- H.forAll genSimpleScript
+  let envelopeJson =
+        Api.serialiseToJSON $ Api.serialiseToTextEnvelope Nothing (Api.SimpleScript oldScript)
+  script <- H.evalEither $ Exp.readAnyScriptBytes Exp.ConwayEra envelopeJson
+  script H.=== Exp.AnySimpleScript (Exp.SimpleScript (Api.toAllegraTimelock oldScript))
+
+prop_read_legacy_json_simple_script :: Property
+prop_read_legacy_json_simple_script = H.property $ do
+  oldScript <- H.forAll genSimpleScript
+  script <- H.evalEither $ Exp.readAnyScriptBytes Exp.ConwayEra (Api.serialiseToJSON oldScript)
+  script H.=== Exp.AnySimpleScript (Exp.SimpleScript (Api.toAllegraTimelock oldScript))
+
+prop_roundtrip_read_file_any_script :: Property
+prop_roundtrip_read_file_any_script = H.propertyOnce . H.moduleWorkspace "any-script" $ \ws -> do
+  oldScript <- H.forAll genSimpleScript
+  let envelopeJson =
+        Api.serialiseToJSON $ Api.serialiseToTextEnvelope Nothing (Api.SimpleScript oldScript)
+      path = ws <> "/simple-script.json"
+  H.evalIO $ BS.writeFile path envelopeJson
+  result <- H.evalIO $ Exp.readFileAnyScript Exp.ConwayEra (Api.File path)
+  script <- H.evalEither result
+  script H.=== Exp.AnySimpleScript (Exp.SimpleScript (Api.toAllegraTimelock oldScript))
 
 prop_created_transaction_with_both_apis_are_the_same :: Property
 prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
