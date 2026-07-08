@@ -1,0 +1,6 @@
+description: |
+  Fixed `deserialiseInput`, `deserialiseInputAnyOf` and `deserialiseAnyVerificationKeyBech32` (and thereby `deserialiseAnyVerificationKey`) to return an error instead of throwing an impure exception when the input is not valid UTF-8.
+kind:
+- bugfix
+pr: 1249
+project: cardano-api

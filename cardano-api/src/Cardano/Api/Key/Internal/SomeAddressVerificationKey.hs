@@ -28,6 +28,7 @@ import Cardano.Api.Serialise.TextEnvelope.Internal
 import Cardano.Chain.Common qualified as Common
 import Cardano.Crypto.Signing qualified as Crypto
 
+import Codec.Binary.Bech32 qualified as Bech32
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
@@ -142,8 +143,11 @@ deserialiseAnyVerificationKey bs =
 
 deserialiseAnyVerificationKeyBech32
   :: ByteString -> Either Bech32DecodeError SomeAddressVerificationKey
-deserialiseAnyVerificationKeyBech32 =
-  deserialiseAnyOfFromBech32 allBech32VerKey . Text.decodeUtf8
+deserialiseAnyVerificationKeyBech32 bs =
+  case Text.decodeUtf8' bs of
+    -- The input is not valid UTF-8, so it cannot be valid Bech32.
+    Left _ -> Left $ Bech32DecodingError $ Bech32.StringToDecodeContainsInvalidChars []
+    Right text -> deserialiseAnyOfFromBech32 allBech32VerKey text
  where
   allBech32VerKey
     :: [FromSomeType SerialiseAsBech32 SomeAddressVerificationKey]

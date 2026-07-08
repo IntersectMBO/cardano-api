@@ -35,7 +35,6 @@ import Data.ByteString.Char8 qualified as BSC
 import Data.Char (toLower)
 import Data.Data
 import Data.List.NonEmpty (NonEmpty)
-import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import GHC.Exts (IsList (..))
 import Prettyprinter
@@ -107,9 +106,6 @@ deserialiseInput
 deserialiseInput acceptedFormats inputBs =
   go (toList acceptedFormats)
  where
-  inputText :: Text
-  inputText = Text.decodeUtf8 inputBs
-
   go :: [InputFormat a] -> Either InputDecodeError a
   go [] = Left InputInvalidError
   go (kf : kfs) =
@@ -140,12 +136,16 @@ deserialiseInput acceptedFormats inputBs =
 
   deserialiseBech32 :: SerialiseAsBech32 a => DeserialiseInputResult a
   deserialiseBech32 =
-    case deserialiseFromBech32 inputText of
-      Right res -> DeserialiseInputSuccess res
-      -- The input was not valid Bech32.
-      Left (Bech32DecodingError _) -> DeserialiseInputErrorFormatMismatch
-      -- The input was valid Bech32, but some other error occurred.
-      Left err -> DeserialiseInputError $ InputBech32DecodeError err
+    case Text.decodeUtf8' inputBs of
+      -- The input was not valid UTF-8, so it cannot be valid Bech32.
+      Left _ -> DeserialiseInputErrorFormatMismatch
+      Right inputText ->
+        case deserialiseFromBech32 inputText of
+          Right res -> DeserialiseInputSuccess res
+          -- The input was not valid Bech32.
+          Left (Bech32DecodingError _) -> DeserialiseInputErrorFormatMismatch
+          -- The input was valid Bech32, but some other error occurred.
+          Left err -> DeserialiseInputError $ InputBech32DecodeError err
 
   deserialiseHex :: SerialiseAsRawBytes a => DeserialiseInputResult a
   deserialiseHex
@@ -179,9 +179,6 @@ deserialiseInputAnyOf bech32Types textEnvTypes inputBs =
     DeserialiseInputError err -> Left err
     DeserialiseInputErrorFormatMismatch -> Left InputInvalidError
  where
-  inputText :: Text
-  inputText = Text.decodeUtf8 inputBs
-
   orTry
     :: DeserialiseInputResult b
     -> DeserialiseInputResult b
@@ -209,12 +206,16 @@ deserialiseInputAnyOf bech32Types textEnvTypes inputBs =
 
   deserialiseBech32 :: DeserialiseInputResult b
   deserialiseBech32 =
-    case deserialiseAnyOfFromBech32 bech32Types inputText of
-      Right res -> DeserialiseInputSuccess res
-      -- The input was not valid Bech32.
-      Left (Bech32DecodingError _) -> DeserialiseInputErrorFormatMismatch
-      -- The input was valid Bech32, but some other error occurred.
-      Left err -> DeserialiseInputError $ InputBech32DecodeError err
+    case Text.decodeUtf8' inputBs of
+      -- The input was not valid UTF-8, so it cannot be valid Bech32.
+      Left _ -> DeserialiseInputErrorFormatMismatch
+      Right inputText ->
+        case deserialiseAnyOfFromBech32 bech32Types inputText of
+          Right res -> DeserialiseInputSuccess res
+          -- The input was not valid Bech32.
+          Left (Bech32DecodingError _) -> DeserialiseInputErrorFormatMismatch
+          -- The input was valid Bech32, but some other error occurred.
+          Left err -> DeserialiseInputError $ InputBech32DecodeError err
 
 -- | Read formatted file
 readFormattedFile
