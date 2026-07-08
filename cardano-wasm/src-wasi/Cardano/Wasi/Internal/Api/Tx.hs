@@ -13,6 +13,8 @@ module Cardano.Wasi.Internal.Api.Tx
   , alsoSignWithPaymentKey
   , alsoSignWithStakeKey
   , toCbor
+  , getUnsignedTxId
+  , getSignedTxId
   )
 where
 
@@ -63,6 +65,9 @@ foreign export ccall "signWithPaymentKey"
 
 foreign export ccall "signWithStakeKey"
   signWithStakeKey :: UnsignedTxObjectJSON -> CString -> IO SignedTxObjectJSON
+
+foreign export ccall "getUnsignedTxId"
+  getUnsignedTxId :: UnsignedTxObjectJSON -> IO CString
 
 #endif
 
@@ -138,6 +143,11 @@ signWithStakeKey unsignedTxObject signingKeyBech32 =
             <*> stringToSigningKey signingKeyBech32
         )
 
+getUnsignedTxId :: UnsignedTxObjectJSON -> IO CString
+getUnsignedTxId unsignedTxObject =
+  newCString . getUnsignedTxIdImpl
+    =<< fromCJSON False "UnsignedTx" unsignedTxObject
+
 -- * SignedTxObject
 
 #if defined(wasm32_HOST_ARCH)
@@ -150,6 +160,9 @@ foreign export ccall "alsoSignWithStakeKey"
 
 foreign export ccall "toCbor"
   toCbor :: SignedTxObjectJSON -> IO CString
+
+foreign export ccall "getSignedTxId"
+  getSignedTxId :: SignedTxObjectJSON -> IO CString
 
 #endif
 
@@ -174,4 +187,9 @@ alsoSignWithStakeKey signedTxObject signingKeyBech32 =
 toCbor :: SignedTxObjectJSON -> IO CString
 toCbor signedTxObject =
   newCString . toCborImpl
+    =<< fromCJSON False "SignedTx" signedTxObject
+
+getSignedTxId :: SignedTxObjectJSON -> IO CString
+getSignedTxId signedTxObject =
+  newCString . getSignedTxIdImpl
     =<< fromCJSON False "SignedTx" signedTxObject

@@ -390,6 +390,9 @@ foreign export javascript "signWithPaymentKey"
 foreign export javascript "signWithStakeKey"
   signWithStakeKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
 
+foreign export javascript "getUnsignedTxId"
+  getUnsignedTxId :: JSUnsignedTx -> IO JSString
+
 -- | Create a new unsigned transaction in the current era.
 newTx :: HasCallStack => IO JSUnsignedTx
 newTx = toJSVal Wasm.newTxImpl
@@ -528,6 +531,11 @@ signWithStakeKey jsUnsignedTx jsSigningKey =
             <*> fromJSVal jsSigningKey
         )
 
+-- | Get the transaction id (the hash of the transaction body) of an unsigned transaction.
+getUnsignedTxId :: HasCallStack => JSUnsignedTx -> IO JSString
+getUnsignedTxId jsUnsignedTx =
+  toJSVal . Wasm.getUnsignedTxIdImpl =<< fromJSVal jsUnsignedTx
+
 -- * SignedTxObject
 
 foreign export javascript "alsoSignWithPaymentKey"
@@ -538,6 +546,9 @@ foreign export javascript "alsoSignWithStakeKey"
 
 foreign export javascript "txToCbor"
   txToCbor :: JSSignedTx -> IO JSString
+
+foreign export javascript "getSignedTxId"
+  getSignedTxId :: JSSignedTx -> IO JSString
 
 -- | Sign an unsigned transaction with a payment key.
 alsoSignWithPaymentKey :: HasCallStack => JSSignedTx -> JSSigningKey -> IO JSSignedTx
@@ -561,6 +572,11 @@ alsoSignWithStakeKey jsSignedTx jsSigningKey =
 txToCbor :: HasCallStack => JSSignedTx -> IO JSString
 txToCbor jsSignedTx =
   toJSVal . Wasm.toCborImpl =<< fromJSVal jsSignedTx
+
+-- | Get the transaction id (the hash of the transaction body) of a signed transaction.
+getSignedTxId :: HasCallStack => JSSignedTx -> IO JSString
+getSignedTxId jsSignedTx =
+  toJSVal . Wasm.getSignedTxIdImpl =<< fromJSVal jsSignedTx
 
 -- * GrpcObject
 

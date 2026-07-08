@@ -30,6 +30,12 @@ declare interface SignedTx {
      * @returns A promise that resolves to the CBOR representation of the transaction as a hex string.
      */
     txToCbor(): Promise<string>;
+
+    /**
+     * Gets the transaction id (the hash of the transaction body). It is not affected by signing, so it matches the id of the unsigned transaction just before signing.
+     * @returns A promise that resolves to the transaction id as a hex string.
+     */
+    getTxId(): Promise<string>;
 }
 
 export default SignedTx;

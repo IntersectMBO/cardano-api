@@ -24,6 +24,8 @@ module Cardano.Wasm.Api.Tx
   , alsoSignWithPaymentKeyImpl
   , alsoSignWithStakeKeyImpl
   , toCborImpl
+  , getUnsignedTxIdImpl
+  , getSignedTxIdImpl
   )
 where
 
@@ -49,7 +51,7 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import GHC.Stack (HasCallStack)
-import Lens.Micro ((%~), (&), (.~), (<>~))
+import Lens.Micro ((%~), (&), (.~), (<>~), (^.))
 
 -- * @UnsignedTx@ object
 
@@ -211,6 +213,16 @@ estimateMinFeeImpl
           numByronKeyWitnesses
           totalRefScriptSize
 
+-- | Get the transaction id of an unsigned transaction object. The transaction
+-- id is the blake2b-256 hash of the transaction body, so it is fully determined
+-- once the body is final and it is not affected by signing.
+getUnsignedTxIdImpl :: UnsignedTxObject -> String
+getUnsignedTxIdImpl (UnsignedTxObject era (Exp.UnsignedTx tx)) =
+  obtainCommonConstraints era $
+    Text.unpack $
+      Api.serialiseToRawBytesHexText $
+        TxBody.getTxIdShelley (Api.convert era) (tx ^. Ledger.bodyTxL)
+
 -- * @SignedTx@ object
 
 -- | An object representing a signed transaction.
@@ -272,3 +284,13 @@ toCborImpl (SignedTxObject era signedTx) =
   obtainCommonConstraints era $
     Text.unpack $
       Text.decodeUtf8 (Api.serialiseToRawBytesHex signedTx)
+
+-- | Get the transaction id of a signed transaction object. The transaction
+-- id is the blake2b-256 hash of the transaction body, so it is not affected
+-- by signing and it matches the id of the unsigned transaction.
+getSignedTxIdImpl :: SignedTxObject -> String
+getSignedTxIdImpl (SignedTxObject era (Exp.SignedTx tx)) =
+  obtainCommonConstraints era $
+    Text.unpack $
+      Api.serialiseToRawBytesHexText $
+        TxBody.getTxIdShelley (Api.convert era) (tx ^. Ledger.bodyTxL)

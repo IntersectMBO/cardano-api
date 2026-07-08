@@ -374,6 +374,16 @@ apiInfo =
                     , methodReturnType = NewObject (virtualObjectName signedTxObj)
                     , methodReturnDoc = "A promise that resolves to a `SignedTx` object."
                     }
+              , MethodInfoEntry $
+                  MethodInfo
+                    { methodName = "getUnsignedTxId"
+                    , methodSimpleName = Just "getTxId"
+                    , methodDoc =
+                        "Gets the transaction id (the hash of the transaction body). It can change if the transaction body is modified."
+                    , methodParams = []
+                    , methodReturnType = OtherType TSString
+                    , methodReturnDoc = "A promise that resolves to the transaction id as a hex string."
+                    }
               ]
           }
 
@@ -409,6 +419,16 @@ apiInfo =
                     , methodReturnType = OtherType TSString
                     , methodReturnDoc =
                         "A promise that resolves to the CBOR representation of the transaction as a hex string."
+                    }
+              , MethodInfoEntry $
+                  MethodInfo
+                    { methodName = "getSignedTxId"
+                    , methodSimpleName = Just "getTxId"
+                    , methodDoc =
+                        "Gets the transaction id (the hash of the transaction body). It is not affected by signing, so it matches the id of the unsigned transaction just before signing."
+                    , methodParams = []
+                    , methodReturnType = OtherType TSString
+                    , methodReturnDoc = "A promise that resolves to the transaction id as a hex string."
                     }
               ]
           }

@@ -1,0 +1,5 @@
+description: Added `getTxId` to the `cardano-wasm` API (on `UnsignedTx` and `SignedTx`), returning the transaction id (the blake2b-256 hash of the transaction body) as a hex string. The id is available as soon as the transaction body is final and is not affected by signing, so flows that do not submit through the app (e.g. air-gapped signing) can display, copy, or link the id.
+kind:
+- feature
+pr: 1243
+project: cardano-wasm
