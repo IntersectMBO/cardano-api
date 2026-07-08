@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1245
+kind:
+  - feature
+description: |
+  Add `readAnyScriptBytes` and `readFileAnyScript` to the experimental API, decoding an `AnyScript` from a text envelope (simple or Plutus script CBOR) with a fallback to the legacy JSON simple script encoding. Introduce `AnyScriptDecodeError` for the JSON and CBOR failure cases.
