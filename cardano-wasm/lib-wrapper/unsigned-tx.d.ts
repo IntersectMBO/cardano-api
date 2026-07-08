@@ -66,6 +66,12 @@ declare interface UnsignedTx {
      * @returns A promise that resolves to a `SignedTx` object.
      */
     signWithStakeKey(signingKey: string): Promise<SignedTx>;
+
+    /**
+     * Gets the transaction id (the hash of the transaction body). It can change if the transaction body is modified.
+     * @returns A promise that resolves to the transaction id as a hex string.
+     */
+    getTxId(): Promise<string>;
 }
 
 export default UnsignedTx;
