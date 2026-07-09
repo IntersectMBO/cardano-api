@@ -4,21 +4,16 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ViewPatterns #-}
--- TODO Delete me when the patterns of this file are removed (they are the ones using deprecated - other - patterns)
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 -- | Blocks in the blockchain
 module Cardano.Api.Block
   ( -- * Blocks in the context of an era
     Block (..)
-  , pattern Block
   , BlockHeader (..)
   , getBlockHeader
   , getBlockTxs
@@ -95,16 +90,6 @@ data Block era where
     :: ShelleyBasedEra era
     -> Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era)
     -> Block era
-
--- | A block consists of a header and a body containing transactions.
-{-# DEPRECATED Block "Use getBlockHeader instead " #-}
-pattern Block :: BlockHeader -> [Tx era] -> Block era
-pattern Block header txs <- (getBlockHeaderAndTxs -> (header, txs))
-
-{-# COMPLETE Block #-}
-
-getBlockHeaderAndTxs :: Block era -> (BlockHeader, [Tx era])
-getBlockHeaderAndTxs block = (getBlockHeader block, getBlockTxs block)
 
 -- The GADT in the ShelleyBlock case requires a custom instance
 instance Show (Block era) where
