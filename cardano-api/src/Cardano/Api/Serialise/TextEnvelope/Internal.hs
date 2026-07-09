@@ -286,7 +286,8 @@ deserialiseFromTextEnvelopeJSONAnyOf types bs =
 -- Note that this does /not/ set conservative file permissions: the file is
 -- created with the default permissions. When writing sensitive data such as
 -- signing keys, use 'writeFileTextEnvelopeWithOwnerPermissions' instead,
--- which tries to restricts access to the file owner (depending on the platform).
+-- which tries to restrict access to the file owner where the platform
+-- supports it (see its documentation for the exact guarantees).
 writeFileTextEnvelope
   :: HasTextEnvelope a
   => File content Out
@@ -296,9 +297,21 @@ writeFileTextEnvelope
 writeFileTextEnvelope outputFile mbDescr a =
   writeLazyByteStringFile outputFile (textEnvelopeToJSON mbDescr a)
 
--- | Like 'writeFileTextEnvelope', but the file is created with owner-only
--- permissions, i.e. it is readable and writable by the file owner only
--- (depending on the platform).
+-- | Like 'writeFileTextEnvelope', but the file is created so that only its
+-- owner has access to it, to the extent the platform allows it:
+--
+-- * On POSIX systems, the file is created with @0700@ permissions
+--   (@ownerModes@, further filtered by the process's @umask@), so no group
+--   or other access, and its ownership is set to the current (real) user.
+--   If the file already exists, its permission bits are left unchanged.
+--
+-- * On Windows, the contents are written to a freshly created temporary
+--   file which is then renamed to the target path. This guarantees the
+--   file is owned by the current user, but no explicit ACL is set: the
+--   file inherits the access control list of the target directory.
+--
+-- * On WASM, this is currently a no-op: no file is written at all.
+--
 -- Use this when writing sensitive data such as signing keys.
 writeFileTextEnvelopeWithOwnerPermissions
   :: HasTextEnvelope a
