@@ -78,7 +78,8 @@ grabNodeKernelAccess =
     Just nodeKernelAccess ->
       pure nodeKernelAccess
 
--- | Fetch a raw block and its block number from ChainDB by slot and header hash.
+-- | Fetch a raw block and its parsed era-contextualised form from ChainDB
+-- by slot and header hash.
 fetchBlock
   :: MonadIO m
   => NodeKernelAccess
@@ -87,9 +88,9 @@ fetchBlock
   -- ^ Block slot number
   -> Hash BlockHeader
   -- ^ Block header hash
-  -> m (Maybe (ByteString, BlockNo))
-  -- ^ Raw CBOR bytes and block number, or 'Nothing' if not found
+  -> m (Maybe (ByteString, BlockInMode))
+  -- ^ Raw CBOR bytes and the block in era context, or 'Nothing' if not found
 fetchBlock NodeKernelAccess{chainDb} slot (HeaderHash shortHash) = do
   let point = Consensus.RealPoint slot (Consensus.OneEraHash shortHash)
-      component = (,) <$> fmap BSL.toStrict Consensus.GetRawBlock <*> fmap Consensus.blockNo Consensus.GetBlock
+      component = (,) <$> fmap BSL.toStrict Consensus.GetRawBlock <*> fmap fromConsensusBlock Consensus.GetBlock
   liftIO $ Consensus.getBlockComponent chainDb component point

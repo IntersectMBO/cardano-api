@@ -54,13 +54,14 @@ fetchBlockMethod request = do
   headerHash <-
     deserialiseFromRawBytes (proxyToAsType (Proxy @(Hash BlockHeader))) hashBytes
       & either (const throwInvalidHash) pure
-  (rawBytes, BlockNo height) <-
+  (rawBytes, BlockInMode _ block) <-
     fetchBlock nodeKernelAccess slot headerHash >>= maybe throwNotFound pure
   eraHistory <- readEraHistory
   timestampMs <-
     slotToUTCTime systemStart eraHistory slot
       & either (const throwPastHorizon) (pure . round . (* 1000) . utcTimeToPOSIXSeconds)
-  let blockHeader =
+  let BlockHeader _ _ (BlockNo height) = getBlockHeader block
+      blockHeader =
         defMessage
           & U5c.slot .~ unSlotNo slot
           & U5c.hash .~ hashBytes
