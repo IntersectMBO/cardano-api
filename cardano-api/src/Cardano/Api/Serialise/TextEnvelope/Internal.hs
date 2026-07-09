@@ -300,10 +300,10 @@ writeFileTextEnvelope outputFile mbDescr a =
 -- | Like 'writeFileTextEnvelope', but the file is created so that only its
 -- owner has access to it, to the extent the platform allows it:
 --
--- * On POSIX systems, the file is created with @0700@ permissions
---   (@ownerModes@, further filtered by the process's @umask@), so no group
---   or other access, and its ownership is set to the current (real) user.
---   If the file already exists, its permission bits are left unchanged.
+-- * On POSIX systems, the file is created with @0600@ permissions (read
+--   and write for the file owner only, further filtered by the process's
+--   @umask@), and its ownership is set to the current (real) user. If the
+--   file already exists, its permission bits are left unchanged.
 --
 -- * On Windows, the contents are written to a freshly created temporary
 --   file which is then renamed to the target path. This guarantees the

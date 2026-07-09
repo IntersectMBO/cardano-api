@@ -32,8 +32,8 @@ import           System.FilePath ((</>))
 import qualified System.IO as IO
 import           System.IO (Handle)
 import           System.Posix.Files (fileMode, getFileStatus, groupModes, intersectFileModes,
-                   nullFileMode, otherModes, ownerModes, ownerReadMode, setFdOwnerAndGroup,
-                   setFileMode, stdFileMode)
+                   nullFileMode, otherModes, ownerReadMode, ownerWriteMode, setFdOwnerAndGroup,
+                   setFileMode, stdFileMode, unionFileModes)
 #if MIN_VERSION_unix(2,8,0)
 import           System.Posix.IO (OpenFileFlags (..), OpenMode (..), closeFd, defaultFileFlags,
                    fdToHandle, openFd)
@@ -104,6 +104,11 @@ checkVrfFilePermissionsImpl (File vrfPrivKey) = do
   hasGroupPermissions :: FileMode -> Bool
   hasGroupPermissions fm' = fm' `hasPermission` groupModes
 
+-- | Read and write permissions for the file owner only (@0600@). Files
+-- created for writing are data files, so the execute bit is not set.
+ownerReadWriteMode :: FileMode
+ownerReadWriteMode = ownerReadMode `unionFileModes` ownerWriteMode
+
 -- | Opens a file from disk.
 openFileDescriptor :: FilePath -> OpenMode -> IO Fd
 # if MIN_VERSION_unix(2,8,0)
@@ -117,7 +122,7 @@ openFileDescriptor fp openMode =
       ReadWrite ->
         defaultFileFlags{creat = Just stdFileMode}
       WriteOnly ->
-        defaultFileFlags{creat = Just ownerModes}
+        defaultFileFlags{creat = Just ownerReadWriteMode}
 
 # else
 openFileDescriptor fp openMode =
@@ -134,7 +139,7 @@ openFileDescriptor fp openMode =
         , defaultFileFlags
         )
       WriteOnly ->
-        ( Just ownerModes
+        ( Just ownerReadWriteMode
         , defaultFileFlags
         )
 
