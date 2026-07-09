@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1252
+kind:
+  - breaking
+description: |
+  Remove the deprecated 'pattern Block :: BlockHeader -> [Tx era] -> Block era' pattern synonym from 'Cardano.Api.Block'. Use 'getBlockHeader' and 'getBlockTxs' instead. The 'Block' data type and its constructors ('ByronBlock', 'ShelleyBlock') are unchanged.
