@@ -217,6 +217,9 @@ You can find more information in [this url](https://ghc.gitlab.haskell.org/ghc/d
 
 And you can find an example of how to use it in the `example` subfolder. This example assumes that the generated `.wasm` and `.js` files as well as the files from the `lib-wrapper` subfolder, all reside in the same folder as the code in `example` subfolder.
 
+>[!NOTE]
+>The no-bundler wrapper (`cardano-api.js` in the `lib-wrapper` folder) dynamically imports `@bjorn3/browser_wasi_shim@0.4.1` from the `unpkg.com` CDN at page load, so the browser needs network access to `unpkg.com` at runtime. In particular, it will not work offline (e.g. in air-gapped environments) or on pages whose Content Security Policy blocks `unpkg.com`. This only applies to the no-bundler wrapper: the NPM package instead depends on `@bjorn3/browser_wasi_shim` as a regular dependency.
+
 ### Troubleshooting guide
 
 #### `Failed to load dynamic interface file for ...` GHC-47808 error

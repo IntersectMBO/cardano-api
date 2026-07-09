@@ -1,0 +1,6 @@
+project: cardano-wasm
+pr: 1251
+kind:
+  - documentation
+description: |
+  Document that the no-bundler browser wrapper (`cardano-api.js`) loads `@bjorn3/browser_wasi_shim` from the `unpkg.com` CDN at page load
