@@ -4,6 +4,7 @@
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
   ( matchesUtxoPredicate
+  , exactAddressPredicate
   , extractAddressesFromPredicate
   , matchesAddressPattern
   , matchesAssetPattern
@@ -24,6 +25,7 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import RIO hiding (toList)
 
 import Data.ByteString qualified as BS
+import Data.ProtoLens (defMessage)
 import Data.Set qualified as Set
 import GHC.IsList
 import Network.GRPC.Spec (Proto)
@@ -89,6 +91,19 @@ matchesAddressPattern pat addr =
           matchesRawField (pat ^. UtxoRpc.delegationPart) $ serialiseStakeCredential cred
         _ -> BS.null $ pat ^. UtxoRpc.delegationPart
     _ -> BS.null $ pat ^. UtxoRpc.delegationPart
+
+-- | A 'UtxoPredicate' matching UTxOs at the exact address.
+exactAddressPredicate
+  :: IsCardanoEra era
+  => AddressInEra era
+  -> Proto UtxoRpc.UtxoPredicate
+exactAddressPredicate address =
+  defMessage
+    & UtxoRpc.match
+      .~ ( defMessage
+             & UtxoRpc.cardano
+               .~ (defMessage & UtxoRpc.address .~ (defMessage & UtxoRpc.exactAddress .~ serialiseToRawBytes address))
+         )
 
 -- | Serialise a 'PaymentCredential' to raw bytes (the key or script hash).
 serialisePaymentCredential :: PaymentCredential -> ByteString

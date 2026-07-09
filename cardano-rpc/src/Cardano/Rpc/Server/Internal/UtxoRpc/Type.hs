@@ -15,6 +15,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   , txInTxOutToAnyUtxoData
   , anyUtxoDataUtxoRpcToUtxo
   , txOutToUtxoRpcTxOutput
+  , txoRefUtxoRpcToTxIn
   , utxoRpcTxOutputToTxOut
   , protocolParamsToUtxoRpcPParams
   , simpleScriptToUtxoRpcNativeScript
@@ -538,7 +539,7 @@ txInTxOutToAnyUtxoData txIn txOut = do
   defMessage
     & U5c.nativeBytes .~ txOutCbor
     & U5c.txoRef .~ inject txIn
-    & U5c.cardano .~ txOutToUtxoRpcTxOutput txOut
+    & U5c.cardano .~ txOutToUtxoRpcTxOutput (convert era) txOut
 
 anyUtxoDataUtxoRpcToUtxo
   :: forall era m
@@ -572,11 +573,10 @@ txoRefUtxoRpcToTxIn txoRef = do
   pure $ TxIn txId' (TxIx . fromIntegral $ txoRef ^. U5c.index)
 
 txOutToUtxoRpcTxOutput
-  :: forall era
-   . IsEra era
-  => TxOut CtxUTxO era
+  :: ShelleyBasedEra era
+  -> TxOut CtxUTxO era
   -> Proto UtxoRpc.TxOutput
-txOutToUtxoRpcTxOutput (TxOut addressInEra txOutValue datum script) = do
+txOutToUtxoRpcTxOutput sbe (TxOut addressInEra txOutValue datum script) = do
   let multiAsset =
         fromList $
           toList (valueToPolicyAssets $ txOutValueToValue txOutValue) <&> \(pId, policyAssets) -> do
@@ -608,7 +608,7 @@ txOutToUtxoRpcTxOutput (TxOut addressInEra txOutValue datum script) = do
               & U5c.originalCbor .~ getOriginalScriptDataBytes hashableScriptData
 
   defMessage
-    & U5c.address .~ T.encodeUtf8 (obtainCommonConstraints (useEra @era) $ serialiseAddress addressInEra)
+    & U5c.address .~ T.encodeUtf8 (shelleyBasedEraConstraints sbe $ serialiseAddress addressInEra)
     & U5c.coin .~ inject (L.unCoin (txOutValueToLovelace txOutValue))
     & U5c.assets .~ multiAsset
     & U5c.maybe'datum .~ datumRpc

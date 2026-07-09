@@ -25,5 +25,5 @@ hprop_roundtrip_tx_output = H.property $ do
 
   H.tripping
     txOut
-    txOutToUtxoRpcTxOutput
+    (txOutToUtxoRpcTxOutput (convert era))
     (first @Either displayException . utxoRpcTxOutputToTxOut)
