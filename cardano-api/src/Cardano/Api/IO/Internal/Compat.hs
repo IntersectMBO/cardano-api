@@ -16,6 +16,7 @@ import Cardano.Api.IO.Internal.Compat.Win32
 
 import Control.Monad.Except (ExceptT)
 import Data.ByteString (ByteString)
+import GHC.Stack (HasCallStack)
 import System.IO
 
 handleFileForWritingWithOwnerPermission
@@ -24,7 +25,8 @@ handleFileForWritingWithOwnerPermission
   -> IO (Either (FileError e) ())
 handleFileForWritingWithOwnerPermission = handleFileForWritingWithOwnerPermissionImpl
 
-writeSecrets :: FilePath -> [Char] -> [Char] -> (a -> ByteString) -> [a] -> IO ()
+writeSecrets
+  :: HasCallStack => FilePath -> [Char] -> [Char] -> (a -> ByteString) -> [a] -> IO ()
 writeSecrets = writeSecretsImpl
 
 checkVrfFilePermissions :: File content direction -> ExceptT VRFPrivateKeyFilePermissionError IO ()

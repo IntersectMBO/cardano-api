@@ -19,7 +19,7 @@ where
 import           Cardano.Api.Error (FileError (..), throwErrorM)
 import           Cardano.Api.IO.Internal.Base
 
-import           Control.Exception (bracketOnError, throwIO)
+import           Control.Exception (bracketOnError)
 import           Control.Monad (forM_, when)
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.IO.Class (liftIO)
@@ -27,6 +27,7 @@ import           Control.Monad.Trans.Except.Extra (left)
 import           Data.Bits
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import           GHC.Stack (HasCallStack)
 import qualified System.Directory as IO
 import           System.Directory (emptyPermissions, readable, setPermissions)
 import           System.FilePath (splitFileName, (<.>), (</>))
@@ -58,7 +59,8 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
  where
   (targetDir, targetFile) = splitFileName path
 
-writeSecretsImpl :: FilePath -> [Char] -> [Char] -> (a -> ByteString) -> [a] -> IO ()
+writeSecretsImpl
+  :: HasCallStack => FilePath -> [Char] -> [Char] -> (a -> ByteString) -> [a] -> IO ()
 writeSecretsImpl outDir prefix suffix secretOp xs =
   forM_ (zip xs [0 :: Int ..]) $
     \(secret, nr) -> do
@@ -66,7 +68,6 @@ writeSecretsImpl outDir prefix suffix secretOp xs =
       result <- handleFileForWritingWithOwnerPermissionImpl filename $ \h ->
         BS.hPut h $ secretOp secret
       case result of
-        Left (FileIOError _ ioe) -> throwIO ioe
         Left err -> throwErrorM (err :: FileError ())
         Right () -> setPermissions filename (emptyPermissions{readable = True})
 
