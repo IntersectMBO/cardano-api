@@ -34,12 +34,73 @@ import Network.GRPC.Spec
 instance Inject (Proto U5c.RationalNumber) Rational where
   inject r = r ^. U5c.numerator . to fromIntegral % r ^. U5c.denominator . to fromIntegral
 
--- NB. this clips value in Integer -> Int64/Word64 conversion here
+-- | Convert a 'Rational' into a protobuf 'U5c.RationalNumber'.
+--
+-- The UTxO RPC spec fixes the field widths to an @int32@ numerator and a
+-- @uint32@ denominator, while on-chain rationals (e.g. bounded ratios backed
+-- by 'Word64') can exceed both. When the numerator and the denominator fit
+-- their fields, the conversion is exact. Otherwise the result is the best
+-- representable approximation of the value: magnitudes beyond
+-- @maxBound \@Int32@ are clamped to it, so out-of-range negative values
+-- clamp to @-maxBound \@Int32@ (one above @minBound \@Int32@), and other
+-- values are approximated using continued fractions, keeping both
+-- components within their field bounds.
+-- The conversion is therefore lossy for such out-of-range values, and values
+-- close enough to zero may approximate to zero.
 instance Inject Rational (Proto U5c.RationalNumber) where
   inject r =
     defMessage
-      & U5c.numerator .~ fromIntegral (numerator r)
-      & U5c.denominator .~ fromIntegral (denominator r)
+      & U5c.numerator .~ fromInteger num
+      & U5c.denominator .~ fromInteger den
+   where
+    (num, den)
+      | numerator r >= fromIntegral (minBound @Int32)
+      , numerator r <= maxNum
+      , denominator r <= maxDen =
+          (numerator r, denominator r)
+      | otherwise = do
+          let approximation = bestApproximation $ abs r
+          (signum (numerator r) * numerator approximation, denominator approximation)
+
+    maxNum = fromIntegral (maxBound @Int32) :: Integer
+
+    maxDen = fromIntegral (maxBound @Word32) :: Integer
+
+    -- Best approximation of a non-negative rational keeping the numerator and
+    -- the denominator within 'maxNum' and 'maxDen' respectively: walk the
+    -- continued fraction convergents of the value until a bound is exceeded,
+    -- then pick the closer of the last in-bounds convergent and the largest
+    -- in-bounds semiconvergent.
+    bestApproximation :: Rational -> Rational
+    bestApproximation x
+      | x > fromIntegral maxNum = maxNum % 1
+      | otherwise = go 0 1 1 0 x
+     where
+      -- (hPrev, kPrev) and (hCur, kCur) are the components of the two most
+      -- recent convergents, y is the current complete quotient. The first
+      -- convergent (floor x % 1) is always in bounds because x <= maxNum, so
+      -- the out-of-bounds branch never divides by kCur = 0.
+      go :: Integer -> Integer -> Integer -> Integer -> Rational -> Rational
+      go hPrev kPrev hCur kCur y = do
+        let a = floor y
+            hNew = a * hCur + hPrev
+            kNew = a * kCur + kPrev
+            rest = y - fromIntegral a
+        if hNew > maxNum || kNew > maxDen
+          then do
+            -- the largest coefficient for which the semiconvergent still fits
+            -- both bounds
+            let aFromNum = if hCur > 0 then (maxNum - hPrev) `div` hCur else a
+                aMax = a `min` aFromNum `min` ((maxDen - kPrev) `div` kCur)
+                semiconvergent = (aMax * hCur + hPrev) % (aMax * kCur + kPrev)
+                convergent = hCur % kCur
+            if aMax >= 1 && abs (x - semiconvergent) <= abs (x - convergent)
+              then semiconvergent
+              else convergent
+          else
+            if rest == 0
+              then hNew % kNew
+              else go hCur kCur hNew kNew (recip rest)
 
 instance Inject (Proto U5c.ExUnits) L.ExUnits where
   inject r =
