@@ -707,21 +707,19 @@ mkProtoTxEval fee evalMap redeemerLookup = do
       protoTraces =
         [ do
             let (purpose, idx) = scriptWitnessIndexToRedeemerPurpose witness
-            Proto $
-              defMessage
-                & U5c.msg .~ traceLine
-                & U5c.purpose .~ purpose
-                & U5c.index .~ idx
+            defMessage
+              & U5c.msg .~ traceLine
+              & U5c.purpose .~ purpose
+              & U5c.index .~ idx
         | (witness, (traces, _)) <- toList successes
         , traceLine <- traces
         ]
-  Proto $
-    defMessage
-      & U5c.fee .~ getProto (inject fee)
-      & U5c.exUnits .~ protoExecutionUnits
-      & U5c.redeemers .~ map getProto protoRedeemers
-      & U5c.errors .~ map getProto protoErrors
-      & U5c.traces .~ map getProto protoTraces
+  defMessage
+    & U5c.fee .~ inject fee
+    & U5c.exUnits .~ protoExecutionUnits
+    & U5c.redeemers .~ protoRedeemers
+    & U5c.errors .~ protoErrors
+    & U5c.traces .~ protoTraces
 
 -- | Assemble a proto 'Redeemer' from evaluation results and transaction
 -- witness data.
@@ -739,13 +737,12 @@ mkProtoRedeemer swi exUnits redeemerDatum = do
         defMessage
           & U5c.steps .~ fromIntegral (executionSteps exUnits)
           & U5c.memory .~ fromIntegral (executionMemory exUnits)
-  Proto $
-    defMessage
-      & U5c.purpose .~ purpose
-      & U5c.index .~ idx
-      & U5c.exUnits .~ protoExUnits
-      & U5c.maybe'payload .~ fmap (getProto . scriptDataToUtxoRpcPlutusData . fst) redeemerDatum
-      & U5c.originalCbor .~ maybe mempty snd redeemerDatum
+  defMessage
+    & U5c.purpose .~ purpose
+    & U5c.index .~ idx
+    & U5c.exUnits .~ protoExUnits
+    & U5c.maybe'payload .~ fmap (scriptDataToUtxoRpcPlutusData . fst) redeemerDatum
+    & U5c.originalCbor .~ maybe mempty snd redeemerDatum
 
 -- | Convert a 'ScriptExecutionError' into a proto 'EvalReport' with the
 -- redeemer purpose and 0-based index that produced the error.
@@ -753,19 +750,19 @@ scriptExecutionErrorToEvalReport
   :: ScriptWitnessIndex -> ScriptExecutionError -> Proto UtxoRpc.EvalReport
 scriptExecutionErrorToEvalReport swi err = do
   let (purpose, idx) = scriptWitnessIndexToRedeemerPurpose swi
-  Proto $
-    defMessage
-      & U5c.msg .~ tshow err
-      & U5c.purpose .~ purpose
-      & U5c.index .~ idx
+  defMessage
+    & U5c.msg .~ tshow err
+    & U5c.purpose .~ purpose
+    & U5c.index .~ idx
 
 -- | Map a 'ScriptWitnessIndex' to the corresponding proto 'RedeemerPurpose'
 -- and the numeric index within that purpose.
-scriptWitnessIndexToRedeemerPurpose :: ScriptWitnessIndex -> (UtxoRpc.RedeemerPurpose, Word32)
+scriptWitnessIndexToRedeemerPurpose
+  :: ScriptWitnessIndex -> (Proto UtxoRpc.RedeemerPurpose, Word32)
 scriptWitnessIndexToRedeemerPurpose = \case
-  ScriptWitnessIndexTxIn i -> (UtxoRpc.REDEEMER_PURPOSE_SPEND, i)
-  ScriptWitnessIndexMint i -> (UtxoRpc.REDEEMER_PURPOSE_MINT, i)
-  ScriptWitnessIndexCertificate i -> (UtxoRpc.REDEEMER_PURPOSE_CERT, i)
-  ScriptWitnessIndexWithdrawal i -> (UtxoRpc.REDEEMER_PURPOSE_REWARD, i)
-  ScriptWitnessIndexVoting i -> (UtxoRpc.REDEEMER_PURPOSE_VOTE, i)
-  ScriptWitnessIndexProposing i -> (UtxoRpc.REDEEMER_PURPOSE_PROPOSE, i)
+  ScriptWitnessIndexTxIn i -> (Proto UtxoRpc.REDEEMER_PURPOSE_SPEND, i)
+  ScriptWitnessIndexMint i -> (Proto UtxoRpc.REDEEMER_PURPOSE_MINT, i)
+  ScriptWitnessIndexCertificate i -> (Proto UtxoRpc.REDEEMER_PURPOSE_CERT, i)
+  ScriptWitnessIndexWithdrawal i -> (Proto UtxoRpc.REDEEMER_PURPOSE_REWARD, i)
+  ScriptWitnessIndexVoting i -> (Proto UtxoRpc.REDEEMER_PURPOSE_VOTE, i)
+  ScriptWitnessIndexProposing i -> (Proto UtxoRpc.REDEEMER_PURPOSE_PROPOSE, i)

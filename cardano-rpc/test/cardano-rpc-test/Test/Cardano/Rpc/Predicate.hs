@@ -21,6 +21,7 @@ import RIO
 import Data.ByteString qualified as BS
 import Data.ProtoLens (defMessage)
 import Data.Set qualified as Set
+import Network.GRPC.Spec (Proto)
 
 import Test.Gen.Cardano.Api.Typed
   ( genAddressByron
@@ -432,7 +433,7 @@ hprop_extract_simple_exact_address :: Property
 hprop_extract_simple_exact_address = H.property $ do
   address <- forAll genAddressShelley
   let addressBytes = serialiseToRawBytes address
-      outputPattern :: U5c.TxOutputPattern
+      outputPattern :: Proto U5c.TxOutputPattern
       outputPattern = defMessage & U5c.address .~ (defMessage & U5c.exactAddress .~ addressBytes)
       predicate = wrapInPredicate outputPattern
   addresses <- H.nothingFail $ extractAddressesFromPredicate predicate
@@ -481,7 +482,7 @@ hprop_extract_consistent_with_matches = H.property $ do
       addressInEra = shelleyAddressInEra sbe address
   _addresses <- H.nothingFail $ extractAddressesFromPredicate predicate
   -- The extracted address should match via matchesAddressPattern
-  let addressPattern :: U5c.AddressPattern
+  let addressPattern :: Proto U5c.AddressPattern
       addressPattern = defMessage & U5c.exactAddress .~ addressBytes
   H.assertWith addressInEra $ matchesAddressPattern addressPattern
 
@@ -533,7 +534,7 @@ genValueWithNativeAsset = do
   pure (value, asset)
 
 -- | Wrap a TxOutputPattern in a UtxoPredicate via match.cardano.
-wrapInPredicate :: U5c.TxOutputPattern -> U5c.UtxoPredicate
+wrapInPredicate :: Proto U5c.TxOutputPattern -> Proto U5c.UtxoPredicate
 wrapInPredicate outputPattern =
   defMessage
     & U5c.match

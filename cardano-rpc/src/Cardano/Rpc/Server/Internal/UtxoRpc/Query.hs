@@ -120,7 +120,7 @@ searchUtxosMethod
   -> m (Proto UtxoRpc.SearchUtxosResponse)
 searchUtxosMethod req = do
   -- TODO: field masks are ignored for now (same as readParamsMethod)
-  let mPredicate = fmap getProto $ req ^. U5c.maybe'predicate
+  let mPredicate = req ^. U5c.maybe'predicate
       maxItems = req ^. U5c.maxItems
       startToken = req ^. U5c.maybe'startToken
 
