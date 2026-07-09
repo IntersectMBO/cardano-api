@@ -147,7 +147,9 @@ tests =
     , testProperty "json roundtrip txoutvalue" prop_json_roundtrip_txoutvalue
     , testProperty "json roundtrip txout tx context" prop_json_roundtrip_txout_tx_context
     , testProperty "json roundtrip txout utxo context" prop_json_roundtrip_txout_utxo_context
-    , testProperty "json roundtrip txout noncanonical inline datum" prop_json_roundtrip_txout_noncanonical_inline_datum
+    , testProperty
+        "json roundtrip txout noncanonical inline datum"
+        prop_json_roundtrip_txout_noncanonical_inline_datum
     , testProperty "json roundtrip scriptdata detailed json" prop_json_roundtrip_scriptdata_detailed_json
     , testProperty "json roundtrip praos nonce" prop_roundtrip_praos_nonce_JSON
     , testProperty "new TxOut ToJSON matches legacy" prop_new_txout_json_matches_legacy
