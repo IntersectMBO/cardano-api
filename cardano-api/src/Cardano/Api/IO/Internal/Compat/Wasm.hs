@@ -1,4 +1,7 @@
 {-# LANGUAGE CPP #-}
+-- HasCallStack is unused in these dummy implementations, but keeps the
+-- signatures identical to the Posix and Win32 variants.
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 #if defined(wasm32_HOST_ARCH)
 #define WASM
@@ -20,6 +23,7 @@ import           Cardano.Api.Error (FileError (..))
 import           Cardano.Api.IO.Internal.Base
 import           Control.Monad.Except (ExceptT)
 import           Data.ByteString (ByteString)
+import           GHC.Stack (HasCallStack)
 import           System.IO (Handle)
 
 handleFileForWritingWithOwnerPermissionImpl
@@ -28,7 +32,8 @@ handleFileForWritingWithOwnerPermissionImpl
   -> IO (Either (FileError e) ())
 handleFileForWritingWithOwnerPermissionImpl _path _f = return $ Right () -- Dummy implementation for WASM
 
-writeSecretsImpl :: FilePath -> [Char] -> [Char] -> (a -> ByteString) -> [a] -> IO ()
+writeSecretsImpl
+  :: HasCallStack => FilePath -> [Char] -> [Char] -> (a -> ByteString) -> [a] -> IO ()
 writeSecretsImpl _outDir _prefix _suffix _secretOp _xs = return () -- Dummy implementation for WASM
 
 -- | Make sure the VRF private key file is readable only

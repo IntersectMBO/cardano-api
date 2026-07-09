@@ -18,7 +18,7 @@ where
 
 #ifdef UNIX
 
-import           Cardano.Api.Error (FileError (..))
+import           Cardano.Api.Error (FileError (..), throwErrorM)
 import           Cardano.Api.IO.Internal.Base
 
 import           Control.Exception (IOException, bracket, bracketOnError, try)
@@ -27,6 +27,7 @@ import           Control.Monad.Except (ExceptT, runExceptT)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
 import qualified Data.ByteString as BS
+import           GHC.Stack (HasCallStack)
 import           System.Directory ()
 import           System.FilePath ((</>))
 import qualified System.IO as IO
@@ -71,13 +72,17 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
         IO.hClose
         (runExceptT . handleIOExceptT (FileIOError path) . f)
 
-writeSecretsImpl :: FilePath -> [Char] -> [Char] -> (a -> BS.ByteString) -> [a] -> IO ()
+writeSecretsImpl
+  :: HasCallStack => FilePath -> [Char] -> [Char] -> (a -> BS.ByteString) -> [a] -> IO ()
 writeSecretsImpl outDir prefix suffix secretOp xs =
   forM_ (zip xs [0 :: Int ..]) $
     \(secret, nr) -> do
       let filename = outDir </> prefix <> "." <> printf "%03d" nr <> "." <> suffix
-      BS.writeFile filename $ secretOp secret
-      setFileMode filename ownerReadMode
+      result <- handleFileForWritingWithOwnerPermissionImpl filename $ \h ->
+        BS.hPut h $ secretOp secret
+      case result of
+        Left err -> throwErrorM (err :: FileError ())
+        Right () -> setFileMode filename ownerReadMode
 
 -- | Make sure the VRF private key file is readable only
 -- by the current process owner the node is running under.
