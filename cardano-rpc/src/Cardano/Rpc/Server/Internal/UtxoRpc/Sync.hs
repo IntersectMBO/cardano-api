@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | Handlers for the UTxO RPC @SyncService@ - synchronising chain data
@@ -20,7 +21,8 @@ import RIO
 
 import Data.ByteString qualified as BS
 import Data.ProtoLens (defMessage)
-import Network.GRPC.Spec (GrpcError (GrpcInvalidArgument, GrpcNotFound), Proto)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import Network.GRPC.Spec (GrpcError (GrpcInternal, GrpcInvalidArgument, GrpcNotFound), Proto)
 
 -- | Handle the @FetchBlock@ SyncService RPC method.
 -- Fetches a block from ChainDB by slot and header hash.
@@ -33,7 +35,7 @@ fetchBlockMethod
   -> m (Proto U5c.FetchBlockResponse)
   -- ^ Response containing the fetched block with raw CBOR and cardano header
 fetchBlockMethod request = do
-  nodeKernelAccess <- grabNodeKernelAccess
+  nodeKernelAccess@NodeKernelAccess{systemStart, readEraHistory} <- grabNodeKernelAccess
   let blockRef = request ^. U5c.ref
       slot = SlotNo $ blockRef ^. U5c.slot
       hashBytes = blockRef ^. U5c.hash
@@ -43,23 +45,33 @@ fetchBlockMethod request = do
       throwNotFound =
         throwGrpcErrorWithMessage GrpcNotFound $
           "block not found at slot " <> tshow (unSlotNo slot)
+      throwPastHorizon =
+        throwGrpcErrorWithMessage GrpcInternal $
+          "cannot convert slot "
+            <> tshow (unSlotNo slot)
+            <> " to timestamp: the slot is past the era history horizon;"
+            <> " check that the requested slot is correct and that the node is fully in sync"
   headerHash <-
     deserialiseFromRawBytes (proxyToAsType (Proxy @(Hash BlockHeader))) hashBytes
       & either (const throwInvalidHash) pure
   (rawBytes, BlockNo height) <-
     fetchBlock nodeKernelAccess slot headerHash >>= maybe throwNotFound pure
+  eraHistory <- readEraHistory
+  timestampMs <-
+    slotToUTCTime systemStart eraHistory slot
+      & either (const throwPastHorizon) (pure . round . (* 1000) . utcTimeToPOSIXSeconds)
   let blockHeader =
         defMessage
           & U5c.slot .~ unSlotNo slot
           & U5c.hash .~ hashBytes
           & U5c.height .~ height
-  -- TODO: timestamp - needs EraHistory from ledger state (snapshot migration)
   pure $
     defMessage
       & U5c.block
         .~ ( defMessage
                & U5c.nativeBytes .~ rawBytes
                & U5c.cardano . U5c.header .~ blockHeader
+               & U5c.cardano . U5c.timestamp .~ timestampMs
            )
 
 -- TODO: cardano.body.tx - needs full block deserialisation + UTxO RPC tx mapping

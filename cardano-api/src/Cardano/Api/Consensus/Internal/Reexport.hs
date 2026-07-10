@@ -2,6 +2,7 @@ module Cardano.Api.Consensus.Internal.Reexport
   ( BlockComponent (..)
   , ByronBlock
   , CardanoBlock
+  , ConfigSupportsNode
   , ChainDepState
   , GenTx (..)
   , HasHeader
@@ -9,17 +10,23 @@ module Cardano.Api.Consensus.Internal.Reexport
   , EraMismatch (..)
   , NodeKernel (..)
   , OneEraHash (..)
+  , HasHardForkHistory (..)
   , PastHorizonException
   , PraosProtocolSupportsNode
   , PraosProtocolSupportsNodeCrypto
   , RealPoint (..)
   , ShelleyGenesisStaking (..)
   , StandardCrypto
+  , TopLevelConfig
+  , ledgerState
   , blockNo
   , byronIdTx
+  , configBlock
+  , configLedger
   , condense
   , getOpCertCounters
   , interpreterToEpochInfo
+  , mkInterpreter
   , unsafeExtendSafeZone
   , txId
   )
@@ -29,12 +36,17 @@ import Cardano.Protocol.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Block (HasHeader, HeaderHash, RealPoint (..), blockNo)
 import Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..), byronIdTx)
 import Ouroboros.Consensus.Cardano.Block (CardanoBlock, EraMismatch (..))
+import Ouroboros.Consensus.Config (TopLevelConfig, configBlock, configLedger)
+import Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode)
+import Ouroboros.Consensus.HardFork.Abstract (HasHardForkHistory (..))
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraHash (..))
 import Ouroboros.Consensus.HardFork.History.EpochInfo (interpreterToEpochInfo)
 import Ouroboros.Consensus.HardFork.History.Qry
   ( PastHorizonException
+  , mkInterpreter
   , unsafeExtendSafeZone
   )
+import Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import Ouroboros.Consensus.Node (NodeKernel (..))
 import Ouroboros.Consensus.Protocol.Abstract (ChainDepState)

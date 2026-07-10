@@ -17,16 +17,20 @@ module Cardano.Api.Consensus.Internal.Protocol
   , ProtocolInfoArgs (..)
   , ProtocolClient (..)
   , ProtocolClientInfoArgs (..)
+  , nodeSystemStart
   )
 where
 
 import Cardano.Api.Consensus.Internal.Mode
 
+import Cardano.Slotting.Time (SystemStart)
 import Ouroboros.Consensus.Block.Forging (MkBlockForging (..))
 import Ouroboros.Consensus.Byron.ByronHFC (ByronBlockHFC)
 import Ouroboros.Consensus.Cardano
 import Ouroboros.Consensus.Cardano.Block
 import Ouroboros.Consensus.Cardano.Node
+import Ouroboros.Consensus.Config (TopLevelConfig, configBlock)
+import Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (getSystemStart))
 import Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
 import Ouroboros.Consensus.Ledger.SupportsProtocol qualified as Consensus (LedgerSupportsProtocol)
 import Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..), ProtocolInfo (..))
@@ -143,3 +147,7 @@ data SomeBlockType where
   SomeBlockType :: BlockType blk -> SomeBlockType
 
 deriving instance Show SomeBlockType
+
+-- | Extract the network system start time from the node's top-level configuration.
+nodeSystemStart :: ConfigSupportsNode blk => TopLevelConfig blk -> SystemStart
+nodeSystemStart = getSystemStart . configBlock
