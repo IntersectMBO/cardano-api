@@ -135,17 +135,19 @@ deserialiseInput acceptedFormats inputBs =
       Left _ -> DeserialiseInputErrorFormatMismatch
 
   deserialiseBech32 :: SerialiseAsBech32 a => DeserialiseInputResult a
-  deserialiseBech32 =
-    case Text.decodeUtf8' inputBs of
-      -- The input was not valid UTF-8, so it cannot be valid Bech32.
-      Left _ -> DeserialiseInputErrorFormatMismatch
-      Right inputText ->
-        case deserialiseFromBech32 inputText of
-          Right res -> DeserialiseInputSuccess res
-          -- The input was not valid Bech32.
-          Left (Bech32DecodingError _) -> DeserialiseInputErrorFormatMismatch
-          -- The input was valid Bech32, but some other error occurred.
-          Left err -> DeserialiseInputError $ InputBech32DecodeError err
+  deserialiseBech32 = either id fromBech32 $ decodeText inputBs
+   where
+    -- The input was not valid UTF-8, so it cannot be valid Bech32.
+    decodeText =
+      first (const DeserialiseInputErrorFormatMismatch)
+        . Text.decodeUtf8'
+    fromBech32 text =
+      case deserialiseFromBech32 text of
+        Right res -> DeserialiseInputSuccess res
+        -- The input was not valid Bech32.
+        Left (Bech32DecodingError _) -> DeserialiseInputErrorFormatMismatch
+        -- The input was valid Bech32, but some other error occurred.
+        Left err -> DeserialiseInputError $ InputBech32DecodeError err
 
   deserialiseHex :: SerialiseAsRawBytes a => DeserialiseInputResult a
   deserialiseHex
@@ -205,17 +207,19 @@ deserialiseInputAnyOf bech32Types textEnvTypes inputBs =
       Left _ -> DeserialiseInputErrorFormatMismatch
 
   deserialiseBech32 :: DeserialiseInputResult b
-  deserialiseBech32 =
-    case Text.decodeUtf8' inputBs of
-      -- The input was not valid UTF-8, so it cannot be valid Bech32.
-      Left _ -> DeserialiseInputErrorFormatMismatch
-      Right inputText ->
-        case deserialiseAnyOfFromBech32 bech32Types inputText of
-          Right res -> DeserialiseInputSuccess res
-          -- The input was not valid Bech32.
-          Left (Bech32DecodingError _) -> DeserialiseInputErrorFormatMismatch
-          -- The input was valid Bech32, but some other error occurred.
-          Left err -> DeserialiseInputError $ InputBech32DecodeError err
+  deserialiseBech32 = either id fromBech32 $ decodeText inputBs
+   where
+    -- The input was not valid UTF-8, so it cannot be valid Bech32.
+    decodeText =
+      first (const DeserialiseInputErrorFormatMismatch)
+        . Text.decodeUtf8'
+    fromBech32 text =
+      case deserialiseAnyOfFromBech32 bech32Types text of
+        Right res -> DeserialiseInputSuccess res
+        -- The input was not valid Bech32.
+        Left (Bech32DecodingError _) -> DeserialiseInputErrorFormatMismatch
+        -- The input was valid Bech32, but some other error occurred.
+        Left err -> DeserialiseInputError $ InputBech32DecodeError err
 
 -- | Read formatted file
 readFormattedFile
