@@ -159,6 +159,7 @@ test_Bech32DecodeError =
     , Bech32DeserialiseFromBytesError bytestring
     , Bech32WrongPrefix text text
     , Bech32UnexpectedHeader text text
+    , Bech32InvalidUtf8 text
     ]
 
 test_InputDecodeError :: TestTree

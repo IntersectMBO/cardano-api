@@ -149,6 +149,9 @@ data Bech32DecodeError
       -- ^ Expected header
       !Text
       -- ^ Unexpected header
+  | -- | The input is not valid UTF-8, so it cannot be a Bech32-encoded
+    -- string. The field contains the rendered UTF-8 decoding error.
+    Bech32InvalidUtf8 !Text
   deriving (Eq, Show, Data)
 
 instance Error Bech32DecodeError where
@@ -181,3 +184,5 @@ instance Error Bech32DecodeError where
         [ "Unexpected CIP-129 Bech32 header: the actual header is " <> pshow actual
         , ", but it was expected to be " <> pshow expected
         ]
+    Bech32InvalidUtf8 decodeErr ->
+      "The Bech32-encoded string is not valid UTF-8: " <> pretty decodeErr

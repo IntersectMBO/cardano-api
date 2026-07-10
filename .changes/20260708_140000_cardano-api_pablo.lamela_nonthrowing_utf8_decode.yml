@@ -1,5 +1,5 @@
 description: |
-  Fixed `deserialiseInput`, `deserialiseInputAnyOf` and `deserialiseAnyVerificationKeyBech32` (and thereby `deserialiseAnyVerificationKey`) to return an error instead of throwing an impure exception when the input is not valid UTF-8.
+  Fixed `deserialiseInput`, `deserialiseInputAnyOf` and `deserialiseAnyVerificationKeyBech32` (and thereby `deserialiseAnyVerificationKey`) to return an error instead of throwing an impure exception when the input is not valid UTF-8. Added a `Bech32InvalidUtf8` constructor to `Bech32DecodeError`, which carries the rendered UTF-8 decoding error.
 kind:
 - bugfix
 pr: 1249
