@@ -13,6 +13,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   , protocolParamsToUtxoRpcPParams
   , simpleScriptToUtxoRpcNativeScript
   , utxoRpcBigIntToInteger
+  , utxoRpcRationalNumberToRational
   , mkChainPointMsg
   , utxoRpcChainPointMsgToChainPoint
   , scriptDataToUtxoRpcPlutusData
@@ -28,6 +29,7 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Script
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput

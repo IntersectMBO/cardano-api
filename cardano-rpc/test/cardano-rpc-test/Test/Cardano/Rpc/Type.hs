@@ -48,42 +48,44 @@ hprop_roundtrip_rational_in_range = H.property $ do
   den <- forAll . H.integral $ H.linear 1 (fromIntegral $ maxBound @Word32)
   let r = num % den :: Rational
       msg = inject r :: Proto U5c.RationalNumber
-  inject msg === r
+  utxoRpcRationalNumberToRational msg === Just r
 
 -- | Rationals with components exceeding the fixed proto field widths convert
 -- to the best representable approximation.
 hprop_rational_conversion_approximates_out_of_range :: Property
 hprop_rational_conversion_approximates_out_of_range = H.propertyOnce $ do
   H.note_ "In-range values convert exactly"
-  throughProto (3 % 4) === 3 % 4
-  throughProto (-(3 % 7)) === (-3) % 7
+  throughProto (3 % 4) === Just (3 % 4)
+  throughProto (-(3 % 7)) === Just ((-3) % 7)
   throughProto (fromIntegral (maxBound @Int32) % fromIntegral (maxBound @Word32))
-    === fromIntegral (maxBound @Int32) % fromIntegral (maxBound @Word32)
+    === Just (fromIntegral (maxBound @Int32) % fromIntegral (maxBound @Word32))
 
   H.note_ "The approximation of 1 % 2^33 carries a valid, non-zero denominator"
   let smallRational = 1 % 2 ^ (33 :: Int) :: Rational
       smallMsg = inject smallRational :: Proto U5c.RationalNumber
   H.assertWith (smallMsg ^. U5c.denominator) (/= 0)
+  smallValue <- H.nothingFail $ utxoRpcRationalNumberToRational smallMsg
   H.note_ "The approximation stays within 1 % 2^33 of the original value"
-  H.assertWith (abs (inject smallMsg - smallRational)) (<= 1 % 2 ^ (33 :: Int))
+  H.assertWith (abs (smallValue - smallRational)) (<= 1 % 2 ^ (33 :: Int))
   H.note_ "0 is the best approximation: it is closer to 1 % 2^33 than 1 % maxBound @Word32 is"
-  inject smallMsg === (0 :: Rational)
+  smallValue === (0 :: Rational)
 
   H.note_ "1 % 2^32 approximates to the largest representable denominator"
-  throughProto (1 % 2 ^ (32 :: Int)) === 1 % (2 ^ (32 :: Int) - 1)
+  throughProto (1 % 2 ^ (32 :: Int)) === Just (1 % (2 ^ (32 :: Int) - 1))
 
   H.note_ "Values beyond the numerator bounds are clamped to them"
-  throughProto (2 ^ (40 :: Int) % 3) === fromIntegral (maxBound @Int32) % 1
-  throughProto (-((2 ^ (40 :: Int)) % 3)) === (-(fromIntegral $ maxBound @Int32)) % 1
+  throughProto (2 ^ (40 :: Int) % 3) === Just (fromIntegral (maxBound @Int32) % 1)
+  throughProto (-((2 ^ (40 :: Int)) % 3)) === Just ((-(fromIntegral $ maxBound @Int32)) % 1)
 
   H.note_ "Unit-interval-scale values keep sub-2^-32 precision"
   let unitScale = 1234567890123456789 % 9876543210987654321 :: Rational
       unitScaleMsg = inject unitScale :: Proto U5c.RationalNumber
   H.assertWith (unitScaleMsg ^. U5c.denominator) (/= 0)
-  H.assertWith (abs (inject unitScaleMsg - unitScale)) (<= 1 % 2 ^ (32 :: Int))
+  unitScaleValue <- H.nothingFail $ utxoRpcRationalNumberToRational unitScaleMsg
+  H.assertWith (abs (unitScaleValue - unitScale)) (<= 1 % 2 ^ (32 :: Int))
  where
-  throughProto :: Rational -> Rational
-  throughProto r = inject (inject r :: Proto U5c.RationalNumber)
+  throughProto :: Rational -> Maybe Rational
+  throughProto r = utxoRpcRationalNumberToRational (inject r :: Proto U5c.RationalNumber)
 
 -- | For arbitrary rationals in the unit interval with components up to
 -- 'Word64' scale (like ledger @UnitInterval@ values), the proto approximation
@@ -95,7 +97,8 @@ hprop_rational_approximation_error_bound = H.property $ do
   let r = num % den :: Rational
       msg = inject r :: Proto U5c.RationalNumber
   H.assertWith (msg ^. U5c.denominator) (/= 0)
-  H.assertWith (abs (inject msg - r)) (<= 1 % 2 ^ (32 :: Int))
+  converted <- H.nothingFail $ utxoRpcRationalNumberToRational msg
+  H.assertWith (abs (converted - r)) (<= 1 % 2 ^ (32 :: Int))
 
 -- | Test that ChainPoint protobuf message roundtrips, including the timestamp field.
 -- Note: @At (BlockNo 0)@ is excluded because it encodes identically to @Origin@.

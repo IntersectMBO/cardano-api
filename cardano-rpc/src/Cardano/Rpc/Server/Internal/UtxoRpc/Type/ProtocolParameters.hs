@@ -17,6 +17,7 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
@@ -149,15 +150,25 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
       , pure . (L.ppEMaxL .~ pp ^. U5c.poolRetirementEpochBound . to fromIntegral . to L.EpochInterval)
       , pure . (L.ppNOptL .~ pp ^. U5c.desiredNumberOfPools . to fromIntegral)
       , \r -> do
-          poolInfluence <- pp ^. U5c.poolInfluence . to inject . to L.boundRational ?! "Invalid poolInfluence"
+          poolInfluence <-
+            pp
+              ^. U5c.poolInfluence
+                . to (L.boundRational <=< utxoRpcRationalNumberToRational)
+                ?! "Invalid poolInfluence"
           pure $ set L.ppA0L poolInfluence r
       , \r -> do
           monetaryExpansion <-
-            pp ^. U5c.monetaryExpansion . to inject . to L.boundRational ?! "Invalid monetaryExpansion"
+            pp
+              ^. U5c.monetaryExpansion
+                . to (L.boundRational <=< utxoRpcRationalNumberToRational)
+                ?! "Invalid monetaryExpansion"
           pure $ set L.ppRhoL monetaryExpansion r
       , \r -> do
           treasuryExpansion <-
-            pp ^. U5c.treasuryExpansion . to inject . to L.boundRational ?! "Invalid treasuryExpansion"
+            pp
+              ^. U5c.treasuryExpansion
+                . to (L.boundRational <=< utxoRpcRationalNumberToRational)
+                ?! "Invalid treasuryExpansion"
           pure $ set L.ppTauL treasuryExpansion r
       , \r -> do
           minPoolCost <- pp ^. U5c.minPoolCost . to utxoRpcBigIntToInteger ?! "Invalid minPoolCost"
@@ -183,8 +194,18 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
           pure $
             r & L.ppCostModelsL .~ L.mkCostModels nonEmptyCostModels
       , \r -> do
-          steps <- pp ^. U5c.prices . U5c.steps . to inject . to L.boundRational ?! "Invalid prices.steps"
-          mem <- pp ^. U5c.prices . U5c.memory . to inject . to L.boundRational ?! "Invalid prices.mem"
+          steps <-
+            pp
+              ^. U5c.prices
+                . U5c.steps
+                . to (L.boundRational <=< utxoRpcRationalNumberToRational)
+                ?! "Invalid prices.steps"
+          mem <-
+            pp
+              ^. U5c.prices
+                . U5c.memory
+                . to (L.boundRational <=< utxoRpcRationalNumberToRational)
+                ?! "Invalid prices.mem"
           pure $
             r
               & L.ppPricesL . prStepsL .~ steps
@@ -195,8 +216,7 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
           minFeeScriptRefCostPerByte <-
             pp
               ^. U5c.minFeeScriptRefCostPerByte
-                . to inject
-                . to L.boundRational
+                . to (L.boundRational <=< utxoRpcRationalNumberToRational)
                 ?! "Invalid minFeeScriptRefCostPerByte"
           pure $ set L.ppMinFeeRefScriptCostPerByteL minFeeScriptRefCostPerByte r
       , \r -> do
@@ -218,7 +238,7 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
                 , (?! "Invalid value in poolVotingThresholds: hardForkInitiation")
                 , (?! "Invalid value in poolVotingThresholds: ppSecurityGroup")
                 ]
-              $ map (L.boundRational . inject) thresholds
+              $ map (L.boundRational <=< utxoRpcRationalNumberToRational) thresholds
           pure $
             r
               & L.ppPoolVotingThresholdsL . L.pvtMotionNoConfidenceL .~ motionNoConfidence
@@ -255,7 +275,7 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
                 , (?! "Invalid value in drepVotingThresholds: ppGovGroup")
                 , (?! "Invalid value in drepVotingThresholds: treasuryWithdrawal")
                 ]
-              $ map (L.boundRational . inject) thresholds
+              $ map (L.boundRational <=< utxoRpcRationalNumberToRational) thresholds
           pure $
             r
               & L.ppDRepVotingThresholdsL . L.dvtMotionNoConfidenceL .~ motionNoConfidence

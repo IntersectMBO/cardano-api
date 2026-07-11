@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1253
+kind:
+  - bugfix
+description: |
+  Fix server crash when a client-supplied RationalNumber has a zero denominator (the protobuf field default): the value is now rejected as invalid instead of throwing.

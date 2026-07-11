@@ -69,6 +69,7 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Script
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
