@@ -114,8 +114,7 @@ evalTxMethod request = do
                     .~ "Transaction is not balanced. Remaining balance (consumed - produced): "
                       <> tshow balance
               ]
-        finalTxEval =
-          Proto $ getProto txEval & Proto.errors %~ (<> balanceErrors)
+        finalTxEval = txEval & Proto.errors %~ (<> balanceErrors)
 
     pure $ def & U5c.report . U5c.cardano .~ finalTxEval
  where

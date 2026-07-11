@@ -65,6 +65,14 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Submit
     Cardano.Rpc.Server.Internal.UtxoRpc.Sync
     Cardano.Rpc.Server.Internal.UtxoRpc.Type
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Script
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
     Cardano.Rpc.Server.NodeKernelAccess
     Cardano.Rpc.Server.NodeKernelAccess.Type
 

@@ -4,6 +4,7 @@
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
   ( matchesUtxoPredicate
+  , exactAddressPredicate
   , extractAddressesFromPredicate
   , matchesAddressPattern
   , matchesAssetPattern
@@ -24,14 +25,16 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import RIO hiding (toList)
 
 import Data.ByteString qualified as BS
+import Data.ProtoLens (defMessage)
 import Data.Set qualified as Set
 import GHC.IsList
+import Network.GRPC.Spec (Proto)
 
 -- | Check if a UTxO entry matches a 'UtxoPredicate'.
 -- All present fields are combined with AND logic.
 matchesUtxoPredicate
   :: IsCardanoEra era
-  => UtxoRpc.UtxoPredicate
+  => Proto UtxoRpc.UtxoPredicate
   -> TxOut CtxUTxO era
   -> Bool
 matchesUtxoPredicate p txOut =
@@ -44,7 +47,7 @@ matchesUtxoPredicate p txOut =
 -- Delegates to the Cardano-specific 'TxOutputPattern' if present.
 matchesAnyUtxoPattern
   :: IsCardanoEra era
-  => UtxoRpc.AnyUtxoPattern
+  => Proto UtxoRpc.AnyUtxoPattern
   -> TxOut CtxUTxO era
   -> Bool
 matchesAnyUtxoPattern pat txOut =
@@ -54,7 +57,7 @@ matchesAnyUtxoPattern pat txOut =
 -- Address and asset filters are combined with AND; absent fields are vacuously true.
 matchesTxOutputPattern
   :: IsCardanoEra era
-  => UtxoRpc.TxOutputPattern
+  => Proto UtxoRpc.TxOutputPattern
   -> TxOut CtxUTxO era
   -> Bool
 matchesTxOutputPattern pat (TxOut addrInEra txOutValue _datum _script) =
@@ -66,7 +69,7 @@ matchesTxOutputPattern pat (TxOut addrInEra txOutValue _datum _script) =
 -- Byron addresses only support exact matching; payment\/delegation filters reject them.
 matchesAddressPattern
   :: IsCardanoEra era
-  => UtxoRpc.AddressPattern
+  => Proto UtxoRpc.AddressPattern
   -> AddressInEra era
   -> Bool
 matchesAddressPattern pat addr =
@@ -89,6 +92,19 @@ matchesAddressPattern pat addr =
         _ -> BS.null $ pat ^. UtxoRpc.delegationPart
     _ -> BS.null $ pat ^. UtxoRpc.delegationPart
 
+-- | A 'UtxoPredicate' matching UTxOs at the exact address.
+exactAddressPredicate
+  :: IsCardanoEra era
+  => AddressInEra era
+  -> Proto UtxoRpc.UtxoPredicate
+exactAddressPredicate address =
+  defMessage
+    & UtxoRpc.match
+      .~ ( defMessage
+             & UtxoRpc.cardano
+               .~ (defMessage & UtxoRpc.address .~ (defMessage & UtxoRpc.exactAddress .~ serialiseToRawBytes address))
+         )
+
 -- | Serialise a 'PaymentCredential' to raw bytes (the key or script hash).
 serialisePaymentCredential :: PaymentCredential -> ByteString
 serialisePaymentCredential (PaymentCredentialByKey h) = serialiseToRawBytes h
@@ -102,7 +118,7 @@ serialiseStakeCredential (StakeCredentialByScript h) = serialiseToRawBytes h
 -- | Check if a 'Value' contains a native asset matching an 'AssetPattern'.
 -- Ada entries are always skipped; zero-quantity entries do not match.
 matchesAssetPattern
-  :: UtxoRpc.AssetPattern
+  :: Proto UtxoRpc.AssetPattern
   -> Value
   -> Bool
 matchesAssetPattern pat value =
@@ -118,7 +134,7 @@ matchesAssetPattern pat value =
 
 -- | Try to extract a set of exact addresses from the predicate for use with 'QueryUTxOByAddress'.
 -- Returns 'Just' if the optimization is applicable, 'Nothing' otherwise.
-extractAddressesFromPredicate :: UtxoRpc.UtxoPredicate -> Maybe (Set AddressAny)
+extractAddressesFromPredicate :: Proto UtxoRpc.UtxoPredicate -> Maybe (Set AddressAny)
 extractAddressesFromPredicate p =
   case (p ^. UtxoRpc.maybe'match, p ^. UtxoRpc.not, p ^. UtxoRpc.allOf, p ^. UtxoRpc.anyOf) of
     (Just pat, [], [], []) -> extractAddressFromPattern pat
@@ -126,7 +142,7 @@ extractAddressesFromPredicate p =
       Set.unions <$> traverse extractAddressesFromPredicate anyPreds
     _ -> Nothing
  where
-  extractAddressFromPattern :: UtxoRpc.AnyUtxoPattern -> Maybe (Set AddressAny)
+  extractAddressFromPattern :: Proto UtxoRpc.AnyUtxoPattern -> Maybe (Set AddressAny)
   extractAddressFromPattern pat = do
     txoPat <- pat ^. UtxoRpc.maybe'cardano
     addrPat <- txoPat ^. UtxoRpc.maybe'address

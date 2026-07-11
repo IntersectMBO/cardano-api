@@ -17,7 +17,7 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type
 import RIO
 
 import GHC.Stack (withFrozenCallStack)
-import Network.GRPC.Spec (getProto)
+import Network.GRPC.Spec (Proto (..), getProto)
 
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
@@ -37,7 +37,7 @@ hprop_scriptWitnessIndex_to_redeemerPurpose = H.propertyOnce $ do
   verify swi expectedPurpose expectedIndex = withFrozenCallStack $ do
     let (purpose, idx) = scriptWitnessIndexToRedeemerPurpose swi
     H.annotate $ "ScriptWitnessIndex: " <> show swi
-    purpose === expectedPurpose
+    purpose === Proto expectedPurpose
     idx === expectedIndex
 
 -- | 'mkProtoRedeemer' assembles a proto Redeemer with correct fields.

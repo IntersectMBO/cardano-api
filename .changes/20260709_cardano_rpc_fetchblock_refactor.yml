@@ -1,0 +1,7 @@
+project: cardano-rpc
+pr: 1253
+kind:
+  - bugfix
+  - refactoring
+description: |
+  Approximate out-of-range rationals in RationalNumber conversions instead of wrapping. Preparatory refactoring for FetchBlock transaction bodies: split UtxoRpc.Type into Type.* modules, use Proto-wrapped messages in conversion functions, generalise txOutToUtxoRpcTxOutput over eras, expose request helpers, and return the parsed block from fetchBlock.
