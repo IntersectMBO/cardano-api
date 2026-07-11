@@ -237,7 +237,7 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
             , updateToConstitution
             , hardforkInitiation
             , ppNetworkGroup
-            , ppEcomonicGroup
+            , ppEconomicGroup
             , ppTechnicalGroup
             , ppGovGroup
             , treasuryWithdrawal
@@ -250,7 +250,7 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
                 , (?! "Invalid value in drepVotingThresholds: updateToConstitution")
                 , (?! "Invalid value in drepVotingThresholds: hardforkInitiation")
                 , (?! "Invalid value in drepVotingThresholds: ppNetworkGroup")
-                , (?! "Invalid value in drepVotingThresholds: ppEcomonicGroup")
+                , (?! "Invalid value in drepVotingThresholds: ppEconomicGroup")
                 , (?! "Invalid value in drepVotingThresholds: ppTechnicalGroup")
                 , (?! "Invalid value in drepVotingThresholds: ppGovGroup")
                 , (?! "Invalid value in drepVotingThresholds: treasuryWithdrawal")
@@ -264,7 +264,7 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
               & L.ppDRepVotingThresholdsL . L.dvtUpdateToConstitutionL .~ updateToConstitution
               & L.ppDRepVotingThresholdsL . L.dvtHardForkInitiationL .~ hardforkInitiation
               & L.ppDRepVotingThresholdsL . L.dvtPPNetworkGroupL .~ ppNetworkGroup
-              & L.ppDRepVotingThresholdsL . L.dvtPPEconomicGroupL .~ ppEcomonicGroup
+              & L.ppDRepVotingThresholdsL . L.dvtPPEconomicGroupL .~ ppEconomicGroup
               & L.ppDRepVotingThresholdsL . L.dvtPPTechnicalGroupL .~ ppTechnicalGroup
               & L.ppDRepVotingThresholdsL . L.dvtPPGovGroupL .~ ppGovGroup
               & L.ppDRepVotingThresholdsL . L.dvtTreasuryWithdrawalL .~ treasuryWithdrawal
