@@ -41,16 +41,19 @@ import Ouroboros.Consensus.Util.IOLike (IOLike)
 
 import Control.Tracer qualified as Tracer
 import Data.Bifunctor (bimap)
+import System.FS.API (SomeHasFS (..))
 
 import Type.Reflection ((:~:) (..))
 
 class (RunNode blk, IOLike m) => Protocol m blk where
   data ProtocolInfoArgs blk
   protocolInfo
-    :: ProtocolInfoArgs blk
-    -> ( ProtocolInfo blk
-       , Tracer.Tracer m KESAgentClientTrace -> m [MkBlockForging m blk]
-       )
+    :: SomeHasFS m
+    -> ProtocolInfoArgs blk
+    -> m
+         ( ProtocolInfo blk
+         , Tracer.Tracer m KESAgentClientTrace -> m [MkBlockForging m blk]
+         )
 
 -- | Node client support for each consensus protocol.
 --
@@ -63,10 +66,11 @@ class RunNode blk => ProtocolClient blk where
 -- | Run PBFT against the Byron ledger
 instance IOLike m => Protocol m ByronBlockHFC where
   data ProtocolInfoArgs ByronBlockHFC = ProtocolInfoArgsByron ProtocolParamsByron
-  protocolInfo (ProtocolInfoArgsByron params) =
-    ( inject $ protocolInfoByron params
-    , \_ -> pure . map (MkBlockForging . pure . inject) $ blockForgingByron params
-    )
+  protocolInfo _fs (ProtocolInfoArgsByron params) =
+    pure
+      ( inject $ protocolInfoByron params
+      , \_ -> pure . map (MkBlockForging . pure . inject) $ blockForgingByron params
+      )
 
 instance
   (CardanoHardForkConstraints StandardCrypto, IOLike m, MonadKESAgent m)
@@ -76,8 +80,8 @@ instance
     = ProtocolInfoArgsCardano
         (CardanoProtocolParams StandardCrypto)
 
-  protocolInfo (ProtocolInfoArgsCardano paramsCardano) =
-    protocolInfoCardano paramsCardano
+  protocolInfo fs (ProtocolInfoArgsCardano paramsCardano) =
+    protocolInfoCardano fs paramsCardano
 
 instance ProtocolClient ByronBlockHFC where
   data ProtocolClientInfoArgs ByronBlockHFC
@@ -107,9 +111,9 @@ instance
         ShelleyGenesis
         (ProtocolParamsShelleyBased StandardCrypto)
         ProtVer
-  protocolInfo (ProtocolInfoArgsShelley genesis paramsShelleyBased_ paramsShelley_) =
-    bimap inject (fmap $ fmap $ map inject) $
-      protocolInfoShelley genesis paramsShelleyBased_ paramsShelley_
+  protocolInfo fs (ProtocolInfoArgsShelley genesis paramsShelleyBased_ paramsShelley_) =
+    bimap inject (fmap $ fmap $ map inject)
+      <$> protocolInfoShelley fs genesis paramsShelleyBased_ paramsShelley_
 
 instance
   Consensus.LedgerSupportsProtocol

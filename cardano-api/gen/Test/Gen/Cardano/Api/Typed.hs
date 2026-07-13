@@ -788,16 +788,19 @@ genTxCertificates :: Typeable era => CardanoEra era -> Gen (TxCertificates Build
 genTxCertificates =
   inEonForEra
     (pure TxCertificatesNone)
-    ( \w -> do
-        certs <- Gen.list (Range.constant 0 3) $ genCertificate w
-        Gen.choice
-          [ pure TxCertificatesNone
-          , pure
-              ( TxCertificates w $
-                  fromList ((,BuildTxWith Nothing) <$> map extractCertificate certs)
-              )
-              -- TODO: Generate certificates
-          ]
+    ( \w -> case w of
+        -- Dijkstra cert path is not yet implemented; skip cert generation.
+        ShelleyBasedEraDijkstra -> pure TxCertificatesNone
+        _ -> do
+          certs <- Gen.list (Range.constant 0 3) $ genCertificate w
+          Gen.choice
+            [ pure TxCertificatesNone
+            , pure
+                ( TxCertificates w $
+                    fromList ((,BuildTxWith Nothing) <$> map extractCertificate certs)
+                )
+                -- TODO: Generate certificates
+            ]
     )
 
 extractCertificate
@@ -1163,7 +1166,12 @@ genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
 genTxScriptValidity =
   inEonForEra
     (pure TxScriptValidityNone)
-    (\w -> TxScriptValidity w <$> genScriptValidity)
+    ( \w -> case w of
+        -- Dijkstra omits the IsValid flag from the CBOR encoding (always True),
+        -- so ScriptInvalid cannot roundtrip; only generate ScriptValid.
+        AlonzoEraOnwardsDijkstra -> pure $ TxScriptValidity w ScriptValid
+        _ -> TxScriptValidity w <$> genScriptValidity
+    )
 
 genScriptValidity :: Gen ScriptValidity
 genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]
@@ -1315,7 +1323,9 @@ genValidProtocolParameters sbe =
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
 genProtocolParametersUpdate era = do
-  protocolUpdateProtocolVersion <- Gen.maybe ((,) <$> genNat <*> genNat)
+  -- Avoid generating protocol version updates: the ledger decoder rejects
+  -- versions exceeding ProtVerHigh @era + 1, but genNat can produce any Word32.
+  let protocolUpdateProtocolVersion = Nothing
   protocolUpdateDecentralization <- Gen.maybe genRational
   protocolUpdateExtraPraosEntropy <- Gen.maybe genMaybePraosNonce
   protocolUpdateMaxBlockHeaderSize <- Gen.maybe genWord16
@@ -1460,13 +1470,16 @@ genProposals
   :: Applicative (BuildTxWith build)
   => ConwayEraOnwards era
   -> Gen (TxProposalProcedures build era)
-genProposals w = conwayEraOnwardsConstraints w $ do
-  proposals <- Gen.list (Range.constant 0 15) (genProposal w)
-  let sbe = convert w
-  proposalsWithMaybeWitnesses <-
-    forM proposals $ \proposal ->
-      (proposal,) <$> Gen.maybe (genScriptWitnessForStake sbe)
-  pure $ mkTxProposalProcedures proposalsWithMaybeWitnesses
+genProposals w = case w of
+  -- ConwayEraOnwardsConstraints is not yet implemented for Dijkstra.
+  ConwayEraOnwardsDijkstra -> pure TxProposalProceduresNone
+  _ -> conwayEraOnwardsConstraints w $ do
+    proposals <- Gen.list (Range.constant 0 15) (genProposal w)
+    let sbe = convert w
+    proposalsWithMaybeWitnesses <-
+      forM proposals $ \proposal ->
+        (proposal,) <$> Gen.maybe (genScriptWitnessForStake sbe)
+    pure $ mkTxProposalProcedures proposalsWithMaybeWitnesses
 
 genScriptWitnessedTxProposals
   :: Exp.Era era
@@ -1487,14 +1500,17 @@ genVotingProcedures
   :: Applicative (BuildTxWith build)
   => ConwayEraOnwards era
   -> Gen (Api.TxVotingProcedures build era)
-genVotingProcedures w = conwayEraOnwardsConstraints w $ do
-  voters <- Gen.list (Range.constant 0 10) Q.arbitrary
-  let sbe = convert w
-  votersWithWitnesses <- fmap fromList . forM voters $ \voter ->
-    (voter,) <$> genScriptWitnessForStake sbe
-  Api.TxVotingProcedures
-    <$> Q.arbitrary
-    <*> pure (pure votersWithWitnesses)
+genVotingProcedures w = case w of
+  -- ConwayEraOnwardsConstraints is not yet implemented for Dijkstra.
+  ConwayEraOnwardsDijkstra -> pure Api.TxVotingProceduresNone
+  _ -> conwayEraOnwardsConstraints w $ do
+    voters <- Gen.list (Range.constant 0 10) Q.arbitrary
+    let sbe = convert w
+    votersWithWitnesses <- fmap fromList . forM voters $ \voter ->
+      (voter,) <$> genScriptWitnessForStake sbe
+    Api.TxVotingProcedures
+      <$> Q.arbitrary
+      <*> pure (pure votersWithWitnesses)
 
 genScriptWitnesssedTxVotingProcedures
   :: Exp.Era era

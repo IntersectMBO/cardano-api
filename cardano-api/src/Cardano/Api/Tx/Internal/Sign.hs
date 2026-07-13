@@ -104,16 +104,17 @@ import Cardano.Ledger.Binary.Plain qualified as Plain
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Keys qualified as Shelley
 
+import Data.Array.Byte (ByteArray (..))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Short qualified as SBS
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import Data.Validation qualified as Valid
 import GHC.Exts (IsList (..))
 import GHC.Stack (HasCallStack)
 import Lens.Micro
@@ -772,24 +773,21 @@ decodeShelleyBasedWitness
   -> ByteString
   -> Either CBOR.DecoderError (KeyWitness era)
 decodeShelleyBasedWitness sbe bs =
-  let e =
-        Valid.toEither $
-          mconcat $
-            map
-              (Valid.liftError return)
-              [ bootstrapWitnessDecoder bs
-              , shelleyKeyWitnessDecoder bs
-              , legacyKeyWitnessDecoder bs
-              ]
-   in case e of
-        Left errs ->
-          let allErrs = Text.unlines $ map renderBuildable errs
-           in Left $ CBOR.DecoderErrorCustom "Failed to deserialise key witness" allErrs
-        Right res -> return res
+  let decoders =
+        [ bootstrapWitnessDecoder bs
+        , shelleyKeyWitnessDecoder bs
+        , legacyKeyWitnessDecoder bs
+        ]
+      go [] errs =
+        let allErrs = Text.unlines $ map renderBuildable (reverse errs)
+         in Left $ CBOR.DecoderErrorCustom "Failed to deserialise key witness" allErrs
+      go (Right res : _) _ = Right res
+      go (Left err : rest) errs = go rest (err : errs)
+   in go decoders []
  where
   shelleyKeyWitnessDecoder b =
     ShelleyKeyWitness sbe
-      <$> CBOR.decodeFullAnnotator
+      <$> CBOR.decodeFullDecoder
         (L.eraProtVerHigh @(ShelleyLedgerEra era))
         "Shelley Witness"
         CBOR.decCBOR
@@ -797,27 +795,27 @@ decodeShelleyBasedWitness sbe bs =
 
   bootstrapWitnessDecoder b =
     ShelleyBootstrapWitness sbe
-      <$> CBOR.decodeFullAnnotator
+      <$> CBOR.decodeFullDecoder
         (L.eraProtVerHigh @(ShelleyLedgerEra era))
         "Shelley Witness"
         CBOR.decCBOR
         (LBS.fromStrict b)
 
   legacyKeyWitnessDecoder b =
-    CBOR.decodeFullAnnotator
+    CBOR.decodeFullDecoder
       (L.eraProtVerHigh @(ShelleyLedgerEra era))
       "Shelley Witness"
       decodeLegacy
       (LBS.fromStrict b)
 
   -- Non-CDDL compliant legacy decoder.
-  decodeLegacy :: CBOR.Decoder s (CBOR.Annotator (KeyWitness era))
+  decodeLegacy :: CBOR.Decoder s (KeyWitness era)
   decodeLegacy = do
     CBOR.decodeListLenOf 2
     t <- CBOR.decodeWord
     case t of
-      0 -> fmap (fmap (ShelleyKeyWitness sbe)) CBOR.decCBOR
-      1 -> fmap (fmap (ShelleyBootstrapWitness sbe)) CBOR.decCBOR
+      0 -> fmap (ShelleyKeyWitness sbe) CBOR.decCBOR
+      1 -> fmap (ShelleyBootstrapWitness sbe) CBOR.decCBOR
       _ ->
         CBOR.cborError $
           CBOR.DecoderErrorUnknownTag
@@ -1114,7 +1112,7 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
       { Shelley.bwKey = vk
       , Shelley.bwSignature = signature
       , Shelley.bwChainCode = chainCode
-      , Shelley.bwAttributes = attributes
+      , Shelley.bwAttributes = bsToByteArray attributes
       }
  where
   -- Starting with the easy bits: we /can/ convert the Byron verification key
@@ -1181,6 +1179,9 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
       toByronNetworkMagic
       (Byron.aaNetworkMagic . unAddrAttrs)
       eitherNwOrAddr
+
+bsToByteArray :: ByteString -> ByteArray
+bsToByteArray bs = case SBS.toShort bs of SBS.SBS ba -> ByteArray ba
 
 makeShelleyKeyWitness
   :: forall era

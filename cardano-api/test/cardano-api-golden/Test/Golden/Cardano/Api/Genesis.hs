@@ -11,7 +11,7 @@ where
 import Cardano.Api.Genesis
 
 import Cardano.Crypto.VRF (VerKeyVRF)
-import Cardano.Ledger.BaseTypes (Network (..), knownNonZeroBounded)
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), knownNonZeroBounded)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
@@ -55,6 +55,7 @@ exampleShelleyGenesis =
           ]
     , sgInitialFunds = ListMap [(initialFundedAddress, initialFunds)]
     , sgStaking = emptyGenesisStaking
+    , sgExtraConfig = SNothing
     }
  where
   -- hash of the genesis verification key

@@ -137,7 +137,7 @@ toPlutusScriptPurpose
   -> Witnessable thing era
   -> L.PlutusPurpose L.AsIx era
 toPlutusScriptPurpose index WitTxIn{} = L.mkSpendingPurpose (L.AsIx index)
-toPlutusScriptPurpose index WitWithdrawal{} = L.mkRewardingPurpose (L.AsIx index)
+toPlutusScriptPurpose index WitWithdrawal{} = L.mkWithdrawingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitMint{} = L.mkMintingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitTxCert{} = L.mkCertifyingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitVote{} = L.mkVotingPurpose (L.AsIx index)

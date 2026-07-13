@@ -121,6 +121,16 @@
           };
         };
 
+        # The leios-prototype ouroboros-consensus uses a git submodule
+        # (cardano-blueprint) for data-files. Fetch it with submodules so the
+        # CDDL files are present during the nix plan phase.
+        ouroboros-consensus-leios = nixpkgs.fetchgit {
+          url = "https://github.com/input-output-hk/ouroboros-consensus.git";
+          rev = "3511ac5ad2ded55553d821e7305a2c10e1cfbeca";
+          sha256 = "sha256-NAokIKE0yOW5EIx6zFgvuwa95iD4vzIq13CJOUUe0mA=";
+          fetchSubmodules = true;
+        };
+
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
@@ -140,8 +150,10 @@
           #
           inputMap = {
             "https://chap.intersectmbo.org/" = inputs.CHaP;
+            # Map the ouroboros-consensus SRP URL to the fetchgit result that
+            # includes the cardano-blueprint git submodule (needed for data-files).
+            "https://github.com/input-output-hk/ouroboros-consensus.git" = ouroboros-consensus-leios;
           };
-          # Also currently needed to make `nix flake lock --update-input CHaP` work.
           cabalProjectLocal = ''
             repository cardano-haskell-packages-local
               url: file:${inputs.CHaP}
@@ -157,6 +169,9 @@
             # This package may need to be built and we need to make sure its dependencies
             # are included in `ghc-pkg list` (in particular `compact`)
             p.ouroboros-consensus
+            # cardano-binary is needed here so that its testlib sublibrary gets registered
+            # in ghc-pkg (required transitively by cardano-crypto-wrapper:testlib)
+            p.cardano-binary
           ];
           # tools we want in our shell, from hackage
           shell.tools =
@@ -211,6 +226,12 @@
           # package customizations as needed. Where cabal.project is not
           # specific enough, or doesn't allow setting these.
           modules = [
+            ({lib, ...}: {
+              # Override the ouroboros-consensus source so haskell.nix uses the
+              # fetchgit result (with submodules), which is already provided via
+              # inputMap but the module override ensures the build phase uses it too.
+              packages.ouroboros-consensus.src = lib.mkForce ouroboros-consensus-leios;
+            })
             ({...}: {
               packages.cardano-api = {
                 configureFlags = ["--ghc-option=-Werror"];

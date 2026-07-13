@@ -156,7 +156,6 @@ import Cardano.Crypto.VRF.Class qualified as VRF
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Api.Era qualified as Ledger
 import Cardano.Ledger.Api.Transition qualified as Ledger
-import Cardano.Ledger.BHeaderView qualified as Ledger
 import Cardano.Ledger.BaseTypes
   ( Globals (..)
   , Nonce
@@ -170,11 +169,13 @@ import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
+import Cardano.Ledger.Dijkstra.Tx (Tx (MkDijkstraTx))
 import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Keys qualified as SL
 import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
 import Cardano.Ledger.Shelley.Core qualified as Core
 import Cardano.Ledger.Shelley.Genesis qualified as Ledger
+import Cardano.Ledger.Slot (isOverlaySlot)
 import Cardano.Ledger.State qualified as SL
 import Cardano.Protocol.Crypto qualified as Crypto
 import Cardano.Protocol.TPraos.API qualified as TPraos
@@ -199,7 +200,6 @@ import Ouroboros.Consensus.HardFork.Combinator.Ledger qualified as HFC
 import Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common qualified as HFC
 import Ouroboros.Consensus.HardFork.Combinator.State.Types
 import Ouroboros.Consensus.Ledger.Abstract qualified as Ledger
-import Ouroboros.Consensus.Ledger.Basics qualified as Consensus
 import Ouroboros.Consensus.Ledger.Extended qualified as Ledger
 import Ouroboros.Consensus.Ledger.Tables.Utils qualified as Ledger
 import Ouroboros.Consensus.Node.ProtocolInfo qualified as Consensus
@@ -214,6 +214,8 @@ import Ouroboros.Consensus.Shelley.Ledger.Block qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Ledger qualified as Shelley
 import Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import Ouroboros.Consensus.Util (coerceMapKeys)
+import System.FS.API (MountPoint (..), SomeHasFS (..))
+import System.FS.IO (ioHasFS)
 import Ouroboros.Network.Block (blockNo)
 import Ouroboros.Network.Block qualified
 import Ouroboros.Network.Protocol.ChainSync.Client qualified as CS
@@ -363,8 +365,8 @@ initialLedgerState nodeConfigFile = do
   -- module.
   config <- modifyError ILSEConfigFile (readNodeConfig nodeConfigFile)
   genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig config)
-  env <- modifyError ILSELedgerConsensusConfig (except (genesisConfigToEnv genesisConfig))
-  let ledgerState = initLedgerStateVar genesisConfig
+  env <- modifyError ILSELedgerConsensusConfig (liftIO (genesisConfigToEnv genesisConfig) >>= except)
+  ledgerState <- liftIO $ initLedgerStateVar genesisConfig
   return (env, ledgerState)
 
 -- | Apply a single block to the current ledger state.
@@ -1051,7 +1053,7 @@ rollBackLedgerStateHist hist maxInc = Seq.dropWhileL ((> maxInc) . (\(x, _, _) -
 
 genesisConfigToEnv
   :: GenesisConfig
-  -> Either GenesisConfigError Env
+  -> IO (Either GenesisConfigError Env)
 genesisConfigToEnv
   -- enp
   genCfg =
@@ -1059,7 +1061,7 @@ genesisConfigToEnv
       GenesisCardano _ bCfg _ transCfg
         | Cardano.Crypto.ProtocolMagic.unProtocolMagicId (Cardano.Chain.Genesis.configProtocolMagicId bCfg)
             /= Ledger.sgNetworkMagic shelleyGenesis ->
-            Left . NECardanoConfig $
+            pure . Left . NECardanoConfig $
               mconcat
                 [ "ProtocolMagicId "
                 , textShow
@@ -1076,22 +1078,21 @@ genesisConfigToEnv
                   :: Int
         , let shelleySystemStart = round . utcTimeToPOSIXSeconds $ Ledger.sgSystemStart shelleyGenesis :: Int
         , byronSystemStart /= shelleySystemStart ->
-            Left . NECardanoConfig $
+            pure . Left . NECardanoConfig $
               mconcat
                 [ "SystemStart "
                 , textShow (Cardano.Chain.Genesis.gdStartTime $ Cardano.Chain.Genesis.configGenesisData bCfg)
                 , " /= "
                 , textShow (Ledger.sgSystemStart shelleyGenesis)
                 ]
-        | otherwise ->
-            let
-              topLevelConfig = Consensus.pInfoConfig $ fst $ mkProtocolInfoCardano genCfg
-             in
-              Right $
-                Env
-                  { envLedgerConfig = Consensus.topLevelConfigLedger topLevelConfig
-                  , envConsensusConfig = Consensus.topLevelConfigProtocol topLevelConfig
-                  }
+        | otherwise -> do
+            protocolInfo <- mkProtocolInfoCardano genCfg
+            let topLevelConfig = Consensus.pInfoConfig $ fst protocolInfo
+            pure . Right $
+              Env
+                { envLedgerConfig = Consensus.topLevelConfigLedger topLevelConfig
+                , envConsensusConfig = Consensus.topLevelConfigProtocol topLevelConfig
+                }
        where
         shelleyGenesis = transCfg ^. Ledger.tcShelleyGenesisL
 
@@ -1234,28 +1235,28 @@ readByteString fp cfgType = (liftEither <=< liftIO) $
         mconcat
           ["Cannot read the ", cfgType, " configuration file at : ", Text.pack fp]
 
-initLedgerStateVar :: GenesisConfig -> LedgerState
-initLedgerStateVar genesisConfig =
-  LedgerState
-    { clsState =
-        Ledger.ledgerState $
-          Ledger.forgetLedgerTables $
-            Consensus.pInfoInitLedger $
-              fst protocolInfo
-    , clsTables =
-        Ledger.projectLedgerTables $
+initLedgerStateVar :: GenesisConfig -> IO LedgerState
+initLedgerStateVar genesisConfig = do
+  protocolInfo <- mkProtocolInfoCardano genesisConfig
+  pure $
+    LedgerState
+      { clsState =
           Ledger.ledgerState $
-            Consensus.pInfoInitLedger $
-              fst protocolInfo
-    }
- where
-  protocolInfo = mkProtocolInfoCardano genesisConfig
+            Ledger.forgetLedgerTables $
+              Consensus.pInfoInitLedger $
+                fst protocolInfo
+      , clsTables =
+          Ledger.projectLedgerTables $
+            Ledger.ledgerState $
+              Consensus.pInfoInitLedger $
+                fst protocolInfo
+      }
 
 data LedgerState = LedgerState
   { clsState :: Consensus.CardanoLedgerState Consensus.StandardCrypto Ledger.EmptyMK
   , clsTables
       :: Ledger.LedgerTables
-           (Ledger.LedgerState (Consensus.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto)))
+           (Consensus.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
            Ledger.ValuesMK
   }
   deriving Show
@@ -1433,7 +1434,7 @@ type LedgerStateEvents = (LedgerState, [LedgerEvent])
 
 toLedgerStateEvents
   :: Ledger.LedgerResult
-       (Ledger.LedgerState (Consensus.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto)))
+       (Consensus.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
        LedgerState
   -> LedgerStateEvents
 toLedgerStateEvents lr = (ledgerState, ledgerEvents)
@@ -1468,13 +1469,15 @@ type NodeConfigFile = File NodeConfig
 
 mkProtocolInfoCardano
   :: GenesisConfig
-  -> ( Consensus.ProtocolInfo
-         (Consensus.CardanoBlock Consensus.StandardCrypto)
-     , Tracer.Tracer IO KESAgentClientTrace
-       -> IO [MkBlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
-     )
+  -> IO
+       ( Consensus.ProtocolInfo
+           (Consensus.CardanoBlock Consensus.StandardCrypto)
+       , Tracer.Tracer IO KESAgentClientTrace
+         -> IO [MkBlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
+       )
 mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transCfg) =
   Consensus.protocolInfoCardano
+    (SomeHasFS (ioHasFS (MountPoint "")))
     Consensus.CardanoProtocolParams
       { Consensus.byronProtocolParams =
           Consensus.ProtocolParamsByron
@@ -1863,13 +1866,13 @@ tickThenReapplyCheckHash cfg block (LedgerState st tbs) =
     then
       let
         keys
-          :: Consensus.LedgerTables
-               (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
+          :: Ledger.LedgerTables
+               (Consensus.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
                Ledger.KeysMK
         keys = Ledger.getBlockKeySets block
 
         restrictedTables =
-          Consensus.LedgerTables
+          Ledger.LedgerTables
             (Ledger.restrictValuesMK (Ledger.getLedgerTables tbs) (Ledger.getLedgerTables keys))
 
         ledgerResult =
@@ -1882,7 +1885,7 @@ tickThenReapplyCheckHash cfg block (LedgerState st tbs) =
             ( \stt ->
                 LedgerState
                   (Ledger.forgetLedgerTables stt)
-                  ( Consensus.LedgerTables
+                  ( Ledger.LedgerTables
                       . Ledger.applyDiffsMK (Ledger.getLedgerTables tbs)
                       . Ledger.getLedgerTables
                       . Ledger.projectLedgerTables
@@ -1924,13 +1927,13 @@ tickThenApply
 tickThenApply cfg block (LedgerState st tbs) =
   let
     keys
-      :: Consensus.LedgerTables
-           (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
+      :: Ledger.LedgerTables
+           (Consensus.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
            Ledger.KeysMK
     keys = Ledger.getBlockKeySets block
 
     restrictedTables =
-      Consensus.LedgerTables
+      Ledger.LedgerTables
         (Ledger.restrictValuesMK (Ledger.getLedgerTables tbs) (Ledger.getLedgerTables keys))
 
     eLedgerResult =
@@ -1946,7 +1949,7 @@ tickThenApply cfg block (LedgerState st tbs) =
             ( \stt ->
                 LedgerState
                   (Ledger.forgetLedgerTables stt)
-                  ( Consensus.LedgerTables
+                  ( Ledger.LedgerTables
                       . Ledger.applyDiffsMK (Ledger.getLedgerTables tbs)
                       . Ledger.getLedgerTables
                       . Ledger.projectLedgerTables
@@ -2111,7 +2114,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
     let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
         slotRangeOfInterest pp' =
           Set.filter
-            (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
+            (not . isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
             $ fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
     caseShelleyToAlonzoOrBabbageEraOnwards
@@ -2226,7 +2229,7 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigni
     let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
         slotRangeOfInterest pp' =
           Set.filter
-            (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
+            (not . isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
             $ fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
     caseShelleyToAlonzoOrBabbageEraOnwards
@@ -2271,7 +2274,7 @@ data AnyNewEpochState where
     :: ShelleyBasedEra era
     -> ShelleyAPI.NewEpochState (ShelleyLedgerEra era)
     -> Ledger.LedgerTables
-         (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
+         (Consensus.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
          Ledger.ValuesMK
     -> AnyNewEpochState
 
@@ -2283,7 +2286,7 @@ getLedgerTablesUTxOValues
   :: forall era
    . ShelleyBasedEra era
   -> Ledger.LedgerTables
-       (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
+       (Consensus.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto))
        Ledger.ValuesMK
   -> Map TxIn (TxOut CtxUTxO era)
 getLedgerTablesUTxOValues sbe tbs =
@@ -2294,7 +2297,7 @@ getLedgerTablesUTxOValues sbe tbs =
            (Shelley.ShelleyBlock proto (ShelleyLedgerEra era))
       -> Map TxIn (TxOut CtxUTxO era)
     ejectTables idx =
-      let Consensus.LedgerTables (Ledger.ValuesMK values) = HFC.ejectLedgerTables idx tbs
+      let Ledger.LedgerTables (Ledger.ValuesMK values) = HFC.ejectLedgerTables idx tbs
        in Map.mapKeys fromShelleyTxIn $ coerceMapKeys $ Map.map (fromShelleyTxOut sbe) values
    in
     case sbe of
