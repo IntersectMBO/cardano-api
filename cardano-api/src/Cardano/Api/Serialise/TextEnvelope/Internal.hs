@@ -284,7 +284,7 @@ deserialiseFromTextEnvelopeJSONAnyOf types bs =
 -- | Write a value to a file in the text envelope format.
 --
 -- Note that this does /not/ set conservative file permissions: the file is
--- created with the default permissions. When writing sensitive data such as
+-- created with the default permissions which should be restricted with `umask`. When writing sensitive data such as
 -- signing keys, use 'writeFileTextEnvelopeWithOwnerPermissions' instead,
 -- which tries to restrict access to the file owner where the platform
 -- supports it (see its documentation for the exact guarantees).
