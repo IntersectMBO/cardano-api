@@ -61,6 +61,7 @@ import Data.Maybe
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
+import Data.Text.Encoding.Error (UnicodeException (..))
 import Data.Word
 import GHC.Exts (IsList (..))
 import GHC.Stack (HasCallStack)
@@ -90,6 +91,9 @@ bytestring = "<bytestring>" :: ByteString
 
 lazyBytestring :: LBS.ByteString
 lazyBytestring = "<lazy-bytestring>" :: LBS.ByteString
+
+unicodeException :: UnicodeException
+unicodeException = DecodeError "<decode error>" (Just 0xc3)
 
 stakePoolVerKey1 :: VerificationKey StakePoolKey
 stakePoolVerKey1 = getVerificationKey $ deterministicSigningKey AsStakePoolKey (Crypto.mkSeedFromBytes seed1)
@@ -159,7 +163,7 @@ test_Bech32DecodeError =
     , Bech32DeserialiseFromBytesError bytestring
     , Bech32WrongPrefix text text
     , Bech32UnexpectedHeader text text
-    , Bech32InvalidUtf8 text
+    , Bech32InvalidUtf8 unicodeException
     ]
 
 test_InputDecodeError :: TestTree

@@ -63,6 +63,8 @@ deriving instance Data Bech32.DecodingError
 
 deriving instance Data Bech32.CharPosition
 
+deriving instance Data T.UnicodeException
+
 -- | These instances originally existed on the Lovelace type.
 -- As the Lovelace type is deleted and we use L.Coin instead,
 -- these instances are added to L.Coin.  The instances are
