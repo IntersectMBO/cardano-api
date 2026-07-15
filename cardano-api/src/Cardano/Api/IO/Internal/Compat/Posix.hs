@@ -34,12 +34,8 @@ import           System.IO (Handle)
 import           System.Posix.Files (fileMode, getFileStatus, groupModes, intersectFileModes,
                    nullFileMode, otherModes, ownerReadMode, ownerWriteMode, setFdOwnerAndGroup,
                    setFileMode, stdFileMode, unionFileModes)
-#if MIN_VERSION_unix(2,8,0)
 import           System.Posix.IO (OpenFileFlags (..), OpenMode (..), closeFd, defaultFileFlags,
                    fdToHandle, openFd)
-#else
-import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
-#endif
 import           System.Posix.Types (Fd, FileMode)
 import           System.Posix.User (getRealUserID)
 import           Text.Printf (printf)
@@ -109,7 +105,8 @@ checkVrfFilePermissionsImpl (File vrfPrivKey) = do
 ownerReadWriteMode :: FileMode
 ownerReadWriteMode = ownerReadMode `unionFileModes` ownerWriteMode
 
--- | Opens a file from disk.
+-- | Opens a file from disk. In 'WriteOnly' mode, the file is truncated if
+-- it already exists.
 openFileDescriptor :: FilePath -> OpenMode -> IO Fd
 # if MIN_VERSION_unix(2,8,0)
 openFileDescriptor fp openMode =
@@ -122,7 +119,7 @@ openFileDescriptor fp openMode =
       ReadWrite ->
         defaultFileFlags{creat = Just stdFileMode}
       WriteOnly ->
-        defaultFileFlags{creat = Just ownerReadWriteMode}
+        defaultFileFlags{creat = Just ownerReadWriteMode, trunc = True}
 
 # else
 openFileDescriptor fp openMode =
@@ -140,7 +137,7 @@ openFileDescriptor fp openMode =
         )
       WriteOnly ->
         ( Just ownerReadWriteMode
-        , defaultFileFlags
+        , defaultFileFlags{trunc = True}
         )
 
 # endif

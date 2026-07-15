@@ -1,4 +1,4 @@
-description: Added `writeFileTextEnvelopeWithOwnerPermissions`, a variant of `writeFileTextEnvelope` that creates the output file with owner-only permissions. Use it when writing sensitive data such as signing keys, since `writeFileTextEnvelope` creates files with the default permissions. Additionally, on POSIX systems, files created by the `WithOwnerPermissions` family of functions now get `0600` permissions instead of `0700` (the owner-execute bit is no longer set).
+description: Added `writeFileTextEnvelopeWithOwnerPermissions`, a variant of `writeFileTextEnvelope` that creates the output file with owner-only permissions. Use it when writing sensitive data such as signing keys, since `writeFileTextEnvelope` creates files with the default permissions. Additionally, on POSIX systems, files created by the `WithOwnerPermissions` family of functions now get `0600` permissions instead of `0700` (the owner-execute bit is no longer set), and pre-existing files are now truncated on open, so overwriting a file with shorter content no longer leaves stale trailing bytes.
 kind:
 - feature
 pr: 1248

@@ -303,7 +303,8 @@ writeFileTextEnvelope outputFile mbDescr a =
 -- * On POSIX systems, the file is created with @0600@ permissions (read
 --   and write for the file owner only, further filtered by the process's
 --   @umask@), and its ownership is set to the current (real) user. If the
---   file already exists, its permission bits are left unchanged.
+--   file already exists, it is truncated, but its permission bits are
+--   left unchanged.
 --
 -- * On Windows, the contents are written to a freshly created temporary
 --   file which is then renamed to the target path. This guarantees the
