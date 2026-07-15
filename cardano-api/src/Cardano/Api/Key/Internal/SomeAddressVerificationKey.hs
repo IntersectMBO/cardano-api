@@ -142,8 +142,11 @@ deserialiseAnyVerificationKey bs =
 
 deserialiseAnyVerificationKeyBech32
   :: ByteString -> Either Bech32DecodeError SomeAddressVerificationKey
-deserialiseAnyVerificationKeyBech32 =
-  deserialiseAnyOfFromBech32 allBech32VerKey . Text.decodeUtf8
+deserialiseAnyVerificationKeyBech32 bs =
+  case Text.decodeUtf8' bs of
+    -- The input is not valid UTF-8, so it cannot be valid Bech32.
+    Left err -> Left $ Bech32InvalidUtf8 err
+    Right text -> deserialiseAnyOfFromBech32 allBech32VerKey text
  where
   allBech32VerKey
     :: [FromSomeType SerialiseAsBech32 SomeAddressVerificationKey]
