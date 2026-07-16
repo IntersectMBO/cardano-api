@@ -84,6 +84,8 @@ library
     Cardano.Api.Experimental.AnyScriptWitness
     Cardano.Api.Experimental.Certificate
     Cardano.Api.Experimental.Era
+    Cardano.Api.Experimental.Era.Range
+    Cardano.Api.Experimental.Era.Range.Some
     Cardano.Api.Experimental.Plutus
     Cardano.Api.Experimental.Serialise.TextEnvelope
     Cardano.Api.Experimental.Simple.Script
@@ -153,6 +155,7 @@ library
     cardano-slotting >=0.2.0.0,
     cardano-strict-containers >=0.1,
     cborg,
+    constraints,
     containers,
     contra-tracer,
     crypton,
@@ -198,6 +201,7 @@ library
     transformers-except ^>=0.1.3,
     typed-protocols ^>=1.2,
     validation,
+    vary,
     vector,
     yaml,
 
@@ -228,6 +232,7 @@ library
     Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
     Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra
     Cardano.Api.Era.Internal.Feature
+    Cardano.Api.Experimental.Era.Range.Internal
     Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
     Cardano.Api.Experimental.Plutus.Internal.Script
     Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
@@ -407,6 +412,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.EpochLeadership
     Test.Cardano.Api.Eras
     Test.Cardano.Api.Experimental
+    Test.Cardano.Api.Experimental.EraRange
     Test.Cardano.Api.Experimental.Fee
     Test.Cardano.Api.Genesis
     Test.Cardano.Api.GovAnchorValidation
