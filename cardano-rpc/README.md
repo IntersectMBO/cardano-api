@@ -33,7 +33,7 @@ It implements [UTxO RPC](https://utxorpc.org/introduction) protobuf communicatio
 
 | Method | Status |
 |--------|--------|
-| [FetchBlock](https://utxorpc.org/sync/spec/#fetchblockrequest) | 🚧 In progress (missing: `Block.body.tx`) |
+| [FetchBlock](https://utxorpc.org/sync/spec/#fetchblockrequest) | ✅ Supported |
 | [DumpHistory](https://utxorpc.org/sync/spec/#dumphistoryrequest) | ⬜ Not supported |
 | [FollowTip](https://utxorpc.org/sync/spec/#followtiprequest) | ⬜ Not supported |
 | [ReadTip](https://utxorpc.org/sync/spec/#readtiprequest) | ⬜ Not supported |

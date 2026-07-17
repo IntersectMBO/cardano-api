@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -15,6 +16,8 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Sync qualified as U5c
 import Cardano.Rpc.Server.Internal.Error
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Tracing ()
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type (anyEraTxConstraints, txToUtxoRpcTx)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron (byronBlockTxs)
 import Cardano.Rpc.Server.NodeKernelAccess
 
 import RIO
@@ -26,6 +29,8 @@ import Network.GRPC.Spec (GrpcError (GrpcInternal, GrpcInvalidArgument, GrpcNotF
 
 -- | Handle the @FetchBlock@ SyncService RPC method.
 -- Fetches a block from ChainDB by slot and header hash.
+-- Byron-era transactions carry no fee: Byron fees are implicit (inputs minus
+-- outputs) and computing them needs UTxO lookups this handler does not do.
 -- Returns @NOT_FOUND@ if the requested block is missing.
 -- Returns @INVALID_ARGUMENT@ if the block reference has an invalid hash.
 fetchBlockMethod
@@ -61,6 +66,14 @@ fetchBlockMethod request = do
     slotToUTCTime systemStart eraHistory slot
       & either (const throwPastHorizon) (pure . round . (* 1000) . utcTimeToPOSIXSeconds)
   let BlockHeader _ _ (BlockNo height) = getBlockHeader block
+      -- Byron transactions are not representable as cardano-api's 'Tx era',
+      -- so they are converted straight from the Byron ledger types
+      txs = case block of
+        ByronBlock consensusBlock ->
+          byronBlockTxs (byronBlockRaw consensusBlock)
+        ShelleyBlock sbe _ ->
+          anyEraTxConstraints sbe $
+            getBlockTxs block <&> \(ShelleyTx _ ledgerTx) -> txToUtxoRpcTx ledgerTx
       blockHeader =
         defMessage
           & U5c.slot .~ unSlotNo slot
@@ -72,7 +85,6 @@ fetchBlockMethod request = do
         .~ ( defMessage
                & U5c.nativeBytes .~ rawBytes
                & U5c.cardano . U5c.header .~ blockHeader
+               & U5c.cardano . U5c.body . U5c.tx .~ txs
                & U5c.cardano . U5c.timestamp .~ timestampMs
            )
-
--- TODO: cardano.body.tx - needs full block deserialisation + UTxO RPC tx mapping
