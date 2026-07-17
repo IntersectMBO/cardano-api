@@ -2179,7 +2179,7 @@ toScriptIndexAlonzo scriptPurposeIndex =
     L.AlonzoSpending (L.AsIx i) -> ScriptWitnessIndexTxIn i
     L.AlonzoMinting (L.AsIx i) -> ScriptWitnessIndexMint i
     L.AlonzoCertifying (L.AsIx i) -> ScriptWitnessIndexCertificate i
-    L.AlonzoRewarding (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
+    L.AlonzoWithdrawing (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
 
 toScriptIndexConway
   :: L.ConwayPlutusPurpose L.AsIx (ShelleyLedgerEra era)
@@ -2189,7 +2189,7 @@ toScriptIndexConway scriptPurposeIndex =
     L.ConwaySpending (L.AsIx i) -> ScriptWitnessIndexTxIn i
     L.ConwayMinting (L.AsIx i) -> ScriptWitnessIndexMint i
     L.ConwayCertifying (L.AsIx i) -> ScriptWitnessIndexCertificate i
-    L.ConwayRewarding (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
+    L.ConwayWithdrawing (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
     L.ConwayVoting (L.AsIx i) -> ScriptWitnessIndexVoting i
     L.ConwayProposing (L.AsIx i) -> ScriptWitnessIndexProposing i
 
@@ -2201,7 +2201,7 @@ toScriptIndexDijkstra scriptPurposeIndex =
     L.DijkstraSpending (L.AsIx i) -> ScriptWitnessIndexTxIn i
     L.DijkstraMinting (L.AsIx i) -> ScriptWitnessIndexMint i
     L.DijkstraCertifying (L.AsIx i) -> ScriptWitnessIndexCertificate i
-    L.DijkstraRewarding (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
+    L.DijkstraWithdrawing (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
     L.DijkstraVoting (L.AsIx i) -> ScriptWitnessIndexVoting i
     L.DijkstraProposing (L.AsIx i) -> ScriptWitnessIndexProposing i
     L.DijkstraGuarding (L.AsIx i) -> error $ "toScriptIndexDijkstra: unexpected DijkstraGuarding at index " <> show i

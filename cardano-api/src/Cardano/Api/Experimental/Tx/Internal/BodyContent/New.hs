@@ -615,7 +615,7 @@ babbageOnwardsTxOutParseJson baseTxOut o = do
         fail "babbageOnwardsTxOutParseJson: inlineDatumhash present without inlineDatumRaw"
       pure $ maybe L.NoDatum L.DatumHash mDatumHash
   -- Determine reference script
-  refScript <- fmap L.maybeToStrictMaybe $ forM mRefScript scriptInAnyLangToLedgerScript
+  refScript <- L.maybeToStrictMaybe <$> forM mRefScript scriptInAnyLangToLedgerScript
   -- Construct TxOut
   pure . TxOut $
     baseTxOut

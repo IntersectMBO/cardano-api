@@ -11,7 +11,7 @@ where
 import Cardano.Api.Genesis
 
 import Cardano.Crypto.VRF (VerKeyVRF)
-import Cardano.Ledger.BaseTypes (Network (..), knownNonZeroBounded)
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (SJust), knownNonZeroBounded)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
@@ -19,7 +19,11 @@ import Cardano.Ledger.Credential
   , StakeReference (..)
   )
 import Cardano.Ledger.Keys (GenDelegPair (..))
-import Cardano.Ledger.Shelley.Genesis (emptyGenesisStaking)
+import Cardano.Ledger.Shelley.Genesis
+  ( InjectionData (EmbeddedInjection, NoInjection)
+  , ShelleyExtraConfig (ShelleyExtraConfig)
+  , emptyGenesisStaking
+  )
 import Cardano.Protocol.Crypto (StandardCrypto)
 
 import Data.ListMap (ListMap (ListMap))
@@ -53,8 +57,15 @@ exampleShelleyGenesis =
             , GenDelegPair delegVerKeyHash (toVRFVerKeyHash delegVrfKeyHash)
             )
           ]
-    , sgInitialFunds = ListMap [(initialFundedAddress, initialFunds)]
+    , sgInitialFunds = ListMap []
     , sgStaking = emptyGenesisStaking
+    , sgExtraConfig =
+        SJust
+          ( ShelleyExtraConfig
+              (EmbeddedInjection (ListMap [(initialFundedAddress, initialFunds)]))
+              NoInjection
+              NoInjection
+          )
     }
  where
   -- hash of the genesis verification key
