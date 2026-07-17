@@ -32,8 +32,13 @@
     },
     "updateQuorum": 16991,
     "networkId": "Testnet",
-    "initialFunds": {
-        "001c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5e37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee": 12157196
+    "initialFunds": {},
+    "extraConfig": {
+        "initialFunds": {
+            "data": {
+                "001c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5e37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee": 12157196
+            }
+        }
     },
     "maxLovelaceSupply": 71,
     "networkMagic": 4036000900,
