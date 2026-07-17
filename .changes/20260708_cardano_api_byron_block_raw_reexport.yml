@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1247
+kind:
+  - compatible
+description: |
+  Re-export `byronBlockRaw` from `Cardano.Api.Consensus`, giving access to the underlying ledger block of a consensus `ByronBlock`.
