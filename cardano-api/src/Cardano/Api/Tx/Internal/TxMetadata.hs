@@ -70,12 +70,15 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as BSC
 import Data.ByteString.Lazy.Char8 qualified as LBS
-import Data.Data (Data)
+import Data.ByteString.Short qualified as SBS
+import Data.Data (Data, constrIndex, toConstr)
 import Data.List qualified as List
 import Data.Map.Lazy qualified as Map.Lazy
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
+import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
+import Data.Ord (comparing)
 import Data.Scientific qualified as Scientific
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -97,11 +100,20 @@ data TxMetadataValue
   | TxMetaNumber Integer -- -2^64 .. 2^64-1
   | TxMetaBytes ByteString
   | TxMetaText Text
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Show, Data)
 
 -- Note the order of constructors is the same as the ledger definitions
 -- so that the Ord instance is consistent with the ledger one.
 -- This is checked by prop_ord_distributive_TxMetadata
+-- We can't derive this instance because Ledger uses ByteArray but here we
+-- have ByteString for TxMetaBytes.
+instance Ord TxMetadataValue where
+  compare (TxMetaMap a) (TxMetaMap b) = compare a b
+  compare (TxMetaList a) (TxMetaList b) = compare a b
+  compare (TxMetaNumber a) (TxMetaNumber b) = compare a b
+  compare (TxMetaBytes a) (TxMetaBytes b) = comparing BS.length a b <> compare a b
+  compare (TxMetaText a) (TxMetaText b) = compare a b
+  compare a b = comparing (constrIndex . toConstr) a b
 
 -- | Merge metadata maps. When there are clashing entries the left hand side
 -- takes precedence.
@@ -227,7 +239,7 @@ toShelleyMetadata = Map.map toShelleyMetadatum
 
 toShelleyMetadatum :: TxMetadataValue -> Shelley.Metadatum
 toShelleyMetadatum (TxMetaNumber x) = Shelley.I x
-toShelleyMetadatum (TxMetaBytes x) = Shelley.B x
+toShelleyMetadatum (TxMetaBytes x) = Shelley.B (byteArrayFromShortByteString (SBS.toShort x))
 toShelleyMetadatum (TxMetaText x) = Shelley.S x
 toShelleyMetadatum (TxMetaList xs) =
   Shelley.List
@@ -245,7 +257,7 @@ fromShelleyMetadata = Map.Lazy.map fromShelleyMetadatum
 
 fromShelleyMetadatum :: Shelley.Metadatum -> TxMetadataValue
 fromShelleyMetadatum (Shelley.I x) = TxMetaNumber x
-fromShelleyMetadatum (Shelley.B x) = TxMetaBytes x
+fromShelleyMetadatum (Shelley.B x) = TxMetaBytes (SBS.fromShort (byteArrayToShortByteString x))
 fromShelleyMetadatum (Shelley.S x) = TxMetaText x
 fromShelleyMetadatum (Shelley.List xs) =
   TxMetaList

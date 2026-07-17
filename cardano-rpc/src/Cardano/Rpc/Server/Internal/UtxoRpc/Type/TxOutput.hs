@@ -16,6 +16,7 @@ where
 import Cardano.Api.Address
 import Cardano.Api.Era
 import Cardano.Api.Error
+import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Era
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Ledger qualified as L
@@ -30,8 +31,6 @@ import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Script
-
-import Cardano.Binary qualified as CBOR
 
 import RIO hiding (toList)
 
@@ -50,7 +49,7 @@ txInTxOutToAnyUtxoData txIn txOut = do
   let era = useEra @era
       txOutCbor =
         obtainCommonConstraints era $
-          CBOR.serialize' $
+          L.serialize' (Exp.eraProtVerHigh era) $
             toShelleyTxOut (convert era) txOut
   defMessage
     & U5c.nativeBytes .~ txOutCbor

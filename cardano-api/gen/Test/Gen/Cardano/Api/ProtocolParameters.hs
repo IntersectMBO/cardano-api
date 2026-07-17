@@ -1,4 +1,6 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Gen.Cardano.Api.ProtocolParameters where
 
@@ -7,6 +9,7 @@ import Cardano.Api.Ledger
 
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer)
 
 import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
@@ -40,8 +43,15 @@ genCommonProtocolParametersUpdate =
 genDeprecatedAfterMaryPParams :: MonadGen m => m (DeprecatedAfterMaryPParams era)
 genDeprecatedAfterMaryPParams = DeprecatedAfterMaryPParams <$> genStrictMaybe Q.arbitrary
 
-genDeprecatedAfterBabbagePParams :: MonadGen m => m (DeprecatedAfterBabbagePParams era)
-genDeprecatedAfterBabbagePParams = DeprecatedAfterBabbagePParams <$> genStrictMaybe Q.arbitrary
+genDeprecatedAfterBabbagePParams
+  :: forall era ledgerera m
+   . MonadGen m
+  => ShelleyBasedEra era
+  -> m (DeprecatedAfterBabbagePParams ledgerera)
+genDeprecatedAfterBabbagePParams sbe =
+  shelleyBasedEraConstraints sbe $
+    DeprecatedAfterBabbagePParams
+      <$> genStrictMaybe (Q.quickcheck (genEraProtVer @(ShelleyLedgerEra era)))
 
 genShelleyToAlonzoPParams :: MonadGen m => m (ShelleyToAlonzoPParams era)
 genShelleyToAlonzoPParams =
@@ -100,7 +110,7 @@ genShelleyEraBasedProtocolParametersUpdate =
   ShelleyEraBasedProtocolParametersUpdate
     <$> genCommonProtocolParametersUpdate
     <*> genDeprecatedAfterMaryPParams
-    <*> genDeprecatedAfterBabbagePParams
+    <*> genDeprecatedAfterBabbagePParams ShelleyBasedEraShelley
     <*> genShelleyToAlonzoPParams
 
 genAllegraEraBasedProtocolParametersUpdate
@@ -110,7 +120,7 @@ genAllegraEraBasedProtocolParametersUpdate =
     <$> genCommonProtocolParametersUpdate
     <*> genDeprecatedAfterMaryPParams
     <*> genShelleyToAlonzoPParams
-    <*> genDeprecatedAfterBabbagePParams
+    <*> genDeprecatedAfterBabbagePParams ShelleyBasedEraAllegra
 
 genMaryEraBasedProtocolParametersUpdate
   :: MonadGen m => m (EraBasedProtocolParametersUpdate MaryEra)
@@ -119,7 +129,7 @@ genMaryEraBasedProtocolParametersUpdate =
     <$> genCommonProtocolParametersUpdate
     <*> genDeprecatedAfterMaryPParams
     <*> genShelleyToAlonzoPParams
-    <*> genDeprecatedAfterBabbagePParams
+    <*> genDeprecatedAfterBabbagePParams ShelleyBasedEraMary
 
 genAlonzoEraBasedProtocolParametersUpdate
   :: MonadGen m => m (EraBasedProtocolParametersUpdate AlonzoEra)
@@ -128,7 +138,7 @@ genAlonzoEraBasedProtocolParametersUpdate =
     <$> genCommonProtocolParametersUpdate
     <*> genShelleyToAlonzoPParams
     <*> genAlonzoOnwardsPParams
-    <*> genDeprecatedAfterBabbagePParams
+    <*> genDeprecatedAfterBabbagePParams ShelleyBasedEraAlonzo
 
 genBabbageEraBasedProtocolParametersUpdate
   :: MonadGen m => m (EraBasedProtocolParametersUpdate BabbageEra)
@@ -136,7 +146,7 @@ genBabbageEraBasedProtocolParametersUpdate =
   BabbageEraBasedProtocolParametersUpdate
     <$> genCommonProtocolParametersUpdate
     <*> genAlonzoOnwardsPParams
-    <*> genDeprecatedAfterBabbagePParams
+    <*> genDeprecatedAfterBabbagePParams ShelleyBasedEraBabbage
     <*> genIntroducedInBabbagePParams
 
 genConwayEraBasedProtocolParametersUpdate
