@@ -73,6 +73,7 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Script
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
     Cardano.Rpc.Server.NodeKernelAccess
@@ -91,12 +92,15 @@ library
     bytestring,
     cardano-api >=11.2,
     cardano-binary,
+    cardano-crypto-class,
+    cardano-ledger-allegra,
     cardano-ledger-alonzo,
     cardano-ledger-api,
     cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core >=1.19,
     cardano-ledger-dijkstra,
+    cardano-ledger-shelley,
     cardano-rpc:gen,
     containers,
     contra-tracer,
@@ -149,6 +153,8 @@ test-suite cardano-rpc-test
     cardano-ledger-api,
     cardano-ledger-conway,
     cardano-ledger-core >=1.19,
+    cardano-ledger-dijkstra,
+    cardano-ledger-shelley,
     cardano-rpc,
     containers,
     grpc-spec,
@@ -169,8 +175,10 @@ test-suite cardano-rpc-test
   build-tool-depends: tasty-discover:tasty-discover
   other-modules:
     Test.Cardano.Rpc.Eval
+    Test.Cardano.Rpc.FetchBlockTx
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters
+    Test.Cardano.Rpc.Script
     Test.Cardano.Rpc.TxOutput
     Test.Cardano.Rpc.Type
