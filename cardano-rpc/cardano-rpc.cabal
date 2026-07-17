@@ -66,7 +66,9 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Sync
     Cardano.Rpc.Server.Internal.UtxoRpc.Type
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
@@ -89,9 +91,12 @@ library
     bytestring,
     cardano-api >=11.2,
     cardano-binary,
+    cardano-ledger-alonzo,
     cardano-ledger-api,
+    cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core >=1.19,
+    cardano-ledger-dijkstra,
     cardano-rpc:gen,
     containers,
     contra-tracer,
@@ -101,6 +106,7 @@ library
     generic-data,
     grapesy,
     grpc-spec,
+    mempack,
     proto-lens >=0.7.1.7,
     proto-lens-protobuf-types,
     random,

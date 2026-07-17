@@ -1,11 +1,15 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
   ( protocolParamsToUtxoRpcPParams
+  , pparamsUpdateToUtxoRpcPParams
   , utxoRpcPParamsToProtocolParams
+  , utxoRpcProtocolVersionToProtVer
   )
 where
 
@@ -19,10 +23,12 @@ import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
 
+import Cardano.Ledger.Alonzo.PParams qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Conway.PParams qualified as L
+import Cardano.Ledger.HKD qualified as L
 import Cardano.Ledger.Plutus qualified as L
 
 import RIO hiding (toList)
@@ -30,96 +36,172 @@ import RIO hiding (toList)
 import Control.Error.Util (note)
 import Data.Default
 import Data.Map.Strict qualified as M
+import Data.ProtoLens (defMessage)
 import GHC.IsList
 import Network.GRPC.Spec
 
+-- | Convert full ledger protocol parameters to the UTxO RPC 'UtxoRpc.PParams'
+-- message. All parameters are set.
 protocolParamsToUtxoRpcPParams
   :: forall era
    . Era era
   -> L.PParams (LedgerEra era)
   -> Proto UtxoRpc.PParams
-protocolParamsToUtxoRpcPParams era pparams = obtainCommonConstraints era $ do
-  let pparamsCostModels :: Map L.Language [Int64] =
-        L.getCostModelParams <$> pparams ^. L.ppCostModelsL . to L.costModelsValid
-      poolVotingThresholds :: L.PoolVotingThresholds =
-        pparams ^. L.ppPoolVotingThresholdsL
-      drepVotingThresholds :: L.DRepVotingThresholds =
-        pparams ^. L.ppDRepVotingThresholdsL
-  def
-    & U5c.coinsPerUtxoByte
-      .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.fromCompact . to inject
-    & U5c.maxTxSize .~ pparams ^. L.ppMaxTxSizeL . to fromIntegral
-    & U5c.minFeeCoefficient
-      .~ pparams ^. L.ppTxFeePerByteL . to L.unCoinPerByte . to L.fromCompact . to inject
-    & U5c.minFeeConstant .~ pparams ^. L.ppTxFeeFixedL . to inject
-    & U5c.maxBlockBodySize .~ pparams ^. L.ppMaxBBSizeL . to fromIntegral
-    & U5c.maxBlockHeaderSize .~ pparams ^. L.ppMaxBHSizeL . to fromIntegral
-    & U5c.stakeKeyDeposit .~ pparams ^. L.ppKeyDepositL . to inject
-    & U5c.poolDeposit .~ pparams ^. L.ppPoolDepositL . to inject
-    & U5c.poolRetirementEpochBound .~ pparams ^. L.ppEMaxL . to L.unEpochInterval . to fromIntegral
-    & U5c.desiredNumberOfPools .~ pparams ^. L.ppNOptL . to fromIntegral
-    & U5c.poolInfluence .~ pparams ^. L.ppA0L . to L.unboundRational . to inject
-    & U5c.monetaryExpansion .~ pparams ^. L.ppRhoL . to L.unboundRational . to inject
-    & U5c.treasuryExpansion .~ pparams ^. L.ppTauL . to L.unboundRational . to inject
-    & U5c.minPoolCost .~ pparams ^. L.ppMinPoolCostL . to inject
-    & U5c.protocolVersion . U5c.major .~ pparams ^. L.ppProtocolVersionL . to L.pvMajor . to L.getVersion
-    & U5c.protocolVersion . U5c.minor .~ pparams ^. L.ppProtocolVersionL . to L.pvMinor . to fromIntegral
-    & U5c.maxValueSize .~ pparams ^. L.ppMaxValSizeL . to fromIntegral
-    & U5c.collateralPercentage .~ pparams ^. L.ppCollateralPercentageL . to fromIntegral
-    & U5c.maxCollateralInputs .~ pparams ^. L.ppMaxCollateralInputsL . to fromIntegral
-    & U5c.costModels . U5c.plutusV1 . U5c.values
-      .~ (join . maybeToList) (M.lookup L.PlutusV1 pparamsCostModels)
-    & U5c.costModels . U5c.plutusV2 . U5c.values
-      .~ (join . maybeToList) (M.lookup L.PlutusV2 pparamsCostModels)
-    & U5c.costModels . U5c.plutusV3 . U5c.values
-      .~ (join . maybeToList) (M.lookup L.PlutusV3 pparamsCostModels)
-    & U5c.costModels . U5c.plutusV4 . U5c.values
-      .~ (join . maybeToList) (M.lookup L.PlutusV4 pparamsCostModels)
-    & U5c.prices . U5c.steps .~ pparams ^. L.ppPricesL . to L.prSteps . to L.unboundRational . to inject
-    & U5c.prices . U5c.memory .~ pparams ^. L.ppPricesL . to L.prMem . to L.unboundRational . to inject
-    & U5c.maxExecutionUnitsPerTransaction .~ pparams ^. L.ppMaxTxExUnitsL . to inject
-    & U5c.maxExecutionUnitsPerBlock .~ pparams ^. L.ppMaxBlockExUnitsL . to inject
-    & U5c.minFeeScriptRefCostPerByte
-      .~ pparams ^. L.ppMinFeeRefScriptCostPerByteL . to L.unboundRational . to inject
-    & U5c.poolVotingThresholds . U5c.thresholds
-      .~ ( inject . L.unboundRational
-             -- order taken from https://github.com/cardano-foundation/CIPs/blob/acb4b2348c968003dfc370cd3769615bfca1f159/CIP-1694/README.md#requirements
-             <$> [ poolVotingThresholds ^. L.pvtMotionNoConfidenceL
-                 , poolVotingThresholds ^. L.pvtCommitteeNormalL
-                 , poolVotingThresholds ^. L.pvtCommitteeNoConfidenceL
-                 , poolVotingThresholds ^. L.pvtHardForkInitiationL
-                 , poolVotingThresholds ^. L.pvtPPSecurityGroupL
-                 ]
-         )
-    & U5c.drepVotingThresholds . U5c.thresholds
-      .~ ( inject . L.unboundRational
-             -- order taken from https://github.com/cardano-foundation/CIPs/blob/acb4b2348c968003dfc370cd3769615bfca1f159/CIP-1694/README.md#requirements
-             <$> [ drepVotingThresholds ^. L.dvtMotionNoConfidenceL
-                 , drepVotingThresholds ^. L.dvtCommitteeNormalL
-                 , drepVotingThresholds ^. L.dvtCommitteeNoConfidenceL
-                 , drepVotingThresholds ^. L.dvtUpdateToConstitutionL
-                 , drepVotingThresholds ^. L.dvtHardForkInitiationL
-                 , drepVotingThresholds ^. L.dvtPPNetworkGroupL
-                 , drepVotingThresholds ^. L.dvtPPEconomicGroupL
-                 , drepVotingThresholds ^. L.dvtPPTechnicalGroupL
-                 , drepVotingThresholds ^. L.dvtPPGovGroupL
-                 , drepVotingThresholds ^. L.dvtTreasuryWithdrawalL
-                 ]
-         )
-    & U5c.minCommitteeSize .~ pparams ^. L.ppCommitteeMinSizeL . to fromIntegral
-    & U5c.committeeTermLimit
-      .~ pparams ^. L.ppCommitteeMaxTermLengthL . to L.unEpochInterval . to fromIntegral
-    & U5c.governanceActionValidityPeriod
-      .~ pparams ^. L.ppGovActionLifetimeL . to L.unEpochInterval . to fromIntegral
-    & U5c.governanceActionDeposit .~ pparams ^. L.ppGovActionDepositL . to inject
-    & U5c.drepDeposit .~ pparams ^. L.ppDRepDepositL . to inject
-    & U5c.drepInactivityPeriod .~ pparams ^. L.ppDRepActivityL . to L.unEpochInterval . to fromIntegral
+protocolParamsToUtxoRpcPParams era pparams =
+  obtainCommonConstraints era $
+    def
+      & appSetters (pparamsFieldSetters @Identity L.SJust (pparams ^. L.ppLensHKD))
+      -- The protocol version is not in 'pparamsFieldSetters': from Conway onwards
+      -- parameter updates cannot change it, so it has no HKD lens in these eras.
+      & U5c.protocolVersion .~ inject (pparams ^. L.ppProtocolVersionL)
+
+-- | Convert a ledger protocol parameter update to the UTxO RPC 'UtxoRpc.PParams'
+-- message. Only the parameters present in the update are set, everything else
+-- keeps the proto3 default. The protocol version is excluded: from Conway
+-- onwards it can only change through a hard fork initiation action.
+pparamsUpdateToUtxoRpcPParams
+  :: L.ConwayEraPParams era
+  => L.PParamsUpdate era
+  -> Proto UtxoRpc.PParams
+pparamsUpdateToUtxoRpcPParams pparamsUpdate =
+  defMessage
+    & appSetters (pparamsFieldSetters @L.StrictMaybe id (pparamsUpdate ^. L.ppuLensHKD))
+
+-- | A setter for each UTxO RPC 'UtxoRpc.PParams' field, built from the higher
+-- kinded protocol parameters representation shared between 'L.PParams'
+-- (@f ~ 'Identity'@, all fields present) and 'L.PParamsUpdate'
+-- (@f ~ 'L.StrictMaybe'@, only the updated fields present). Keeping a single
+-- field table guarantees that the protocol parameters query and the parameter
+-- change governance action cannot disagree on the wire mapping.
+pparamsFieldSetters
+  :: forall f era
+   . (L.HKDFunctor f, L.ConwayEraPParams era)
+  => (forall a. L.HKD f a -> L.StrictMaybe a)
+  -- ^ Extract a field value: 'L.SJust' for 'Identity', 'id' for 'L.StrictMaybe'
+  -> L.PParamsHKD f era
+  -> [L.StrictMaybe (Proto UtxoRpc.PParams -> Proto UtxoRpc.PParams)]
+pparamsFieldSetters extract pparams =
+  [ field @L.CoinPerByte (L.hkdCoinsPerUTxOByteL @era @f) <&> \value ->
+      U5c.coinsPerUtxoByte .~ inject (L.fromCompact (L.unCoinPerByte value))
+  , field @Word32 (L.hkdMaxTxSizeL @era @f) <&> \value ->
+      U5c.maxTxSize .~ fromIntegral value
+  , field @L.CoinPerByte (L.hkdTxFeePerByteL @era @f) <&> \value ->
+      U5c.minFeeCoefficient .~ inject (L.fromCompact (L.unCoinPerByte value))
+  , field @(L.CompactForm L.Coin) (L.hkdTxFeeFixedCompactL @era @f) <&> \value ->
+      U5c.minFeeConstant .~ inject (L.fromCompact value)
+  , field @Word32 (L.hkdMaxBBSizeL @era @f) <&> \value ->
+      U5c.maxBlockBodySize .~ fromIntegral value
+  , field @Word16 (L.hkdMaxBHSizeL @era @f) <&> \value ->
+      U5c.maxBlockHeaderSize .~ fromIntegral value
+  , field @(L.CompactForm L.Coin) (L.hkdKeyDepositCompactL @era @f) <&> \value ->
+      U5c.stakeKeyDeposit .~ inject (L.fromCompact value)
+  , field @(L.CompactForm L.Coin) (L.hkdPoolDepositCompactL @era @f) <&> \value ->
+      U5c.poolDeposit .~ inject (L.fromCompact value)
+  , field @L.EpochInterval (L.hkdEMaxL @era @f) <&> \value ->
+      U5c.poolRetirementEpochBound .~ fromIntegral (L.unEpochInterval value)
+  , field @Word16 (L.hkdNOptL @era @f) <&> \value ->
+      U5c.desiredNumberOfPools .~ fromIntegral value
+  , field @L.NonNegativeInterval (L.hkdA0L @era @f) <&> \value ->
+      U5c.poolInfluence .~ inject (L.unboundRational value)
+  , field @L.UnitInterval (L.hkdRhoL @era @f) <&> \value ->
+      U5c.monetaryExpansion .~ inject (L.unboundRational value)
+  , field @L.UnitInterval (L.hkdTauL @era @f) <&> \value ->
+      U5c.treasuryExpansion .~ inject (L.unboundRational value)
+  , field @(L.CompactForm L.Coin) (L.hkdMinPoolCostCompactL @era @f) <&> \value ->
+      U5c.minPoolCost .~ inject (L.fromCompact value)
+  , field @Word32 (L.hkdMaxValSizeL @era @f) <&> \value ->
+      U5c.maxValueSize .~ fromIntegral value
+  , field @Word16 (L.hkdCollateralPercentageL @era @f) <&> \value ->
+      U5c.collateralPercentage .~ fromIntegral value
+  , field @Word16 (L.hkdMaxCollateralInputsL @era @f) <&> \value ->
+      U5c.maxCollateralInputs .~ fromIntegral value
+  , field @L.CostModels (L.hkdCostModelsL @era @f) <&> \value ->
+      U5c.costModels .~ costModelsToUtxoRpcCostModels value
+  , field @L.Prices (L.hkdPricesL @era @f) <&> \prices ->
+      (U5c.prices . U5c.steps .~ inject (L.unboundRational (L.prSteps prices)))
+        . (U5c.prices . U5c.memory .~ inject (L.unboundRational (L.prMem prices)))
+  , field @L.ExUnits (L.hkdMaxTxExUnitsL @era @f) <&> \value ->
+      U5c.maxExecutionUnitsPerTransaction .~ inject value
+  , field @L.ExUnits (L.hkdMaxBlockExUnitsL @era @f) <&> \value ->
+      U5c.maxExecutionUnitsPerBlock .~ inject value
+  , field @L.NonNegativeInterval (L.hkdMinFeeRefScriptCostPerByteL @era @f) <&> \value ->
+      U5c.minFeeScriptRefCostPerByte .~ inject (L.unboundRational value)
+  , field @L.PoolVotingThresholds (L.hkdPoolVotingThresholdsL @era @f) <&> \poolVotingThresholds ->
+      U5c.poolVotingThresholds . U5c.thresholds
+        .~ ( inject . L.unboundRational
+               -- order taken from https://github.com/cardano-foundation/CIPs/blob/acb4b2348c968003dfc370cd3769615bfca1f159/CIP-1694/README.md#requirements
+               <$> [ poolVotingThresholds ^. L.pvtMotionNoConfidenceL
+                   , poolVotingThresholds ^. L.pvtCommitteeNormalL
+                   , poolVotingThresholds ^. L.pvtCommitteeNoConfidenceL
+                   , poolVotingThresholds ^. L.pvtHardForkInitiationL
+                   , poolVotingThresholds ^. L.pvtPPSecurityGroupL
+                   ]
+           )
+  , field @L.DRepVotingThresholds (L.hkdDRepVotingThresholdsL @era @f) <&> \drepVotingThresholds ->
+      U5c.drepVotingThresholds . U5c.thresholds
+        .~ ( inject . L.unboundRational
+               -- order taken from https://github.com/cardano-foundation/CIPs/blob/acb4b2348c968003dfc370cd3769615bfca1f159/CIP-1694/README.md#requirements
+               <$> [ drepVotingThresholds ^. L.dvtMotionNoConfidenceL
+                   , drepVotingThresholds ^. L.dvtCommitteeNormalL
+                   , drepVotingThresholds ^. L.dvtCommitteeNoConfidenceL
+                   , drepVotingThresholds ^. L.dvtUpdateToConstitutionL
+                   , drepVotingThresholds ^. L.dvtHardForkInitiationL
+                   , drepVotingThresholds ^. L.dvtPPNetworkGroupL
+                   , drepVotingThresholds ^. L.dvtPPEconomicGroupL
+                   , drepVotingThresholds ^. L.dvtPPTechnicalGroupL
+                   , drepVotingThresholds ^. L.dvtPPGovGroupL
+                   , drepVotingThresholds ^. L.dvtTreasuryWithdrawalL
+                   ]
+           )
+  , field @Word16 (L.hkdCommitteeMinSizeL @era @f) <&> \value ->
+      U5c.minCommitteeSize .~ fromIntegral value
+  , field @L.EpochInterval (L.hkdCommitteeMaxTermLengthL @era @f) <&> \value ->
+      U5c.committeeTermLimit .~ fromIntegral (L.unEpochInterval value)
+  , field @L.EpochInterval (L.hkdGovActionLifetimeL @era @f) <&> \value ->
+      U5c.governanceActionValidityPeriod .~ fromIntegral (L.unEpochInterval value)
+  , field @(L.CompactForm L.Coin) (L.hkdGovActionDepositCompactL @era @f) <&> \value ->
+      U5c.governanceActionDeposit .~ inject (L.fromCompact value)
+  , field @(L.CompactForm L.Coin) (L.hkdDRepDepositCompactL @era @f) <&> \value ->
+      U5c.drepDeposit .~ inject (L.fromCompact value)
+  , field @L.EpochInterval (L.hkdDRepActivityL @era @f) <&> \value ->
+      U5c.drepInactivityPeriod .~ fromIntegral (L.unEpochInterval value)
+  ]
+ where
+  field :: forall a. Lens' (L.PParamsHKD f era) (L.HKD f a) -> L.StrictMaybe a
+  field fieldLens = extract @a (pparams ^. fieldLens)
+
+-- | Apply the setters for the fields that are present to the message
+appSetters
+  :: [L.StrictMaybe (Proto UtxoRpc.PParams -> Proto UtxoRpc.PParams)]
+  -> Proto UtxoRpc.PParams
+  -> Proto UtxoRpc.PParams
+appSetters setters message = foldl' (\acc -> L.strictMaybe acc ($ acc)) message setters
+
+-- | Convert ledger cost models to the UTxO RPC 'UtxoRpc.CostModels' message.
+-- Only the languages present in the ledger value are marked present on the
+-- wire: a parameter update touching a single language does not report the
+-- other languages as updated to empty cost models, and a parameters query
+-- does not report cost models for languages the era does not have.
+-- Note that 'L.costModelsUnknown' (raw models for languages this node does
+-- not recognise) cannot be represented in the proto and are dropped.
+costModelsToUtxoRpcCostModels :: L.CostModels -> Proto UtxoRpc.CostModels
+costModelsToUtxoRpcCostModels costModels = do
+  let costModelParams :: Map L.Language [Int64]
+      costModelParams = L.getCostModelParams <$> L.costModelsValid costModels
+      costModelFor :: L.Language -> Maybe (Proto UtxoRpc.CostModel)
+      costModelFor language =
+        M.lookup language costModelParams <&> \values -> defMessage & U5c.values .~ values
+  defMessage
+    & U5c.maybe'plutusV1 .~ costModelFor L.PlutusV1
+    & U5c.maybe'plutusV2 .~ costModelFor L.PlutusV2
+    & U5c.maybe'plutusV3 .~ costModelFor L.PlutusV3
+    & U5c.maybe'plutusV4 .~ costModelFor L.PlutusV4
 
 utxoRpcPParamsToProtocolParams
   :: Era era
   -> Proto UtxoRpc.PParams
   -> Either String (L.PParams (ShelleyLedgerEra era))
-utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era) $ do
+utxoRpcPParamsToProtocolParams era pp = obtainCommonConstraints era $ do
   def
     & appFuns
       [ \r -> do
@@ -174,9 +256,9 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
           minPoolCost <- pp ^. U5c.minPoolCost . to utxoRpcBigIntToInteger ?! "Invalid minPoolCost"
           pure $ set L.ppMinPoolCostL (L.Coin minPoolCost) r
       , \r -> do
-          major <- L.mkVersion64 $ pp ^. U5c.protocolVersion . U5c.major . to fromIntegral
-          pure $ set (L.ppProtocolVersionL . pvMajorL) major r
-      , pure . (L.ppProtocolVersionL . pvMinorL .~ pp ^. U5c.protocolVersion . U5c.minor . to fromIntegral)
+          protocolVersion <-
+            pp ^. U5c.protocolVersion . to utxoRpcProtocolVersionToProtVer ?! "Invalid protocolVersion"
+          pure $ set L.ppProtocolVersionL protocolVersion r
       , pure . (L.ppMaxValSizeL .~ pp ^. U5c.maxValueSize . to fromIntegral)
       , pure . (L.ppCollateralPercentageL .~ pp ^. U5c.collateralPercentage . to fromIntegral)
       , pure . (L.ppMaxCollateralInputsL .~ pp ^. U5c.maxCollateralInputs . to fromIntegral)
@@ -309,14 +391,20 @@ utxoRpcPParamsToProtocolParams era pp = conwayEraOnwardsConstraints (convert era
   appFuns :: Monad m => [a -> m a] -> a -> m a
   appFuns fs a0 = foldr (=<<) (pure a0) fs
 
-  pvMajorL :: Lens' L.ProtVer L.Version
-  pvMajorL = lens L.pvMajor $ \p v -> p{L.pvMajor = v}
-
-  pvMinorL :: Lens' L.ProtVer Natural
-  pvMinorL = lens L.pvMinor $ \p v -> p{L.pvMinor = v}
-
   prStepsL :: Lens' L.Prices L.NonNegativeInterval
   prStepsL = lens L.prSteps $ \p v -> p{L.prSteps = v}
 
   prMemL :: Lens' L.Prices L.NonNegativeInterval
   prMemL = lens L.prMem $ \p v -> p{L.prMem = v}
+
+-- | Build a ledger protocol version from the proto 'U5c.ProtocolVersion'.
+-- The conversion can fail, because the ledger major 'L.Version' is bounded,
+-- while the proto major is a full @uint32@.
+utxoRpcProtocolVersionToProtVer :: Proto U5c.ProtocolVersion -> Maybe L.ProtVer
+utxoRpcProtocolVersionToProtVer protocolVersion = do
+  major <- L.mkVersion $ protocolVersion ^. U5c.major
+  pure
+    L.ProtVer
+      { L.pvMajor = major
+      , L.pvMinor = fromIntegral $ protocolVersion ^. U5c.minor
+      }

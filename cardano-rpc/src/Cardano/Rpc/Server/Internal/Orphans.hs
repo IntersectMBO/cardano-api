@@ -17,6 +17,8 @@ import Cardano.Api.Serialise.Raw
 import Cardano.Api.Tx
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 
+import Cardano.Ledger.BaseTypes qualified as L (getVersion)
+
 import RIO hiding (toList)
 
 import Data.Default
@@ -111,6 +113,12 @@ instance Inject L.ExUnits (Proto U5c.ExUnits) where
     defMessage
       & U5c.memory .~ fromIntegral mem
       & U5c.steps .~ fromIntegral steps
+
+instance Inject L.ProtVer (Proto U5c.ProtocolVersion) where
+  inject L.ProtVer{L.pvMajor = major, L.pvMinor = minor} =
+    defMessage
+      & U5c.major .~ L.getVersion major
+      & U5c.minor .~ fromIntegral minor
 
 -- | Note that conversion is not total in the other direction
 instance Inject TxIn (Proto U5c.TxoRef) where
