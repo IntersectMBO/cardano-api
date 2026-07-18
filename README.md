@@ -19,6 +19,9 @@ Development documentation can be found in [Cardano Node Wiki](https://github.com
 
 Haddock documentation is available at: https://cardano-api.cardano.intersectmbo.org/
 
+A browser wallet demo built on [`cardano-wasm`](cardano-wasm/) is published at:
+https://cardano-api.cardano.intersectmbo.org/cardano-wasm/demo/
+
 [![x86\_64-linux](https://img.shields.io/endpoint?url=https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-linux.required/shield&style=flat-square&label=x86_64-linux)](https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-linux.required)
 [![x86\_64-darwin](https://img.shields.io/endpoint?url=https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-darwin.required/shield&style=flat-square&label=x86_64-darwin)](https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-darwin.required)
 [![GHA Build](https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-api/haskell.yml?branch=master&label=GHA%20Build&style=flat-square)](https://github.com/IntersectMBO/cardano-api/actions/workflows/haskell.yml?query=branch%3Amaster)

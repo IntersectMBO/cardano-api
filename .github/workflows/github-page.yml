@@ -50,6 +50,15 @@ jobs:
           mkdir -p website/cardano-wasm/typedoc
           cp -r result/. website/cardano-wasm/typedoc/
 
+      - name: Add wallet demo (from the latest successful master wasm build)
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: haskell-wasm.yml
+          branch: master
+          workflow_conclusion: success
+          name: cardano-wasm-demo
+          path: website/cardano-wasm/demo
+
       - name: Compress website
         run: |
           tar -czf website.tgz -C website .

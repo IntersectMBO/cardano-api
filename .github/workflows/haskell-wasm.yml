@@ -206,6 +206,23 @@ jobs:
         node node.test.js
         cd -
 
+    - uses: rrbutani/use-nix-shell-action@v1
+      with:
+        devShell: .#demo
+
+    - name: Build wallet demo
+      run: |
+        cd cardano-wasm/demo
+        elm-format --validate src/
+        ./build.sh --wasm-dir ../lib-wrapper --out dist
+
+    - name: Upload wallet demo
+      uses: actions/upload-artifact@v4
+      with:
+        name: cardano-wasm-demo
+        path: cardano-wasm/demo/dist
+        compression-level: 9
+
     - name: Upload built wasm library
       uses: actions/upload-artifact@v4
       with:
