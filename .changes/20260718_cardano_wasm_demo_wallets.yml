@@ -1,0 +1,10 @@
+project: cardano-wasm
+
+# FIXME: placeholder — set to the real PR number when the PR is opened
+pr: 1261
+
+kind:
+  - feature
+
+description: |
+  Demo: multi-wallet management (generate/restore, aliases, network switch with address re-derivation).
