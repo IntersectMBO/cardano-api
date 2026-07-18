@@ -1,0 +1,9 @@
+project: cardano-wasm
+
+pr: 1270
+
+kind:
+  - feature
+
+description: |
+  Demo: multi-wallet management (generate/restore, aliases, network switch with address re-derivation).

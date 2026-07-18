@@ -1,0 +1,227 @@
+module View exposing (view)
+
+{-| The UI: wallets column · (builder placeholder) · console column, the forget
+dialog and the toast. Pure Model → Html.
+-}
+
+import Format exposing (shorten)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (onClick, onInput, stopPropagationOn)
+import Json.Decode as D
+import Net exposing (faucetUrl, netMagic, netName)
+import State exposing (..)
+import Types exposing (..)
+
+
+view : Model -> Html Msg
+view model =
+    div []
+        [ div [ class "mock" ] [ text "◆ DEMO — keys, balances, fees and transactions are real cardano-wasm calls on the selected network. Use TESTNETS only." ]
+        , viewTopbar model
+        , div [ class "grid" ]
+            [ div [ class "col" ] [ viewWalletsCard model ]
+            , div [ class "col" ]
+                [ div [ class "card" ]
+                    [ h3 [] [ text "Transaction builder" ]
+                    , div [ class "empty" ] [ text "coming in a later change" ]
+                    ]
+                ]
+            , div [ class "col" ] [ viewConsole model ]
+            ]
+        , viewModal model
+        , viewToast model
+        ]
+
+
+viewTopbar : Model -> Html Msg
+viewTopbar model =
+    div [ class "topbar" ]
+        [ div [ class "brand" ] [ span [ class "b" ] [ text "◆" ], text " cardano-wasm ", span [ class "muted" ] [ text "demo · multi-wallet" ] ]
+        , div [ class "nettabs" ]
+            (List.map
+                (\n ->
+                    button [ classList [ ( "on", model.network == n ) ], onClick (SelectNetwork n) ] [ text (netName n) ]
+                )
+                [ Mainnet, Preprod, Preview ]
+            )
+        , span [ class "magic" ] [ text ("magic " ++ netMagic model.network) ]
+        ]
+
+
+viewWalletsCard : Model -> Html Msg
+viewWalletsCard model =
+    div [ class "card" ]
+        [ h3 []
+            [ text "Wallets"
+            , span [ class "hrow" ]
+                [ button [ class "btn xs", onClick ClickNewWallet ] [ text "+ New" ]
+                , button [ class "btn ghost xs", onClick ClickRestoreToggle ] [ text "Restore" ]
+                ]
+            ]
+        , if model.restore.open then
+            div [ class "restore" ]
+                [ input [ placeholder "payment signing key (bech32)", value model.restore.paymentSkey, onInput UpdateRestorePay ] []
+                , input [ placeholder "stake signing key (bech32)", value model.restore.stakeSkey, onInput UpdateRestoreStake, style "margin-top" "6px" ] []
+                , div [ class "hrow", style "margin-top" "6px" ]
+                    [ button [ class "btn sm", style "flex" "1", onClick SubmitRestore ] [ text "Restore wallet" ]
+                    , button [ class "btn ghost sm", onClick CancelRestore ] [ text "Cancel" ]
+                    ]
+                ]
+
+          else
+            text ""
+        , if List.isEmpty model.wallets then
+            div [ class "empty" ] [ text "No wallets yet — click + New" ]
+
+          else
+            div [] (List.map (viewWallet model) model.wallets)
+        , case faucetUrl model.network of
+            Just url ->
+                if List.isEmpty model.wallets then
+                    text ""
+
+                else
+                    a [ href url, target "_blank", class "faucet" ] [ button [ class "btn ghost sm block" ] [ text "🚰 Faucet" ] ]
+
+            Nothing ->
+                text ""
+        ]
+
+
+viewWallet : Model -> Wallet -> Html Msg
+viewWallet model w =
+    div [ classList [ ( "wallet", True ), ( "open", w.expanded ) ] ]
+        [ div [ class "whead", onClick (ToggleWalletExpanded w.id) ]
+            [ span [ class "wchev" ] [ text "▶" ]
+            , span [ class "wav", style "background" w.color ] [ text (String.left 1 w.alias |> String.toUpper) ]
+            , span [ class "winfo" ]
+                [ input [ class "walias", value w.alias, stopClick, onInput (EditAlias w.id) ] []
+                , span [ class "waddr mono" ] [ text (shorten w.address) ]
+                ]
+            ]
+        , if w.expanded then
+            div [ class "wbody" ]
+                [ div [ class "kv" ]
+                    [ span [ class "k" ] [ text "Address" ]
+                    , span [ class "v mono" ]
+                        [ text (shorten w.address)
+                        , text " "
+                        , button [ class "btn ghost xs", onClick (Copy w.address) ] [ text "copy" ]
+                        ]
+                    ]
+                , details []
+                    [ summary [] [ text "keys & hashes (signing keys are your backup)" ]
+                    , kv "pay vkey" (shorten w.keys.paymentVKey)
+                    , kvSecret "pay skey" w.keys.paymentSKey
+                    , kv "stake vkey" (shorten w.keys.stakeVKey)
+                    , kvSecret "stake skey" w.keys.stakeSKey
+                    , kv "pay keyhash" (shorten w.keys.paymentKeyHash)
+                    , kv "stake keyhash" (shorten w.keys.stakeKeyHash)
+                    ]
+                , div [ class "hrow", style "margin-top" "8px" ]
+                    [ button [ class "btn xs danger", onClick (RequestForget w.id) ] [ text "🗑 forget" ] ]
+                ]
+
+          else
+            text ""
+        ]
+
+
+viewConsole : Model -> Html Msg
+viewConsole model =
+    div [ class "card" ]
+        [ h3 [] [ text "Console", button [ class "btn ghost xs", onClick ClearConsole ] [ text "clear" ] ]
+
+        -- newest rendered first + CSS column-reverse = chronological order with the
+        -- scroll position pinned to the latest line (no scroll commands needed)
+        , div [ class "console" ]
+            (List.map
+                (\l ->
+                    div [ class ("ln " ++ logClass l.level) ] [ text (logPrefix l.level ++ " " ++ l.text) ]
+                )
+                (List.reverse model.console)
+            )
+        ]
+
+
+logClass : LogLevel -> String
+logClass l =
+    case l of
+        LogInfo ->
+            "info"
+
+        LogOk ->
+            "ok"
+
+        LogWarn ->
+            "warn"
+
+        LogCmd ->
+            "cmd"
+
+
+logPrefix : LogLevel -> String
+logPrefix l =
+    case l of
+        LogInfo ->
+            "→"
+
+        LogOk ->
+            "✓"
+
+        LogWarn ->
+            "!"
+
+        LogCmd ->
+            "$"
+
+
+viewModal : Model -> Html Msg
+viewModal model =
+    case model.modal of
+        NoModal ->
+            text ""
+
+        ForgetDialog wid ->
+            div [ class "modal-bg" ]
+                [ div [ class "modal sm" ]
+                    [ div [ class "mh" ] [ h3 [] [ text ("Forget " ++ aliasOf wid model ++ "?") ] ]
+                    , div [ class "mb" ]
+                        [ p [] [ text "Keys are not stored — be sure the signing keys are saved." ]
+                        , div [ class "hrow" ]
+                            [ button [ class "btn danger", onClick (ConfirmForget wid) ] [ text "Forget" ]
+                            , button [ class "btn ghost", onClick CancelForget ] [ text "Cancel" ]
+                            ]
+                        ]
+                    ]
+                ]
+
+
+viewToast : Model -> Html Msg
+viewToast model =
+    case model.toast of
+        Just t ->
+            div [ class "toast on" ] [ text t ]
+
+        Nothing ->
+            div [ class "toast" ] []
+
+
+
+-- view helpers
+
+
+kv : String -> String -> Html Msg
+kv k v =
+    div [ class "kv" ] [ span [ class "k" ] [ text k ], span [ class "v" ] [ text v ] ]
+
+
+kvSecret : String -> String -> Html Msg
+kvSecret k v =
+    div [ class "kv" ] [ span [ class "k" ] [ text k ], span [ class "v mono secret" ] [ text v ] ]
+
+
+stopClick : Attribute Msg
+stopClick =
+    stopPropagationOn "click" (D.succeed ( NoOp, True ))

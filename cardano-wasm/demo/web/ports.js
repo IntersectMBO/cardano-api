@@ -1,11 +1,64 @@
-// Boot the cardano-wasm engine, then start the Elm application.
-// The Elm app is only started once `initialise()` has succeeded, so the page
-// rendering at all is proof that the wasm engine loaded.
+// Port glue: Elm ⇄ cardano-wasm. The wrapper does the Cardano work here —
+// key generation and restoration, address encoding.
 import initialise from "./cardano-api.js";
 
+const magic = { mainnet: undefined, preprod: 1, preview: 2 };
+
+async function walletToJson(w) {
+  return {
+    address: await w.getAddressBech32(),
+    keys: {
+      paymentVKey: await w.getBech32ForPaymentVerificationKey(),
+      paymentSKey: await w.getBech32ForPaymentSigningKey(),
+      stakeVKey: await w.getBech32ForStakeVerificationKey(),
+      stakeSKey: await w.getBech32ForStakeSigningKey(),
+      paymentKeyHash: await w.getBase16ForPaymentVerificationKeyHash(),
+      stakeKeyHash: await w.getBase16ForStakeVerificationKeyHash(),
+    },
+  };
+}
+
+async function restoreWallet(api, network, paymentSkey, stakeSkey) {
+  return network === "mainnet"
+    ? api.wallet.mainnet.restoreStakeWalletFromSigningKeyBech32(paymentSkey, stakeSkey)
+    : api.wallet.testnet.restoreStakeWalletFromSigningKeyBech32(magic[network], paymentSkey, stakeSkey);
+}
+
+function wire(app, api) {
+  app.ports.wasmGenerateWallet.subscribe(async ({ network }) => {
+    try {
+      const w = network === "mainnet"
+        ? await api.wallet.mainnet.generateStakeWallet()
+        : await api.wallet.testnet.generateStakeWallet(magic[network]);
+      app.ports.wasmWalletGenerated.send(await walletToJson(w));
+    } catch (e) { app.ports.wasmWalletGenerated.send({ error: String(e) }); }
+  });
+
+  app.ports.wasmRestoreWallet.subscribe(async ({ network, paymentSkey, stakeSkey }) => {
+    try {
+      const w = await restoreWallet(api, network, paymentSkey, stakeSkey);
+      app.ports.wasmWalletRestored.send(await walletToJson(w));
+    } catch (e) { app.ports.wasmWalletRestored.send({ error: String(e) }); }
+  });
+
+  app.ports.wasmDeriveAddresses.subscribe(async ({ network, wallets }) => {
+    try {
+      const out = [];
+      for (const wk of wallets) {
+        const w = await restoreWallet(api, network, wk.paymentSkey, wk.stakeSkey);
+        out.push({ id: wk.id, address: await w.getAddressBech32() });
+      }
+      app.ports.wasmAddressesDerived.send(out);
+    } catch (e) { app.ports.wasmAddressesDerived.send({ error: String(e) }); }
+  });
+
+  app.ports.clipboardWrite.subscribe((t) => { if (navigator.clipboard) navigator.clipboard.writeText(t); });
+}
+
 async function boot() {
-  await initialise();
-  window.Elm.Main.init({ node: document.getElementById("app") });
+  const api = await initialise();
+  const app = window.Elm.Main.init({ node: document.getElementById("app") });
+  wire(app, api);
 }
 
 boot().catch((e) => {

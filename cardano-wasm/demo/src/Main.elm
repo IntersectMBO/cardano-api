@@ -1,24 +1,42 @@
 module Main exposing (main)
 
-{-| Placeholder page: proves the demo build pipeline and that the cardano-wasm
-engine loads in the browser (web/ports.js only starts this application after
-`initialise()` has succeeded). The wallet application itself follows.
+{-| Entry point — wires The Elm Architecture together. The interesting code lives in:
+
+  - Types — every data type, the Model and the Msg
+  - State — initial state, derived queries, small updaters
+  - Update — the controller (one branch per Msg)
+  - View — the whole UI
+  - Wasm — the cardano-wasm boundary (port commands + decoders)
+  - Net / Format — static tables and pure utilities
+  - Ports — the raw port declarations (JS side: web/ports.js)
+
 -}
 
-import Html exposing (Html, div, h3, p, text)
-import Html.Attributes exposing (class, style)
+import Browser
+import Ports
+import State exposing (init)
+import Types exposing (..)
+import Update exposing (update)
+import View exposing (view)
+import Wasm
 
 
-main : Html msg
-main =
-    div [ class "grid" ]
-        [ div [ class "col" ] []
-        , div [ class "col" ]
-            [ div [ class "card", style "margin-top" "40px" ]
-                [ h3 [] [ text "cardano-wasm wallet demo" ]
-                , p [] [ text "✓ the cardano-wasm engine loaded successfully in your browser." ]
-                , p [ class "muted small" ] [ text "The wallet application will appear here as it is built up in subsequent changes." ]
-                ]
-            ]
-        , div [ class "col" ] []
+{-| Each incoming port is decoded by Wasm and dispatched as a Msg.
+-}
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.batch
+        [ Ports.wasmWalletGenerated (Wasm.decodeResult Wasm.genDecoder >> GotGeneratedWallet)
+        , Ports.wasmWalletRestored (Wasm.decodeResult Wasm.genDecoder >> GotRestoredWallet)
+        , Ports.wasmAddressesDerived (Wasm.decodeResult Wasm.addrsDecoder >> GotDerivedAddresses)
         ]
+
+
+main : Program () Model Msg
+main =
+    Browser.element
+        { init = init
+        , update = update
+        , view = view
+        , subscriptions = subscriptions
+        }
