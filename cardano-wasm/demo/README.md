@@ -6,6 +6,19 @@ signing happen in the wasm engine; chain data (UTxOs, stake pools) and transacti
 submission go through [Blockfrost](https://blockfrost.io) using a project id the user
 types into the page (kept in memory only).
 
+What it demonstrates:
+
+- multiple wallets: generate stake-enabled key pairs, restore from bech32 signing keys
+- mainnet / preprod / preview, with addresses re-derived on switch
+- UTxOs and balances per wallet; payments with change and validated recipients
+  (cardano-wasm's `inspectAddress` flags invalid and wrong-network addresses)
+- staking: register / register+delegate / delegate-only / unregister, with a paginated
+  live pool picker and payment + stake witnesses
+- fee estimation (`estimateMinFee`) with balance and min-UTxO checks; the tx id is shown
+  right after signing (`getTxId`)
+- submission via Blockfrost (hash cross-checked against the wasm tx id) or a
+  `cardano-cli` TextEnvelope download
+
 The demo built from `master` is published at:
 **https://cardano-api.cardano.intersectmbo.org/cardano-wasm/demo/**
 

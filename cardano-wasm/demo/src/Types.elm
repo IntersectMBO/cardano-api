@@ -1,9 +1,5 @@
 module Types exposing (..)
 
-{-| Every data type in the application: the Model (all state in one record)
-and the Msg (everything that can happen).
--}
-
 import Dict exposing (Dict)
 import Http
 
@@ -73,19 +69,25 @@ type alias Output =
     }
 
 
-{-| Which family of networks an address belongs to. Addresses only encode
-mainnet-vs-testnet, so preprod and preview cannot be told apart.
--}
-type NetKind
-    = MainKind
-    | TestKind
+type CertAction
+    = Register
+    | RegisterAndDelegate String
+    | DelegateOnly String
+    | Unregister
 
 
-{-| Result of cardano-wasm's inspectAddress for one address.
--}
-type AddrCheck
-    = CheckInvalid
-    | CheckValid NetKind
+type alias Certificate =
+    { wallet : WalletId
+    , action : CertAction
+    }
+
+
+type alias Pool =
+    { idBech32 : String
+    , idHex : String
+    , liveStake : Int
+    , saturation : Float
+    }
 
 
 type Era
@@ -111,6 +113,21 @@ type alias SignedPayload =
     { cbor : String, txId : String }
 
 
+{-| Which family of networks an address belongs to. Addresses only encode
+mainnet-vs-testnet, so preprod and preview cannot be told apart.
+-}
+type NetKind
+    = MainKind
+    | TestKind
+
+
+{-| Result of cardano-wasm's inspectAddress for one address.
+-}
+type AddrCheck
+    = CheckInvalid
+    | CheckValid NetKind
+
+
 type TxState
     = Draft
     | Signing
@@ -124,17 +141,28 @@ type SubmitState
     | SubmitFailed String
 
 
+type DelegKind
+    = RegThenDeleg
+    | DelegOnly
+
+
+type PoolPurpose
+    = ForNewCert WalletId DelegKind
+    | ForEditCert Int
+
+
 type Modal
     = NoModal
+    | PoolPicker PoolPurpose String
     | ForgetDialog WalletId
-
-
-type alias BookForm =
-    { open : Bool, alias : String, address : String }
 
 
 type alias RestoreForm =
     { open : Bool, paymentSkey : String, stakeSkey : String }
+
+
+type alias BookForm =
+    { open : Bool, alias : String, address : String }
 
 
 type LogLevel
@@ -153,8 +181,8 @@ type alias GenPayload =
 
 
 {-| The two protocol parameters the Elm side needs for its balance arithmetic.
-Read from web/pparams.js at startup (see web/ports.js) so the pinned object is
-the single source of truth; everything else in it is consumed only by
+Read from web/pparams.json at startup (see web/ports.js) so the pinned file is
+the single source of truth; everything else in that file is consumed only by
 cardano-wasm's estimateMinFee.
 -}
 type alias Protocol =
@@ -169,18 +197,21 @@ type alias Model =
     , nextWid : Int
     , book : List BookEntry
     , outputs : List Output
+    , certs : List Certificate
     , era : Era
     , fee : FeeState
     , feeText : String
     , tx : TxState
     , submit : SubmitState
+    , pools : Loadable (List Pool) -- the page of pools currently shown in the picker
+    , poolPage : Int -- its 1-based page number (Blockfrost pages, 100 pools each)
     , modal : Modal
-    , bfKeys : BfKeys
     , restore : RestoreForm
     , bookForm : BookForm
     , console : List LogLine
     , toast : Maybe String
     , toastSeq : Int
+    , bfKeys : BfKeys
     , addrChecks : Dict String AddrCheck -- inspectAddress results, keyed by address
     , protocol : Protocol
     }
@@ -192,6 +223,7 @@ type alias BfKeys =
 
 type Msg
     = SelectNetwork Network
+    | UpdateBfKey String
     | ClickNewWallet
     | GotGeneratedWallet (Result String GenPayload)
     | ClickRestoreToggle
@@ -206,7 +238,6 @@ type Msg
     | RequestForget WalletId
     | ConfirmForget WalletId
     | CancelForget
-    | UpdateBfKey String
     | ClickLoadUtxos WalletId
     | ClickLoadAll
     | GotUtxos WalletId (Result Http.Error (List Utxo))
@@ -221,16 +252,26 @@ type Msg
     | UpdateOutputAmount Int String
     | ToggleOutputChange Int
     | DeleteOutput Int
+    | SetWalletCert WalletId String
+    | DeleteCertificate Int
+    | ChangeCertPool Int
     | ClearInputs
     | ClearOutputs
+    | ClearCerts
     | ClearTx
-    | GotAddressInspected (Result String ( String, AddrCheck ))
+    | UpdatePoolSearch String
+    | PickPool String
+    | ClosePoolModal
+    | ClickLoadPools
+    | ClickPoolPage Int
+    | GotPools (Result Http.Error (List Pool))
     | SelectEra Era
     | ClickEstimateFee
     | GotFeeEstimated (Result String Int)
     | UpdateFeeText String
     | ClickSign
     | GotTxSigned (Result String SignedPayload)
+    | GotAddressInspected (Result String ( String, AddrCheck ))
     | ClickDownloadCli
     | ClickSubmit
     | GotSubmitted (Result String String)

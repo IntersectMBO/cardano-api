@@ -11,7 +11,8 @@ module Net exposing
     , netTag
     )
 
-{-| Static tables for the three networks. Pure data — no logic lives here.
+{-| Static tables: the three networks and the two eras. Pure data — no logic
+lives here.
 -}
 
 import Types exposing (..)

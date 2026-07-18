@@ -15,8 +15,9 @@ module Wasm exposing
 
 {-| The cardano-wasm boundary. Commands encode a request and send it out a port;
 results come back on the matching incoming port and are decoded here (see the
-subscriptions in Main). The Cardano processing itself (key handling, address
-encoding) happens in web/ports.js through the cardano-wasm wrapper.
+subscriptions in Main). The Cardano processing itself — key handling, transaction
+building, fee estimation, signing — happens on the JS side (web/ports.js) through
+the cardano-wasm wrapper; the JSON built here just describes the transaction.
 -}
 
 import Format
@@ -75,6 +76,158 @@ deriveAddresses net wallets =
         )
 
 
+{-| Ask for the minimum fee of the currently described transaction.
+-}
+estimateFee : Model -> Cmd msg
+estimateFee model =
+    Ports.wasmEstimateFee
+        (E.object
+            [ ( "spec", encodeSpec Nothing model )
+            , ( "paymentWits", E.int (List.length (paymentWalletIds model)) )
+            , ( "stakeWits", E.int (List.length (stakeWalletIds model)) )
+            ]
+        )
+
+
+{-| Build, balance (fee + change already decided in Elm) and sign the transaction.
+-}
+signTx : Int -> Model -> Cmd msg
+signTx fee model =
+    Ports.wasmSignTx
+        (E.object
+            [ ( "spec", encodeSpec (Just fee) model )
+            , ( "paymentKeys", E.list E.string (paymentSigningKeys model) )
+            , ( "stakeKeys", E.list E.string (stakeSigningKeys model) )
+            ]
+        )
+
+
+{-| Validate an address and detect its network kind.
+-}
+inspectAddress : String -> Cmd msg
+inspectAddress addr =
+    Ports.wasmInspectAddress (E.object [ ( "address", E.string addr ) ])
+
+
+
+-- TX SPEC
+-- The JSON description of the transaction that web/ports.js replays against the
+-- cardano-wasm builder (newTx → addTxInput → addSimpleTxOut → appendCertificateToTx).
+
+
+encodeSpec : Maybe Int -> Model -> E.Value
+encodeSpec maybeFee model =
+    E.object
+        [ ( "era", E.string (eraTag model.era) )
+        , ( "inputs"
+          , E.list
+                (\( _, u ) -> E.object [ ( "txId", E.string u.txId ), ( "txIx", E.int u.txIx ) ])
+                (selectedInputs model)
+          )
+        , ( "outputs", E.list identity (finalOutputs (Maybe.withDefault 0 maybeFee) model) )
+        , ( "certs", E.list identity (List.concatMap (certJson model) model.certs) )
+        , ( "fee", maybeFee |> Maybe.map E.int |> Maybe.withDefault E.null )
+        ]
+
+
+{-| The explicit outputs plus the computed change output (if there is a remainder).
+For fee estimation the fee is still unknown (0) — the change is then slightly too
+large, but the transaction _size_ is the same, which is all the estimate needs.
+-}
+finalOutputs : Int -> Model -> List E.Value
+finalOutputs feeForChange model =
+    let
+        explicit =
+            model.outputs
+                |> List.filterMap
+                    (\o ->
+                        case o.amount of
+                            Lovelace s ->
+                                Format.adaToLovelace s
+                                    |> Maybe.map (\l -> outputJson o.address l)
+
+                            Change ->
+                                Nothing
+                    )
+
+        chg =
+            inputsTotal model - explicitOutputsTotal model - depositTotal model - feeForChange
+
+        changeOut =
+            case ( changeAddress model, chg > 0 ) of
+                ( Just addr, True ) ->
+                    [ outputJson addr chg ]
+
+                _ ->
+                    []
+    in
+    explicit ++ changeOut
+
+
+outputJson : String -> Int -> E.Value
+outputJson addr lovelace =
+    E.object [ ( "address", E.string addr ), ( "lovelace", E.int lovelace ) ]
+
+
+{-| A certificate as JSON; "register + delegate" becomes two certificates.
+NOTE: the unregistration refund must equal the deposit paid at registration. We use
+the current keyDeposit — correct unless the protocol parameter changed in between
+(fine for a demo).
+-}
+certJson : Model -> Certificate -> List E.Value
+certJson model c =
+    let
+        skh =
+            stakeHashOf c.wallet model
+
+        reg =
+            E.object [ ( "action", E.string "register" ), ( "stakeKeyHash", E.string skh ), ( "deposit", E.int model.protocol.keyDeposit ) ]
+
+        unreg =
+            E.object [ ( "action", E.string "unregister" ), ( "stakeKeyHash", E.string skh ), ( "deposit", E.int model.protocol.keyDeposit ) ]
+
+        deleg pid =
+            E.object
+                [ ( "action", E.string "delegate" )
+                , ( "stakeKeyHash", E.string skh )
+                , ( "poolId", E.string (poolHex model pid) )
+                ]
+    in
+    case c.action of
+        Register ->
+            [ reg ]
+
+        Unregister ->
+            [ unreg ]
+
+        DelegateOnly pid ->
+            [ deleg pid ]
+
+        RegisterAndDelegate pid ->
+            [ reg, deleg pid ]
+
+
+
+-- SIGNING KEYS
+-- Payment witnesses for the wallets whose UTxOs are spent; stake witnesses
+-- (alsoSignWithStakeKey) for the wallets that carry a certificate. Registration
+-- alone wouldn't need a stake witness, but an extra witness is harmless.
+
+
+paymentSigningKeys : Model -> List String
+paymentSigningKeys model =
+    paymentWalletIds model
+        |> List.filterMap (\wid -> getWallet wid model)
+        |> List.map (\w -> w.keys.paymentSKey)
+
+
+stakeSigningKeys : Model -> List String
+stakeSigningKeys model =
+    stakeWalletIds model
+        |> List.filterMap (\wid -> getWallet wid model)
+        |> List.map (\w -> w.keys.stakeSKey)
+
+
 
 -- DECODERS (in ← cardano-wasm)
 
@@ -114,11 +267,16 @@ addrsDecoder =
     D.list (D.map2 Tuple.pair (D.field "id" D.int) (D.field "address" D.string))
 
 
-{-| Validate an address and detect its network kind.
--}
-inspectAddress : String -> Cmd msg
-inspectAddress addr =
-    Ports.wasmInspectAddress (E.object [ ( "address", E.string addr ) ])
+feeDecoder : D.Decoder Int
+feeDecoder =
+    D.field "fee" D.int
+
+
+signedDecoder : D.Decoder SignedPayload
+signedDecoder =
+    D.map2 SignedPayload
+        (D.field "cbor" D.string)
+        (D.field "txId" D.string)
 
 
 inspectedDecoder : D.Decoder ( String, AddrCheck )
@@ -139,113 +297,3 @@ inspectedDecoder =
                             CheckInvalid
                 )
         )
-
-
-{-| Ask for the minimum fee of the currently described transaction.
--}
-estimateFee : Model -> Cmd msg
-estimateFee model =
-    Ports.wasmEstimateFee
-        (E.object
-            [ ( "spec", encodeSpec Nothing model )
-            , ( "paymentWits", E.int (List.length (paymentWalletIds model)) )
-            , ( "stakeWits", E.int 0 ) -- stake witnesses arrive with certificates
-            ]
-        )
-
-
-{-| Build, balance (fee + change already decided in Elm) and sign the transaction.
--}
-signTx : Int -> Model -> Cmd msg
-signTx fee model =
-    Ports.wasmSignTx
-        (E.object
-            [ ( "spec", encodeSpec (Just fee) model )
-            , ( "paymentKeys", E.list E.string (paymentSigningKeys model) )
-            , ( "stakeKeys", E.list E.string [] ) -- stake keys arrive with certificates
-            ]
-        )
-
-
-
--- TX SPEC
--- The JSON description of the transaction that web/ports.js replays against the
--- cardano-wasm builder (newTx → addTxInput → addSimpleTxOut).
-
-
-encodeSpec : Maybe Int -> Model -> E.Value
-encodeSpec maybeFee model =
-    E.object
-        [ ( "era", E.string (eraTag model.era) )
-        , ( "inputs"
-          , E.list
-                (\( _, u ) -> E.object [ ( "txId", E.string u.txId ), ( "txIx", E.int u.txIx ) ])
-                (selectedInputs model)
-          )
-        , ( "outputs", E.list identity (finalOutputs (Maybe.withDefault 0 maybeFee) model) )
-        , ( "certs", E.list identity [] ) -- certificates arrive in a later change
-        , ( "fee", maybeFee |> Maybe.map E.int |> Maybe.withDefault E.null )
-        ]
-
-
-{-| The explicit outputs plus the computed change output (if there is a remainder).
-For fee estimation the fee is still unknown (0) — the change is then slightly too
-large, but the transaction _size_ is the same, which is all the estimate needs.
--}
-finalOutputs : Int -> Model -> List E.Value
-finalOutputs feeForChange model =
-    let
-        explicit =
-            model.outputs
-                |> List.filterMap
-                    (\o ->
-                        case o.amount of
-                            Lovelace s ->
-                                Format.adaToLovelace s
-                                    |> Maybe.map (\l -> outputJson o.address l)
-
-                            Change ->
-                                Nothing
-                    )
-
-        chg =
-            inputsTotal model - explicitOutputsTotal model - feeForChange
-
-        changeOut =
-            case ( changeAddress model, chg > 0 ) of
-                ( Just addr, True ) ->
-                    [ outputJson addr chg ]
-
-                _ ->
-                    []
-    in
-    explicit ++ changeOut
-
-
-outputJson : String -> Int -> E.Value
-outputJson addr lovelace =
-    E.object [ ( "address", E.string addr ), ( "lovelace", E.int lovelace ) ]
-
-
-
--- SIGNING KEYS
--- Payment witnesses for the wallets whose UTxOs are spent.
-
-
-paymentSigningKeys : Model -> List String
-paymentSigningKeys model =
-    paymentWalletIds model
-        |> List.filterMap (\wid -> getWallet wid model)
-        |> List.map (\w -> w.keys.paymentSKey)
-
-
-feeDecoder : D.Decoder Int
-feeDecoder =
-    D.field "fee" D.int
-
-
-signedDecoder : D.Decoder SignedPayload
-signedDecoder =
-    D.map2 SignedPayload
-        (D.field "cbor" D.string)
-        (D.field "txId" D.string)

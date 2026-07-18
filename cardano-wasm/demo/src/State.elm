@@ -1,5 +1,6 @@
 module State exposing
     ( adaOnlyMinUtxo
+    , addCert
     , addWallet
     , addrFlagged
     , addrIssue
@@ -8,10 +9,13 @@ module State exposing
     , balance
     , balanceWith
     , canSign
+    , certCode
+    , certMenu
     , changeAddress
     , changeRow
     , computeBalance
     , currentKey
+    , depositTotal
     , deselectInputs
     , distinct
     , emptyBookForm
@@ -22,19 +26,26 @@ module State exposing
     , inputsTotal
     , invalidate
     , invalidateShape
+    , isFailed
+    , loadedPools
     , log
     , mapWallet
     , outputAddressesOk
     , outputsComplete
     , ownBook
     , paymentWalletIds
+    , poolByIdIn
+    , poolHex
     , removeAt
     , selectedInputs
     , setBookAddr
     , setBookAlias
+    , setCertPool
     , setCurrentKey
     , setRestorePay
     , setRestoreStake
+    , stakeHashOf
+    , stakeWalletIds
     , toastNow
     , toggleBook
     , toggleRestore
@@ -42,6 +53,7 @@ module State exposing
     , txReady
     , updateAt
     , walletBalance
+    , walletCertAction
     , witnessCount
     )
 
@@ -49,6 +61,7 @@ module State exposing
 and update read), and the small pure updaters. No commands except the toast timer.
 -}
 
+import Bech32
 import Dict
 import Format exposing (adaToLovelace)
 import Net exposing (expectedNetKind)
@@ -68,19 +81,24 @@ init protocol =
       , nextWid = 1
       , book = []
       , outputs = []
+      , certs = []
       , era = Conway
       , fee = NoFee
       , feeText = ""
       , tx = Draft
       , submit = NotSubmitted
+      , pools = NotAsked
+      , poolPage = 1
       , modal = NoModal
-      , bfKeys = { mainnet = "", preprod = "", preview = "" }
       , restore = emptyRestoreForm
       , bookForm = emptyBookForm
       , console =
-            [ LogLine LogInfo "cardano-wasm loaded · post-link module ready" ]
+            [ LogLine LogInfo "cardano-wasm loaded · post-link module ready"
+            , LogLine LogInfo "data: Blockfrost (enter a free project id) · pinned protocol params"
+            ]
       , toast = Nothing
       , toastSeq = 0
+      , bfKeys = { mainnet = "", preprod = "", preview = "" }
       , addrChecks = Dict.empty
       , protocol = protocol
       }
@@ -201,52 +219,6 @@ walletBalance w =
             Nothing
 
 
-
--- CONSOLE & TOAST
-
-
-log : LogLevel -> String -> Model -> Model
-log level text model =
-    let
-        entries =
-            model.console ++ [ LogLine level text ]
-    in
-    -- keep the last 200 lines only
-    { model | console = List.drop (List.length entries - 200) entries }
-
-
-{-| Show a toast and schedule its dismissal; the sequence number ignores stale timers.
--}
-toastNow : String -> Model -> ( Model, Cmd Msg )
-toastNow text model =
-    let
-        seq =
-            model.toastSeq + 1
-    in
-    ( { model | toast = Just text, toastSeq = seq }
-    , Process.sleep 1900 |> Task.perform (\_ -> ClearToast seq)
-    )
-
-
-
--- SMALL FORM UPDATERS
-
-
-toggleRestore : RestoreForm -> RestoreForm
-toggleRestore r =
-    { r | open = not r.open }
-
-
-setRestorePay : String -> RestoreForm -> RestoreForm
-setRestorePay s r =
-    { r | paymentSkey = s }
-
-
-setRestoreStake : String -> RestoreForm -> RestoreForm
-setRestoreStake s r =
-    { r | stakeSkey = s }
-
-
 {-| The address book shows own wallets first (derived, always current) plus the
 manually added external entries stored in model.book.
 -}
@@ -314,6 +286,10 @@ deselectInputs model =
     }
 
 
+
+-- TRANSACTION TOTALS
+
+
 inputsTotal : Model -> Int
 inputsTotal model =
     selectedInputs model |> List.map (\( _, u ) -> u.lovelace) |> List.sum
@@ -336,11 +312,151 @@ explicitOutputsTotal model =
         |> List.sum
 
 
+{-| Net deposit: +keyDeposit per registration, −keyDeposit (refund) per unregistration.
+-}
+depositTotal : Model -> Int
+depositTotal model =
+    model.certs
+        |> List.map
+            (\c ->
+                case c.action of
+                    Register ->
+                        model.protocol.keyDeposit
+
+                    RegisterAndDelegate _ ->
+                        model.protocol.keyDeposit
+
+                    Unregister ->
+                        negate model.protocol.keyDeposit
+
+                    DelegateOnly _ ->
+                        0
+            )
+        |> List.sum
+
+
+
+-- WITNESSES
+-- Payment witnesses come from wallets whose UTxOs are spent; stake witnesses from
+-- wallets that carry a certificate. Distinct per wallet.
+
+
+paymentWalletIds : Model -> List WalletId
+paymentWalletIds model =
+    selectedInputs model |> List.map (\( w, _ ) -> w.id) |> distinct
+
+
+stakeWalletIds : Model -> List WalletId
+stakeWalletIds model =
+    model.certs |> List.map .wallet |> distinct
+
+
+witnessCount : Model -> Int
+witnessCount model =
+    List.length (paymentWalletIds model) + List.length (stakeWalletIds model)
+
+
+
+-- CHANGE & BALANCE
+
+
 {-| The output marked "change" (at most one), if any.
 -}
 changeRow : Model -> Maybe Output
 changeRow model =
     model.outputs |> List.filter (\o -> o.amount == Change) |> List.head
+
+
+{-| Where the remainder goes: the change output if marked, else the first input wallet.
+-}
+changeAddress : Model -> Maybe String
+changeAddress model =
+    case changeRow model of
+        Just o ->
+            Just o.address
+
+        Nothing ->
+            selectedInputs model |> List.head |> Maybe.map (\( w, _ ) -> w.address)
+
+
+{-| Balance arithmetic: change = inputs − outputs − deposit − fee, plus the
+ADA-only min-UTxO check on the change. Plain integer bookkeeping over lovelace
+totals — fee estimation, serialisation and signing all happen in cardano-wasm.
+-}
+computeBalance : Int -> { inputs : Int, outputs : Int, deposit : Int, fee : Int } -> Balance
+computeBalance minUtxo t =
+    let
+        change =
+            t.inputs - t.outputs - t.deposit - t.fee
+    in
+    if change < 0 then
+        Insufficient (negate change)
+
+    else if change == 0 then
+        Balanced 0
+
+    else if change < minUtxo then
+        DustChange change minUtxo
+
+    else
+        Balanced change
+
+
+{-| Minimum lovelace an ADA-only output must hold:
+(≈65 B output + 160 B overhead) × coinsPerUtxoByte ≈ 0.97 ₳.
+Only valid for ADA-only outputs — with native assets the size (and thus the
+minimum) grows, which is one reason this demo blocks token-bearing UTxOs.
+-}
+adaOnlyMinUtxo : Protocol -> Int
+adaOnlyMinUtxo protocol =
+    protocol.coinsPerUtxoByte * 225
+
+
+balanceWith : Int -> Model -> Balance
+balanceWith fee model =
+    computeBalance (adaOnlyMinUtxo model.protocol)
+        { inputs = inputsTotal model
+        , outputs = explicitOutputsTotal model
+        , deposit = depositTotal model
+        , fee = fee
+        }
+
+
+balance : Model -> Balance
+balance model =
+    case model.fee of
+        FeeSet fee ->
+            balanceWith fee model
+
+        _ ->
+            NoFeeYet
+
+
+
+-- READINESS GATES
+
+
+{-| Enough of a transaction to estimate a fee: at least one input, something to do
+(outputs or certificates), and no invalid amounts or addresses.
+-}
+txReady : Model -> Bool
+txReady model =
+    not (List.isEmpty (selectedInputs model))
+        && (explicitOutputsTotal model > 0 || changeRow model /= Nothing || not (List.isEmpty model.certs))
+        && outputsComplete model
+        && outputAddressesOk model
+
+
+{-| The sign button (and handler) gate: ready, fee set, balanced, still a draft.
+-}
+canSign : Model -> Bool
+canSign model =
+    case ( model.fee, balance model, model.tx ) of
+        ( FeeSet _, Balanced _, Draft ) ->
+            txReady model
+
+        _ ->
+            False
 
 
 {-| Every non-change output parses to a positive lovelace amount.
@@ -414,146 +530,105 @@ addrFlagged model a =
     addrVerdict model a |> Maybe.andThen (\_ -> addrIssue model a)
 
 
-toggleBook : BookForm -> BookForm
-toggleBook b =
-    { b | open = not b.open }
+
+-- CERTIFICATES
+-- One certificate per wallet, chosen from a small menu. The menu codes below are the
+-- single source of truth shared by the view (options) and the update (parsing).
 
 
-setBookAlias : String -> BookForm -> BookForm
-setBookAlias s b =
-    { b | alias = s }
+certMenu : List ( String, String )
+certMenu =
+    [ ( "", "no certificate" )
+    , ( "reg", "Register stake key" )
+    , ( "deleg", "Register + delegate" )
+    , ( "delegonly", "Delegate only" )
+    , ( "unreg", "Unregister stake key" )
+    ]
 
 
-setBookAddr : String -> BookForm -> BookForm
-setBookAddr s b =
-    { b | address = s }
+certCode : CertAction -> String
+certCode action =
+    case action of
+        Register ->
+            "reg"
+
+        RegisterAndDelegate _ ->
+            "deleg"
+
+        DelegateOnly _ ->
+            "delegonly"
+
+        Unregister ->
+            "unreg"
 
 
-removeAt : Int -> List a -> List a
-removeAt i xs =
-    List.indexedMap (\j x -> ( j, x )) xs
-        |> List.filter (\( j, _ ) -> j /= i)
-        |> List.map Tuple.second
-
-
-updateAt : Int -> (a -> a) -> List a -> List a
-updateAt i f xs =
-    List.indexedMap
-        (\j x ->
-            if j == i then
-                f x
-
-            else
-                x
-        )
-        xs
-
-
-
--- WITNESSES
--- Payment witnesses come from the wallets whose UTxOs are spent. Distinct per wallet.
-
-
-paymentWalletIds : Model -> List WalletId
-paymentWalletIds model =
-    selectedInputs model |> List.map (\( w, _ ) -> w.id) |> distinct
-
-
-witnessCount : Model -> Int
-witnessCount model =
-    List.length (paymentWalletIds model)
-
-
-{-| Where the remainder goes: the change output if marked, else the first input wallet.
+{-| The menu code of the wallet's current certificate ("" = none) — keeps the
+per-wallet select in sync with the certificate list.
 -}
-changeAddress : Model -> Maybe String
-changeAddress model =
-    case changeRow model of
-        Just o ->
-            Just o.address
+walletCertAction : WalletId -> Model -> String
+walletCertAction wid model =
+    List.filter (\c -> c.wallet == wid) model.certs
+        |> List.head
+        |> Maybe.map (.action >> certCode)
+        |> Maybe.withDefault ""
+
+
+addCert : Certificate -> Model -> Model
+addCert c model =
+    { model | certs = model.certs ++ [ c ] } |> invalidateShape
+
+
+setCertPool : String -> Certificate -> Certificate
+setCertPool pid c =
+    { c
+        | action =
+            case c.action of
+                RegisterAndDelegate _ ->
+                    RegisterAndDelegate pid
+
+                DelegateOnly _ ->
+                    DelegateOnly pid
+
+                other ->
+                    other
+    }
+
+
+stakeHashOf : WalletId -> Model -> String
+stakeHashOf wid model =
+    getWallet wid model |> Maybe.map (\w -> w.keys.stakeKeyHash) |> Maybe.withDefault ""
+
+
+
+-- POOLS
+
+
+loadedPools : Model -> List Pool
+loadedPools model =
+    case model.pools of
+        Loaded ps ->
+            ps
+
+        _ ->
+            []
+
+
+poolByIdIn : List Pool -> String -> Maybe Pool
+poolByIdIn ps pid =
+    List.filter (\p -> p.idBech32 == pid) ps |> List.head
+
+
+{-| Pool base16 id for the delegation certificate. Prefer Blockfrost's `hex`; fall
+back to the provisional Elm bech32 decoder if the pool isn't in the loaded set.
+-}
+poolHex : Model -> String -> String
+poolHex model pid =
+    case poolByIdIn (loadedPools model) pid of
+        Just p ->
+            p.idHex
 
         Nothing ->
-            selectedInputs model |> List.head |> Maybe.map (\( w, _ ) -> w.address)
-
-
-{-| Balance arithmetic: change = inputs − outputs − deposit − fee, plus the
-ADA-only min-UTxO check on the change. Plain integer bookkeeping over lovelace
-totals — fee estimation, serialisation and signing all happen in cardano-wasm.
--}
-computeBalance : Int -> { inputs : Int, outputs : Int, deposit : Int, fee : Int } -> Balance
-computeBalance minUtxo t =
-    let
-        change =
-            t.inputs - t.outputs - t.deposit - t.fee
-    in
-    if change < 0 then
-        Insufficient (negate change)
-
-    else if change == 0 then
-        Balanced 0
-
-    else if change < minUtxo then
-        DustChange change minUtxo
-
-    else
-        Balanced change
-
-
-{-| Minimum lovelace an ADA-only output must hold:
-(≈65 B output + 160 B overhead) × coinsPerUtxoByte ≈ 0.97 ₳.
-Only valid for ADA-only outputs — with native assets the size (and thus the
-minimum) grows, which is one reason this demo blocks token-bearing UTxOs.
--}
-adaOnlyMinUtxo : Protocol -> Int
-adaOnlyMinUtxo protocol =
-    protocol.coinsPerUtxoByte * 225
-
-
-balanceWith : Int -> Model -> Balance
-balanceWith fee model =
-    computeBalance (adaOnlyMinUtxo model.protocol)
-        { inputs = inputsTotal model
-        , outputs = explicitOutputsTotal model
-        , deposit = 0 -- deposits arrive with certificates
-        , fee = fee
-        }
-
-
-balance : Model -> Balance
-balance model =
-    case model.fee of
-        FeeSet fee ->
-            balanceWith fee model
-
-        _ ->
-            NoFeeYet
-
-
-
--- READINESS GATES
-
-
-{-| Enough of a transaction to estimate a fee: at least one input, something to
-send, and no invalid amounts or addresses.
--}
-txReady : Model -> Bool
-txReady model =
-    not (List.isEmpty (selectedInputs model))
-        && (explicitOutputsTotal model > 0 || changeRow model /= Nothing)
-        && outputsComplete model
-        && outputAddressesOk model
-
-
-{-| The sign button (and handler) gate: ready, fee set, balanced, still a draft.
--}
-canSign : Model -> Bool
-canSign model =
-    case ( model.fee, balance model, model.tx ) of
-        ( FeeSet _, Balanced _, Draft ) ->
-            txReady model
-
-        _ ->
-            False
+            Bech32.bech32ToHex pid |> Maybe.withDefault pid
 
 
 
@@ -583,6 +658,81 @@ invalidateShape model =
     { model | tx = Draft, submit = NotSubmitted, fee = NoFee, feeText = "" }
 
 
+
+-- CONSOLE & TOAST
+
+
+log : LogLevel -> String -> Model -> Model
+log level text model =
+    let
+        entries =
+            model.console ++ [ LogLine level text ]
+    in
+    -- keep the last 200 lines only
+    { model | console = List.drop (List.length entries - 200) entries }
+
+
+{-| Show a toast and schedule its dismissal; the sequence number ignores stale timers.
+-}
+toastNow : String -> Model -> ( Model, Cmd Msg )
+toastNow text model =
+    let
+        seq =
+            model.toastSeq + 1
+    in
+    ( { model | toast = Just text, toastSeq = seq }
+    , Process.sleep 1900 |> Task.perform (\_ -> ClearToast seq)
+    )
+
+
+
+-- SMALL FORM UPDATERS
+
+
+toggleRestore : RestoreForm -> RestoreForm
+toggleRestore r =
+    { r | open = not r.open }
+
+
+setRestorePay : String -> RestoreForm -> RestoreForm
+setRestorePay s r =
+    { r | paymentSkey = s }
+
+
+setRestoreStake : String -> RestoreForm -> RestoreForm
+setRestoreStake s r =
+    { r | stakeSkey = s }
+
+
+toggleBook : BookForm -> BookForm
+toggleBook b =
+    { b | open = not b.open }
+
+
+setBookAlias : String -> BookForm -> BookForm
+setBookAlias s b =
+    { b | alias = s }
+
+
+setBookAddr : String -> BookForm -> BookForm
+setBookAddr s b =
+    { b | address = s }
+
+
+
+-- GENERIC LIST HELPERS
+
+
+isFailed : Loadable a -> Bool
+isFailed l =
+    case l of
+        Failed _ ->
+            True
+
+        _ ->
+            False
+
+
 {-| Deduplicate, keeping the first occurrence of each element (stable order).
 -}
 distinct : List comparable -> List comparable
@@ -596,4 +746,24 @@ distinct xs =
                 acc ++ [ x ]
         )
         []
+        xs
+
+
+removeAt : Int -> List a -> List a
+removeAt i xs =
+    List.indexedMap (\j x -> ( j, x )) xs
+        |> List.filter (\( j, _ ) -> j /= i)
+        |> List.map Tuple.second
+
+
+updateAt : Int -> (a -> a) -> List a -> List a
+updateAt i f xs =
+    List.indexedMap
+        (\j x ->
+            if j == i then
+                f x
+
+            else
+                x
+        )
         xs

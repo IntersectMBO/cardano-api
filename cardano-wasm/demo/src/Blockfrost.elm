@@ -1,8 +1,8 @@
-module Blockfrost exposing (fetchUtxos, httpErrStr, submitTx)
+module Blockfrost exposing (fetchPools, fetchUtxos, httpErrStr, submitTx)
 
 {-| The Blockfrost boundary (plain HTTP, CORS-friendly from a static page).
-Supplies UTxOs and broadcasts signed transactions, authenticated with the
-per-network project id the user types into the UI.
+Supplies UTxOs and the pool list, and broadcasts signed transactions.
+Authenticated with the per-network project id the user types into the UI.
 -}
 
 import Hex
@@ -20,6 +20,14 @@ import Types exposing (..)
 fetchUtxos : Model -> WalletId -> String -> Cmd Msg
 fetchUtxos model wid addr =
     request model "GET" ("/addresses/" ++ addr ++ "/utxos?count=100") Http.emptyBody (expectUtxos (GotUtxos wid))
+
+
+{-| One page of registered pools (100 = Blockfrost's page maximum, pages are 1-based).
+The picker appends pages — see PoolPaging.
+-}
+fetchPools : Model -> Int -> Cmd Msg
+fetchPools model page =
+    request model "GET" ("/pools/extended?count=100&page=" ++ String.fromInt page) Http.emptyBody (Http.expectJson GotPools poolsDecoder)
 
 
 submitTx : Model -> String -> Cmd Msg
@@ -154,3 +162,33 @@ unitsDecoder =
 lovelaceIn : List ( String, Int ) -> Int
 lovelaceIn units =
     units |> List.filter (\( u, _ ) -> u == "lovelace") |> List.map Tuple.second |> List.sum
+
+
+poolsDecoder : D.Decoder (List Pool)
+poolsDecoder =
+    D.list
+        (D.map4 Pool
+            (D.field "pool_id" D.string)
+            (D.field "hex" D.string)
+            (D.field "live_stake" (D.nullable lovelaceStringDecoder) |> D.map (Maybe.withDefault 0))
+            (D.field "live_saturation" (D.nullable D.float) |> D.map (Maybe.withDefault 0))
+        )
+
+
+{-| Lovelace amounts arrive as strings (or occasionally numbers).
+-}
+lovelaceStringDecoder : D.Decoder Int
+lovelaceStringDecoder =
+    D.oneOf
+        [ D.int
+        , D.string
+            |> D.andThen
+                (\s ->
+                    case String.toInt s of
+                        Just n ->
+                            D.succeed n
+
+                        Nothing ->
+                            D.fail "bad lovelace"
+                )
+        ]

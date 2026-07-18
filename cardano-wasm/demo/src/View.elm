@@ -1,17 +1,22 @@
 module View exposing (view)
 
-{-| The UI: wallets column · (builder placeholder) · console column, the forget
-dialog and the toast. Pure Model → Html.
+{-| The entire UI: three columns (wallets + address book · transaction builder ·
+inspector + console), the pool/forget modals and the toast. Pure Model → Html.
 -}
 
 import Format exposing (ada, adaToLovelace, amountError, lovelaceToAda, shorten)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput, stopPropagationOn)
+import Html.Events exposing (on, onClick, onInput, stopPropagationOn, targetValue)
 import Json.Decode as D
 import Net exposing (cliFlag, eraTag, expectedNetKind, explorerTx, faucetUrl, netMagic, netName, netTag)
 import State exposing (..)
 import Types exposing (..)
+
+
+onChange : (String -> msg) -> Attribute msg
+onChange tagger =
+    on "change" (D.map tagger targetValue)
 
 
 view : Model -> Html Msg
@@ -146,6 +151,18 @@ viewWallet model w =
                         ]
                     , button [ class "btn xs danger", onClick (RequestForget w.id) ] [ text "🗑 forget" ]
                     ]
+
+                -- bound to the wallet's current certificate; options come from
+                -- State.certMenu (the same codes the update parses)
+                , let
+                    cur =
+                        walletCertAction w.id model
+                  in
+                  select [ class "certsel", onChange (SetWalletCert w.id) ]
+                    (List.map
+                        (\( code, lbl ) -> option [ value code, selected (code == cur) ] [ text lbl ])
+                        certMenu
+                    )
                 , viewWalletUtxos w
                 ]
 
@@ -290,6 +307,8 @@ viewBuilder model =
         , viewInputs model
         , sectionLabel "Outputs — add recipients from the address book" (not (List.isEmpty model.outputs)) ClearOutputs
         , viewOutputs model
+        , sectionLabel "Certificates — pick one in a wallet’s certificate menu" (not (List.isEmpty model.certs)) ClearCerts
+        , viewCerts model
         , viewSummary model
         , div [ class "hrow", style "margin-top" "12px" ]
             [ button [ class "btn ghost", disabled (not (txReady model)), onClick ClickEstimateFee ] [ text "⚙ estimateMinFee()" ]
@@ -400,21 +419,73 @@ viewOutputs model =
         div [] (List.indexedMap row model.outputs ++ hint)
 
 
-sectionLabel : String -> Bool -> Msg -> Html Msg
-sectionLabel txt canClear clearMsg =
-    div [ class "seclabel" ]
-        [ label [] [ text txt ]
-        , if canClear then
-            button [ class "btn ghost xs", onClick clearMsg ] [ text "clear" ]
+viewCerts : Model -> Html Msg
+viewCerts model =
+    if List.isEmpty model.certs then
+        div [ class "empty" ] [ text "No certificates yet — pick one in a wallet’s certificate menu" ]
 
-          else
-            text ""
-        ]
+    else
+        div []
+            (List.indexedMap
+                (\i c ->
+                    let
+                        wAlias =
+                            aliasOf c.wallet model
+
+                        ( label_, poolMaybe ) =
+                            certLabel (loadedPools model) c.action
+                    in
+                    div [ class "certrow" ]
+                        [ span [ class "wav small", style "background" (getWallet c.wallet model |> Maybe.map .color |> Maybe.withDefault "#555") ]
+                            [ text (String.left 1 wAlias |> String.toUpper) ]
+                        , div [ class "grow" ]
+                            [ b [] [ text wAlias ]
+                            , div [ class "muted small" ] [ text label_ ]
+                            ]
+                        , case poolMaybe of
+                            Just _ ->
+                                button [ class "btn ghost xs", onClick (ChangeCertPool i) ] [ text "pool" ]
+
+                            Nothing ->
+                                text ""
+                        , button [ class "x", onClick (DeleteCertificate i) ] [ text "×" ]
+                        ]
+                )
+                model.certs
+            )
+
+
+certLabel : List Pool -> CertAction -> ( String, Maybe String )
+certLabel ps action =
+    let
+        poolName pid =
+            case poolByIdIn ps pid of
+                Just p ->
+                    shorten p.idBech32
+
+                Nothing ->
+                    shorten pid
+    in
+    case action of
+        Register ->
+            ( "Register", Nothing )
+
+        Unregister ->
+            ( "Unregister", Nothing )
+
+        DelegateOnly pid ->
+            ( "Delegate only → " ++ poolName pid, Just pid )
+
+        RegisterAndDelegate pid ->
+            ( "Register + delegate → " ++ poolName pid, Just pid )
 
 
 viewSummary : Model -> Html Msg
 viewSummary model =
     let
+        dep =
+            depositTotal model
+
         ( changeLabel, changeText ) =
             case ( model.fee, balance model ) of
                 ( FeeSet _, Balanced ch ) ->
@@ -432,6 +503,7 @@ viewSummary model =
     div [ class "summary" ]
         [ kv "Input total" (ada (inputsTotal model))
         , kv "Output total" (ada (explicitOutputsTotal model))
+        , kv "Deposit" (ada dep)
         , kv "Fee" (feeDisplay model)
         , kv changeLabel changeText
         , kv "Witnesses" (witnessSummary model)
@@ -472,12 +544,18 @@ witnessSummary model =
     let
         pays =
             paymentWalletIds model |> List.map (\wid -> aliasOf wid model ++ " (payment)")
+
+        stakes =
+            stakeWalletIds model |> List.map (\wid -> aliasOf wid model ++ " (stake)")
+
+        parts =
+            pays ++ stakes
     in
-    if List.isEmpty pays then
+    if List.isEmpty parts then
         "—"
 
     else
-        String.join ", " pays ++ " · " ++ String.fromInt (witnessCount model)
+        String.join ", " parts ++ " · " ++ String.fromInt (witnessCount model)
 
 
 viewExport : Model -> Html Msg
@@ -599,6 +677,18 @@ inspectorText model =
                                         )
                     )
                 |> String.join ",\n"
+
+        certs =
+            model.certs
+                |> List.map
+                    (\c ->
+                        let
+                            ( lbl, _ ) =
+                                certLabel (loadedPools model) c.action
+                        in
+                        "    { stakeKey: \"" ++ aliasOf c.wallet model ++ "\", action: \"" ++ lbl ++ "\" }"
+                    )
+                |> String.join ",\n"
     in
     "{\n  era: \""
         ++ eraTag model.era
@@ -606,11 +696,25 @@ inspectorText model =
         ++ ins
         ++ "\n  ],\n  outputs: [\n"
         ++ outs
+        ++ "\n  ],\n  certs: [\n"
+        ++ certs
         ++ "\n  ],\n  fee: "
         ++ feeDisplay model
         ++ ",\n  requiredWitnesses: "
         ++ String.fromInt (witnessCount model)
         ++ "\n}"
+
+
+sectionLabel : String -> Bool -> Msg -> Html Msg
+sectionLabel txt canClear clearMsg =
+    div [ class "seclabel" ]
+        [ label [] [ text txt ]
+        , if canClear then
+            button [ class "btn ghost xs", onClick clearMsg ] [ text "clear" ]
+
+          else
+            text ""
+        ]
 
 
 viewConsole : Model -> Html Msg
@@ -682,6 +786,92 @@ viewModal model =
                     ]
                 ]
 
+        PoolPicker _ query ->
+            div [ class "modal-bg" ]
+                [ div [ class "modal" ]
+                    [ div [ class "mh" ]
+                        [ h3 [] [ text "Choose a stake pool" ]
+                        , input [ class "poolsearch", placeholder "search ticker or id…", value query, onInput UpdatePoolSearch ] []
+                        , button [ class "btn ghost x", onClick ClosePoolModal ] [ text "✕" ]
+                        ]
+                    , div [ class "mb" ] (viewPoolList model query)
+                    ]
+                ]
+
+
+viewPoolList : Model -> String -> List (Html Msg)
+viewPoolList model query =
+    case model.pools of
+        NotAsked ->
+            [ div [ class "empty" ]
+                [ text "pools not loaded — enter a Blockfrost project id, then "
+                , button [ class "btn ghost xs", onClick ClickLoadPools ] [ text "load pools" ]
+                ]
+            ]
+
+        Loading ->
+            [ div [ class "empty" ] [ text "loading pools from Blockfrost…" ] ]
+
+        Failed e ->
+            [ div [ class "empty" ]
+                [ text ("failed: " ++ e ++ " ")
+                , button [ class "btn ghost xs", onClick (ClickPoolPage model.poolPage) ] [ text "retry" ]
+                ]
+            ]
+
+        Loaded ps ->
+            let
+                ql =
+                    String.toLower query
+
+                matches =
+                    List.filter (\p -> String.contains ql (String.toLower p.idBech32)) ps
+
+                cards =
+                    if List.isEmpty matches then
+                        [ div [ class "empty" ] [ text "no pools match (search covers this page only)" ] ]
+
+                    else
+                        List.map viewPoolCard matches
+            in
+            cards ++ [ viewPoolPager model (List.length ps) ]
+
+
+{-| Prev/next pager. A full page (100) means there is probably a next one; a short
+page is the end of the list. Pages are only ever fetched on these clicks.
+-}
+viewPoolPager : Model -> Int -> Html Msg
+viewPoolPager model pageSize =
+    div [ class "empty" ]
+        [ button
+            [ class "btn ghost xs", disabled (model.poolPage <= 1), onClick (ClickPoolPage (model.poolPage - 1)) ]
+            [ text "◂ prev" ]
+        , text (" page " ++ String.fromInt model.poolPage ++ " · " ++ String.fromInt pageSize ++ " pools ")
+        , button
+            [ class "btn ghost xs", disabled (pageSize < 100), onClick (ClickPoolPage (model.poolPage + 1)) ]
+            [ text "next ▸" ]
+        ]
+
+
+viewPoolCard : Pool -> Html Msg
+viewPoolCard p =
+    div [ class "poolcard", onClick (PickPool p.idBech32) ]
+        [ span [ class "tk" ] [ text "◆" ]
+        , div [ class "pm grow" ]
+            [ b [ class "mono" ] [ text (shorten p.idBech32) ]
+            , div [ class "d mono" ] [ text ("hex " ++ String.left 16 p.idHex ++ "…") ]
+            ]
+        , div [ class "stats" ]
+            [ statBox "live ₳" (lovelaceToAda p.liveStake)
+            , statBox "sat" (String.fromInt (round (p.saturation * 100)) ++ "%")
+            ]
+        ]
+
+
+statBox : String -> String -> Html Msg
+statBox lbl v =
+    div [] [ span [] [ text lbl ], text v ]
+
 
 viewToast : Model -> Html Msg
 viewToast model =
@@ -709,4 +899,4 @@ kvSecret k v =
 
 stopClick : Attribute Msg
 stopClick =
-    stopPropagationOn "click" (D.succeed ( NoOp, True ))
+    Html.Events.stopPropagationOn "click" (D.succeed ( NoOp, True ))
