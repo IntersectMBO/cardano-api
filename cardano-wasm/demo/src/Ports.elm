@@ -1,10 +1,5 @@
 port module Ports exposing (..)
 
-{-| The raw port declarations — the only holes in the wall between Elm and
-JavaScript. The JS side lives in web/ports.js. Payloads are untyped JSON;
-Wasm.elm encodes the requests and decodes the replies.
--}
-
 import Json.Decode as D
 import Json.Encode as E
 
