@@ -1,23 +1,33 @@
 module State exposing
-    ( addWallet
+    ( adaOnlyMinUtxo
+    , addWallet
     , addrFlagged
     , addrIssue
     , addrVerdict
     , aliasOf
+    , balance
+    , balanceWith
+    , canSign
+    , changeAddress
     , changeRow
+    , computeBalance
     , currentKey
     , deselectInputs
+    , distinct
     , emptyBookForm
     , emptyRestoreForm
     , explicitOutputsTotal
     , getWallet
     , init
     , inputsTotal
+    , invalidate
+    , invalidateShape
     , log
     , mapWallet
     , outputAddressesOk
     , outputsComplete
     , ownBook
+    , paymentWalletIds
     , removeAt
     , selectedInputs
     , setBookAddr
@@ -29,8 +39,10 @@ module State exposing
     , toggleBook
     , toggleRestore
     , toggleUtxo
+    , txReady
     , updateAt
     , walletBalance
+    , witnessCount
     )
 
 {-| Everything about the Model: the initial state, derived queries (what the view
@@ -49,13 +61,17 @@ import Types exposing (..)
 -- INIT
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
+init : Protocol -> ( Model, Cmd Msg )
+init protocol =
     ( { network = Mainnet
       , wallets = []
       , nextWid = 1
       , book = []
       , outputs = []
+      , era = Conway
+      , fee = NoFee
+      , feeText = ""
+      , tx = Draft
       , modal = NoModal
       , bfKeys = { mainnet = "", preprod = "", preview = "" }
       , restore = emptyRestoreForm
@@ -65,6 +81,7 @@ init _ =
       , toast = Nothing
       , toastSeq = 0
       , addrChecks = Dict.empty
+      , protocol = protocol
       }
     , Cmd.none
     )
@@ -428,4 +445,154 @@ updateAt i f xs =
             else
                 x
         )
+        xs
+
+
+
+-- WITNESSES
+-- Payment witnesses come from the wallets whose UTxOs are spent. Distinct per wallet.
+
+
+paymentWalletIds : Model -> List WalletId
+paymentWalletIds model =
+    selectedInputs model |> List.map (\( w, _ ) -> w.id) |> distinct
+
+
+witnessCount : Model -> Int
+witnessCount model =
+    List.length (paymentWalletIds model)
+
+
+{-| Where the remainder goes: the change output if marked, else the first input wallet.
+-}
+changeAddress : Model -> Maybe String
+changeAddress model =
+    case changeRow model of
+        Just o ->
+            Just o.address
+
+        Nothing ->
+            selectedInputs model |> List.head |> Maybe.map (\( w, _ ) -> w.address)
+
+
+{-| Balance arithmetic: change = inputs − outputs − deposit − fee, plus the
+ADA-only min-UTxO check on the change. Plain integer bookkeeping over lovelace
+totals — fee estimation, serialisation and signing all happen in cardano-wasm.
+-}
+computeBalance : Int -> { inputs : Int, outputs : Int, deposit : Int, fee : Int } -> Balance
+computeBalance minUtxo t =
+    let
+        change =
+            t.inputs - t.outputs - t.deposit - t.fee
+    in
+    if change < 0 then
+        Insufficient (negate change)
+
+    else if change == 0 then
+        Balanced 0
+
+    else if change < minUtxo then
+        DustChange change minUtxo
+
+    else
+        Balanced change
+
+
+{-| Minimum lovelace an ADA-only output must hold:
+(≈65 B output + 160 B overhead) × coinsPerUtxoByte ≈ 0.97 ₳.
+Only valid for ADA-only outputs — with native assets the size (and thus the
+minimum) grows, which is one reason this demo blocks token-bearing UTxOs.
+-}
+adaOnlyMinUtxo : Protocol -> Int
+adaOnlyMinUtxo protocol =
+    protocol.coinsPerUtxoByte * 225
+
+
+balanceWith : Int -> Model -> Balance
+balanceWith fee model =
+    computeBalance (adaOnlyMinUtxo model.protocol)
+        { inputs = inputsTotal model
+        , outputs = explicitOutputsTotal model
+        , deposit = 0 -- deposits arrive with certificates
+        , fee = fee
+        }
+
+
+balance : Model -> Balance
+balance model =
+    case model.fee of
+        FeeSet fee ->
+            balanceWith fee model
+
+        _ ->
+            NoFeeYet
+
+
+
+-- READINESS GATES
+
+
+{-| Enough of a transaction to estimate a fee: at least one input, something to
+send, and no invalid amounts or addresses.
+-}
+txReady : Model -> Bool
+txReady model =
+    not (List.isEmpty (selectedInputs model))
+        && (explicitOutputsTotal model > 0 || changeRow model /= Nothing)
+        && outputsComplete model
+        && outputAddressesOk model
+
+
+{-| The sign button (and handler) gate: ready, fee set, balanced, still a draft.
+-}
+canSign : Model -> Bool
+canSign model =
+    case ( model.fee, balance model, model.tx ) of
+        ( FeeSet _, Balanced _, Draft ) ->
+            txReady model
+
+        _ ->
+            False
+
+
+
+-- STALENESS
+-- A signed tx is a snapshot: any later edit makes it stale.
+
+
+{-| Drop back to Draft. For edits that do NOT change the transaction body
+(e.g. typing a new fee).
+-}
+invalidate : Model -> Model
+invalidate model =
+    case model.tx of
+        Draft ->
+            model
+
+        _ ->
+            { model | tx = Draft }
+
+
+{-| For edits that change the transaction _shape_ (inputs, outputs, certificates,
+era). Those also reset the fee: a previously estimated fee would now be wrong
+(possibly below the minimum, which the node only rejects at submission).
+-}
+invalidateShape : Model -> Model
+invalidateShape model =
+    { model | tx = Draft, fee = NoFee, feeText = "" }
+
+
+{-| Deduplicate, keeping the first occurrence of each element (stable order).
+-}
+distinct : List comparable -> List comparable
+distinct xs =
+    List.foldl
+        (\x acc ->
+            if List.member x acc then
+                acc
+
+            else
+                acc ++ [ x ]
+        )
+        []
         xs

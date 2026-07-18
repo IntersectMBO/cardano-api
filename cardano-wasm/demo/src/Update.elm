@@ -6,8 +6,10 @@ helpers; effects go through Wasm (ports).
 
 import Blockfrost
 import Dict
+import File.Download as Download
 import Format
-import Net exposing (netName)
+import Json.Encode as E
+import Net exposing (cliType, netName)
 import Ports exposing (clipboardWrite)
 import State exposing (..)
 import Types exposing (..)
@@ -40,6 +42,9 @@ update msg model =
                 | network = n
                 , wallets = List.map (\w -> { w | utxos = NotAsked }) model.wallets
                 , outputs = []
+                , fee = NoFee
+                , feeText = ""
+                , tx = Draft
               }
                 |> log LogInfo ("switched to " ++ netName n)
             , if List.isEmpty model.wallets then
@@ -123,6 +128,7 @@ update msg model =
                 | wallets = List.filter (\w -> w.id /= wid) model.wallets
                 , modal = NoModal
               }
+                |> invalidateShape
                 |> log LogWarn "forgot wallet"
             , Cmd.none
             )
@@ -176,7 +182,8 @@ update msg model =
                 )
 
         GotUtxos wid (Ok us) ->
-            -- On reload, keep the selection for UTxOs that still exist.
+            -- On reload, keep the selection for UTxOs that still exist. If a selected
+            -- UTxO disappeared (it was spent), the tx shape changed under us — invalidate.
             let
                 prevSelected =
                     case getWallet wid model |> Maybe.map .utxos of
@@ -189,6 +196,9 @@ update msg model =
                 restored =
                     List.map (\u -> { u | selected = List.member ( u.txId, u.txIx ) prevSelected }) us
 
+                lostSelection =
+                    List.length (List.filter .selected restored) /= List.length prevSelected
+
                 warnTruncated m =
                     if List.length us >= 100 then
                         log LogWarn "wallet has 100+ UTxOs — only the first page is shown" m
@@ -197,6 +207,12 @@ update msg model =
                         m
             in
             ( mapWallet wid (\w -> { w | utxos = Loaded restored }) model
+                |> (if lostSelection then
+                        invalidateShape
+
+                    else
+                        identity
+                   )
                 |> log LogOk ("loaded " ++ String.fromInt (List.length us) ++ " UTxOs")
                 |> warnTruncated
             , Cmd.none
@@ -209,7 +225,7 @@ update msg model =
             )
 
         ToggleUtxoSelected wid txId txIx ->
-            ( mapWallet wid (toggleUtxo txId txIx) model, Cmd.none )
+            ( mapWallet wid (toggleUtxo txId txIx) model |> invalidateShape, Cmd.none )
 
         -- ── address book ───────────────────────────────────────────────────────
         ClickAddBookToggle ->
@@ -256,12 +272,12 @@ update msg model =
 
         -- ── outputs ────────────────────────────────────────────────────────────
         UseBookAddress alias addr ->
-            ( { model | outputs = model.outputs ++ [ Output addr alias (Lovelace "") ] }
+            ( { model | outputs = model.outputs ++ [ Output addr alias (Lovelace "") ] } |> invalidateShape
             , inspectIfNew model addr
             )
 
         UpdateOutputAmount i s ->
-            ( { model | outputs = updateAt i (\o -> { o | amount = Lovelace s }) model.outputs }, Cmd.none )
+            ( { model | outputs = updateAt i (\o -> { o | amount = Lovelace s }) model.outputs } |> invalidateShape, Cmd.none )
 
         ToggleOutputChange i ->
             -- at most one change output: marking one unmarks any other
@@ -287,18 +303,117 @@ update msg model =
                         )
                         model.outputs
               }
+                |> invalidateShape
             , Cmd.none
             )
 
         DeleteOutput i ->
-            ( { model | outputs = removeAt i model.outputs }, Cmd.none )
+            ( { model | outputs = removeAt i model.outputs } |> invalidateShape, Cmd.none )
 
         -- ── clearing ───────────────────────────────────────────────────────────
         ClearInputs ->
-            ( deselectInputs model, Cmd.none )
+            ( deselectInputs model |> invalidateShape, Cmd.none )
 
         ClearOutputs ->
-            ( { model | outputs = [] }, Cmd.none )
+            ( { model | outputs = [] } |> invalidateShape, Cmd.none )
+
+        ClearTx ->
+            ( deselectInputs { model | outputs = [] } |> invalidateShape, Cmd.none )
+
+        -- ── era & fee ──────────────────────────────────────────────────────────
+        SelectEra e ->
+            ( { model | era = e }
+                |> invalidateShape
+                |> log LogCmd
+                    ("tx = "
+                        ++ (if e == Conway then
+                                "newTx()"
+
+                            else
+                                "newUpcomingEraTx()"
+                           )
+                    )
+            , Cmd.none
+            )
+
+        ClickEstimateFee ->
+            if not (txReady model) then
+                toastNow "Add inputs and a recipient, and fix any flagged issues" model
+
+            else
+                ( { model | fee = EstimatingFee } |> log LogCmd ("tx.estimateMinFee(pparams, " ++ String.fromInt (witnessCount model) ++ ", 0, 0)")
+                , Wasm.estimateFee model
+                )
+
+        GotFeeEstimated (Ok n) ->
+            ( { model | fee = FeeSet n, feeText = String.fromInt n } |> log LogOk ("minFee = " ++ String.fromInt n ++ " lovelace"), Cmd.none )
+
+        GotFeeEstimated (Err e) ->
+            ( { model | fee = NoFee } |> log LogWarn ("fee estimate failed: " ++ e), Cmd.none )
+
+        UpdateFeeText s ->
+            -- Manual fee entry: only a positive integer counts. Plain `invalidate` here —
+            -- `invalidateShape` would wipe the very fee being typed.
+            ( { model
+                | feeText = s
+                , fee =
+                    case String.toInt s of
+                        Just n ->
+                            if n > 0 then
+                                FeeSet n
+
+                            else
+                                NoFee
+
+                        Nothing ->
+                            NoFee
+              }
+                |> invalidate
+            , Cmd.none
+            )
+
+        -- ── sign / export ──────────────────────────────────────────────────────
+        ClickSign ->
+            -- same predicate that enables the button (fee set + balanced + draft + ready)
+            case ( canSign model, model.fee ) of
+                ( True, FeeSet fee ) ->
+                    ( { model | tx = Signing } |> log LogCmd "signWithPaymentKey(…) + alsoSign…"
+                    , Wasm.signTx fee model
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        GotTxSigned (Ok p) ->
+            ( { model | tx = Signed (SignedTx p.cbor p.txId (List.length (paymentWalletIds model)) 0) }
+                |> log LogOk ("transaction signed · txid " ++ p.txId)
+            , Cmd.none
+            )
+
+        GotTxSigned (Err e) ->
+            ( { model | tx = Draft } |> log LogWarn ("sign failed: " ++ e), Cmd.none )
+
+        ClickDownloadCli ->
+            case model.tx of
+                Signed s ->
+                    -- cardano-cli TextEnvelope; broadcast with:
+                    --   cardano-cli conway transaction submit --tx-file tx.signed <network-flag>
+                    let
+                        envelope =
+                            E.encode 4
+                                (E.object
+                                    [ ( "type", E.string (cliType model.era) )
+                                    , ( "description", E.string "Ledger Cddl Format" )
+                                    , ( "cborHex", E.string s.cbor )
+                                    ]
+                                )
+                    in
+                    ( log LogOk ("wrote tx.signed (" ++ cliType model.era ++ ")") model
+                    , Download.string "tx.signed" "application/json" envelope
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
 
         -- ── misc ───────────────────────────────────────────────────────────────
         Copy t ->

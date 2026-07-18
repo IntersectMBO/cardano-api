@@ -88,6 +88,35 @@ type AddrCheck
     | CheckValid NetKind
 
 
+type Era
+    = Conway
+    | Dijkstra
+
+
+type FeeState
+    = NoFee
+    | EstimatingFee
+    | FeeSet Int
+
+
+type alias SignedTx =
+    { cbor : String
+    , txId : String
+    , paymentWits : Int
+    , stakeWits : Int
+    }
+
+
+type alias SignedPayload =
+    { cbor : String, txId : String }
+
+
+type TxState
+    = Draft
+    | Signing
+    | Signed SignedTx
+
+
 type Modal
     = NoModal
     | ForgetDialog WalletId
@@ -116,12 +145,27 @@ type alias GenPayload =
     { address : String, keys : Keys }
 
 
+{-| The two protocol parameters the Elm side needs for its balance arithmetic.
+Read from web/pparams.js at startup (see web/ports.js) so the pinned object is
+the single source of truth; everything else in it is consumed only by
+cardano-wasm's estimateMinFee.
+-}
+type alias Protocol =
+    { keyDeposit : Int
+    , coinsPerUtxoByte : Int
+    }
+
+
 type alias Model =
     { network : Network
     , wallets : List Wallet
     , nextWid : Int
     , book : List BookEntry
     , outputs : List Output
+    , era : Era
+    , fee : FeeState
+    , feeText : String
+    , tx : TxState
     , modal : Modal
     , bfKeys : BfKeys
     , restore : RestoreForm
@@ -130,6 +174,7 @@ type alias Model =
     , toast : Maybe String
     , toastSeq : Int
     , addrChecks : Dict String AddrCheck -- inspectAddress results, keyed by address
+    , protocol : Protocol
     }
 
 
@@ -170,8 +215,23 @@ type Msg
     | DeleteOutput Int
     | ClearInputs
     | ClearOutputs
+    | ClearTx
     | GotAddressInspected (Result String ( String, AddrCheck ))
+    | SelectEra Era
+    | ClickEstimateFee
+    | GotFeeEstimated (Result String Int)
+    | UpdateFeeText String
+    | ClickSign
+    | GotTxSigned (Result String SignedPayload)
+    | ClickDownloadCli
     | Copy String
     | ClearConsole
     | ClearToast Int
     | NoOp
+
+
+type Balance
+    = NoFeeYet
+    | Insufficient Int
+    | DustChange Int Int
+    | Balanced Int

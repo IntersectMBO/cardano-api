@@ -9,7 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, stopPropagationOn)
 import Json.Decode as D
-import Net exposing (expectedNetKind, faucetUrl, netMagic, netName, netTag)
+import Net exposing (cliFlag, eraTag, expectedNetKind, faucetUrl, netMagic, netName, netTag)
 import State exposing (..)
 import Types exposing (..)
 
@@ -22,7 +22,7 @@ view model =
         , div [ class "grid" ]
             [ div [ class "col" ] [ viewDataSource model, viewWalletsCard model, viewBookCard model ]
             , div [ class "col" ] [ viewBuilder model ]
-            , div [ class "col" ] [ viewConsole model ]
+            , div [ class "col" ] [ viewInspector model, viewConsole model ]
             ]
         , viewModal model
         , viewToast model
@@ -276,11 +276,38 @@ viewAddrBadge model a =
 viewBuilder : Model -> Html Msg
 viewBuilder model =
     div [ class "card" ]
-        [ h3 [] [ text "Transaction builder" ]
+        [ h3 []
+            [ text "Transaction builder"
+            , span [ class "hrow" ]
+                [ button [ class "btn ghost xs", onClick ClearTx ] [ text "clear tx" ]
+                , span [ class "seg" ]
+                    [ button [ classList [ ( "on", model.era == Conway ) ], onClick (SelectEra Conway) ] [ text "Conway" ]
+                    , button [ classList [ ( "on", model.era == Dijkstra ) ], onClick (SelectEra Dijkstra) ] [ text "Dijkstra" ]
+                    ]
+                ]
+            ]
         , sectionLabel "Inputs — tick UTxOs inside a wallet panel" (not (List.isEmpty (selectedInputs model))) ClearInputs
         , viewInputs model
         , sectionLabel "Outputs — add recipients from the address book" (not (List.isEmpty model.outputs)) ClearOutputs
         , viewOutputs model
+        , viewSummary model
+        , div [ class "hrow", style "margin-top" "12px" ]
+            [ button [ class "btn ghost", disabled (not (txReady model)), onClick ClickEstimateFee ] [ text "⚙ estimateMinFee()" ]
+            , input [ class "feeinput", placeholder "or set fee (lovelace)", value model.feeText, onInput UpdateFeeText ] []
+            ]
+        , div [ class "hrow", style "margin-top" "12px" ]
+            [ button [ class "btn", disabled (not (canSign model)), onClick ClickSign ]
+                [ text
+                    (if model.tx == Signing then
+                        "signing…"
+
+                     else
+                        "✍ sign"
+                    )
+                ]
+            ]
+        , label [ style "margin-top" "16px" ] [ text "Signed transaction" ]
+        , viewExport model
         ]
 
 
@@ -383,6 +410,171 @@ sectionLabel txt canClear clearMsg =
           else
             text ""
         ]
+
+
+viewSummary : Model -> Html Msg
+viewSummary model =
+    let
+        ( changeLabel, changeText ) =
+            case ( model.fee, balance model ) of
+                ( FeeSet _, Balanced ch ) ->
+                    ( changeLabelText model, ada ch )
+
+                ( FeeSet _, Insufficient short ) ->
+                    ( "⚠ insufficient funds", "short " ++ ada short )
+
+                ( FeeSet _, DustChange ch _ ) ->
+                    ( "⚠ change below min-UTxO", ada ch )
+
+                _ ->
+                    ( changeLabelText model, "—" )
+    in
+    div [ class "summary" ]
+        [ kv "Input total" (ada (inputsTotal model))
+        , kv "Output total" (ada (explicitOutputsTotal model))
+        , kv "Fee" (feeDisplay model)
+        , kv changeLabel changeText
+        , kv "Witnesses" (witnessSummary model)
+        ]
+
+
+changeLabelText : Model -> String
+changeLabelText model =
+    case changeRow model of
+        Just o ->
+            "Change → "
+                ++ (if o.alias == "" then
+                        o.address
+
+                    else
+                        o.alias
+                   )
+
+        Nothing ->
+            "Change → first input wallet"
+
+
+feeDisplay : Model -> String
+feeDisplay model =
+    case model.fee of
+        NoFee ->
+            "— not set —"
+
+        EstimatingFee ->
+            "estimating…"
+
+        FeeSet n ->
+            ada n
+
+
+witnessSummary : Model -> String
+witnessSummary model =
+    let
+        pays =
+            paymentWalletIds model |> List.map (\wid -> aliasOf wid model ++ " (payment)")
+    in
+    if List.isEmpty pays then
+        "—"
+
+    else
+        String.join ", " pays ++ " · " ++ String.fromInt (witnessCount model)
+
+
+viewExport : Model -> Html Msg
+viewExport model =
+    case model.tx of
+        Signed s ->
+            div []
+                [ div [ class "small", style "margin-bottom" "8px" ]
+                    [ span [ class "muted" ] [ text "txid " ]
+                    , span [ class "mono", style "word-break" "break-all" ] [ text s.txId ]
+                    , text " "
+                    , button [ class "btn ghost xs", onClick (Copy s.txId) ] [ text "copy" ]
+                    ]
+                , div [ class "hrow" ]
+                    [ button [ class "btn good", onClick ClickDownloadCli ] [ text "⤓ download cardano-cli tx file" ]
+                    , button [ class "btn ghost sm", onClick (Copy s.cbor) ] [ text "copy CBOR" ]
+                    ]
+                , div [ class "clihint mono" ] [ text ("broadcast yourself: cardano-cli conway transaction submit --tx-file tx.signed " ++ cliFlag model.network) ]
+                ]
+
+        _ ->
+            div [ class "empty" ] [ text "sign the transaction to enable export" ]
+
+
+viewInspector : Model -> Html Msg
+viewInspector model =
+    div [ class "card" ]
+        [ h3 [] [ text "Live tx inspector", span [ classList [ ( "pill", True ), ( "signed", isSigned model ) ] ] [ text (txStateLabel model) ] ]
+        , pre [ class "inspector" ] [ text (inspectorText model) ]
+        ]
+
+
+isSigned : Model -> Bool
+isSigned model =
+    case model.tx of
+        Signed _ ->
+            True
+
+        _ ->
+            False
+
+
+txStateLabel : Model -> String
+txStateLabel model =
+    case model.tx of
+        Draft ->
+            "draft"
+
+        Signing ->
+            "signing"
+
+        Signed _ ->
+            "signed"
+
+
+inspectorText : Model -> String
+inspectorText model =
+    let
+        ins =
+            selectedInputs model
+                |> List.map (\( w, u ) -> "    \"" ++ u.txId ++ "#" ++ String.fromInt u.txIx ++ "\"  // " ++ w.alias)
+                |> String.join ",\n"
+
+        outs =
+            model.outputs
+                |> List.filterMap
+                    (\o ->
+                        case o.amount of
+                            Change ->
+                                Just ("    { addr: \"" ++ o.address ++ "\", lovelace: \"<remaining>\" }")
+
+                            Lovelace s ->
+                                if s == "" then
+                                    Nothing
+
+                                else
+                                    Just
+                                        ("    { addr: \""
+                                            ++ o.address
+                                            ++ "\", lovelace: "
+                                            ++ (adaToLovelace s |> Maybe.map String.fromInt |> Maybe.withDefault "\"<invalid>\"")
+                                            ++ " }"
+                                        )
+                    )
+                |> String.join ",\n"
+    in
+    "{\n  era: \""
+        ++ eraTag model.era
+        ++ "\",\n  inputs: [\n"
+        ++ ins
+        ++ "\n  ],\n  outputs: [\n"
+        ++ outs
+        ++ "\n  ],\n  fee: "
+        ++ feeDisplay model
+        ++ ",\n  requiredWitnesses: "
+        ++ String.fromInt (witnessCount model)
+        ++ "\n}"
 
 
 viewConsole : Model -> Html Msg

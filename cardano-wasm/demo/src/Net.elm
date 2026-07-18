@@ -1,6 +1,8 @@
 module Net exposing
     ( blockfrostBase
     , cliFlag
+    , cliType
+    , eraTag
     , expectedNetKind
     , explorerTx
     , faucetUrl
@@ -120,3 +122,31 @@ expectedNetKind n =
 
         _ ->
             TestKind
+
+
+
+-- ERAS
+
+
+{-| Lowercase identifier used on the JS side of the ports.
+-}
+eraTag : Era -> String
+eraTag e =
+    case e of
+        Conway ->
+            "conway"
+
+        Dijkstra ->
+            "dijkstra"
+
+
+{-| The TextEnvelope `type` field cardano-cli expects in a tx file.
+-}
+cliType : Era -> String
+cliType e =
+    case e of
+        Conway ->
+            "Tx ConwayEra"
+
+        Dijkstra ->
+            "Tx DijkstraEra"
