@@ -45,6 +45,7 @@ update msg model =
                 , fee = NoFee
                 , feeText = ""
                 , tx = Draft
+                , submit = NotSubmitted
               }
                 |> log LogInfo ("switched to " ++ netName n)
             , if List.isEmpty model.wallets then
@@ -385,13 +386,47 @@ update msg model =
                     ( model, Cmd.none )
 
         GotTxSigned (Ok p) ->
-            ( { model | tx = Signed (SignedTx p.cbor p.txId (List.length (paymentWalletIds model)) 0) }
+            ( { model | tx = Signed (SignedTx p.cbor p.txId (List.length (paymentWalletIds model)) 0), submit = NotSubmitted }
                 |> log LogOk ("transaction signed · txid " ++ p.txId)
             , Cmd.none
             )
 
         GotTxSigned (Err e) ->
             ( { model | tx = Draft } |> log LogWarn ("sign failed: " ++ e), Cmd.none )
+
+        ClickSubmit ->
+            case model.tx of
+                Signed s ->
+                    if currentKey model == "" then
+                        toastNow "Enter a Blockfrost project id first" model
+
+                    else
+                        ( { model | submit = Submitting } |> log LogCmd "POST blockfrost /tx/submit"
+                        , Blockfrost.submitTx model s.cbor
+                        )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        GotSubmitted (Ok txid) ->
+            -- Blockfrost returns the tx hash; it must equal the id cardano-wasm computed.
+            let
+                consistency =
+                    case model.tx of
+                        Signed s ->
+                            if s.txId == txid then
+                                identity
+
+                            else
+                                log LogWarn ("txid mismatch! wasm said " ++ s.txId ++ " but Blockfrost returned " ++ txid)
+
+                        _ ->
+                            identity
+            in
+            ( { model | submit = Submitted txid } |> log LogOk ("submitted · txid " ++ txid) |> consistency, Cmd.none )
+
+        GotSubmitted (Err e) ->
+            ( { model | submit = SubmitFailed e } |> log LogWarn ("submit failed: " ++ e), Cmd.none )
 
         ClickDownloadCli ->
             case model.tx of

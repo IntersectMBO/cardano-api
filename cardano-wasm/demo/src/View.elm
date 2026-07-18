@@ -9,7 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, stopPropagationOn)
 import Json.Decode as D
-import Net exposing (cliFlag, eraTag, expectedNetKind, faucetUrl, netMagic, netName, netTag)
+import Net exposing (cliFlag, eraTag, expectedNetKind, explorerTx, faucetUrl, netMagic, netName, netTag)
 import State exposing (..)
 import Types exposing (..)
 
@@ -490,16 +490,52 @@ viewExport model =
                     , span [ class "mono", style "word-break" "break-all" ] [ text s.txId ]
                     , text " "
                     , button [ class "btn ghost xs", onClick (Copy s.txId) ] [ text "copy" ]
+                    , text " "
+                    , a [ href (explorerTx model.network ++ "transaction/" ++ s.txId), target "_blank" ] [ text "↗ explorer" ]
                     ]
                 , div [ class "hrow" ]
-                    [ button [ class "btn good", onClick ClickDownloadCli ] [ text "⤓ download cardano-cli tx file" ]
+                    [ button [ class "btn", onClick ClickSubmit, disabled (model.submit == Submitting) ]
+                        [ text
+                            (if model.submit == Submitting then
+                                "submitting…"
+
+                             else
+                                "⇪ submit via Blockfrost"
+                            )
+                        ]
+                    , button [ class "btn good", onClick ClickDownloadCli ] [ text "⤓ download cardano-cli tx file" ]
                     , button [ class "btn ghost sm", onClick (Copy s.cbor) ] [ text "copy CBOR" ]
                     ]
-                , div [ class "clihint mono" ] [ text ("broadcast yourself: cardano-cli conway transaction submit --tx-file tx.signed " ++ cliFlag model.network) ]
+                , viewSubmitStatus model
+                , div [ class "clihint mono" ] [ text ("or broadcast yourself: cardano-cli conway transaction submit --tx-file tx.signed " ++ cliFlag model.network) ]
+                , div [ class "muted small", style "margin-top" "6px" ]
+                    [ text "the explorer link resolves once the transaction is on-chain" ]
                 ]
 
         _ ->
-            div [ class "empty" ] [ text "sign the transaction to enable export" ]
+            div [ class "empty" ] [ text "sign the transaction to enable submit / export" ]
+
+
+viewSubmitStatus : Model -> Html Msg
+viewSubmitStatus model =
+    case model.submit of
+        NotSubmitted ->
+            text ""
+
+        Submitting ->
+            div [ class "muted small", style "margin-top" "6px" ] [ text "submitting to Blockfrost…" ]
+
+        Submitted txid ->
+            div [ class "small", style "margin-top" "6px" ]
+                [ span [ class "pill signed" ] [ text "on-chain" ]
+                , text " txid "
+                , span [ class "mono" ] [ text txid ]
+                , text " "
+                , a [ href (explorerTx model.network ++ "transaction/" ++ txid), target "_blank" ] [ text "↗ explorer" ]
+                ]
+
+        SubmitFailed e ->
+            div [ class "small", style "margin-top" "6px", style "color" "#ff6b6b" ] [ text ("submit failed: " ++ e) ]
 
 
 viewInspector : Model -> Html Msg

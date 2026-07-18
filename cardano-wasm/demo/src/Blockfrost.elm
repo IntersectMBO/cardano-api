@@ -1,10 +1,11 @@
-module Blockfrost exposing (fetchUtxos, httpErrStr)
+module Blockfrost exposing (fetchUtxos, httpErrStr, submitTx)
 
 {-| The Blockfrost boundary (plain HTTP, CORS-friendly from a static page).
-Supplies UTxOs, authenticated with the per-network project id the user types
-into the UI.
+Supplies UTxOs and broadcasts signed transactions, authenticated with the
+per-network project id the user types into the UI.
 -}
 
+import Hex
 import Http
 import Json.Decode as D
 import Net exposing (blockfrostBase)
@@ -19,6 +20,11 @@ import Types exposing (..)
 fetchUtxos : Model -> WalletId -> String -> Cmd Msg
 fetchUtxos model wid addr =
     request model "GET" ("/addresses/" ++ addr ++ "/utxos?count=100") Http.emptyBody (expectUtxos (GotUtxos wid))
+
+
+submitTx : Model -> String -> Cmd Msg
+submitTx model cborHex =
+    request model "POST" "/tx/submit" (Http.bytesBody "application/cbor" (Hex.hexToBytes cborHex)) (expectSubmit GotSubmitted)
 
 
 request : Model -> String -> String -> Http.Body -> Http.Expect Msg -> Cmd Msg
@@ -76,6 +82,20 @@ expectUtxos =
 
             else
                 Err (Http.BadStatus meta.statusCode)
+        )
+
+
+{-| /tx/submit returns the tx hash as a JSON string on success, a JSON error otherwise.
+-}
+expectSubmit : (Result String String -> Msg) -> Http.Expect Msg
+expectSubmit =
+    expectResponse httpErrStr
+        (\meta body ->
+            if meta.statusCode >= 200 && meta.statusCode < 300 then
+                Ok (D.decodeString D.string body |> Result.withDefault (String.trim body))
+
+            else
+                Err ("HTTP " ++ String.fromInt meta.statusCode ++ " · " ++ String.left 300 body)
         )
 
 

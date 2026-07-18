@@ -72,6 +72,7 @@ init protocol =
       , fee = NoFee
       , feeText = ""
       , tx = Draft
+      , submit = NotSubmitted
       , modal = NoModal
       , bfKeys = { mainnet = "", preprod = "", preview = "" }
       , restore = emptyRestoreForm
@@ -570,7 +571,7 @@ invalidate model =
             model
 
         _ ->
-            { model | tx = Draft }
+            { model | tx = Draft, submit = NotSubmitted }
 
 
 {-| For edits that change the transaction _shape_ (inputs, outputs, certificates,
@@ -579,7 +580,7 @@ era). Those also reset the fee: a previously estimated fee would now be wrong
 -}
 invalidateShape : Model -> Model
 invalidateShape model =
-    { model | tx = Draft, fee = NoFee, feeText = "" }
+    { model | tx = Draft, submit = NotSubmitted, fee = NoFee, feeText = "" }
 
 
 {-| Deduplicate, keeping the first occurrence of each element (stable order).
