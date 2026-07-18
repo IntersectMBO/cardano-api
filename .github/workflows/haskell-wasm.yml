@@ -236,8 +236,15 @@ jobs:
     - name: Build wallet demo
       run: |
         cd cardano-wasm/demo
-        elm-format --validate src/
+        elm-format --validate src/ tests/
+        elm-test
         ./build.sh --wasm-dir ../lib-wrapper --out dist
+
+    - name: Demo wasm API regression tests
+      run: |
+        cd cardano-wasm/demo/tests/wasm
+        npm install
+        node api-regression.mjs
 
     - name: Upload wallet demo
       uses: actions/upload-artifact@v4

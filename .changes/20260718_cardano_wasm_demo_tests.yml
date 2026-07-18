@@ -1,0 +1,9 @@
+project: cardano-wasm
+
+pr: 1318
+
+kind:
+  - test
+
+description: |
+  Demo: elm-test suite and Node wasm API regression suite, both wired into the WASM CI workflow.
