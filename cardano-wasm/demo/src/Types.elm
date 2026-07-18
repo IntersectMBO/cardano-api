@@ -4,6 +4,8 @@ module Types exposing (..)
 and the Msg (everything that can happen).
 -}
 
+import Http
+
 
 type Network
     = Mainnet
@@ -25,11 +27,28 @@ type alias Keys =
     }
 
 
+type alias Utxo =
+    { txId : String
+    , txIx : Int
+    , lovelace : Int
+    , selected : Bool
+    , hasAssets : Bool -- carries native tokens; unusable as input in this ADA-only demo
+    }
+
+
+type Loadable a
+    = NotAsked
+    | Loading
+    | Loaded a
+    | Failed String
+
+
 type alias Wallet =
     { id : WalletId
     , alias : String
     , address : String
     , keys : Keys
+    , utxos : Loadable (List Utxo)
     , expanded : Bool
     , color : String
     }
@@ -64,11 +83,16 @@ type alias Model =
     , wallets : List Wallet
     , nextWid : Int
     , modal : Modal
+    , bfKeys : BfKeys
     , restore : RestoreForm
     , console : List LogLine
     , toast : Maybe String
     , toastSeq : Int
     }
+
+
+type alias BfKeys =
+    { mainnet : String, preprod : String, preview : String }
 
 
 type Msg
@@ -87,6 +111,10 @@ type Msg
     | RequestForget WalletId
     | ConfirmForget WalletId
     | CancelForget
+    | UpdateBfKey String
+    | ClickLoadUtxos WalletId
+    | ClickLoadAll
+    | GotUtxos WalletId (Result Http.Error (List Utxo))
     | Copy String
     | ClearConsole
     | ClearToast Int

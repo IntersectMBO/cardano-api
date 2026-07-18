@@ -1,0 +1,10 @@
+project: cardano-wasm
+
+# FIXME: placeholder — set to the real PR number when the PR is opened
+pr: 1262
+
+kind:
+  - feature
+
+description: |
+  Demo: UTxOs and balances via Blockfrost (per-network project id, token-UTxO flagging).

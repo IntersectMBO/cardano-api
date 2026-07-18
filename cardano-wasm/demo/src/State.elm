@@ -1,15 +1,18 @@
 module State exposing
     ( addWallet
     , aliasOf
+    , currentKey
     , emptyRestoreForm
     , getWallet
     , init
     , log
     , mapWallet
+    , setCurrentKey
     , setRestorePay
     , setRestoreStake
     , toastNow
     , toggleRestore
+    , walletBalance
     )
 
 {-| Everything about the Model: the initial state, derived queries (what the view
@@ -31,6 +34,7 @@ init _ =
       , wallets = []
       , nextWid = 1
       , modal = NoModal
+      , bfKeys = { mainnet = "", preprod = "", preview = "" }
       , restore = emptyRestoreForm
       , console =
             [ LogLine LogInfo "cardano-wasm loaded · post-link module ready" ]
@@ -44,6 +48,43 @@ init _ =
 emptyRestoreForm : RestoreForm
 emptyRestoreForm =
     { open = False, paymentSkey = "", stakeSkey = "" }
+
+
+
+-- BLOCKFROST KEY (stored per network, in memory only)
+
+
+currentKey : Model -> String
+currentKey model =
+    case model.network of
+        Mainnet ->
+            model.bfKeys.mainnet
+
+        Preprod ->
+            model.bfKeys.preprod
+
+        Preview ->
+            model.bfKeys.preview
+
+
+setCurrentKey : String -> Model -> Model
+setCurrentKey v model =
+    let
+        k =
+            model.bfKeys
+    in
+    { model
+        | bfKeys =
+            case model.network of
+                Mainnet ->
+                    { k | mainnet = v }
+
+                Preprod ->
+                    { k | preprod = v }
+
+                Preview ->
+                    { k | preview = v }
+    }
 
 
 
@@ -94,11 +135,22 @@ addWallet p model =
             , alias = "Wallet " ++ String.fromInt model.nextWid
             , address = p.address
             , keys = p.keys
+            , utxos = NotAsked
             , expanded = True
             , color = color
             }
     in
     { model | wallets = model.wallets ++ [ w ], nextWid = model.nextWid + 1 }
+
+
+walletBalance : Wallet -> Maybe Int
+walletBalance w =
+    case w.utxos of
+        Loaded us ->
+            Just (List.map .lovelace us |> List.sum)
+
+        _ ->
+            Nothing
 
 
 

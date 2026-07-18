@@ -4,12 +4,12 @@ module View exposing (view)
 dialog and the toast. Pure Model → Html.
 -}
 
-import Format exposing (shorten)
+import Format exposing (ada, lovelaceToAda, shorten)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, stopPropagationOn)
 import Json.Decode as D
-import Net exposing (faucetUrl, netMagic, netName)
+import Net exposing (faucetUrl, netMagic, netName, netTag)
 import State exposing (..)
 import Types exposing (..)
 
@@ -20,7 +20,7 @@ view model =
         [ div [ class "mock" ] [ text "◆ DEMO — keys, balances, fees and transactions are real cardano-wasm calls on the selected network. Use TESTNETS only." ]
         , viewTopbar model
         , div [ class "grid" ]
-            [ div [ class "col" ] [ viewWalletsCard model ]
+            [ div [ class "col" ] [ viewDataSource model, viewWalletsCard model ]
             , div [ class "col" ]
                 [ div [ class "card" ]
                     [ h3 [] [ text "Transaction builder" ]
@@ -46,6 +46,20 @@ viewTopbar model =
                 [ Mainnet, Preprod, Preview ]
             )
         , span [ class "magic" ] [ text ("magic " ++ netMagic model.network) ]
+        ]
+
+
+viewDataSource : Model -> Html Msg
+viewDataSource model =
+    div [ class "card" ]
+        [ h3 [] [ text "Data source · Blockfrost" ]
+        , label [] [ text ("project id (" ++ netName model.network ++ ")") ]
+        , input [ type_ "password", placeholder (netTag model.network ++ "…"), value (currentKey model), onInput UpdateBfKey ] []
+        , div [ class "muted small", style "margin-top" "6px" ]
+            [ text "Free key per network at "
+            , a [ href "https://blockfrost.io", target "_blank" ] [ text "blockfrost.io" ]
+            , text " · kept in memory only, never bundled."
+            ]
         ]
 
 
@@ -76,6 +90,11 @@ viewWalletsCard model =
 
           else
             div [] (List.map (viewWallet model) model.wallets)
+        , if List.isEmpty model.wallets then
+            text ""
+
+          else
+            button [ class "btn ghost sm block", onClick ClickLoadAll ] [ text "↻ Load all balances (Blockfrost)" ]
         , case faucetUrl model.network of
             Just url ->
                 if List.isEmpty model.wallets then
@@ -99,6 +118,7 @@ viewWallet model w =
                 [ input [ class "walias", value w.alias, stopClick, onInput (EditAlias w.id) ] []
                 , span [ class "waddr mono" ] [ text (shorten w.address) ]
                 ]
+            , span [ class "wbal" ] [ text (walletBalance w |> Maybe.map ada |> Maybe.withDefault "—") ]
             ]
         , if w.expanded then
             div [ class "wbody" ]
@@ -120,12 +140,59 @@ viewWallet model w =
                     , kv "stake keyhash" (shorten w.keys.stakeKeyHash)
                     ]
                 , div [ class "hrow", style "margin-top" "8px" ]
-                    [ button [ class "btn xs danger", onClick (RequestForget w.id) ] [ text "🗑 forget" ] ]
+                    [ button [ class "btn ghost xs", onClick (ClickLoadUtxos w.id) ]
+                        [ text
+                            (if w.utxos == NotAsked then
+                                "↻ load UTxOs"
+
+                             else
+                                "↻ reload UTxOs"
+                            )
+                        ]
+                    , button [ class "btn xs danger", onClick (RequestForget w.id) ] [ text "🗑 forget" ]
+                    ]
+                , viewWalletUtxos w
                 ]
 
           else
             text ""
         ]
+
+
+viewWalletUtxos : Wallet -> Html Msg
+viewWalletUtxos w =
+    case w.utxos of
+        NotAsked ->
+            div [ class "empty" ] [ text "UTxOs not loaded" ]
+
+        Loading ->
+            div [ class "empty" ] [ text "loading…" ]
+
+        Failed e ->
+            div [ class "empty" ] [ text ("failed: " ++ e) ]
+
+        Loaded [] ->
+            div [ class "empty" ] [ text "no UTxOs at this address" ]
+
+        Loaded us ->
+            table []
+                (tr [] [ th [] [ text "txid#ix" ], th [ class "right" ] [ text "₳" ] ]
+                    :: List.map
+                        (\u ->
+                            tr []
+                                [ td [ class "mono" ]
+                                    [ text (String.left 8 u.txId ++ "…#" ++ String.fromInt u.txIx)
+                                    , if u.hasAssets then
+                                        span [ class "pill warn", title "carries native tokens — can't be spent in this ADA-only demo" ] [ text "tokens" ]
+
+                                      else
+                                        text ""
+                                    ]
+                                , td [ class "right" ] [ text (lovelaceToAda u.lovelace) ]
+                                ]
+                        )
+                        us
+                )
 
 
 viewConsole : Model -> Html Msg
