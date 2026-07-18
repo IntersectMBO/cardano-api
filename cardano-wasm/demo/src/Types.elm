@@ -4,6 +4,8 @@ module Types exposing (..)
 and the Msg (everything that can happen).
 -}
 
+import Http
+
 
 type Network
     = Mainnet
@@ -25,11 +27,36 @@ type alias Keys =
     }
 
 
+type alias Utxo =
+    { txId : String
+    , txIx : Int
+    , lovelace : Int
+    , hasAssets : Bool -- carries native tokens; unusable as input in this ADA-only demo
+    }
+
+
+{-| One fetched page of a wallet's UTxOs. `truncated` means the page came back
+full, so the on-chain set may be larger and sums are lower bounds.
+-}
+type alias UtxoPage =
+    { utxos : List Utxo
+    , truncated : Bool
+    }
+
+
+type Loadable a
+    = NotAsked
+    | Loading
+    | Loaded a
+    | Failed String
+
+
 type alias Wallet =
     { id : WalletId
     , alias : String
     , address : String
     , keys : Keys
+    , utxos : Loadable UtxoPage
     , expanded : Bool
     , color : String
     }
@@ -61,14 +88,22 @@ type alias GenPayload =
 
 type alias Model =
     { network : Network
+
+    -- a network switch re-derives addresses asynchronously; loads wait for it
+    , deriving : Bool
     , wallets : List Wallet
     , nextWid : Int
     , modal : Modal
+    , bfKeys : BfKeys
     , restore : RestoreForm
     , console : List LogLine
     , toast : Maybe String
     , toastSeq : Int
     }
+
+
+type alias BfKeys =
+    { mainnet : String, preprod : String, preview : String }
 
 
 type Msg
@@ -87,6 +122,10 @@ type Msg
     | RequestForget WalletId
     | ConfirmForget WalletId
     | CancelForget
+    | UpdateBfKey String
+    | ClickLoadUtxos WalletId
+    | ClickLoadAll
+    | GotUtxos WalletId Network (Result String UtxoPage)
     | Copy String
     | ClearConsole
     | ClearToast Int

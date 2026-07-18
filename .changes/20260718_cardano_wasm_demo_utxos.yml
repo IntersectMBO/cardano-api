@@ -1,0 +1,9 @@
+project: cardano-wasm
+
+pr: 1276
+
+kind:
+  - feature
+
+description: |
+  Demo: UTxOs and balances via Blockfrost (per-network project id, token-UTxO flagging).
