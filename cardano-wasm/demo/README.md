@@ -62,5 +62,8 @@ from Elm over HTTPS.
 ## Development
 
 - Source is `elm-format`-canonical; CI validates it (`elm-format --validate src/`).
-- CI builds the demo in the *Haskell CI (WASM)* workflow and the GitHub Pages workflow
-  publishes the result.
+- Unit tests for the pure core (bech32, ada↔lovelace, balance arithmetic): `elm-test`.
+- API regression tests against the built wasm library: see
+  [`tests/wasm/README.md`](tests/wasm/README.md).
+- CI runs all of the above in the *Haskell CI (WASM)* workflow and the GitHub Pages
+  workflow publishes the built demo.

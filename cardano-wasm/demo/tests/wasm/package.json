@@ -1,0 +1,9 @@
+{
+  "name": "cardano-wasm-demo-regression",
+  "private": true,
+  "type": "module",
+  "description": "Node regression suite for the cardano-wasm JS API, driven by the demo",
+  "dependencies": {
+    "@bjorn3/browser_wasi_shim": "0.4.1"
+  }
+}

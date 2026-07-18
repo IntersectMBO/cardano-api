@@ -1,0 +1,10 @@
+project: cardano-wasm
+
+# FIXME: placeholder — set to the real PR number when the PR is opened
+pr: 1267
+
+kind:
+  - test
+
+description: |
+  Demo: elm-test suite and Node wasm API regression suite, both wired into the WASM CI workflow.
