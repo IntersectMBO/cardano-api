@@ -9,7 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, stopPropagationOn)
 import Json.Decode as D
-import Net exposing (cliFlag, eraTag, expectedNetKind, faucetUrl, netMagic, netName, netTag)
+import Net exposing (cliFlag, eraTag, expectedNetKind, explorerTx, faucetUrl, netMagic, netName, netTag)
 import State exposing (..)
 import Types exposing (..)
 
@@ -565,6 +565,8 @@ viewExport model =
                     , span [ class "mono", style "word-break" "break-all" ] [ text s.txId ]
                     , text " "
                     , button [ class "btn ghost xs", onClick (Copy s.txId) ] [ text "copy" ]
+                    , text " "
+                    , a [ href (explorerTx model.network ++ "transaction/" ++ s.txId), target "_blank", rel "noopener noreferrer" ] [ text "↗ explorer" ]
                     ]
                 , div [ class "muted small", style "margin-bottom" "8px" ]
                     [ text
@@ -586,16 +588,64 @@ viewExport model =
                         )
                     ]
                 , div [ class "hrow" ]
-                    [ button [ class "btn good", onClick ClickDownloadCli ] [ text "⤓ download cardano-cli tx file" ]
+                    [ button [ class "btn", onClick ClickSubmit, disabled (submitLocked model.submit) ]
+                        [ text
+                            (case model.submit of
+                                Submitting ->
+                                    "submitting…"
+
+                                Submitted _ ->
+                                    "✓ submitted"
+
+                                _ ->
+                                    "⇪ submit via Blockfrost"
+                            )
+                        ]
+                    , button [ class "btn good", onClick ClickDownloadCli ] [ text "⤓ download cardano-cli tx file" ]
                     , button [ class "btn ghost sm", onClick (Copy s.cbor) ] [ text "copy CBOR" ]
                     ]
+                , viewSubmitStatus model s
                 , -- the era command group matches the envelope's type; for the upcoming
                   -- era this assumes the cardano-cli release that ships it
-                  div [ class "clihint mono" ] [ text ("broadcast yourself: cardano-cli " ++ eraTag model.era ++ " transaction submit --tx-file tx.signed " ++ cliFlag model.network) ]
+                  div [ class "clihint mono" ] [ text ("or broadcast yourself: cardano-cli " ++ eraTag model.era ++ " transaction submit --tx-file tx.signed " ++ cliFlag model.network) ]
+                , div [ class "muted small", style "margin-top" "6px" ]
+                    [ text "the explorer link resolves once the transaction is on-chain" ]
                 ]
 
         _ ->
-            div [ class "empty" ] [ text "sign the transaction to enable export" ]
+            div [ class "empty" ] [ text "sign the transaction to enable submit / export" ]
+
+
+viewSubmitStatus : Model -> SignedTx -> Html Msg
+viewSubmitStatus model s =
+    case model.submit of
+        NotSubmitted ->
+            text ""
+
+        Submitting ->
+            div [ class "muted small", style "margin-top" "6px" ] [ text "submitting to Blockfrost…" ]
+
+        Submitted txid ->
+            -- accepted into the node's mempool; inclusion in a block comes later
+            div [ class "small", style "margin-top" "6px" ]
+                [ span [ class "pill signed" ] [ text "submitted" ]
+                , text " txid "
+                , span [ class "mono" ] [ text txid ]
+                , text " "
+                , a [ href (explorerTx model.network ++ "transaction/" ++ txid), target "_blank", rel "noopener noreferrer" ] [ text "↗ explorer" ]
+                , if txid == s.txId then
+                    text ""
+
+                  else
+                    -- Blockfrost accepted the tx but under a different id than
+                    -- cardano-wasm computed: a serialization/hash bug. The id
+                    -- above is the accepted, authoritative one.
+                    div [ style "color" "var(--bad)", style "margin-top" "4px" ]
+                        [ text "⚠ differs from the id cardano-wasm computed — possible serialization bug" ]
+                ]
+
+        SubmitFailed e ->
+            div [ class "small", style "margin-top" "6px", style "color" "var(--bad)" ] [ text ("submit failed: " ++ e) ]
 
 
 viewInspector : Model -> Html Msg
