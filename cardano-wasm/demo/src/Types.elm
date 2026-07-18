@@ -4,6 +4,7 @@ module Types exposing (..)
 and the Msg (everything that can happen).
 -}
 
+import Dict exposing (Dict)
 import Http
 
 
@@ -54,9 +55,46 @@ type alias Wallet =
     }
 
 
+type alias BookEntry =
+    { alias : String
+    , address : String
+    }
+
+
+type OutputAmount
+    = Lovelace String
+    | Change
+
+
+type alias Output =
+    { address : String
+    , alias : String
+    , amount : OutputAmount
+    }
+
+
+{-| Which family of networks an address belongs to. Addresses only encode
+mainnet-vs-testnet, so preprod and preview cannot be told apart.
+-}
+type NetKind
+    = MainKind
+    | TestKind
+
+
+{-| Result of cardano-wasm's inspectAddress for one address.
+-}
+type AddrCheck
+    = CheckInvalid
+    | CheckValid NetKind
+
+
 type Modal
     = NoModal
     | ForgetDialog WalletId
+
+
+type alias BookForm =
+    { open : Bool, alias : String, address : String }
 
 
 type alias RestoreForm =
@@ -82,12 +120,16 @@ type alias Model =
     { network : Network
     , wallets : List Wallet
     , nextWid : Int
+    , book : List BookEntry
+    , outputs : List Output
     , modal : Modal
     , bfKeys : BfKeys
     , restore : RestoreForm
+    , bookForm : BookForm
     , console : List LogLine
     , toast : Maybe String
     , toastSeq : Int
+    , addrChecks : Dict String AddrCheck -- inspectAddress results, keyed by address
     }
 
 
@@ -115,6 +157,20 @@ type Msg
     | ClickLoadUtxos WalletId
     | ClickLoadAll
     | GotUtxos WalletId (Result Http.Error (List Utxo))
+    | ToggleUtxoSelected WalletId String Int
+    | ClickAddBookToggle
+    | UpdateBookAlias String
+    | UpdateBookAddr String
+    | SaveBookEntry
+    | CancelBookEntry
+    | DeleteBookEntry Int
+    | UseBookAddress String String
+    | UpdateOutputAmount Int String
+    | ToggleOutputChange Int
+    | DeleteOutput Int
+    | ClearInputs
+    | ClearOutputs
+    | GotAddressInspected (Result String ( String, AddrCheck ))
     | Copy String
     | ClearConsole
     | ClearToast Int

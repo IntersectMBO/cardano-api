@@ -1,5 +1,5 @@
 // Port glue: Elm ⇄ cardano-wasm. The wrapper does the Cardano work here —
-// key generation and restoration, address encoding.
+// key generation and restoration, address encoding and inspection.
 import initialise from "./cardano-api.js";
 
 const magic = { mainnet: undefined, preprod: 1, preview: 2 };
@@ -50,6 +50,16 @@ function wire(app, api) {
       }
       app.ports.wasmAddressesDerived.send(out);
     } catch (e) { app.ports.wasmAddressesDerived.send({ error: String(e) }); }
+  });
+
+  app.ports.wasmInspectAddress.subscribe(async ({ address }) => {
+    try {
+      const r = await api.inspectAddress(address); // { network } | null — never throws
+      app.ports.wasmAddressInspected.send({ address, network: r ? r.network : "invalid" });
+    } catch (e) {
+      // Belt and braces: treat an unexpected throw as invalid rather than leaving the check pending.
+      app.ports.wasmAddressInspected.send({ address, network: "invalid" });
+    }
   });
 
   app.ports.clipboardWrite.subscribe((t) => { if (navigator.clipboard) navigator.clipboard.writeText(t); });

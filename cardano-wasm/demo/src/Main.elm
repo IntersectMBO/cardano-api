@@ -29,6 +29,7 @@ subscriptions _ =
         [ Ports.wasmWalletGenerated (Wasm.decodeResult Wasm.genDecoder >> GotGeneratedWallet)
         , Ports.wasmWalletRestored (Wasm.decodeResult Wasm.genDecoder >> GotRestoredWallet)
         , Ports.wasmAddressesDerived (Wasm.decodeResult Wasm.addrsDecoder >> GotDerivedAddresses)
+        , Ports.wasmAddressInspected (Wasm.decodeResult Wasm.inspectedDecoder >> GotAddressInspected)
         ]
 
 

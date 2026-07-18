@@ -1,6 +1,7 @@
 module Net exposing
     ( blockfrostBase
     , cliFlag
+    , expectedNetKind
     , explorerTx
     , faucetUrl
     , netMagic
@@ -106,3 +107,16 @@ cliFlag n =
 
         Preview ->
             "--testnet-magic 2"
+
+
+{-| The network kind an address must have to be usable on the selected network.
+Addresses only encode mainnet-vs-testnet, so preprod and preview both map to TestKind.
+-}
+expectedNetKind : Network -> NetKind
+expectedNetKind n =
+    case n of
+        Mainnet ->
+            MainKind
+
+        _ ->
+            TestKind

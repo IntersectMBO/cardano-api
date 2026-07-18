@@ -1,0 +1,10 @@
+project: cardano-wasm
+
+# FIXME: placeholder — set to the real PR number when the PR is opened
+pr: 1263
+
+kind:
+  - feature
+
+description: |
+  Demo: payment builder — address book with inspectAddress validation, outputs with change, input selection.

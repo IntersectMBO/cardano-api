@@ -4,6 +4,8 @@ module Wasm exposing
     , deriveAddresses
     , genDecoder
     , generateWallet
+    , inspectAddress
+    , inspectedDecoder
     , restoreWallet
     )
 
@@ -104,3 +106,30 @@ keysDecoder =
 addrsDecoder : D.Decoder (List ( WalletId, String ))
 addrsDecoder =
     D.list (D.map2 Tuple.pair (D.field "id" D.int) (D.field "address" D.string))
+
+
+{-| Validate an address and detect its network kind.
+-}
+inspectAddress : String -> Cmd msg
+inspectAddress addr =
+    Ports.wasmInspectAddress (E.object [ ( "address", E.string addr ) ])
+
+
+inspectedDecoder : D.Decoder ( String, AddrCheck )
+inspectedDecoder =
+    D.map2 Tuple.pair
+        (D.field "address" D.string)
+        (D.field "network" D.string
+            |> D.map
+                (\n ->
+                    case n of
+                        "mainnet" ->
+                            CheckValid MainKind
+
+                        "testnet" ->
+                            CheckValid TestKind
+
+                        _ ->
+                            CheckInvalid
+                )
+        )
