@@ -1,8 +1,8 @@
-module Blockfrost exposing (fetchUtxos, isBlockfrostNotFound, pageSize, submitTx, utxosDecoder)
+module Blockfrost exposing (fetchPools, fetchUtxos, isBlockfrostNotFound, pageSize, submitTx, utxosDecoder)
 
 {-| The Blockfrost boundary (plain HTTP, CORS-friendly from a static page).
-Supplies UTxOs and submits transactions — authenticated with the per-network
-project id the user types into the UI. Deliberately kept
+Supplies UTxOs and the pool list, submits transactions — authenticated with
+the per-network project id the user types into the UI. Deliberately kept
 independent of `State`, so state helpers can build on this module without an
 import cycle.
 -}
@@ -30,6 +30,18 @@ fetchUtxos key network wid addr =
         ("/addresses/" ++ addr ++ "/utxos?order=desc&count=" ++ String.fromInt pageSize)
         Http.emptyBody
         (expectUtxos (GotUtxos wid network))
+
+
+{-| One page of registered pools (pages are 1-based). The picker appends pages.
+-}
+fetchPools : String -> Network -> Int -> Cmd Msg
+fetchPools key network page =
+    request key
+        network
+        "GET"
+        ("/pools/extended?count=" ++ String.fromInt pageSize ++ "&page=" ++ String.fromInt page)
+        Http.emptyBody
+        (expectPools GotPools)
 
 
 {-| POST the signed CBOR. The reply is stamped with the id of the transaction
@@ -105,6 +117,18 @@ expectUtxos =
                 D.decodeString utxosDecoder body
                     |> Result.map (\us -> { utxos = us, truncated = List.length us == pageSize })
                     |> Result.mapError D.errorToString
+
+            else
+                Err (statusErrStr meta body)
+        )
+
+
+expectPools : (Result String (List Pool) -> Msg) -> Http.Expect Msg
+expectPools =
+    expectResponse
+        (\meta body ->
+            if meta.statusCode >= 200 && meta.statusCode < 300 then
+                D.decodeString poolsDecoder body |> Result.mapError D.errorToString
 
             else
                 Err (statusErrStr meta body)
@@ -258,3 +282,33 @@ lovelaceQuantityDecoder =
 lovelaceIn : List ( String, Int ) -> Int
 lovelaceIn units =
     units |> List.filter (\( u, _ ) -> u == "lovelace") |> List.map Tuple.second |> List.sum
+
+
+poolsDecoder : D.Decoder (List Pool)
+poolsDecoder =
+    D.list
+        (D.map4 Pool
+            (D.field "pool_id" D.string)
+            (D.field "hex" D.string)
+            (D.field "live_stake" (D.nullable lovelaceStringDecoder) |> D.map (Maybe.withDefault 0))
+            (D.field "live_saturation" (D.nullable D.float) |> D.map (Maybe.withDefault 0))
+        )
+
+
+{-| Lovelace amounts arrive as strings (or occasionally numbers).
+-}
+lovelaceStringDecoder : D.Decoder Int
+lovelaceStringDecoder =
+    D.oneOf
+        [ D.int
+        , D.string
+            |> D.andThen
+                (\s ->
+                    case String.toInt s of
+                        Just n ->
+                            D.succeed n
+
+                        Nothing ->
+                            D.fail "bad lovelace"
+                )
+        ]

@@ -1,7 +1,7 @@
 module Update exposing (update)
 
 {-| The controller: every Msg in one `update`. Pure state changes call State
-helpers; effects go through Wasm (ports).
+helpers; effects go through Wasm (ports), Blockfrost (HTTP), or File.Download.
 -}
 
 import Blockfrost
@@ -34,6 +34,37 @@ inspectIfNew model a =
             Wasm.inspectAddress a
 
 
+{-| Open the pool picker; fetch the pool list (once) if we have a key and none yet.
+-}
+openPool : PoolPurpose -> Model -> ( Model, Cmd Msg )
+openPool purpose model =
+    let
+        shouldFetch =
+            currentKey model /= "" && (model.pools == NotAsked || isFailed model.pools)
+    in
+    ( { model
+        | modal = PoolPicker purpose ""
+        , pools =
+            if shouldFetch then
+                Loading
+
+            else
+                model.pools
+        , poolPage =
+            if shouldFetch then
+                1
+
+            else
+                model.poolPage
+      }
+    , if shouldFetch then
+        Blockfrost.fetchPools (currentKey model) model.network 1
+
+      else
+        Cmd.none
+    )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -42,19 +73,29 @@ update msg model =
 
         -- ── network ────────────────────────────────────────────────────────────
         SelectNetwork n ->
-            -- Balances are network-specific and swept. Wallet keys survive a network
-            -- switch; addresses are re-derived below (the bech32 encoding is
-            -- network-specific, the keys are not). Loads pause while the
-            -- re-derivation is pending so no request carries a stale address.
-            ( { model
-                | network = n
-                , wallets = List.map (\w -> { w | utxos = NotAsked }) model.wallets
-                , deriving = not (List.isEmpty model.wallets)
-                , reloading = Set.empty
-                , outputs = []
-              }
-                |> invalidateShape
-                |> log LogInfo ("switched to " ++ netName n)
+            -- Everything network-specific is swept: balances, tx draft, fee, and the
+            -- pool list (pools differ per network!). Wallet keys survive; addresses
+            -- are re-derived below. addrChecks survive too (an address's network kind
+            -- is intrinsic to the address, not to the selected network).
+            let
+                swept =
+                    { model
+                        | network = n
+                        , wallets = List.map (\w -> { w | utxos = NotAsked }) model.wallets
+                        , outputs = []
+                        , certs = []
+                        , modal = NoModal
+                        , pools = NotAsked
+                        , poolPage = 1
+
+                        -- loads pause until the new network's addresses arrive
+                        , deriving = not (List.isEmpty model.wallets)
+                        , reloading = Set.empty
+                    }
+                        |> invalidateShape
+                        |> log LogInfo ("switched to " ++ netName n ++ " — cleared inputs, outputs, certs")
+            in
+            ( swept
             , if List.isEmpty model.wallets then
                 Cmd.none
 
@@ -82,6 +123,9 @@ update msg model =
 
         GotDerivedAddresses (Err e) ->
             ( log LogWarn ("derive addresses failed: " ++ e) { model | deriving = False }, Cmd.none )
+
+        UpdateBfKey v ->
+            ( setCurrentKey v model, Cmd.none )
 
         -- ── wallets: generate / restore / edit / forget ────────────────────────
         ClickNewWallet ->
@@ -135,6 +179,7 @@ update msg model =
         ConfirmForget wid ->
             ( { model
                 | wallets = List.filter (\w -> w.id /= wid) model.wallets
+                , certs = List.filter (\c -> c.wallet /= wid) model.certs
                 , modal = NoModal
               }
                 |> invalidateShape
@@ -143,9 +188,6 @@ update msg model =
             )
 
         -- ── UTxOs (Blockfrost reads) ───────────────────────────────────────────
-        UpdateBfKey v ->
-            ( setCurrentKey v model, Cmd.none )
-
         ClickLoadUtxos wid ->
             case getWallet wid model of
                 Just w ->
@@ -322,15 +364,109 @@ update msg model =
         DeleteOutput i ->
             ( { model | outputs = removeAt i model.outputs } |> invalidateShape, Cmd.none )
 
-        -- ── clearing ───────────────────────────────────────────────────────────
-        ClearInputs ->
-            ( deselectInputs model |> invalidateShape, Cmd.none )
+        -- ── certificates ───────────────────────────────────────────────────────
+        SetWalletCert wid raw ->
+            -- The select is bound to the wallet's current certificate: changing it
+            -- replaces (or clears) that wallet's cert; "" = no certificate.
+            let
+                cleared =
+                    { model | certs = List.filter (\c -> c.wallet /= wid) model.certs } |> invalidateShape
+            in
+            case raw of
+                "reg" ->
+                    ( addCert (Certificate wid Register) cleared |> log LogCmd (aliasOf wid model ++ ": register cert"), Cmd.none )
 
-        ClearOutputs ->
-            ( { model | outputs = [] } |> invalidateShape, Cmd.none )
+                "unreg" ->
+                    ( addCert (Certificate wid Unregister) cleared |> log LogCmd (aliasOf wid model ++ ": unregister cert"), Cmd.none )
 
-        ClearTx ->
-            ( deselectInputs { model | outputs = [] } |> invalidateShape, Cmd.none )
+                "deleg" ->
+                    openPool (ForNewCert wid RegThenDeleg) cleared
+
+                "delegonly" ->
+                    openPool (ForNewCert wid DelegOnly) cleared
+
+                _ ->
+                    ( cleared, Cmd.none )
+
+        DeleteCertificate i ->
+            ( { model | certs = removeAt i model.certs } |> invalidateShape, Cmd.none )
+
+        ChangeCertPool i ->
+            openPool (ForEditCert i) model
+
+        -- ── pool picker ────────────────────────────────────────────────────────
+        UpdatePoolSearch s ->
+            ( { model
+                | modal =
+                    case model.modal of
+                        PoolPicker p _ ->
+                            PoolPicker p s
+
+                        other ->
+                            other
+              }
+            , Cmd.none
+            )
+
+        PickPool pid ->
+            case model.modal of
+                PoolPicker (ForNewCert wid kind) _ ->
+                    let
+                        action =
+                            case kind of
+                                RegThenDeleg ->
+                                    RegisterAndDelegate pid
+
+                                DelegOnly ->
+                                    DelegateOnly pid
+                    in
+                    ( addCert (Certificate wid action) { model | modal = NoModal }
+                        |> log LogCmd (aliasOf wid model ++ ": delegate to " ++ pid)
+                    , Cmd.none
+                    )
+
+                PoolPicker (ForEditCert i) _ ->
+                    ( { model | certs = updateAt i (setCertPool pid) model.certs, modal = NoModal } |> invalidateShape, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        ClosePoolModal ->
+            ( { model | modal = NoModal }, Cmd.none )
+
+        ClickLoadPools ->
+            -- (re)load the first page, from inside the picker (e.g. the key was
+            -- entered after opening it, or the fetch failed)
+            if currentKey model == "" then
+                toastNow "Enter a Blockfrost project id first" model
+
+            else
+                ( { model | pools = Loading, poolPage = 1 }
+                , Blockfrost.fetchPools (currentKey model) model.network 1
+                )
+
+        ClickPoolPage page ->
+            -- prev/next navigation: each view is exactly one server page, so shifting
+            -- offsets can never show duplicates. Only fetched on click.
+            if page < 1 || currentKey model == "" then
+                ( model, Cmd.none )
+
+            else
+                ( { model | pools = Loading, poolPage = page }
+                , Blockfrost.fetchPools (currentKey model) model.network page
+                )
+
+        GotPools (Ok ps) ->
+            ( { model | pools = Loaded ps }
+                |> log LogOk ("loaded " ++ String.fromInt (List.length ps) ++ " pools (page " ++ String.fromInt model.poolPage ++ ")")
+            , Cmd.none
+            )
+
+        GotPools (Err e) ->
+            ( { model | pools = Failed e }
+                |> log LogWarn ("pool list failed: " ++ e)
+            , Cmd.none
+            )
 
         -- ── era & fee ──────────────────────────────────────────────────────────
         SelectEra e ->
@@ -350,7 +486,7 @@ update msg model =
 
         ClickEstimateFee ->
             if not (txReady model) then
-                toastNow "Add inputs and a recipient, and fix any flagged issues" model
+                toastNow "Add inputs and a recipient or certificate, and fix any flagged issues" model
 
             else
                 -- a fresh estimate makes any existing signature's fee basis stale
@@ -396,7 +532,7 @@ update msg model =
             , Cmd.none
             )
 
-        -- ── sign / export ──────────────────────────────────────────────────────
+        -- ── sign / submit / export ─────────────────────────────────────────────
         ClickSign ->
             -- same predicate that enables the button (fee set + balanced + draft + ready)
             case ( canSign model, model.fee ) of
@@ -417,7 +553,7 @@ update msg model =
             else
                 case result of
                     Ok p ->
-                        ( { model | tx = Signed (SignedTx p.cbor p.txId (List.length (paymentWalletIds model)) 0), submit = NotSubmitted }
+                        ( { model | tx = Signed (SignedTx p.cbor p.txId (List.length (paymentWalletIds model)) (List.length (stakeWalletIds model))), submit = NotSubmitted }
                             |> log LogOk ("transaction signed · txid " ++ p.txId)
                         , Cmd.none
                         )
@@ -522,6 +658,19 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
+
+        -- ── clearing ───────────────────────────────────────────────────────────
+        ClearInputs ->
+            ( deselectInputs model |> invalidateShape, Cmd.none )
+
+        ClearOutputs ->
+            ( { model | outputs = [] } |> invalidateShape, Cmd.none )
+
+        ClearCerts ->
+            ( { model | certs = [] } |> invalidateShape, Cmd.none )
+
+        ClearTx ->
+            ( deselectInputs { model | outputs = [], certs = [] } |> invalidateShape, Cmd.none )
 
         -- ── misc ───────────────────────────────────────────────────────────────
         Copy t ->
