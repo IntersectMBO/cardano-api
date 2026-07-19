@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-05-28T20:13:41Z
-  , cardano-haskell-packages 2026-05-28T08:12:31Z
+  , hackage.haskell.org 2026-07-01T00:33:51Z
+  , cardano-haskell-packages 2026-06-29T12:05:19Z
 
 active-repositories:
   , :rest
@@ -124,6 +124,18 @@ if arch(wasm32)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- Needed for all ghc versions due to added aeson >= 2.3 bound.
+allow-newer:
+  , cborg-json:aeson
+  , criterion-measurement:aeson
+  , deriving-aeson:aeson
+  , grapesy:aeson
+  , grpc-spec:aeson
+  , hedgehog-extras:aeson
+  , microstache:aeson
+  , monad-control:transformers
+  , http-api-data:text-iso8601
 
 -- cabal-allow-newer begin
 if impl(ghc >=9.14)
