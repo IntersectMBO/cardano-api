@@ -217,7 +217,6 @@ library
     Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
     Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
     Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
-    Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra
     Cardano.Api.Era.Internal.Eon.Convert
     Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
     Cardano.Api.Era.Internal.Eon.MaryEraOnwards
