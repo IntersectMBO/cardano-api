@@ -16,10 +16,7 @@ module Cardano.Api.Era
   , module Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
   , module Cardano.Api.Era.Internal.Eon.MaryEraOnwards
   , module Cardano.Api.Era.Internal.Eon.ShelleyEraOnly
-  , module Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra
-  , module Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra
   , module Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
-  , module Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra
   , module Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
   , module Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 
@@ -68,9 +65,6 @@ module Cardano.Api.Era
   , caseByronOrShelleyBasedEra
 
     -- ** Case on ShelleyBasedEra
-  , caseShelleyToAllegraOrMaryEraOnwards
-  , caseShelleyToMaryOrAlonzoEraOnwards
-  , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
   )
 where
@@ -85,8 +79,5 @@ import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Eon.ShelleyEraOnly
-import Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra
-import Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
-import Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra
 import Cardano.Api.Era.Internal.Feature

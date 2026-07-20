@@ -107,7 +107,8 @@ import Cardano.Api.Certificate.Internal
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Consensus.Internal.Mode qualified as Api
 import Cardano.Api.Era.Internal.Case
-import Cardano.Api.Era.Internal.Core (forEraMaybeEon)
+import Cardano.Api.Era.Internal.Core (forEraInEon, forEraMaybeEon, toCardanoEra)
+import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error as Api
 import Cardano.Api.Genesis.Internal
@@ -2079,12 +2080,17 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
     let previousLabNonce =
           Consensus.previousLabNonce
             (Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState)
+        -- 'ppExtraEntropyL' requires 'ProtVerAtMost 6' (Shelley to Alonzo), evidence
+        -- that 'forEraInEon' cannot provide in its negative branch, so we match on
+        -- 'ShelleyBasedEra' directly to obtain it for the pre-Babbage eras.
         extraEntropy :: Nonce
-        extraEntropy =
-          caseShelleyToAlonzoOrBabbageEraOnwards
-            (const (pp ^. Core.ppExtraEntropyL))
-            (const Ledger.NeutralNonce)
-            sbe
+        extraEntropy = case sbe of
+          ShelleyBasedEraShelley -> pp ^. Core.ppExtraEntropyL
+          ShelleyBasedEraAllegra -> pp ^. Core.ppExtraEntropyL
+          ShelleyBasedEraMary -> pp ^. Core.ppExtraEntropyL
+          ShelleyBasedEraAlonzo -> pp ^. Core.ppExtraEntropyL
+          ShelleyBasedEraBabbage -> Ledger.NeutralNonce
+          ShelleyBasedEraConway -> Ledger.NeutralNonce
 
         nextEpochsNonce = candidateNonce ⭒ previousLabNonce ⭒ extraEntropy
 
@@ -2108,14 +2114,15 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
             (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
             $ fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
-    caseShelleyToAlonzoOrBabbageEraOnwards
-      ( const
-          (isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f)
+    forEraInEon
+      (toCardanoEra sbe)
+      ( shelleyBasedEraConstraints sbe $
+          isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
       )
-      ( const
-          (isLeadingSlotsPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f)
+      ( \w ->
+          babbageEraOnwardsConstraints w $
+            isLeadingSlotsPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
       )
-      sbe
  where
   globals = shelleyBasedEraConstraints sbe $ constructGlobals sGen eInfo
 
@@ -2223,14 +2230,15 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigni
             (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
             $ fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
-    caseShelleyToAlonzoOrBabbageEraOnwards
-      ( const
-          (isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f)
+    forEraInEon
+      (toCardanoEra sbe)
+      ( shelleyBasedEraConstraints sbe $
+          isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f
       )
-      ( const
-          (isLeadingSlotsPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f)
+      ( \w ->
+          babbageEraOnwardsConstraints w $
+            isLeadingSlotsPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f
       )
-      sbe
  where
   globals = shelleyBasedEraConstraints sbe $ constructGlobals sGen eInfo
 

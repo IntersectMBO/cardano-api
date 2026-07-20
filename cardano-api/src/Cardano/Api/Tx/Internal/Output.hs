@@ -58,12 +58,12 @@ module Cardano.Api.Tx.Internal.Output
 where
 
 import Cardano.Api.Address
-import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error (Error (..), displayError)
 import Cardano.Api.HasTypeProxy qualified as HTP
@@ -793,8 +793,9 @@ toShelleyTxOut
   -> L.TxOut ledgerera
 toShelleyTxOut sbe = shelleyBasedEraConstraints sbe $ \case
   TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
-    caseShelleyToMaryOrAlonzoEraOnwards
-      (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
+    forEraInEon
+      (convert sbe)
+      (L.mkBasicTxOut (toShelleyAddr addr) value)
       ( \case
           AlonzoEraOnwardsAlonzo ->
             L.mkBasicTxOut (toShelleyAddr addr) value
@@ -813,7 +814,6 @@ toShelleyTxOut sbe = shelleyBasedEraConstraints sbe $ \case
               & L.referenceScriptTxOutL
                 .~ refScriptToShelleyScript sbe refScript
       )
-      sbe
 
 -- | A variant of 'toShelleyTxOutAny that is used only internally to this module
 -- that works with a 'TxOut' in any context (including CtxTx) by ignoring
@@ -827,8 +827,9 @@ toShelleyTxOutAny
   -> L.TxOut ledgerera
 toShelleyTxOutAny sbe = shelleyBasedEraConstraints sbe $ \case
   TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
-    caseShelleyToMaryOrAlonzoEraOnwards
-      (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
+    forEraInEon
+      (convert sbe)
+      (L.mkBasicTxOut (toShelleyAddr addr) value)
       ( \case
           AlonzoEraOnwardsAlonzo ->
             L.mkBasicTxOut (toShelleyAddr addr) value
@@ -847,7 +848,6 @@ toShelleyTxOutAny sbe = shelleyBasedEraConstraints sbe $ \case
               & L.referenceScriptTxOutL
                 .~ refScriptToShelleyScript sbe refScript
       )
-      sbe
 
 fromShelleyTxOut
   :: forall era ctx
@@ -938,18 +938,18 @@ instance IsCardanoEra era => ToJSON (TxOutValue era) where
 
 instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
   parseJSON = withObject "TxOutValue" $ \o ->
-    caseShelleyToAllegraOrMaryEraOnwards
-      ( \shelleyToAlleg -> do
+    forEraInEon @MaryEraOnwards
+      (convert (shelleyBasedEra @era))
+      ( shelleyBasedEraConstraints (shelleyBasedEra @era) $ do
           ll <- o .: "lovelace"
-          let sbe = convert shelleyToAlleg
+          let sbe = shelleyBasedEra @era
           pure $
-            shelleyBasedEraConstraints sbe $
-              TxOutValueShelleyBased sbe $
-                A.mkAdaValue sbe ll
+            TxOutValueShelleyBased sbe $
+              A.mkAdaValue sbe ll
       )
       ( \w -> do
           let l = toList o
-              sbe = convert w
+              sbe = shelleyBasedEra @era
           vals <- mapM decodeAssetId l
           pure $
             shelleyBasedEraConstraints sbe $
@@ -957,7 +957,6 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
                 toLedgerValue w $
                   mconcat vals
       )
-      (shelleyBasedEra @era)
    where
     decodeAssetId :: (Aeson.Key, Aeson.Value) -> Aeson.Parser Value
     decodeAssetId (polid, Aeson.Object assetNameHm) = do

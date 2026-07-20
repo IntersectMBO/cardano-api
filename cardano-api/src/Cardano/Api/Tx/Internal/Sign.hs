@@ -249,8 +249,9 @@ deserialiseShelleyBasedTx mkTx bs =
 {-# DEPRECATED getTxBody "Use 'UnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
 getTxBody :: Tx era -> TxBody era
 getTxBody (ShelleyTx sbe tx) =
-  caseShelleyToMaryOrAlonzoEraOnwards
-    ( const $
+  forEraInEon
+    (convert sbe)
+    ( shelleyBasedEraConstraints sbe $
         let txBody = tx ^. L.bodyTxL
             txAuxData = tx ^. L.auxDataTxL
             scriptWits = tx ^. L.witsTxL . L.scriptTxWitsL
@@ -263,21 +264,21 @@ getTxBody (ShelleyTx sbe tx) =
               TxScriptValidityNone
     )
     ( \w ->
-        let txBody = tx ^. L.bodyTxL
-            txAuxData = tx ^. L.auxDataTxL
-            scriptWits = tx ^. L.witsTxL . L.scriptTxWitsL
-            datsWits = tx ^. L.witsTxL . L.datsTxWitsL
-            redeemerWits = tx ^. L.witsTxL . L.rdmrsTxWitsL
-            isValid = tx ^. L.isValidTxL
-         in ShelleyTxBody
-              sbe
-              txBody
-              (Map.elems scriptWits)
-              (TxBodyScriptData w datsWits redeemerWits)
-              (strictMaybeToMaybe txAuxData)
-              (TxScriptValidity w (isValidToScriptValidity isValid))
+        alonzoEraOnwardsConstraints w $
+          let txBody = tx ^. L.bodyTxL
+              txAuxData = tx ^. L.auxDataTxL
+              scriptWits = tx ^. L.witsTxL . L.scriptTxWitsL
+              datsWits = tx ^. L.witsTxL . L.datsTxWitsL
+              redeemerWits = tx ^. L.witsTxL . L.rdmrsTxWitsL
+              isValid = tx ^. L.isValidTxL
+           in ShelleyTxBody
+                sbe
+                txBody
+                (Map.elems scriptWits)
+                (TxBodyScriptData w datsWits redeemerWits)
+                (strictMaybeToMaybe txAuxData)
+                (TxScriptValidity w (isValidToScriptValidity isValid))
     )
-    sbe
 
 instance IsShelleyBasedEra era => HasTextEnvelope (Tx era) where
   textEnvelopeType _ =
@@ -333,20 +334,21 @@ instance Eq (TxBody era) where
   (==)
     (ShelleyTxBody sbe txbodyA txscriptsA redeemersA txmetadataA scriptValidityA)
     (ShelleyTxBody _ txbodyB txscriptsB redeemersB txmetadataB scriptValidityB) =
-      caseShelleyToMaryOrAlonzoEraOnwards
-        ( const $
+      forEraInEon
+        (convert sbe)
+        ( shelleyBasedEraConstraints sbe $
             txbodyA == txbodyB
               && txscriptsA == txscriptsB
               && txmetadataA == txmetadataB
         )
-        ( const $
-            txbodyA == txbodyB
-              && txscriptsA == txscriptsB
-              && redeemersA == redeemersB
-              && txmetadataA == txmetadataB
-              && scriptValidityA == scriptValidityB
+        ( \w ->
+            alonzoEraOnwardsConstraints w $
+              txbodyA == txbodyB
+                && txscriptsA == txscriptsB
+                && redeemersA == redeemersB
+                && txmetadataA == txmetadataB
+                && scriptValidityA == scriptValidityB
         )
-        sbe
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
 instance Show (TxBody era) where
@@ -951,10 +953,10 @@ getTxWitnessesByron (Byron.ATxAux{Byron.aTaWitness = witnesses}) =
 
 getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
 getTxWitnesses (ShelleyTx sbe tx') =
-  caseShelleyToMaryOrAlonzoEraOnwards
-    (const (getShelleyTxWitnesses tx'))
-    (const (getAlonzoTxWitnesses tx'))
-    sbe
+  forEraInEon
+    (convert sbe)
+    (shelleyBasedEraConstraints sbe $ getShelleyTxWitnesses tx')
+    (\w -> alonzoEraOnwardsConstraints w $ getAlonzoTxWitnesses tx')
  where
   getShelleyTxWitnesses
     :: forall ledgerera

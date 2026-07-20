@@ -1265,17 +1265,18 @@ createTransactionBody
 createTransactionBody sbe bc =
   shelleyBasedEraConstraints sbe $ do
     (sData, mScriptIntegrityHash, scripts) <-
-      caseShelleyToMaryOrAlonzoEraOnwards
-        ( \eon -> do
+      forEraInEon
+        (convert sbe)
+        ( do
             let scripts =
                   catMaybes
                     [ toShelleyScript <$> getScriptWitnessScript scriptwitness
                     | (_, AnyScriptWitness scriptwitness) <-
-                        collectTxBodyScriptWitnesses (convert eon) bc
+                        collectTxBodyScriptWitnesses sbe bc
                     ]
             return (TxBodyNoScriptData, SNothing, scripts)
         )
-        ( \aeon -> do
+        ( \aeon -> alonzoEraOnwardsConstraints aeon $ do
             TxScriptWitnessRequirements languages scripts dats redeemers <-
               collectTxBodyScriptWitnessRequirements aeon bc
 
@@ -1288,7 +1289,6 @@ createTransactionBody sbe bc =
               , scripts
               )
         )
-        sbe
     let era = toCardanoEra sbe
 
         apiScriptValidity = txScriptValidity bc
@@ -1557,48 +1557,57 @@ fromLedgerTxInsCollateral
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxInsCollateral era
 fromLedgerTxInsCollateral sbe body =
-  caseShelleyToMaryOrAlonzoEraOnwards
-    (const TxInsCollateralNone)
-    (\w -> TxInsCollateral w $ map fromShelleyTxIn $ toList $ body ^. L.collateralInputsTxBodyL)
-    sbe
+  forEraInEon
+    (convert sbe)
+    TxInsCollateralNone
+    ( \w ->
+        alonzoEraOnwardsConstraints w $
+          TxInsCollateral w $
+            map fromShelleyTxIn $
+              toList $
+                body ^. L.collateralInputsTxBodyL
+    )
 
 fromLedgerTxInsReference
   :: ShelleyBasedEra era
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxInsReference ViewTx era
 fromLedgerTxInsReference sbe txBody =
-  caseShelleyToAlonzoOrBabbageEraOnwards
-    (const TxInsReferenceNone)
-    (\w -> TxInsReference w (map fromShelleyTxIn . toList $ txBody ^. L.referenceInputsTxBodyL) ViewTx)
-    sbe
+  forEraInEon
+    (convert sbe)
+    TxInsReferenceNone
+    ( \w ->
+        babbageEraOnwardsConstraints w $
+          TxInsReference w (map fromShelleyTxIn . toList $ txBody ^. L.referenceInputsTxBodyL) ViewTx
+    )
 
 fromLedgerTxTotalCollateral
   :: ShelleyBasedEra era
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxTotalCollateral era
 fromLedgerTxTotalCollateral sbe txbody =
-  caseShelleyToAlonzoOrBabbageEraOnwards
-    (const TxTotalCollateralNone)
-    ( \w ->
+  forEraInEon
+    (convert sbe)
+    TxTotalCollateralNone
+    ( \w -> babbageEraOnwardsConstraints w $
         case txbody ^. L.totalCollateralTxBodyL of
           SNothing -> TxTotalCollateralNone
           SJust totColl -> TxTotalCollateral w totColl
     )
-    sbe
 
 fromLedgerTxReturnCollateral
   :: ShelleyBasedEra era
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxReturnCollateral CtxTx era
 fromLedgerTxReturnCollateral sbe txbody =
-  caseShelleyToAlonzoOrBabbageEraOnwards
-    (const TxReturnCollateralNone)
-    ( \w ->
+  forEraInEon
+    (convert sbe)
+    TxReturnCollateralNone
+    ( \w -> babbageEraOnwardsConstraints w $
         case txbody ^. L.collateralReturnTxBodyL of
           SNothing -> TxReturnCollateralNone
           SJust collReturnOut -> TxReturnCollateral w $ fromShelleyTxOut sbe collReturnOut
     )
-    sbe
 
 fromLedgerTxFee
   :: ShelleyBasedEra era -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era) -> TxFee era
@@ -1691,20 +1700,21 @@ fromLedgerTxExtraKeyWitnesses
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxExtraKeyWitnesses era
 fromLedgerTxExtraKeyWitnesses sbe body =
-  caseShelleyToMaryOrAlonzoEraOnwards
-    (const TxExtraKeyWitnessesNone)
+  forEraInEon
+    (convert sbe)
+    TxExtraKeyWitnessesNone
     ( \w ->
-        let keyhashes = body ^. L.reqSignerHashesTxBodyG
-         in if Set.null keyhashes
-              then TxExtraKeyWitnessesNone
-              else
-                TxExtraKeyWitnesses
-                  w
-                  [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
-                  | keyhash <- toList $ body ^. L.reqSignerHashesTxBodyG
-                  ]
+        alonzoEraOnwardsConstraints w $
+          let keyhashes = body ^. L.reqSignerHashesTxBodyG
+           in if Set.null keyhashes
+                then TxExtraKeyWitnessesNone
+                else
+                  TxExtraKeyWitnesses
+                    w
+                    [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
+                    | keyhash <- toList $ body ^. L.reqSignerHashesTxBodyG
+                    ]
     )
-    sbe
 
 fromLedgerTxWithdrawals
   :: ShelleyBasedEra era
@@ -1890,49 +1900,50 @@ convScriptData
   -> [(ScriptWitnessIndex, AnyScriptWitness era)]
   -> TxBodyScriptData era
 convScriptData sbe txOuts scriptWitnesses =
-  caseShelleyToMaryOrAlonzoEraOnwards
-    (const TxBodyNoScriptData)
+  forEraInEon
+    (convert sbe)
+    TxBodyNoScriptData
     ( \w ->
-        let redeemers =
-              Alonzo.Redeemers $
-                fromList
-                  [ (i, (toAlonzoData d, toAlonzoExUnits e))
-                  | ( idx
-                      , AnyScriptWitness
-                          (PlutusScriptWitness _ _ _ _ d e)
-                      ) <-
-                      scriptWitnesses
-                  , Just i <- [fromScriptWitnessIndex w idx]
-                  ]
+        alonzoEraOnwardsConstraints w $
+          let redeemers =
+                Alonzo.Redeemers $
+                  fromList
+                    [ (i, (toAlonzoData d, toAlonzoExUnits e))
+                    | ( idx
+                        , AnyScriptWitness
+                            (PlutusScriptWitness _ _ _ _ d e)
+                        ) <-
+                        scriptWitnesses
+                    , Just i <- [fromScriptWitnessIndex w idx]
+                    ]
 
-            datums =
-              Alonzo.TxDats $
-                fromList
-                  [ (L.hashData d', d')
-                  | d <- scriptdata
-                  , let d' = toAlonzoData d
-                  ]
+              datums =
+                Alonzo.TxDats $
+                  fromList
+                    [ (L.hashData d', d')
+                    | d <- scriptdata
+                    , let d' = toAlonzoData d
+                    ]
 
-            scriptdata :: [HashableScriptData]
-            scriptdata =
-              [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
-                ++ [ d
-                   | ( _
-                       , AnyScriptWitness
-                           ( PlutusScriptWitness
-                               _
-                               _
-                               _
-                               (ScriptDatumForTxIn (Just d))
-                               _
-                               _
-                             )
-                       ) <-
-                       scriptWitnesses
-                   ]
-         in TxBodyScriptData w datums redeemers
+              scriptdata :: [HashableScriptData]
+              scriptdata =
+                [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
+                  ++ [ d
+                     | ( _
+                         , AnyScriptWitness
+                             ( PlutusScriptWitness
+                                 _
+                                 _
+                                 _
+                                 (ScriptDatumForTxIn (Just d))
+                                 _
+                                 _
+                               )
+                         ) <-
+                         scriptWitnesses
+                     ]
+           in TxBodyScriptData w datums redeemers
     )
-    sbe
 
 convPParamsToScriptIntegrityHash
   :: ()

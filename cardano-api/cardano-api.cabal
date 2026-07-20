@@ -222,10 +222,7 @@ library
     Cardano.Api.Era.Internal.Eon.MaryEraOnwards
     Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
     Cardano.Api.Era.Internal.Eon.ShelleyEraOnly
-    Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra
-    Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra
     Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
-    Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra
     Cardano.Api.Era.Internal.Feature
     Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
     Cardano.Api.Experimental.Plutus.Internal.Script

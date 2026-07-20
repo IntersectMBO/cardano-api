@@ -121,7 +121,6 @@ module Cardano.Api.Plutus.Internal.Script
   )
 where
 
-import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
@@ -1670,10 +1669,10 @@ instance IsShelleyBasedEra era => ToJSON (ReferenceScript era) where
 -- entire module in favour of the experimental api is the long term solution to this problem.
 instance IsShelleyBasedEra era => FromJSON (ReferenceScript era) where
   parseJSON = Aeson.withObject "ReferenceScript" $ \o ->
-    caseShelleyToAlonzoOrBabbageEraOnwards
-      (const (pure ReferenceScriptNone))
+    forEraInEon
+      (toCardanoEra (shelleyBasedEra :: ShelleyBasedEra era))
+      (pure ReferenceScriptNone)
       (\w -> ReferenceScript w <$> o .: "referenceScript")
-      (shelleyBasedEra :: ShelleyBasedEra era)
 
 refScriptToShelleyScript
   :: ShelleyBasedEra era
@@ -1692,10 +1691,10 @@ fromShelleyScriptToReferenceScript sbe script =
 
 scriptInEraToRefScript :: ScriptInEra era -> ReferenceScript era
 scriptInEraToRefScript sIne@(ScriptInEra _ s) =
-  caseShelleyToAlonzoOrBabbageEraOnwards
-    (const ReferenceScriptNone)
+  forEraInEon
+    (toCardanoEra (eraOfScriptInEra sIne))
+    ReferenceScriptNone
     (\w -> ReferenceScript w $ toScriptInAnyLang s) -- Any script can be a reference script
-    (eraOfScriptInEra sIne)
 
 -- Helpers
 

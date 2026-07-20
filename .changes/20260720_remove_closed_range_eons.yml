@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1260
+kind:
+  - breaking
+description: Remove the closed-range eons `ShelleyToAllegraEra`, `ShelleyToMaryEra` and `ShelleyToAlonzoEra` and their eliminators `caseShelleyToAllegraOrMaryEraOnwards`, `caseShelleyToMaryOrAlonzoEraOnwards` and `caseShelleyToAlonzoOrBabbageEraOnwards`; achieve the same era-gating with `forEraInEon` (or `inEonForEra`) on `toCardanoEra era`, keyed on the surviving `MaryEraOnwards`/`AlonzoEraOnwards`/`BabbageEraOnwards` eon.
