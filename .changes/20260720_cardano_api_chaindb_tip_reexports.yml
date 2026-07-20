@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1259
+kind:
+  - compatible
+description: |
+  Re-export getTipHeader, blockHash and blockSlot from Cardano.Api.Consensus.

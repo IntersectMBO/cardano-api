@@ -95,10 +95,12 @@ instance Pretty TraceRpcSubmit where
 instance Error TraceRpcSubmit where
   prettyError = pretty
 
--- | Traces used in SyncService (FetchBlock, FollowTip)
+-- | Traces used in SyncService (FetchBlock, ReadTip, FollowTip)
 data TraceRpcSync
   = -- | FetchBlock span
     TraceRpcFetchBlockSpan TraceSpanEvent
+  | -- | ReadTip span
+    TraceRpcReadTipSpan TraceSpanEvent
   | -- | Requested block was not found
     TraceRpcFetchBlockNotFound SlotNo
   | -- | Node kernel access is not yet available
@@ -111,6 +113,8 @@ instance Pretty TraceRpcSync where
   pretty = \case
     TraceRpcFetchBlockSpan (SpanBegin _) -> "Started FetchBlock method"
     TraceRpcFetchBlockSpan (SpanEnd _) -> "Finished FetchBlock method"
+    TraceRpcReadTipSpan (SpanBegin _) -> "Started ReadTip method"
+    TraceRpcReadTipSpan (SpanEnd _) -> "Finished ReadTip method"
     TraceRpcFetchBlockNotFound slot -> "Block not found at slot " <> pshow slot
     TraceRpcNodeKernelAccessUnavailable -> "Node kernel access not yet initialised"
     TraceRpcForkerError e -> "Ledger forker error: " <> pretty e
