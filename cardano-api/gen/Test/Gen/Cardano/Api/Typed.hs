@@ -560,13 +560,13 @@ genLedgerValueForTxOut sbe = do
   ada <- A.mkAdaValue sbe . L.Coin <$> Gen.integral (Range.constant 1 2)
 
   -- Generate a potentially empty list with multi assets
-  caseShelleyToAllegraOrMaryEraOnwards
-    (const (pure ada))
-    ( \w -> do
+  forEraInEon
+    (toCardanoEra sbe)
+    (pure ada)
+    ( \w -> maryEraOnwardsConstraints w $ do
         v <- Gen.list (Range.constant 0 5) $ genLedgerValue w genAssetId genPositiveQuantity
         pure $ ada <> mconcat v
     )
-    sbe
 
 genLedgerMultiAssetValue :: Gen L.MultiAsset
 genLedgerMultiAssetValue = Q.arbitrary
@@ -1065,9 +1065,10 @@ genTxInsReference
   :: Applicative (BuildTxWith build)
   => ShelleyBasedEra era
   -> Gen (TxInsReference build era)
-genTxInsReference =
-  caseShelleyToAlonzoOrBabbageEraOnwards
-    (const (pure TxInsReferenceNone))
+genTxInsReference sbe =
+  forEraInEon
+    (toCardanoEra sbe)
+    (pure TxInsReferenceNone)
     ( \w -> do
         txIns <- Gen.list (Range.linear 0 10) genTxIn
         pure $ TxInsReference w txIns mempty

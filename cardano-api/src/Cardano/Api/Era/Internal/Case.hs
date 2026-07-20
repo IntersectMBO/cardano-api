@@ -8,25 +8,16 @@ module Cardano.Api.Era.Internal.Case
     caseByronOrShelleyBasedEra
   -- Case on ShelleyBasedEra
   , caseShelleyEraOnlyOrAllegraEraOnwards
-  , caseShelleyToAllegraOrMaryEraOnwards
-  , caseShelleyToMaryOrAlonzoEraOnwards
-  , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
   )
 where
 
 import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
-import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
-import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
-import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Era.Internal.Eon.ShelleyEraOnly
-import Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra
-import Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
-import Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra
 
 -- | @caseByronOrShelleyBasedEra f g era@ returns @f@ in Byron and applies @g@ to Shelley-based eras.
 caseByronOrShelleyBasedEra
@@ -63,57 +54,6 @@ caseShelleyEraOnlyOrAllegraEraOnwards l r = \case
   ShelleyBasedEraBabbage -> r AllegraEraOnwardsBabbage
   ShelleyBasedEraConway -> r AllegraEraOnwardsConway
   ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyEraOnlyOrAllegraEraOnwards: era not supported"
-
--- | @caseShelleyToAllegraOrMaryEraOnwards f g era@ applies @f@ to shelley and allegra;
--- and applies @g@ to mary and later eras.
-caseShelleyToAllegraOrMaryEraOnwards
-  :: ()
-  => (ShelleyToAllegraEraConstraints era => ShelleyToAllegraEra era -> a)
-  -> (MaryEraOnwardsConstraints era => MaryEraOnwards era -> a)
-  -> ShelleyBasedEra era
-  -> a
-caseShelleyToAllegraOrMaryEraOnwards l r = \case
-  ShelleyBasedEraShelley -> l ShelleyToAllegraEraShelley
-  ShelleyBasedEraAllegra -> l ShelleyToAllegraEraAllegra
-  ShelleyBasedEraMary -> r MaryEraOnwardsMary
-  ShelleyBasedEraAlonzo -> r MaryEraOnwardsAlonzo
-  ShelleyBasedEraBabbage -> r MaryEraOnwardsBabbage
-  ShelleyBasedEraConway -> r MaryEraOnwardsConway
-  ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyToAllegraOrMaryEraOnwards: era not supported"
-
--- | @caseShelleyToMaryOrAlonzoEraOnwards f g era@ applies @f@ to shelley, allegra, and mary;
--- and applies @g@ to alonzo and later eras.
-caseShelleyToMaryOrAlonzoEraOnwards
-  :: ()
-  => (ShelleyToMaryEraConstraints era => ShelleyToMaryEra era -> a)
-  -> (AlonzoEraOnwardsConstraints era => AlonzoEraOnwards era -> a)
-  -> ShelleyBasedEra era
-  -> a
-caseShelleyToMaryOrAlonzoEraOnwards l r = \case
-  ShelleyBasedEraShelley -> l ShelleyToMaryEraShelley
-  ShelleyBasedEraAllegra -> l ShelleyToMaryEraAllegra
-  ShelleyBasedEraMary -> l ShelleyToMaryEraMary
-  ShelleyBasedEraAlonzo -> r AlonzoEraOnwardsAlonzo
-  ShelleyBasedEraBabbage -> r AlonzoEraOnwardsBabbage
-  ShelleyBasedEraConway -> r AlonzoEraOnwardsConway
-  ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyToMaryOrAlonzoEraOnwards: era not supported"
-
--- | @caseShelleyToAlonzoOrBabbageEraOnwards f g era@ applies @f@ to shelley, allegra, mary, and alonzo;
--- and applies @g@ to babbage and later eras.
-caseShelleyToAlonzoOrBabbageEraOnwards
-  :: ()
-  => (ShelleyToAlonzoEraConstraints era => ShelleyToAlonzoEra era -> a)
-  -> (BabbageEraOnwardsConstraints era => BabbageEraOnwards era -> a)
-  -> ShelleyBasedEra era
-  -> a
-caseShelleyToAlonzoOrBabbageEraOnwards l r = \case
-  ShelleyBasedEraShelley -> l ShelleyToAlonzoEraShelley
-  ShelleyBasedEraAllegra -> l ShelleyToAlonzoEraAllegra
-  ShelleyBasedEraMary -> l ShelleyToAlonzoEraMary
-  ShelleyBasedEraAlonzo -> l ShelleyToAlonzoEraAlonzo
-  ShelleyBasedEraBabbage -> r BabbageEraOnwardsBabbage
-  ShelleyBasedEraConway -> r BabbageEraOnwardsConway
-  ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyToAlonzoOrBabbageEraOnwards: era not supported"
 
 -- | @caseShelleyToBabbageOrConwayEraOnwards f g era@ applies @f@ to eras before conway;
 -- and applies @g@ to conway and later eras.

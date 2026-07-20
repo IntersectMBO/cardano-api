@@ -58,7 +58,6 @@ where
 
 import Cardano.Api.Address
 import Cardano.Api.Certificate.Internal
-import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
@@ -328,21 +327,22 @@ estimateBalancedTxBody
 
     -- Step 4. We use the fee to calculate the required collateral
     (retColl, reqCol) <-
-      caseShelleyToAlonzoOrBabbageEraOnwards
-        (const $ pure (TxReturnCollateralNone, TxTotalCollateralNone))
+      forEraInEon
+        (convert sbe)
+        (pure (TxReturnCollateralNone, TxTotalCollateralNone))
         ( \w' ->
-            first (TxFeeEstimationBalanceError . TxBodyErrorCollateral) $
-              calcReturnAndTotalCollateral
-                w'
-                fee
-                pparams
-                (txInsCollateral txbodycontent)
-                (txReturnCollateral txbodycontent)
-                (txTotalCollateral txbodycontent)
-                changeaddr
-                (A.mkAdaValue sbe totalPotentialCollateral)
+            babbageEraOnwardsConstraints w' $
+              first (TxFeeEstimationBalanceError . TxBodyErrorCollateral) $
+                calcReturnAndTotalCollateral
+                  w'
+                  fee
+                  pparams
+                  (txInsCollateral txbodycontent)
+                  (txReturnCollateral txbodycontent)
+                  (txTotalCollateral txbodycontent)
+                  changeaddr
+                  (A.mkAdaValue sbe totalPotentialCollateral)
         )
-        sbe
 
     -- Step 5. Now we can calculate the balance of the tx. What matter here are:
     --  1. The original outputs
@@ -675,14 +675,14 @@ evaluateTransactionExecutionUnitsShelley
   -> L.Tx L.TopTx (ShelleyLedgerEra era)
   -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
-  caseShelleyToMaryOrAlonzoEraOnwards
-    (const Map.empty)
+  forEraInEon
+    (convert sbe)
+    Map.empty
     ( \w ->
-        fromLedgerScriptExUnitsMap w $
-          alonzoEraOnwardsConstraints w $
+        alonzoEraOnwardsConstraints w $
+          fromLedgerScriptExUnitsMap w $
             L.evalTxExUnitsWithLogs pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart
     )
-    sbe
  where
   LedgerEpochInfo ledgerEpochInfo = epochInfo
 
@@ -1107,9 +1107,10 @@ makeTransactionBodyAutoBalance
               mnkeys
           fee = calculateMinTxFee sbe pp utxo txbody1 nkeys
       (retColl, reqCol) <-
-        caseShelleyToAlonzoOrBabbageEraOnwards
-          (const $ pure (TxReturnCollateralNone, TxTotalCollateralNone))
-          ( \w -> do
+        forEraInEon
+          (convert sbe)
+          (pure (TxReturnCollateralNone, TxTotalCollateralNone))
+          ( \w -> babbageEraOnwardsConstraints w $ do
               let totalPotentialCollateral =
                     mconcat
                       [ txOutValue
@@ -1128,7 +1129,6 @@ makeTransactionBodyAutoBalance
                   changeaddr
                   totalPotentialCollateral
           )
-          sbe
 
       -- Make a txbody for calculating the balance. For this the size of the tx
       -- does not matter, instead it's just the values of the fee and outputs.
