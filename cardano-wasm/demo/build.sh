@@ -11,8 +11,14 @@ WASM_DIR=
 OUT="$HERE/dist"
 while [ $# -gt 0 ]; do
   case "$1" in
-    --wasm-dir) WASM_DIR="$(cd "$2" && pwd)"; shift 2 ;;
-    --out) mkdir -p "$2"; OUT="$(cd "$2" && pwd)"; shift 2 ;;
+    --wasm-dir)
+      [ $# -ge 2 ] || { echo "error: --wasm-dir requires an argument" >&2; exit 2; }
+      WASM_DIR="$(cd "$2" && pwd)"; shift 2
+      ;;
+    --out)
+      [ $# -ge 2 ] || { echo "error: --out requires an argument" >&2; exit 2; }
+      mkdir -p "$2"; OUT="$(cd "$2" && pwd)"; shift 2
+      ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
