@@ -333,7 +333,12 @@
           };
         };
         demoShell = let
-          demo-pkgs = inputs.nixpkgs.legacyPackages.${system};
+          # The Elm toolchain comes from the `unstable` input: on this
+          # flake's pinned nixpkgs, elm-format is bootstrapped through a
+          # source-built GHC 9.0.2 on aarch64-darwin, which no longer
+          # compiles with current clang. On the newer pin every tool below
+          # is prebuilt in the NixOS binary cache for all our systems.
+          demo-pkgs = inputs.unstable.legacyPackages.${system};
         in {
           demo = demo-pkgs.mkShell {
             packages = [
