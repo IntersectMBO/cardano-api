@@ -217,6 +217,9 @@ data AnyPlutusScriptLanguage where
     :: L.PlutusLanguage lang
     => L.SLanguage lang -> AnyPlutusScriptLanguage
 
+instance Show AnyPlutusScriptLanguage where
+  show = Text.unpack . plutusLanguageToText
+
 -- | Serialise an 'AnyPlutusScript' to a 'TextEnvelope'. The text envelope type
 -- is determined by the Plutus language version of the script.
 serialiseAnyPlutusScriptToTextEnvelope
