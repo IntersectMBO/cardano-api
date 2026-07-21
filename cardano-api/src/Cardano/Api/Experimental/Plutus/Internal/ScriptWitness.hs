@@ -173,6 +173,9 @@ data PlutusScriptPurpose
     ProposingScript
   | -- | Witnesses a vote
     VotingScript
+  | -- | Witnesses a guard script (Dijkstra onwards)
+    GuardingScript
+  deriving (Show, Eq, Ord)
 
 data NoScriptDatum deriving (Show, Eq)
 
@@ -204,6 +207,10 @@ type family PlutusScriptDatumF (lang :: L.Language) (purpose :: PlutusScriptPurp
   PlutusScriptDatumF L.PlutusV2 VotingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV3 VotingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV4 VotingScript = NoScriptDatum
+  PlutusScriptDatumF L.PlutusV1 GuardingScript = NoScriptDatum
+  PlutusScriptDatumF L.PlutusV2 GuardingScript = NoScriptDatum
+  PlutusScriptDatumF L.PlutusV3 GuardingScript = NoScriptDatum
+  PlutusScriptDatumF L.PlutusV4 GuardingScript = NoScriptDatum
 
 data PlutusScriptDatum (lang :: L.Language) (purpose :: PlutusScriptPurpose) where
   SpendingScriptDatum

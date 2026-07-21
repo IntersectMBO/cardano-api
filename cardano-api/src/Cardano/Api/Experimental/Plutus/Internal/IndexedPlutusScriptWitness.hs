@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
@@ -17,6 +18,7 @@ module Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
 
     -- * Create the index for a witnessable thing.
   , toPlutusScriptPurpose
+  , toPlutusScriptPurposeIndex
   , createIndexedPlutusScriptWitnesses
   , getAnyWitnessRedeemerPointerMap
   , obtainAlonzoScriptPurposeConstraints
@@ -38,6 +40,7 @@ import Cardano.Api.Plutus.Internal.ScriptData
 import Cardano.Api.Tx.Internal.TxIn
 import Cardano.Api.Value.Internal
 
+import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Conway.Scripts qualified as L
 
 import Data.Function
@@ -142,6 +145,50 @@ toPlutusScriptPurpose index WitMint{} = L.mkMintingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitTxCert{} = L.mkCertifyingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitVote{} = L.mkVotingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitProposal{} = L.mkProposingPurpose (L.AsIx index)
+
+-- | Classify a ledger redeemer pointer ('L.PlutusPurpose' 'L.AsIx') into the
+-- 'PlutusScriptPurpose' category it belongs to and the index within that
+-- category. This is the read direction, the inverse of 'toPlutusScriptPurpose'.
+toPlutusScriptPurposeIndex
+  :: ShelleyBasedEra era
+  -> L.PlutusPurpose L.AsIx (ShelleyLedgerEra era)
+  -> (PlutusScriptPurpose, Word32)
+toPlutusScriptPurposeIndex = \case
+  -- eras before Alonzo have no plutus purposes at all - 'L.PlutusPurpose' is
+  -- a stuck type family there, so no argument can ever be supplied to these
+  -- arms; GHC cannot prove a stuck family uninhabited (an empty case trips
+  -- '-Wincomplete-patterns'), hence the error stubs
+  ShelleyBasedEraShelley -> \case
+    _ -> error "toPlutusScriptPurposeIndex: impossible"
+  ShelleyBasedEraAllegra -> \case
+    _ -> error "toPlutusScriptPurposeIndex: impossible"
+  ShelleyBasedEraMary -> \case
+    _ -> error "toPlutusScriptPurposeIndex: impossible"
+  ShelleyBasedEraAlonzo -> \case
+    L.AlonzoSpending (L.AsIx i) -> (SpendingScript, i)
+    L.AlonzoMinting (L.AsIx i) -> (MintingScript, i)
+    L.AlonzoCertifying (L.AsIx i) -> (CertifyingScript, i)
+    L.AlonzoRewarding (L.AsIx i) -> (WithdrawingScript, i)
+  ShelleyBasedEraBabbage -> \case
+    L.AlonzoSpending (L.AsIx i) -> (SpendingScript, i)
+    L.AlonzoMinting (L.AsIx i) -> (MintingScript, i)
+    L.AlonzoCertifying (L.AsIx i) -> (CertifyingScript, i)
+    L.AlonzoRewarding (L.AsIx i) -> (WithdrawingScript, i)
+  ShelleyBasedEraConway -> \case
+    L.ConwaySpending (L.AsIx i) -> (SpendingScript, i)
+    L.ConwayMinting (L.AsIx i) -> (MintingScript, i)
+    L.ConwayCertifying (L.AsIx i) -> (CertifyingScript, i)
+    L.ConwayRewarding (L.AsIx i) -> (WithdrawingScript, i)
+    L.ConwayVoting (L.AsIx i) -> (VotingScript, i)
+    L.ConwayProposing (L.AsIx i) -> (ProposingScript, i)
+  ShelleyBasedEraDijkstra -> \case
+    L.DijkstraSpending (L.AsIx i) -> (SpendingScript, i)
+    L.DijkstraMinting (L.AsIx i) -> (MintingScript, i)
+    L.DijkstraCertifying (L.AsIx i) -> (CertifyingScript, i)
+    L.DijkstraRewarding (L.AsIx i) -> (WithdrawingScript, i)
+    L.DijkstraVoting (L.AsIx i) -> (VotingScript, i)
+    L.DijkstraProposing (L.AsIx i) -> (ProposingScript, i)
+    L.DijkstraGuarding (L.AsIx i) -> (GuardingScript, i)
 
 createIndexedPlutusScriptWitness
   :: L.AlonzoEraScript era
