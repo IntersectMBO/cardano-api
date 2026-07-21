@@ -11,6 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -62,6 +63,7 @@ import Cardano.Api.Serialise.Raw
 import Cardano.Api.Serialise.SerialiseUsing
 import Cardano.Api.Serialise.TextEnvelope.Internal
 
+import Cardano.Binary.FixedSizeCodec qualified as Crypto
 import Cardano.Crypto.DSIGN qualified as DSIGN
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as Crypto
@@ -81,6 +83,14 @@ import Data.ByteString qualified as BS
 import Data.Either.Combinators (maybeToRight)
 import Data.Maybe
 import Data.String (IsString (..))
+import Data.Typeable (Typeable)
+
+-- TODO: drop these and use EncCBOR/DecCBOR
+instance Typeable kd => ToCBOR (Shelley.VKey kd) where
+  toCBOR (Shelley.VKey vk) = Crypto.encodeFixedSized vk
+
+instance Typeable kd => FromCBOR (Shelley.VKey kd) where
+  fromCBOR = Shelley.VKey <$> Crypto.decodeFixedSized
 
 --
 -- Shelley payment keys
@@ -131,23 +141,23 @@ instance Key PaymentKey where
 
 instance SerialiseAsRawBytes (VerificationKey PaymentKey) where
   serialiseToRawBytes (PaymentVerificationKey (Shelley.VKey vk)) =
-    Crypto.rawSerialiseVerKeyDSIGN vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsPaymentKey) bs =
     maybe
       (Left (SerialiseAsRawBytesError "Unable to deserialise VerificationKey PaymentKey"))
       (Right . PaymentVerificationKey . Shelley.VKey)
-      (Crypto.rawDeserialiseVerKeyDSIGN bs)
+      (Crypto.rawDecodeFixedSized bs)
 
 instance SerialiseAsRawBytes (SigningKey PaymentKey) where
   serialiseToRawBytes (PaymentSigningKey sk) =
-    Crypto.rawSerialiseSignKeyDSIGN sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsPaymentKey) bs =
     maybe
       (Left (SerialiseAsRawBytesError "Unable to serialise AsSigningKey AsPaymentKey"))
       (Right . PaymentSigningKey)
-      (Crypto.rawDeserialiseSignKeyDSIGN bs)
+      (Crypto.rawDecodeFixedSized bs)
 
 instance SerialiseAsBech32 (VerificationKey PaymentKey) where
   bech32PrefixFor _ = unsafeHumanReadablePartFromText "addr_vk"
@@ -334,7 +344,7 @@ instance CastVerificationKeyRole PaymentExtendedKey PaymentKey where
     PaymentVerificationKey
       . Shelley.VKey
       . fromMaybe impossible
-      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.rawDecodeFixedSized
       . Crypto.HD.xpubPublicKey
       $ vk
    where
@@ -387,20 +397,20 @@ instance Key StakeKey where
 
 instance SerialiseAsRawBytes (VerificationKey StakeKey) where
   serialiseToRawBytes (StakeVerificationKey (Shelley.VKey vk)) =
-    Crypto.rawSerialiseVerKeyDSIGN vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsStakeKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey StakeKey") $
       StakeVerificationKey . Shelley.VKey
-        <$> Crypto.rawDeserialiseVerKeyDSIGN bs
+        <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey StakeKey) where
   serialiseToRawBytes (StakeSigningKey sk) =
-    Crypto.rawSerialiseSignKeyDSIGN sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsStakeKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey StakeKey") $
-      StakeSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
+      StakeSigningKey <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsBech32 (VerificationKey StakeKey) where
   bech32PrefixFor _ = unsafeHumanReadablePartFromText "stake_vk"
@@ -584,7 +594,7 @@ instance CastVerificationKeyRole StakeExtendedKey StakeKey where
     StakeVerificationKey
       . Shelley.VKey
       . fromMaybe impossible
-      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.rawDecodeFixedSized
       . Crypto.HD.xpubPublicKey
       $ vk
    where
@@ -636,20 +646,20 @@ instance Key GenesisKey where
 
 instance SerialiseAsRawBytes (VerificationKey GenesisKey) where
   serialiseToRawBytes (GenesisVerificationKey (Shelley.VKey vk)) =
-    Crypto.rawSerialiseVerKeyDSIGN vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsGenesisKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey GenesisKey") $
       GenesisVerificationKey . Shelley.VKey
-        <$> Crypto.rawDeserialiseVerKeyDSIGN bs
+        <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey GenesisKey) where
   serialiseToRawBytes (GenesisSigningKey sk) =
-    Crypto.rawSerialiseSignKeyDSIGN sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsGenesisKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey GenesisKey") $
-      GenesisSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
+      GenesisSigningKey <$> Crypto.rawDecodeFixedSized bs
 
 newtype instance Hash GenesisKey
   = GenesisKeyHash {unGenesisKeyHash :: Shelley.KeyHash Shelley.GenesisRole}
@@ -732,22 +742,22 @@ instance Key CommitteeHotKey where
 
 instance SerialiseAsRawBytes (VerificationKey CommitteeHotKey) where
   serialiseToRawBytes (CommitteeHotVerificationKey (Shelley.VKey vk)) =
-    Crypto.rawSerialiseVerKeyDSIGN vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsCommitteeHotKey) bs =
     maybeToRight
       (SerialiseAsRawBytesError "Unable to deserialise VerificationKey Constitutional Committee Hot Key")
       $ CommitteeHotVerificationKey . Shelley.VKey
-        <$> Crypto.rawDeserialiseVerKeyDSIGN bs
+        <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey CommitteeHotKey) where
   serialiseToRawBytes (CommitteeHotSigningKey sk) =
-    Crypto.rawSerialiseSignKeyDSIGN sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsCommitteeHotKey) bs =
     maybeToRight
       (SerialiseAsRawBytesError "Unable to deserialise SigningKey Constitutional Committee Hot Key")
-      $ CommitteeHotSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
+      $ CommitteeHotSigningKey <$> Crypto.rawDecodeFixedSized bs
 
 newtype instance Hash CommitteeHotKey
   = CommitteeHotKeyHash
@@ -843,22 +853,22 @@ instance Key CommitteeColdKey where
 
 instance SerialiseAsRawBytes (VerificationKey CommitteeColdKey) where
   serialiseToRawBytes (CommitteeColdVerificationKey (Shelley.VKey vk)) =
-    Crypto.rawSerialiseVerKeyDSIGN vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsCommitteeColdKey) bs =
     maybeToRight
       (SerialiseAsRawBytesError "Unable to deserialise VerificationKey Constitutional Committee Cold Key")
       $ CommitteeColdVerificationKey . Shelley.VKey
-        <$> Crypto.rawDeserialiseVerKeyDSIGN bs
+        <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey CommitteeColdKey) where
   serialiseToRawBytes (CommitteeColdSigningKey sk) =
-    Crypto.rawSerialiseSignKeyDSIGN sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsCommitteeColdKey) bs =
     maybeToRight
       (SerialiseAsRawBytesError "Unable to deserialise SigningKey Constitutional Committee Cold Key")
-      $ CommitteeColdSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
+      $ CommitteeColdSigningKey <$> Crypto.rawDecodeFixedSized bs
 
 newtype instance Hash CommitteeColdKey
   = CommitteeColdKeyHash
@@ -1037,7 +1047,7 @@ instance CastVerificationKeyRole CommitteeColdExtendedKey CommitteeColdKey where
     CommitteeColdVerificationKey
       . Shelley.VKey
       . fromMaybe impossible
-      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.rawDecodeFixedSized
       . Crypto.HD.xpubPublicKey
       $ vk
    where
@@ -1172,7 +1182,7 @@ instance CastVerificationKeyRole CommitteeHotExtendedKey CommitteeHotKey where
     CommitteeHotVerificationKey
       . Shelley.VKey
       . fromMaybe impossible
-      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.rawDecodeFixedSized
       . Crypto.HD.xpubPublicKey
       $ vk
    where
@@ -1311,7 +1321,7 @@ instance CastVerificationKeyRole GenesisExtendedKey GenesisKey where
     GenesisVerificationKey
       . Shelley.VKey
       . fromMaybe impossible
-      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.rawDecodeFixedSized
       . Crypto.HD.xpubPublicKey
       $ vk
    where
@@ -1363,20 +1373,20 @@ instance Key GenesisDelegateKey where
 
 instance SerialiseAsRawBytes (VerificationKey GenesisDelegateKey) where
   serialiseToRawBytes (GenesisDelegateVerificationKey (Shelley.VKey vk)) =
-    Crypto.rawSerialiseVerKeyDSIGN vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsGenesisDelegateKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey GenesisDelegateKey") $
       GenesisDelegateVerificationKey . Shelley.VKey
-        <$> Crypto.rawDeserialiseVerKeyDSIGN bs
+        <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey GenesisDelegateKey) where
   serialiseToRawBytes (GenesisDelegateSigningKey sk) =
-    Crypto.rawSerialiseSignKeyDSIGN sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsGenesisDelegateKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey GenesisDelegateKey") $
-      GenesisDelegateSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
+      GenesisDelegateSigningKey <$> Crypto.rawDecodeFixedSized bs
 
 newtype instance Hash GenesisDelegateKey
   = GenesisDelegateKeyHash
@@ -1560,7 +1570,7 @@ instance CastVerificationKeyRole GenesisDelegateExtendedKey GenesisDelegateKey w
     GenesisDelegateVerificationKey
       . Shelley.VKey
       . fromMaybe impossible
-      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.rawDecodeFixedSized
       . Crypto.HD.xpubPublicKey
       $ vk
    where
@@ -1612,19 +1622,19 @@ instance Key GenesisUTxOKey where
 
 instance SerialiseAsRawBytes (VerificationKey GenesisUTxOKey) where
   serialiseToRawBytes (GenesisUTxOVerificationKey (Shelley.VKey vk)) =
-    Crypto.rawSerialiseVerKeyDSIGN vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsGenesisUTxOKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey GenesisUTxOKey") $
-      GenesisUTxOVerificationKey . Shelley.VKey <$> Crypto.rawDeserialiseVerKeyDSIGN bs
+      GenesisUTxOVerificationKey . Shelley.VKey <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey GenesisUTxOKey) where
   serialiseToRawBytes (GenesisUTxOSigningKey sk) =
-    Crypto.rawSerialiseSignKeyDSIGN sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsGenesisUTxOKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey GenesisUTxOKey") $
-      GenesisUTxOSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
+      GenesisUTxOSigningKey <$> Crypto.rawDecodeFixedSized bs
 
 newtype instance Hash GenesisUTxOKey
   = GenesisUTxOKeyHash {unGenesisUTxOKeyHash :: Shelley.KeyHash Shelley.Payment}
@@ -1736,22 +1746,22 @@ instance Key StakePoolKey where
 
 instance SerialiseAsRawBytes (VerificationKey StakePoolKey) where
   serialiseToRawBytes (StakePoolVerificationKey (Shelley.VKey vk)) =
-    Crypto.rawSerialiseVerKeyDSIGN vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsStakePoolKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey StakePoolKey") $
       StakePoolVerificationKey . Shelley.VKey
-        <$> Crypto.rawDeserialiseVerKeyDSIGN bs
+        <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey StakePoolKey) where
   serialiseToRawBytes (StakePoolSigningKey sk) =
-    Crypto.rawSerialiseSignKeyDSIGN sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsStakePoolKey) bs =
     maybe
       (Left (SerialiseAsRawBytesError "Unable to deserialise SigningKey StakePoolKey"))
       (Right . StakePoolSigningKey)
-      (Crypto.rawDeserialiseSignKeyDSIGN bs)
+      (Crypto.rawDecodeFixedSized bs)
 
 instance SerialiseAsBech32 (VerificationKey StakePoolKey) where
   bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool_vk"
@@ -1970,7 +1980,7 @@ instance CastVerificationKeyRole StakePoolExtendedKey StakePoolKey where
     StakePoolVerificationKey
       . Shelley.VKey
       . fromMaybe impossible
-      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.rawDecodeFixedSized
       . Crypto.HD.xpubPublicKey
       $ vk
    where
@@ -2022,22 +2032,22 @@ instance Key DRepKey where
 
 instance SerialiseAsRawBytes (VerificationKey DRepKey) where
   serialiseToRawBytes (DRepVerificationKey (Shelley.VKey vk)) =
-    Crypto.rawSerialiseVerKeyDSIGN vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsDRepKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey DRepKey") $
       DRepVerificationKey . Shelley.VKey
-        <$> Crypto.rawDeserialiseVerKeyDSIGN bs
+        <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey DRepKey) where
   serialiseToRawBytes (DRepSigningKey sk) =
-    Crypto.rawSerialiseSignKeyDSIGN sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsDRepKey) bs =
     maybe
       (Left (SerialiseAsRawBytesError "Unable to deserialise SigningKey DRepKey"))
       (Right . DRepSigningKey)
-      (Crypto.rawDeserialiseSignKeyDSIGN bs)
+      (Crypto.rawDecodeFixedSized bs)
 
 instance SerialiseAsBech32 (VerificationKey DRepKey) where
   bech32PrefixFor _ = unsafeHumanReadablePartFromText "drep_vk"
@@ -2229,7 +2239,7 @@ instance CastVerificationKeyRole DRepExtendedKey DRepKey where
     DRepVerificationKey
       . Shelley.VKey
       . fromMaybe impossible
-      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.rawDecodeFixedSized
       . Crypto.HD.xpubPublicKey
       $ vk
    where

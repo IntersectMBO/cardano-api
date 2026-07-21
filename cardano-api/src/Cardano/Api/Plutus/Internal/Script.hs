@@ -1505,7 +1505,7 @@ instance
         plutusScript = PlutusScriptBinary scriptShortBs
         plutusScriptInEra = PlutusScriptInEra $ PlutusScriptSerialised scriptShortBs
 
-    case Plutus.decodePlutusRunnable v plutusScript of
+    case Plutus.plutusRunnableResult (Plutus.decodePlutusRunnable v plutusScript) of
       Left e ->
         Left $
           CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.pack . show $ pretty e)

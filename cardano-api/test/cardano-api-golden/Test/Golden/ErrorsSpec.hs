@@ -325,8 +325,7 @@ examplePlutusWithContext :: PlutusWithContext
 examplePlutusWithContext =
   PlutusWithContext
     { pwcProtocolVersion = defaultVersion
-    , pwcScript = Left examplePlutusScript
-    , pwcScriptHash = Language.hashPlutusScript examplePlutusScript
+    , pwcScript = Language.decodePlutusRunnable defaultVersion examplePlutusScript
     , pwcArgs = examplePlutusScriptArgs
     , pwcExUnits = ExUnits 1 1
     , pwcCostModel = defaultCostModel

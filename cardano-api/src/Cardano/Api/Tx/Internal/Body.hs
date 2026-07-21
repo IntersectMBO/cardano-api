@@ -2136,7 +2136,7 @@ fromScriptWitnessIndexAlonzo i =
     ScriptWitnessIndexTxIn n -> Just $ L.AlonzoSpending (L.AsIx n)
     ScriptWitnessIndexMint n -> Just $ L.AlonzoMinting (L.AsIx n)
     ScriptWitnessIndexCertificate n -> Just $ L.AlonzoCertifying (L.AsIx n)
-    ScriptWitnessIndexWithdrawal n -> Just $ L.AlonzoRewarding (L.AsIx n)
+    ScriptWitnessIndexWithdrawal n -> Just $ L.AlonzoWithdrawing (L.AsIx n)
     _ -> Nothing
 
 fromScriptWitnessIndexBabbage
@@ -2146,7 +2146,7 @@ fromScriptWitnessIndexBabbage i =
     ScriptWitnessIndexTxIn n -> Just $ L.AlonzoSpending (L.AsIx n)
     ScriptWitnessIndexMint n -> Just $ L.AlonzoMinting (L.AsIx n)
     ScriptWitnessIndexCertificate n -> Just $ L.AlonzoCertifying (L.AsIx n)
-    ScriptWitnessIndexWithdrawal n -> Just $ L.AlonzoRewarding (L.AsIx n)
+    ScriptWitnessIndexWithdrawal n -> Just $ L.AlonzoWithdrawing (L.AsIx n)
     _ -> Nothing
 
 fromScriptWitnessIndexConway
@@ -2156,7 +2156,7 @@ fromScriptWitnessIndexConway i =
     ScriptWitnessIndexTxIn n -> Just $ L.ConwaySpending (L.AsIx n)
     ScriptWitnessIndexMint n -> Just $ L.ConwayMinting (L.AsIx n)
     ScriptWitnessIndexCertificate n -> Just $ L.ConwayCertifying (L.AsIx n)
-    ScriptWitnessIndexWithdrawal n -> Just $ L.ConwayRewarding (L.AsIx n)
+    ScriptWitnessIndexWithdrawal n -> Just $ L.ConwayWithdrawing (L.AsIx n)
     ScriptWitnessIndexVoting n -> Just $ L.ConwayVoting (L.AsIx n)
     ScriptWitnessIndexProposing n -> Just $ L.ConwayProposing (L.AsIx n)
 
@@ -2167,7 +2167,7 @@ fromScriptWitnessIndexDijkstra i =
     ScriptWitnessIndexTxIn n -> Just $ L.DijkstraSpending (L.AsIx n)
     ScriptWitnessIndexMint n -> Just $ L.DijkstraMinting (L.AsIx n)
     ScriptWitnessIndexCertificate n -> Just $ L.DijkstraCertifying (L.AsIx n)
-    ScriptWitnessIndexWithdrawal n -> Just $ L.DijkstraRewarding (L.AsIx n)
+    ScriptWitnessIndexWithdrawal n -> Just $ L.DijkstraWithdrawing (L.AsIx n)
     ScriptWitnessIndexVoting n -> Just $ L.DijkstraVoting (L.AsIx n)
     ScriptWitnessIndexProposing n -> Just $ L.DijkstraProposing (L.AsIx n)
 

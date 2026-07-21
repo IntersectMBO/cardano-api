@@ -118,7 +118,7 @@ genAlonzoGenesis = do
                 Nothing -> Map.empty
             )
             [Alonzo.PlutusV2 .. maxBound]
-      extraConfig = Just $ Alonzo.AlonzoExtraConfig $ Just $ L.mkCostModels v2OnwardsCostModels
+      extraConfig = Ledger.SJust $ Alonzo.AlonzoExtraConfig $ Just $ L.mkCostModels v2OnwardsCostModels
   prices' <- genPrices
   maxTxExUnits' <- genExUnits
   maxBlockExUnits' <- genExUnits

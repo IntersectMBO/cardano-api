@@ -35,6 +35,7 @@ import Cardano.Api.Serialise.Raw
 import Cardano.Api.Serialise.SerialiseUsing
 import Cardano.Api.Serialise.TextEnvelope.Internal
 
+import Cardano.Binary.FixedSizeCodec qualified as Crypto
 import Cardano.Crypto.DSIGN.BLS12381 qualified as Crypto
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as Crypto
@@ -91,19 +92,19 @@ instance Key BlsKey where
 
 instance SerialiseAsRawBytes (VerificationKey BlsKey) where
   serialiseToRawBytes (BlsVerificationKey vk) =
-    Crypto.rawSerialiseVerKeyDSIGN vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsBlsKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey BlsKey") $
-      BlsVerificationKey <$> Crypto.rawDeserialiseVerKeyDSIGN bs
+      BlsVerificationKey <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey BlsKey) where
   serialiseToRawBytes (BlsSigningKey sk) =
-    Crypto.rawSerialiseSignKeyDSIGN sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsBlsKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey BlsKey") $
-      BlsSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
+      BlsSigningKey <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsBech32 (VerificationKey BlsKey) where
   bech32PrefixFor _ = unsafeHumanReadablePartFromText "bls_vk"
@@ -173,11 +174,11 @@ instance Pretty BlsPossessionProof where
 
 instance SerialiseAsRawBytes BlsPossessionProof where
   serialiseToRawBytes (BlsPossessionProof proof) =
-    Crypto.rawSerialisePossessionProofDSIGN proof
+    Crypto.rawEncodeFixedSized proof
 
   deserialiseFromRawBytes AsBlsPossessionProof bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise BlsPossessionProof") $
-      BlsPossessionProof <$> Crypto.rawDeserialisePossessionProofDSIGN bs
+      BlsPossessionProof <$> Crypto.rawDecodeFixedSized bs
 
 -- | Construct a 'BlsPossessionProof' from a hex-encoded raw 'ByteString'.
 --

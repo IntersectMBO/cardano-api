@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -104,8 +103,9 @@ instance
     tryPlutusScript script = do
       ps <- L.toPlutusScript script
       L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) ->
-        AnyPlutusScript . PlutusScriptInEra
-          <$> rightToMaybe (Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus)
+        let plutusRunnable = Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus
+         in AnyPlutusScript . PlutusScriptInEra
+              <$> (plutusRunnable <$ rightToMaybe (Plutus.plutusRunnableResult plutusRunnable))
 
     noParseError :: CBOR.DecoderError
     noParseError =

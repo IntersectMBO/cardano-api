@@ -58,48 +58,21 @@ testDSIGNAlgorithm _ n =
         "serialisation"
         [ testGroup
             "raw"
-            [ testProperty "VerKey" $
-                prop_raw_serialise @(VerKeyDSIGN v)
-                  rawSerialiseVerKeyDSIGN
-                  rawDeserialiseVerKeyDSIGN
-            , testProperty "SignKey" $
-                prop_raw_serialise @(SignKeyDSIGN v)
-                  rawSerialiseSignKeyDSIGN
-                  rawDeserialiseSignKeyDSIGN
-            , testProperty "Sig" $
-                prop_raw_serialise @(SigDSIGN v)
-                  rawSerialiseSigDSIGN
-                  rawDeserialiseSigDSIGN
+            [ testProperty "VerKey" $ prop_raw_serialise_fixed_sized @(VerKeyDSIGN v)
+            , testProperty "SignKey" $ prop_raw_serialise_fixed_sized @(SignKeyDSIGN v)
+            , testProperty "Sig" $ prop_raw_serialise_fixed_sized @(SigDSIGN v)
             ]
         , testGroup
             "size"
-            [ testProperty "VerKey" $
-                prop_size_serialise @(VerKeyDSIGN v)
-                  rawSerialiseVerKeyDSIGN
-                  (verKeySizeDSIGN (Proxy @v))
-            , testProperty "SignKey" $
-                prop_size_serialise @(SignKeyDSIGN v)
-                  rawSerialiseSignKeyDSIGN
-                  (signKeySizeDSIGN (Proxy @v))
-            , testProperty "Sig" $
-                prop_size_serialise @(SigDSIGN v)
-                  rawSerialiseSigDSIGN
-                  (sigSizeDSIGN (Proxy @v))
+            [ testProperty "VerKey" $ prop_size_serialise_fixed_sized @(VerKeyDSIGN v)
+            , testProperty "SignKey" $ prop_size_serialise_fixed_sized @(SignKeyDSIGN v)
+            , testProperty "Sig" $ prop_size_serialise_fixed_sized @(SigDSIGN v)
             ]
         , testGroup
             "direct CBOR"
-            [ testProperty "VerKey" $
-                prop_cbor_with @(VerKeyDSIGN v)
-                  encodeVerKeyDSIGN
-                  decodeVerKeyDSIGN
-            , testProperty "SignKey" $
-                prop_cbor_with @(SignKeyDSIGN v)
-                  encodeSignKeyDSIGN
-                  decodeSignKeyDSIGN
-            , testProperty "Sig" $
-                prop_cbor_with @(SigDSIGN v)
-                  encodeSigDSIGN
-                  decodeSigDSIGN
+            [ testProperty "VerKey" $ prop_cbor_fixed_sized @(VerKeyDSIGN v)
+            , testProperty "SignKey" $ prop_cbor_fixed_sized @(SignKeyDSIGN v)
+            , testProperty "Sig" $ prop_cbor_fixed_sized @(SigDSIGN v)
             ]
         , testGroup
             "To/FromCBOR class"
@@ -115,15 +88,9 @@ testDSIGNAlgorithm _ n =
             ]
         , testGroup
             "direct matches class"
-            [ testProperty "VerKey" $
-                prop_cbor_direct_vs_class @(VerKeyDSIGN v)
-                  encodeVerKeyDSIGN
-            , testProperty "SignKey" $
-                prop_cbor_direct_vs_class @(SignKeyDSIGN v)
-                  encodeSignKeyDSIGN
-            , testProperty "Sig" $
-                prop_cbor_direct_vs_class @(SigDSIGN v)
-                  encodeSigDSIGN
+            [ testProperty "VerKey" $ prop_cbor_fixed_sized_vs_class @(VerKeyDSIGN v)
+            , testProperty "SignKey" $ prop_cbor_fixed_sized_vs_class @(SignKeyDSIGN v)
+            , testProperty "Sig" $ prop_cbor_fixed_sized_vs_class @(SigDSIGN v)
             ]
         ]
     , testGroup

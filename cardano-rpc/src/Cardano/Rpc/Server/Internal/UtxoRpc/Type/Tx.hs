@@ -40,6 +40,7 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
   , txOutToUtxoRpcTxOutput
   )
 
+import Cardano.Binary.FixedSizeCodec (rawEncodeFixedSized)
 import Cardano.Crypto.DSIGN.Class qualified as DSIGN
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
@@ -48,7 +49,9 @@ import Cardano.Ledger.Keys.Bootstrap qualified as L
 
 import RIO hiding (toList)
 
+import Data.ByteString.Short qualified as SBS
 import Data.Map.Strict qualified as M
+import Data.MemPack.Buffer (byteArrayToShortByteString)
 import Data.ProtoLens (defMessage)
 import GHC.IsList
 import Network.GRPC.Spec
@@ -120,23 +123,25 @@ txToUtxoRpcTx ledgerTx = anyEraTxConstraints sbe $ do
       -- a transaction marked invalid during phase-2 validation consumes its
       -- collateral instead of producing its outputs; before Alonzo every
       -- transaction is valid
-      L.IsValid isValid = fromMaybe (L.IsValid True) $ ledgerTx ^. L.isValidTxG
+      isValid = fromMaybe L.Phase2Valid (ledgerTx ^. L.isPhase2ValidTxG) == L.Phase2Valid
       vkeyWitnesses :: [Proto UtxoRpc.VKeyWitness]
       vkeyWitnesses =
         toList (wits ^. L.addrTxWitsL) <&> \(L.WitVKey (L.VKey vkey) (DSIGN.SignedDSIGN signature)) ->
           defMessage
-            & U5c.vkey .~ DSIGN.rawSerialiseVerKeyDSIGN vkey
-            & U5c.signature .~ DSIGN.rawSerialiseSigDSIGN signature
+            & U5c.vkey .~ rawEncodeFixedSized vkey
+            & U5c.signature .~ rawEncodeFixedSized signature
       bootstrapWitnesses :: [Proto UtxoRpc.BootstrapWitness]
       bootstrapWitnesses =
         toList (wits ^. L.bootAddrTxWitsL) <&> \bootstrapWitness -> do
           let L.VKey bootstrapKey = L.bwKey bootstrapWitness
               DSIGN.SignedDSIGN bootstrapSignature = L.bwSignature bootstrapWitness
           defMessage
-            & U5c.vkey .~ DSIGN.rawSerialiseVerKeyDSIGN bootstrapKey
-            & U5c.signature .~ DSIGN.rawSerialiseSigDSIGN bootstrapSignature
-            & U5c.chainCode .~ L.unChainCode (L.bwChainCode bootstrapWitness)
-            & U5c.attributes .~ L.bwAttributes bootstrapWitness
+            & U5c.vkey .~ rawEncodeFixedSized bootstrapKey
+            & U5c.signature .~ rawEncodeFixedSized bootstrapSignature
+            & U5c.chainCode
+              .~ SBS.fromShort (byteArrayToShortByteString (L.unChainCode (L.bwChainCode bootstrapWitness)))
+            & U5c.attributes
+              .~ SBS.fromShort (byteArrayToShortByteString (L.bwAttributes bootstrapWitness))
       scriptWitnesses :: [Proto UtxoRpc.Script]
       scriptWitnesses =
         M.elems (wits ^. L.scriptTxWitsL) <&> ledgerScriptToUtxoRpcScript sbe
@@ -273,7 +278,7 @@ metadatumToUtxoRpcMetadatum = \case
           fromInteger . max (toInteger (minBound @Int64)) $
             min (toInteger (maxBound @Int64)) int
     defMessage & U5c.int .~ clamped
-  L.B bytes -> defMessage & U5c.bytes .~ bytes
+  L.B bytes -> defMessage & U5c.bytes .~ SBS.fromShort (byteArrayToShortByteString bytes)
   L.S text -> defMessage & U5c.text .~ text
   L.List elements ->
     defMessage & U5c.array . U5c.items .~ map metadatumToUtxoRpcMetadatum elements

@@ -257,9 +257,7 @@ deriving newtype instance ToJSON (Babbage.ApplyTxError Consensus.BabbageEra)
 
 deriving newtype instance ToJSON (Conway.ApplyTxError Consensus.ConwayEra)
 
--- TODO Dijkstra: fix this ToJSON instance when the era is stable in Ledger
-instance ToJSON (Dijkstra.ApplyTxError Consensus.DijkstraEra) where
-  toJSON = error "TODO Dijkstra: toJSON @(ApplyTxError DijkstraEra): era not active"
+deriving newtype instance ToJSON (Dijkstra.ApplyTxError Consensus.DijkstraEra)
 
 deriving via
   ShowOf (L.Keys.VKey L.Keys.Witness)
@@ -285,6 +283,11 @@ deriving via
   ShowOf (L.ConwayLedgerPredFailure ledgerera)
   instance
     Show (L.ConwayLedgerPredFailure ledgerera) => ToJSON (L.ConwayLedgerPredFailure ledgerera)
+
+deriving via
+  ShowOf (L.DijkstraMempoolPredFailure ledgerera)
+  instance
+    Show (L.DijkstraMempoolPredFailure ledgerera) => ToJSON (L.DijkstraMempoolPredFailure ledgerera)
 
 deriving via
   ShowOf (L.ShelleyDelegsPredFailure ledgerera)

@@ -366,7 +366,7 @@ alonzoGenesisDefaults =
     , agPlutusV1CostModel = either (error . show) id (L.mkCostModel PlutusV1 defaultV1CostModelValues)
     , agCollateralPercentage = 150
     , agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
-    , agExtraConfig = Just . AlonzoExtraConfig . Just $ errorFail apiCostModels
+    , agExtraConfig = SJust . AlonzoExtraConfig . Just $ errorFail apiCostModels
     }
  where
   apiCostModels =
