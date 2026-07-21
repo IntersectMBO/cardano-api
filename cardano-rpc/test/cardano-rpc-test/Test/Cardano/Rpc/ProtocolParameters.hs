@@ -105,7 +105,7 @@ clipI n v
 pvMajorL :: Lens' L.ProtVer L.Version
 pvMajorL = lens L.pvMajor $ \p v -> p{L.pvMajor = v}
 
-pvMinorL :: Lens' L.ProtVer Natural
+pvMinorL :: Lens' L.ProtVer Word32
 pvMinorL = lens L.pvMinor $ \p v -> p{L.pvMinor = v}
 
 prStepsL :: Lens' L.Prices L.NonNegativeInterval

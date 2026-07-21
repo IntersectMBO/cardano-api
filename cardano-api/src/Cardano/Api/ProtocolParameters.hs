@@ -544,7 +544,7 @@ pparamsUpdateToIntroducedInBabbagePParams w ppupdate =
 
 data ProtocolParameters
   = ProtocolParameters
-  { protocolParamProtocolVersion :: (Natural, Natural)
+  { protocolParamProtocolVersion :: (Natural, Word32)
   -- ^ Protocol version, major and minor. Updating the major version is
   -- used to trigger hard forks.
   --                              (Major  , Minor  )

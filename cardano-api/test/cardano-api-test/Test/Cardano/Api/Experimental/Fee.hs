@@ -555,14 +555,13 @@ prop_calcMinFeeRecursive_well_funded_succeeds = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genFundedSimpleTx Exp.ConwayEra
   Exp.UnsignedTx resultLedgerTx <-
     H.leftFail $
-      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0
   let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
   H.assertWith resultFee (> L.Coin 0)
   -- The resulting transaction must be fully balanced (zero balance).
   let balance =
         UnexportedLedger.evalBalanceTxBody
           exampleProtocolParams
-          (const Nothing)
           (const Nothing)
           (const False)
           utxo
@@ -577,13 +576,12 @@ prop_calcMinFeeRecursive_well_funded_multi_asset = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genFundedMultiAssetTx Exp.ConwayEra
   Exp.UnsignedTx resultLedgerTx <-
     H.leftFail $
-      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0
   let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
   H.assertWith resultFee (> L.Coin 0)
   let balance =
         UnexportedLedger.evalBalanceTxBody
           exampleProtocolParams
-          (const Nothing)
           (const Nothing)
           (const False)
           utxo
@@ -598,10 +596,10 @@ prop_calcMinFeeRecursive_fee_fixpoint = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genFundedSimpleTx Exp.ConwayEra
   resultTx <-
     H.leftFail $
-      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0
   secondResult <-
     H.leftFail $
-      Exp.calcMinFeeRecursive changeAddr resultTx utxo exampleProtocolParams mempty mempty mempty 0
+      Exp.calcMinFeeRecursive changeAddr resultTx utxo exampleProtocolParams mempty mempty 0
   resultTx H.=== secondResult
 
 -- | When the outputs exceed the UTxO value the function returns
@@ -609,7 +607,7 @@ prop_calcMinFeeRecursive_fee_fixpoint = H.property $ do
 prop_calcMinFeeRecursive_insufficient_funds :: Property
 prop_calcMinFeeRecursive_insufficient_funds = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genUnderfundedTx Exp.ConwayEra
-  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
+  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0 of
     Left (Exp.NotEnoughAdaForNewOutput deficit) -> H.assertWith deficit (< L.Coin 0)
     Left Exp.NonAdaAssetsUnbalanced{} -> H.annotate "Unexpected NonAdaAssetsUnbalanced error" >> H.failure
     Left Exp.MinUTxONotMet{} -> H.annotate "Unexpected MinUTxONotMet error" >> H.failure
@@ -622,7 +620,7 @@ prop_calcMinFeeRecursive_insufficient_funds = H.property $ do
 prop_calcMinFeeRecursive_non_ada_unbalanced :: Property
 prop_calcMinFeeRecursive_non_ada_unbalanced = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genNonAdaUnbalancedTx Exp.ConwayEra
-  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
+  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0 of
     Left (Exp.NonAdaAssetsUnbalanced _) -> H.success
     Left Exp.NotEnoughAdaForChangeOutput{} -> H.annotate "Unexpected NotEnoughAdaForChangeOutput" >> H.failure
     Left Exp.NotEnoughAdaForNewOutput{} -> H.annotate "Unexpected NotEnoughAdaForNewOutput" >> H.failure
@@ -636,7 +634,7 @@ prop_calcMinFeeRecursive_non_ada_unbalanced = H.property $ do
 prop_calcMinFeeRecursive_min_utxo_not_met :: Property
 prop_calcMinFeeRecursive_min_utxo_not_met = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genMinUTxOViolatingTx Exp.ConwayEra
-  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
+  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0 of
     Left (Exp.MinUTxONotMet actual required) ->
       H.assertWith (actual, required) (uncurry (<))
     Left Exp.NotEnoughAdaForChangeOutput{} -> H.annotate "Unexpected NotEnoughAdaForChangeOutput" >> H.failure
@@ -652,7 +650,7 @@ prop_calcMinFeeRecursive_no_tx_outs = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genNoOutputsTx Exp.ConwayEra
   Exp.UnsignedTx resultLedgerTx <-
     H.leftFail $
-      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0
   let outs = toList $ resultLedgerTx ^. L.bodyTxL . L.outputsTxBodyL
   -- The result should have exactly one output (the change output)
   length outs H.=== 1
@@ -663,7 +661,7 @@ prop_calcMinFeeRecursive_no_tx_outs = H.property $ do
 prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada :: Property
 prop_calcMinFeeRecursive_tiny_surplus_not_enough_ada = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genTinySurplusTx Exp.ConwayEra
-  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
+  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0 of
     Left (Exp.NotEnoughAdaForChangeOutput deficit) ->
       H.assertWith deficit (< L.Coin 0)
     Left (Exp.MinUTxONotMet actual required) ->
@@ -684,13 +682,12 @@ prop_calcMinFeeRecursive_withdrawal_funded_succeeds = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genWithdrawalFundedTx Exp.ConwayEra
   Exp.UnsignedTx resultLedgerTx <-
     H.leftFail $
-      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0
   let resultFee = resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL
   H.assertWith resultFee (> L.Coin 0)
   let balance =
         UnexportedLedger.evalBalanceTxBody
           exampleProtocolParams
-          (const Nothing)
           (const Nothing)
           (const False)
           utxo
@@ -704,7 +701,7 @@ prop_calcMinFeeRecursive_withdrawal_funded_succeeds = H.property $ do
 prop_calcMinFeeRecursive_withdrawal_tiny_input_fails :: Property
 prop_calcMinFeeRecursive_withdrawal_tiny_input_fails = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genWithdrawalTinyInputTx Exp.ConwayEra
-  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0 of
+  case Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0 of
     Left (Exp.NotEnoughAdaForChangeOutput deficit) ->
       H.assertWith deficit (< L.Coin 0)
     Left (Exp.NotEnoughAdaForNewOutput deficit) ->
@@ -734,7 +731,6 @@ prop_makeTransactionBodyAutoBalance_balance_negative = H.property $ do
     systemStart
     epochInfo
     exampleProtocolParams
-    mempty
     mempty
     mempty
     utxo
@@ -770,7 +766,7 @@ prop_evaluateSignedTx_balanced_mempty = H.property $ do
   (unsignedTx, utxo, changeAddr) <- H.forAll $ genFundedSimpleTx Exp.ConwayEra
   Exp.UnsignedTx balancedLedgerTx <-
     H.leftFail $
-      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty mempty 0
+      Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0
   let signedTx = Exp.SignedTx balancedLedgerTx
       systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
       epochInfo =
@@ -781,7 +777,6 @@ prop_evaluateSignedTx_balanced_mempty = H.property $ do
           systemStart
           epochInfo
           exampleProtocolParams
-          mempty
           mempty
           mempty
           utxo
@@ -808,7 +803,6 @@ evalSimpleTx = do
           systemStart
           epochInfo
           exampleProtocolParams
-          mempty
           mempty
           mempty
           utxo
