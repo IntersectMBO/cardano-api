@@ -45,7 +45,7 @@ import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Control.Monad.Trans.Except (runExceptT)
 import Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (bimap, first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Either.Combinators (maybeToRight, rightToMaybe)
@@ -176,7 +176,7 @@ simpleScriptTextEnvelopeType =
 
 -- | Decode an 'AnyScript' from its serialised form: a text envelope wrapping
 -- the CBOR encoding of either a simple or a Plutus script, or (as a fallback)
--- the legacy JSON-only encoding of a simple script.
+-- the JSON-only encoding of a simple script.
 readAnyScriptBytes
   :: forall era
    . Era era
@@ -184,32 +184,48 @@ readAnyScriptBytes
   -> Either AnyScriptDecodeError (AnyScript (LedgerEra era))
 readAnyScriptBytes era bs =
   case deserialiseFromJSON bs :: Either JsonDecodeError TextEnvelope of
-    Right te ->
-      let scriptBs = teRawCBOR te
-          TextEnvelopeType anyScriptType = teType te
-       in case textToPlutusLanguage (Text.pack anyScriptType) of
-            Just lang ->
-              case obtainCommonConstraints era $
-                     decodeAnyPlutusScript @(LedgerEra era) scriptBs lang
-                     :: Either CBOR.DecoderError (PlutusScript.AnyPlutusScript (LedgerEra era)) of
-                Left e -> Left (AnyScriptPlutusCborError lang e)
-                Right (PlutusScript.AnyPlutusScript ps) -> Right (AnyPlutusScript ps)
-            Nothing
-              | teType te == simpleScriptTextEnvelopeType ->
-                  bimap AnyScriptSimpleCborError AnySimpleScript $
-                    obtainCommonConstraints era (deserialiseSimpleScript scriptBs)
-              | otherwise ->
-                  Left (AnyScriptUnknownTextEnvelopeType (teType te))
-    Left teErr ->
-      case deserialiseFromJSON bs :: Either JsonDecodeError OldScript.SimpleScript of
-        Left e -> Left (AnyScriptJsonError teErr e)
-        Right script ->
-          case era of
-            DijkstraEra -> error "TODO Dijkstra: Simple script not supported"
-            ConwayEra ->
-              obtainConwayConstraints era $
-                Right . AnySimpleScript . SimpleScript $
-                  toAllegraTimelock script
+    Right te -> readTextEnvelopeScript era te
+    Left teErr -> first (AnyScriptJsonError teErr) (readSimpleScriptFromJson era bs)
+
+-- | Decode an 'AnyScript' from a text envelope, selecting the Plutus or simple
+-- script CBOR decoder from the envelope type, and rejecting envelope types that
+-- are not scripts.
+readTextEnvelopeScript
+  :: forall era
+   . Era era
+  -> TextEnvelope
+  -> Either AnyScriptDecodeError (AnyScript (LedgerEra era))
+readTextEnvelopeScript era te =
+  let scriptBs = teRawCBOR te
+      TextEnvelopeType anyScriptType = teType te
+   in case textToPlutusLanguage (Text.pack anyScriptType) of
+        Just lang ->
+          case obtainCommonConstraints era $
+                 decodeAnyPlutusScript @(LedgerEra era) scriptBs lang
+                 :: Either CBOR.DecoderError (PlutusScript.AnyPlutusScript (LedgerEra era)) of
+            Left e -> Left (AnyScriptPlutusCborError lang e)
+            Right (PlutusScript.AnyPlutusScript ps) -> Right (AnyPlutusScript ps)
+        Nothing
+          | teType te == simpleScriptTextEnvelopeType ->
+              bimap AnyScriptSimpleCborError AnySimpleScript $
+                obtainCommonConstraints era (deserialiseSimpleScript scriptBs)
+          | otherwise ->
+              Left (AnyScriptUnknownTextEnvelopeType (teType te))
+
+-- | Decode an 'AnyScript' from the JSON-only simple script encoding.
+readSimpleScriptFromJson
+  :: forall era
+   . Era era
+  -> ByteString
+  -> Either JsonDecodeError (AnyScript (LedgerEra era))
+readSimpleScriptFromJson era bs = do
+  script <- deserialiseFromJSON bs :: Either JsonDecodeError OldScript.SimpleScript
+  case era of
+    DijkstraEra -> error "TODO Dijkstra: Simple script not supported"
+    ConwayEra ->
+      obtainConwayConstraints era $
+        Right . AnySimpleScript . SimpleScript $
+          toAllegraTimelock script
 
 readFileAnyScript
   :: Era era
