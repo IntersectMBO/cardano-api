@@ -163,7 +163,8 @@ module Cardano.Api.Ledger.Internal.Reexport
   , pattern AlonzoGenesis
   , AsIxItem (..)
   , EraGov
-  , EraTx (witsTxL, bodyTxL)
+  , EraTx (witsTxL, bodyTxL, auxDataTxL)
+  , EraTxAuxData (metadataTxAuxDataL)
   , EraTxBody (..)
   , TopTx
   , Tx
@@ -228,7 +229,7 @@ import Cardano.Ledger.Alonzo.Core
   , AsIxItem (AsIxItem)
   , CoinPerWord (..)
   , EraGov
-  , EraTx (bodyTxL, witsTxL)
+  , EraTx (bodyTxL, witsTxL, auxDataTxL)
   , EraTxWits (..)
   , PParamsUpdate (..)
   , Tx
@@ -347,6 +348,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
   ( Era (..)
   , EraPParams (..)
+  , EraTxAuxData (metadataTxAuxDataL)
   , EraTxBody (..)
   , EraTxOut
   , PParams (..)
