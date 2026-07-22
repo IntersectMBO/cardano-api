@@ -2,6 +2,7 @@ module Cardano.Api.Consensus.Internal.Reexport
   ( BlockComponent (..)
   , ByronBlock
   , CardanoBlock
+  , ChainUpdate (..)
   , ConfigSupportsNode
   , ChainDepState
   , GenTx (..)
@@ -15,6 +16,7 @@ module Cardano.Api.Consensus.Internal.Reexport
   , PraosProtocolSupportsNode
   , PraosProtocolSupportsNodeCrypto
   , RealPoint (..)
+  , ResourceRegistry
   , ShelleyGenesisStaking (..)
   , StandardCrypto
   , TopLevelConfig
@@ -32,6 +34,7 @@ module Cardano.Api.Consensus.Internal.Reexport
   , mkInterpreter
   , unsafeExtendSafeZone
   , txId
+  , withRegistry
   )
 where
 
@@ -68,3 +71,6 @@ import Ouroboros.Consensus.Protocol.Praos.Common
 import Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 import Ouroboros.Consensus.Storage.Common (BlockComponent (..))
 import Ouroboros.Consensus.Util.Condense (condense)
+import Ouroboros.Network.Block (ChainUpdate (..))
+
+import Control.ResourceRegistry (ResourceRegistry, withRegistry)

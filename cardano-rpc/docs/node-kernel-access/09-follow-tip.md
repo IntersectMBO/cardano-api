@@ -55,7 +55,7 @@ Changelog fragment: cardano-api, `compatible`.
 
 In `Cardano.Rpc.Server.NodeKernelAccess`:
 
-- `data ChainChange = ChainApply RawBlock | ChainRollBack ChainPoint` where `RawBlock` carries the raw CBOR and the parsed `BlockInMode` (same pair `fetchBlock` returns).
+- `data ChainChange = ChainApply (ByteString, BlockInMode) | ChainRollBack ChainPoint` - the apply payload is the same raw-bytes-plus-parsed-block pair `fetchBlock` returns.
   Note: consensus `RollBack` carries only the rollback point, never the rolled-back blocks, which constrains what `undo` can contain (see the scope note in phase 4).
 - `data ChainFollower = ChainFollower { nextChange :: IO ChainChange, findIntersect :: [ChainPoint] -> IO (Maybe ChainPoint) }`.
 - `withFollower :: NodeKernelAccess -> (ChainFollower -> IO a) -> IO a` with bracket semantics: `withRegistry`, `ChainDB.newFollower` with a block component fetching raw bytes and the block (as in `fetchBlock`), `followerClose` on all exit paths.

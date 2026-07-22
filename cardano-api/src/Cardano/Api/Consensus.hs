@@ -52,9 +52,13 @@ module Cardano.Api.Consensus
   , ByronBlock
   , CardanoBlock
   , ChainDB.ChainDB
+  , ChainDB.ChainType (..)
+  , ChainDB.Follower (..)
   , ChainDB.getBlockComponent
   , ChainDB.getCurrentLedger
   , ChainDB.getTipHeader
+  , ChainDB.newFollower
+  , ChainUpdate (..)
   , ConfigSupportsNode
   , ChainDepState
   , GenTx (..)
@@ -68,6 +72,7 @@ module Cardano.Api.Consensus
   , PraosProtocolSupportsNode
   , PraosProtocolSupportsNodeCrypto
   , RealPoint (..)
+  , ResourceRegistry
   , ShelleyGenesisStaking (..)
   , StandardCrypto
   , TopLevelConfig
@@ -85,6 +90,7 @@ module Cardano.Api.Consensus
   , mkInterpreter
   , unsafeExtendSafeZone
   , txId
+  , withRegistry
   )
 where
 
