@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1262
+kind:
+  - compatible
+description: |
+  Re-export the ledger accessors `auxDataTxL` (via `EraTx`) and `metadataTxAuxDataL` (via `EraTxAuxData`) from `Cardano.Api.Ledger`, so downstream code can read a transaction's auxiliary data (metadata) through the ledger lenses without depending on `cardano-ledger` directly.
