@@ -2693,7 +2693,12 @@ makeShelleyTransactionBody
     let bOn = BabbageEraOnwardsDijkstra
     validateTxBodyContent sbe txbodycontent
     let scriptIntegrityHash =
-          convPParamsToScriptIntegrityHash AlonzoEraOnwardsDijkstra txProtocolParams redeemers datums languages
+          convPParamsToScriptIntegrityHash
+            AlonzoEraOnwardsDijkstra
+            txProtocolParams
+            redeemers
+            datums
+            languages
     let txbody =
           ( mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
               & A.collateralInputsTxBodyL azOn
@@ -2918,7 +2923,7 @@ fromScriptWitnessIndexAlonzo i =
     ScriptWitnessIndexTxIn n -> Just $ L.AlonzoSpending (L.AsIx n)
     ScriptWitnessIndexMint n -> Just $ L.AlonzoMinting (L.AsIx n)
     ScriptWitnessIndexCertificate n -> Just $ L.AlonzoCertifying (L.AsIx n)
-    ScriptWitnessIndexWithdrawal n -> Just $ L.AlonzoRewarding (L.AsIx n)
+    ScriptWitnessIndexWithdrawal n -> Just $ L.AlonzoWithdrawing (L.AsIx n)
     _ -> Nothing
 
 fromScriptWitnessIndexBabbage
@@ -2928,7 +2933,7 @@ fromScriptWitnessIndexBabbage i =
     ScriptWitnessIndexTxIn n -> Just $ L.AlonzoSpending (L.AsIx n)
     ScriptWitnessIndexMint n -> Just $ L.AlonzoMinting (L.AsIx n)
     ScriptWitnessIndexCertificate n -> Just $ L.AlonzoCertifying (L.AsIx n)
-    ScriptWitnessIndexWithdrawal n -> Just $ L.AlonzoRewarding (L.AsIx n)
+    ScriptWitnessIndexWithdrawal n -> Just $ L.AlonzoWithdrawing (L.AsIx n)
     _ -> Nothing
 
 fromScriptWitnessIndexConway
@@ -2938,7 +2943,7 @@ fromScriptWitnessIndexConway i =
     ScriptWitnessIndexTxIn n -> Just $ L.ConwaySpending (L.AsIx n)
     ScriptWitnessIndexMint n -> Just $ L.ConwayMinting (L.AsIx n)
     ScriptWitnessIndexCertificate n -> Just $ L.ConwayCertifying (L.AsIx n)
-    ScriptWitnessIndexWithdrawal n -> Just $ L.ConwayRewarding (L.AsIx n)
+    ScriptWitnessIndexWithdrawal n -> Just $ L.ConwayWithdrawing (L.AsIx n)
     ScriptWitnessIndexVoting n -> Just $ L.ConwayVoting (L.AsIx n)
     ScriptWitnessIndexProposing n -> Just $ L.ConwayProposing (L.AsIx n)
 
@@ -2949,7 +2954,7 @@ fromScriptWitnessIndexDijkstra i =
     ScriptWitnessIndexTxIn n -> Just $ L.DijkstraSpending (L.AsIx n)
     ScriptWitnessIndexMint n -> Just $ L.DijkstraMinting (L.AsIx n)
     ScriptWitnessIndexCertificate n -> Just $ L.DijkstraCertifying (L.AsIx n)
-    ScriptWitnessIndexWithdrawal n -> Just $ L.DijkstraRewarding (L.AsIx n)
+    ScriptWitnessIndexWithdrawal n -> Just $ L.DijkstraWithdrawing (L.AsIx n)
     ScriptWitnessIndexVoting n -> Just $ L.DijkstraVoting (L.AsIx n)
     ScriptWitnessIndexProposing n -> Just $ L.DijkstraProposing (L.AsIx n)
 
@@ -2972,7 +2977,7 @@ toScriptIndexAlonzo scriptPurposeIndex =
     L.AlonzoSpending (L.AsIx i) -> ScriptWitnessIndexTxIn i
     L.AlonzoMinting (L.AsIx i) -> ScriptWitnessIndexMint i
     L.AlonzoCertifying (L.AsIx i) -> ScriptWitnessIndexCertificate i
-    L.AlonzoRewarding (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
+    L.AlonzoWithdrawing (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
 
 toScriptIndexConway
   :: L.ConwayPlutusPurpose L.AsIx (ShelleyLedgerEra era)
@@ -2982,7 +2987,7 @@ toScriptIndexConway scriptPurposeIndex =
     L.ConwaySpending (L.AsIx i) -> ScriptWitnessIndexTxIn i
     L.ConwayMinting (L.AsIx i) -> ScriptWitnessIndexMint i
     L.ConwayCertifying (L.AsIx i) -> ScriptWitnessIndexCertificate i
-    L.ConwayRewarding (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
+    L.ConwayWithdrawing (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
     L.ConwayVoting (L.AsIx i) -> ScriptWitnessIndexVoting i
     L.ConwayProposing (L.AsIx i) -> ScriptWitnessIndexProposing i
 
@@ -2994,7 +2999,7 @@ toScriptIndexDijkstra scriptPurposeIndex =
     L.DijkstraSpending (L.AsIx i) -> ScriptWitnessIndexTxIn i
     L.DijkstraMinting (L.AsIx i) -> ScriptWitnessIndexMint i
     L.DijkstraCertifying (L.AsIx i) -> ScriptWitnessIndexCertificate i
-    L.DijkstraRewarding (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
+    L.DijkstraWithdrawing (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
     L.DijkstraVoting (L.AsIx i) -> ScriptWitnessIndexVoting i
     L.DijkstraProposing (L.AsIx i) -> ScriptWitnessIndexProposing i
     L.DijkstraGuarding (L.AsIx i) -> error $ "toScriptIndexDijkstra: unexpected DijkstraGuarding at index " <> show i

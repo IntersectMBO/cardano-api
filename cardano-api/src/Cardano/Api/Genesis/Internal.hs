@@ -185,6 +185,7 @@ shelleyGenesisDefaults =
     , sgStaking = emptyGenesisStaking
     , sgInitialFunds = ListMap.empty
     , sgMaxLovelaceSupply = 0
+    , sgExtraConfig = SNothing
     }
  where
   k = knownNonZeroBounded @2160
@@ -215,6 +216,7 @@ conwayGenesisDefaults =
     , cgCommittee = DefaultClass.def
     , cgDelegs = mempty
     , cgInitialDReps = mempty
+    , cgExtraConfig = SNothing
     }
  where
   defaultUpgradeConwayParams :: UpgradeConwayPParams Identity

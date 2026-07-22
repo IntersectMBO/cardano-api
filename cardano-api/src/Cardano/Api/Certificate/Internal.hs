@@ -91,6 +91,7 @@ import Cardano.Api.Pretty (Doc)
 import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.TextEnvelope.Internal
 
+import Cardano.Base.IP qualified as BaseIP
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.State qualified as Ledger
@@ -208,6 +209,7 @@ data StakePoolParameters
   = StakePoolParameters
   { stakePoolId :: PoolId
   , stakePoolVRF :: Hash VrfKey
+  , stakePoolBlsKey :: Maybe Ledger.LeiosKey
   , stakePoolCost :: L.Coin
   , stakePoolMargin :: Rational
   , stakePoolRewardAccount :: StakeAddress
@@ -656,6 +658,7 @@ toShelleyPoolParams
   StakePoolParameters
     { stakePoolId = StakePoolKeyHash poolkh
     , stakePoolVRF = VrfKeyHash vrfkh
+    , stakePoolBlsKey
     , stakePoolCost
     , stakePoolMargin
     , stakePoolRewardAccount
@@ -685,14 +688,15 @@ toShelleyPoolParams
       , Ledger.sppMetadata =
           toShelleyPoolMetadata
             <$> Ledger.maybeToStrictMaybe stakePoolMetadata
+      , Ledger.sppLeiosKey = Ledger.maybeToStrictMaybe stakePoolBlsKey
       }
    where
     toShelleyStakePoolRelay :: StakePoolRelay -> Ledger.StakePoolRelay
     toShelleyStakePoolRelay (StakePoolRelayIp mipv4 mipv6 mport) =
       Ledger.SingleHostAddr
         (fromIntegral <$> Ledger.maybeToStrictMaybe mport)
-        (Ledger.maybeToStrictMaybe mipv4)
-        (Ledger.maybeToStrictMaybe mipv6)
+        (BaseIP.mkIPv4 <$> Ledger.maybeToStrictMaybe mipv4)
+        (BaseIP.mkIPv6 <$> Ledger.maybeToStrictMaybe mipv6)
     toShelleyStakePoolRelay (StakePoolRelayDnsARecord dnsname mport) =
       Ledger.SingleHostName
         (fromIntegral <$> Ledger.maybeToStrictMaybe mport)
@@ -737,10 +741,12 @@ fromShelleyPoolParams
     , Ledger.sppOwners
     , Ledger.sppRelays
     , Ledger.sppMetadata
+    , Ledger.sppLeiosKey
     } =
     StakePoolParameters
       { stakePoolId = StakePoolKeyHash sppId
       , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash sppVrf)
+      , stakePoolBlsKey = Ledger.strictMaybeToMaybe sppLeiosKey
       , stakePoolCost = sppCost
       , stakePoolMargin = Ledger.unboundRational sppMargin
       , stakePoolRewardAccount = fromShelleyStakeAddr sppAccountAddress
@@ -758,8 +764,8 @@ fromShelleyPoolParams
     fromShelleyStakePoolRelay :: Ledger.StakePoolRelay -> StakePoolRelay
     fromShelleyStakePoolRelay (Ledger.SingleHostAddr mport mipv4 mipv6) =
       StakePoolRelayIp
-        (Ledger.strictMaybeToMaybe mipv4)
-        (Ledger.strictMaybeToMaybe mipv6)
+        (BaseIP.unIPv4 <$> Ledger.strictMaybeToMaybe mipv4)
+        (BaseIP.unIPv6 <$> Ledger.strictMaybeToMaybe mipv6)
         (fromIntegral . Ledger.portToWord16 <$> Ledger.strictMaybeToMaybe mport)
     fromShelleyStakePoolRelay (Ledger.SingleHostName mport dnsname) =
       StakePoolRelayDnsARecord

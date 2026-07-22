@@ -41,7 +41,6 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Orphans ()
 
-import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (WithOrigin (..))
 import Cardano.Ledger.BaseTypes qualified as L
@@ -494,7 +493,7 @@ txInTxOutToAnyUtxoData txIn txOut = do
   let era = useEra @era
       txOutCbor =
         obtainCommonConstraints era $
-          CBOR.serialize' $
+          L.serialize' (L.eraProtVerLow @(LedgerEra era)) $
             toShelleyTxOut (convert era) txOut
   defMessage
     & U5c.nativeBytes .~ txOutCbor

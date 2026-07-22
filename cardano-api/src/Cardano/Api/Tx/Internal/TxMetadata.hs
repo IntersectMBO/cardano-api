@@ -63,6 +63,7 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Aeson
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Text qualified as Aeson.Text
+import Data.Array.Byte (ByteArray (..))
 import Data.Attoparsec.ByteString.Char8 qualified as Atto
 import Data.Bifunctor (bimap, first)
 import Data.ByteString (ByteString)
@@ -70,6 +71,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as BSC
 import Data.ByteString.Lazy.Char8 qualified as LBS
+import Data.ByteString.Short qualified as SBS
 import Data.Data (Data)
 import Data.List qualified as List
 import Data.Map.Lazy qualified as Map.Lazy
@@ -97,11 +99,31 @@ data TxMetadataValue
   | TxMetaNumber Integer -- -2^64 .. 2^64-1
   | TxMetaBytes ByteString
   | TxMetaText Text
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Show)
 
 -- Note the order of constructors is the same as the ledger definitions
 -- so that the Ord instance is consistent with the ledger one.
 -- This is checked by prop_ord_distributive_TxMetadata
+
+-- | Custom 'Ord' instance to match the ledger's 'Metadatum' ordering.
+-- 'TxMetaBytes' stores a 'ByteString' while the ledger stores 'ByteArray';
+-- their 'Ord' instances differ: 'ByteArray' compares by length first then
+-- content, while 'ByteString' compares lexicographically.
+instance Ord TxMetadataValue where
+  compare (TxMetaMap xs) (TxMetaMap ys) = compare xs ys
+  compare (TxMetaList xs) (TxMetaList ys) = compare xs ys
+  compare (TxMetaNumber x) (TxMetaNumber y) = compare x y
+  compare (TxMetaBytes x) (TxMetaBytes y) =
+    compare (BS.length x) (BS.length y) <> compare x y
+  compare (TxMetaText x) (TxMetaText y) = compare x y
+  compare x y = compare (constructorTag x) (constructorTag y)
+   where
+    constructorTag :: TxMetadataValue -> Int
+    constructorTag TxMetaMap{} = 0
+    constructorTag TxMetaList{} = 1
+    constructorTag TxMetaNumber{} = 2
+    constructorTag TxMetaBytes{} = 3
+    constructorTag TxMetaText{} = 4
 
 -- | Merge metadata maps. When there are clashing entries the left hand side
 -- takes precedence.
@@ -227,7 +249,7 @@ toShelleyMetadata = Map.map toShelleyMetadatum
 
 toShelleyMetadatum :: TxMetadataValue -> Shelley.Metadatum
 toShelleyMetadatum (TxMetaNumber x) = Shelley.I x
-toShelleyMetadatum (TxMetaBytes x) = Shelley.B x
+toShelleyMetadatum (TxMetaBytes x) = Shelley.B (byteStringToByteArray x)
 toShelleyMetadatum (TxMetaText x) = Shelley.S x
 toShelleyMetadatum (TxMetaList xs) =
   Shelley.List
@@ -245,7 +267,7 @@ fromShelleyMetadata = Map.Lazy.map fromShelleyMetadatum
 
 fromShelleyMetadatum :: Shelley.Metadatum -> TxMetadataValue
 fromShelleyMetadatum (Shelley.I x) = TxMetaNumber x
-fromShelleyMetadatum (Shelley.B x) = TxMetaBytes x
+fromShelleyMetadatum (Shelley.B x) = TxMetaBytes (byteArrayToByteString x)
 fromShelleyMetadatum (Shelley.S x) = TxMetaText x
 fromShelleyMetadatum (Shelley.List xs) =
   TxMetaList
@@ -257,6 +279,14 @@ fromShelleyMetadatum (Shelley.Map xs) =
       )
     | (k, v) <- xs
     ]
+
+byteStringToByteArray :: ByteString -> ByteArray
+byteStringToByteArray bs =
+  let sbs = SBS.toShort bs
+   in case sbs of SBS.SBS ba -> ByteArray ba
+
+byteArrayToByteString :: ByteArray -> ByteString
+byteArrayToByteString (ByteArray ba) = SBS.fromShort (SBS.SBS ba)
 
 -- | Transform a string-like structure into chunks with a maximum size; Chunks
 -- are filled from left to right.
