@@ -27,6 +27,7 @@ import RIO
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Data.ProtoLens (defMessage)
+import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Network.GRPC.Spec (GrpcError (GrpcInternal, GrpcInvalidArgument, GrpcNotFound), Proto)
 
@@ -62,35 +63,13 @@ fetchBlockMethod request = do
   headerHash <-
     deserialiseFromRawBytes (proxyToAsType (Proxy @(Hash BlockHeader))) hashBytes
       & either (const throwInvalidHash) pure
-  (rawBytes, BlockInMode _ block) <-
+  (rawBytes, blockInMode) <-
     fetchBlock nodeKernelAccess slot headerHash >>= maybe throwNotFound pure
   eraHistory <- readEraHistory
-  timestampMs <-
+  timestamp <-
     slotToUTCTime systemStart eraHistory slot
-      & either (const throwPastHorizon) (pure . round . (* 1000) . utcTimeToPOSIXSeconds)
-  let BlockHeader _ _ (BlockNo height) = getBlockHeader block
-      -- Byron transactions are not representable as cardano-api's 'Tx era',
-      -- so they are converted straight from the Byron ledger types
-      txs = case block of
-        ByronBlock consensusBlock ->
-          byronBlockTxs (byronBlockRaw consensusBlock)
-        ShelleyBlock sbe _ ->
-          anyEraTxConstraints sbe $
-            getBlockTxs block <&> \(ShelleyTx _ ledgerTx) -> txToUtxoRpcTx ledgerTx
-      blockHeader =
-        defMessage
-          & U5c.slot .~ unSlotNo slot
-          & U5c.hash .~ hashBytes
-          & U5c.height .~ height
-  pure $
-    defMessage
-      & U5c.block
-        .~ ( defMessage
-               & U5c.nativeBytes .~ rawBytes
-               & U5c.cardano . U5c.header .~ blockHeader
-               & U5c.cardano . U5c.body . U5c.tx .~ txs
-               & U5c.cardano . U5c.timestamp .~ timestampMs
-           )
+      & either (const throwPastHorizon) pure
+  pure $ defMessage & U5c.block .~ mkAnyChainBlock rawBytes blockInMode timestamp
 
 -- | Handle the @ReadTip@ SyncService RPC method.
 -- Reads the current chain tip from ChainDB and returns it as slot, block
@@ -105,21 +84,65 @@ readTipMethod _request = do
   tipHeader <- liftIO $ Consensus.getTipHeader chainDb
   tip <- forM tipHeader $ \header -> do
     let slot = Consensus.blockSlot header
-        Consensus.OneEraHash tipHash = Consensus.blockHash header
-        BlockNo height = Consensus.blockNo header
         throwPastHorizon =
           throwGrpcErrorWithMessage GrpcInternal $
             "cannot convert tip slot "
               <> tshow (unSlotNo slot)
               <> " to timestamp: the slot is past the era history horizon"
     eraHistory <- readEraHistory
-    timestampMs <-
+    timestamp <-
       slotToUTCTime systemStart eraHistory slot
-        & either (const throwPastHorizon) (pure . round . (* 1000) . utcTimeToPOSIXSeconds)
-    pure $
-      defMessage
+        & either (const throwPastHorizon) pure
+    pure $ mkTipBlockRef header timestamp
+  pure $ defMessage & U5c.maybe'tip .~ tip
+
+-- | Assemble the @AnyChainBlock@ proto message: raw CBOR bytes, the cardano
+-- header (slot, hash, height - derived from the block itself) and the parsed
+-- transactions (all eras), plus the given slot timestamp.
+mkAnyChainBlock
+  :: ByteString
+  -> BlockInMode
+  -> UTCTime
+  -- ^ Slot wall-clock time; encoded as milliseconds since the Unix epoch
+  -> Proto U5c.AnyChainBlock
+mkAnyChainBlock rawBytes (BlockInMode _ block) timestamp =
+  let BlockHeader slot headerHash (BlockNo height) = getBlockHeader block
+      -- Byron transactions are not representable as cardano-api's 'Tx era',
+      -- so they are converted straight from the Byron ledger types
+      txs = case block of
+        ByronBlock consensusBlock ->
+          byronBlockTxs (byronBlockRaw consensusBlock)
+        ShelleyBlock sbe _ ->
+          anyEraTxConstraints sbe $
+            getBlockTxs block <&> \(ShelleyTx _ ledgerTx) -> txToUtxoRpcTx ledgerTx
+      blockHeader =
+        defMessage
+          & U5c.slot .~ unSlotNo slot
+          & U5c.hash .~ serialiseToRawBytes headerHash
+          & U5c.height .~ height
+   in defMessage
+        & U5c.nativeBytes .~ rawBytes
+        & U5c.cardano . U5c.header .~ blockHeader
+        & U5c.cardano . U5c.body . U5c.tx .~ txs
+        & U5c.cardano . U5c.timestamp .~ utcTimeToMs timestamp
+
+-- | Project a ChainDB header and a slot timestamp into a @BlockRef@: slot,
+-- header hash, block height and timestamp.
+mkTipBlockRef
+  :: Consensus.Header (Consensus.CardanoBlock Consensus.StandardCrypto)
+  -> UTCTime
+  -- ^ Slot wall-clock time; encoded as milliseconds since the Unix epoch
+  -> Proto U5c.BlockRef
+mkTipBlockRef header timestamp =
+  let slot = Consensus.blockSlot header
+      Consensus.OneEraHash tipHash = Consensus.blockHash header
+      BlockNo height = Consensus.blockNo header
+   in defMessage
         & U5c.slot .~ unSlotNo slot
         & U5c.hash .~ SBS.fromShort tipHash
         & U5c.height .~ height
-        & U5c.timestamp .~ timestampMs
-  pure $ defMessage & U5c.maybe'tip .~ tip
+        & U5c.timestamp .~ utcTimeToMs timestamp
+
+-- | Milliseconds since the Unix epoch, the timestamp encoding UTxO RPC uses.
+utcTimeToMs :: UTCTime -> Word64
+utcTimeToMs = round . (* 1000) . utcTimeToPOSIXSeconds

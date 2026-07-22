@@ -7,6 +7,7 @@ module Cardano.Api.Consensus.Internal.Reexport
   , ChainDepState
   , GenTx (..)
   , HasHeader
+  , Header
   , HeaderHash
   , EraMismatch (..)
   , NodeKernel (..)
@@ -41,6 +42,7 @@ where
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Block
   ( HasHeader
+  , Header
   , HeaderHash
   , RealPoint (..)
   , blockHash

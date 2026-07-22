@@ -65,6 +65,7 @@ module Cardano.Api.Consensus
   , EraMismatch (..)
   , HasHardForkHistory (..)
   , HasHeader
+  , Header
   , HeaderHash
   , NodeKernel (..)
   , OneEraHash (..)
