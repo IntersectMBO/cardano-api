@@ -18,6 +18,7 @@ module Cardano.Rpc.Server.Internal.Monad
   , grab
   , putTrace
   , wrapInSpan
+  , wrapInSpanStreaming
   )
 where
 
@@ -92,6 +93,37 @@ wrapInSpan spanConstructor act = do
   newSpanId :: m SpanId
   newSpanId = UsingRawBytesHex <$> uniformM globalStdGen
 {-# INLINE wrapInSpan #-}
+
+-- | Wrap a server-streaming handler in span begin and end events.
+--
+-- Same begin/end and exception semantics as 'wrapInSpan' - the end event is
+-- guaranteed via 'finally', so it fires on normal completion, on stream
+-- cancellation and on any exception - but shaped for grapesy's
+-- server-streaming handlers ('Network.GRPC.Server.StreamType.mkServerStreaming'),
+-- which take the request and a send callback instead of returning a value.
+wrapInSpanStreaming
+  :: forall t' t e m req resp
+   . t ~ TraceRpc
+  => Inject t' t
+  => Has (Tracer m t) e
+  => MonadReader e m
+  => MonadUnliftIO m
+  => (TraceSpanEvent -> t')
+  -- ^ Trace constructor accepting 'TraceSpanEvent'
+  -> (req -> (resp -> IO ()) -> m ())
+  -- ^ streaming handler to be wrapped in begin and end events
+  -> req
+  -> (resp -> IO ())
+  -> m ()
+wrapInSpanStreaming spanConstructor handler request send = do
+  spanId <- newSpanId
+  putTrace $ spanConstructor (SpanBegin spanId)
+  handler request send `finally` putTrace (spanConstructor $ SpanEnd spanId)
+ where
+  -- generate random span id
+  newSpanId :: m SpanId
+  newSpanId = UsingRawBytesHex <$> uniformM globalStdGen
+{-# INLINE wrapInSpanStreaming #-}
 
 type MonadRpc e m =
   ( Has (Tracer m TraceRpc) e

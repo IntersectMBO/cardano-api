@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 0
+kind:
+  - feature
+description: |
+  Implement the FollowTip SyncService method: streams fully parsed blocks as the chain advances, with client-supplied intersection points and rollbacks delivered as reset actions.
