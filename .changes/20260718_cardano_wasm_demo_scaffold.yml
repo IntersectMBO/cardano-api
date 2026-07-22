@@ -1,0 +1,11 @@
+project: cardano-wasm
+
+pr: 1257
+
+kind:
+  - feature
+
+description: |
+  Scaffold a browser wallet demo under cardano-wasm/demo (Elm), built by the
+  Haskell CI (WASM) workflow and published by the GitHub Pages workflow at
+  /cardano-wasm/demo/. Adds the .#demo dev shell (Elm toolchain).

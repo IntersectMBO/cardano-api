@@ -2,6 +2,13 @@
 
 Part of an effort at IOG to build Cardano Haskell libraries to Wasm.
 
+## Wallet demo
+
+A browser wallet demo built on this library lives in [`demo/`](demo/) and is published at
+<https://cardano-api.cardano.intersectmbo.org/cardano-wasm/demo/>. See
+[`demo/README.md`](demo/README.md) for how to build it locally (`nix develop .#demo` provides
+the Elm toolchain).
+
 ## Building the wasm module
 
 ### Setting up build environment with nix

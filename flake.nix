@@ -332,6 +332,23 @@
             ];
           };
         };
+        demoShell = let
+          # The Elm toolchain comes from the `unstable` input: on this
+          # flake's pinned nixpkgs, elm-format is bootstrapped through a
+          # source-built GHC 9.0.2 on aarch64-darwin, which no longer
+          # compiles with current clang. On the newer pin every tool below
+          # is prebuilt in the NixOS binary cache for all our systems.
+          demo-pkgs = inputs.unstable.legacyPackages.${system};
+        in {
+          demo = demo-pkgs.mkShell {
+            packages = [
+              demo-pkgs.elmPackages.elm
+              demo-pkgs.elmPackages.elm-format
+              demo-pkgs.elmPackages.elm-test
+              demo-pkgs.nodejs
+            ];
+          };
+        };
         flakeWithWasmShell = nixpkgs.lib.recursiveUpdate flake {
           devShells = wasmShell;
           hydraJobs = {devShells = wasmShell;};
@@ -340,15 +357,19 @@
           devShells = playwrightShell;
           hydraJobs = {devShells = playwrightShell;};
         };
+        flakeWithDemoShell = nixpkgs.lib.recursiveUpdate flakeWithPlaywrightShell {
+          devShells = demoShell;
+          hydraJobs = {devShells = demoShell;};
+        };
       in
-        nixpkgs.lib.recursiveUpdate flakeWithPlaywrightShell rec {
+        nixpkgs.lib.recursiveUpdate flakeWithDemoShell rec {
           project = cabalProject;
           # add a required job, that's basically all hydraJobs.
           hydraJobs =
             nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates
             {
               ciJobs =
-                flakeWithPlaywrightShell.hydraJobs
+                flakeWithDemoShell.hydraJobs
                 // {
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
