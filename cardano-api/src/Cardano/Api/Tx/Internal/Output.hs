@@ -90,6 +90,7 @@ import Cardano.Ledger.Plutus.Data qualified as Plutus
 import Data.Aeson (object, withObject, (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Aeson
+import Data.Aeson.Text qualified as Aeson
 import Data.Aeson.Types qualified as Aeson
 import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString.Base16 qualified as Base16
@@ -98,6 +99,7 @@ import Data.Map.Strict qualified as Map
 import Data.Scientific (toBoundedInteger)
 import Data.Sequence.Strict qualified as Seq
 import Data.Text.Encoding qualified as Text
+import Data.Text.Lazy (unpack)
 import Data.Type.Equality
 import Data.Typeable (Typeable)
 import Data.Word
@@ -431,6 +433,29 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
       ReferenceScript _ s -> toJSON s
       ReferenceScriptNone -> Aeson.Null
 
+-- | Parse 'HashableScriptData' from a JSON object, preferring the raw CBOR
+-- bytes in @inlineDatumRaw@ when present to preserve non-canonical encodings,
+-- falling back to the detailed-schema JSON for objects that lack the field.
+parseInlineDatum
+  :: Aeson.Object
+  -> Aeson.Value
+  -> Hash ScriptData
+  -> Aeson.Parser HashableScriptData
+parseInlineDatum o dVal h = do
+  mRaw <- o .:? "inlineDatumRaw"
+  hashableData <- case mRaw of
+    Just rawHex -> do
+      rawBytes <- either fail pure $ Base16.decode (Text.encodeUtf8 rawHex)
+      either (fail . show) pure $ deserialiseFromCBOR AsHashableScriptData rawBytes
+    Nothing ->
+      case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
+        Left err -> fail $ "Error parsing TxOut JSON: " <> displayError err
+        Right sData -> pure sData
+  if hashScriptDataBytes hashableData /= h
+    then
+      fail $ "Inline datum not equivalent to inline datum hash. " <> unpack (Aeson.encodeToLazyText o)
+    else pure hashableData
+
 instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
   parseJSON = withObject "TxOut" $ \o -> do
     case shelleyBasedEra :: ShelleyBasedEra era of
@@ -462,13 +487,8 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
             (Just dVal, Just h) -> do
-              case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right hashableData -> do
-                  if hashScriptDataBytes hashableData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
+              hashableData <- parseInlineDatum o dVal h
+              return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
@@ -485,14 +505,9 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
         inlineDatum <- o .:? "inlineDatum"
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsConway sData
+            (Just dVal, Just h) -> do
+              hashableData <- parseInlineDatum o dVal h
+              return $ TxOutDatumInline BabbageEraOnwardsConway hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
@@ -509,14 +524,9 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
         inlineDatum <- o .:? "inlineDatum"
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsDijkstra sData
+            (Just dVal, Just h) -> do
+              hashableData <- parseInlineDatum o dVal h
+              return $ TxOutDatumInline BabbageEraOnwardsDijkstra hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
@@ -645,13 +655,8 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
             (Just dVal, Just h) -> do
-              case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right hashableData -> do
-                  if hashScriptDataBytes hashableData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
+              hashableData <- parseInlineDatum o dVal h
+              return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
@@ -669,14 +674,9 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
         inlineDatum <- o .:? "inlineDatum"
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsConway sData
+            (Just dVal, Just h) -> do
+              hashableData <- parseInlineDatum o dVal h
+              return $ TxOutDatumInline BabbageEraOnwardsConway hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
@@ -694,14 +694,9 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
         inlineDatum <- o .:? "inlineDatum"
         mInlineDatum <-
           case (inlineDatum, inlineDatumHash) of
-            (Just dVal, Just h) ->
-              case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
-                Left err ->
-                  fail $ "Error parsing TxOut JSON: " <> displayError err
-                Right sData ->
-                  if hashScriptDataBytes sData /= h
-                    then fail "Inline datum not equivalent to inline datum hash"
-                    else return $ TxOutDatumInline BabbageEraOnwardsDijkstra sData
+            (Just dVal, Just h) -> do
+              hashableData <- parseInlineDatum o dVal h
+              return $ TxOutDatumInline BabbageEraOnwardsDijkstra hashableData
             (Nothing, Nothing) -> return TxOutDatumNone
             (_, _) ->
               fail
