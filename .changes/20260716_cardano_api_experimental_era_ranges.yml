@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1256
+kind:
+  - feature
+  - bugfix
+description: |
+  Add experimental era ranges in `Cardano.Api.Experimental.Era.Range` and `Cardano.Api.Experimental.Era.Range.Some`: era spans as type-level lists (`Onwards`, `:-:`) with a generic membership witness `EraIn`, range constraints derived by GHC via `All`/`withRange`/`rangeDict`, total and nestable `splitRange` dispatch, and a `vary`-based existential `SomeEraIn`. Fix `TestEquality CardanoEra` missing the `DijkstraEra` case.
