@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1265
+kind:
+  - bugfix
+description: |
+  Issue: `makeTransactionBodyAutoBalance` and `estimateBalancedTxBody` (both the traditional and the experimental versions) keep the collateral inputs and set the collateral fields on transactions without Plutus scripts, even though the ledger requires no collateral for them. With a small collateral input, the computed return collateral output falls below the minimum UTxO value and the ledger rejects the transaction.
+  Solution: collateral inputs are now removed from transactions without Plutus scripts, and no collateral fields are set.
