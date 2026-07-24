@@ -50,6 +50,7 @@ data StakePoolParameters
   = StakePoolParameters
   { stakePoolId :: PoolId
   , stakePoolVRF :: Hash VrfKey
+  , stakePoolBlsKey :: Maybe Ledger.LeiosKey
   , stakePoolCost :: L.Coin
   , stakePoolMargin :: Rational
   , stakePoolRewardAccount :: StakeAddress
@@ -91,6 +92,7 @@ toShelleyPoolParams
   StakePoolParameters
     { stakePoolId = StakePoolKeyHash poolkh
     , stakePoolVRF = VrfKeyHash vrfkh
+    , stakePoolBlsKey
     , stakePoolCost
     , stakePoolMargin
     , stakePoolRewardAccount
@@ -120,6 +122,7 @@ toShelleyPoolParams
       , Ledger.sppMetadata =
           toShelleyPoolMetadata
             <$> Ledger.maybeToStrictMaybe stakePoolMetadata
+      , Ledger.sppLeiosKey = Ledger.maybeToStrictMaybe stakePoolBlsKey
       }
    where
     toShelleyStakePoolRelay :: StakePoolRelay -> Ledger.StakePoolRelay
@@ -172,10 +175,12 @@ fromShelleyPoolParams
     , Ledger.sppOwners
     , Ledger.sppRelays
     , Ledger.sppMetadata
+    , Ledger.sppLeiosKey
     } =
     StakePoolParameters
       { stakePoolId = StakePoolKeyHash sppId
       , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash sppVrf)
+      , stakePoolBlsKey = Ledger.strictMaybeToMaybe sppLeiosKey
       , stakePoolCost = sppCost
       , stakePoolMargin = Ledger.unboundRational sppMargin
       , stakePoolRewardAccount = fromShelleyStakeAddr sppAccountAddress
