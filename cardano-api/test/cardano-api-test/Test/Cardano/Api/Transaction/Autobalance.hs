@@ -495,7 +495,7 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
   txTotColl <- forAll $ Gen.frequency [(4, pure TxTotalCollateralNone), (1, genTxTotalCollateral era)]
   let address = AddressInEra (ShelleyAddressInEra sbe) (ShelleyAddress L.Testnet def L.StakeRefNull)
 
-  let (resRetColl, resTotColl) =
+  let result =
         calcReturnAndTotalCollateral
           beo
           feeCoin
@@ -506,43 +506,45 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
           address
           totalCollateral
 
-  H.annotateShow resRetColl
-  H.annotateShow resTotColl
-
-  let resRetCollValue =
-        mconcat
-          [ txOutValue
-          | TxReturnCollateral _ (TxOut _ (TxOutValueShelleyBased _ txOutValue) _ _) <- pure resRetColl
-          ]
-      collBalance = totalCollateral <-> resRetCollValue
-
-  resTotCollValue <-
-    H.noteShow $ mconcat [Api.mkAdaValue sbe lovelace | TxTotalCollateral _ lovelace <- pure resTotColl]
+  H.annotateShow result
 
   if
-    | txInsColl == TxInsCollateralNone -> do
-        -- no inputs - no outputs
-        TxReturnCollateralNone === resRetColl
-        TxTotalCollateralNone === resTotColl
-    | txRetColl /= TxReturnCollateralNone || txTotColl /= TxTotalCollateralNone -> do
-        -- got collateral values as function arguments - not calculating anything
-        txRetColl === resRetColl
-        txTotColl === resTotColl
-    | totalCollateralAda < requiredCollateralAda -> do
-        -- provided collateral not enough, not calculating anything
-        TxReturnCollateralNone === resRetColl
-        TxTotalCollateralNone === resTotColl
-    | otherwise -> do
+    | txInsColl == TxInsCollateralNone ->
+        -- no inputs - no collateral fields; this is the only case producing
+        -- two empty fields, the pass-through and computed cases below always
+        -- set at least one of them
+        Right (TxReturnCollateralNone, TxTotalCollateralNone) === result
+    | txRetColl /= TxReturnCollateralNone || txTotColl /= TxTotalCollateralNone ->
+        -- got collateral values as function arguments - passed through unchanged
+        Right (txRetColl, txTotColl) === result
+    | totalCollateralAda < requiredCollateralAda ->
+        -- provided collateral not enough, the caller has to raise an error
+        Left (InsufficientCollateral totalCollateralAda requiredCollateralAda) === result
+    | otherwise ->
         -- no explicit collateral or return collateral was provided, we do the calculation
-        H.annotateShow collBalance
-        H.note_ "Check if collateral balance is positive"
-        H.assertWith collBalance $ L.pointwise (<=) mempty
-        H.note_ "Check if collateral balance contains only ada"
-        H.assertWith collBalance L.isAdaOnly
-        H.note_ "Check if collateral balance is at least minimum required"
-        H.assertWith collBalance $ L.pointwise (<=) (L.inject requiredCollateralAda)
-        H.note_ "Check that collateral balance is equal to collateral in tx body"
-        resTotCollValue === collBalance
+        case result of
+          Left (ReturnCollateralBelowMinimumUTxO returnAda minUTxO) ->
+            -- the leftover cannot form a valid return collateral output
+            H.assertWith (returnAda, minUTxO) $ uncurry (<)
+          Right (resRetColl, resTotColl) -> do
+            let resRetCollValue =
+                  mconcat
+                    [ txOutValue
+                    | TxReturnCollateral _ (TxOut _ (TxOutValueShelleyBased _ txOutValue) _ _) <- pure resRetColl
+                    ]
+                collBalance = totalCollateral <-> resRetCollValue
+            resTotCollValue <-
+              H.noteShow $ mconcat [Api.mkAdaValue sbe lovelace | TxTotalCollateral _ lovelace <- pure resTotColl]
+            H.annotateShow collBalance
+            H.note_ "Check if collateral balance is positive"
+            H.assertWith collBalance $ L.pointwise (<=) mempty
+            H.note_ "Check if collateral balance contains only ada"
+            H.assertWith collBalance L.isAdaOnly
+            H.note_ "Check if collateral balance is at least minimum required"
+            H.assertWith collBalance $ L.pointwise (<=) (L.inject requiredCollateralAda)
+            H.note_ "Check that collateral balance is equal to collateral in tx body"
+            resTotCollValue === collBalance
+          _ -> H.failure
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
 --
@@ -687,6 +689,100 @@ prop_estimate_balanced_tx_body_no_collateral_without_plutus = H.propertyOnce $ d
       H.annotateShow collateral
       H.annotate "Expected no collateral in a transaction without Plutus scripts"
       H.failure
+
+-- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
+--
+-- When the collateral inputs carry native tokens, the tokens must be given
+-- back in a return collateral output. With a collateral input holding
+-- exactly the minimum UTxO value, the ada left for the return collateral
+-- output after covering the required collateral (150% of the fee) is
+-- necessarily below the output's own minimum UTxO value, so no valid return
+-- collateral output exists and balancing must fail.
+prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_utxo :: Property
+prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_utxo = H.propertyOnce $ do
+  let ceo = ConwayEraOnwardsConway
+      beo = convert ceo
+      aeo = convert beo
+      meo = convert beo
+      sbe = convert ceo
+
+  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
+  let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
+
+  ledgerPParams <-
+    H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+  let pparams = LedgerProtocolParameters ledgerPParams
+
+  (sh@(ScriptHash scriptHash), plutusWitness) <- loadPlutusWitness ceo
+  let policyId' = PolicyId sh
+      address =
+        AddressInEra
+          (ShelleyAddressInEra sbe)
+          ( ShelleyAddress
+              L.Testnet
+              (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
+              L.StakeRefNull
+          )
+      fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+      tokenValue coin =
+        TxOutValueShelleyBased sbe $
+          L.MaryValue
+            coin
+            (L.MultiAsset $ fromList [(L.PolicyID scriptHash, [(L.AssetName "eeee", 1)])])
+      -- The token-carrying collateral input holds exactly its minimum UTxO
+      -- value.
+      minUTxOCollateral =
+        calculateMinimumUTxO sbe ledgerPParams $
+          TxOut address (tokenValue 0) TxOutDatumNone ReferenceScriptNone
+      utxos =
+        UTxO
+          [
+            ( fundingTxIn
+            , TxOut address (lovelaceToTxOutValue sbe 12_000_000) TxOutDatumNone ReferenceScriptNone
+            )
+          ,
+            ( collateralTxIn
+            , TxOut address (tokenValue minUTxOCollateral) TxOutDatumNone ReferenceScriptNone
+            )
+          ]
+      txMint =
+        TxMintValue
+          meo
+          [(policyId', ([(UnsafeAssetName "eeee", 1)], BuildTxWith plutusWitness))]
+      content =
+        defaultTxBodyContent sbe
+          & setTxIns [(fundingTxIn, BuildTxWith (KeyWitness KeyWitnessForSpending))]
+          & setTxInsCollateral (TxInsCollateral aeo [collateralTxIn])
+          & setTxOuts (mkTxOutput beo address (L.Coin 5_000_000) Nothing)
+          & setTxMintValue txMint
+          & setTxProtocolParams (pure $ pure pparams)
+
+  case makeTransactionBodyAutoBalance
+    sbe
+    systemStart
+    epochInfo
+    pparams
+    mempty
+    mempty
+    mempty
+    utxos
+    content
+    address
+    Nothing of
+    -- Any failure passes here: this is a regression test against
+    -- successfully building an invalid transaction, and it predates the fix,
+    -- so it cannot name the specific error the fix introduces.
+    Left _ -> pure ()
+    Right (BalancedTxBody balancedContent _ _ _) ->
+      -- The ledger requires the ada in the return collateral output to cover
+      -- the minimum UTxO value of the output.
+      case txReturnCollateral balancedContent of
+        TxReturnCollateralNone -> pure ()
+        TxReturnCollateral _ txOut@(TxOut _ txOutValue _ _) -> do
+          let minUTxO = calculateMinimumUTxO sbe ledgerPParams txOut
+          H.note_ "Check that the return collateral output meets the minimum UTxO value"
+          H.assertWith (txOutValueToLovelace txOutValue, minUTxO) $ uncurry (>=)
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-cli/issues/1073
 prop_ensure_gov_actions_are_preserved_by_autobalance :: Property
@@ -942,6 +1038,9 @@ tests =
     , testProperty
         "estimateBalancedTxBody removes collateral on transactions without Plutus scripts"
         prop_estimate_balanced_tx_body_no_collateral_without_plutus
+    , testProperty
+        "makeTransactionBodyAutoBalance fails on return collateral with tokens below min UTxO"
+        prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_utxo
     , testProperty
         "Governance actions are preserved by autobalance"
         prop_ensure_gov_actions_are_preserved_by_autobalance

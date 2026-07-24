@@ -34,6 +34,7 @@ module Cardano.Api.Tx.Internal.Fee
   , estimateOrCalculateBalancedTxBody
   , makeTransactionBodyAutoBalance
   , calcReturnAndTotalCollateral
+  , CollateralError (..)
   , AutoBalanceError (..)
   , BalancedTxBody (..)
   , FeeEstimationMode (..)
@@ -322,22 +323,23 @@ estimateBalancedTxBody
             (fromIntegral byronwits)
             sizeOfAllReferenceScripts
 
-        -- Step 4. We use the fee to calculate the required collateral
-        (retColl, reqCol) =
-          caseShelleyToAlonzoOrBabbageEraOnwards
-            (const (TxReturnCollateralNone, TxTotalCollateralNone))
-            ( \w' ->
-                calcReturnAndTotalCollateral
-                  w'
-                  fee
-                  pparams
-                  (txInsCollateral txbodycontent)
-                  (txReturnCollateral txbodycontent)
-                  (txTotalCollateral txbodycontent)
-                  changeaddr
-                  (A.mkAdaValue sbe totalPotentialCollateral)
-            )
-            sbe
+    -- Step 4. We use the fee to calculate the required collateral
+    (retColl, reqCol) <-
+      caseShelleyToAlonzoOrBabbageEraOnwards
+        (const $ pure (TxReturnCollateralNone, TxTotalCollateralNone))
+        ( \w' ->
+            first (TxFeeEstimationBalanceError . TxBodyErrorCollateral) $
+              calcReturnAndTotalCollateral
+                w'
+                fee
+                pparams
+                (txInsCollateral txbodycontent)
+                (txReturnCollateral txbodycontent)
+                (txTotalCollateral txbodycontent)
+                changeaddr
+                (A.mkAdaValue sbe totalPotentialCollateral)
+        )
+        sbe
 
     -- Step 5. Now we can calculate the balance of the tx. What matter here are:
     --  1. The original outputs
@@ -831,6 +833,10 @@ data TxBodyErrorAutoBalance era
   | TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
       ScriptWitnessIndex
       (Map ScriptWitnessIndex ExecutionUnits)
+  | -- | The collateral fields could not be computed: the ledger would
+    -- reject a transaction built with them. The transaction should be
+    -- changed to provide collateral inputs with more ada.
+    TxBodyErrorCollateral CollateralError
   deriving Show
 
 instance Error (TxBodyErrorAutoBalance era) where
@@ -878,6 +884,8 @@ instance Error (TxBodyErrorAutoBalance era) where
         [ "ScriptWitnessIndex (redeemer pointer): " <> pshow sIndex <> " is missing from the execution "
         , "units (redeemer pointer) map: " <> pshow eUnitsMap
         ]
+    TxBodyErrorCollateral collateralError ->
+      prettyError collateralError
 
 handleExUnitsErrors
   :: ScriptValidity
@@ -1095,28 +1103,29 @@ makeTransactionBodyAutoBalance
               (estimateTransactionKeyWitnessCount txbodycontent1)
               mnkeys
           fee = calculateMinTxFee sbe pp utxo txbody1 nkeys
-          (retColl, reqCol) =
-            caseShelleyToAlonzoOrBabbageEraOnwards
-              (const (TxReturnCollateralNone, TxTotalCollateralNone))
-              ( \w -> do
-                  let totalPotentialCollateral =
-                        mconcat
-                          [ txOutValue
-                          | TxInsCollateral _ collInputs <- pure $ txInsCollateral txbodycontent
-                          , collTxIn <- collInputs
-                          , Just (TxOut _ (TxOutValueShelleyBased _ txOutValue) _ _) <- pure $ Map.lookup collTxIn (unUTxO utxo)
-                          ]
-                  calcReturnAndTotalCollateral
-                    w
-                    fee
-                    pp
-                    (txInsCollateral txbodycontent)
-                    (txReturnCollateral txbodycontent)
-                    (txTotalCollateral txbodycontent)
-                    changeaddr
-                    totalPotentialCollateral
-              )
-              sbe
+      (retColl, reqCol) <-
+        caseShelleyToAlonzoOrBabbageEraOnwards
+          (const $ pure (TxReturnCollateralNone, TxTotalCollateralNone))
+          ( \w -> do
+              let totalPotentialCollateral =
+                    mconcat
+                      [ txOutValue
+                      | TxInsCollateral _ collInputs <- pure $ txInsCollateral txbodycontent
+                      , collTxIn <- collInputs
+                      , Just (TxOut _ (TxOutValueShelleyBased _ txOutValue) _ _) <- pure $ Map.lookup collTxIn (unUTxO utxo)
+                      ]
+              first TxBodyErrorCollateral $
+                calcReturnAndTotalCollateral
+                  w
+                  fee
+                  pp
+                  (txInsCollateral txbodycontent)
+                  (txReturnCollateral txbodycontent)
+                  (txTotalCollateral txbodycontent)
+                  changeaddr
+                  totalPotentialCollateral
+          )
+          sbe
 
       -- Make a txbody for calculating the balance. For this the size of the tx
       -- does not matter, instead it's just the values of the fee and outputs.
@@ -1239,6 +1248,51 @@ hasPlutusScriptWitnesses sbe txbodycontent =
           collectTxBodyScriptWitnesses sbe txbodycontent
       ]
 
+-- | Why 'calcReturnAndTotalCollateral' could not compute the collateral
+-- fields: the ledger would reject a transaction built with them.
+data CollateralError
+  = -- | The ada in the collateral inputs does not cover the required
+    -- collateral (the transaction fee multiplied by the collateral
+    -- percentage, divided by 100).
+    InsufficientCollateral
+      L.Coin
+      -- ^ Ada available in the collateral inputs
+      L.Coin
+      -- ^ Required collateral
+  | -- | The ada left over for the return collateral output after covering
+    -- the required collateral is below the output's minimum UTxO value.
+    ReturnCollateralBelowMinimumUTxO
+      L.Coin
+      -- ^ Ada left for the return collateral output
+      L.Coin
+      -- ^ Minimum UTxO value of the return collateral output
+  deriving (Eq, Show)
+
+instance Error CollateralError where
+  prettyError = \case
+    InsufficientCollateral available required ->
+      mconcat
+        [ "The ada in the collateral inputs does not cover the required collateral. \n"
+        , "Ada in collateral inputs: " <> pretty available <> "\n"
+        , "Required collateral: "
+            <> pretty required
+            <> " (the transaction fee multiplied by the collateralPercentage protocol parameter, divided by 100). \n"
+        , "The usual solution is to provide collateral inputs with more ada."
+        ]
+    ReturnCollateralBelowMinimumUTxO returnAda minUTxO ->
+      mconcat
+        [ "The return collateral output does not meet the minimum UTxO value. \n"
+        , "Ada left for the return collateral output: " <> pretty returnAda <> "\n"
+        , "Minimum required UTxO: " <> pretty minUTxO <> "\n"
+        , "The usual solution is to provide collateral inputs with more ada."
+        ]
+
+-- | Compute the return and total collateral fields of the transaction.
+-- Both fields are returned as 'TxReturnCollateralNone' and
+-- 'TxTotalCollateralNone' if and only if the transaction uses no collateral
+-- inputs. Fields provided by the user are passed through unvalidated:
+-- 'Left' can only arise when the function computes the fields itself.
+--
 -- Calculation taken from validateInsufficientCollateral:
 -- https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
 -- TODO: Bug Jared to expose a function from the ledger that returns total and
@@ -1260,8 +1314,8 @@ calcReturnAndTotalCollateral
   -- ^ Change address
   -> L.Value (ShelleyLedgerEra era)
   -- ^ Total available collateral (can include non-ada)
-  -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
-calcReturnAndTotalCollateral _ _ _ TxInsCollateralNone _ _ _ _ = (TxReturnCollateralNone, TxTotalCollateralNone)
+  -> Either CollateralError (TxReturnCollateral CtxTx era, TxTotalCollateral era)
+calcReturnAndTotalCollateral _ _ _ TxInsCollateralNone _ _ _ _ = Right (TxReturnCollateralNone, TxTotalCollateralNone)
 calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTotalCollateral cAddr totalAvailableCollateral = babbageEraOnwardsConstraints w $ do
   let sbe = convert w
       colPerc = pp' ^. Ledger.ppCollateralPercentageL
@@ -1279,31 +1333,35 @@ calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTo
       -- and round the returnCollateral down which has the effect of potentially slightly
       -- overestimating the required collateral.
       L.Coin returnCollateralAmount = totalCollateralLovelace * 100 - requiredCollateral
-      returnAdaCollateral = A.mkAdaValue sbe $ L.rationalToCoinViaFloor $ returnCollateralAmount % 100
+      returnCollateralAda = L.rationalToCoinViaFloor $ returnCollateralAmount % 100
+      returnAdaCollateral = A.mkAdaValue sbe returnCollateralAda
       -- non-ada collateral is not used, so just return it as is in the return collateral output
       nonAdaCollateral = L.modifyCoin (const mempty) totalAvailableCollateral
       returnCollateral = returnAdaCollateral <> nonAdaCollateral
   case (txReturnCollateral, txTotalCollateral) of
     (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) ->
-      (rc, tc)
+      Right (rc, tc)
     (rc@TxReturnCollateral{}, TxTotalCollateralNone) ->
-      (rc, TxTotalCollateralNone)
+      Right (rc, TxTotalCollateralNone)
     (TxReturnCollateralNone, tc@TxTotalCollateral{}) ->
-      (TxReturnCollateralNone, tc)
+      Right (TxReturnCollateralNone, tc)
     (TxReturnCollateralNone, TxTotalCollateralNone)
       | returnCollateralAmount < 0 ->
-          (TxReturnCollateralNone, TxTotalCollateralNone)
-      | otherwise ->
-          ( TxReturnCollateral
-              w
-              ( TxOut
+          Left $
+            InsufficientCollateral
+              totalCollateralLovelace
+              (L.rationalToCoinViaCeiling $ reqAmt % 100)
+      | otherwise -> do
+          let returnCollateralTxOut =
+                TxOut
                   cAddr
                   (TxOutValueShelleyBased sbe returnCollateral)
                   TxOutDatumNone
                   ReferenceScriptNone
-              )
-          , totalCollateral
-          )
+              minReturnUTxO = calculateMinimumUTxO sbe pp' returnCollateralTxOut
+          if returnCollateralAda < minReturnUTxO
+            then Left $ ReturnCollateralBelowMinimumUTxO returnCollateralAda minReturnUTxO
+            else Right (TxReturnCollateral w returnCollateralTxOut, totalCollateral)
 
 -- | Calculate the partial change - this does not include certificates' deposits
 calculatePartialChangeValue
