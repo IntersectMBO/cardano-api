@@ -9,6 +9,7 @@ import Cardano.Api.Experimental.Era
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type
 
+import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (WithOrigin (..))
 
 import RIO
@@ -99,6 +100,21 @@ hprop_rational_approximation_error_bound = H.property $ do
   H.assertWith (msg ^. U5c.denominator) (/= 0)
   converted <- H.nothingFail $ utxoRpcRationalNumberToRational msg
   H.assertWith (abs (converted - r)) (<= 1 % 2 ^ (32 :: Int))
+
+-- | Metadata integers outside of the 'Int64' range are clamped to the
+-- 'Int64' bounds.
+hprop_metadatum_int_clamps_to_int64 :: Property
+hprop_metadatum_int_clamps_to_int64 = H.propertyOnce $ do
+  H.note_ "In-range values are preserved"
+  metadatumToUtxoRpcMetadatum (L.I 42) ^. U5c.int === 42
+  metadatumToUtxoRpcMetadatum (L.I (-42)) ^. U5c.int === (-42)
+  metadatumToUtxoRpcMetadatum (L.I . fromIntegral $ maxBound @Int64) ^. U5c.int === maxBound
+  metadatumToUtxoRpcMetadatum (L.I . fromIntegral $ minBound @Int64) ^. U5c.int === minBound
+  H.note_ "2^63 clamps to maxBound"
+  metadatumToUtxoRpcMetadatum (L.I $ 2 ^ (63 :: Int)) ^. U5c.int === maxBound
+  metadatumToUtxoRpcMetadatum (L.I $ 2 ^ (64 :: Int) - 1) ^. U5c.int === maxBound
+  H.note_ "-2^63 - 1 clamps to minBound"
+  metadatumToUtxoRpcMetadatum (L.I $ -(2 ^ (63 :: Int)) - 1) ^. U5c.int === minBound
 
 -- | Test that ChainPoint protobuf message roundtrips, including the timestamp field.
 -- Note: @At (BlockNo 0)@ is excluded because it encodes identically to @Origin@.

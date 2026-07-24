@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -19,15 +20,19 @@ import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Serialise.Cbor (SerialiseAsCBOR (..))
 
 import Cardano.Ledger.Conway qualified as L
+import Cardano.Ledger.Conway.Scripts qualified as L
 import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Dijkstra.Scripts qualified as L
 import Cardano.Ledger.Plutus.Language qualified as L
 
 import Prelude
 
+import Data.Bifunctor (second)
 import Data.Function
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (..))
+import Data.Word (Word32)
 
 import Test.Gen.Cardano.Api.Experimental qualified as Exp
 import Test.Gen.Cardano.Api.Typed
@@ -198,7 +203,7 @@ prop_extractAllIndexedPlutusScriptWitnesses =
           mconcat
             [ createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableTxIns generatedTxInWits
             , createIndexedPlutusScriptWitnesses $
-                map (\(w, sw) -> (w, anyScriptWitnessToAnyWitness sw)) $
+                map (second anyScriptWitnessToAnyWitness) $
                   Exp.extractWitnessableMints generatedTxMintWits
             , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableCertificates generatedTxCertWits
             , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableWithdrawals generatedTxWithdrawals
@@ -213,6 +218,65 @@ prop_extractAllIndexedPlutusScriptWitnesses =
     H.noteShow_ extractedPlutusScriptWitnesses
 
     length allGeneratedPlutusScriptWitnesses === length extractedPlutusScriptWitnesses
+
+-- | 'toPlutusScriptPurposeIndex' classifies ledger redeemer pointers the same
+-- way as the older 'Api.toScriptIndex', for every purpose category the two
+-- share, at every era with plutus scripts. 'GuardingScript' (Dijkstra's new
+-- purpose) has no old-API counterpart -- 'Api.toScriptIndex' errors on it --
+-- so it is checked separately in 'prop_toPlutusScriptPurposeIndex_guarding'.
+prop_toPlutusScriptPurposeIndex_matches_toScriptIndex :: Property
+prop_toPlutusScriptPurposeIndex_matches_toScriptIndex = property $ do
+  ix <- forAll $ Gen.word32 (Range.linear 0 1000)
+  checkAlonzoFamily AlonzoEraOnwardsAlonzo ix
+  checkAlonzoFamily AlonzoEraOnwardsBabbage ix
+  checkConwayFamily AlonzoEraOnwardsConway ix
+  checkConwayFamily AlonzoEraOnwardsDijkstra ix
+ where
+  verify
+    :: AlonzoEraOnwards era
+    -> L.PlutusPurpose L.AsIx (Api.ShelleyLedgerEra era)
+    -> PropertyT IO ()
+  verify eon purpose =
+    Api.toScriptIndex eon purpose
+      === toOldEquivalent (toPlutusScriptPurposeIndex (Api.convert eon) purpose)
+
+  checkAlonzoFamily
+    :: forall era
+     . L.AlonzoEraScript (Api.ShelleyLedgerEra era)
+    => AlonzoEraOnwards era -> Word32 -> PropertyT IO ()
+  checkAlonzoFamily eon ix = do
+    verify eon (L.mkSpendingPurpose @(Api.ShelleyLedgerEra era) (L.AsIx ix))
+    verify eon (L.mkMintingPurpose @(Api.ShelleyLedgerEra era) (L.AsIx ix))
+    verify eon (L.mkCertifyingPurpose @(Api.ShelleyLedgerEra era) (L.AsIx ix))
+    verify eon (L.mkRewardingPurpose @(Api.ShelleyLedgerEra era) (L.AsIx ix))
+
+  checkConwayFamily
+    :: forall era
+     . L.ConwayEraScript (Api.ShelleyLedgerEra era)
+    => AlonzoEraOnwards era -> Word32 -> PropertyT IO ()
+  checkConwayFamily eon ix = do
+    checkAlonzoFamily eon ix
+    verify eon (L.mkVotingPurpose @(Api.ShelleyLedgerEra era) (L.AsIx ix))
+    verify eon (L.mkProposingPurpose @(Api.ShelleyLedgerEra era) (L.AsIx ix))
+
+  toOldEquivalent :: (PlutusScriptPurpose, Word32) -> Api.ScriptWitnessIndex
+  toOldEquivalent (SpendingScript, i) = Api.ScriptWitnessIndexTxIn i
+  toOldEquivalent (MintingScript, i) = Api.ScriptWitnessIndexMint i
+  toOldEquivalent (CertifyingScript, i) = Api.ScriptWitnessIndexCertificate i
+  toOldEquivalent (WithdrawingScript, i) = Api.ScriptWitnessIndexWithdrawal i
+  toOldEquivalent (VotingScript, i) = Api.ScriptWitnessIndexVoting i
+  toOldEquivalent (ProposingScript, i) = Api.ScriptWitnessIndexProposing i
+  toOldEquivalent (GuardingScript, i) =
+    error $ "no old-API equivalent for GuardingScript " <> show i
+
+-- | The Dijkstra-only 'GuardingScript' purpose has no 'Api.toScriptIndex'
+-- counterpart ('Api.toScriptIndexDijkstra' errors on it), so it is checked
+-- directly here instead of alongside the shared categories above.
+prop_toPlutusScriptPurposeIndex_guarding :: Property
+prop_toPlutusScriptPurposeIndex_guarding = property $ do
+  ix <- forAll $ Gen.word32 (Range.linear 0 1000)
+  let purpose = L.mkGuardingPurpose @(Api.ShelleyLedgerEra Api.DijkstraEra) (L.AsIx ix)
+  toPlutusScriptPurposeIndex Api.ShelleyBasedEraDijkstra purpose === (GuardingScript, ix)
 
 -- | We exclude reference scripts because they do not end up in the resulting transaction.
 isReferenceScript :: Api.Witness witctx era -> Bool
@@ -246,4 +310,10 @@ tests =
         prop_extractAllIndexedPlutusScriptWitnesses
     , testProperty "prop_getAnyWitnessRedeemerPointerMap" prop_getAnyWitnessRedeemerPointerMap
     , testProperty "prop_toAnyWitness" prop_toAnyWitness
+    , testProperty
+        "prop_toPlutusScriptPurposeIndex_matches_toScriptIndex"
+        prop_toPlutusScriptPurposeIndex_matches_toScriptIndex
+    , testProperty
+        "prop_toPlutusScriptPurposeIndex_guarding"
+        prop_toPlutusScriptPurposeIndex_guarding
     ]

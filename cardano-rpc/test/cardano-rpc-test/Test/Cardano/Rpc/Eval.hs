@@ -9,6 +9,7 @@ import Cardano.Api
   , ScriptData (..)
   , ScriptWitnessIndex (..)
   )
+import Cardano.Api.Experimental (PlutusScriptPurpose (..))
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Tx (ScriptExecutionError (..))
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
@@ -43,10 +44,9 @@ hprop_scriptWitnessIndex_to_redeemerPurpose = H.propertyOnce $ do
 -- | 'mkProtoRedeemer' assembles a proto Redeemer with correct fields.
 hprop_mkProtoRedeemer :: Property
 hprop_mkProtoRedeemer = H.propertyOnce $ do
-  let swi = ScriptWitnessIndexMint 2
-      exUnits = ExecutionUnits{executionSteps = 100, executionMemory = 200}
+  let exUnits = ExecutionUnits{executionSteps = 100, executionMemory = 200}
       payload = ScriptDataNumber 42
-      redeemer = getProto $ mkProtoRedeemer swi exUnits (Just (payload, mempty))
+      redeemer = getProto $ mkProtoRedeemer (MintingScript, 2) exUnits (Just (payload, mempty))
 
   redeemer ^. U5c.purpose === U5c.REDEEMER_PURPOSE_MINT
   redeemer ^. U5c.index === 2

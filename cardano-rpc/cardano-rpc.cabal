@@ -66,11 +66,15 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Sync
     Cardano.Rpc.Server.Internal.UtxoRpc.Type
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Script
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
     Cardano.Rpc.Server.NodeKernelAccess
@@ -89,9 +93,18 @@ library
     bytestring,
     cardano-api >=11.2,
     cardano-binary,
+    cardano-crypto,
+    cardano-crypto-class,
+    cardano-crypto-wrapper,
+    cardano-ledger-allegra,
+    cardano-ledger-alonzo,
     cardano-ledger-api,
+    cardano-ledger-binary,
+    cardano-ledger-byron,
     cardano-ledger-conway,
     cardano-ledger-core >=1.19,
+    cardano-ledger-dijkstra,
+    cardano-ledger-shelley,
     cardano-rpc:gen,
     containers,
     contra-tracer,
@@ -101,6 +114,8 @@ library
     generic-data,
     grapesy,
     grpc-spec,
+    memory,
+    mempack,
     proto-lens >=0.7.1.7,
     proto-lens-protobuf-types,
     random,
@@ -140,20 +155,30 @@ test-suite cardano-rpc-test
     bytestring,
     cardano-api,
     cardano-api:gen,
+    cardano-crypto,
+    cardano-crypto-wrapper,
+    cardano-crypto-wrapper:testlib,
     cardano-ledger-api,
+    cardano-ledger-binary,
+    cardano-ledger-byron,
+    cardano-ledger-byron:testlib,
     cardano-ledger-conway,
     cardano-ledger-core >=1.19,
+    cardano-ledger-dijkstra,
+    cardano-ledger-shelley,
     cardano-rpc,
     containers,
     grpc-spec,
     hedgehog,
     hedgehog-extras,
+    memory,
     proto-lens,
     rio,
     tasty,
     tasty-hedgehog,
     text,
     time,
+    zlib,
 
   ghc-options:
     -threaded
@@ -162,9 +187,12 @@ test-suite cardano-rpc-test
 
   build-tool-depends: tasty-discover:tasty-discover
   other-modules:
+    Test.Cardano.Rpc.ByronTx
     Test.Cardano.Rpc.Eval
+    Test.Cardano.Rpc.FetchBlockTx
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters
+    Test.Cardano.Rpc.Script
     Test.Cardano.Rpc.TxOutput
     Test.Cardano.Rpc.Type

@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1247
+kind:
+  - feature
+description: |
+  FetchBlock now returns fully populated transactions for blocks in every era, including Byron. Previously the response contained only the block header and raw block bytes.

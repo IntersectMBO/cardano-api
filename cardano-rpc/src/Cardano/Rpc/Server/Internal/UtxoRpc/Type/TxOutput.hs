@@ -4,7 +4,8 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
-  ( txOutToUtxoRpcTxOutput
+  ( policyAssetsToUtxoRpcMultiassets
+  , txOutToUtxoRpcTxOutput
   , utxoRpcTxOutputToTxOut
   , txoRefUtxoRpcToTxIn
   , utxoToUtxoRpcAnyUtxoData
@@ -88,25 +89,28 @@ txoRefUtxoRpcToTxIn txoRef = do
         txoRef ^. U5c.hash
   pure $ TxIn txId' (TxIx . fromIntegral $ txoRef ^. U5c.index)
 
+-- | Convert per-policy asset bundles to UTxO RPC 'UtxoRpc.Multiasset' messages.
+policyAssetsToUtxoRpcMultiassets :: Map PolicyId PolicyAssets -> [Proto UtxoRpc.Multiasset]
+policyAssetsToUtxoRpcMultiassets policyAssetsMap =
+  toList policyAssetsMap <&> \(pId, policyAssets) -> do
+    let assets =
+          toList policyAssets <&> \(assetName, Quantity qty) -> do
+            defMessage
+              & U5c.name .~ serialiseToRawBytes assetName
+              -- we don't have access to info if the coin was minted in the transaction,
+              -- maybe we should add it later
+              -- & U5c.maybe'mintCoin .~ Nothing
+              & U5c.quantity .~ inject qty
+    defMessage
+      & U5c.policyId .~ serialiseToRawBytes pId
+      & U5c.assets .~ assets
+
 txOutToUtxoRpcTxOutput
   :: ShelleyBasedEra era
   -> TxOut CtxUTxO era
   -> Proto UtxoRpc.TxOutput
 txOutToUtxoRpcTxOutput sbe (TxOut addressInEra txOutValue datum script) = do
-  let multiAsset =
-        fromList $
-          toList (valueToPolicyAssets $ txOutValueToValue txOutValue) <&> \(pId, policyAssets) -> do
-            let assets =
-                  toList policyAssets <&> \(assetName, Quantity qty) -> do
-                    defMessage
-                      & U5c.name .~ serialiseToRawBytes assetName
-                      -- we don't have access to info if the coin was minted in the transaction,
-                      -- maybe we should add it later
-                      -- & U5c.maybe'mintCoin .~ Nothing
-                      & U5c.quantity .~ inject qty
-            defMessage
-              & U5c.policyId .~ serialiseToRawBytes pId
-              & U5c.assets .~ assets
+  let multiAsset = policyAssetsToUtxoRpcMultiassets . valueToPolicyAssets $ txOutValueToValue txOutValue
       datumRpc = case datum of
         TxOutDatumNone ->
           Nothing
