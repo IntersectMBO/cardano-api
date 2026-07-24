@@ -9,6 +9,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
 where
 
 import Cardano.Api.Era
+import Cardano.Api.Experimental (PlutusScriptPurpose (..))
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus
 import Cardano.Api.Tx
@@ -45,7 +46,8 @@ mkProtoTxEval fee evalMap redeemerLookup = do
           & U5c.steps .~ fromIntegral totalSteps
           & U5c.memory .~ fromIntegral totalMemory
       protoRedeemers =
-        [ mkProtoRedeemer witness units $ M.lookup witness redeemerLookup
+        [ mkProtoRedeemer (scriptWitnessIndexToPlutusScriptPurpose witness) units $
+            M.lookup witness redeemerLookup
         | (witness, (_, units)) <- toList successes
         ]
       protoErrors =
@@ -72,21 +74,20 @@ mkProtoTxEval fee evalMap redeemerLookup = do
 -- | Assemble a proto 'Redeemer' from evaluation results and transaction
 -- witness data.
 mkProtoRedeemer
-  :: ScriptWitnessIndex
+  :: (PlutusScriptPurpose, Word32)
   -- ^ Redeemer purpose and index
   -> ExecutionUnits
   -- ^ Execution units consumed
   -> Maybe (ScriptData, ByteString)
   -- ^ Plutus data payload and its CBOR bytes
   -> Proto UtxoRpc.Redeemer
-mkProtoRedeemer swi exUnits redeemerDatum = do
-  let (purpose, idx) = scriptWitnessIndexToRedeemerPurpose swi
-      protoExUnits =
+mkProtoRedeemer (purpose, idx) exUnits redeemerDatum = do
+  let protoExUnits =
         defMessage
           & U5c.steps .~ fromIntegral (executionSteps exUnits)
           & U5c.memory .~ fromIntegral (executionMemory exUnits)
   defMessage
-    & U5c.purpose .~ purpose
+    & U5c.purpose .~ plutusScriptPurposeToRedeemerPurpose purpose
     & U5c.index .~ idx
     & U5c.exUnits .~ protoExUnits
     & U5c.maybe'payload .~ fmap (scriptDataToUtxoRpcPlutusData . fst) redeemerDatum
@@ -103,14 +104,34 @@ scriptExecutionErrorToEvalReport swi err = do
     & U5c.purpose .~ purpose
     & U5c.index .~ idx
 
+-- | Bridge a legacy 'ScriptWitnessIndex' (still produced by the transaction
+-- evaluation path) to the experimental Plutus script purpose pairing.
+scriptWitnessIndexToPlutusScriptPurpose :: ScriptWitnessIndex -> (PlutusScriptPurpose, Word32)
+scriptWitnessIndexToPlutusScriptPurpose = \case
+  ScriptWitnessIndexTxIn i -> (SpendingScript, i)
+  ScriptWitnessIndexMint i -> (MintingScript, i)
+  ScriptWitnessIndexCertificate i -> (CertifyingScript, i)
+  ScriptWitnessIndexWithdrawal i -> (WithdrawingScript, i)
+  ScriptWitnessIndexVoting i -> (VotingScript, i)
+  ScriptWitnessIndexProposing i -> (ProposingScript, i)
+
+-- | Map a Plutus script purpose to the corresponding proto 'RedeemerPurpose'.
+-- 'GuardingScript' (Dijkstra's new purpose) has no UTxO RPC counterpart yet,
+-- so it maps to the unspecified value.
+plutusScriptPurposeToRedeemerPurpose :: PlutusScriptPurpose -> Proto UtxoRpc.RedeemerPurpose
+plutusScriptPurposeToRedeemerPurpose = \case
+  SpendingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_SPEND
+  MintingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_MINT
+  CertifyingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_CERT
+  WithdrawingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_REWARD
+  VotingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_VOTE
+  ProposingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_PROPOSE
+  GuardingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_UNSPECIFIED
+
 -- | Map a 'ScriptWitnessIndex' to the corresponding proto 'RedeemerPurpose'
 -- and the numeric index within that purpose.
 scriptWitnessIndexToRedeemerPurpose
   :: ScriptWitnessIndex -> (Proto UtxoRpc.RedeemerPurpose, Word32)
-scriptWitnessIndexToRedeemerPurpose = \case
-  ScriptWitnessIndexTxIn i -> (Proto UtxoRpc.REDEEMER_PURPOSE_SPEND, i)
-  ScriptWitnessIndexMint i -> (Proto UtxoRpc.REDEEMER_PURPOSE_MINT, i)
-  ScriptWitnessIndexCertificate i -> (Proto UtxoRpc.REDEEMER_PURPOSE_CERT, i)
-  ScriptWitnessIndexWithdrawal i -> (Proto UtxoRpc.REDEEMER_PURPOSE_REWARD, i)
-  ScriptWitnessIndexVoting i -> (Proto UtxoRpc.REDEEMER_PURPOSE_VOTE, i)
-  ScriptWitnessIndexProposing i -> (Proto UtxoRpc.REDEEMER_PURPOSE_PROPOSE, i)
+scriptWitnessIndexToRedeemerPurpose swi =
+  let (purpose, idx) = scriptWitnessIndexToPlutusScriptPurpose swi
+   in (plutusScriptPurposeToRedeemerPurpose purpose, idx)

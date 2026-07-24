@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1247
+kind:
+  - feature
+  - breaking
+description: |
+  Add `toPlutusScriptPurposeIndex`, the inverse of `toPlutusScriptPurpose`, classifying a ledger redeemer pointer into its experimental `PlutusScriptPurpose` category and index given an `AlonzoEraOnwards` witness. Add the `GuardingScript` constructor to `PlutusScriptPurpose` for Dijkstra's new guard script purpose.

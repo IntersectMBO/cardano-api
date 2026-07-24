@@ -53,6 +53,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Conway qualified as Ledger
+import Cardano.Ledger.Conway.Core qualified as L (ConwayEraPParams)
 import Cardano.Ledger.Conway.Governance qualified as L
 import Cardano.Ledger.Conway.State qualified as L
 import Cardano.Ledger.Core qualified as Ledger
@@ -296,6 +297,7 @@ type EraCommonConstraints era =
   , L.BabbageEraTxBody (LedgerEra era)
   , L.ConwayEraCertState (LedgerEra era)
   , L.ConwayEraGov (LedgerEra era)
+  , L.ConwayEraPParams (LedgerEra era)
   , L.ConwayEraTxBody (LedgerEra era)
   , L.ConwayEraTxCert (LedgerEra era)
   , L.Era (LedgerEra era)

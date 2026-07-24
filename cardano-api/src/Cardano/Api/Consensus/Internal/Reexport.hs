@@ -2,10 +2,12 @@ module Cardano.Api.Consensus.Internal.Reexport
   ( BlockComponent (..)
   , ByronBlock
   , CardanoBlock
+  , ChainUpdate (..)
   , ConfigSupportsNode
   , ChainDepState
   , GenTx (..)
   , HasHeader
+  , Header
   , HeaderHash
   , EraMismatch (..)
   , NodeKernel (..)
@@ -15,11 +17,15 @@ module Cardano.Api.Consensus.Internal.Reexport
   , PraosProtocolSupportsNode
   , PraosProtocolSupportsNodeCrypto
   , RealPoint (..)
+  , ResourceRegistry
   , ShelleyGenesisStaking (..)
   , StandardCrypto
   , TopLevelConfig
   , ledgerState
+  , blockHash
   , blockNo
+  , blockSlot
+  , byronBlockRaw
   , byronIdTx
   , configBlock
   , configLedger
@@ -29,12 +35,21 @@ module Cardano.Api.Consensus.Internal.Reexport
   , mkInterpreter
   , unsafeExtendSafeZone
   , txId
+  , withRegistry
   )
 where
 
 import Cardano.Protocol.Crypto (StandardCrypto)
-import Ouroboros.Consensus.Block (HasHeader, HeaderHash, RealPoint (..), blockNo)
-import Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..), byronIdTx)
+import Ouroboros.Consensus.Block
+  ( HasHeader
+  , Header
+  , HeaderHash
+  , RealPoint (..)
+  , blockHash
+  , blockNo
+  , blockSlot
+  )
+import Ouroboros.Consensus.Byron.Ledger (ByronBlock (byronBlockRaw), GenTx (..), byronIdTx)
 import Ouroboros.Consensus.Cardano.Block (CardanoBlock, EraMismatch (..))
 import Ouroboros.Consensus.Config (TopLevelConfig, configBlock, configLedger)
 import Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode)
@@ -58,3 +73,6 @@ import Ouroboros.Consensus.Protocol.Praos.Common
 import Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 import Ouroboros.Consensus.Storage.Common (BlockComponent (..))
 import Ouroboros.Consensus.Util.Condense (condense)
+import Ouroboros.Network.Block (ChainUpdate (..))
+
+import Control.ResourceRegistry (ResourceRegistry, withRegistry)

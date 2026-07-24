@@ -7,7 +7,10 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   , utxoToUtxoRpcAnyUtxoData
   , txInTxOutToAnyUtxoData
   , anyUtxoDataUtxoRpcToUtxo
+  , metadatumToUtxoRpcMetadatum
   , txOutToUtxoRpcTxOutput
+  , txToUtxoRpcTx
+  , anyEraTxConstraints
   , txoRefUtxoRpcToTxIn
   , utxoRpcTxOutputToTxOut
   , protocolParamsToUtxoRpcPParams
@@ -31,5 +34,6 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Script
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput

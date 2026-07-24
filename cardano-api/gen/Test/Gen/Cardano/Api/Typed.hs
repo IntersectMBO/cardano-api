@@ -124,6 +124,7 @@ module Test.Gen.Cardano.Api.Typed
   , genLedgerValueForTxOut
   , genLedgerMultiAssetValue
   , genWitnesses
+  , genTxWitnesses
   , genScriptWitnessedTxIn
   , genScriptWitnessedTxMintValue
   , genScriptWitnessedTxCertificates
@@ -1177,10 +1178,23 @@ genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]
 genTx
   :: ShelleyBasedEra era
   -> Gen (Tx era)
-genTx era =
-  makeSignedTransaction
-    <$> genWitnesses era
-    <*> (fst <$> genValidTxBody era)
+genTx era = do
+  txBody <- fst <$> genValidTxBody era
+  makeSignedTransaction <$> genTxWitnesses era txBody <*> pure txBody
+
+-- | Witnesses signing the given transaction body.
+genTxWitnesses :: ShelleyBasedEra era -> TxBody era -> Gen [KeyWitness era]
+genTxWitnesses era txBody = do
+  bootstrapWitnesses <-
+    Gen.list (Range.constant 0 10) $
+      makeShelleyBootstrapWitness era
+        <$> genWitnessNetworkIdOrByronAddress
+        <*> pure txBody
+        <*> genSigningKey AsByronKey
+  keyWitnesses <-
+    Gen.list (Range.constant 0 10) $
+      makeShelleyKeyWitness era txBody <$> genShelleyWitnessSigningKey
+  pure $ bootstrapWitnesses ++ keyWitnesses
 
 genWitnesses :: ShelleyBasedEra era -> Gen [KeyWitness era]
 genWitnesses sbe = do

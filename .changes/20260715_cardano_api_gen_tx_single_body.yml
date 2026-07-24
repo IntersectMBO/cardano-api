@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1247
+kind:
+  - test
+description: |
+  genTx now generates one transaction body and signs it with all generated witnesses, instead of signing a fresh throwaway body per witness. Added genTxWitnesses for generating key witnesses for a given transaction body.

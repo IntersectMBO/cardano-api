@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 0
+kind:
+  - compatible
+description: |
+  Re-export the ChainDB follower API from Cardano.Api.Consensus: newFollower, Follower, ChainType, ChainUpdate, withRegistry and ResourceRegistry.

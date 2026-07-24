@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1247
+kind:
+  - breaking
+description: |
+  Add ConwayEraPParams to EraCommonConstraints. Both Conway and Dijkstra satisfy it, so obtainCommonConstraints now provides protocol parameter constraints without needing conwayEraOnwardsConstraints.

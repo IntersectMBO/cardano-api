@@ -11,6 +11,16 @@ import Cardano.Api.Experimental.Tx qualified as Exp
 
 This is valid GHC Haskell — both modules are accessible via the `Exp.` prefix. Name resolution happens at the use site; ambiguity only arises if both modules export the same identifier and it is used without disambiguation. Do **not** flag this pattern as a compile error or suggest renaming an alias unless there is an actual ambiguity at a specific use site.
 
+Even when several same-alias modules export the same **name**, there is still no ambiguity if they denote the same original entity. Re-exports are the norm in this codebase: `Cardano.Api.Ledger` re-exports large parts of `Cardano.Ledger.Api` and `Cardano.Ledger.BaseTypes`, and all three are conventionally imported qualified as `L`:
+
+```haskell
+import Cardano.Api.Ledger qualified as L
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.BaseTypes qualified as L
+```
+
+A use like `L.SNothing` or `L.Tx` resolves to a single entity because every import chain leads back to the same defining module. GHC rejects a use site only when the same name refers to **different** entities. Do **not** claim such code "should fail to compile" — CI compiles every module with `-Wall -Werror` including `-Wunused-imports`, so if the code is merged or the build is green, the imports are neither ambiguous nor redundant. Do **not** suggest dropping one of the imports as "redundant" either: each import typically contributes names the others do not re-export, and a genuinely redundant import would already fail the zero-warning build.
+
 ## Cabal File Formatting
 
 In `.cabal` files, all top-level package metadata fields (`name:`, `version:`, `synopsis:`, `description:`, `copyright:`, `author:`, `maintainer:`, `license:`, `build-type:`, etc.) are written at column 0 with no leading indentation. This is the standard Cabal format. Do **not** flag these fields as having inconsistent indentation.

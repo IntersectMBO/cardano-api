@@ -112,6 +112,7 @@ module Cardano.Api.Experimental
   , anyScriptWitnessToAnyWitness
   , getAnyWitnessRedeemerPointerMap
   , toPlutusScriptPurpose
+  , toPlutusScriptPurposeIndex
 
     -- ** Legacy
   , legacyWitnessConversion
