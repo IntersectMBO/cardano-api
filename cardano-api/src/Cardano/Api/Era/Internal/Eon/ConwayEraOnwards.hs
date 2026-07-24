@@ -37,7 +37,6 @@ import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
 import Cardano.Ledger.Conway.State qualified as L
-import Cardano.Ledger.Conway.TxCert qualified as L
 import Cardano.Ledger.Mary.Value qualified as L
 import Cardano.Protocol.Crypto qualified as L
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
