@@ -8,10 +8,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
--- The ConwayEraOnwardsDijkstra arm of conwayEraOnwardsConstraints is
--- type-unreachable given the current constraint set (Dijkstra's TxCert is
--- DijkstraTxCert, not ConwayTxCert). The branch is kept for GADT exhaustiveness.
-{-# OPTIONS_GHC -Wno-inaccessible-code #-}
 
 module Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
   ( ConwayEraOnwards (..)
@@ -127,8 +123,6 @@ type ConwayEraOnwardsConstraints era =
   , L.MaryEraTxBody (ShelleyLedgerEra era)
   , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
   , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
-  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
-  , L.TxCert (ShelleyLedgerEra era) ~ L.ConwayTxCert (ShelleyLedgerEra era)
   , L.Value (ShelleyLedgerEra era) ~ L.MaryValue
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
@@ -147,12 +141,7 @@ conwayEraOnwardsConstraints
   -> a
 conwayEraOnwardsConstraints = \case
   ConwayEraOnwardsConway -> id
-  -- Dijkstra cannot satisfy ShelleyEraTxCert (gated AtMostEra "Conway") or
-  -- TxCert ~ ConwayTxCert (Dijkstra has DijkstraTxCert). The Dijkstra
-  -- certificate path is a follow-up; for now any ConwayEraOnwards-bound
-  -- code on Dijkstra fails at runtime here.
-  ConwayEraOnwardsDijkstra ->
-    const $ error "TODO Dijkstra: conwayEraOnwardsConstraints: Dijkstra cert path not yet implemented"
+  ConwayEraOnwardsDijkstra -> id
 
 class IsBabbageBasedEra era => IsConwayBasedEra era where
   conwayBasedEra :: ConwayEraOnwards era

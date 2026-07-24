@@ -131,17 +131,9 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraAlonzo -> l ShelleyToBabbageEraAlonzo
   ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway -> r ConwayEraOnwardsConway
-  -- ConwayEraOnwardsConstraints requires TxCert ~ ConwayTxCert which Dijkstra
-  -- cannot satisfy. Dispatching to the ConwayEraOnwards arm for Dijkstra is
-  -- not type-correct; callers must handle Dijkstra separately.
-  ShelleyBasedEraDijkstra ->
-    error
-      "TODO Dijkstra: caseShelleyToBabbageOrConwayEraOnwards: Dijkstra requires a separate cert path"
+  ShelleyBasedEraDijkstra -> r ConwayEraOnwardsDijkstra
 
--- | Like 'caseShelleyToBabbageOrConwayEraOnwards' but the right arm
--- carries only the 'ConwayEraOnwards' value and admits Dijkstra.
--- 'ConwayEraOnwardsConstraints' is not derivable for Dijkstra
--- (requires 'TxCert ~ ConwayTxCert' and 'ShelleyEraTxCert').
+-- | Alias for 'caseShelleyToBabbageOrConwayEraOnwards'.
 caseShelleyToBabbageOrConwayOrDijkstra
   :: ()
   => (ShelleyToBabbageEraConstraints era => ShelleyToBabbageEra era -> a)
