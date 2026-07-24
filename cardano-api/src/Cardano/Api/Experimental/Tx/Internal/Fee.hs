@@ -232,7 +232,11 @@ estimateBalancedTxBody
   -> Map (Ledger.PlutusPurpose Ledger.AsIx (LedgerEra era)) ExecutionUnits
   -- ^ Plutus script execution units.
   -> Coin
-  -- ^ Total potential collateral amount.
+  -- ^ Total potential collateral amount. The content of the collateral
+  --   inputs is not visible to this function, so they are assumed to
+  --   contain no native tokens. To use collateral inputs that carry
+  --   native tokens, provide 'txReturnCollateral' and 'txTotalCollateral'
+  --   explicitly.
   -> Int
   -- ^ The number of key witnesses to be added to the transaction.
   -> Int
@@ -292,7 +296,11 @@ estimateBalancedTxBody'
   -> Map ScriptWitnessIndex ExecutionUnits
   -- ^ Plutus script execution units.
   -> Coin
-  -- ^ Total potential collateral amount.
+  -- ^ Total potential collateral amount. The content of the collateral
+  --   inputs is not visible to this function, so they are assumed to
+  --   contain no native tokens. To use collateral inputs that carry
+  --   native tokens, provide 'txReturnCollateral' and 'txTotalCollateral'
+  --   explicitly.
   -> Int
   -- ^ The number of key witnesses to be added to the transaction.
   -> Int
@@ -767,13 +775,19 @@ calcReturnAndTotalCollateral fee pp' _ mTxReturnCollateral mTxTotalCollateral cA
               minReturnUTxO =
                 obtainCommonConstraints (useEra @era) $
                   calculateMinimumUTxO pp' (TxOut returnCollateralTxOut)
-          if returnCollateralAda < minReturnUTxO
-            then Left $ ReturnCollateralBelowMinimumUTxO returnCollateralAda minReturnUTxO
-            else
-              Right
-                ( Just $ TxReturnCollateral returnCollateralTxOut
-                , Just $ TxTotalCollateral totalCollateral
-                )
+          if
+            | returnCollateralAda >= minReturnUTxO ->
+                Right
+                  ( Just $ TxReturnCollateral returnCollateralTxOut
+                  , Just $ TxTotalCollateral totalCollateral
+                  )
+            | L.isZero nonAdaCollateral ->
+                -- The ada left over is too small for a return collateral output, so
+                -- use the whole collateral as total collateral instead. The extra ada
+                -- is only lost if a Plutus script fails on chain.
+                Right (Nothing, Just $ TxTotalCollateral totalCollateralLovelace)
+            | otherwise ->
+                Left $ ReturnCollateralBelowMinimumUTxO returnCollateralAda minReturnUTxO
 
 -- | Transaction fees can be computed for a proposed transaction based on the
 -- expected number of key witnesses (i.e. signatures).

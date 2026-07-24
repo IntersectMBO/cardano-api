@@ -213,7 +213,11 @@ estimateBalancedTxBody
   -> Map ScriptWitnessIndex ExecutionUnits
   -- ^ Plutus script execution units.
   -> Coin
-  -- ^ Total potential collateral amount.
+  -- ^ Total potential collateral amount. The content of the collateral
+  --   inputs is not visible to this function, so they are assumed to
+  --   contain no native tokens. To use collateral inputs that carry
+  --   native tokens, provide 'txReturnCollateral' and 'txTotalCollateral'
+  --   explicitly.
   -> Int
   -- ^ The number of key witnesses to be added to the transaction.
   -> Int
@@ -940,7 +944,8 @@ data FeeEstimationMode era
   | -- | Less accurate fee estimation.
     EstimateWithoutSpendableUTxO
       Coin
-      -- ^ Total potential collateral amount
+      -- ^ Total potential collateral amount, assuming the collateral
+      --   inputs contain no native tokens
       Value
       -- ^ Total value of UTxOs being spent
       (Map ScriptWitnessIndex ExecutionUnits)
@@ -1359,9 +1364,16 @@ calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTo
                   TxOutDatumNone
                   ReferenceScriptNone
               minReturnUTxO = calculateMinimumUTxO sbe pp' returnCollateralTxOut
-          if returnCollateralAda < minReturnUTxO
-            then Left $ ReturnCollateralBelowMinimumUTxO returnCollateralAda minReturnUTxO
-            else Right (TxReturnCollateral w returnCollateralTxOut, totalCollateral)
+          if
+            | returnCollateralAda >= minReturnUTxO ->
+                Right (TxReturnCollateral w returnCollateralTxOut, totalCollateral)
+            | L.isZero nonAdaCollateral ->
+                -- The ada left over is too small for a return collateral output, so
+                -- use the whole collateral as total collateral instead. The extra ada
+                -- is only lost if a Plutus script fails on chain.
+                Right (TxReturnCollateralNone, TxTotalCollateral w totalCollateralLovelace)
+            | otherwise ->
+                Left $ ReturnCollateralBelowMinimumUTxO returnCollateralAda minReturnUTxO
 
 -- | Calculate the partial change - this does not include certificates' deposits
 calculatePartialChangeValue
