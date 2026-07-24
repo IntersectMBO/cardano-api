@@ -1,0 +1,4 @@
+The ada in the collateral inputs does not cover the required collateral. 
+Ada in collateral inputs: 1 Lovelace
+Required collateral: 2 Lovelace (the transaction fee multiplied by the collateralPercentage protocol parameter). 
+The usual solution is to provide collateral inputs with more ada.

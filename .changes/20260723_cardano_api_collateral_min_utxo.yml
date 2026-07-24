@@ -1,0 +1,8 @@
+project: cardano-api
+pr: 1266
+kind:
+  - bugfix
+  - breaking
+description: |
+  Issue: `makeTransactionBodyAutoBalance` and `estimateBalancedTxBody` (both the traditional and the experimental versions) could build transactions that the ledger rejects: with a return collateral output below the minimum UTxO value, or with insufficient collateral.
+  Solution: balancing now fails with the new `TxBodyErrorReturnCollateralMinUTxONotMet` and `TxBodyErrorInsufficientCollateral` errors instead of building a rejected transaction. `calcReturnAndTotalCollateral` now returns a `CollateralComputation` value instead of a pair.

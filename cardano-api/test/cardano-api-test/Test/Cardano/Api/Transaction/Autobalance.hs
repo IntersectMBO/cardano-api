@@ -495,7 +495,7 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
   txTotColl <- forAll $ Gen.frequency [(4, pure TxTotalCollateralNone), (1, genTxTotalCollateral era)]
   let address = AddressInEra (ShelleyAddressInEra sbe) (ShelleyAddress L.Testnet def L.StakeRefNull)
 
-  let (resRetColl, resTotColl) =
+  let result =
         calcReturnAndTotalCollateral
           beo
           feeCoin
@@ -506,43 +506,43 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
           address
           totalCollateral
 
-  H.annotateShow resRetColl
-  H.annotateShow resTotColl
-
-  let resRetCollValue =
-        mconcat
-          [ txOutValue
-          | TxReturnCollateral _ (TxOut _ (TxOutValueShelleyBased _ txOutValue) _ _) <- pure resRetColl
-          ]
-      collBalance = totalCollateral <-> resRetCollValue
-
-  resTotCollValue <-
-    H.noteShow $ mconcat [Api.mkAdaValue sbe lovelace | TxTotalCollateral _ lovelace <- pure resTotColl]
+  H.annotateShow result
 
   if
-    | txInsColl == TxInsCollateralNone -> do
-        -- no inputs - no outputs
-        TxReturnCollateralNone === resRetColl
-        TxTotalCollateralNone === resTotColl
-    | txRetColl /= TxReturnCollateralNone || txTotColl /= TxTotalCollateralNone -> do
+    | txInsColl == TxInsCollateralNone ->
+        -- no inputs - no collateral fields
+        NoCollateralNeeded === result
+    | txRetColl /= TxReturnCollateralNone || txTotColl /= TxTotalCollateralNone ->
         -- got collateral values as function arguments - not calculating anything
-        txRetColl === resRetColl
-        txTotColl === resTotColl
-    | totalCollateralAda < requiredCollateralAda -> do
-        -- provided collateral not enough, not calculating anything
-        TxReturnCollateralNone === resRetColl
-        TxTotalCollateralNone === resTotColl
-    | otherwise -> do
+        CollateralComputed txRetColl txTotColl === result
+    | totalCollateralAda < requiredCollateralAda ->
+        -- provided collateral not enough, the caller has to raise an error
+        InsufficientCollateral totalCollateralAda requiredCollateralAda === result
+    | otherwise ->
         -- no explicit collateral or return collateral was provided, we do the calculation
-        H.annotateShow collBalance
-        H.note_ "Check if collateral balance is positive"
-        H.assertWith collBalance $ L.pointwise (<=) mempty
-        H.note_ "Check if collateral balance contains only ada"
-        H.assertWith collBalance L.isAdaOnly
-        H.note_ "Check if collateral balance is at least minimum required"
-        H.assertWith collBalance $ L.pointwise (<=) (L.inject requiredCollateralAda)
-        H.note_ "Check that collateral balance is equal to collateral in tx body"
-        resTotCollValue === collBalance
+        case result of
+          ReturnCollateralBelowMinimumUTxO returnAda minUTxO ->
+            -- the leftover cannot form a valid return collateral output
+            H.assertWith (returnAda, minUTxO) $ uncurry (<)
+          CollateralComputed resRetColl resTotColl -> do
+            let resRetCollValue =
+                  mconcat
+                    [ txOutValue
+                    | TxReturnCollateral _ (TxOut _ (TxOutValueShelleyBased _ txOutValue) _ _) <- pure resRetColl
+                    ]
+                collBalance = totalCollateral <-> resRetCollValue
+            resTotCollValue <-
+              H.noteShow $ mconcat [Api.mkAdaValue sbe lovelace | TxTotalCollateral _ lovelace <- pure resTotColl]
+            H.annotateShow collBalance
+            H.note_ "Check if collateral balance is positive"
+            H.assertWith collBalance $ L.pointwise (<=) mempty
+            H.note_ "Check if collateral balance contains only ada"
+            H.assertWith collBalance L.isAdaOnly
+            H.note_ "Check if collateral balance is at least minimum required"
+            H.assertWith collBalance $ L.pointwise (<=) (L.inject requiredCollateralAda)
+            H.note_ "Check that collateral balance is equal to collateral in tx body"
+            resTotCollValue === collBalance
+          _ -> H.failure
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
 --
