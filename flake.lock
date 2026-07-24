@@ -440,6 +440,7 @@
       "flake": false,
       "locked": {
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1785728842,
         "narHash": "sha256-3R5qunuAddR7849eVthkALRrKcXLPMd2LeQVPH/+lRs=",
         "owner": "input-output-hk",
@@ -452,6 +453,13 @@
         "repo": "hackage.nix",
         "rev": "fb52363b13b1548ec9addc2ce443264e18b4ed11",
 >>>>>>> 34016a335 (Fix Dijkstra era query dispatch)
+=======
+        "lastModified": 1784929219,
+        "narHash": "sha256-3AJ770XS/73rwGO4WThjEgo6cjyZDDiVHPm3wQzA/zk=",
+        "owner": "input-output-hk",
+        "repo": "hackage.nix",
+        "rev": "b5b47da514cf576d06ce1e4efec76a8c942131ac",
+>>>>>>> 54175a2ff (Update flake inputs)
         "type": "github"
       },
       "original": {
