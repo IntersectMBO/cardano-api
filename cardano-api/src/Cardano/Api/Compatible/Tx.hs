@@ -232,15 +232,16 @@ convScriptData'
   -> [(ScriptWitnessIndex, AnyWitness (ShelleyLedgerEra era))]
   -> TxBodyScriptData era
 convScriptData' sbe extraDatums scriptWitnesses =
-  caseShelleyToMaryOrAlonzoEraOnwards
-    (const TxBodyNoScriptData)
+  forEraInEon
+    (convert sbe)
+    TxBodyNoScriptData
     ( \w ->
-        let redeemers = getAnyPlutusScriptWitnessRedeemerPointerMap w scriptWitnesses
-            datums = mconcat [getAnyWitnessScriptData wit | (_, wit) <- scriptWitnesses]
-            supplementalDatums = alonzoEraOnwardsConstraints w $ Alonzo.TxDats extraDatums
-         in TxBodyScriptData w (datums <> supplementalDatums) redeemers
+        alonzoEraOnwardsConstraints w $
+          let redeemers = getAnyPlutusScriptWitnessRedeemerPointerMap w scriptWitnesses
+              datums = mconcat [getAnyWitnessScriptData wit | (_, wit) <- scriptWitnesses]
+              supplementalDatums = Alonzo.TxDats extraDatums
+           in TxBodyScriptData w (datums <> supplementalDatums) redeemers
     )
-    sbe
 
 getAnyPlutusScriptWitnessRedeemerPointerMap
   :: AlonzoEraOnwards era

@@ -70,7 +70,7 @@ module Cardano.Api.Value.Internal
   )
 where
 
-import Cardano.Api.Era.Internal.Case
+import Cardano.Api.Era.Internal.Core (forEraInEon, toCardanoEra)
 import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.HasTypeProxy
@@ -336,10 +336,10 @@ toLedgerValue w = maryEraOnwardsConstraints w toMaryValue
 
 fromLedgerValue :: ShelleyBasedEra era -> L.Value (ShelleyLedgerEra era) -> Value
 fromLedgerValue sbe v =
-  caseShelleyToAllegraOrMaryEraOnwards
-    (const (lovelaceToValue v))
-    (const (fromMaryValue v))
-    sbe
+  forEraInEon
+    (toCardanoEra sbe)
+    (shelleyBasedEraConstraints sbe $ lovelaceToValue $ L.coin v)
+    (\w -> maryEraOnwardsConstraints w $ fromMaryValue v)
 
 fromMaryValue :: MaryValue -> Value
 fromMaryValue (MaryValue (L.Coin lovelace) multiAsset) =

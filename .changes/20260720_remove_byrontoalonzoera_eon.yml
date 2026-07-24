@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1260
+kind:
+  - breaking
+description: Remove the unused `ByronToAlonzoEra` eon (the `Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra` module and its `Cardano.Api.Era` re-export); it had no consumers, and the same era-gating is available via `forEraInEon`/`inEonForEra` on `toCardanoEra era`.
