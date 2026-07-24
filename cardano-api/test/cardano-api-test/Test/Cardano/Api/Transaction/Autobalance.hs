@@ -688,6 +688,97 @@ prop_estimate_balanced_tx_body_no_collateral_without_plutus = H.propertyOnce $ d
       H.annotate "Expected no collateral in a transaction without Plutus scripts"
       H.failure
 
+-- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
+--
+-- When the collateral inputs carry native tokens, the tokens must be given
+-- back in a return collateral output. With a collateral input holding
+-- exactly the minimum UTxO value, the ada left for the return collateral
+-- output after covering the required collateral (150% of the fee) is
+-- necessarily below the output's own minimum UTxO value, so no valid return
+-- collateral output exists and balancing must fail.
+prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_utxo :: Property
+prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_utxo = H.propertyOnce $ do
+  let ceo = ConwayEraOnwardsConway
+      beo = convert ceo
+      aeo = convert beo
+      meo = convert beo
+      sbe = convert ceo
+
+  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
+  let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
+
+  ledgerPParams <-
+    H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+  let pparams = LedgerProtocolParameters ledgerPParams
+
+  (sh@(ScriptHash scriptHash), plutusWitness) <- loadPlutusWitness ceo
+  let policyId' = PolicyId sh
+      address =
+        AddressInEra
+          (ShelleyAddressInEra sbe)
+          ( ShelleyAddress
+              L.Testnet
+              (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
+              L.StakeRefNull
+          )
+      fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+      tokenValue coin =
+        TxOutValueShelleyBased sbe $
+          L.MaryValue
+            coin
+            (L.MultiAsset $ fromList [(L.PolicyID scriptHash, [(L.AssetName "eeee", 1)])])
+      -- The token-carrying collateral input holds exactly its minimum UTxO
+      -- value.
+      minUTxOCollateral =
+        calculateMinimumUTxO sbe ledgerPParams $
+          TxOut address (tokenValue 0) TxOutDatumNone ReferenceScriptNone
+      utxos =
+        UTxO
+          [
+            ( fundingTxIn
+            , TxOut address (lovelaceToTxOutValue sbe 12_000_000) TxOutDatumNone ReferenceScriptNone
+            )
+          ,
+            ( collateralTxIn
+            , TxOut address (tokenValue minUTxOCollateral) TxOutDatumNone ReferenceScriptNone
+            )
+          ]
+      txMint =
+        TxMintValue
+          meo
+          [(policyId', ([(UnsafeAssetName "eeee", 1)], BuildTxWith plutusWitness))]
+      content =
+        defaultTxBodyContent sbe
+          & setTxIns [(fundingTxIn, BuildTxWith (KeyWitness KeyWitnessForSpending))]
+          & setTxInsCollateral (TxInsCollateral aeo [collateralTxIn])
+          & setTxOuts (mkTxOutput beo address (L.Coin 5_000_000) Nothing)
+          & setTxMintValue txMint
+          & setTxProtocolParams (pure $ pure pparams)
+
+  case makeTransactionBodyAutoBalance
+    sbe
+    systemStart
+    epochInfo
+    pparams
+    mempty
+    mempty
+    mempty
+    utxos
+    content
+    address
+    Nothing of
+    Left _ -> pure ()
+    Right (BalancedTxBody balancedContent _ _ _) ->
+      -- The ledger requires the ada in the return collateral output to cover
+      -- the minimum UTxO value of the output.
+      case txReturnCollateral balancedContent of
+        TxReturnCollateralNone -> pure ()
+        TxReturnCollateral _ txOut@(TxOut _ txOutValue _ _) -> do
+          let minUTxO = calculateMinimumUTxO sbe ledgerPParams txOut
+          H.note_ "Check that the return collateral output meets the minimum UTxO value"
+          H.assertWith (txOutValueToLovelace txOutValue, minUTxO) $ uncurry (>=)
+
 -- | Regression test for: https://github.com/IntersectMBO/cardano-cli/issues/1073
 prop_ensure_gov_actions_are_preserved_by_autobalance :: Property
 prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
@@ -942,6 +1033,9 @@ tests =
     , testProperty
         "estimateBalancedTxBody removes collateral on transactions without Plutus scripts"
         prop_estimate_balanced_tx_body_no_collateral_without_plutus
+    , testProperty
+        "makeTransactionBodyAutoBalance fails on return collateral with tokens below min UTxO"
+        prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_utxo
     , testProperty
         "Governance actions are preserved by autobalance"
         prop_ensure_gov_actions_are_preserved_by_autobalance
