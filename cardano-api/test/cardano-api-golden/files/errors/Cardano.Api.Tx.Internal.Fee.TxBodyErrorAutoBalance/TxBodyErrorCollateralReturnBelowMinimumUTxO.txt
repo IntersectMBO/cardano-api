@@ -1,4 +1,4 @@
-The return collateral output does not meet the minimum UTxO value. 
+The return collateral output does not meet the minimum UTxO value.
 Ada left for the return collateral output: 1 Lovelace
 Minimum required UTxO: 2 Lovelace
-The usual solution is to provide collateral inputs with more ada.
+The usual solution is to provide collateral inputs with more ada, or to increase the ada in the explicitly provided return collateral output.

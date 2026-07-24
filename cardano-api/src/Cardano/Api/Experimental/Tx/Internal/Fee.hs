@@ -707,9 +707,9 @@ hasPlutusScriptWitnesses txbodycontent =
 
 -- | Compute the return and total collateral fields of the transaction.
 -- Both fields are returned as 'Nothing' if and only if the transaction uses
--- no collateral inputs. Fields provided by the user are passed through
--- unvalidated: 'Left' can only arise when the function computes the fields
--- itself.
+-- no collateral inputs. A user-provided return collateral output is checked
+-- against its minimum UTxO value; user-provided fields are otherwise passed
+-- through unvalidated.
 --
 -- TODO: Bug Jared to expose a function from the ledger that returns total and
 -- return collateral.
@@ -754,19 +754,21 @@ calcReturnAndTotalCollateral fee pp' _ mTxReturnCollateral mTxTotalCollateral cA
       nonAdaCollateral = L.modifyCoin (const mempty) totalAvailableCollateral
       returnCollateral = returnAdaCollateral <> nonAdaCollateral
   case (mTxReturnCollateral, mTxTotalCollateral) of
-    (r@Just{}, t@Just{}) -> Right (r, t)
-    (r@Just{}, Nothing) -> Right (r, Nothing)
+    (r@(Just (TxReturnCollateral rcTxOut)), t) -> obtainCommonConstraints (useEra @era) $ do
+      -- The provided return collateral output is included in the transaction
+      -- verbatim, so it must meet its own minimum UTxO value.
+      let minReturnUTxO = calculateMinimumUTxO pp' (TxOut rcTxOut)
+          rcAda = rcTxOut ^. L.coinTxOutL
+      if rcAda < minReturnUTxO
+        then Left $ ReturnCollateralBelowMinimumUTxO rcAda minReturnUTxO
+        else Right (r, t)
     (Nothing, t@Just{}) -> Right (Nothing, t)
     (Nothing, Nothing)
       | returnCollateralAmount < 0 ->
           Left $ InsufficientCollateral totalCollateralLovelace totalCollateral
-      | otherwise -> do
-          let returnCollateralTxOut =
-                obtainCommonConstraints (useEra @era) $
-                  L.mkBasicTxOut (toShelleyAddr cAddr) returnCollateral
-              minReturnUTxO =
-                obtainCommonConstraints (useEra @era) $
-                  calculateMinimumUTxO pp' (TxOut returnCollateralTxOut)
+      | otherwise -> obtainCommonConstraints (useEra @era) $ do
+          let returnCollateralTxOut = L.mkBasicTxOut (toShelleyAddr cAddr) returnCollateral
+              minReturnUTxO = calculateMinimumUTxO pp' (TxOut returnCollateralTxOut)
           if returnCollateralAda < minReturnUTxO
             then Left $ ReturnCollateralBelowMinimumUTxO returnCollateralAda minReturnUTxO
             else

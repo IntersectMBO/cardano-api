@@ -515,8 +515,19 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
         -- set at least one of them
         Right (TxReturnCollateralNone, TxTotalCollateralNone) === result
     | txRetColl /= TxReturnCollateralNone || txTotColl /= TxTotalCollateralNone ->
-        -- got collateral values as function arguments - passed through unchanged
-        Right (txRetColl, txTotColl) === result
+        -- got collateral values as function arguments - passed through
+        -- unchanged, except that a provided return collateral output must
+        -- meet its own minimum UTxO value
+        case txRetColl of
+          TxReturnCollateral _ rcTxOut@(TxOut _ rcValue _ _)
+            | txOutValueToLovelace rcValue < calculateMinimumUTxO sbe pparams rcTxOut ->
+                Left
+                  ( ReturnCollateralBelowMinimumUTxO
+                      (txOutValueToLovelace rcValue)
+                      (calculateMinimumUTxO sbe pparams rcTxOut)
+                  )
+                  === result
+          _ -> Right (txRetColl, txTotColl) === result
     | totalCollateralAda < requiredCollateralAda ->
         -- provided collateral not enough, the caller has to raise an error
         Left (InsufficientCollateral totalCollateralAda requiredCollateralAda) === result
@@ -770,10 +781,13 @@ prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_u
     content
     address
     Nothing of
-    -- Any failure passes here: this is a regression test against
-    -- successfully building an invalid transaction, and it predates the fix,
-    -- so it cannot name the specific error the fix introduces.
-    Left _ -> pure ()
+    -- Only a collateral error passes: balancing must reject the transaction
+    -- because of its collateral. Any other failure is a broken test fixture.
+    Left (Api.TxBodyErrorCollateral _) -> pure ()
+    Left err -> do
+      H.annotateShow err
+      H.annotate "Expected balancing to fail with a collateral error"
+      H.failure
     Right (BalancedTxBody balancedContent _ _ _) ->
       -- The ledger requires the ada in the return collateral output to cover
       -- the minimum UTxO value of the output.

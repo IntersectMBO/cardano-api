@@ -1272,26 +1272,28 @@ instance Error CollateralError where
   prettyError = \case
     InsufficientCollateral available required ->
       mconcat
-        [ "The ada in the collateral inputs does not cover the required collateral. \n"
+        [ "The ada in the collateral inputs does not cover the required collateral.\n"
         , "Ada in collateral inputs: " <> pretty available <> "\n"
         , "Required collateral: "
             <> pretty required
-            <> " (the transaction fee multiplied by the collateralPercentage protocol parameter, divided by 100). \n"
+            <> " (the transaction fee multiplied by the collateralPercentage protocol parameter, divided by 100).\n"
         , "The usual solution is to provide collateral inputs with more ada."
         ]
     ReturnCollateralBelowMinimumUTxO returnAda minUTxO ->
       mconcat
-        [ "The return collateral output does not meet the minimum UTxO value. \n"
+        [ "The return collateral output does not meet the minimum UTxO value.\n"
         , "Ada left for the return collateral output: " <> pretty returnAda <> "\n"
         , "Minimum required UTxO: " <> pretty minUTxO <> "\n"
-        , "The usual solution is to provide collateral inputs with more ada."
+        , "The usual solution is to provide collateral inputs with more ada, "
+        , "or to increase the ada in the explicitly provided return collateral output."
         ]
 
 -- | Compute the return and total collateral fields of the transaction.
 -- Both fields are returned as 'TxReturnCollateralNone' and
 -- 'TxTotalCollateralNone' if and only if the transaction uses no collateral
--- inputs. Fields provided by the user are passed through unvalidated:
--- 'Left' can only arise when the function computes the fields itself.
+-- inputs. A user-provided return collateral output is checked against its
+-- minimum UTxO value; user-provided fields are otherwise passed through
+-- unvalidated.
 --
 -- Calculation taken from validateInsufficientCollateral:
 -- https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
@@ -1339,10 +1341,14 @@ calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTo
       nonAdaCollateral = L.modifyCoin (const mempty) totalAvailableCollateral
       returnCollateral = returnAdaCollateral <> nonAdaCollateral
   case (txReturnCollateral, txTotalCollateral) of
-    (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) ->
-      Right (rc, tc)
-    (rc@TxReturnCollateral{}, TxTotalCollateralNone) ->
-      Right (rc, TxTotalCollateralNone)
+    (rc@(TxReturnCollateral _ rcTxOut@(TxOut _ rcValue _ _)), tc) -> do
+      -- The provided return collateral output is included in the transaction
+      -- verbatim, so it must meet its own minimum UTxO value.
+      let minReturnUTxO = calculateMinimumUTxO sbe pp' rcTxOut
+          rcAda = txOutValueToLovelace rcValue
+      if rcAda < minReturnUTxO
+        then Left $ ReturnCollateralBelowMinimumUTxO rcAda minReturnUTxO
+        else Right (rc, tc)
     (TxReturnCollateralNone, tc@TxTotalCollateral{}) ->
       Right (TxReturnCollateralNone, tc)
     (TxReturnCollateralNone, TxTotalCollateralNone)
