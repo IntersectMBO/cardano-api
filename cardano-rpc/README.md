@@ -36,7 +36,7 @@ It implements [UTxO RPC](https://utxorpc.org/introduction) protobuf communicatio
 | [FetchBlock](https://utxorpc.org/sync/spec/#fetchblockrequest) | ✅ Supported |
 | [DumpHistory](https://utxorpc.org/sync/spec/#dumphistoryrequest) | ⬜ Not supported |
 | [FollowTip](https://utxorpc.org/sync/spec/#followtiprequest) | ⬜ Not supported |
-| [ReadTip](https://utxorpc.org/sync/spec/#readtiprequest) | ⬜ Not supported |
+| [ReadTip](https://utxorpc.org/sync/spec/#readtiprequest) | ✅ Supported |
 
 ### [WatchService](https://utxorpc.org/watch/spec/)
 

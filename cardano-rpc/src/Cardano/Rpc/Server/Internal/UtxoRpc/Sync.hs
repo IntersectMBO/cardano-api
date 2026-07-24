@@ -8,10 +8,12 @@
 -- (fetching blocks, dumping history, following the tip).
 module Cardano.Rpc.Server.Internal.UtxoRpc.Sync
   ( fetchBlockMethod
+  , readTipMethod
   )
 where
 
 import Cardano.Api
+import Cardano.Api.Consensus qualified as Consensus
 import Cardano.Rpc.Proto.Api.UtxoRpc.Sync qualified as U5c
 import Cardano.Rpc.Server.Internal.Error
 import Cardano.Rpc.Server.Internal.Monad
@@ -23,6 +25,7 @@ import Cardano.Rpc.Server.NodeKernelAccess
 import RIO
 
 import Data.ByteString qualified as BS
+import Data.ByteString.Short qualified as SBS
 import Data.ProtoLens (defMessage)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Network.GRPC.Spec (GrpcError (GrpcInternal, GrpcInvalidArgument, GrpcNotFound), Proto)
@@ -88,3 +91,35 @@ fetchBlockMethod request = do
                & U5c.cardano . U5c.body . U5c.tx .~ txs
                & U5c.cardano . U5c.timestamp .~ timestampMs
            )
+
+-- | Handle the @ReadTip@ SyncService RPC method.
+-- Reads the current chain tip from ChainDB and returns it as slot, block
+-- header hash, block height and slot timestamp.
+-- When the chain is at origin, the tip field is left unset.
+readTipMethod
+  :: MonadRpc e m
+  => Proto U5c.ReadTipRequest
+  -> m (Proto U5c.ReadTipResponse)
+readTipMethod _request = do
+  NodeKernelAccess{chainDb, systemStart, readEraHistory} <- grabNodeKernelAccess
+  tipHeader <- liftIO $ Consensus.getTipHeader chainDb
+  tip <- forM tipHeader $ \header -> do
+    let slot = Consensus.blockSlot header
+        Consensus.OneEraHash tipHash = Consensus.blockHash header
+        BlockNo height = Consensus.blockNo header
+        throwPastHorizon =
+          throwGrpcErrorWithMessage GrpcInternal $
+            "cannot convert tip slot "
+              <> tshow (unSlotNo slot)
+              <> " to timestamp: the slot is past the era history horizon"
+    eraHistory <- readEraHistory
+    timestampMs <-
+      slotToUTCTime systemStart eraHistory slot
+        & either (const throwPastHorizon) (pure . round . (* 1000) . utcTimeToPOSIXSeconds)
+    pure $
+      defMessage
+        & U5c.slot .~ unSlotNo slot
+        & U5c.hash .~ SBS.fromShort tipHash
+        & U5c.height .~ height
+        & U5c.timestamp .~ timestampMs
+  pure $ defMessage & U5c.maybe'tip .~ tip

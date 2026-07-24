@@ -54,6 +54,7 @@ module Cardano.Api.Consensus
   , ChainDB.ChainDB
   , ChainDB.getBlockComponent
   , ChainDB.getCurrentLedger
+  , ChainDB.getTipHeader
   , ConfigSupportsNode
   , ChainDepState
   , GenTx (..)
@@ -71,7 +72,9 @@ module Cardano.Api.Consensus
   , StandardCrypto
   , TopLevelConfig
   , ledgerState
+  , blockHash
   , blockNo
+  , blockSlot
   , byronBlockRaw
   , byronIdTx
   , configBlock
