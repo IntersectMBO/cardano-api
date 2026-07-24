@@ -70,4 +70,4 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraAlonzo -> l ShelleyToBabbageEraAlonzo
   ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway -> r ConwayEraOnwardsConway
-  ShelleyBasedEraDijkstra -> error "TODO Dijkstra: caseShelleyToBabbageOrConwayEraOnwards: era not supported"
+  ShelleyBasedEraDijkstra -> r ConwayEraOnwardsDijkstra
