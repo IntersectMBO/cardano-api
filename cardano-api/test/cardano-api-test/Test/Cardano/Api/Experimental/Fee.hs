@@ -16,6 +16,7 @@ import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Monad.Error (failEitherWith)
+import Cardano.Api.Parser.Text qualified as Api
 
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
@@ -107,6 +108,15 @@ tests =
         [ testProperty
             "underfunded transaction fails with TxBodyErrorBalanceNegative"
             prop_makeTransactionBodyAutoBalance_balance_negative
+        , testProperty
+            "removes collateral without Plutus scripts"
+            prop_makeTransactionBodyAutoBalance_no_collateral_without_plutus
+        ]
+    , testGroup
+        "estimateBalancedTxBody"
+        [ testProperty
+            "removes collateral without Plutus scripts"
+            prop_estimateBalancedTxBody_no_collateral_without_plutus
         ]
     , testGroup
         "evaluateTransaction"
@@ -747,6 +757,133 @@ prop_makeTransactionBodyAutoBalance_balance_negative = H.property $ do
     Right _ ->
       H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
         >> H.failure
+
+-- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
+--
+-- The ledger requires collateral only for transactions that run Plutus
+-- scripts, so balancing a transaction without Plutus scripts must not
+-- include any collateral: the collateral inputs are removed and no
+-- collateral fields are set. In particular it must not compute a return
+-- collateral output: with a collateral input holding exactly the minimum
+-- UTxO value, the computed return collateral output would fall below its own
+-- minimum UTxO value, and the ledger would reject the transaction.
+prop_makeTransactionBodyAutoBalance_no_collateral_without_plutus :: Property
+prop_makeTransactionBodyAutoBalance_no_collateral_without_plutus = H.propertyOnce $ do
+  let era = Exp.ConwayEra
+      sbe = convert era
+      systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
+      epochInfo =
+        Api.LedgerEpochInfo $
+          Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+
+  fundingTxIn <-
+    H.evalEither $
+      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+  collateralTxIn <-
+    H.evalEither $
+      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+
+  let addr =
+        L.Addr
+          L.Testnet
+          (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+          L.StakeRefNull
+      -- The smallest realistic collateral input: it holds exactly the
+      -- minimum UTxO value.
+      minUTxOCollateral =
+        Exp.calculateMinimumUTxO exampleProtocolParams $
+          Exp.TxOut (L.mkBasicTxOut addr (L.MaryValue (L.Coin 0) mempty))
+      utxo =
+        L.UTxO $
+          Map.fromList
+            [ (Api.toShelleyTxIn fundingTxIn, L.mkBasicTxOut addr (L.MaryValue (L.Coin 12_000_000) mempty))
+            , (Api.toShelleyTxIn collateralTxIn, L.mkBasicTxOut addr (L.MaryValue minUTxOCollateral mempty))
+            ]
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(fundingTxIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxInsCollateral [collateralTxIn]
+          & Exp.setTxOuts [Exp.TxOut $ L.mkBasicTxOut addr (L.MaryValue (L.Coin 5_000_000) mempty)]
+
+  (_, balancedContent) <-
+    H.leftFail $
+      Exp.makeTransactionBodyAutoBalance
+        systemStart
+        epochInfo
+        exampleProtocolParams
+        mempty
+        mempty
+        mempty
+        utxo
+        txBodyContent
+        (Api.fromShelleyAddr sbe addr)
+        Nothing
+
+  case ( Exp.txInsCollateral balancedContent
+       , Exp.txReturnCollateral balancedContent
+       , Exp.txTotalCollateral balancedContent
+       ) of
+    ([], Nothing, Nothing) -> pure ()
+    _ -> do
+      H.annotate "Expected no collateral in a transaction without Plutus scripts"
+      H.failure
+
+-- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
+--
+-- Like 'prop_makeTransactionBodyAutoBalance_no_collateral_without_plutus',
+-- but for 'Exp.estimateBalancedTxBody'.
+prop_estimateBalancedTxBody_no_collateral_without_plutus :: Property
+prop_estimateBalancedTxBody_no_collateral_without_plutus = H.propertyOnce $ do
+  let era = Exp.ConwayEra
+      sbe = convert era
+
+  fundingTxIn <-
+    H.evalEither $
+      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+  collateralTxIn <-
+    H.evalEither $
+      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+
+  let addr =
+        L.Addr
+          L.Testnet
+          (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+          L.StakeRefNull
+      -- The smallest realistic collateral: exactly the minimum UTxO value.
+      minUTxOCollateral =
+        Exp.calculateMinimumUTxO exampleProtocolParams $
+          Exp.TxOut (L.mkBasicTxOut addr (L.MaryValue (L.Coin 0) mempty))
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(fundingTxIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxInsCollateral [collateralTxIn]
+          & Exp.setTxOuts [Exp.TxOut $ L.mkBasicTxOut addr (L.MaryValue (L.Coin 5_000_000) mempty)]
+
+  balancedContent <-
+    H.leftFail $
+      Exp.estimateBalancedTxBody
+        era
+        txBodyContent
+        exampleProtocolParams
+        mempty
+        mempty
+        mempty
+        mempty
+        minUTxOCollateral
+        1
+        0
+        0
+        (Api.fromShelleyAddr sbe addr)
+        (L.MaryValue (L.Coin 12_000_000) mempty)
+
+  case ( Exp.txInsCollateral balancedContent
+       , Exp.txReturnCollateral balancedContent
+       , Exp.txTotalCollateral balancedContent
+       ) of
+    ([], Nothing, Nothing) -> pure ()
+    _ -> do
+      H.annotate "Expected no collateral in a transaction without Plutus scripts"
+      H.failure
 
 -- | A well-funded transaction returns a positive fee from 'evaluateTransaction'.
 prop_evaluateTransaction_positive_fee :: Property

@@ -544,6 +544,150 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
         H.note_ "Check that collateral balance is equal to collateral in tx body"
         resTotCollValue === collBalance
 
+-- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
+--
+-- The ledger requires collateral only for transactions that run Plutus
+-- scripts, so balancing a transaction without Plutus scripts must not
+-- include any collateral: the collateral inputs are removed and no
+-- collateral fields are set. In particular it must not compute a return
+-- collateral output: with a collateral input holding exactly the minimum
+-- UTxO value, the computed return collateral output would fall below its own
+-- minimum UTxO value, and the ledger would reject the transaction.
+prop_make_transaction_body_autobalance_no_collateral_without_plutus :: Property
+prop_make_transaction_body_autobalance_no_collateral_without_plutus = H.propertyOnce $ do
+  let ceo = ConwayEraOnwardsConway
+      beo = convert ceo
+      aeo = convert beo
+      sbe = convert ceo
+
+  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
+  let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
+
+  ledgerPParams <-
+    H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+  let pparams = LedgerProtocolParameters ledgerPParams
+
+  let address =
+        AddressInEra
+          (ShelleyAddressInEra sbe)
+          ( ShelleyAddress
+              L.Testnet
+              (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
+              L.StakeRefNull
+          )
+      fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+      -- The smallest realistic collateral input: it holds exactly the
+      -- minimum UTxO value.
+      minUTxOCollateral =
+        calculateMinimumUTxO sbe ledgerPParams $
+          TxOut address (lovelaceToTxOutValue sbe 0) TxOutDatumNone ReferenceScriptNone
+      utxos =
+        UTxO
+          [
+            ( fundingTxIn
+            , TxOut address (lovelaceToTxOutValue sbe 12_000_000) TxOutDatumNone ReferenceScriptNone
+            )
+          ,
+            ( collateralTxIn
+            , TxOut address (lovelaceToTxOutValue sbe minUTxOCollateral) TxOutDatumNone ReferenceScriptNone
+            )
+          ]
+      content =
+        defaultTxBodyContent sbe
+          & setTxIns [(fundingTxIn, BuildTxWith (KeyWitness KeyWitnessForSpending))]
+          & setTxInsCollateral (TxInsCollateral aeo [collateralTxIn])
+          & setTxOuts (mkTxOutput beo address (L.Coin 5_000_000) Nothing)
+          & setTxProtocolParams (pure $ pure pparams)
+
+  BalancedTxBody balancedContent _ _ _ <-
+    H.leftFail $
+      makeTransactionBodyAutoBalance
+        sbe
+        systemStart
+        epochInfo
+        pparams
+        mempty
+        mempty
+        mempty
+        utxos
+        content
+        address
+        Nothing
+
+  case ( txInsCollateral balancedContent
+       , txReturnCollateral balancedContent
+       , txTotalCollateral balancedContent
+       ) of
+    (TxInsCollateralNone, TxReturnCollateralNone, TxTotalCollateralNone) -> pure ()
+    collateral -> do
+      H.annotateShow collateral
+      H.annotate "Expected no collateral in a transaction without Plutus scripts"
+      H.failure
+
+-- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
+--
+-- Like 'prop_make_transaction_body_autobalance_no_collateral_without_plutus',
+-- but for 'estimateBalancedTxBody'.
+prop_estimate_balanced_tx_body_no_collateral_without_plutus :: Property
+prop_estimate_balanced_tx_body_no_collateral_without_plutus = H.propertyOnce $ do
+  let ceo = ConwayEraOnwardsConway
+      beo = convert ceo
+      aeo = convert beo
+      meo = convert beo
+      sbe = convert ceo
+
+  ledgerPParams <-
+    H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  let address =
+        AddressInEra
+          (ShelleyAddressInEra sbe)
+          ( ShelleyAddress
+              L.Testnet
+              (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
+              L.StakeRefNull
+          )
+      fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+      -- The smallest realistic collateral: exactly the minimum UTxO value.
+      minUTxOCollateral =
+        calculateMinimumUTxO sbe ledgerPParams $
+          TxOut address (lovelaceToTxOutValue sbe 0) TxOutDatumNone ReferenceScriptNone
+      content =
+        defaultTxBodyContent sbe
+          & setTxIns [(fundingTxIn, BuildTxWith (KeyWitness KeyWitnessForSpending))]
+          & setTxInsCollateral (TxInsCollateral aeo [collateralTxIn])
+          & setTxOuts (mkTxOutput beo address (L.Coin 5_000_000) Nothing)
+          & setTxProtocolParams (pure $ pure (LedgerProtocolParameters ledgerPParams))
+
+  BalancedTxBody balancedContent _ _ _ <-
+    H.leftFail $
+      estimateBalancedTxBody
+        meo
+        content
+        ledgerPParams
+        mempty
+        mempty
+        mempty
+        mempty
+        minUTxOCollateral
+        1
+        0
+        0
+        address
+        (lovelaceToValue 12_000_000)
+
+  case ( txInsCollateral balancedContent
+       , txReturnCollateral balancedContent
+       , txTotalCollateral balancedContent
+       ) of
+    (TxInsCollateralNone, TxReturnCollateralNone, TxTotalCollateralNone) -> pure ()
+    collateral -> do
+      H.annotateShow collateral
+      H.annotate "Expected no collateral in a transaction without Plutus scripts"
+      H.failure
+
 -- | Regression test for: https://github.com/IntersectMBO/cardano-cli/issues/1073
 prop_ensure_gov_actions_are_preserved_by_autobalance :: Property
 prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
@@ -792,6 +936,12 @@ tests =
         "makeTransactionBodyAutoBalance autobalances when deregistering certificates"
         prop_make_transaction_body_autobalance_when_deregistering_certs
     , testProperty "calcReturnAndTotalCollateral constraints hold" prop_calcReturnAndTotalCollateral
+    , testProperty
+        "makeTransactionBodyAutoBalance removes collateral on transactions without Plutus scripts"
+        prop_make_transaction_body_autobalance_no_collateral_without_plutus
+    , testProperty
+        "estimateBalancedTxBody removes collateral on transactions without Plutus scripts"
+        prop_estimate_balanced_tx_body_no_collateral_without_plutus
     , testProperty
         "Governance actions are preserved by autobalance"
         prop_ensure_gov_actions_are_preserved_by_autobalance
