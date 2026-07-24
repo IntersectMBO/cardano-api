@@ -90,6 +90,7 @@ library
   build-depends:
     aeson,
     base,
+    base16-bytestring,
     bytestring,
     cardano-api >=11.2,
     cardano-binary,

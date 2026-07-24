@@ -8,8 +8,7 @@ module Test.Cardano.Rpc.FetchBlockTx where
 
 import Cardano.Api (SlotNo (..))
 import Cardano.Api.Address
-  ( serialiseAddress
-  , toShelleyAddr
+  ( toShelleyAddr
   , toShelleyStakeAddr
   , toShelleyStakeCredential
   )
@@ -32,7 +31,6 @@ import RIO hiding (toList)
 
 import Data.Map.Strict qualified as M
 import Data.ProtoLens (decodeMessage, encodeMessage)
-import Data.Text.Encoding qualified as T
 import GHC.IsList (fromList, toList)
 import GHC.Stack (withFrozenCallStack)
 import Network.GRPC.Spec (Proto (..))
@@ -97,7 +95,7 @@ txToUtxoRpcTxProjections sbe = H.withTests 40 . H.property $ anyEraTxConstraints
       expectedAddress ledgerOutput =
         case fromShelleyTxOut sbe ledgerOutput of
           TxOut addressInEra _ _ _ ->
-            shelleyBasedEraConstraints sbe $ T.encodeUtf8 (serialiseAddress addressInEra)
+            shelleyBasedEraConstraints sbe $ serialiseToRawBytes addressInEra
   map (\o -> (o ^. U5c.address, o ^. U5c.coin)) protoOutputs
     === map
       (\o -> (expectedAddress o, inject $ o ^. L.coinTxOutL))
@@ -331,7 +329,7 @@ hprop_tx_to_utxorpc_tx_injected_optional_fields = H.withTests 10 . H.property $ 
   totalCollateral === inject (L.Coin totalCollateralCoin)
   collateralReturn <- H.nothingFail $ collateral ^. U5c.maybe'collateralReturn
   collateralReturn ^. U5c.address
-    === shelleyBasedEraConstraints sbe (T.encodeUtf8 (serialiseAddress returnAddress))
+    === shelleyBasedEraConstraints sbe (serialiseToRawBytes returnAddress)
   collateralReturn ^. U5c.coin === inject (L.Coin returnCoin)
 
   H.note_ "The proposal carries the injected deposit, return account, anchor and action"
