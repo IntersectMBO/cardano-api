@@ -51,7 +51,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , toCompactPartial
   , EraPParams (..)
   , Era (..)
-  , EraTxOut
+  , EraTxOut (addrTxOutL, valueTxOutL)
   , Inject (..)
   , Network (..)
   , PoolCert (..)
@@ -151,6 +151,10 @@ module Cardano.Api.Ledger.Internal.Reexport
   , AsIx (..)
   , CoinPerWord (..)
   , Data (..)
+  , Datum (..)
+  , AlonzoEraTxOut (datumTxOutF)
+  , hashBinaryData
+  , hashScript
   , EraTxWits (..)
   , ExUnits (..)
   , Redeemers (..)
@@ -163,7 +167,8 @@ module Cardano.Api.Ledger.Internal.Reexport
   , pattern AlonzoGenesis
   , AsIxItem (..)
   , EraGov
-  , EraTx (witsTxL, bodyTxL)
+  , EraTx (witsTxL, bodyTxL, auxDataTxL)
+  , EraTxAuxData (metadataTxAuxDataL)
   , EraTxBody (..)
   , TopTx
   , Tx
@@ -222,13 +227,14 @@ import Cardano.Ledger.Address (AccountAddress (..), Addr (..))
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), Timelock (..), showTimelock)
 import Cardano.Ledger.Alonzo.Core
   ( AlonzoEraScript (..)
+  , AlonzoEraTxOut (datumTxOutF)
   , AlonzoEraTxBody (..)
   , AlonzoEraTxWits (..)
   , AsIx (..)
   , AsIxItem (AsIxItem)
   , CoinPerWord (..)
   , EraGov
-  , EraTx (bodyTxL, witsTxL)
+  , EraTx (bodyTxL, witsTxL, auxDataTxL)
   , EraTxWits (..)
   , PParamsUpdate (..)
   , Tx
@@ -347,14 +353,16 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
   ( Era (..)
   , EraPParams (..)
+  , EraTxAuxData (metadataTxAuxDataL)
   , EraTxBody (..)
-  , EraTxOut
+  , EraTxOut (addrTxOutL, valueTxOutL)
   , PParams (..)
   , PoolCert (..)
   , TopTx
   , TxOut
   , Value
   , fromEraCBOR
+  , hashScript
   , mkBasicTxOut
   , ppMinFeeAL
   , ppMinUTxOValueL
@@ -381,7 +389,7 @@ import Cardano.Ledger.Keys
   , toVRFVerKeyHash
   )
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..), PolicyID (..), valueFromList)
-import Cardano.Ledger.Plutus.Data (Data (..), unData)
+import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), hashBinaryData, unData)
 import Cardano.Ledger.Plutus.Language
   ( Language
   , Plutus

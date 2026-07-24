@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1262
+kind:
+  - compatible
+description: |
+  Re-export additional ledger accessors from `Cardano.Api.Ledger` so downstream code can read a transaction and its outputs through the ledger lenses without depending on `cardano-ledger` directly: `auxDataTxL` (via `EraTx`), `metadataTxAuxDataL` (via `EraTxAuxData`), `addrTxOutL` / `valueTxOutL` (via `EraTxOut`), `datumTxOutF` (via `AlonzoEraTxOut`), plus `Datum (..)`, `hashBinaryData`, and `hashScript`.
