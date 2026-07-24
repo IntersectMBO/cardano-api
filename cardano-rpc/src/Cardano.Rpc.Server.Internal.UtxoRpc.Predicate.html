@@ -1,0 +1,698 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Predicate</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesUtxoPredicate"><span class="hs-identifier">matchesUtxoPredicate</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#exactAddressPredicate"><span class="hs-identifier">exactAddressPredicate</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#extractAddressesFromPredicate"><span class="hs-identifier">extractAddressesFromPredicate</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAddressPattern"><span class="hs-identifier">matchesAddressPattern</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAssetPattern"><span class="hs-identifier">matchesAssetPattern</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesTxOutputPattern"><span class="hs-identifier">matchesTxOutputPattern</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAnyUtxoPattern"><span class="hs-identifier">matchesAnyUtxoPattern</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#serialisePaymentCredential"><span class="hs-identifier">serialisePaymentCredential</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#serialiseStakeCredential"><span class="hs-identifier">serialiseStakeCredential</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html"><span class="hs-identifier">Cardano.Api.Address</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Era.html"><span class="hs-identifier">Cardano.Api.Era</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html"><span class="hs-identifier">Cardano.Api.Serialise.Raw</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.html"><span class="hs-identifier">Cardano.Api.Tx</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Value.html"><span class="hs-identifier">Cardano.Api.Value</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UtxoRpc</span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/rio-0.1.24.0-d0e5831b10849e265fde05dc5b9b28d702aecc86ff0ea6a46676b331d3c74941/share/doc/html/src/RIO.html"><span class="hs-identifier">RIO</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#toList"><span class="hs-identifier">toList</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.html"><span class="hs-identifier">Data.ProtoLens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier">defMessage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/GHC.IsList.html"><span class="hs-identifier">GHC.IsList</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.html"><span class="hs-identifier">Network.GRPC.Spec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier">Proto</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- | Check if a UTxO entry matches a 'UtxoPredicate'.</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- All present fields are combined with AND logic.</span><span>
+</span><span id="line-35"></span><span id="local-6989586621679617139"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesUtxoPredicate"><span class="hs-identifier hs-type">matchesUtxoPredicate</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#IsCardanoEra"><span class="hs-identifier hs-type">IsCardanoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617139"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.UtxoPredicate</span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Output.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Output.html#CtxUTxO"><span class="hs-identifier hs-type">CtxUTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617139"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-40"></span><span id="matchesUtxoPredicate"><span class="annot"><span class="annottext">matchesUtxoPredicate :: forall era.
+IsCardanoEra era =&gt;
+Proto UtxoPredicate -&gt; TxOut CtxUTxO era -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesUtxoPredicate"><span class="hs-identifier hs-var hs-var">matchesUtxoPredicate</span></a></span></span><span> </span><span id="local-6989586621679617417"><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><a href="#local-6989586621679617417"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679617418"><span class="annot"><span class="annottext">TxOut CtxUTxO era
+</span><a href="#local-6989586621679617418"><span class="hs-identifier hs-var">txOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><span class="annottext">(Proto AnyUtxoPattern -&gt; Bool)
+-&gt; Maybe (Proto AnyUtxoPattern) -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#all"><span class="hs-identifier hs-var">all</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto AnyUtxoPattern -&gt; TxOut CtxUTxO era -&gt; Bool
+forall era.
+IsCardanoEra era =&gt;
+Proto AnyUtxoPattern -&gt; TxOut CtxUTxO era -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAnyUtxoPattern"><span class="hs-operator hs-var">`matchesAnyUtxoPattern`</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut CtxUTxO era
+</span><a href="#local-6989586621679617418"><span class="hs-identifier hs-var">txOut</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><a href="#local-6989586621679617417"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+-&gt; Getting
+     (Maybe (Proto AnyUtxoPattern))
+     (Proto UtxoPredicate)
+     (Maybe (Proto AnyUtxoPattern))
+-&gt; Maybe (Proto AnyUtxoPattern)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (Proto AnyUtxoPattern))
+  (Proto UtxoPredicate)
+  (Maybe (Proto AnyUtxoPattern))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'match&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.maybe'match</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Proto UtxoPredicate -&gt; Bool) -&gt; [Proto UtxoPredicate] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto UtxoPredicate -&gt; TxOut CtxUTxO era -&gt; Bool
+forall era.
+IsCardanoEra era =&gt;
+Proto UtxoPredicate -&gt; TxOut CtxUTxO era -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesUtxoPredicate"><span class="hs-operator hs-var">`matchesUtxoPredicate`</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut CtxUTxO era
+</span><a href="#local-6989586621679617418"><span class="hs-identifier hs-var">txOut</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><a href="#local-6989586621679617417"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+-&gt; Getting
+     [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+-&gt; [Proto UtxoPredicate]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;not&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.not</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Proto UtxoPredicate -&gt; Bool) -&gt; [Proto UtxoPredicate] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#all"><span class="hs-identifier hs-var">all</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto UtxoPredicate -&gt; TxOut CtxUTxO era -&gt; Bool
+forall era.
+IsCardanoEra era =&gt;
+Proto UtxoPredicate -&gt; TxOut CtxUTxO era -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesUtxoPredicate"><span class="hs-operator hs-var">`matchesUtxoPredicate`</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut CtxUTxO era
+</span><a href="#local-6989586621679617418"><span class="hs-identifier hs-var">txOut</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><a href="#local-6989586621679617417"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+-&gt; Getting
+     [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+-&gt; [Proto UtxoPredicate]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;allOf&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.allOf</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Proto UtxoPredicate] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><a href="#local-6989586621679617417"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+-&gt; Getting
+     [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+-&gt; [Proto UtxoPredicate]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;anyOf&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.anyOf</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">(Proto UtxoPredicate -&gt; Bool) -&gt; [Proto UtxoPredicate] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto UtxoPredicate -&gt; TxOut CtxUTxO era -&gt; Bool
+forall era.
+IsCardanoEra era =&gt;
+Proto UtxoPredicate -&gt; TxOut CtxUTxO era -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesUtxoPredicate"><span class="hs-operator hs-var">`matchesUtxoPredicate`</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut CtxUTxO era
+</span><a href="#local-6989586621679617418"><span class="hs-identifier hs-var">txOut</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><a href="#local-6989586621679617417"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+-&gt; Getting
+     [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+-&gt; [Proto UtxoPredicate]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;anyOf&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.anyOf</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- | Check if a UTxO entry matches an 'AnyUtxoPattern'.</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- Delegates to the Cardano-specific 'TxOutputPattern' if present.</span><span>
+</span><span id="line-48"></span><span id="local-6989586621679617146"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAnyUtxoPattern"><span class="hs-identifier hs-type">matchesAnyUtxoPattern</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#IsCardanoEra"><span class="hs-identifier hs-type">IsCardanoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617146"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.AnyUtxoPattern</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Output.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Output.html#CtxUTxO"><span class="hs-identifier hs-type">CtxUTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617146"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-53"></span><span id="matchesAnyUtxoPattern"><span class="annot"><span class="annottext">matchesAnyUtxoPattern :: forall era.
+IsCardanoEra era =&gt;
+Proto AnyUtxoPattern -&gt; TxOut CtxUTxO era -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAnyUtxoPattern"><span class="hs-identifier hs-var hs-var">matchesAnyUtxoPattern</span></a></span></span><span> </span><span id="local-6989586621679617438"><span class="annot"><span class="annottext">Proto AnyUtxoPattern
+</span><a href="#local-6989586621679617438"><span class="hs-identifier hs-var">pat</span></a></span></span><span> </span><span id="local-6989586621679617439"><span class="annot"><span class="annottext">TxOut CtxUTxO era
+</span><a href="#local-6989586621679617439"><span class="hs-identifier hs-var">txOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">(Proto TxOutputPattern -&gt; Bool)
+-&gt; Maybe (Proto TxOutputPattern) -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#all"><span class="hs-identifier hs-var">all</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto TxOutputPattern -&gt; TxOut CtxUTxO era -&gt; Bool
+forall era.
+IsCardanoEra era =&gt;
+Proto TxOutputPattern -&gt; TxOut CtxUTxO era -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesTxOutputPattern"><span class="hs-operator hs-var">`matchesTxOutputPattern`</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut CtxUTxO era
+</span><a href="#local-6989586621679617439"><span class="hs-identifier hs-var">txOut</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto AnyUtxoPattern
+</span><a href="#local-6989586621679617438"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AnyUtxoPattern
+-&gt; Getting
+     (Maybe (Proto TxOutputPattern))
+     (Proto AnyUtxoPattern)
+     (Maybe (Proto TxOutputPattern))
+-&gt; Maybe (Proto TxOutputPattern)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (Proto TxOutputPattern))
+  (Proto AnyUtxoPattern)
+  (Maybe (Proto TxOutputPattern))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'cardano&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.maybe'cardano</span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- | Check if a tx output matches a 'TxOutputPattern'.</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- Address and asset filters are combined with AND; absent fields are vacuously true.</span><span>
+</span><span id="line-58"></span><span id="local-6989586621679617166"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesTxOutputPattern"><span class="hs-identifier hs-type">matchesTxOutputPattern</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#IsCardanoEra"><span class="hs-identifier hs-type">IsCardanoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617166"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.TxOutputPattern</span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Output.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Output.html#CtxUTxO"><span class="hs-identifier hs-type">CtxUTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617166"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-63"></span><span id="matchesTxOutputPattern"><span class="annot"><span class="annottext">matchesTxOutputPattern :: forall era.
+IsCardanoEra era =&gt;
+Proto TxOutputPattern -&gt; TxOut CtxUTxO era -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesTxOutputPattern"><span class="hs-identifier hs-var hs-var">matchesTxOutputPattern</span></a></span></span><span> </span><span id="local-6989586621679617456"><span class="annot"><span class="annottext">Proto TxOutputPattern
+</span><a href="#local-6989586621679617456"><span class="hs-identifier hs-var">pat</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Output.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span id="local-6989586621679617458"><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621679617458"><span class="hs-identifier hs-var">addrInEra</span></a></span></span><span> </span><span id="local-6989586621679617459"><span class="annot"><span class="annottext">TxOutValue era
+</span><a href="#local-6989586621679617459"><span class="hs-identifier hs-var">txOutValue</span></a></span></span><span> </span><span id="local-6989586621679617460"><span class="annot"><span class="annottext">TxOutDatum CtxUTxO era
+</span><a href="#local-6989586621679617460"><span class="hs-identifier hs-var">_datum</span></a></span></span><span> </span><span id="local-6989586621679617461"><span class="annot"><span class="annottext">ReferenceScript era
+</span><a href="#local-6989586621679617461"><span class="hs-identifier hs-var">_script</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="annottext">(Proto AddressPattern -&gt; Bool)
+-&gt; Maybe (Proto AddressPattern) -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#all"><span class="hs-identifier hs-var">all</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto AddressPattern -&gt; AddressInEra era -&gt; Bool
+forall era.
+IsCardanoEra era =&gt;
+Proto AddressPattern -&gt; AddressInEra era -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAddressPattern"><span class="hs-operator hs-var">`matchesAddressPattern`</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621679617458"><span class="hs-identifier hs-var">addrInEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto TxOutputPattern
+</span><a href="#local-6989586621679617456"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto TxOutputPattern
+-&gt; Getting
+     (Maybe (Proto AddressPattern))
+     (Proto TxOutputPattern)
+     (Maybe (Proto AddressPattern))
+-&gt; Maybe (Proto AddressPattern)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (Proto AddressPattern))
+  (Proto TxOutputPattern)
+  (Maybe (Proto AddressPattern))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'address&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.maybe'address</span></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Proto AssetPattern -&gt; Bool) -&gt; Maybe (Proto AssetPattern) -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#all"><span class="hs-identifier hs-var">all</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto AssetPattern -&gt; Value -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAssetPattern"><span class="hs-operator hs-var">`matchesAssetPattern`</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutValue era -&gt; Value
+forall era. TxOutValue era -&gt; Value
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Output.html#txOutValueToValue"><span class="hs-identifier hs-var">txOutValueToValue</span></a></span><span> </span><span class="annot"><span class="annottext">TxOutValue era
+</span><a href="#local-6989586621679617459"><span class="hs-identifier hs-var">txOutValue</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto TxOutputPattern
+</span><a href="#local-6989586621679617456"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto TxOutputPattern
+-&gt; Getting
+     (Maybe (Proto AssetPattern))
+     (Proto TxOutputPattern)
+     (Maybe (Proto AssetPattern))
+-&gt; Maybe (Proto AssetPattern)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (Proto AssetPattern))
+  (Proto TxOutputPattern)
+  (Maybe (Proto AssetPattern))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'asset&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.maybe'asset</span></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- | Check if an address matches an 'AddressPattern'.</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- All present fields (exact, payment, delegation) must match (AND logic).</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- Byron addresses only support exact matching; payment\/delegation filters reject them.</span><span>
+</span><span id="line-70"></span><span id="local-6989586621679617175"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAddressPattern"><span class="hs-identifier hs-type">matchesAddressPattern</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#IsCardanoEra"><span class="hs-identifier hs-type">IsCardanoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617175"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.AddressPattern</span></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#AddressInEra"><span class="hs-identifier hs-type">AddressInEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617175"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-75"></span><span id="matchesAddressPattern"><span class="annot"><span class="annottext">matchesAddressPattern :: forall era.
+IsCardanoEra era =&gt;
+Proto AddressPattern -&gt; AddressInEra era -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAddressPattern"><span class="hs-identifier hs-var hs-var">matchesAddressPattern</span></a></span></span><span> </span><span id="local-6989586621679617481"><span class="annot"><span class="annottext">Proto AddressPattern
+</span><a href="#local-6989586621679617481"><span class="hs-identifier hs-var">pat</span></a></span></span><span> </span><span id="local-6989586621679617482"><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621679617482"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679617483"><span class="hs-identifier hs-var">exactMatch</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679617484"><span class="hs-identifier hs-var">paymentMatch</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679617485"><span class="hs-identifier hs-var">delegationMatch</span></a></span><span>
+</span><span id="line-77"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-comment">-- proto3 optional bytes defaults to empty when absent</span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679617487"><span class="annot"><span class="annottext">matchesRawField :: ByteString -&gt; ByteString -&gt; Bool
+</span><a href="#local-6989586621679617487"><span class="hs-identifier hs-var hs-var">matchesRawField</span></a></span></span><span> </span><span id="local-6989586621679617488"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679617488"><span class="hs-identifier hs-var">field</span></a></span></span><span> </span><span id="local-6989586621679617489"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679617489"><span class="hs-identifier hs-var">actual</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.html#null"><span class="hs-identifier hs-var">BS.null</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679617488"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679617488"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679617489"><span class="hs-identifier hs-var">actual</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679617483"><span class="annot"><span class="annottext">exactMatch :: Bool
+</span><a href="#local-6989586621679617483"><span class="hs-identifier hs-var hs-var">exactMatch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+</span><a href="#local-6989586621679617487"><span class="hs-identifier hs-var">matchesRawField</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto AddressPattern
+</span><a href="#local-6989586621679617481"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+-&gt; Getting ByteString (Proto AddressPattern) ByteString
+-&gt; ByteString
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting ByteString (Proto AddressPattern) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;exactAddress&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.exactAddress</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Bool) -&gt; ByteString -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra era -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621679617482"><span class="hs-identifier hs-var">addr</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679617484"><span class="annot"><span class="annottext">paymentMatch :: Bool
+</span><a href="#local-6989586621679617484"><span class="hs-identifier hs-var hs-var">paymentMatch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621679617482"><span class="hs-identifier hs-var">addr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#AddressInEra"><span class="hs-identifier hs-type">AddressInEra</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#ShelleyAddressInEra"><span class="hs-identifier hs-type">ShelleyAddressInEra</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#ShelleyAddress"><span class="hs-identifier hs-type">ShelleyAddress</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679617500"><span class="annot"><span class="annottext">Credential Payment
+</span><a href="#local-6989586621679617500"><span class="hs-identifier hs-var">payCred</span></a></span></span><span> </span><span class="annot"><span class="annottext">StakeReference
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-84"></span><span>      </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+</span><a href="#local-6989586621679617487"><span class="hs-identifier hs-var">matchesRawField</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto AddressPattern
+</span><a href="#local-6989586621679617481"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+-&gt; Getting ByteString (Proto AddressPattern) ByteString
+-&gt; ByteString
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting ByteString (Proto AddressPattern) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;paymentPart&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.paymentPart</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Bool)
+-&gt; (PaymentCredential -&gt; ByteString) -&gt; PaymentCredential -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#serialisePaymentCredential"><span class="hs-identifier hs-var">serialisePaymentCredential</span></a></span><span> </span><span class="annot"><span class="annottext">(PaymentCredential -&gt; Bool) -&gt; PaymentCredential -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">Credential Payment -&gt; PaymentCredential
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#fromShelleyPaymentCredential"><span class="hs-identifier hs-var">fromShelleyPaymentCredential</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Payment
+</span><a href="#local-6989586621679617500"><span class="hs-identifier hs-var">payCred</span></a></span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="annottext">AddressInEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.html#null"><span class="hs-identifier hs-var">BS.null</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Bool) -&gt; ByteString -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+</span><a href="#local-6989586621679617481"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+-&gt; Getting ByteString (Proto AddressPattern) ByteString
+-&gt; ByteString
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting ByteString (Proto AddressPattern) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;paymentPart&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.paymentPart</span></span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679617485"><span class="annot"><span class="annottext">delegationMatch :: Bool
+</span><a href="#local-6989586621679617485"><span class="hs-identifier hs-var hs-var">delegationMatch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621679617482"><span class="hs-identifier hs-var">addr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#AddressInEra"><span class="hs-identifier hs-type">AddressInEra</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#ShelleyAddressInEra"><span class="hs-identifier hs-type">ShelleyAddressInEra</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#ShelleyAddress"><span class="hs-identifier hs-type">ShelleyAddress</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Credential Payment
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679617510"><span class="annot"><span class="annottext">StakeReference
+</span><a href="#local-6989586621679617510"><span class="hs-identifier hs-var">stakeRef</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-89"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">StakeReference -&gt; StakeAddressReference
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#fromShelleyStakeReference"><span class="hs-identifier hs-var">fromShelleyStakeReference</span></a></span><span> </span><span class="annot"><span class="annottext">StakeReference
+</span><a href="#local-6989586621679617510"><span class="hs-identifier hs-var">stakeRef</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-90"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#StakeAddressByValue"><span class="hs-identifier hs-type">StakeAddressByValue</span></a></span><span> </span><span id="local-6989586621679617513"><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621679617513"><span class="hs-identifier hs-var">cred</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>          </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+</span><a href="#local-6989586621679617487"><span class="hs-identifier hs-var">matchesRawField</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto AddressPattern
+</span><a href="#local-6989586621679617481"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+-&gt; Getting ByteString (Proto AddressPattern) ByteString
+-&gt; ByteString
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting ByteString (Proto AddressPattern) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;delegationPart&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.delegationPart</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Bool) -&gt; ByteString -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#serialiseStakeCredential"><span class="hs-identifier hs-var">serialiseStakeCredential</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621679617513"><span class="hs-identifier hs-var">cred</span></a></span><span>
+</span><span id="line-92"></span><span>        </span><span class="annot"><span class="annottext">StakeAddressReference
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.html#null"><span class="hs-identifier hs-var">BS.null</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Bool) -&gt; ByteString -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+</span><a href="#local-6989586621679617481"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+-&gt; Getting ByteString (Proto AddressPattern) ByteString
+-&gt; ByteString
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting ByteString (Proto AddressPattern) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;delegationPart&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.delegationPart</span></span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">AddressInEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.html#null"><span class="hs-identifier hs-var">BS.null</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Bool) -&gt; ByteString -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+</span><a href="#local-6989586621679617481"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+-&gt; Getting ByteString (Proto AddressPattern) ByteString
+-&gt; ByteString
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting ByteString (Proto AddressPattern) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;delegationPart&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.delegationPart</span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="annot"><span class="hs-comment">-- | A 'UtxoPredicate' matching UTxOs at the exact address.</span></span><span>
+</span><span id="line-96"></span><span id="local-6989586621679617215"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#exactAddressPredicate"><span class="hs-identifier hs-type">exactAddressPredicate</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#IsCardanoEra"><span class="hs-identifier hs-type">IsCardanoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617215"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#AddressInEra"><span class="hs-identifier hs-type">AddressInEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617215"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.UtxoPredicate</span></span></span><span>
+</span><span id="line-100"></span><span id="exactAddressPredicate"><span class="annot"><span class="annottext">exactAddressPredicate :: forall era.
+IsCardanoEra era =&gt;
+AddressInEra era -&gt; Proto UtxoPredicate
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#exactAddressPredicate"><span class="hs-identifier hs-var hs-var">exactAddressPredicate</span></a></span></span><span> </span><span id="local-6989586621679617553"><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621679617553"><span class="hs-identifier hs-var">address</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+-&gt; (Proto UtxoPredicate -&gt; Proto UtxoPredicate)
+-&gt; Proto UtxoPredicate
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto UtxoPredicate) (Proto AnyUtxoPattern)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;match&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.match</span></span><span>
+</span><span id="line-103"></span><span>      </span><span class="annot"><span class="annottext">LensLike' Identity (Proto UtxoPredicate) (Proto AnyUtxoPattern)
+-&gt; Proto AnyUtxoPattern
+-&gt; Proto UtxoPredicate
+-&gt; Proto UtxoPredicate
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Proto AnyUtxoPattern
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-104"></span><span>             </span><span class="annot"><span class="annottext">Proto AnyUtxoPattern
+-&gt; (Proto AnyUtxoPattern -&gt; Proto AnyUtxoPattern)
+-&gt; Proto AnyUtxoPattern
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto AnyUtxoPattern) (Proto TxOutputPattern)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;cardano&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.cardano</span></span><span>
+</span><span id="line-105"></span><span>               </span><span class="annot"><span class="annottext">LensLike' Identity (Proto AnyUtxoPattern) (Proto TxOutputPattern)
+-&gt; Proto TxOutputPattern
+-&gt; Proto AnyUtxoPattern
+-&gt; Proto AnyUtxoPattern
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto TxOutputPattern
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto TxOutputPattern
+-&gt; (Proto TxOutputPattern -&gt; Proto TxOutputPattern)
+-&gt; Proto TxOutputPattern
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxOutputPattern) (Proto AddressPattern)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;address&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.address</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxOutputPattern) (Proto AddressPattern)
+-&gt; Proto AddressPattern
+-&gt; Proto TxOutputPattern
+-&gt; Proto TxOutputPattern
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto AddressPattern
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+-&gt; (Proto AddressPattern -&gt; Proto AddressPattern)
+-&gt; Proto AddressPattern
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto AddressPattern) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;exactAddress&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.exactAddress</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto AddressPattern) ByteString
+-&gt; ByteString -&gt; Proto AddressPattern -&gt; Proto AddressPattern
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">AddressInEra era -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621679617553"><span class="hs-identifier hs-var">address</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>         </span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="annot"><span class="hs-comment">-- | Serialise a 'PaymentCredential' to raw bytes (the key or script hash).</span></span><span>
+</span><span id="line-109"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#serialisePaymentCredential"><span class="hs-identifier hs-type">serialisePaymentCredential</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#PaymentCredential"><span class="hs-identifier hs-type">PaymentCredential</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-110"></span><span id="serialisePaymentCredential"><span class="annot"><span class="annottext">serialisePaymentCredential :: PaymentCredential -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#serialisePaymentCredential"><span class="hs-identifier hs-var hs-var">serialisePaymentCredential</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#PaymentCredentialByKey"><span class="hs-identifier hs-type">PaymentCredentialByKey</span></a></span><span> </span><span id="local-6989586621679617560"><span class="annot"><span class="annottext">Hash PaymentKey
+</span><a href="#local-6989586621679617560"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash PaymentKey -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Hash PaymentKey
+</span><a href="#local-6989586621679617560"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#serialisePaymentCredential"><span class="hs-identifier hs-var">serialisePaymentCredential</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#PaymentCredentialByScript"><span class="hs-identifier hs-type">PaymentCredentialByScript</span></a></span><span> </span><span id="local-6989586621679617562"><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621679617562"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621679617562"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><span class="hs-comment">-- | Serialise a 'StakeCredential' to raw bytes (the key or script hash).</span></span><span>
+</span><span id="line-114"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#serialiseStakeCredential"><span class="hs-identifier hs-type">serialiseStakeCredential</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#StakeCredential"><span class="hs-identifier hs-type">StakeCredential</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-115"></span><span id="serialiseStakeCredential"><span class="annot"><span class="annottext">serialiseStakeCredential :: StakeCredential -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#serialiseStakeCredential"><span class="hs-identifier hs-var hs-var">serialiseStakeCredential</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#StakeCredentialByKey"><span class="hs-identifier hs-type">StakeCredentialByKey</span></a></span><span> </span><span id="local-6989586621679617564"><span class="annot"><span class="annottext">Hash StakeKey
+</span><a href="#local-6989586621679617564"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash StakeKey -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Hash StakeKey
+</span><a href="#local-6989586621679617564"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-116"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#serialiseStakeCredential"><span class="hs-identifier hs-var">serialiseStakeCredential</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#StakeCredentialByScript"><span class="hs-identifier hs-type">StakeCredentialByScript</span></a></span><span> </span><span id="local-6989586621679617566"><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621679617566"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621679617566"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- | Check if a 'Value' contains a native asset matching an 'AssetPattern'.</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- Ada entries are always skipped; zero-quantity entries do not match.</span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAssetPattern"><span class="hs-identifier hs-type">matchesAssetPattern</span></a></span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.AssetPattern</span></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Value.Internal.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-124"></span><span id="matchesAssetPattern"><span class="annot"><span class="annottext">matchesAssetPattern :: Proto AssetPattern -&gt; Value -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesAssetPattern"><span class="hs-identifier hs-var hs-var">matchesAssetPattern</span></a></span></span><span> </span><span id="local-6989586621679617567"><span class="annot"><span class="annottext">Proto AssetPattern
+</span><a href="#local-6989586621679617567"><span class="hs-identifier hs-var">pat</span></a></span></span><span> </span><span id="local-6989586621679617568"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679617568"><span class="hs-identifier hs-var">value</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><span class="annottext">((AssetId, Quantity) -&gt; Bool) -&gt; [(AssetId, Quantity)] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#any"><span class="hs-identifier hs-var">any</span></a></span><span> </span><span class="annot"><span class="annottext">(AssetId, Quantity) -&gt; Bool
+</span><a href="#local-6989586621679617569"><span class="hs-identifier hs-var">matchesEntry</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; [Item Value]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IsList.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679617568"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679617570"><span class="annot"><span class="annottext">patternPolicy :: ByteString
+</span><a href="#local-6989586621679617570"><span class="hs-identifier hs-var hs-var">patternPolicy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proto AssetPattern
+</span><a href="#local-6989586621679617567"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AssetPattern
+-&gt; Getting ByteString (Proto AssetPattern) ByteString -&gt; ByteString
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting ByteString (Proto AssetPattern) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;policyId&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.policyId</span></span><span>
+</span><span id="line-128"></span><span>  </span><span id="local-6989586621679617572"><span class="annot"><span class="annottext">patternTokenName :: ByteString
+</span><a href="#local-6989586621679617572"><span class="hs-identifier hs-var hs-var">patternTokenName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proto AssetPattern
+</span><a href="#local-6989586621679617567"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AssetPattern
+-&gt; Getting ByteString (Proto AssetPattern) ByteString -&gt; ByteString
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting ByteString (Proto AssetPattern) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;assetName&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.assetName</span></span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621679617569"><span class="annot"><span class="annottext">matchesEntry :: (AssetId, Quantity) -&gt; Bool
+</span><a href="#local-6989586621679617569"><span class="hs-identifier hs-var hs-var">matchesEntry</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Value.Internal.html#AssetId"><span class="hs-identifier hs-type">AssetId</span></a></span><span> </span><span id="local-6989586621679617575"><span class="annot"><span class="annottext">PolicyId
+</span><a href="#local-6989586621679617575"><span class="hs-identifier hs-var">policy</span></a></span></span><span> </span><span id="local-6989586621679617576"><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621679617576"><span class="hs-identifier hs-var">tokenName</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Value.Internal.html#Quantity"><span class="hs-identifier hs-type">Quantity</span></a></span><span> </span><span id="local-6989586621679617578"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679617578"><span class="hs-identifier hs-var">qty</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-130"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.html#null"><span class="hs-identifier hs-var">BS.null</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679617570"><span class="hs-identifier hs-var">patternPolicy</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">PolicyId -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">PolicyId
+</span><a href="#local-6989586621679617575"><span class="hs-identifier hs-var">policy</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679617570"><span class="hs-identifier hs-var">patternPolicy</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.html#null"><span class="hs-identifier hs-var">BS.null</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679617572"><span class="hs-identifier hs-var">patternTokenName</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">AssetName -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621679617576"><span class="hs-identifier hs-var">tokenName</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679617572"><span class="hs-identifier hs-var">patternTokenName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679617578"><span class="hs-identifier hs-var">qty</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><a href="#local-6989586621679617569"><span class="hs-identifier hs-var">matchesEntry</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AssetId
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Value.Internal.html#AdaAssetId"><span class="hs-identifier hs-var">AdaAssetId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Quantity
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- | Try to extract a set of exact addresses from the predicate for use with 'QueryUTxOByAddress'.</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- Returns 'Just' if the optimization is applicable, 'Nothing' otherwise.</span><span>
+</span><span id="line-137"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#extractAddressesFromPredicate"><span class="hs-identifier hs-type">extractAddressesFromPredicate</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.UtxoPredicate</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#AddressAny"><span class="hs-identifier hs-type">AddressAny</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span id="extractAddressesFromPredicate"><span class="annot"><span class="annottext">extractAddressesFromPredicate :: Proto UtxoPredicate -&gt; Maybe (Set AddressAny)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#extractAddressesFromPredicate"><span class="hs-identifier hs-var hs-var">extractAddressesFromPredicate</span></a></span></span><span> </span><span id="local-6989586621679617581"><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><a href="#local-6989586621679617581"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><a href="#local-6989586621679617581"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+-&gt; Getting
+     (Maybe (Proto AnyUtxoPattern))
+     (Proto UtxoPredicate)
+     (Maybe (Proto AnyUtxoPattern))
+-&gt; Maybe (Proto AnyUtxoPattern)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (Proto AnyUtxoPattern))
+  (Proto UtxoPredicate)
+  (Maybe (Proto AnyUtxoPattern))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'match&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.maybe'match</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><a href="#local-6989586621679617581"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+-&gt; Getting
+     [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+-&gt; [Proto UtxoPredicate]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;not&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.not</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><a href="#local-6989586621679617581"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+-&gt; Getting
+     [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+-&gt; [Proto UtxoPredicate]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;allOf&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.allOf</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><a href="#local-6989586621679617581"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate
+-&gt; Getting
+     [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+-&gt; [Proto UtxoPredicate]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [Proto UtxoPredicate] (Proto UtxoPredicate) [Proto UtxoPredicate]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;anyOf&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.anyOf</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679617582"><span class="annot"><span class="annottext">Proto AnyUtxoPattern
+</span><a href="#local-6989586621679617582"><span class="hs-identifier hs-var">pat</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Proto AnyUtxoPattern -&gt; Maybe (Set AddressAny)
+</span><a href="#local-6989586621679617583"><span class="hs-identifier hs-var">extractAddressFromPattern</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AnyUtxoPattern
+</span><a href="#local-6989586621679617582"><span class="hs-identifier hs-var">pat</span></a></span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe (Proto AnyUtxoPattern)
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679617584"><span class="annot"><span class="annottext">anyPreds :: [Proto UtxoPredicate]
+</span><a href="#local-6989586621679617584"><span class="hs-identifier hs-var">anyPreds</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto UtxoPredicate
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Proto UtxoPredicate]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-142"></span><span>      </span><span class="annot"><span class="annottext">[Set AddressAny] -&gt; Set AddressAny
+forall (f :: * -&gt; *) a. (Foldable f, Ord a) =&gt; f (Set a) -&gt; Set a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#unions"><span class="hs-identifier hs-var">Set.unions</span></a></span><span> </span><span class="annot"><span class="annottext">([Set AddressAny] -&gt; Set AddressAny)
+-&gt; Maybe [Set AddressAny] -&gt; Maybe (Set AddressAny)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Proto UtxoPredicate -&gt; Maybe (Set AddressAny))
+-&gt; [Proto UtxoPredicate] -&gt; Maybe [Set AddressAny]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">Proto UtxoPredicate -&gt; Maybe (Set AddressAny)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#extractAddressesFromPredicate"><span class="hs-identifier hs-var">extractAddressesFromPredicate</span></a></span><span> </span><span class="annot"><span class="annottext">[Proto UtxoPredicate]
+</span><a href="#local-6989586621679617584"><span class="hs-identifier hs-var">anyPreds</span></a></span><span>
+</span><span id="line-143"></span><span>    </span><span class="annot"><span class="annottext">(Maybe (Proto AnyUtxoPattern), [Proto UtxoPredicate],
+ [Proto UtxoPredicate], [Proto UtxoPredicate])
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (Set AddressAny)
+forall a. Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-144"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><a href="#local-6989586621679617583"><span class="hs-identifier hs-type">extractAddressFromPattern</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.AnyUtxoPattern</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#AddressAny"><span class="hs-identifier hs-type">AddressAny</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>  </span><span id="local-6989586621679617583"><span class="annot"><span class="annottext">extractAddressFromPattern :: Proto AnyUtxoPattern -&gt; Maybe (Set AddressAny)
+</span><a href="#local-6989586621679617583"><span class="hs-identifier hs-var hs-var">extractAddressFromPattern</span></a></span></span><span> </span><span id="local-6989586621679617588"><span class="annot"><span class="annottext">Proto AnyUtxoPattern
+</span><a href="#local-6989586621679617588"><span class="hs-identifier hs-var">pat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-147"></span><span>    </span><span id="local-6989586621679617589"><span class="annot"><a href="#local-6989586621679617589"><span class="hs-identifier hs-var">txoPat</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Proto AnyUtxoPattern
+</span><a href="#local-6989586621679617588"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AnyUtxoPattern
+-&gt; Getting
+     (Maybe (Proto TxOutputPattern))
+     (Proto AnyUtxoPattern)
+     (Maybe (Proto TxOutputPattern))
+-&gt; Maybe (Proto TxOutputPattern)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (Proto TxOutputPattern))
+  (Proto AnyUtxoPattern)
+  (Maybe (Proto TxOutputPattern))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'cardano&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.maybe'cardano</span></span><span>
+</span><span id="line-148"></span><span>    </span><span id="local-6989586621679617590"><span class="annot"><a href="#local-6989586621679617590"><span class="hs-identifier hs-var">addrPat</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="#local-6989586621679617589"><span class="hs-identifier hs-type">txoPat</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">^.</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.maybe'address</span></span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679617591"><span class="annot"><a href="#local-6989586621679617591"><span class="hs-identifier hs-var hs-var">exact</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+</span><a href="#local-6989586621679617590"><span class="hs-identifier hs-var">addrPat</span></a></span><span> </span><span class="annot"><span class="annottext">Proto AddressPattern
+-&gt; Getting ByteString (Proto AddressPattern) ByteString
+-&gt; ByteString
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting ByteString (Proto AddressPattern) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;exactAddress&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">UtxoRpc.exactAddress</span></span><span>
+</span><span id="line-150"></span><span>    </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.html#guard"><span class="hs-identifier hs-type">guard</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#not"><span class="hs-identifier hs-type">not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.html#null"><span class="hs-identifier hs-type">BS.null</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617591"><span class="hs-identifier hs-type">exact</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>    </span><span id="local-6989586621679617592"><span class="annot"><a href="#local-6989586621679617592"><span class="hs-identifier hs-var">addrAny</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#either"><span class="hs-identifier hs-type">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#const"><span class="hs-identifier hs-type">const</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-type">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#deserialiseFromRawBytes"><span class="hs-identifier hs-type">deserialiseFromRawBytes</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#AsAddressAny"><span class="hs-identifier hs-type">AsAddressAny</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617591"><span class="hs-identifier hs-type">exact</span></a></span><span>
+</span><span id="line-152"></span><span>    </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#singleton"><span class="hs-identifier hs-type">Set.singleton</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679617592"><span class="hs-identifier hs-type">addrAny</span></a></span><span>
+</span><span id="line-153"></span></pre></body></html>

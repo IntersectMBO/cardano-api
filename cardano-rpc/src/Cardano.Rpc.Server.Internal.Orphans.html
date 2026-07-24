@@ -1,0 +1,622 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Orphans.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Orphans</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Era.html"><span class="hs-identifier">Cardano.Api.Era</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Error.html"><span class="hs-identifier">Cardano.Api.Error</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Ledger.html"><span class="hs-identifier">Cardano.Api.Ledger</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Pretty.html"><span class="hs-identifier">Cardano.Api.Pretty</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html"><span class="hs-identifier">Cardano.Api.Serialise.Raw</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.html"><span class="hs-identifier">Cardano.Api.Tx</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U5c</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.8.1.0-ac33ac4e1ab5e5f62986c8483159d6d55ed0bb54170ca5464cfa7e85c63b0135/share/doc/html/src/Cardano.Ledger.Binary.Version.html#getVersion"><span class="hs-identifier">getVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/rio-0.1.24.0-d0e5831b10849e265fde05dc5b9b28d702aecc86ff0ea6a46676b331d3c74941/share/doc/html/src/RIO.html"><span class="hs-identifier">RIO</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#toList"><span class="hs-identifier">toList</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Default</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.html"><span class="hs-identifier">Data.ProtoLens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier">defMessage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html"><span class="hs-identifier">Data.ProtoLens.Message</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#Message"><span class="hs-identifier">Message</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Ratio.html"><span class="hs-identifier">Data.Ratio</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#denominator"><span class="hs-identifier">denominator</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#numerator"><span class="hs-identifier">numerator</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#%25"><span class="hs-operator">(%)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.html"><span class="hs-identifier">Network.GRPC.Spec</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">---------------</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- Conversion</span><span>
+</span><span id="line-32"></span><span class="hs-comment">---------------</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- It's easier to use 'Proto a' wrappers for RPC types, because it makes lens automatically available.</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | Convert a 'Rational' into a protobuf 'U5c.RationalNumber'.</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- The UTxO RPC spec fixes the field widths to an @int32@ numerator and a</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- @uint32@ denominator, while on-chain rationals (e.g. bounded ratios backed</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- by 'Word64') can exceed both. When the numerator and the denominator fit</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- their fields, the conversion is exact. Otherwise the result is the best</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- representable approximation of the value: magnitudes beyond</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- @maxBound \@Int32@ are clamped to it, so out-of-range negative values</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- clamp to @-maxBound \@Int32@ (one above @minBound \@Int32@), and other</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- values are approximated using continued fractions, keeping both</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- components within their field bounds.</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- The conversion is therefore lossy for such out-of-range values, and values</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- close enough to zero may approximate to zero.</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Rational"><span class="hs-identifier hs-type">Rational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.RationalNumber</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679616393"><span class="annot"><span class="annottext">inject :: Rational -&gt; Proto RationalNumber
+</span><a href="#local-6989586621679616393"><span class="hs-identifier hs-var hs-var hs-var">inject</span></a></span></span><span> </span><span id="local-6989586621679616395"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616395"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">Proto RationalNumber
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">Proto RationalNumber
+-&gt; (Proto RationalNumber -&gt; Proto RationalNumber)
+-&gt; Proto RationalNumber
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto RationalNumber) Int32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;numerator&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.numerator</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto RationalNumber) Int32
+-&gt; Int32 -&gt; Proto RationalNumber -&gt; Proto RationalNumber
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Int32
+forall a. Num a =&gt; Integer -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#fromInteger"><span class="hs-identifier hs-var">fromInteger</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616399"><span class="hs-identifier hs-var">num</span></a></span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><span class="annottext">Proto RationalNumber
+-&gt; (Proto RationalNumber -&gt; Proto RationalNumber)
+-&gt; Proto RationalNumber
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto RationalNumber) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;denominator&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.denominator</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto RationalNumber) Word32
+-&gt; Word32 -&gt; Proto RationalNumber -&gt; Proto RationalNumber
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Word32
+forall a. Num a =&gt; Integer -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#fromInteger"><span class="hs-identifier hs-var">fromInteger</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616401"><span class="hs-identifier hs-var">den</span></a></span><span>
+</span><span id="line-54"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679616399"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616399"><span class="hs-identifier hs-var">num</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679616401"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616401"><span class="hs-identifier hs-var">den</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall a. Ratio a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#numerator"><span class="hs-identifier hs-var">numerator</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616395"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int32 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#minBound"><span class="hs-identifier hs-var">minBound</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Int.html#Int32"><span class="hs-identifier hs-type">Int32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall a. Ratio a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#numerator"><span class="hs-identifier hs-var">numerator</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616395"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616404"><span class="hs-identifier hs-var">maxNum</span></a></span><span>
+</span><span id="line-58"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall a. Ratio a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#denominator"><span class="hs-identifier hs-var">denominator</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616395"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616405"><span class="hs-identifier hs-var">maxDen</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-59"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall a. Ratio a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#numerator"><span class="hs-identifier hs-var">numerator</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616395"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall a. Ratio a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#denominator"><span class="hs-identifier hs-var">denominator</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616395"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679616406"><span class="annot"><span class="annottext">approximation :: Rational
+</span><a href="#local-6989586621679616406"><span class="hs-identifier hs-var hs-var">approximation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational
+</span><a href="#local-6989586621679616407"><span class="hs-identifier hs-var">bestApproximation</span></a></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Rational) -&gt; Rational -&gt; Rational
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#abs"><span class="hs-identifier hs-var">abs</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616395"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-62"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#signum"><span class="hs-identifier hs-var">signum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall a. Ratio a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#numerator"><span class="hs-identifier hs-var">numerator</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616395"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall a. Ratio a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#numerator"><span class="hs-identifier hs-var">numerator</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616406"><span class="hs-identifier hs-var">approximation</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall a. Ratio a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#denominator"><span class="hs-identifier hs-var">denominator</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616406"><span class="hs-identifier hs-var">approximation</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span>    </span><span id="local-6989586621679616404"><span class="annot"><span class="annottext">maxNum :: Integer
+</span><a href="#local-6989586621679616404"><span class="hs-identifier hs-var hs-var">maxNum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int32 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Int.html#Int32"><span class="hs-identifier hs-type">Int32</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bignum.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679616405"><span class="annot"><span class="annottext">maxDen :: Integer
+</span><a href="#local-6989586621679616405"><span class="hs-identifier hs-var hs-var">maxDen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bignum.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-comment">-- Best approximation of a non-negative rational keeping the numerator and</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-comment">-- the denominator within 'maxNum' and 'maxDen' respectively: walk the</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">-- continued fraction convergents of the value until a bound is exceeded,</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">-- then pick the closer of the last in-bounds convergent and the largest</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">-- in-bounds semiconvergent.</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><a href="#local-6989586621679616407"><span class="hs-identifier hs-type">bestApproximation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Rational"><span class="hs-identifier hs-type">Rational</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Rational"><span class="hs-identifier hs-type">Rational</span></a></span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679616407"><span class="annot"><span class="annottext">bestApproximation :: Rational -&gt; Rational
+</span><a href="#local-6989586621679616407"><span class="hs-identifier hs-var hs-var">bestApproximation</span></a></span></span><span> </span><span id="local-6989586621679616420"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616420"><span class="hs-identifier hs-var">x</span></a></span></span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616420"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Rational
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616404"><span class="hs-identifier hs-var">maxNum</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616404"><span class="hs-identifier hs-var">maxNum</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Rational
+forall a. Integral a =&gt; a -&gt; a -&gt; Ratio a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-76"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer -&gt; Integer -&gt; Rational -&gt; Rational
+</span><a href="#local-6989586621679616422"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616420"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-77"></span><span>     </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-comment">-- (hPrev, kPrev) and (hCur, kCur) are the components of the two most</span><span>
+</span><span id="line-79"></span><span>      </span><span class="hs-comment">-- recent convergents, y is the current complete quotient. The first</span><span>
+</span><span id="line-80"></span><span>      </span><span class="hs-comment">-- convergent (floor x % 1) is always in bounds because x &lt;= maxNum, so</span><span>
+</span><span id="line-81"></span><span>      </span><span class="hs-comment">-- the out-of-bounds branch never divides by kCur = 0.</span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><a href="#local-6989586621679616422"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bignum.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bignum.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bignum.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bignum.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Rational"><span class="hs-identifier hs-type">Rational</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Rational"><span class="hs-identifier hs-type">Rational</span></a></span><span>
+</span><span id="line-83"></span><span>      </span><span id="local-6989586621679616422"><span class="annot"><span class="annottext">go :: Integer -&gt; Integer -&gt; Integer -&gt; Integer -&gt; Rational -&gt; Rational
+</span><a href="#local-6989586621679616422"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679616423"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616423"><span class="hs-identifier hs-var">hPrev</span></a></span></span><span> </span><span id="local-6989586621679616424"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616424"><span class="hs-identifier hs-var">kPrev</span></a></span></span><span> </span><span id="local-6989586621679616425"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616425"><span class="hs-identifier hs-var">hCur</span></a></span></span><span> </span><span id="local-6989586621679616426"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616426"><span class="hs-identifier hs-var">kCur</span></a></span></span><span> </span><span id="local-6989586621679616427"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616427"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-84"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679616428"><span class="annot"><span class="annottext">a :: Integer
+</span><a href="#local-6989586621679616428"><span class="hs-identifier hs-var hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall b. Integral b =&gt; Rational -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#floor"><span class="hs-identifier hs-var">floor</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616427"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-85"></span><span>            </span><span id="local-6989586621679616430"><span class="annot"><span class="annottext">hNew :: Integer
+</span><a href="#local-6989586621679616430"><span class="hs-identifier hs-var hs-var">hNew</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616428"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616425"><span class="hs-identifier hs-var">hCur</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616423"><span class="hs-identifier hs-var">hPrev</span></a></span><span>
+</span><span id="line-86"></span><span>            </span><span id="local-6989586621679616432"><span class="annot"><span class="annottext">kNew :: Integer
+</span><a href="#local-6989586621679616432"><span class="hs-identifier hs-var hs-var">kNew</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616428"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616426"><span class="hs-identifier hs-var">kCur</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616424"><span class="hs-identifier hs-var">kPrev</span></a></span><span>
+</span><span id="line-87"></span><span>            </span><span id="local-6989586621679616433"><span class="annot"><span class="annottext">rest :: Rational
+</span><a href="#local-6989586621679616433"><span class="hs-identifier hs-var hs-var">rest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616427"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Rational
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616428"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-88"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616430"><span class="hs-identifier hs-var">hNew</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616404"><span class="hs-identifier hs-var">maxNum</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616432"><span class="hs-identifier hs-var">kNew</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616405"><span class="hs-identifier hs-var">maxDen</span></a></span><span>
+</span><span id="line-89"></span><span>          </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>            </span><span class="hs-comment">-- the largest coefficient for which the semiconvergent still fits</span><span>
+</span><span id="line-91"></span><span>            </span><span class="hs-comment">-- both bounds</span><span>
+</span><span id="line-92"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679616435"><span class="annot"><span class="annottext">aFromNum :: Integer
+</span><a href="#local-6989586621679616435"><span class="hs-identifier hs-var hs-var">aFromNum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616425"><span class="hs-identifier hs-var">hCur</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616404"><span class="hs-identifier hs-var">maxNum</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616423"><span class="hs-identifier hs-var">hPrev</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#div"><span class="hs-operator hs-var">`div`</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616425"><span class="hs-identifier hs-var">hCur</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616428"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-93"></span><span>                </span><span id="local-6989586621679616437"><span class="annot"><span class="annottext">aMax :: Integer
+</span><a href="#local-6989586621679616437"><span class="hs-identifier hs-var hs-var">aMax</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616428"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#min"><span class="hs-operator hs-var">`min`</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616435"><span class="hs-identifier hs-var">aFromNum</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#min"><span class="hs-operator hs-var">`min`</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616405"><span class="hs-identifier hs-var">maxDen</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616424"><span class="hs-identifier hs-var">kPrev</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#div"><span class="hs-operator hs-var">`div`</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616426"><span class="hs-identifier hs-var">kCur</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>                </span><span id="local-6989586621679616439"><span class="annot"><span class="annottext">semiconvergent :: Rational
+</span><a href="#local-6989586621679616439"><span class="hs-identifier hs-var hs-var">semiconvergent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616437"><span class="hs-identifier hs-var">aMax</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616425"><span class="hs-identifier hs-var">hCur</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616423"><span class="hs-identifier hs-var">hPrev</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Rational
+forall a. Integral a =&gt; a -&gt; a -&gt; Ratio a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616437"><span class="hs-identifier hs-var">aMax</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616426"><span class="hs-identifier hs-var">kCur</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616424"><span class="hs-identifier hs-var">kPrev</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>                </span><span id="local-6989586621679616440"><span class="annot"><span class="annottext">convergent :: Rational
+</span><a href="#local-6989586621679616440"><span class="hs-identifier hs-var hs-var">convergent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616425"><span class="hs-identifier hs-var">hCur</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Rational
+forall a. Integral a =&gt; a -&gt; a -&gt; Ratio a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616426"><span class="hs-identifier hs-var">kCur</span></a></span><span>
+</span><span id="line-96"></span><span>            </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616437"><span class="hs-identifier hs-var">aMax</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#abs"><span class="hs-identifier hs-var">abs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616420"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616439"><span class="hs-identifier hs-var">semiconvergent</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#abs"><span class="hs-identifier hs-var">abs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616420"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616440"><span class="hs-identifier hs-var">convergent</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616439"><span class="hs-identifier hs-var">semiconvergent</span></a></span><span>
+</span><span id="line-98"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616440"><span class="hs-identifier hs-var">convergent</span></a></span><span>
+</span><span id="line-99"></span><span>          </span><span class="hs-keyword">else</span><span>
+</span><span id="line-100"></span><span>            </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616433"><span class="hs-identifier hs-var">rest</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-101"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616430"><span class="hs-identifier hs-var">hNew</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Rational
+forall a. Integral a =&gt; a -&gt; a -&gt; Ratio a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616432"><span class="hs-identifier hs-var">kNew</span></a></span><span>
+</span><span id="line-102"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer -&gt; Integer -&gt; Rational -&gt; Rational
+</span><a href="#local-6989586621679616422"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616425"><span class="hs-identifier hs-var">hCur</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616426"><span class="hs-identifier hs-var">kCur</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616430"><span class="hs-identifier hs-var">hNew</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616432"><span class="hs-identifier hs-var">kNew</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; Rational
+forall a. Fractional a =&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#recip"><span class="hs-identifier hs-var">recip</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679616433"><span class="hs-identifier hs-var">rest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.ExUnits</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">L.ExUnits</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679616464"><span class="annot"><span class="annottext">inject :: Proto ExUnits -&gt; ExUnits
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var hs-var hs-var">inject</span></a></span></span><span> </span><span id="local-6989586621679616465"><span class="annot"><span class="annottext">Proto ExUnits
+</span><a href="#local-6989586621679616465"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">L.ExUnits</span></a></span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">exUnitsMem :: Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#exUnitsMem"><span class="hs-identifier hs-var">L.exUnitsMem</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proto ExUnits
+</span><a href="#local-6989586621679616465"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Proto ExUnits -&gt; Getting Natural (Proto ExUnits) Natural -&gt; Natural
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">LensLike' (Const Natural) (Proto ExUnits) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;memory&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.memory</span></span><span> </span><span class="annot"><span class="annottext">LensLike' (Const Natural) (Proto ExUnits) Word64
+-&gt; ((Natural -&gt; Const Natural Natural)
+    -&gt; Word64 -&gt; Const Natural Word64)
+-&gt; Getting Natural (Proto ExUnits) Natural
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; Natural) -&gt; SimpleGetter Word64 Natural
+forall s a. (s -&gt; a) -&gt; SimpleGetter s a
+</span><span class="hs-identifier hs-var">to</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Natural
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">exUnitsSteps :: Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#exUnitsSteps"><span class="hs-identifier hs-var">L.exUnitsSteps</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proto ExUnits
+</span><a href="#local-6989586621679616465"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Proto ExUnits -&gt; Getting Natural (Proto ExUnits) Natural -&gt; Natural
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">LensLike' (Const Natural) (Proto ExUnits) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;steps&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.steps</span></span><span> </span><span class="annot"><span class="annottext">LensLike' (Const Natural) (Proto ExUnits) Word64
+-&gt; ((Natural -&gt; Const Natural Natural)
+    -&gt; Word64 -&gt; Const Natural Word64)
+-&gt; Getting Natural (Proto ExUnits) Natural
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; Natural) -&gt; SimpleGetter Word64 Natural
+forall s a. (s -&gt; a) -&gt; SimpleGetter s a
+</span><span class="hs-identifier hs-var">to</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Natural
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">L.ExUnits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.ExUnits</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-112"></span><span>  </span><span id="local-6989586621679616495"><span class="annot"><span class="annottext">inject :: ExUnits -&gt; Proto ExUnits
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var hs-var hs-var">inject</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">L.ExUnits</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">exUnitsMem :: ExUnits -&gt; Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#exUnitsMem"><span class="hs-identifier hs-var">L.exUnitsMem</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679616496"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679616496"><span class="hs-identifier hs-var">mem</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">exUnitsSteps :: ExUnits -&gt; Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#exUnitsSteps"><span class="hs-identifier hs-var">L.exUnitsSteps</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679616497"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679616497"><span class="hs-identifier hs-var">steps</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">Proto ExUnits
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><span class="annottext">Proto ExUnits -&gt; (Proto ExUnits -&gt; Proto ExUnits) -&gt; Proto ExUnits
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;memory&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.memory</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+-&gt; Word64 -&gt; Proto ExUnits -&gt; Proto ExUnits
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679616496"><span class="hs-identifier hs-var">mem</span></a></span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><span class="annottext">Proto ExUnits -&gt; (Proto ExUnits -&gt; Proto ExUnits) -&gt; Proto ExUnits
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;steps&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.steps</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+-&gt; Word64 -&gt; Proto ExUnits -&gt; Proto ExUnits
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679616497"><span class="hs-identifier hs-var">steps</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier hs-type">L.ProtVer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.ProtocolVersion</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-118"></span><span>  </span><span id="local-6989586621679616518"><span class="annot"><span class="annottext">inject :: ProtVer -&gt; Proto ProtocolVersion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var hs-var hs-var">inject</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier hs-type">L.ProtVer</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">pvMajor :: ProtVer -&gt; Version
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#pvMajor"><span class="hs-identifier hs-var">L.pvMajor</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679616521"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679616521"><span class="hs-identifier hs-var">major</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pvMinor :: ProtVer -&gt; Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#pvMinor"><span class="hs-identifier hs-var">L.pvMinor</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679616523"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679616523"><span class="hs-identifier hs-var">minor</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">Proto ProtocolVersion
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">Proto ProtocolVersion
+-&gt; (Proto ProtocolVersion -&gt; Proto ProtocolVersion)
+-&gt; Proto ProtocolVersion
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ProtocolVersion) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;major&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.major</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ProtocolVersion) Word32
+-&gt; Word32 -&gt; Proto ProtocolVersion -&gt; Proto ProtocolVersion
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Word32
+forall i. Integral i =&gt; Version -&gt; i
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.8.1.0-ac33ac4e1ab5e5f62986c8483159d6d55ed0bb54170ca5464cfa7e85c63b0135/share/doc/html/src/Cardano.Ledger.Binary.Version.html#getVersion"><span class="hs-identifier hs-var">L.getVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679616521"><span class="hs-identifier hs-var">major</span></a></span><span>
+</span><span id="line-121"></span><span>      </span><span class="annot"><span class="annottext">Proto ProtocolVersion
+-&gt; (Proto ProtocolVersion -&gt; Proto ProtocolVersion)
+-&gt; Proto ProtocolVersion
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ProtocolVersion) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;minor&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.minor</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ProtocolVersion) Word32
+-&gt; Word32 -&gt; Proto ProtocolVersion -&gt; Proto ProtocolVersion
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Word32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679616523"><span class="hs-identifier hs-var">minor</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="annot"><span class="hs-comment">-- | Note that conversion is not total in the other direction</span></span><span>
+</span><span id="line-124"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.TxoRef</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-125"></span><span>  </span><span id="local-6989586621679616548"><span class="annot"><span class="annottext">inject :: TxIn -&gt; Proto TxoRef
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var hs-var hs-var">inject</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span id="local-6989586621679616550"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679616550"><span class="hs-identifier hs-var">txId'</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-type">TxIx</span></a></span><span> </span><span id="local-6989586621679616552"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679616552"><span class="hs-identifier hs-var">txIx</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="annottext">Proto TxoRef
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-127"></span><span>      </span><span class="annot"><span class="annottext">Proto TxoRef -&gt; (Proto TxoRef -&gt; Proto TxoRef) -&gt; Proto TxoRef
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxoRef) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;hash&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.hash</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxoRef) ByteString
+-&gt; ByteString -&gt; Proto TxoRef -&gt; Proto TxoRef
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679616550"><span class="hs-identifier hs-var">txId'</span></a></span><span>
+</span><span id="line-128"></span><span>      </span><span class="annot"><span class="annottext">Proto TxoRef -&gt; (Proto TxoRef -&gt; Proto TxoRef) -&gt; Proto TxoRef
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxoRef) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;index&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.index</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxoRef) Word32
+-&gt; Word32 -&gt; Proto TxoRef -&gt; Proto TxoRef
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679616552"><span class="hs-identifier hs-var">txIx</span></a></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679616267"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679616267"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Default</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679616267"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621679616562"><span class="annot"><span class="annottext">def :: Proto a
+</span><a href="#local-6989586621679616562"><span class="hs-identifier hs-var hs-var hs-var">def</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proto a
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bignum.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.BigInt</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621679616608"><span class="annot"><span class="annottext">inject :: Integer -&gt; Proto BigInt
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var hs-var hs-var">inject</span></a></span></span><span> </span><span id="local-6989586621679616609"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616609"><span class="hs-identifier hs-var">int</span></a></span></span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616609"><span class="hs-identifier hs-var">int</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616609"><span class="hs-identifier hs-var">int</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#minBound"><span class="hs-identifier hs-var">minBound</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-137"></span><span>        </span><span class="annot"><span class="annottext">forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">inject</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span><span> </span><span class="annot"><span class="annottext">(Int64 -&gt; Proto BigInt) -&gt; Int64 -&gt; Proto BigInt
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Int64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616609"><span class="hs-identifier hs-var">int</span></a></span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616609"><span class="hs-identifier hs-var">int</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-139"></span><span>        </span><span class="hs-comment">-- https://www.rfc-editor.org/rfc/rfc8949.html#name-bignums see 3.4.3 for negative integers</span><span>
+</span><span id="line-140"></span><span>        </span><span class="annot"><span class="annottext">Proto BigInt
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto BigInt -&gt; (Proto BigInt -&gt; Proto BigInt) -&gt; Proto BigInt
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto BigInt) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;bigNInt&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.bigNInt</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto BigInt) ByteString
+-&gt; ByteString -&gt; Proto BigInt -&gt; Proto BigInt
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bignum.Natural.html#Natural"><span class="hs-identifier hs-type">Natural</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616609"><span class="hs-identifier hs-var">int</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-142"></span><span>        </span><span class="annot"><span class="annottext">Proto BigInt
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto BigInt -&gt; (Proto BigInt -&gt; Proto BigInt) -&gt; Proto BigInt
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto BigInt) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;bigUInt&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.bigUInt</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto BigInt) ByteString
+-&gt; ByteString -&gt; Proto BigInt -&gt; Proto BigInt
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bignum.Natural.html#Natural"><span class="hs-identifier hs-type">Natural</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679616609"><span class="hs-identifier hs-var">int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.BigInt</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-145"></span><span>  </span><span id="local-6989586621679616622"><span class="annot"><span class="annottext">inject :: Int64 -&gt; Proto BigInt
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var hs-var hs-var">inject</span></a></span></span><span> </span><span id="local-6989586621679616623"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679616623"><span class="hs-identifier hs-var">int</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proto BigInt
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto BigInt -&gt; (Proto BigInt -&gt; Proto BigInt) -&gt; Proto BigInt
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto BigInt) Int64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;int&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.int</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto BigInt) Int64
+-&gt; Int64 -&gt; Proto BigInt -&gt; Proto BigInt
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679616623"><span class="hs-identifier hs-var">int</span></a></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.BigInt</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-148"></span><span>  </span><span id="local-6989586621679616631"><span class="annot"><span class="annottext">inject :: Coin -&gt; Proto BigInt
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var hs-var hs-var">inject</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Proto BigInt
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">inject</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Proto BigInt)
+-&gt; (Coin -&gt; Integer) -&gt; Coin -&gt; Proto BigInt
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bignum.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="hs-comment">-----------</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- Errors</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-----------</span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span class="hs-comment">-- TODO add RIO to cardano-api and move this instance there</span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">StringException</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-157"></span><span>  </span><span id="local-6989586621679616637"><span class="annot"><span class="annottext">prettyError :: forall ann. StringException -&gt; Doc ann
+</span><a href="#local-6989586621679616637"><span class="hs-identifier hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StringException -&gt; Doc ann
+forall a ann. Exception a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Pretty.html#prettyException"><span class="hs-identifier hs-var">prettyException</span></a></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679616293"><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679616293"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.Fail.html#MonadFail"><span class="hs-identifier hs-type">MonadFail</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679616293"><span class="hs-identifier hs-type">e</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-160"></span><span>  </span><span id="local-6989586621679616649"><span class="annot"><span class="annottext">fail :: forall a. HasCallStack =&gt; String -&gt; Either e a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var hs-var hs-var">fail</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">e -&gt; Either e a
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(e -&gt; Either e a) -&gt; (String -&gt; e) -&gt; String -&gt; Either e a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; e
+forall a. IsString a =&gt; String -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.String.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span>
+</span><span id="line-161"></span></pre></body></html>

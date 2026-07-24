@@ -1,0 +1,504 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#scriptDataToUtxoRpcPlutusData"><span class="hs-identifier">scriptDataToUtxoRpcPlutusData</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#utxoRpcPlutusDataToScriptData"><span class="hs-identifier">utxoRpcPlutusDataToScriptData</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Era.html"><span class="hs-identifier">Cardano.Api.Era</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.html"><span class="hs-identifier">Cardano.Api.Plutus</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U5c</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UtxoRpc</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Orphans.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/rio-0.1.24.0-d0e5831b10849e265fde05dc5b9b28d702aecc86ff0ea6a46676b331d3c74941/share/doc/html/src/RIO.html"><span class="hs-identifier">RIO</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.html"><span class="hs-identifier">Data.ProtoLens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier">defMessage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.html"><span class="hs-identifier">Network.GRPC.Spec</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#scriptDataToUtxoRpcPlutusData"><span class="hs-identifier hs-type">scriptDataToUtxoRpcPlutusData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptData"><span class="hs-identifier hs-type">ScriptData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.PlutusData</span></span><span>
+</span><span id="line-25"></span><span id="scriptDataToUtxoRpcPlutusData"><span class="annot"><span class="annottext">scriptDataToUtxoRpcPlutusData :: ScriptData -&gt; Proto PlutusData
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#scriptDataToUtxoRpcPlutusData"><span class="hs-identifier hs-var hs-var">scriptDataToUtxoRpcPlutusData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptDataBytes"><span class="hs-identifier hs-type">ScriptDataBytes</span></a></span><span> </span><span id="local-6989586621679619820"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679619820"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">Proto PlutusData
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+-&gt; (Proto PlutusData -&gt; Proto PlutusData) -&gt; Proto PlutusData
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusData) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;boundedBytes&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.boundedBytes</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusData) ByteString
+-&gt; ByteString -&gt; Proto PlutusData -&gt; Proto PlutusData
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679619820"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptDataNumber"><span class="hs-identifier hs-type">ScriptDataNumber</span></a></span><span> </span><span id="local-6989586621679619825"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679619825"><span class="hs-identifier hs-var">int</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+-&gt; (Proto PlutusData -&gt; Proto PlutusData) -&gt; Proto PlutusData
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusData) (Proto BigInt)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;bigInt&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.bigInt</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusData) (Proto BigInt)
+-&gt; Proto BigInt -&gt; Proto PlutusData -&gt; Proto PlutusData
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Proto BigInt
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">inject</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679619825"><span class="hs-identifier hs-var">int</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptDataList"><span class="hs-identifier hs-type">ScriptDataList</span></a></span><span> </span><span id="local-6989586621679619829"><span class="annot"><span class="annottext">[ScriptData]
+</span><a href="#local-6989586621679619829"><span class="hs-identifier hs-var">sds</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">Proto PlutusData
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+-&gt; (Proto PlutusData -&gt; Proto PlutusData) -&gt; Proto PlutusData
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusData) (Proto PlutusDataArray)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;array&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.array</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusData) (Proto PlutusDataArray)
+-&gt; (([Proto PlutusData] -&gt; Identity [Proto PlutusData])
+    -&gt; Proto PlutusDataArray -&gt; Identity (Proto PlutusDataArray))
+-&gt; ([Proto PlutusData] -&gt; Identity [Proto PlutusData])
+-&gt; Proto PlutusData
+-&gt; Identity (Proto PlutusData)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">([Proto PlutusData] -&gt; Identity [Proto PlutusData])
+-&gt; Proto PlutusDataArray -&gt; Identity (Proto PlutusDataArray)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;items&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.items</span></span><span> </span><span class="annot"><span class="annottext">(([Proto PlutusData] -&gt; Identity [Proto PlutusData])
+ -&gt; Proto PlutusData -&gt; Identity (Proto PlutusData))
+-&gt; [Proto PlutusData] -&gt; Proto PlutusData -&gt; Proto PlutusData
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">(ScriptData -&gt; Proto PlutusData)
+-&gt; [ScriptData] -&gt; [Proto PlutusData]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptData -&gt; Proto PlutusData
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#scriptDataToUtxoRpcPlutusData"><span class="hs-identifier hs-var">scriptDataToUtxoRpcPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">[ScriptData]
+</span><a href="#local-6989586621679619829"><span class="hs-identifier hs-var">sds</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptDataMap"><span class="hs-identifier hs-type">ScriptDataMap</span></a></span><span> </span><span id="local-6989586621679619834"><span class="annot"><span class="annottext">[(ScriptData, ScriptData)]
+</span><a href="#local-6989586621679619834"><span class="hs-identifier hs-var">elements</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679619851"><span class="annot"><span class="annottext">pairs :: [Proto PlutusDataPair]
+</span><a href="#local-6989586621679619851"><span class="hs-identifier hs-var hs-var">pairs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>          </span><span class="annot"><span class="annottext">[(ScriptData, ScriptData)]
+</span><a href="#local-6989586621679619834"><span class="hs-identifier hs-var">elements</span></a></span><span> </span><span class="annot"><span class="annottext">[(ScriptData, ScriptData)]
+-&gt; ((ScriptData, ScriptData) -&gt; Proto PlutusDataPair)
+-&gt; [Proto PlutusDataPair]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679619853"><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679619853"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679619854"><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679619854"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-34"></span><span>            </span><span class="annot"><span class="annottext">Proto PlutusDataPair
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-35"></span><span>              </span><span class="annot"><span class="annottext">Proto PlutusDataPair
+-&gt; (Proto PlutusDataPair -&gt; Proto PlutusDataPair)
+-&gt; Proto PlutusDataPair
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusDataPair) (Proto PlutusData)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;key&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.key</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusDataPair) (Proto PlutusData)
+-&gt; Proto PlutusData -&gt; Proto PlutusDataPair -&gt; Proto PlutusDataPair
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ScriptData -&gt; Proto PlutusData
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#scriptDataToUtxoRpcPlutusData"><span class="hs-identifier hs-var">scriptDataToUtxoRpcPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679619853"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-36"></span><span>              </span><span class="annot"><span class="annottext">Proto PlutusDataPair
+-&gt; (Proto PlutusDataPair -&gt; Proto PlutusDataPair)
+-&gt; Proto PlutusDataPair
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusDataPair) (Proto PlutusData)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;value&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.value</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusDataPair) (Proto PlutusData)
+-&gt; Proto PlutusData -&gt; Proto PlutusDataPair -&gt; Proto PlutusDataPair
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ScriptData -&gt; Proto PlutusData
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#scriptDataToUtxoRpcPlutusData"><span class="hs-identifier hs-var">scriptDataToUtxoRpcPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptData
+</span><a href="#local-6989586621679619854"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">Proto PlutusData
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+-&gt; (Proto PlutusData -&gt; Proto PlutusData) -&gt; Proto PlutusData
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusData) (Proto PlutusDataMap)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;map&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.map</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusData) (Proto PlutusDataMap)
+-&gt; (([Proto PlutusDataPair] -&gt; Identity [Proto PlutusDataPair])
+    -&gt; Proto PlutusDataMap -&gt; Identity (Proto PlutusDataMap))
+-&gt; ([Proto PlutusDataPair] -&gt; Identity [Proto PlutusDataPair])
+-&gt; Proto PlutusData
+-&gt; Identity (Proto PlutusData)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">([Proto PlutusDataPair] -&gt; Identity [Proto PlutusDataPair])
+-&gt; Proto PlutusDataMap -&gt; Identity (Proto PlutusDataMap)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;pairs&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.pairs</span></span><span> </span><span class="annot"><span class="annottext">(([Proto PlutusDataPair] -&gt; Identity [Proto PlutusDataPair])
+ -&gt; Proto PlutusData -&gt; Identity (Proto PlutusData))
+-&gt; [Proto PlutusDataPair] -&gt; Proto PlutusData -&gt; Proto PlutusData
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[Proto PlutusDataPair]
+</span><a href="#local-6989586621679619851"><span class="hs-identifier hs-var">pairs</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptDataConstructor"><span class="hs-identifier hs-type">ScriptDataConstructor</span></a></span><span> </span><span id="local-6989586621679619860"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679619860"><span class="hs-identifier hs-var">tag</span></a></span></span><span> </span><span id="local-6989586621679619861"><span class="annot"><span class="annottext">[ScriptData]
+</span><a href="#local-6989586621679619861"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">-- Details of plutus tag serialisation:</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-comment">-- https://github.com/IntersectMBO/plutus/blob/fc78c36b545ee287ae8796a0c1a7d04cf31f4cee/plutus-core/plutus-core/src/PlutusCore/Data.hs#L72</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679619900"><span class="annot"><span class="annottext">constr :: Proto Constr
+</span><a href="#local-6989586621679619900"><span class="hs-identifier hs-var hs-var">constr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>          </span><span class="annot"><span class="annottext">Proto Constr
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-43"></span><span>            </span><span class="annot"><span class="annottext">Proto Constr -&gt; (Proto Constr -&gt; Proto Constr) -&gt; Proto Constr
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679619860"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>                  </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constr) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;tag&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.tag</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constr) Word32
+-&gt; Word32 -&gt; Proto Constr -&gt; Proto Constr
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Word32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679619860"><span class="hs-identifier hs-var">tag</span></a></span><span>
+</span><span id="line-45"></span><span>                  </span><span class="hs-keyword">else</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constr) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;tag&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.tag</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constr) Word32
+-&gt; Word32 -&gt; Proto Constr -&gt; Proto Constr
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">102</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Proto Constr -&gt; Proto Constr)
+-&gt; (Proto Constr -&gt; Proto Constr) -&gt; Proto Constr -&gt; Proto Constr
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constr) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;anyConstructor&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.anyConstructor</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constr) Word64
+-&gt; Word64 -&gt; Proto Constr -&gt; Proto Constr
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679619860"><span class="hs-identifier hs-var">tag</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>            </span><span class="annot"><span class="annottext">Proto Constr -&gt; (Proto Constr -&gt; Proto Constr) -&gt; Proto Constr
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constr) [Proto PlutusData]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;fields&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.fields</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constr) [Proto PlutusData]
+-&gt; [Proto PlutusData] -&gt; Proto Constr -&gt; Proto Constr
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">(ScriptData -&gt; Proto PlutusData)
+-&gt; [ScriptData] -&gt; [Proto PlutusData]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptData -&gt; Proto PlutusData
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#scriptDataToUtxoRpcPlutusData"><span class="hs-identifier hs-var">scriptDataToUtxoRpcPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">[ScriptData]
+</span><a href="#local-6989586621679619861"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><span class="annottext">Proto PlutusData
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+-&gt; (Proto PlutusData -&gt; Proto PlutusData) -&gt; Proto PlutusData
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusData) (Proto Constr)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;constr&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.constr</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto PlutusData) (Proto Constr)
+-&gt; Proto Constr -&gt; Proto PlutusData -&gt; Proto PlutusData
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Proto Constr
+</span><a href="#local-6989586621679619900"><span class="hs-identifier hs-var">constr</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span id="local-6989586621679619704"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#utxoRpcPlutusDataToScriptData"><span class="hs-identifier hs-type">utxoRpcPlutusDataToScriptData</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/exceptions-0.10.11-inplace/src/Control.Monad.Catch.html#MonadThrow"><span class="hs-identifier hs-type">MonadThrow</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679619704"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.PlutusData</span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679619704"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptData"><span class="hs-identifier hs-type">ScriptData</span></a></span></span><span>
+</span><span id="line-55"></span><span id="utxoRpcPlutusDataToScriptData"><span class="annot"><span class="annottext">utxoRpcPlutusDataToScriptData :: forall (m :: * -&gt; *).
+(HasCallStack, MonadThrow m) =&gt;
+Proto PlutusData -&gt; m ScriptData
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#utxoRpcPlutusDataToScriptData"><span class="hs-identifier hs-var hs-var">utxoRpcPlutusDataToScriptData</span></a></span></span><span> </span><span id="local-6989586621679619999"><span class="annot"><span class="annottext">Proto PlutusData
+</span><a href="#local-6989586621679619999"><span class="hs-identifier hs-var">pd</span></a></span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679620000"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679620000"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+</span><a href="#local-6989586621679619999"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+-&gt; Getting (Maybe ByteString) (Proto PlutusData) (Maybe ByteString)
+-&gt; Maybe ByteString
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting (Maybe ByteString) (Proto PlutusData) (Maybe ByteString)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'boundedBytes&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'boundedBytes</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">ScriptData -&gt; m ScriptData
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptData -&gt; m ScriptData) -&gt; ScriptData -&gt; m ScriptData
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ScriptData
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptDataBytes"><span class="hs-identifier hs-var">ScriptDataBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679620000"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679620003"><span class="annot"><span class="annottext">Proto BigInt
+</span><a href="#local-6989586621679620003"><span class="hs-identifier hs-var">bigInt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+</span><a href="#local-6989586621679619999"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+-&gt; Getting
+     (Maybe (Proto BigInt)) (Proto PlutusData) (Maybe (Proto BigInt))
+-&gt; Maybe (Proto BigInt)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (Proto BigInt)) (Proto PlutusData) (Maybe (Proto BigInt))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'bigInt&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'bigInt</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">Integer -&gt; ScriptData
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptDataNumber"><span class="hs-identifier hs-var">ScriptDataNumber</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; ScriptData) -&gt; m Integer -&gt; m ScriptData
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Proto BigInt -&gt; m Integer
+forall (m :: * -&gt; *).
+(HasCallStack, MonadThrow m) =&gt;
+Proto BigInt -&gt; m Integer
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt.html#utxoRpcBigIntToInteger"><span class="hs-identifier hs-var">utxoRpcBigIntToInteger</span></a></span><span> </span><span class="annot"><span class="annottext">Proto BigInt
+</span><a href="#local-6989586621679620003"><span class="hs-identifier hs-var">bigInt</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679620007"><span class="annot"><span class="annottext">Proto PlutusDataArray
+</span><a href="#local-6989586621679620007"><span class="hs-identifier hs-var">arr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+</span><a href="#local-6989586621679619999"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+-&gt; Getting
+     (Maybe (Proto PlutusDataArray))
+     (Proto PlutusData)
+     (Maybe (Proto PlutusDataArray))
+-&gt; Maybe (Proto PlutusDataArray)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (Proto PlutusDataArray))
+  (Proto PlutusData)
+  (Maybe (Proto PlutusDataArray))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'array&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'array</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">[ScriptData] -&gt; ScriptData
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptDataList"><span class="hs-identifier hs-var">ScriptDataList</span></a></span><span> </span><span class="annot"><span class="annottext">([ScriptData] -&gt; ScriptData) -&gt; m [ScriptData] -&gt; m ScriptData
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Proto PlutusData -&gt; m ScriptData)
+-&gt; [Proto PlutusData] -&gt; m [ScriptData]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData -&gt; m ScriptData
+forall (m :: * -&gt; *).
+(HasCallStack, MonadThrow m) =&gt;
+Proto PlutusData -&gt; m ScriptData
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#utxoRpcPlutusDataToScriptData"><span class="hs-identifier hs-var">utxoRpcPlutusDataToScriptData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto PlutusDataArray
+</span><a href="#local-6989586621679620007"><span class="hs-identifier hs-var">arr</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusDataArray
+-&gt; Getting
+     [Proto PlutusData] (Proto PlutusDataArray) [Proto PlutusData]
+-&gt; [Proto PlutusData]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [Proto PlutusData] (Proto PlutusDataArray) [Proto PlutusData]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;items&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.items</span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679620010"><span class="annot"><span class="annottext">Proto PlutusDataMap
+</span><a href="#local-6989586621679620010"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+</span><a href="#local-6989586621679619999"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+-&gt; Getting
+     (Maybe (Proto PlutusDataMap))
+     (Proto PlutusData)
+     (Maybe (Proto PlutusDataMap))
+-&gt; Maybe (Proto PlutusDataMap)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (Proto PlutusDataMap))
+  (Proto PlutusData)
+  (Maybe (Proto PlutusDataMap))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'map&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'map</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-63"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679620037"><span class="annot"><span class="annottext">convertPair :: s -&gt; m (ScriptData, ScriptData)
+</span><a href="#local-6989586621679620037"><span class="hs-identifier hs-var hs-var">convertPair</span></a></span></span><span> </span><span id="local-6989586621679620038"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679620038"><span class="hs-identifier hs-var">pair</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-64"></span><span>            </span><span id="local-6989586621679620039"><span class="annot"><a href="#local-6989586621679620039"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Proto PlutusData -&gt; m ScriptData
+forall (m :: * -&gt; *).
+(HasCallStack, MonadThrow m) =&gt;
+Proto PlutusData -&gt; m ScriptData
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#utxoRpcPlutusDataToScriptData"><span class="hs-identifier hs-var">utxoRpcPlutusDataToScriptData</span></a></span><span> </span><span class="annot"><span class="annottext">(Proto PlutusData -&gt; m ScriptData)
+-&gt; Proto PlutusData -&gt; m ScriptData
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679620038"><span class="hs-identifier hs-var">pair</span></a></span><span> </span><span class="annot"><span class="annottext">s
+-&gt; Getting (Proto PlutusData) s (Proto PlutusData)
+-&gt; Proto PlutusData
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting (Proto PlutusData) s (Proto PlutusData)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;key&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.key</span></span><span>
+</span><span id="line-65"></span><span>            </span><span id="local-6989586621679620040"><span class="annot"><a href="#local-6989586621679620040"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#utxoRpcPlutusDataToScriptData"><span class="hs-identifier hs-type">utxoRpcPlutusDataToScriptData</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679620038"><span class="hs-identifier hs-type">pair</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">^.</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.value</span></span><span>
+</span><span id="line-66"></span><span>            </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679620039"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679620040"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><span class="annottext">[(ScriptData, ScriptData)] -&gt; ScriptData
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptDataMap"><span class="hs-identifier hs-var">ScriptDataMap</span></a></span><span> </span><span class="annot"><span class="annottext">([(ScriptData, ScriptData)] -&gt; ScriptData)
+-&gt; m [(ScriptData, ScriptData)] -&gt; m ScriptData
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Proto PlutusDataPair -&gt; m (ScriptData, ScriptData))
+-&gt; [Proto PlutusDataPair] -&gt; m [(ScriptData, ScriptData)]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusDataPair -&gt; m (ScriptData, ScriptData)
+forall {m :: * -&gt; *} {s}.
+(MonadThrow m, HasField s &quot;value&quot; (Proto PlutusData),
+ HasField s &quot;key&quot; (Proto PlutusData)) =&gt;
+s -&gt; m (ScriptData, ScriptData)
+</span><a href="#local-6989586621679620037"><span class="hs-identifier hs-var">convertPair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto PlutusDataMap
+</span><a href="#local-6989586621679620010"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusDataMap
+-&gt; Getting
+     [Proto PlutusDataPair] (Proto PlutusDataMap) [Proto PlutusDataPair]
+-&gt; [Proto PlutusDataPair]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [Proto PlutusDataPair] (Proto PlutusDataMap) [Proto PlutusDataPair]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;pairs&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.pairs</span></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679620041"><span class="annot"><span class="annottext">Proto Constr
+</span><a href="#local-6989586621679620041"><span class="hs-identifier hs-var">constr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+</span><a href="#local-6989586621679619999"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData
+-&gt; Getting
+     (Maybe (Proto Constr)) (Proto PlutusData) (Maybe (Proto Constr))
+-&gt; Maybe (Proto Constr)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (Proto Constr)) (Proto PlutusData) (Maybe (Proto Constr))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'constr&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'constr</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-69"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679620048"><span class="annot"><span class="annottext">tag :: Word32
+</span><a href="#local-6989586621679620048"><span class="hs-identifier hs-var hs-var hs-var">tag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proto Constr
+</span><a href="#local-6989586621679620041"><span class="hs-identifier hs-var">constr</span></a></span><span> </span><span class="annot"><span class="annottext">Proto Constr -&gt; Getting Word32 (Proto Constr) Word32 -&gt; Word32
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Word32 (Proto Constr) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;tag&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.tag</span></span><span>
+</span><span id="line-70"></span><span>          </span><span id="local-6989586621679620054"><span class="annot"><span class="annottext">anyC :: Word64
+</span><a href="#local-6989586621679620054"><span class="hs-identifier hs-var hs-var hs-var">anyC</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proto Constr
+</span><a href="#local-6989586621679620041"><span class="hs-identifier hs-var">constr</span></a></span><span> </span><span class="annot"><span class="annottext">Proto Constr -&gt; Getting Word64 (Proto Constr) Word64 -&gt; Word64
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Word64 (Proto Constr) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;anyConstructor&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.anyConstructor</span></span><span>
+</span><span id="line-71"></span><span>          </span><span class="hs-comment">-- Inverse of scriptDataToUtxoRpcPlutusData: tag 102 signals that the</span><span>
+</span><span id="line-72"></span><span>          </span><span class="hs-comment">-- real constructor index lives in anyConstructor (for values &gt; maxBound @Word32).</span><span>
+</span><span id="line-73"></span><span>          </span><span class="hs-comment">-- See: https://github.com/IntersectMBO/plutus/blob/fc78c36b545ee287ae8796a0c1a7d04cf31f4cee/plutus-core/plutus-core/src/PlutusCore/Data.hs#L72</span><span>
+</span><span id="line-74"></span><span>          </span><span id="local-6989586621679620082"><span class="annot"><span class="annottext">resolvedTag :: Integer
+</span><a href="#local-6989586621679620082"><span class="hs-identifier hs-var hs-var hs-var">resolvedTag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>            </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679620048"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Word32 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">102</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679620054"><span class="hs-identifier hs-var">anyC</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-76"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679620054"><span class="hs-identifier hs-var">anyC</span></a></span><span>
+</span><span id="line-77"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679620048"><span class="hs-identifier hs-var">tag</span></a></span><span>
+</span><span id="line-78"></span><span>      </span><span id="local-6989586621679620085"><span class="annot"><a href="#local-6989586621679620085"><span class="hs-identifier hs-var">fields</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Proto PlutusData -&gt; m ScriptData)
+-&gt; [Proto PlutusData] -&gt; m [ScriptData]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">Proto PlutusData -&gt; m ScriptData
+forall (m :: * -&gt; *).
+(HasCallStack, MonadThrow m) =&gt;
+Proto PlutusData -&gt; m ScriptData
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#utxoRpcPlutusDataToScriptData"><span class="hs-identifier hs-var">utxoRpcPlutusDataToScriptData</span></a></span><span> </span><span class="annot"><span class="annottext">([Proto PlutusData] -&gt; m [ScriptData])
+-&gt; [Proto PlutusData] -&gt; m [ScriptData]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Proto Constr
+</span><a href="#local-6989586621679620041"><span class="hs-identifier hs-var">constr</span></a></span><span> </span><span class="annot"><span class="annottext">Proto Constr
+-&gt; Getting [Proto PlutusData] (Proto Constr) [Proto PlutusData]
+-&gt; [Proto PlutusData]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting [Proto PlutusData] (Proto Constr) [Proto PlutusData]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;fields&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.fields</span></span><span>
+</span><span id="line-79"></span><span>      </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptDataConstructor"><span class="hs-identifier hs-type">ScriptDataConstructor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679620082"><span class="hs-identifier hs-type">resolvedTag</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679620085"><span class="hs-identifier hs-type">fields</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>      </span><span class="annot"><span class="annottext">StringException -&gt; m ScriptData
+forall e a. (HasCallStack, Exception e) =&gt; e -&gt; m a
+forall (m :: * -&gt; *) e a.
+(MonadThrow m, HasCallStack, Exception e) =&gt;
+e -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/exceptions-0.10.11-inplace/src/Control.Monad.Catch.html#throwM"><span class="hs-identifier hs-var">throwM</span></a></span><span> </span><span class="annot"><span class="annottext">(StringException -&gt; m ScriptData)
+-&gt; ([Char] -&gt; StringException) -&gt; [Char] -&gt; m ScriptData
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; [Char] -&gt; StringException
+[Char] -&gt; StringException
+</span><span class="hs-identifier hs-var">stringException</span></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; m ScriptData) -&gt; [Char] -&gt; m ScriptData
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;utxoRpcPlutusDataToScriptData: no PlutusData variant set&quot;</span></span><span>
+</span><span id="line-82"></span></pre></body></html>

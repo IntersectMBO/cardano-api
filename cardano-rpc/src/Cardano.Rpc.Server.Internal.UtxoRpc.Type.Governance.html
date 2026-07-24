@@ -1,0 +1,883 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#proposalProcedureToUtxoRpcProposal"><span class="hs-identifier">proposalProcedureToUtxoRpcProposal</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html"><span class="hs-identifier">Cardano.Api.Address</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Era.html"><span class="hs-identifier">Cardano.Api.Era</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Ledger.html"><span class="hs-identifier">Cardano.Api.Ledger</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html"><span class="hs-identifier">Cardano.Api.Serialise.Raw</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.html"><span class="hs-identifier">Cardano.Api.Tx</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U5c</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UtxoRpc</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Orphans.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate.html#anchorToUtxoRpcAnchor"><span class="hs-identifier">anchorToUtxoRpcAnchor</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate.html#credentialToUtxoRpcStakeCredential"><span class="hs-identifier">credentialToUtxoRpcStakeCredential</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate.html#scriptHashToBytes"><span class="hs-identifier">scriptHashToBytes</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters.html#pparamsUpdateToUtxoRpcPParams"><span class="hs-identifier">pparamsUpdateToUtxoRpcPParams</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.PParams.html"><span class="hs-identifier">Cardano.Ledger.Conway.PParams</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/rio-0.1.24.0-d0e5831b10849e265fde05dc5b9b28d702aecc86ff0ea6a46676b331d3c74941/share/doc/html/src/RIO.html"><span class="hs-identifier">RIO</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.html"><span class="hs-identifier">Data.ProtoLens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier">defMessage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.html"><span class="hs-identifier">Network.GRPC.Spec</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | Convert a ledger governance proposal procedure to the UTxO RPC</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- 'UtxoRpc.GovernanceActionProposal' message.</span><span>
+</span><span id="line-37"></span><span id="local-6989586621679622210"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#proposalProcedureToUtxoRpcProposal"><span class="hs-identifier hs-type">proposalProcedureToUtxoRpcProposal</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ConwayEraPParams"><span class="hs-identifier hs-type">L.ConwayEraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679622210"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#ProposalProcedure"><span class="hs-identifier hs-type">L.ProposalProcedure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679622210"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.GovernanceActionProposal</span></span></span><span>
+</span><span id="line-41"></span><span id="proposalProcedureToUtxoRpcProposal"><span class="annot"><span class="annottext">proposalProcedureToUtxoRpcProposal :: forall era.
+ConwayEraPParams era =&gt;
+ProposalProcedure era -&gt; Proto GovernanceActionProposal
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#proposalProcedureToUtxoRpcProposal"><span class="hs-identifier hs-var hs-var">proposalProcedureToUtxoRpcProposal</span></a></span></span><span> </span><span id="local-6989586621679622456"><span class="annot"><span class="annottext">ProposalProcedure era
+</span><a href="#local-6989586621679622456"><span class="hs-identifier hs-var">proposal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="annottext">Proto GovernanceActionProposal
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceActionProposal
+-&gt; (Proto GovernanceActionProposal
+    -&gt; Proto GovernanceActionProposal)
+-&gt; Proto GovernanceActionProposal
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceActionProposal) (Proto BigInt)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;deposit&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.deposit</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceActionProposal) (Proto BigInt)
+-&gt; Proto BigInt
+-&gt; Proto GovernanceActionProposal
+-&gt; Proto GovernanceActionProposal
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Proto BigInt
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">inject</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProposalProcedure era -&gt; Coin
+forall era. ProposalProcedure era -&gt; Coin
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#pProcDeposit"><span class="hs-identifier hs-var">L.pProcDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">ProposalProcedure era
+</span><a href="#local-6989586621679622456"><span class="hs-identifier hs-var">proposal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceActionProposal
+-&gt; (Proto GovernanceActionProposal
+    -&gt; Proto GovernanceActionProposal)
+-&gt; Proto GovernanceActionProposal
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceActionProposal) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;rewardAccount&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.rewardAccount</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceActionProposal) ByteString
+-&gt; ByteString
+-&gt; Proto GovernanceActionProposal
+-&gt; Proto GovernanceActionProposal
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">StakeAddress -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AccountAddress -&gt; StakeAddress
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#fromShelleyStakeAddr"><span class="hs-identifier hs-var">fromShelleyStakeAddr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProposalProcedure era -&gt; AccountAddress
+forall era. ProposalProcedure era -&gt; AccountAddress
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#pProcReturnAddr"><span class="hs-identifier hs-var">L.pProcReturnAddr</span></a></span><span> </span><span class="annot"><span class="annottext">ProposalProcedure era
+</span><a href="#local-6989586621679622456"><span class="hs-identifier hs-var">proposal</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceActionProposal
+-&gt; (Proto GovernanceActionProposal
+    -&gt; Proto GovernanceActionProposal)
+-&gt; Proto GovernanceActionProposal
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceActionProposal) (Proto GovernanceAction)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;govAction&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.govAction</span></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceActionProposal) (Proto GovernanceAction)
+-&gt; Proto GovernanceAction
+-&gt; Proto GovernanceActionProposal
+-&gt; Proto GovernanceActionProposal
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">GovAction era -&gt; Proto GovernanceAction
+forall era.
+ConwayEraPParams era =&gt;
+GovAction era -&gt; Proto GovernanceAction
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govActionToUtxoRpcGovernanceAction"><span class="hs-identifier hs-var">govActionToUtxoRpcGovernanceAction</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProposalProcedure era -&gt; GovAction era
+forall era. ProposalProcedure era -&gt; GovAction era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#pProcGovAction"><span class="hs-identifier hs-var">L.pProcGovAction</span></a></span><span> </span><span class="annot"><span class="annottext">ProposalProcedure era
+</span><a href="#local-6989586621679622456"><span class="hs-identifier hs-var">proposal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceActionProposal
+-&gt; (Proto GovernanceActionProposal
+    -&gt; Proto GovernanceActionProposal)
+-&gt; Proto GovernanceActionProposal
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceActionProposal) (Proto Anchor)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;anchor&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.anchor</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceActionProposal) (Proto Anchor)
+-&gt; Proto Anchor
+-&gt; Proto GovernanceActionProposal
+-&gt; Proto GovernanceActionProposal
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Anchor -&gt; Proto Anchor
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate.html#anchorToUtxoRpcAnchor"><span class="hs-identifier hs-var">anchorToUtxoRpcAnchor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProposalProcedure era -&gt; Anchor
+forall era. ProposalProcedure era -&gt; Anchor
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#pProcAnchor"><span class="hs-identifier hs-var">L.pProcAnchor</span></a></span><span> </span><span class="annot"><span class="annottext">ProposalProcedure era
+</span><a href="#local-6989586621679622456"><span class="hs-identifier hs-var">proposal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- | Convert a ledger governance action to the UTxO RPC 'UtxoRpc.GovernanceAction'</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- message, dispatching on the action type to select the corresponding oneof field.</span><span>
+</span><span id="line-50"></span><span id="local-6989586621679622249"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govActionToUtxoRpcGovernanceAction"><span class="hs-identifier hs-type">govActionToUtxoRpcGovernanceAction</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ConwayEraPParams"><span class="hs-identifier hs-type">L.ConwayEraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679622249"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovAction"><span class="hs-identifier hs-type">L.GovAction</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679622249"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.GovernanceAction</span></span></span><span>
+</span><span id="line-54"></span><span id="govActionToUtxoRpcGovernanceAction"><span class="annot"><span class="annottext">govActionToUtxoRpcGovernanceAction :: forall era.
+ConwayEraPParams era =&gt;
+GovAction era -&gt; Proto GovernanceAction
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govActionToUtxoRpcGovernanceAction"><span class="hs-identifier hs-var hs-var">govActionToUtxoRpcGovernanceAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#ParameterChange"><span class="hs-identifier hs-type">L.ParameterChange</span></a></span><span> </span><span id="local-6989586621679622695"><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'PParamUpdatePurpose)
+</span><a href="#local-6989586621679622695"><span class="hs-identifier hs-var">prevActionId</span></a></span></span><span> </span><span id="local-6989586621679622696"><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621679622696"><span class="hs-identifier hs-var">pparamsUpdate</span></a></span></span><span> </span><span id="local-6989586621679622697"><span class="annot"><span class="annottext">StrictMaybe ScriptHash
+</span><a href="#local-6989586621679622697"><span class="hs-identifier hs-var">guardrailsScriptHash</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">Proto GovernanceAction
+-&gt; (Proto GovernanceAction -&gt; Proto GovernanceAction)
+-&gt; Proto GovernanceAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto ParameterChangeAction)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;parameterChangeAction&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.parameterChangeAction</span></span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto ParameterChangeAction)
+-&gt; Proto ParameterChangeAction
+-&gt; Proto GovernanceAction
+-&gt; Proto GovernanceAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Proto ParameterChangeAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-59"></span><span>               </span><span class="annot"><span class="annottext">Proto ParameterChangeAction
+-&gt; (Proto ParameterChangeAction -&gt; Proto ParameterChangeAction)
+-&gt; Proto ParameterChangeAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto ParameterChangeAction)
+  (Maybe (Proto GovernanceActionId))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'govActionId&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'govActionId</span></span><span>
+</span><span id="line-60"></span><span>                 </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto ParameterChangeAction)
+  (Maybe (Proto GovernanceActionId))
+-&gt; Maybe (Proto GovernanceActionId)
+-&gt; Proto ParameterChangeAction
+-&gt; Proto ParameterChangeAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">(GovPurposeId 'PParamUpdatePurpose -&gt; Proto GovernanceActionId)
+-&gt; Maybe (GovPurposeId 'PParamUpdatePurpose)
+-&gt; Maybe (Proto GovernanceActionId)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">GovPurposeId 'PParamUpdatePurpose -&gt; Proto GovernanceActionId
+forall (purpose :: GovActionPurpose).
+GovPurposeId purpose -&gt; Proto GovernanceActionId
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govPurposeIdToUtxoRpcGovernanceActionId"><span class="hs-identifier hs-var">govPurposeIdToUtxoRpcGovernanceActionId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'PParamUpdatePurpose)
+-&gt; Maybe (GovPurposeId 'PParamUpdatePurpose)
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-e09e49eb4bcdd129752ca5d2415cb0bfcf8b9dbf62c4d12d54f0d88df49b0730/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">L.strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'PParamUpdatePurpose)
+</span><a href="#local-6989586621679622695"><span class="hs-identifier hs-var">prevActionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>               </span><span class="annot"><span class="annottext">Proto ParameterChangeAction
+-&gt; (Proto ParameterChangeAction -&gt; Proto ParameterChangeAction)
+-&gt; Proto ParameterChangeAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ParameterChangeAction) (Proto PParams)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;protocolParamUpdate&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.protocolParamUpdate</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ParameterChangeAction) (Proto PParams)
+-&gt; Proto PParams
+-&gt; Proto ParameterChangeAction
+-&gt; Proto ParameterChangeAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era -&gt; Proto PParams
+forall era.
+ConwayEraPParams era =&gt;
+PParamsUpdate era -&gt; Proto PParams
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters.html#pparamsUpdateToUtxoRpcPParams"><span class="hs-identifier hs-var">pparamsUpdateToUtxoRpcPParams</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621679622696"><span class="hs-identifier hs-var">pparamsUpdate</span></a></span><span>
+</span><span id="line-62"></span><span>               </span><span class="annot"><span class="annottext">Proto ParameterChangeAction
+-&gt; (Proto ParameterChangeAction -&gt; Proto ParameterChangeAction)
+-&gt; Proto ParameterChangeAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ParameterChangeAction) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;policyHash&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.policyHash</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ParameterChangeAction) ByteString
+-&gt; ByteString
+-&gt; Proto ParameterChangeAction
+-&gt; Proto ParameterChangeAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+-&gt; (ScriptHash -&gt; ByteString)
+-&gt; StrictMaybe ScriptHash
+-&gt; ByteString
+forall a b. a -&gt; (b -&gt; a) -&gt; StrictMaybe b -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-e09e49eb4bcdd129752ca5d2415cb0bfcf8b9dbf62c4d12d54f0d88df49b0730/share/doc/html/src/Data.Maybe.Strict.html#strictMaybe"><span class="hs-identifier hs-var">L.strictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate.html#scriptHashToBytes"><span class="hs-identifier hs-var">scriptHashToBytes</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe ScriptHash
+</span><a href="#local-6989586621679622697"><span class="hs-identifier hs-var">guardrailsScriptHash</span></a></span><span>
+</span><span id="line-63"></span><span>           </span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#HardForkInitiation"><span class="hs-identifier hs-type">L.HardForkInitiation</span></a></span><span> </span><span id="local-6989586621679622706"><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'HardForkPurpose)
+</span><a href="#local-6989586621679622706"><span class="hs-identifier hs-var">prevActionId</span></a></span></span><span> </span><span id="local-6989586621679622707"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679622707"><span class="hs-identifier hs-var">protocolVersion</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><span class="annottext">Proto GovernanceAction
+-&gt; (Proto GovernanceAction -&gt; Proto GovernanceAction)
+-&gt; Proto GovernanceAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto HardForkInitiationAction)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;hardForkInitiationAction&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.hardForkInitiationAction</span></span><span>
+</span><span id="line-67"></span><span>        </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto HardForkInitiationAction)
+-&gt; Proto HardForkInitiationAction
+-&gt; Proto GovernanceAction
+-&gt; Proto GovernanceAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Proto HardForkInitiationAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-68"></span><span>               </span><span class="annot"><span class="annottext">Proto HardForkInitiationAction
+-&gt; (Proto HardForkInitiationAction
+    -&gt; Proto HardForkInitiationAction)
+-&gt; Proto HardForkInitiationAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto HardForkInitiationAction)
+  (Maybe (Proto GovernanceActionId))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'govActionId&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'govActionId</span></span><span>
+</span><span id="line-69"></span><span>                 </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto HardForkInitiationAction)
+  (Maybe (Proto GovernanceActionId))
+-&gt; Maybe (Proto GovernanceActionId)
+-&gt; Proto HardForkInitiationAction
+-&gt; Proto HardForkInitiationAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">(GovPurposeId 'HardForkPurpose -&gt; Proto GovernanceActionId)
+-&gt; Maybe (GovPurposeId 'HardForkPurpose)
+-&gt; Maybe (Proto GovernanceActionId)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">GovPurposeId 'HardForkPurpose -&gt; Proto GovernanceActionId
+forall (purpose :: GovActionPurpose).
+GovPurposeId purpose -&gt; Proto GovernanceActionId
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govPurposeIdToUtxoRpcGovernanceActionId"><span class="hs-identifier hs-var">govPurposeIdToUtxoRpcGovernanceActionId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'HardForkPurpose)
+-&gt; Maybe (GovPurposeId 'HardForkPurpose)
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-e09e49eb4bcdd129752ca5d2415cb0bfcf8b9dbf62c4d12d54f0d88df49b0730/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">L.strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'HardForkPurpose)
+</span><a href="#local-6989586621679622706"><span class="hs-identifier hs-var">prevActionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>               </span><span class="annot"><span class="annottext">Proto HardForkInitiationAction
+-&gt; (Proto HardForkInitiationAction
+    -&gt; Proto HardForkInitiationAction)
+-&gt; Proto HardForkInitiationAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto HardForkInitiationAction) (Proto ProtocolVersion)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;protocolVersion&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.protocolVersion</span></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto HardForkInitiationAction) (Proto ProtocolVersion)
+-&gt; Proto ProtocolVersion
+-&gt; Proto HardForkInitiationAction
+-&gt; Proto HardForkInitiationAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; Proto ProtocolVersion
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">inject</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679622707"><span class="hs-identifier hs-var">protocolVersion</span></a></span><span>
+</span><span id="line-71"></span><span>           </span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#TreasuryWithdrawals"><span class="hs-identifier hs-type">L.TreasuryWithdrawals</span></a></span><span> </span><span id="local-6989586621679622711"><span class="annot"><span class="annottext">Map AccountAddress Coin
+</span><a href="#local-6989586621679622711"><span class="hs-identifier hs-var">withdrawals</span></a></span></span><span> </span><span id="local-6989586621679622712"><span class="annot"><span class="annottext">StrictMaybe ScriptHash
+</span><a href="#local-6989586621679622712"><span class="hs-identifier hs-var">guardrailsScriptHash</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span class="annot"><span class="annottext">Proto GovernanceAction
+-&gt; (Proto GovernanceAction -&gt; Proto GovernanceAction)
+-&gt; Proto GovernanceAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto TreasuryWithdrawalsAction)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;treasuryWithdrawalsAction&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.treasuryWithdrawalsAction</span></span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto TreasuryWithdrawalsAction)
+-&gt; Proto TreasuryWithdrawalsAction
+-&gt; Proto GovernanceAction
+-&gt; Proto GovernanceAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Proto TreasuryWithdrawalsAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-76"></span><span>               </span><span class="annot"><span class="annottext">Proto TreasuryWithdrawalsAction
+-&gt; (Proto TreasuryWithdrawalsAction
+    -&gt; Proto TreasuryWithdrawalsAction)
+-&gt; Proto TreasuryWithdrawalsAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto TreasuryWithdrawalsAction) [Proto WithdrawalAmount]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;withdrawals&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.withdrawals</span></span><span>
+</span><span id="line-77"></span><span>                 </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto TreasuryWithdrawalsAction) [Proto WithdrawalAmount]
+-&gt; [Proto WithdrawalAmount]
+-&gt; Proto TreasuryWithdrawalsAction
+-&gt; Proto TreasuryWithdrawalsAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Map AccountAddress Coin -&gt; [(AccountAddress, Coin)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">M.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Map AccountAddress Coin
+</span><a href="#local-6989586621679622711"><span class="hs-identifier hs-var">withdrawals</span></a></span><span> </span><span class="annot"><span class="annottext">[(AccountAddress, Coin)]
+-&gt; ((AccountAddress, Coin) -&gt; Proto WithdrawalAmount)
+-&gt; [Proto WithdrawalAmount]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679622717"><span class="annot"><span class="annottext">AccountAddress
+</span><a href="#local-6989586621679622717"><span class="hs-identifier hs-var">accountAddress</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679622718"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679622718"><span class="hs-identifier hs-var">coin</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>                        </span><span class="annot"><span class="annottext">Proto WithdrawalAmount
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-79"></span><span>                          </span><span class="annot"><span class="annottext">Proto WithdrawalAmount
+-&gt; (Proto WithdrawalAmount -&gt; Proto WithdrawalAmount)
+-&gt; Proto WithdrawalAmount
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto WithdrawalAmount) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;rewardAccount&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.rewardAccount</span></span><span>
+</span><span id="line-80"></span><span>                            </span><span class="annot"><span class="annottext">LensLike' Identity (Proto WithdrawalAmount) ByteString
+-&gt; ByteString -&gt; Proto WithdrawalAmount -&gt; Proto WithdrawalAmount
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">StakeAddress -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AccountAddress -&gt; StakeAddress
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#fromShelleyStakeAddr"><span class="hs-identifier hs-var">fromShelleyStakeAddr</span></a></span><span> </span><span class="annot"><span class="annottext">AccountAddress
+</span><a href="#local-6989586621679622717"><span class="hs-identifier hs-var">accountAddress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>                          </span><span class="annot"><span class="annottext">Proto WithdrawalAmount
+-&gt; (Proto WithdrawalAmount -&gt; Proto WithdrawalAmount)
+-&gt; Proto WithdrawalAmount
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto WithdrawalAmount) (Proto BigInt)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;coin&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.coin</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto WithdrawalAmount) (Proto BigInt)
+-&gt; Proto BigInt -&gt; Proto WithdrawalAmount -&gt; Proto WithdrawalAmount
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Proto BigInt
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">inject</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679622718"><span class="hs-identifier hs-var">coin</span></a></span><span>
+</span><span id="line-82"></span><span>                    </span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>               </span><span class="annot"><span class="annottext">Proto TreasuryWithdrawalsAction
+-&gt; (Proto TreasuryWithdrawalsAction
+    -&gt; Proto TreasuryWithdrawalsAction)
+-&gt; Proto TreasuryWithdrawalsAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TreasuryWithdrawalsAction) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;policyHash&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.policyHash</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TreasuryWithdrawalsAction) ByteString
+-&gt; ByteString
+-&gt; Proto TreasuryWithdrawalsAction
+-&gt; Proto TreasuryWithdrawalsAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+-&gt; (ScriptHash -&gt; ByteString)
+-&gt; StrictMaybe ScriptHash
+-&gt; ByteString
+forall a b. a -&gt; (b -&gt; a) -&gt; StrictMaybe b -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-e09e49eb4bcdd129752ca5d2415cb0bfcf8b9dbf62c4d12d54f0d88df49b0730/share/doc/html/src/Data.Maybe.Strict.html#strictMaybe"><span class="hs-identifier hs-var">L.strictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate.html#scriptHashToBytes"><span class="hs-identifier hs-var">scriptHashToBytes</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe ScriptHash
+</span><a href="#local-6989586621679622712"><span class="hs-identifier hs-var">guardrailsScriptHash</span></a></span><span>
+</span><span id="line-84"></span><span>           </span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#NoConfidence"><span class="hs-identifier hs-type">L.NoConfidence</span></a></span><span> </span><span id="local-6989586621679622721"><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'CommitteePurpose)
+</span><a href="#local-6989586621679622721"><span class="hs-identifier hs-var">prevActionId</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-87"></span><span>      </span><span class="annot"><span class="annottext">Proto GovernanceAction
+-&gt; (Proto GovernanceAction -&gt; Proto GovernanceAction)
+-&gt; Proto GovernanceAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto NoConfidenceAction)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;noConfidenceAction&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.noConfidenceAction</span></span><span>
+</span><span id="line-88"></span><span>        </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto NoConfidenceAction)
+-&gt; Proto NoConfidenceAction
+-&gt; Proto GovernanceAction
+-&gt; Proto GovernanceAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Proto NoConfidenceAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-89"></span><span>               </span><span class="annot"><span class="annottext">Proto NoConfidenceAction
+-&gt; (Proto NoConfidenceAction -&gt; Proto NoConfidenceAction)
+-&gt; Proto NoConfidenceAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto NoConfidenceAction)
+  (Maybe (Proto GovernanceActionId))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'govActionId&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'govActionId</span></span><span>
+</span><span id="line-90"></span><span>                 </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto NoConfidenceAction)
+  (Maybe (Proto GovernanceActionId))
+-&gt; Maybe (Proto GovernanceActionId)
+-&gt; Proto NoConfidenceAction
+-&gt; Proto NoConfidenceAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">(GovPurposeId 'CommitteePurpose -&gt; Proto GovernanceActionId)
+-&gt; Maybe (GovPurposeId 'CommitteePurpose)
+-&gt; Maybe (Proto GovernanceActionId)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">GovPurposeId 'CommitteePurpose -&gt; Proto GovernanceActionId
+forall (purpose :: GovActionPurpose).
+GovPurposeId purpose -&gt; Proto GovernanceActionId
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govPurposeIdToUtxoRpcGovernanceActionId"><span class="hs-identifier hs-var">govPurposeIdToUtxoRpcGovernanceActionId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'CommitteePurpose)
+-&gt; Maybe (GovPurposeId 'CommitteePurpose)
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-e09e49eb4bcdd129752ca5d2415cb0bfcf8b9dbf62c4d12d54f0d88df49b0730/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">L.strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'CommitteePurpose)
+</span><a href="#local-6989586621679622721"><span class="hs-identifier hs-var">prevActionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>           </span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#UpdateCommittee"><span class="hs-identifier hs-type">L.UpdateCommittee</span></a></span><span> </span><span id="local-6989586621679622724"><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'CommitteePurpose)
+</span><a href="#local-6989586621679622724"><span class="hs-identifier hs-var">prevActionId</span></a></span></span><span> </span><span id="local-6989586621679622725"><span class="annot"><span class="annottext">Set (Credential ColdCommitteeRole)
+</span><a href="#local-6989586621679622725"><span class="hs-identifier hs-var">removedMembers</span></a></span></span><span> </span><span id="local-6989586621679622726"><span class="annot"><span class="annottext">Map (Credential ColdCommitteeRole) EpochNo
+</span><a href="#local-6989586621679622726"><span class="hs-identifier hs-var">addedMembers</span></a></span></span><span> </span><span id="local-6989586621679622727"><span class="annot"><span class="annottext">UnitInterval
+</span><a href="#local-6989586621679622727"><span class="hs-identifier hs-var">threshold</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-94"></span><span>      </span><span class="annot"><span class="annottext">Proto GovernanceAction
+-&gt; (Proto GovernanceAction -&gt; Proto GovernanceAction)
+-&gt; Proto GovernanceAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto UpdateCommitteeAction)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;updateCommitteeAction&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.updateCommitteeAction</span></span><span>
+</span><span id="line-95"></span><span>        </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto UpdateCommitteeAction)
+-&gt; Proto UpdateCommitteeAction
+-&gt; Proto GovernanceAction
+-&gt; Proto GovernanceAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Proto UpdateCommitteeAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-96"></span><span>               </span><span class="annot"><span class="annottext">Proto UpdateCommitteeAction
+-&gt; (Proto UpdateCommitteeAction -&gt; Proto UpdateCommitteeAction)
+-&gt; Proto UpdateCommitteeAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto UpdateCommitteeAction)
+  (Maybe (Proto GovernanceActionId))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'govActionId&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'govActionId</span></span><span>
+</span><span id="line-97"></span><span>                 </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto UpdateCommitteeAction)
+  (Maybe (Proto GovernanceActionId))
+-&gt; Maybe (Proto GovernanceActionId)
+-&gt; Proto UpdateCommitteeAction
+-&gt; Proto UpdateCommitteeAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">(GovPurposeId 'CommitteePurpose -&gt; Proto GovernanceActionId)
+-&gt; Maybe (GovPurposeId 'CommitteePurpose)
+-&gt; Maybe (Proto GovernanceActionId)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">GovPurposeId 'CommitteePurpose -&gt; Proto GovernanceActionId
+forall (purpose :: GovActionPurpose).
+GovPurposeId purpose -&gt; Proto GovernanceActionId
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govPurposeIdToUtxoRpcGovernanceActionId"><span class="hs-identifier hs-var">govPurposeIdToUtxoRpcGovernanceActionId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'CommitteePurpose)
+-&gt; Maybe (GovPurposeId 'CommitteePurpose)
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-e09e49eb4bcdd129752ca5d2415cb0bfcf8b9dbf62c4d12d54f0d88df49b0730/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">L.strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'CommitteePurpose)
+</span><a href="#local-6989586621679622724"><span class="hs-identifier hs-var">prevActionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>               </span><span class="annot"><span class="annottext">Proto UpdateCommitteeAction
+-&gt; (Proto UpdateCommitteeAction -&gt; Proto UpdateCommitteeAction)
+-&gt; Proto UpdateCommitteeAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto UpdateCommitteeAction) [Proto StakeCredential]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;removeCommitteeCredentials&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.removeCommitteeCredentials</span></span><span>
+</span><span id="line-99"></span><span>                 </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto UpdateCommitteeAction) [Proto StakeCredential]
+-&gt; [Proto StakeCredential]
+-&gt; Proto UpdateCommitteeAction
+-&gt; Proto UpdateCommitteeAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">(Credential ColdCommitteeRole -&gt; Proto StakeCredential)
+-&gt; [Credential ColdCommitteeRole] -&gt; [Proto StakeCredential]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Credential ColdCommitteeRole -&gt; Proto StakeCredential
+forall (kr :: KeyRole). Credential kr -&gt; Proto StakeCredential
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate.html#credentialToUtxoRpcStakeCredential"><span class="hs-identifier hs-var">credentialToUtxoRpcStakeCredential</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set (Credential ColdCommitteeRole)
+-&gt; [Credential ColdCommitteeRole]
+forall a. Set a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Credential ColdCommitteeRole)
+</span><a href="#local-6989586621679622725"><span class="hs-identifier hs-var">removedMembers</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>               </span><span class="annot"><span class="annottext">Proto UpdateCommitteeAction
+-&gt; (Proto UpdateCommitteeAction -&gt; Proto UpdateCommitteeAction)
+-&gt; Proto UpdateCommitteeAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto UpdateCommitteeAction)
+  [Proto NewCommitteeCredentials]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;newCommitteeCredentials&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.newCommitteeCredentials</span></span><span>
+</span><span id="line-101"></span><span>                 </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto UpdateCommitteeAction)
+  [Proto NewCommitteeCredentials]
+-&gt; [Proto NewCommitteeCredentials]
+-&gt; Proto UpdateCommitteeAction
+-&gt; Proto UpdateCommitteeAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Map (Credential ColdCommitteeRole) EpochNo
+-&gt; [(Credential ColdCommitteeRole, EpochNo)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">M.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential ColdCommitteeRole) EpochNo
+</span><a href="#local-6989586621679622726"><span class="hs-identifier hs-var">addedMembers</span></a></span><span> </span><span class="annot"><span class="annottext">[(Credential ColdCommitteeRole, EpochNo)]
+-&gt; ((Credential ColdCommitteeRole, EpochNo)
+    -&gt; Proto NewCommitteeCredentials)
+-&gt; [Proto NewCommitteeCredentials]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679622732"><span class="annot"><span class="annottext">Credential ColdCommitteeRole
+</span><a href="#local-6989586621679622732"><span class="hs-identifier hs-var">coldCredential</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679622733"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679622733"><span class="hs-identifier hs-var">expirationEpoch</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-102"></span><span>                        </span><span class="annot"><span class="annottext">Proto NewCommitteeCredentials
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-103"></span><span>                          </span><span class="annot"><span class="annottext">Proto NewCommitteeCredentials
+-&gt; (Proto NewCommitteeCredentials -&gt; Proto NewCommitteeCredentials)
+-&gt; Proto NewCommitteeCredentials
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto NewCommitteeCredentials) (Proto StakeCredential)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;committeeColdCredential&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.committeeColdCredential</span></span><span>
+</span><span id="line-104"></span><span>                            </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto NewCommitteeCredentials) (Proto StakeCredential)
+-&gt; Proto StakeCredential
+-&gt; Proto NewCommitteeCredentials
+-&gt; Proto NewCommitteeCredentials
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Credential ColdCommitteeRole -&gt; Proto StakeCredential
+forall (kr :: KeyRole). Credential kr -&gt; Proto StakeCredential
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate.html#credentialToUtxoRpcStakeCredential"><span class="hs-identifier hs-var">credentialToUtxoRpcStakeCredential</span></a></span><span> </span><span class="annot"><span class="annottext">Credential ColdCommitteeRole
+</span><a href="#local-6989586621679622732"><span class="hs-identifier hs-var">coldCredential</span></a></span><span>
+</span><span id="line-105"></span><span>                          </span><span class="annot"><span class="annottext">Proto NewCommitteeCredentials
+-&gt; (Proto NewCommitteeCredentials -&gt; Proto NewCommitteeCredentials)
+-&gt; Proto NewCommitteeCredentials
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto NewCommitteeCredentials) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;expiresEpoch&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.expiresEpoch</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto NewCommitteeCredentials) Word32
+-&gt; Word32
+-&gt; Proto NewCommitteeCredentials
+-&gt; Proto NewCommitteeCredentials
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochNo -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.1.0-845f61282fa147f6776dfdeb4b7986ef8e21c6da208b17365ca926b91ae734aa/share/doc/html/src/Cardano.Slotting.Slot.html#unEpochNo"><span class="hs-identifier hs-var">L.unEpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679622733"><span class="hs-identifier hs-var">expirationEpoch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>                    </span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>               </span><span class="annot"><span class="annottext">Proto UpdateCommitteeAction
+-&gt; (Proto UpdateCommitteeAction -&gt; Proto UpdateCommitteeAction)
+-&gt; Proto UpdateCommitteeAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto UpdateCommitteeAction) (Proto RationalNumber)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;newCommitteeThreshold&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.newCommitteeThreshold</span></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto UpdateCommitteeAction) (Proto RationalNumber)
+-&gt; Proto RationalNumber
+-&gt; Proto UpdateCommitteeAction
+-&gt; Proto UpdateCommitteeAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Ratio Integer -&gt; Proto RationalNumber
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">inject</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UnitInterval -&gt; Ratio Integer
+forall r. BoundedRational r =&gt; r -&gt; Ratio Integer
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">L.unboundRational</span></a></span><span> </span><span class="annot"><span class="annottext">UnitInterval
+</span><a href="#local-6989586621679622727"><span class="hs-identifier hs-var">threshold</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>           </span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#NewConstitution"><span class="hs-identifier hs-type">L.NewConstitution</span></a></span><span> </span><span id="local-6989586621679622740"><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'ConstitutionPurpose)
+</span><a href="#local-6989586621679622740"><span class="hs-identifier hs-var">prevActionId</span></a></span></span><span> </span><span id="local-6989586621679622741"><span class="annot"><span class="annottext">Constitution era
+</span><a href="#local-6989586621679622741"><span class="hs-identifier hs-var">constitution</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">Proto GovernanceAction
+-&gt; (Proto GovernanceAction -&gt; Proto GovernanceAction)
+-&gt; Proto GovernanceAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto NewConstitutionAction)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;newConstitutionAction&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.newConstitutionAction</span></span><span>
+</span><span id="line-112"></span><span>        </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto GovernanceAction) (Proto NewConstitutionAction)
+-&gt; Proto NewConstitutionAction
+-&gt; Proto GovernanceAction
+-&gt; Proto GovernanceAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Proto NewConstitutionAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-113"></span><span>               </span><span class="annot"><span class="annottext">Proto NewConstitutionAction
+-&gt; (Proto NewConstitutionAction -&gt; Proto NewConstitutionAction)
+-&gt; Proto NewConstitutionAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto NewConstitutionAction)
+  (Maybe (Proto GovernanceActionId))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'govActionId&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'govActionId</span></span><span>
+</span><span id="line-114"></span><span>                 </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto NewConstitutionAction)
+  (Maybe (Proto GovernanceActionId))
+-&gt; Maybe (Proto GovernanceActionId)
+-&gt; Proto NewConstitutionAction
+-&gt; Proto NewConstitutionAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">(GovPurposeId 'ConstitutionPurpose -&gt; Proto GovernanceActionId)
+-&gt; Maybe (GovPurposeId 'ConstitutionPurpose)
+-&gt; Maybe (Proto GovernanceActionId)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">GovPurposeId 'ConstitutionPurpose -&gt; Proto GovernanceActionId
+forall (purpose :: GovActionPurpose).
+GovPurposeId purpose -&gt; Proto GovernanceActionId
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govPurposeIdToUtxoRpcGovernanceActionId"><span class="hs-identifier hs-var">govPurposeIdToUtxoRpcGovernanceActionId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'ConstitutionPurpose)
+-&gt; Maybe (GovPurposeId 'ConstitutionPurpose)
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-e09e49eb4bcdd129752ca5d2415cb0bfcf8b9dbf62c4d12d54f0d88df49b0730/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">L.strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'ConstitutionPurpose)
+</span><a href="#local-6989586621679622740"><span class="hs-identifier hs-var">prevActionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>               </span><span class="annot"><span class="annottext">Proto NewConstitutionAction
+-&gt; (Proto NewConstitutionAction -&gt; Proto NewConstitutionAction)
+-&gt; Proto NewConstitutionAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto NewConstitutionAction) (Proto Constitution)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;constitution&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.constitution</span></span><span>
+</span><span id="line-116"></span><span>                 </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto NewConstitutionAction) (Proto Constitution)
+-&gt; Proto Constitution
+-&gt; Proto NewConstitutionAction
+-&gt; Proto NewConstitutionAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Proto Constitution
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-117"></span><span>                        </span><span class="annot"><span class="annottext">Proto Constitution
+-&gt; (Proto Constitution -&gt; Proto Constitution) -&gt; Proto Constitution
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constitution) (Proto Anchor)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;anchor&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.anchor</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constitution) (Proto Anchor)
+-&gt; Proto Anchor -&gt; Proto Constitution -&gt; Proto Constitution
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Anchor -&gt; Proto Anchor
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate.html#anchorToUtxoRpcAnchor"><span class="hs-identifier hs-var">anchorToUtxoRpcAnchor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Constitution era -&gt; Anchor
+forall era. Constitution era -&gt; Anchor
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#constitutionAnchor"><span class="hs-identifier hs-var">L.constitutionAnchor</span></a></span><span> </span><span class="annot"><span class="annottext">Constitution era
+</span><a href="#local-6989586621679622741"><span class="hs-identifier hs-var">constitution</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>                        </span><span class="annot"><span class="annottext">Proto Constitution
+-&gt; (Proto Constitution -&gt; Proto Constitution) -&gt; Proto Constitution
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constitution) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;hash&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.hash</span></span><span>
+</span><span id="line-119"></span><span>                          </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Constitution) ByteString
+-&gt; ByteString -&gt; Proto Constitution -&gt; Proto Constitution
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+-&gt; (ScriptHash -&gt; ByteString)
+-&gt; StrictMaybe ScriptHash
+-&gt; ByteString
+forall a b. a -&gt; (b -&gt; a) -&gt; StrictMaybe b -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-e09e49eb4bcdd129752ca5d2415cb0bfcf8b9dbf62c4d12d54f0d88df49b0730/share/doc/html/src/Data.Maybe.Strict.html#strictMaybe"><span class="hs-identifier hs-var">L.strictMaybe</span></a></span><span>
+</span><span id="line-120"></span><span>                            </span><span class="annot"><span class="annottext">ByteString
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-121"></span><span>                            </span><span class="annot"><span class="annottext">ScriptHash -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate.html#scriptHashToBytes"><span class="hs-identifier hs-var">scriptHashToBytes</span></a></span><span>
+</span><span id="line-122"></span><span>                            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Constitution era -&gt; StrictMaybe ScriptHash
+forall era. Constitution era -&gt; StrictMaybe ScriptHash
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#constitutionGuardrailsScriptHash"><span class="hs-identifier hs-var">L.constitutionGuardrailsScriptHash</span></a></span><span> </span><span class="annot"><span class="annottext">Constitution era
+</span><a href="#local-6989586621679622741"><span class="hs-identifier hs-var">constitution</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>                    </span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>           </span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><span class="annottext">GovAction era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#InfoAction"><span class="hs-identifier hs-var">L.InfoAction</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto GovernanceAction
+-&gt; (Proto GovernanceAction -&gt; Proto GovernanceAction)
+-&gt; Proto GovernanceAction
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceAction) (Proto InfoAction)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;infoAction&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.infoAction</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceAction) (Proto InfoAction)
+-&gt; Proto InfoAction
+-&gt; Proto GovernanceAction
+-&gt; Proto GovernanceAction
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Proto InfoAction
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- | Convert a governance purpose id, which identifies the previous governance</span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- action, to the UTxO RPC 'UtxoRpc.GovernanceActionId' message.</span><span>
+</span><span id="line-130"></span><span id="local-6989586621679622294"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govPurposeIdToUtxoRpcGovernanceActionId"><span class="hs-identifier hs-type">govPurposeIdToUtxoRpcGovernanceActionId</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovPurposeId"><span class="hs-identifier hs-type">L.GovPurposeId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679622294"><span class="hs-identifier hs-type">purpose</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.GovernanceActionId</span></span></span><span>
+</span><span id="line-132"></span><span id="govPurposeIdToUtxoRpcGovernanceActionId"><span class="annot"><span class="annottext">govPurposeIdToUtxoRpcGovernanceActionId :: forall (purpose :: GovActionPurpose).
+GovPurposeId purpose -&gt; Proto GovernanceActionId
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govPurposeIdToUtxoRpcGovernanceActionId"><span class="hs-identifier hs-var hs-var">govPurposeIdToUtxoRpcGovernanceActionId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><span class="annottext">GovActionId -&gt; Proto GovernanceActionId
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govActionIdToUtxoRpcGovernanceActionId"><span class="hs-identifier hs-var">govActionIdToUtxoRpcGovernanceActionId</span></a></span><span> </span><span class="annot"><span class="annottext">(GovActionId -&gt; Proto GovernanceActionId)
+-&gt; (GovPurposeId purpose -&gt; GovActionId)
+-&gt; GovPurposeId purpose
+-&gt; Proto GovernanceActionId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GovPurposeId purpose -&gt; GovActionId
+forall (p :: GovActionPurpose). GovPurposeId p -&gt; GovActionId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#unGovPurposeId"><span class="hs-identifier hs-var">L.unGovPurposeId</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- | Convert a ledger governance action id to the UTxO RPC</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- 'UtxoRpc.GovernanceActionId' message.</span><span>
+</span><span id="line-137"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govActionIdToUtxoRpcGovernanceActionId"><span class="hs-identifier hs-type">govActionIdToUtxoRpcGovernanceActionId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier hs-type">L.GovActionId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.GovernanceActionId</span></span><span>
+</span><span id="line-138"></span><span id="govActionIdToUtxoRpcGovernanceActionId"><span class="annot"><span class="annottext">govActionIdToUtxoRpcGovernanceActionId :: GovActionId -&gt; Proto GovernanceActionId
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance.html#govActionIdToUtxoRpcGovernanceActionId"><span class="hs-identifier hs-var hs-var">govActionIdToUtxoRpcGovernanceActionId</span></a></span></span><span> </span><span id="local-6989586621679622752"><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621679622752"><span class="hs-identifier hs-var">govActionId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-139"></span><span>  </span><span class="annot"><span class="annottext">Proto GovernanceActionId
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-140"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceActionId
+-&gt; (Proto GovernanceActionId -&gt; Proto GovernanceActionId)
+-&gt; Proto GovernanceActionId
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceActionId) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;transactionId&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.transactionId</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceActionId) ByteString
+-&gt; ByteString
+-&gt; Proto GovernanceActionId
+-&gt; Proto GovernanceActionId
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId -&gt; TxId
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxId"><span class="hs-identifier hs-var">fromShelleyTxId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovActionId -&gt; TxId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#gaidTxId"><span class="hs-identifier hs-var">L.gaidTxId</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621679622752"><span class="hs-identifier hs-var">govActionId</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>    </span><span class="annot"><span class="annottext">Proto GovernanceActionId
+-&gt; (Proto GovernanceActionId -&gt; Proto GovernanceActionId)
+-&gt; Proto GovernanceActionId
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceActionId) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;governanceActionIndex&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.governanceActionIndex</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto GovernanceActionId) Word32
+-&gt; Word32 -&gt; Proto GovernanceActionId -&gt; Proto GovernanceActionId
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Word32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovActionIx -&gt; Word16
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#unGovActionIx"><span class="hs-identifier hs-var">L.unGovActionIx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovActionId -&gt; GovActionIx
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.22.1.0-cfe0daa7f171a8bb84e765265a2dfb9a26d7fbf403b48daedf16243ab8d6606c/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#gaidGovActionIx"><span class="hs-identifier hs-var">L.gaidGovActionIx</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621679622752"><span class="hs-identifier hs-var">govActionId</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span></pre></body></html>

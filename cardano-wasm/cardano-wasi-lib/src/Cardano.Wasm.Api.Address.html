@@ -1,0 +1,107 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE InstanceSigs #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MonoLocalBinds #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Wasm.Api.Address.html"><span class="hs-identifier">Cardano.Wasm.Api.Address</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Wasm.Api.Address.html#AddressInfo"><span class="hs-identifier">AddressInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Wasm.Api.Address.html#inspectAddressImpl"><span class="hs-identifier">inspectAddressImpl</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Ledger.html"><span class="hs-identifier">Cardano.Api.Ledger</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toJSON</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.=)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><span class="hs-comment">-- | Information about a valid address, as returned by 'inspectAddressImpl'.</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">newtype</span><span> </span><span id="AddressInfo"><span class="annot"><a href="Cardano.Wasm.Api.Address.html#AddressInfo"><span class="hs-identifier hs-var">AddressInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AddressInfo"><span class="annot"><a href="Cardano.Wasm.Api.Address.html#AddressInfo"><span class="hs-identifier hs-var">AddressInfo</span></a></span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="addressNetwork"><span class="annot"><span class="annottext">AddressInfo -&gt; Network
+</span><a href="Cardano.Wasm.Api.Address.html#addressNetwork"><span class="hs-identifier hs-var hs-var">addressNetwork</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Network"><span class="hs-identifier hs-type">Ledger.Network</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The network the address belongs to.</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679605807"><span id="local-6989586621679605813"><span id="local-6989586621679605817"><span class="annot"><span class="annottext">Int -&gt; AddressInfo -&gt; ShowS
+[AddressInfo] -&gt; ShowS
+AddressInfo -&gt; String
+(Int -&gt; AddressInfo -&gt; ShowS)
+-&gt; (AddressInfo -&gt; String)
+-&gt; ([AddressInfo] -&gt; ShowS)
+-&gt; Show AddressInfo
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; AddressInfo -&gt; ShowS
+showsPrec :: Int -&gt; AddressInfo -&gt; ShowS
+$cshow :: AddressInfo -&gt; String
+show :: AddressInfo -&gt; String
+$cshowList :: [AddressInfo] -&gt; ShowS
+showList :: [AddressInfo] -&gt; ShowS
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679605822"><span id="local-6989586621679605827"><span class="annot"><span class="annottext">AddressInfo -&gt; AddressInfo -&gt; Bool
+(AddressInfo -&gt; AddressInfo -&gt; Bool)
+-&gt; (AddressInfo -&gt; AddressInfo -&gt; Bool) -&gt; Eq AddressInfo
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: AddressInfo -&gt; AddressInfo -&gt; Bool
+== :: AddressInfo -&gt; AddressInfo -&gt; Bool
+$c/= :: AddressInfo -&gt; AddressInfo -&gt; Bool
+/= :: AddressInfo -&gt; AddressInfo -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679605835"><span id="local-6989586621679605839"><span id="local-6989586621679605842"><span id="local-6989586621679605845"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Wasm.Api.Address.html#AddressInfo"><span class="hs-identifier hs-type">AddressInfo</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">toJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Wasm.Api.Address.html#AddressInfo"><span class="hs-identifier hs-type">AddressInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Value</span></span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679605859"><span class="annot"><span class="annottext">toJSON :: AddressInfo -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Wasm.Api.Address.html#AddressInfo"><span class="hs-identifier hs-type">AddressInfo</span></a></span><span> </span><span id="local-6989586621679605860"><span class="annot"><span class="annottext">Network
+</span><a href="#local-6989586621679605860"><span class="hs-identifier hs-var">network</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">[(Key, Value)] -&gt; Value
+</span><span class="hs-identifier hs-var">Aeson.object</span></span><span>
+</span><span id="line-29"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;network&quot;</span></span><span>
+</span><span id="line-30"></span><span>          </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; (Key, Value)
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; (Key, Value)
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="#local-6989586621679605860"><span class="hs-identifier hs-var">network</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-31"></span><span>            </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Mainnet"><span class="hs-identifier hs-var">Ledger.Mainnet</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;mainnet&quot;</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-32"></span><span>            </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Ledger.Testnet</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;testnet&quot;</span></span><span>
+</span><span id="line-33"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | Inspect an address given as a string. If the address is a well-formed</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- Shelley-era address (bech32, like @addr...@ or @addr_test...@), it returns</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- information about the address: currently, the network it belongs to.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- Otherwise it returns 'Nothing' (serialised as @null@ in the JavaScript</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- API). It never throws.</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- Note that an address only encodes whether it belongs to mainnet or a</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- testnet: it is not possible to distinguish between different testnets</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- (like preprod and preview) from an address alone, because they only differ</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- in the network magic, which is not part of the address.</span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Cardano.Wasm.Api.Address.html#inspectAddressImpl"><span class="hs-identifier hs-type">inspectAddressImpl</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Wasm.Api.Address.html#AddressInfo"><span class="hs-identifier hs-type">AddressInfo</span></a></span><span>
+</span><span id="line-46"></span><span id="inspectAddressImpl"><span class="annot"><span class="annottext">inspectAddressImpl :: String -&gt; Maybe AddressInfo
+</span><a href="Cardano.Wasm.Api.Address.html#inspectAddressImpl"><span class="hs-identifier hs-var hs-var">inspectAddressImpl</span></a></span></span><span> </span><span id="local-6989586621679605864"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679605864"><span class="hs-identifier hs-var">addrStr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">AsType (Address ShelleyAddr) -&gt; Text -&gt; Maybe (Address ShelleyAddr)
+forall addr.
+SerialiseAddress addr =&gt;
+AsType addr -&gt; Text -&gt; Maybe addr
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#deserialiseAddress"><span class="hs-identifier hs-var">Api.deserialiseAddress</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AsType ShelleyAddr -&gt; AsType (Address ShelleyAddr)
+forall addrtype. AsType addrtype -&gt; AsType (Address addrtype)
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#AsAddress"><span class="hs-identifier hs-var">Api.AsAddress</span></a></span><span> </span><span class="annot"><span class="annottext">AsType ShelleyAddr
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#AsShelleyAddr"><span class="hs-identifier hs-var">Api.AsShelleyAddr</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679605864"><span class="hs-identifier hs-var">addrStr</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Address.html#ShelleyAddress"><span class="hs-identifier hs-type">Api.ShelleyAddress</span></a></span><span> </span><span id="local-6989586621679605871"><span class="annot"><span class="annottext">Network
+</span><a href="#local-6989586621679605871"><span class="hs-identifier hs-var">network</span></a></span></span><span> </span><span class="annot"><span class="annottext">Credential Payment
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">StakeReference
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AddressInfo -&gt; Maybe AddressInfo
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; AddressInfo
+</span><a href="Cardano.Wasm.Api.Address.html#AddressInfo"><span class="hs-identifier hs-var">AddressInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="#local-6989586621679605871"><span class="hs-identifier hs-var">network</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Address ShelleyAddr)
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe AddressInfo
+forall a. Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-50"></span></pre></body></html>

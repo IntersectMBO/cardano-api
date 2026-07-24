@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Runtime.Eval.Utils.html"><span class="hs-identifier">GHC.Runtime.Eval.Utils</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.OldList.html#elemIndices"><span class="hs-identifier">elemIndices</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- | Split up a string with an eventually qualified declaration name into 3 components</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--   1. module name</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--   2. top-level decl</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--   3. full-name of the eventually nested decl, but without module qualification</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- === __Example__</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--     &quot;foo&quot;           = (&quot;&quot;, &quot;foo&quot;, &quot;foo&quot;)</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--     &quot;A.B.C.foo&quot;     = (&quot;A.B.C&quot;, &quot;foo&quot;, &quot;foo&quot;)</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--     &quot;M.N.foo.bar&quot;   = (&quot;M.N&quot;, &quot;foo&quot;, &quot;foo.bar&quot;)</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-20"></span><span class="annot"><a href="GHC.Runtime.Eval.Utils.html#splitIdent"><span class="hs-identifier hs-type">splitIdent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span id="splitIdent"><span class="annot"><span class="annottext">splitIdent :: String -&gt; (String, String, String)
+</span><a href="GHC.Runtime.Eval.Utils.html#splitIdent"><span class="hs-identifier hs-var hs-var">splitIdent</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="annot"><a href="GHC.Runtime.Eval.Utils.html#splitIdent"><span class="hs-identifier hs-var">splitIdent</span></a></span><span> </span><span id="local-6989586621682656143"><span class="annot"><span class="annottext">inp :: String
+</span><a href="#local-6989586621682656143"><span class="hs-identifier hs-var">inp</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621682656144"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682656144"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Unicode.html#isUpper"><span class="hs-identifier hs-var">isUpper</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621682656144"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621682656146"><span class="hs-identifier hs-var">fixs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-24"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656143"><span class="hs-identifier hs-var">inp</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621682656147"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656147"><span class="hs-identifier hs-var">i1</span></a></span></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; String
+</span><a href="#local-6989586621682656148"><span class="hs-identifier hs-var">upto</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656147"><span class="hs-identifier hs-var">i1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+</span><a href="#local-6989586621682656149"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656147"><span class="hs-identifier hs-var">i1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+</span><a href="#local-6989586621682656149"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656147"><span class="hs-identifier hs-var">i1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621682656150"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656150"><span class="hs-identifier hs-var">i1</span></a></span></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621682656151"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656151"><span class="hs-identifier hs-var">i2</span></a></span></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; String
+</span><a href="#local-6989586621682656148"><span class="hs-identifier hs-var">upto</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656150"><span class="hs-identifier hs-var">i1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+forall a. Int -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.List.html#take"><span class="hs-identifier hs-var">take</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656151"><span class="hs-identifier hs-var">i2</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656150"><span class="hs-identifier hs-var">i1</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; String
+</span><a href="#local-6989586621682656149"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656150"><span class="hs-identifier hs-var">i1</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+</span><a href="#local-6989586621682656149"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656150"><span class="hs-identifier hs-var">i1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621682656153"><span class="hs-identifier hs-var">ixs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-28"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656143"><span class="hs-identifier hs-var">inp</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656143"><span class="hs-identifier hs-var">inp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621682656154"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656154"><span class="hs-identifier hs-var">i1</span></a></span></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+</span><a href="#local-6989586621682656148"><span class="hs-identifier hs-var">upto</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656154"><span class="hs-identifier hs-var">i1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656143"><span class="hs-identifier hs-var">inp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>    </span><span id="local-6989586621682656153"><span class="annot"><span class="annottext">ixs :: [Int]
+</span><a href="#local-6989586621682656153"><span class="hs-identifier hs-var hs-var">ixs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; [Int]
+forall a. Eq a =&gt; a -&gt; [a] -&gt; [Int]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.OldList.html#elemIndices"><span class="hs-identifier hs-var">elemIndices</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656143"><span class="hs-identifier hs-var">inp</span></a></span><span>        </span><span class="hs-comment">-- indices of '.' in whole input</span><span>
+</span><span id="line-32"></span><span>    </span><span id="local-6989586621682656146"><span class="annot"><span class="annottext">fixs :: [Int]
+</span><a href="#local-6989586621682656146"><span class="hs-identifier hs-var hs-var">fixs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Bool) -&gt; [Int] -&gt; [Int]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.List.html#dropWhile"><span class="hs-identifier hs-var">dropWhile</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Bool
+</span><a href="#local-6989586621682656156"><span class="hs-identifier hs-var">isNextUc</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621682656153"><span class="hs-identifier hs-var">ixs</span></a></span><span>    </span><span class="hs-comment">-- indices of '.' in function names              --</span><span>
+</span><span id="line-33"></span><span>    </span><span id="local-6989586621682656156"><span class="annot"><span class="annottext">isNextUc :: Int -&gt; Bool
+</span><a href="#local-6989586621682656156"><span class="hs-identifier hs-var hs-var">isNextUc</span></a></span></span><span> </span><span id="local-6989586621682656157"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656157"><span class="hs-identifier hs-var">ix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Unicode.html#isUpper"><span class="hs-identifier hs-var">isUpper</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Char -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656158"><span class="hs-identifier hs-var">safeInp</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Char
+forall a. HasCallStack =&gt; [a] -&gt; Int -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.List.html#%21%21"><span class="hs-operator hs-var">!!</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656157"><span class="hs-identifier hs-var">ix</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>    </span><span id="local-6989586621682656158"><span class="annot"><span class="annottext">safeInp :: String
+</span><a href="#local-6989586621682656158"><span class="hs-identifier hs-var hs-var">safeInp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656143"><span class="hs-identifier hs-var">inp</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; &quot;</span></span><span>
+</span><span id="line-35"></span><span>    </span><span id="local-6989586621682656148"><span class="annot"><span class="annottext">upto :: Int -&gt; String
+</span><a href="#local-6989586621682656148"><span class="hs-identifier hs-var hs-var">upto</span></a></span></span><span> </span><span id="local-6989586621682656161"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656161"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+forall a. Int -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.List.html#take"><span class="hs-identifier hs-var">take</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656161"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656143"><span class="hs-identifier hs-var">inp</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span id="local-6989586621682656149"><span class="annot"><span class="annottext">from :: Int -&gt; String
+</span><a href="#local-6989586621682656149"><span class="hs-identifier hs-var hs-var">from</span></a></span></span><span> </span><span id="local-6989586621682656162"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656162"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+forall a. Int -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.List.html#drop"><span class="hs-identifier hs-var">drop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682656162"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656143"><span class="hs-identifier hs-var">inp</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | Qualify an identifier name with a module name</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- combineModIdent &quot;A&quot; &quot;foo&quot;  =  &quot;A.foo&quot;</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- combineModIdent &quot;&quot;  &quot;foo&quot;  =  &quot;foo&quot;</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-44"></span><span class="annot"><a href="GHC.Runtime.Eval.Utils.html#combineModIdent"><span class="hs-identifier hs-type">combineModIdent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-45"></span><span id="combineModIdent"><span class="annot"><span class="annottext">combineModIdent :: String -&gt; String -&gt; String
+</span><a href="GHC.Runtime.Eval.Utils.html#combineModIdent"><span class="hs-identifier hs-var hs-var">combineModIdent</span></a></span></span><span> </span><span id="local-6989586621682656165"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656165"><span class="hs-identifier hs-var">mod</span></a></span></span><span> </span><span id="local-6989586621682656166"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656166"><span class="hs-identifier hs-var">ident</span></a></span></span><span>
+</span><span id="line-46"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656165"><span class="hs-identifier hs-var">mod</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656166"><span class="hs-identifier hs-var">ident</span></a></span><span>
+</span><span id="line-47"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656166"><span class="hs-identifier hs-var">ident</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656165"><span class="hs-identifier hs-var">mod</span></a></span><span>
+</span><span id="line-48"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656165"><span class="hs-identifier hs-var">mod</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621682656166"><span class="hs-identifier hs-var">ident</span></a></span><span>
+</span><span id="line-49"></span></pre></body></html>

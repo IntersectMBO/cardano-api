@@ -1,0 +1,62 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational</span></a></span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational.html#utxoRpcRationalNumberToRational"><span class="hs-identifier">utxoRpcRationalNumberToRational</span></a></span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U5c</span></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/rio-0.1.24.0-d0e5831b10849e265fde05dc5b9b28d702aecc86ff0ea6a46676b331d3c74941/share/doc/html/src/RIO.html"><span class="hs-identifier">RIO</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Ratio.html"><span class="hs-identifier">Data.Ratio</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#%25"><span class="hs-operator">(%)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.html"><span class="hs-identifier">Network.GRPC.Spec</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- | Convert a protobuf 'U5c.RationalNumber' into a 'Rational'.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- Fails with 'Nothing' when the denominator is zero, which is also the</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- default value of the protobuf field when it is omitted.</span><span>
+</span><span id="line-17"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational.html#utxoRpcRationalNumberToRational"><span class="hs-identifier hs-type">utxoRpcRationalNumberToRational</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.RationalNumber</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Rational"><span class="hs-identifier hs-type">Rational</span></a></span><span>
+</span><span id="line-18"></span><span id="utxoRpcRationalNumberToRational"><span class="annot"><span class="annottext">utxoRpcRationalNumberToRational :: Proto RationalNumber -&gt; Maybe Rational
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational.html#utxoRpcRationalNumberToRational"><span class="hs-identifier hs-var hs-var">utxoRpcRationalNumberToRational</span></a></span></span><span> </span><span id="local-6989586621679620169"><span class="annot"><span class="annottext">Proto RationalNumber
+</span><a href="#local-6989586621679620169"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Proto RationalNumber
+</span><a href="#local-6989586621679620169"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Proto RationalNumber
+-&gt; Getting Word32 (Proto RationalNumber) Word32 -&gt; Word32
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Word32 (Proto RationalNumber) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;denominator&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.denominator</span></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Rational
+forall a. Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span id="local-6989586621679620172"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679620172"><span class="hs-identifier hs-var">den</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Maybe Rational
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Maybe Rational) -&gt; Rational -&gt; Maybe Rational
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Proto RationalNumber
+</span><a href="#local-6989586621679620169"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Proto RationalNumber
+-&gt; Getting Integer (Proto RationalNumber) Integer -&gt; Integer
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">LensLike' (Const Integer) (Proto RationalNumber) Int32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;numerator&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.numerator</span></span><span> </span><span class="annot"><span class="annottext">LensLike' (Const Integer) (Proto RationalNumber) Int32
+-&gt; ((Integer -&gt; Const Integer Integer)
+    -&gt; Int32 -&gt; Const Integer Int32)
+-&gt; Getting Integer (Proto RationalNumber) Integer
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Int32 -&gt; Integer) -&gt; SimpleGetter Int32 Integer
+forall s a. (s -&gt; a) -&gt; SimpleGetter s a
+</span><span class="hs-identifier hs-var">to</span></span><span> </span><span class="annot"><span class="annottext">Int32 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Rational
+forall a. Integral a =&gt; a -&gt; a -&gt; Ratio a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679620172"><span class="hs-identifier hs-var">den</span></a></span><span>
+</span><span id="line-22"></span></pre></body></html>

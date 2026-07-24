@@ -1,0 +1,570 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#mkProtoTxEval"><span class="hs-identifier">mkProtoTxEval</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#mkProtoRedeemer"><span class="hs-identifier">mkProtoRedeemer</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptExecutionErrorToEvalReport"><span class="hs-identifier">scriptExecutionErrorToEvalReport</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptWitnessIndexToRedeemerPurpose"><span class="hs-identifier">scriptWitnessIndexToRedeemerPurpose</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Era.html"><span class="hs-identifier">Cardano.Api.Era</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.html"><span class="hs-identifier">Cardano.Api.Experimental</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#PlutusScriptPurpose"><span class="hs-identifier">PlutusScriptPurpose</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Ledger.html"><span class="hs-identifier">Cardano.Api.Ledger</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.html"><span class="hs-identifier">Cardano.Api.Plutus</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.html"><span class="hs-identifier">Cardano.Api.Tx</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U5c</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UtxoRpc</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Orphans.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/rio-0.1.24.0-d0e5831b10849e265fde05dc5b9b28d702aecc86ff0ea6a46676b331d3c74941/share/doc/html/src/RIO.html"><span class="hs-identifier">RIO</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#toList"><span class="hs-identifier">toList</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.html"><span class="hs-identifier">Data.ProtoLens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier">defMessage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/GHC.IsList.html"><span class="hs-identifier">GHC.IsList</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.html"><span class="hs-identifier">Network.GRPC.Spec</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- | Assemble a proto 'TxEval' response from the computed fee, per-redeemer</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- evaluation results, and redeemer Plutus data from the transaction witness set.</span><span>
+</span><span id="line-30"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#mkProtoTxEval"><span class="hs-identifier hs-type">mkProtoTxEval</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Computed minimum fee</span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndex"><span class="hs-identifier hs-type">ScriptWitnessIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Fee.html#ScriptExecutionError"><span class="hs-identifier hs-type">ScriptExecutionError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.Script.html#ExecutionUnits"><span class="hs-identifier hs-type">ExecutionUnits</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-comment">-- ^ Per-redeemer evaluation results: script traces and execution units on</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-comment">-- success, or a script execution error on failure</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndex"><span class="hs-identifier hs-type">ScriptWitnessIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptData"><span class="hs-identifier hs-type">ScriptData</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-comment">-- ^ Redeemer Plutus data extracted from the transaction witness set, keyed</span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-comment">-- by script witness index, with decoded payload and CBOR bytes.</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.TxEval</span></span><span>
+</span><span id="line-40"></span><span id="mkProtoTxEval"><span class="annot"><span class="annottext">mkProtoTxEval :: Coin
+-&gt; Map
+     ScriptWitnessIndex
+     (Either ScriptExecutionError ([Text], ExecutionUnits))
+-&gt; Map ScriptWitnessIndex (ScriptData, ByteString)
+-&gt; Proto TxEval
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#mkProtoTxEval"><span class="hs-identifier hs-var hs-var">mkProtoTxEval</span></a></span></span><span> </span><span id="local-6989586621679624068"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679624068"><span class="hs-identifier hs-var">fee</span></a></span></span><span> </span><span id="local-6989586621679624069"><span class="annot"><span class="annottext">Map
+  ScriptWitnessIndex
+  (Either ScriptExecutionError ([Text], ExecutionUnits))
+</span><a href="#local-6989586621679624069"><span class="hs-identifier hs-var">evalMap</span></a></span></span><span> </span><span id="local-6989586621679624070"><span class="annot"><span class="annottext">Map ScriptWitnessIndex (ScriptData, ByteString)
+</span><a href="#local-6989586621679624070"><span class="hs-identifier hs-var">redeemerLookup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679624071"><span class="annot"><span class="annottext">Map ScriptWitnessIndex ScriptExecutionError
+</span><a href="#local-6989586621679624071"><span class="hs-identifier hs-var">failures</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624072"><span class="annot"><span class="annottext">Map ScriptWitnessIndex ([Text], ExecutionUnits)
+</span><a href="#local-6989586621679624072"><span class="hs-identifier hs-var">successes</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either ScriptExecutionError ([Text], ExecutionUnits)
+ -&gt; Either ScriptExecutionError ([Text], ExecutionUnits))
+-&gt; Map
+     ScriptWitnessIndex
+     (Either ScriptExecutionError ([Text], ExecutionUnits))
+-&gt; (Map ScriptWitnessIndex ScriptExecutionError,
+    Map ScriptWitnessIndex ([Text], ExecutionUnits))
+forall a b c k. (a -&gt; Either b c) -&gt; Map k a -&gt; (Map k b, Map k c)
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Strict.Internal.html#mapEither"><span class="hs-identifier hs-var">M.mapEither</span></a></span><span> </span><span class="annot"><span class="annottext">Either ScriptExecutionError ([Text], ExecutionUnits)
+-&gt; Either ScriptExecutionError ([Text], ExecutionUnits)
+forall a. a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  ScriptWitnessIndex
+  (Either ScriptExecutionError ([Text], ExecutionUnits))
+</span><a href="#local-6989586621679624069"><span class="hs-identifier hs-var">evalMap</span></a></span><span>
+</span><span id="line-42"></span><span>      </span><span id="local-6989586621679624079"><span class="annot"><span class="annottext">totalSteps :: Natural
+</span><a href="#local-6989586621679624079"><span class="hs-identifier hs-var hs-var">totalSteps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Natural] -&gt; Natural
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ExecutionUnits -&gt; Natural
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.Script.html#executionSteps"><span class="hs-identifier hs-var">executionSteps</span></a></span><span> </span><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621679624082"><span class="hs-identifier hs-var">units</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624082"><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621679624082"><span class="hs-identifier hs-var">units</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map ScriptWitnessIndex ([Text], ExecutionUnits)
+-&gt; [([Text], ExecutionUnits)]
+forall k a. Map k a -&gt; [a]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#elems"><span class="hs-identifier hs-var">M.elems</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptWitnessIndex ([Text], ExecutionUnits)
+</span><a href="#local-6989586621679624072"><span class="hs-identifier hs-var">successes</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-43"></span><span>      </span><span id="local-6989586621679624086"><span class="annot"><span class="annottext">totalMemory :: Natural
+</span><a href="#local-6989586621679624086"><span class="hs-identifier hs-var hs-var">totalMemory</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Natural] -&gt; Natural
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ExecutionUnits -&gt; Natural
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.Script.html#executionMemory"><span class="hs-identifier hs-var">executionMemory</span></a></span><span> </span><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621679624088"><span class="hs-identifier hs-var">units</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624088"><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621679624088"><span class="hs-identifier hs-var">units</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map ScriptWitnessIndex ([Text], ExecutionUnits)
+-&gt; [([Text], ExecutionUnits)]
+forall k a. Map k a -&gt; [a]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#elems"><span class="hs-identifier hs-var">M.elems</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptWitnessIndex ([Text], ExecutionUnits)
+</span><a href="#local-6989586621679624072"><span class="hs-identifier hs-var">successes</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-44"></span><span>      </span><span id="local-6989586621679624110"><span class="annot"><span class="annottext">protoExecutionUnits :: Proto ExUnits
+</span><a href="#local-6989586621679624110"><span class="hs-identifier hs-var hs-var">protoExecutionUnits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-45"></span><span>        </span><span class="annot"><span class="annottext">Proto ExUnits
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-46"></span><span>          </span><span class="annot"><span class="annottext">Proto ExUnits -&gt; (Proto ExUnits -&gt; Proto ExUnits) -&gt; Proto ExUnits
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;steps&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.steps</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+-&gt; Word64 -&gt; Proto ExUnits -&gt; Proto ExUnits
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679624079"><span class="hs-identifier hs-var">totalSteps</span></a></span><span>
+</span><span id="line-47"></span><span>          </span><span class="annot"><span class="annottext">Proto ExUnits -&gt; (Proto ExUnits -&gt; Proto ExUnits) -&gt; Proto ExUnits
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;memory&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.memory</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+-&gt; Word64 -&gt; Proto ExUnits -&gt; Proto ExUnits
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679624086"><span class="hs-identifier hs-var">totalMemory</span></a></span><span>
+</span><span id="line-48"></span><span>      </span><span id="local-6989586621679624120"><span class="annot"><span class="annottext">protoRedeemers :: [Proto Redeemer]
+</span><a href="#local-6989586621679624120"><span class="hs-identifier hs-var hs-var">protoRedeemers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">(PlutusScriptPurpose, Word32)
+-&gt; ExecutionUnits
+-&gt; Maybe (ScriptData, ByteString)
+-&gt; Proto Redeemer
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#mkProtoRedeemer"><span class="hs-identifier hs-var">mkProtoRedeemer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScriptWitnessIndex -&gt; (PlutusScriptPurpose, Word32)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptWitnessIndexToPlutusScriptPurpose"><span class="hs-identifier hs-var">scriptWitnessIndexToPlutusScriptPurpose</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621679624122"><span class="hs-identifier hs-var">witness</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621679624123"><span class="hs-identifier hs-var">units</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (ScriptData, ByteString) -&gt; Proto Redeemer)
+-&gt; Maybe (ScriptData, ByteString) -&gt; Proto Redeemer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-50"></span><span>            </span><span class="annot"><span class="annottext">ScriptWitnessIndex
+-&gt; Map ScriptWitnessIndex (ScriptData, ByteString)
+-&gt; Maybe (ScriptData, ByteString)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621679624122"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptWitnessIndex (ScriptData, ByteString)
+</span><a href="#local-6989586621679624070"><span class="hs-identifier hs-var">redeemerLookup</span></a></span><span>
+</span><span id="line-51"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679624122"><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621679624122"><span class="hs-identifier hs-var">witness</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624123"><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621679624123"><span class="hs-identifier hs-var">units</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map ScriptWitnessIndex ([Text], ExecutionUnits)
+-&gt; [Item (Map ScriptWitnessIndex ([Text], ExecutionUnits))]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IsList.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptWitnessIndex ([Text], ExecutionUnits)
+</span><a href="#local-6989586621679624072"><span class="hs-identifier hs-var">successes</span></a></span><span>
+</span><span id="line-52"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>      </span><span id="local-6989586621679624127"><span class="annot"><span class="annottext">protoErrors :: [Proto EvalReport]
+</span><a href="#local-6989586621679624127"><span class="hs-identifier hs-var hs-var">protoErrors</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">ScriptWitnessIndex -&gt; ScriptExecutionError -&gt; Proto EvalReport
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptExecutionErrorToEvalReport"><span class="hs-identifier hs-var">scriptExecutionErrorToEvalReport</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621679624128"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptExecutionError
+</span><a href="#local-6989586621679624129"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-55"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679624128"><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621679624128"><span class="hs-identifier hs-var">witness</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624129"><span class="annot"><span class="annottext">ScriptExecutionError
+</span><a href="#local-6989586621679624129"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map ScriptWitnessIndex ScriptExecutionError
+-&gt; [Item (Map ScriptWitnessIndex ScriptExecutionError)]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IsList.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptWitnessIndex ScriptExecutionError
+</span><a href="#local-6989586621679624071"><span class="hs-identifier hs-var">failures</span></a></span><span>
+</span><span id="line-56"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-57"></span><span>      </span><span id="local-6989586621679624139"><span class="annot"><span class="annottext">protoTraces :: [Proto EvalReport]
+</span><a href="#local-6989586621679624139"><span class="hs-identifier hs-var hs-var">protoTraces</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-58"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-59"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679624140"><span class="annot"><span class="annottext">Proto RedeemerPurpose
+</span><a href="#local-6989586621679624140"><span class="hs-identifier hs-var">purpose</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624141"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624141"><span class="hs-identifier hs-var">idx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptWitnessIndex -&gt; (Proto RedeemerPurpose, Word32)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptWitnessIndexToRedeemerPurpose"><span class="hs-identifier hs-var">scriptWitnessIndexToRedeemerPurpose</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621679624142"><span class="hs-identifier hs-var">witness</span></a></span><span>
+</span><span id="line-60"></span><span>            </span><span class="annot"><span class="annottext">Proto EvalReport
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-61"></span><span>              </span><span class="annot"><span class="annottext">Proto EvalReport
+-&gt; (Proto EvalReport -&gt; Proto EvalReport) -&gt; Proto EvalReport
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;msg&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.msg</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) Text
+-&gt; Text -&gt; Proto EvalReport -&gt; Proto EvalReport
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679624144"><span class="hs-identifier hs-var">traceLine</span></a></span><span>
+</span><span id="line-62"></span><span>              </span><span class="annot"><span class="annottext">Proto EvalReport
+-&gt; (Proto EvalReport -&gt; Proto EvalReport) -&gt; Proto EvalReport
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) (Proto RedeemerPurpose)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;purpose&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.purpose</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) (Proto RedeemerPurpose)
+-&gt; Proto RedeemerPurpose -&gt; Proto EvalReport -&gt; Proto EvalReport
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Proto RedeemerPurpose
+</span><a href="#local-6989586621679624140"><span class="hs-identifier hs-var">purpose</span></a></span><span>
+</span><span id="line-63"></span><span>              </span><span class="annot"><span class="annottext">Proto EvalReport
+-&gt; (Proto EvalReport -&gt; Proto EvalReport) -&gt; Proto EvalReport
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;index&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.index</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) Word32
+-&gt; Word32 -&gt; Proto EvalReport -&gt; Proto EvalReport
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624141"><span class="hs-identifier hs-var">idx</span></a></span><span>
+</span><span id="line-64"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679624142"><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621679624142"><span class="hs-identifier hs-var">witness</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679624147"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679624147"><span class="hs-identifier hs-var">traces</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ExecutionUnits
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map ScriptWitnessIndex ([Text], ExecutionUnits)
+-&gt; [Item (Map ScriptWitnessIndex ([Text], ExecutionUnits))]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IsList.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptWitnessIndex ([Text], ExecutionUnits)
+</span><a href="#local-6989586621679624072"><span class="hs-identifier hs-var">successes</span></a></span><span>
+</span><span id="line-65"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624144"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679624144"><span class="hs-identifier hs-var">traceLine</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679624147"><span class="hs-identifier hs-var">traces</span></a></span><span>
+</span><span id="line-66"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><span class="annottext">Proto TxEval
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">Proto TxEval -&gt; (Proto TxEval -&gt; Proto TxEval) -&gt; Proto TxEval
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxEval) (Proto BigInt)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;fee&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.fee</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxEval) (Proto BigInt)
+-&gt; Proto BigInt -&gt; Proto TxEval -&gt; Proto TxEval
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Proto BigInt
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.20.0.0-cf413c1335bd1d6fdd3c1e53ad6ec6a52cb1c7b6d3904ce36f60e07e3c39bb5e/share/doc/html/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">inject</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679624068"><span class="hs-identifier hs-var">fee</span></a></span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">Proto TxEval -&gt; (Proto TxEval -&gt; Proto TxEval) -&gt; Proto TxEval
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxEval) (Proto ExUnits)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;exUnits&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.exUnits</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxEval) (Proto ExUnits)
+-&gt; Proto ExUnits -&gt; Proto TxEval -&gt; Proto TxEval
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Proto ExUnits
+</span><a href="#local-6989586621679624110"><span class="hs-identifier hs-var">protoExecutionUnits</span></a></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">Proto TxEval -&gt; (Proto TxEval -&gt; Proto TxEval) -&gt; Proto TxEval
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxEval) [Proto Redeemer]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;redeemers&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.redeemers</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxEval) [Proto Redeemer]
+-&gt; [Proto Redeemer] -&gt; Proto TxEval -&gt; Proto TxEval
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[Proto Redeemer]
+</span><a href="#local-6989586621679624120"><span class="hs-identifier hs-var">protoRedeemers</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">Proto TxEval -&gt; (Proto TxEval -&gt; Proto TxEval) -&gt; Proto TxEval
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxEval) [Proto EvalReport]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;errors&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.errors</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxEval) [Proto EvalReport]
+-&gt; [Proto EvalReport] -&gt; Proto TxEval -&gt; Proto TxEval
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[Proto EvalReport]
+</span><a href="#local-6989586621679624127"><span class="hs-identifier hs-var">protoErrors</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="annottext">Proto TxEval -&gt; (Proto TxEval -&gt; Proto TxEval) -&gt; Proto TxEval
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxEval) [Proto EvalReport]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;traces&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.traces</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxEval) [Proto EvalReport]
+-&gt; [Proto EvalReport] -&gt; Proto TxEval -&gt; Proto TxEval
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[Proto EvalReport]
+</span><a href="#local-6989586621679624139"><span class="hs-identifier hs-var">protoTraces</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | Assemble a proto 'Redeemer' from evaluation results and transaction</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- witness data.</span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#mkProtoRedeemer"><span class="hs-identifier hs-type">mkProtoRedeemer</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#PlutusScriptPurpose"><span class="hs-identifier hs-type">PlutusScriptPurpose</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Redeemer purpose and index</span></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.Script.html#ExecutionUnits"><span class="hs-identifier hs-type">ExecutionUnits</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Execution units consumed</span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.ScriptData.html#ScriptData"><span class="hs-identifier hs-type">ScriptData</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Plutus data payload and its CBOR bytes</span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.Redeemer</span></span><span>
+</span><span id="line-84"></span><span id="mkProtoRedeemer"><span class="annot"><span class="annottext">mkProtoRedeemer :: (PlutusScriptPurpose, Word32)
+-&gt; ExecutionUnits
+-&gt; Maybe (ScriptData, ByteString)
+-&gt; Proto Redeemer
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#mkProtoRedeemer"><span class="hs-identifier hs-var hs-var">mkProtoRedeemer</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679624154"><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="#local-6989586621679624154"><span class="hs-identifier hs-var">purpose</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624155"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624155"><span class="hs-identifier hs-var">idx</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679624156"><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621679624156"><span class="hs-identifier hs-var">exUnits</span></a></span></span><span> </span><span id="local-6989586621679624157"><span class="annot"><span class="annottext">Maybe (ScriptData, ByteString)
+</span><a href="#local-6989586621679624157"><span class="hs-identifier hs-var">redeemerDatum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679624174"><span class="annot"><span class="annottext">protoExUnits :: Proto ExUnits
+</span><a href="#local-6989586621679624174"><span class="hs-identifier hs-var hs-var">protoExUnits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">Proto ExUnits
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-87"></span><span>          </span><span class="annot"><span class="annottext">Proto ExUnits -&gt; (Proto ExUnits -&gt; Proto ExUnits) -&gt; Proto ExUnits
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;steps&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.steps</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+-&gt; Word64 -&gt; Proto ExUnits -&gt; Proto ExUnits
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ExecutionUnits -&gt; Natural
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.Script.html#executionSteps"><span class="hs-identifier hs-var">executionSteps</span></a></span><span> </span><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621679624156"><span class="hs-identifier hs-var">exUnits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>          </span><span class="annot"><span class="annottext">Proto ExUnits -&gt; (Proto ExUnits -&gt; Proto ExUnits) -&gt; Proto ExUnits
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;memory&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.memory</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExUnits) Word64
+-&gt; Word64 -&gt; Proto ExUnits -&gt; Proto ExUnits
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ExecutionUnits -&gt; Natural
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Plutus.Internal.Script.html#executionMemory"><span class="hs-identifier hs-var">executionMemory</span></a></span><span> </span><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621679624156"><span class="hs-identifier hs-var">exUnits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><span class="annottext">Proto Redeemer
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">Proto Redeemer
+-&gt; (Proto Redeemer -&gt; Proto Redeemer) -&gt; Proto Redeemer
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Redeemer) (Proto RedeemerPurpose)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;purpose&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.purpose</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Redeemer) (Proto RedeemerPurpose)
+-&gt; Proto RedeemerPurpose -&gt; Proto Redeemer -&gt; Proto Redeemer
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">PlutusScriptPurpose -&gt; Proto RedeemerPurpose
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#plutusScriptPurposeToRedeemerPurpose"><span class="hs-identifier hs-var">plutusScriptPurposeToRedeemerPurpose</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="#local-6989586621679624154"><span class="hs-identifier hs-var">purpose</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><span class="annottext">Proto Redeemer
+-&gt; (Proto Redeemer -&gt; Proto Redeemer) -&gt; Proto Redeemer
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Redeemer) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;index&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.index</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Redeemer) Word32
+-&gt; Word32 -&gt; Proto Redeemer -&gt; Proto Redeemer
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624155"><span class="hs-identifier hs-var">idx</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><span class="annottext">Proto Redeemer
+-&gt; (Proto Redeemer -&gt; Proto Redeemer) -&gt; Proto Redeemer
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Redeemer) (Proto ExUnits)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;exUnits&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.exUnits</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Redeemer) (Proto ExUnits)
+-&gt; Proto ExUnits -&gt; Proto Redeemer -&gt; Proto Redeemer
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Proto ExUnits
+</span><a href="#local-6989586621679624174"><span class="hs-identifier hs-var">protoExUnits</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">Proto Redeemer
+-&gt; (Proto Redeemer -&gt; Proto Redeemer) -&gt; Proto Redeemer
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Redeemer) (Maybe (Proto PlutusData))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'payload&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'payload</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Redeemer) (Maybe (Proto PlutusData))
+-&gt; Maybe (Proto PlutusData) -&gt; Proto Redeemer -&gt; Proto Redeemer
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">((ScriptData, ByteString) -&gt; Proto PlutusData)
+-&gt; Maybe (ScriptData, ByteString) -&gt; Maybe (Proto PlutusData)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScriptData -&gt; Proto PlutusData
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData.html#scriptDataToUtxoRpcPlutusData"><span class="hs-identifier hs-var">scriptDataToUtxoRpcPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptData -&gt; Proto PlutusData)
+-&gt; ((ScriptData, ByteString) -&gt; ScriptData)
+-&gt; (ScriptData, ByteString)
+-&gt; Proto PlutusData
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptData, ByteString) -&gt; ScriptData
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe (ScriptData, ByteString)
+</span><a href="#local-6989586621679624157"><span class="hs-identifier hs-var">redeemerDatum</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">Proto Redeemer
+-&gt; (Proto Redeemer -&gt; Proto Redeemer) -&gt; Proto Redeemer
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Redeemer) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;originalCbor&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.originalCbor</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto Redeemer) ByteString
+-&gt; ByteString -&gt; Proto Redeemer -&gt; Proto Redeemer
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+-&gt; ((ScriptData, ByteString) -&gt; ByteString)
+-&gt; Maybe (ScriptData, ByteString)
+-&gt; ByteString
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptData, ByteString) -&gt; ByteString
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (ScriptData, ByteString)
+</span><a href="#local-6989586621679624157"><span class="hs-identifier hs-var">redeemerDatum</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- | Convert a 'ScriptExecutionError' into a proto 'EvalReport' with the</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- redeemer purpose and 0-based index that produced the error.</span><span>
+</span><span id="line-98"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptExecutionErrorToEvalReport"><span class="hs-identifier hs-type">scriptExecutionErrorToEvalReport</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndex"><span class="hs-identifier hs-type">ScriptWitnessIndex</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Fee.html#ScriptExecutionError"><span class="hs-identifier hs-type">ScriptExecutionError</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.EvalReport</span></span><span>
+</span><span id="line-100"></span><span id="scriptExecutionErrorToEvalReport"><span class="annot"><span class="annottext">scriptExecutionErrorToEvalReport :: ScriptWitnessIndex -&gt; ScriptExecutionError -&gt; Proto EvalReport
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptExecutionErrorToEvalReport"><span class="hs-identifier hs-var hs-var">scriptExecutionErrorToEvalReport</span></a></span></span><span> </span><span id="local-6989586621679624183"><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621679624183"><span class="hs-identifier hs-var">swi</span></a></span></span><span> </span><span id="local-6989586621679624184"><span class="annot"><span class="annottext">ScriptExecutionError
+</span><a href="#local-6989586621679624184"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679624185"><span class="annot"><span class="annottext">Proto RedeemerPurpose
+</span><a href="#local-6989586621679624185"><span class="hs-identifier hs-var">purpose</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624186"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624186"><span class="hs-identifier hs-var">idx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptWitnessIndex -&gt; (Proto RedeemerPurpose, Word32)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptWitnessIndexToRedeemerPurpose"><span class="hs-identifier hs-var">scriptWitnessIndexToRedeemerPurpose</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621679624183"><span class="hs-identifier hs-var">swi</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><span class="annottext">Proto EvalReport
+forall msg. Message msg =&gt; msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/proto-lens-0.7.1.7-ec44ba089511e2d98de76e51433087277f723d1c20e87bf6340134b84aafab22/share/doc/html/src/Data.ProtoLens.Message.html#defMessage"><span class="hs-identifier hs-var">defMessage</span></a></span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><span class="annottext">Proto EvalReport
+-&gt; (Proto EvalReport -&gt; Proto EvalReport) -&gt; Proto EvalReport
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;msg&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.msg</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) Text
+-&gt; Text -&gt; Proto EvalReport -&gt; Proto EvalReport
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ScriptExecutionError -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/rio-0.1.24.0-d0e5831b10849e265fde05dc5b9b28d702aecc86ff0ea6a46676b331d3c74941/share/doc/html/src/RIO.Prelude.Text.html#tshow"><span class="hs-identifier hs-var">tshow</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptExecutionError
+</span><a href="#local-6989586621679624184"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span class="annot"><span class="annottext">Proto EvalReport
+-&gt; (Proto EvalReport -&gt; Proto EvalReport) -&gt; Proto EvalReport
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) (Proto RedeemerPurpose)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;purpose&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.purpose</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) (Proto RedeemerPurpose)
+-&gt; Proto RedeemerPurpose -&gt; Proto EvalReport -&gt; Proto EvalReport
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Proto RedeemerPurpose
+</span><a href="#local-6989586621679624185"><span class="hs-identifier hs-var">purpose</span></a></span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><span class="annottext">Proto EvalReport
+-&gt; (Proto EvalReport -&gt; Proto EvalReport) -&gt; Proto EvalReport
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) Word32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;index&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.index</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EvalReport) Word32
+-&gt; Word32 -&gt; Proto EvalReport -&gt; Proto EvalReport
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624186"><span class="hs-identifier hs-var">idx</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- | Bridge a legacy 'ScriptWitnessIndex' (still produced by the transaction</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- evaluation path) to the experimental Plutus script purpose pairing.</span><span>
+</span><span id="line-109"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptWitnessIndexToPlutusScriptPurpose"><span class="hs-identifier hs-type">scriptWitnessIndexToPlutusScriptPurpose</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndex"><span class="hs-identifier hs-type">ScriptWitnessIndex</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#PlutusScriptPurpose"><span class="hs-identifier hs-type">PlutusScriptPurpose</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span id="scriptWitnessIndexToPlutusScriptPurpose"><span class="annot"><span class="annottext">scriptWitnessIndexToPlutusScriptPurpose :: ScriptWitnessIndex -&gt; (PlutusScriptPurpose, Word32)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptWitnessIndexToPlutusScriptPurpose"><span class="hs-identifier hs-var hs-var">scriptWitnessIndexToPlutusScriptPurpose</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndexTxIn"><span class="hs-identifier hs-type">ScriptWitnessIndexTxIn</span></a></span><span> </span><span id="local-6989586621679624189"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624189"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#SpendingScript"><span class="hs-identifier hs-var">SpendingScript</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624189"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndexMint"><span class="hs-identifier hs-type">ScriptWitnessIndexMint</span></a></span><span> </span><span id="local-6989586621679624192"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624192"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#MintingScript"><span class="hs-identifier hs-var">MintingScript</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624192"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndexCertificate"><span class="hs-identifier hs-type">ScriptWitnessIndexCertificate</span></a></span><span> </span><span id="local-6989586621679624195"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624195"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#CertifyingScript"><span class="hs-identifier hs-var">CertifyingScript</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624195"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndexWithdrawal"><span class="hs-identifier hs-type">ScriptWitnessIndexWithdrawal</span></a></span><span> </span><span id="local-6989586621679624198"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624198"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#WithdrawingScript"><span class="hs-identifier hs-var">WithdrawingScript</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624198"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndexVoting"><span class="hs-identifier hs-type">ScriptWitnessIndexVoting</span></a></span><span> </span><span id="local-6989586621679624201"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624201"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#VotingScript"><span class="hs-identifier hs-var">VotingScript</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624201"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndexProposing"><span class="hs-identifier hs-type">ScriptWitnessIndexProposing</span></a></span><span> </span><span id="local-6989586621679624204"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624204"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#ProposingScript"><span class="hs-identifier hs-var">ProposingScript</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624204"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- | Map a Plutus script purpose to the corresponding proto 'RedeemerPurpose'.</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- 'GuardingScript' (Dijkstra's new purpose) has no UTxO RPC counterpart yet,</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- so it maps to the unspecified value.</span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#plutusScriptPurposeToRedeemerPurpose"><span class="hs-identifier hs-type">plutusScriptPurposeToRedeemerPurpose</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#PlutusScriptPurpose"><span class="hs-identifier hs-type">PlutusScriptPurpose</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.RedeemerPurpose</span></span><span>
+</span><span id="line-122"></span><span id="plutusScriptPurposeToRedeemerPurpose"><span class="annot"><span class="annottext">plutusScriptPurposeToRedeemerPurpose :: PlutusScriptPurpose -&gt; Proto RedeemerPurpose
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#plutusScriptPurposeToRedeemerPurpose"><span class="hs-identifier hs-var hs-var">plutusScriptPurposeToRedeemerPurpose</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-123"></span><span>  </span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#SpendingScript"><span class="hs-identifier hs-var">SpendingScript</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose -&gt; Proto RedeemerPurpose
+forall msg. msg -&gt; Proto msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-var">Proto</span></a></span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose
+</span><span class="hs-identifier hs-var">UtxoRpc.REDEEMER_PURPOSE_SPEND</span></span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#MintingScript"><span class="hs-identifier hs-var">MintingScript</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose -&gt; Proto RedeemerPurpose
+forall msg. msg -&gt; Proto msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-var">Proto</span></a></span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose
+</span><span class="hs-identifier hs-var">UtxoRpc.REDEEMER_PURPOSE_MINT</span></span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#CertifyingScript"><span class="hs-identifier hs-var">CertifyingScript</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose -&gt; Proto RedeemerPurpose
+forall msg. msg -&gt; Proto msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-var">Proto</span></a></span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose
+</span><span class="hs-identifier hs-var">UtxoRpc.REDEEMER_PURPOSE_CERT</span></span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#WithdrawingScript"><span class="hs-identifier hs-var">WithdrawingScript</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose -&gt; Proto RedeemerPurpose
+forall msg. msg -&gt; Proto msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-var">Proto</span></a></span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose
+</span><span class="hs-identifier hs-var">UtxoRpc.REDEEMER_PURPOSE_REWARD</span></span><span>
+</span><span id="line-127"></span><span>  </span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#VotingScript"><span class="hs-identifier hs-var">VotingScript</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose -&gt; Proto RedeemerPurpose
+forall msg. msg -&gt; Proto msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-var">Proto</span></a></span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose
+</span><span class="hs-identifier hs-var">UtxoRpc.REDEEMER_PURPOSE_VOTE</span></span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#ProposingScript"><span class="hs-identifier hs-var">ProposingScript</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose -&gt; Proto RedeemerPurpose
+forall msg. msg -&gt; Proto msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-var">Proto</span></a></span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose
+</span><span class="hs-identifier hs-var">UtxoRpc.REDEEMER_PURPOSE_PROPOSE</span></span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#GuardingScript"><span class="hs-identifier hs-var">GuardingScript</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose -&gt; Proto RedeemerPurpose
+forall msg. msg -&gt; Proto msg
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-var">Proto</span></a></span><span> </span><span class="annot"><span class="annottext">RedeemerPurpose
+</span><span class="hs-identifier hs-var">UtxoRpc.REDEEMER_PURPOSE_UNSPECIFIED</span></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- | Map a 'ScriptWitnessIndex' to the corresponding proto 'RedeemerPurpose'</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- and the numeric index within that purpose.</span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptWitnessIndexToRedeemerPurpose"><span class="hs-identifier hs-type">scriptWitnessIndexToRedeemerPurpose</span></a></span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.3.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndex"><span class="hs-identifier hs-type">ScriptWitnessIndex</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/grpc-spec-1.0.0-84781cf3ef639996d51378eba2595c6a0b5aa533c85efc476b2bb406355dca63/share/doc/html/src/Network.GRPC.Spec.RPC.Protobuf.html#Proto"><span class="hs-identifier hs-type">Proto</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.RedeemerPurpose</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span id="scriptWitnessIndexToRedeemerPurpose"><span class="annot"><span class="annottext">scriptWitnessIndexToRedeemerPurpose :: ScriptWitnessIndex -&gt; (Proto RedeemerPurpose, Word32)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptWitnessIndexToRedeemerPurpose"><span class="hs-identifier hs-var hs-var">scriptWitnessIndexToRedeemerPurpose</span></a></span></span><span> </span><span id="local-6989586621679624215"><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621679624215"><span class="hs-identifier hs-var">swi</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679624216"><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="#local-6989586621679624216"><span class="hs-identifier hs-var">purpose</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624217"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624217"><span class="hs-identifier hs-var">idx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptWitnessIndex -&gt; (PlutusScriptPurpose, Word32)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#scriptWitnessIndexToPlutusScriptPurpose"><span class="hs-identifier hs-var">scriptWitnessIndexToPlutusScriptPurpose</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621679624215"><span class="hs-identifier hs-var">swi</span></a></span><span>
+</span><span id="line-137"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PlutusScriptPurpose -&gt; Proto RedeemerPurpose
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval.html#plutusScriptPurposeToRedeemerPurpose"><span class="hs-identifier hs-var">plutusScriptPurposeToRedeemerPurpose</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusScriptPurpose
+</span><a href="#local-6989586621679624216"><span class="hs-identifier hs-var">purpose</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679624217"><span class="hs-identifier hs-var">idx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span></pre></body></html>

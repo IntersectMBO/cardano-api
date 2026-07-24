@@ -1,0 +1,567 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- | The SymbolCache is used to cache lookups for specific symbols when using</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- the interpreter.</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html"><span class="hs-identifier">GHC.Runtime.Interpreter.Types.SymbolCache</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>     </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbolCache"><span class="hs-identifier">InterpSymbolCache</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#mkInterpSymbolCache"><span class="hs-identifier">mkInterpSymbolCache</span></a></span><span>
+</span><span id="line-10"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#lookupInterpSymbolCache"><span class="hs-identifier">lookupInterpSymbolCache</span></a></span><span>
+</span><span id="line-11"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#updateInterpSymbolCache"><span class="hs-identifier">updateInterpSymbolCache</span></a></span><span>
+</span><span id="line-12"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#purgeInterpSymbolCache"><span class="hs-identifier">purgeInterpSymbolCache</span></a></span><span>
+</span><span id="line-13"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier">InterpSymbol</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SuffixOrInterpreted"><span class="hs-identifier">SuffixOrInterpreted</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolName"><span class="hs-identifier">interpSymbolName</span></a></span><span>
+</span><span id="line-16"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolSuffix"><span class="hs-identifier">interpSymbolSuffix</span></a></span><span>
+</span><span id="line-17"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#eliminateInterpSymbol"><span class="hs-identifier">eliminateInterpSymbol</span></a></span><span>
+</span><span id="line-18"></span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpretedInterpSymbol"><span class="hs-identifier">interpretedInterpSymbol</span></a></span><span>
+</span><span id="line-19"></span><span>   </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html"><span class="hs-identifier">GHC.Types.Unique.FM</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.html"><span class="hs-identifier">GHC.Types.Name</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html"><span class="hs-identifier">GHC.Data.FastString</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Foreign.html"><span class="hs-identifier">Foreign</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/GHC.TypeLits.html"><span class="hs-identifier">GHC.TypeLits</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- The symbols records the suffix which each cache deals with.</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">newtype</span><span> </span><span id="SymbolCache"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-var">SymbolCache</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682734601"><span class="annot"><a href="#local-6989586621682734601"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SymbolCache"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-var">SymbolCache</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="_getSymbolCache"><span class="annot"><span class="annottext">forall (s :: Symbol). SymbolCache s -&gt; UniqFM Name (Ptr ())
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#_getSymbolCache"><span class="hs-identifier hs-var hs-var">_getSymbolCache</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html#UniqFM"><span class="hs-identifier hs-type">UniqFM</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- Each cache is keyed by Name, there is one cache for each type of symbol we will</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- potentially lookup. The caches are keyed by 'Name' so that it is not necessary to consult</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- a complicated `FastString` each time.</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">data</span><span> </span><span id="InterpSymbolCache"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbolCache"><span class="hs-identifier hs-var">InterpSymbolCache</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="InterpSymbolCache"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbolCache"><span class="hs-identifier hs-var">InterpSymbolCache</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-40"></span><span>        </span><span id="interpClosureCache"><span class="annot"><span class="annottext">InterpSymbolCache -&gt; MVar (SymbolCache &quot;closure&quot;)
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpClosureCache"><span class="hs-identifier hs-var hs-var">interpClosureCache</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-type">SymbolCache</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;closure&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="interpConInfoCache"><span class="annot"><span class="annottext">InterpSymbolCache -&gt; MVar (SymbolCache &quot;con_info&quot;)
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpConInfoCache"><span class="hs-identifier hs-var hs-var">interpConInfoCache</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-type">SymbolCache</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;con_info&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="interpStaticInfoCache"><span class="annot"><span class="annottext">InterpSymbolCache -&gt; MVar (SymbolCache &quot;static_info&quot;)
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpStaticInfoCache"><span class="hs-identifier hs-var hs-var">interpStaticInfoCache</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-type">SymbolCache</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;static_info&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="interpBytesCache"><span class="annot"><span class="annottext">InterpSymbolCache -&gt; MVar (SymbolCache &quot;bytes&quot;)
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpBytesCache"><span class="hs-identifier hs-var hs-var">interpBytesCache</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-type">SymbolCache</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;bytes&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="interpFaststringCache"><span class="annot"><span class="annottext">InterpSymbolCache -&gt; MVar (UniqFM FastString (Ptr ()))
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpFaststringCache"><span class="hs-identifier hs-var hs-var">interpFaststringCache</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.FM.html#UniqFM"><span class="hs-identifier hs-type">UniqFM</span></a></span><span> </span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">data</span><span> </span><span id="SuffixOrInterpreted"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SuffixOrInterpreted"><span class="hs-identifier hs-var">SuffixOrInterpreted</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Suffix"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-var">Suffix</span></a></span></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Interpreted"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Interpreted"><span class="hs-identifier hs-var">Interpreted</span></a></span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">data</span><span> </span><span id="InterpSymbol"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-var">InterpSymbol</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682734703"><span class="annot"><a href="#local-6989586621682734703"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SuffixOrInterpreted"><span class="hs-identifier hs-type">SuffixOrInterpreted</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>  </span><span id="IClosureSymbol"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IClosureSymbol"><span class="hs-identifier hs-var">IClosureSymbol</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-type">Suffix</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;closure&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span id="IConInfoSymbol"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IConInfoSymbol"><span class="hs-identifier hs-var">IConInfoSymbol</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-type">Suffix</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;con_info&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>  </span><span id="IStaticInfoSymbol"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IStaticInfoSymbol"><span class="hs-identifier hs-var">IStaticInfoSymbol</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-type">Suffix</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;static_info&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>  </span><span id="IBytesSymbol"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IBytesSymbol"><span class="hs-identifier hs-var">IBytesSymbol</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-type">Suffix</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;bytes&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>  </span><span id="IFaststringSymbol"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IFaststringSymbol"><span class="hs-identifier hs-var">IFaststringSymbol</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Interpreted"><span class="hs-identifier hs-type">Interpreted</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682734615"><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734615"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621682734712"><span class="annot"><span class="annottext">ppr :: InterpSymbol s -&gt; SDoc
+</span><a href="#local-6989586621682734712"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span id="local-6989586621682734714"><span class="annot"><span class="annottext">InterpSymbol s
+</span><a href="#local-6989586621682734714"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+-&gt; (InterpSymbol 'Interpreted -&gt; SDoc)
+-&gt; (forall (x :: Symbol). InterpSymbol ('Suffix x) -&gt; SDoc)
+-&gt; SDoc
+forall (s :: SuffixOrInterpreted) r.
+InterpSymbol s
+-&gt; (InterpSymbol 'Interpreted -&gt; r)
+-&gt; (forall (x :: Symbol). InterpSymbol ('Suffix x) -&gt; r)
+-&gt; r
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#eliminateInterpSymbol"><span class="hs-identifier hs-var">eliminateInterpSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+</span><a href="#local-6989586621682734714"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-58"></span><span>            </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IFaststringSymbol"><span class="hs-identifier hs-type">IFaststringSymbol</span></a></span><span> </span><span id="local-6989586621682734721"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682734721"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;interpreted:&quot;</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FastString -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682734721"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>            </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682734730"><span class="annot"><span class="annottext">InterpSymbol ('Suffix x)
+</span><a href="#local-6989586621682734730"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InterpSymbol ('Suffix x) -&gt; String
+forall (s :: Symbol). InterpSymbol ('Suffix s) -&gt; String
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolSuffix"><span class="hs-identifier hs-var">interpSymbolSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix x)
+</span><a href="#local-6989586621682734730"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc
+forall doc. IsLine doc =&gt; doc
+</span><a href="GHC.Utils.Outputable.html#colon"><span class="hs-identifier hs-var">colon</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InterpSymbol ('Suffix x) -&gt; Name
+forall (s :: Symbol). InterpSymbol ('Suffix s) -&gt; Name
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolName"><span class="hs-identifier hs-var">interpSymbolName</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix x)
+</span><a href="#local-6989586621682734730"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span id="local-6989586621682734619"><span id="local-6989586621682734620"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#eliminateInterpSymbol"><span class="hs-identifier hs-type">eliminateInterpSymbol</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734619"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Interpreted"><span class="hs-identifier hs-type">Interpreted</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682734620"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>                                        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682734617"><span class="annot"><a href="#local-6989586621682734617"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-type">Suffix</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734617"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682734620"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>                                        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682734620"><span class="hs-identifier hs-type">r</span></a></span></span></span><span>
+</span><span id="line-64"></span><span id="eliminateInterpSymbol"><span class="annot"><span class="annottext">eliminateInterpSymbol :: forall (s :: SuffixOrInterpreted) r.
+InterpSymbol s
+-&gt; (InterpSymbol 'Interpreted -&gt; r)
+-&gt; (forall (x :: Symbol). InterpSymbol ('Suffix x) -&gt; r)
+-&gt; r
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#eliminateInterpSymbol"><span class="hs-identifier hs-var hs-var">eliminateInterpSymbol</span></a></span></span><span> </span><span id="local-6989586621682734732"><span class="annot"><span class="annottext">InterpSymbol s
+</span><a href="#local-6989586621682734732"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621682734733"><span class="annot"><span class="annottext">InterpSymbol 'Interpreted -&gt; r
+</span><a href="#local-6989586621682734733"><span class="hs-identifier hs-var">k1</span></a></span></span><span> </span><span id="local-6989586621682734734"><span class="annot"><span class="annottext">forall (x :: Symbol). InterpSymbol ('Suffix x) -&gt; r
+</span><a href="#local-6989586621682734734"><span class="hs-identifier hs-var">k2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+</span><a href="#local-6989586621682734732"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IFaststringSymbol"><span class="hs-identifier hs-type">IFaststringSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InterpSymbol 'Interpreted -&gt; r
+</span><a href="#local-6989586621682734733"><span class="hs-identifier hs-var">k1</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+InterpSymbol 'Interpreted
+</span><a href="#local-6989586621682734732"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IBytesSymbol"><span class="hs-identifier hs-type">IBytesSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;bytes&quot;) -&gt; r
+forall (x :: Symbol). InterpSymbol ('Suffix x) -&gt; r
+</span><a href="#local-6989586621682734734"><span class="hs-identifier hs-var">k2</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+InterpSymbol ('Suffix &quot;bytes&quot;)
+</span><a href="#local-6989586621682734732"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IStaticInfoSymbol"><span class="hs-identifier hs-type">IStaticInfoSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;static_info&quot;) -&gt; r
+forall (x :: Symbol). InterpSymbol ('Suffix x) -&gt; r
+</span><a href="#local-6989586621682734734"><span class="hs-identifier hs-var">k2</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+InterpSymbol ('Suffix &quot;static_info&quot;)
+</span><a href="#local-6989586621682734732"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IConInfoSymbol"><span class="hs-identifier hs-type">IConInfoSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;con_info&quot;) -&gt; r
+forall (x :: Symbol). InterpSymbol ('Suffix x) -&gt; r
+</span><a href="#local-6989586621682734734"><span class="hs-identifier hs-var">k2</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+InterpSymbol ('Suffix &quot;con_info&quot;)
+</span><a href="#local-6989586621682734732"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IClosureSymbol"><span class="hs-identifier hs-type">IClosureSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;closure&quot;) -&gt; r
+forall (x :: Symbol). InterpSymbol ('Suffix x) -&gt; r
+</span><a href="#local-6989586621682734734"><span class="hs-identifier hs-var">k2</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+InterpSymbol ('Suffix &quot;closure&quot;)
+</span><a href="#local-6989586621682734732"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span id="local-6989586621682734626"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolName"><span class="hs-identifier hs-type">interpSymbolName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-type">Suffix</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734626"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span></span><span>
+</span><span id="line-74"></span><span id="interpSymbolName"><span class="annot"><span class="annottext">interpSymbolName :: forall (s :: Symbol). InterpSymbol ('Suffix s) -&gt; Name
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolName"><span class="hs-identifier hs-var hs-var">interpSymbolName</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IClosureSymbol"><span class="hs-identifier hs-type">IClosureSymbol</span></a></span><span> </span><span id="local-6989586621682734741"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682734741"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682734741"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-75"></span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolName"><span class="hs-identifier hs-var">interpSymbolName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IConInfoSymbol"><span class="hs-identifier hs-type">IConInfoSymbol</span></a></span><span> </span><span id="local-6989586621682734743"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682734743"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682734743"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolName"><span class="hs-identifier hs-var">interpSymbolName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IStaticInfoSymbol"><span class="hs-identifier hs-type">IStaticInfoSymbol</span></a></span><span> </span><span id="local-6989586621682734745"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682734745"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682734745"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-77"></span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolName"><span class="hs-identifier hs-var">interpSymbolName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IBytesSymbol"><span class="hs-identifier hs-type">IBytesSymbol</span></a></span><span> </span><span id="local-6989586621682734747"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682734747"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682734747"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpretedInterpSymbol"><span class="hs-identifier hs-type">interpretedInterpSymbol</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Interpreted"><span class="hs-identifier hs-type">Interpreted</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span>
+</span><span id="line-80"></span><span id="interpretedInterpSymbol"><span class="annot"><span class="annottext">interpretedInterpSymbol :: InterpSymbol 'Interpreted -&gt; FastString
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpretedInterpSymbol"><span class="hs-identifier hs-var hs-var">interpretedInterpSymbol</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IFaststringSymbol"><span class="hs-identifier hs-type">IFaststringSymbol</span></a></span><span> </span><span id="local-6989586621682734749"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682734749"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682734749"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span id="local-6989586621682734624"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolSuffix"><span class="hs-identifier hs-type">interpSymbolSuffix</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-type">Suffix</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734624"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span></span><span>
+</span><span id="line-83"></span><span id="interpSymbolSuffix"><span class="annot"><span class="annottext">interpSymbolSuffix :: forall (s :: Symbol). InterpSymbol ('Suffix s) -&gt; String
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolSuffix"><span class="hs-identifier hs-var hs-var">interpSymbolSuffix</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IClosureSymbol"><span class="hs-identifier hs-type">IClosureSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;closure&quot;</span></span><span>
+</span><span id="line-84"></span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolSuffix"><span class="hs-identifier hs-var">interpSymbolSuffix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IConInfoSymbol"><span class="hs-identifier hs-type">IConInfoSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;con_info&quot;</span></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolSuffix"><span class="hs-identifier hs-var">interpSymbolSuffix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IStaticInfoSymbol"><span class="hs-identifier hs-type">IStaticInfoSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;static_info&quot;</span></span><span>
+</span><span id="line-86"></span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolSuffix"><span class="hs-identifier hs-var">interpSymbolSuffix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IBytesSymbol"><span class="hs-identifier hs-type">IBytesSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;bytes&quot;</span></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span id="local-6989586621682734631"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#emptySymbolCache"><span class="hs-identifier hs-type">emptySymbolCache</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-type">SymbolCache</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734631"><span class="hs-identifier hs-type">s</span></a></span></span><span>
+</span><span id="line-89"></span><span id="emptySymbolCache"><span class="annot"><span class="annottext">emptySymbolCache :: forall (s :: Symbol). SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#emptySymbolCache"><span class="hs-identifier hs-var hs-var">emptySymbolCache</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqFM Name (Ptr ()) -&gt; SymbolCache s
+forall (s :: Symbol). UniqFM Name (Ptr ()) -&gt; SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-var">SymbolCache</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM Name (Ptr ())
+forall {k} (key :: k) elt. UniqFM key elt
+</span><a href="GHC.Types.Unique.FM.html#emptyUFM"><span class="hs-identifier hs-var">emptyUFM</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span id="local-6989586621682734636"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#lookupSymbolCache"><span class="hs-identifier hs-type">lookupSymbolCache</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-type">Suffix</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734636"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-type">SymbolCache</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734636"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-92"></span><span id="lookupSymbolCache"><span class="annot"><span class="annottext">lookupSymbolCache :: forall (s :: Symbol).
+InterpSymbol ('Suffix s) -&gt; SymbolCache s -&gt; Maybe (Ptr ())
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#lookupSymbolCache"><span class="hs-identifier hs-var hs-var">lookupSymbolCache</span></a></span></span><span> </span><span id="local-6989586621682734759"><span class="annot"><span class="annottext">InterpSymbol ('Suffix s)
+</span><a href="#local-6989586621682734759"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-type">SymbolCache</span></a></span><span> </span><span id="local-6989586621682734760"><span class="annot"><span class="annottext">UniqFM Name (Ptr ())
+</span><a href="#local-6989586621682734760"><span class="hs-identifier hs-var">cache</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqFM Name (Ptr ()) -&gt; Name -&gt; Maybe (Ptr ())
+forall key elt. Uniquable key =&gt; UniqFM key elt -&gt; key -&gt; Maybe elt
+</span><a href="GHC.Types.Unique.FM.html#lookupUFM"><span class="hs-identifier hs-var">lookupUFM</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM Name (Ptr ())
+</span><a href="#local-6989586621682734760"><span class="hs-identifier hs-var">cache</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s) -&gt; Name
+forall (s :: Symbol). InterpSymbol ('Suffix s) -&gt; Name
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolName"><span class="hs-identifier hs-var">interpSymbolName</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s)
+</span><a href="#local-6989586621682734759"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span id="local-6989586621682734641"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#insertSymbolCache"><span class="hs-identifier hs-type">insertSymbolCache</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-type">Suffix</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734641"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-type">SymbolCache</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734641"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-type">SymbolCache</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734641"><span class="hs-identifier hs-type">s</span></a></span></span><span>
+</span><span id="line-95"></span><span id="insertSymbolCache"><span class="annot"><span class="annottext">insertSymbolCache :: forall (s :: Symbol).
+InterpSymbol ('Suffix s)
+-&gt; Ptr () -&gt; SymbolCache s -&gt; SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#insertSymbolCache"><span class="hs-identifier hs-var hs-var">insertSymbolCache</span></a></span></span><span> </span><span id="local-6989586621682734764"><span class="annot"><span class="annottext">InterpSymbol ('Suffix s)
+</span><a href="#local-6989586621682734764"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621682734765"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621682734765"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-type">SymbolCache</span></a></span><span> </span><span id="local-6989586621682734766"><span class="annot"><span class="annottext">UniqFM Name (Ptr ())
+</span><a href="#local-6989586621682734766"><span class="hs-identifier hs-var">cache</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqFM Name (Ptr ()) -&gt; SymbolCache s
+forall (s :: Symbol). UniqFM Name (Ptr ()) -&gt; SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-var">SymbolCache</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UniqFM Name (Ptr ()) -&gt; Name -&gt; Ptr () -&gt; UniqFM Name (Ptr ())
+forall key elt.
+Uniquable key =&gt;
+UniqFM key elt -&gt; key -&gt; elt -&gt; UniqFM key elt
+</span><a href="GHC.Types.Unique.FM.html#addToUFM"><span class="hs-identifier hs-var">addToUFM</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM Name (Ptr ())
+</span><a href="#local-6989586621682734766"><span class="hs-identifier hs-var">cache</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s) -&gt; Name
+forall (s :: Symbol). InterpSymbol ('Suffix s) -&gt; Name
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolName"><span class="hs-identifier hs-var">interpSymbolName</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s)
+</span><a href="#local-6989586621682734764"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621682734765"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span id="local-6989586621682734645"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#lookupInterpSymbolCache"><span class="hs-identifier hs-type">lookupInterpSymbolCache</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734645"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbolCache"><span class="hs-identifier hs-type">InterpSymbolCache</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-98"></span><span id="lookupInterpSymbolCache"><span class="annot"><span class="annottext">lookupInterpSymbolCache :: forall (s :: SuffixOrInterpreted).
+InterpSymbol s -&gt; InterpSymbolCache -&gt; IO (Maybe (Ptr ()))
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#lookupInterpSymbolCache"><span class="hs-identifier hs-var hs-var">lookupInterpSymbolCache</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(InterpSymbol 'Interpreted
+ -&gt; MVar (UniqFM FastString (Ptr ())) -&gt; IO (Maybe (Ptr ())))
+-&gt; (forall (x :: Symbol).
+    InterpSymbol ('Suffix x)
+    -&gt; MVar (SymbolCache x) -&gt; IO (Maybe (Ptr ())))
+-&gt; InterpSymbol s
+-&gt; InterpSymbolCache
+-&gt; IO (Maybe (Ptr ()))
+forall r (s :: SuffixOrInterpreted).
+(InterpSymbol 'Interpreted
+ -&gt; MVar (UniqFM FastString (Ptr ())) -&gt; r)
+-&gt; (forall (x :: Symbol).
+    InterpSymbol ('Suffix x) -&gt; MVar (SymbolCache x) -&gt; r)
+-&gt; InterpSymbol s
+-&gt; InterpSymbolCache
+-&gt; r
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#withInterpSymbolCache"><span class="hs-identifier hs-var">withInterpSymbolCache</span></a></span><span>
+</span><span id="line-99"></span><span>                            </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IFaststringSymbol"><span class="hs-identifier hs-type">IFaststringSymbol</span></a></span><span> </span><span id="local-6989586621682734773"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682734773"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682734774"><span class="annot"><span class="annottext">MVar (UniqFM FastString (Ptr ()))
+</span><a href="#local-6989586621682734774"><span class="hs-identifier hs-var">mvar_var</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682734775"><span class="annot"><span class="annottext">UniqFM FastString (Ptr ())
+</span><a href="#local-6989586621682734775"><span class="hs-identifier hs-var">cache</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">UniqFM FastString (Ptr ()) -&gt; FastString -&gt; Maybe (Ptr ())
+forall key elt. Uniquable key =&gt; UniqFM key elt -&gt; key -&gt; Maybe elt
+</span><a href="GHC.Types.Unique.FM.html#lookupUFM"><span class="hs-identifier hs-var">lookupUFM</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM FastString (Ptr ())
+</span><a href="#local-6989586621682734775"><span class="hs-identifier hs-var">cache</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682734773"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(UniqFM FastString (Ptr ()) -&gt; Maybe (Ptr ()))
+-&gt; IO (UniqFM FastString (Ptr ())) -&gt; IO (Maybe (Ptr ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (UniqFM FastString (Ptr ()))
+-&gt; IO (UniqFM FastString (Ptr ()))
+forall a. MVar a -&gt; IO a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#readMVar"><span class="hs-identifier hs-var">readMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (UniqFM FastString (Ptr ()))
+</span><a href="#local-6989586621682734774"><span class="hs-identifier hs-var">mvar_var</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>                            </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682734779"><span class="annot"><span class="annottext">InterpSymbol ('Suffix x)
+</span><a href="#local-6989586621682734779"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621682734780"><span class="annot"><span class="annottext">MVar (SymbolCache x)
+</span><a href="#local-6989586621682734780"><span class="hs-identifier hs-var">mvar_var</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix x) -&gt; SymbolCache x -&gt; Maybe (Ptr ())
+forall (s :: Symbol).
+InterpSymbol ('Suffix s) -&gt; SymbolCache s -&gt; Maybe (Ptr ())
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#lookupSymbolCache"><span class="hs-identifier hs-var">lookupSymbolCache</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix x)
+</span><a href="#local-6989586621682734779"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">(SymbolCache x -&gt; Maybe (Ptr ()))
+-&gt; IO (SymbolCache x) -&gt; IO (Maybe (Ptr ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache x) -&gt; IO (SymbolCache x)
+forall a. MVar a -&gt; IO a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#readMVar"><span class="hs-identifier hs-var">readMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache x)
+</span><a href="#local-6989586621682734780"><span class="hs-identifier hs-var">mvar_var</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span id="local-6989586621682734655"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#updateInterpSymbolCache"><span class="hs-identifier hs-type">updateInterpSymbolCache</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734655"><span class="hs-identifier hs-type">s</span></a></span><span>
+</span><span id="line-104"></span><span>                                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbolCache"><span class="hs-identifier hs-type">InterpSymbolCache</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-105"></span><span id="updateInterpSymbolCache"><span class="annot"><span class="annottext">updateInterpSymbolCache :: forall (s :: SuffixOrInterpreted).
+InterpSymbol s -&gt; InterpSymbolCache -&gt; Ptr () -&gt; IO ()
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#updateInterpSymbolCache"><span class="hs-identifier hs-var hs-var">updateInterpSymbolCache</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(InterpSymbol 'Interpreted
+ -&gt; MVar (UniqFM FastString (Ptr ())) -&gt; Ptr () -&gt; IO ())
+-&gt; (forall (x :: Symbol).
+    InterpSymbol ('Suffix x)
+    -&gt; MVar (SymbolCache x) -&gt; Ptr () -&gt; IO ())
+-&gt; InterpSymbol s
+-&gt; InterpSymbolCache
+-&gt; Ptr ()
+-&gt; IO ()
+forall r (s :: SuffixOrInterpreted).
+(InterpSymbol 'Interpreted
+ -&gt; MVar (UniqFM FastString (Ptr ())) -&gt; r)
+-&gt; (forall (x :: Symbol).
+    InterpSymbol ('Suffix x) -&gt; MVar (SymbolCache x) -&gt; r)
+-&gt; InterpSymbol s
+-&gt; InterpSymbolCache
+-&gt; r
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#withInterpSymbolCache"><span class="hs-identifier hs-var">withInterpSymbolCache</span></a></span><span>
+</span><span id="line-106"></span><span>                            </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IFaststringSymbol"><span class="hs-identifier hs-type">IFaststringSymbol</span></a></span><span> </span><span id="local-6989586621682734784"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682734784"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682734785"><span class="annot"><span class="annottext">MVar (UniqFM FastString (Ptr ()))
+</span><a href="#local-6989586621682734785"><span class="hs-identifier hs-var">mvar_var</span></a></span></span><span> </span><span id="local-6989586621682734786"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621682734786"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MVar (UniqFM FastString (Ptr ()))
+-&gt; (UniqFM FastString (Ptr ()) -&gt; IO (UniqFM FastString (Ptr ())))
+-&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">modifyMVar_</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (UniqFM FastString (Ptr ()))
+</span><a href="#local-6989586621682734785"><span class="hs-identifier hs-var">mvar_var</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682734788"><span class="annot"><span class="annottext">UniqFM FastString (Ptr ())
+</span><a href="#local-6989586621682734788"><span class="hs-identifier hs-var">cache</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">UniqFM FastString (Ptr ()) -&gt; IO (UniqFM FastString (Ptr ()))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(UniqFM FastString (Ptr ()) -&gt; IO (UniqFM FastString (Ptr ())))
+-&gt; UniqFM FastString (Ptr ()) -&gt; IO (UniqFM FastString (Ptr ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM FastString (Ptr ())
+-&gt; FastString -&gt; Ptr () -&gt; UniqFM FastString (Ptr ())
+forall key elt.
+Uniquable key =&gt;
+UniqFM key elt -&gt; key -&gt; elt -&gt; UniqFM key elt
+</span><a href="GHC.Types.Unique.FM.html#addToUFM"><span class="hs-identifier hs-var">addToUFM</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM FastString (Ptr ())
+</span><a href="#local-6989586621682734788"><span class="hs-identifier hs-var">cache</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621682734784"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621682734786"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>                            </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682734790"><span class="annot"><span class="annottext">InterpSymbol ('Suffix x)
+</span><a href="#local-6989586621682734790"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621682734791"><span class="annot"><span class="annottext">MVar (SymbolCache x)
+</span><a href="#local-6989586621682734791"><span class="hs-identifier hs-var">mvar_var</span></a></span></span><span> </span><span id="local-6989586621682734792"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621682734792"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache x)
+-&gt; (SymbolCache x -&gt; IO (SymbolCache x)) -&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">modifyMVar_</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache x)
+</span><a href="#local-6989586621682734791"><span class="hs-identifier hs-var">mvar_var</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682734793"><span class="annot"><span class="annottext">SymbolCache x
+</span><a href="#local-6989586621682734793"><span class="hs-identifier hs-var">cache</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SymbolCache x -&gt; IO (SymbolCache x)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(SymbolCache x -&gt; IO (SymbolCache x))
+-&gt; SymbolCache x -&gt; IO (SymbolCache x)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix x)
+-&gt; Ptr () -&gt; SymbolCache x -&gt; SymbolCache x
+forall (s :: Symbol).
+InterpSymbol ('Suffix s)
+-&gt; Ptr () -&gt; SymbolCache s -&gt; SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#insertSymbolCache"><span class="hs-identifier hs-var">insertSymbolCache</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix x)
+</span><a href="#local-6989586621682734790"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621682734792"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache x
+</span><a href="#local-6989586621682734793"><span class="hs-identifier hs-var">cache</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span id="local-6989586621682734648"><span id="local-6989586621682734649"><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#withInterpSymbolCache"><span class="hs-identifier hs-type">withInterpSymbolCache</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-110"></span><span>                </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Interpreted"><span class="hs-identifier hs-type">Interpreted</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.FM.html#UniqFM"><span class="hs-identifier hs-type">UniqFM</span></a></span><span> </span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682734648"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682734646"><span class="annot"><a href="#local-6989586621682734646"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-type">Suffix</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734646"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#SymbolCache"><span class="hs-identifier hs-type">SymbolCache</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734646"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682734648"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682734649"><span class="hs-identifier hs-type">s</span></a></span><span>
+</span><span id="line-113"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbolCache"><span class="hs-identifier hs-type">InterpSymbolCache</span></a></span><span>
+</span><span id="line-114"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682734648"><span class="hs-identifier hs-type">r</span></a></span></span></span><span>
+</span><span id="line-115"></span><span id="withInterpSymbolCache"><span class="annot"><span class="annottext">withInterpSymbolCache :: forall r (s :: SuffixOrInterpreted).
+(InterpSymbol 'Interpreted
+ -&gt; MVar (UniqFM FastString (Ptr ())) -&gt; r)
+-&gt; (forall (x :: Symbol).
+    InterpSymbol ('Suffix x) -&gt; MVar (SymbolCache x) -&gt; r)
+-&gt; InterpSymbol s
+-&gt; InterpSymbolCache
+-&gt; r
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#withInterpSymbolCache"><span class="hs-identifier hs-var hs-var">withInterpSymbolCache</span></a></span></span><span> </span><span id="local-6989586621682734794"><span class="annot"><span class="annottext">InterpSymbol 'Interpreted -&gt; MVar (UniqFM FastString (Ptr ())) -&gt; r
+</span><a href="#local-6989586621682734794"><span class="hs-identifier hs-var">k1</span></a></span></span><span> </span><span id="local-6989586621682734795"><span class="annot"><span class="annottext">forall (x :: Symbol).
+InterpSymbol ('Suffix x) -&gt; MVar (SymbolCache x) -&gt; r
+</span><a href="#local-6989586621682734795"><span class="hs-identifier hs-var">k2</span></a></span></span><span> </span><span id="local-6989586621682734796"><span class="annot"><span class="annottext">InterpSymbol s
+</span><a href="#local-6989586621682734796"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbolCache"><span class="hs-identifier hs-type">InterpSymbolCache</span></a></span><span class="hs-special">{</span><span id="local-6989586621682734797"><span id="local-6989586621682734798"><span id="local-6989586621682734799"><span id="local-6989586621682734800"><span id="local-6989586621682734801"><span class="annot"><span class="annottext">MVar (UniqFM FastString (Ptr ()))
+MVar (SymbolCache &quot;bytes&quot;)
+MVar (SymbolCache &quot;closure&quot;)
+MVar (SymbolCache &quot;con_info&quot;)
+MVar (SymbolCache &quot;static_info&quot;)
+interpClosureCache :: InterpSymbolCache -&gt; MVar (SymbolCache &quot;closure&quot;)
+interpConInfoCache :: InterpSymbolCache -&gt; MVar (SymbolCache &quot;con_info&quot;)
+interpStaticInfoCache :: InterpSymbolCache -&gt; MVar (SymbolCache &quot;static_info&quot;)
+interpBytesCache :: InterpSymbolCache -&gt; MVar (SymbolCache &quot;bytes&quot;)
+interpFaststringCache :: InterpSymbolCache -&gt; MVar (UniqFM FastString (Ptr ()))
+interpClosureCache :: MVar (SymbolCache &quot;closure&quot;)
+interpConInfoCache :: MVar (SymbolCache &quot;con_info&quot;)
+interpStaticInfoCache :: MVar (SymbolCache &quot;static_info&quot;)
+interpBytesCache :: MVar (SymbolCache &quot;bytes&quot;)
+interpFaststringCache :: MVar (UniqFM FastString (Ptr ()))
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpClosureCache"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+</span><a href="#local-6989586621682734796"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IClosureSymbol"><span class="hs-identifier hs-type">IClosureSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;closure&quot;)
+-&gt; MVar (SymbolCache &quot;closure&quot;) -&gt; r
+forall (x :: Symbol).
+InterpSymbol ('Suffix x) -&gt; MVar (SymbolCache x) -&gt; r
+</span><a href="#local-6989586621682734795"><span class="hs-identifier hs-var">k2</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+InterpSymbol ('Suffix &quot;closure&quot;)
+</span><a href="#local-6989586621682734796"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;closure&quot;)
+</span><a href="#local-6989586621682734797"><span class="hs-identifier hs-var">interpClosureCache</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IConInfoSymbol"><span class="hs-identifier hs-type">IConInfoSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;con_info&quot;)
+-&gt; MVar (SymbolCache &quot;con_info&quot;) -&gt; r
+forall (x :: Symbol).
+InterpSymbol ('Suffix x) -&gt; MVar (SymbolCache x) -&gt; r
+</span><a href="#local-6989586621682734795"><span class="hs-identifier hs-var">k2</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+InterpSymbol ('Suffix &quot;con_info&quot;)
+</span><a href="#local-6989586621682734796"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;con_info&quot;)
+</span><a href="#local-6989586621682734798"><span class="hs-identifier hs-var">interpConInfoCache</span></a></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IStaticInfoSymbol"><span class="hs-identifier hs-type">IStaticInfoSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;static_info&quot;)
+-&gt; MVar (SymbolCache &quot;static_info&quot;) -&gt; r
+forall (x :: Symbol).
+InterpSymbol ('Suffix x) -&gt; MVar (SymbolCache x) -&gt; r
+</span><a href="#local-6989586621682734795"><span class="hs-identifier hs-var">k2</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+InterpSymbol ('Suffix &quot;static_info&quot;)
+</span><a href="#local-6989586621682734796"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;static_info&quot;)
+</span><a href="#local-6989586621682734799"><span class="hs-identifier hs-var">interpStaticInfoCache</span></a></span><span>
+</span><span id="line-120"></span><span>    </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IBytesSymbol"><span class="hs-identifier hs-type">IBytesSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;bytes&quot;) -&gt; MVar (SymbolCache &quot;bytes&quot;) -&gt; r
+forall (x :: Symbol).
+InterpSymbol ('Suffix x) -&gt; MVar (SymbolCache x) -&gt; r
+</span><a href="#local-6989586621682734795"><span class="hs-identifier hs-var">k2</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+InterpSymbol ('Suffix &quot;bytes&quot;)
+</span><a href="#local-6989586621682734796"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;bytes&quot;)
+</span><a href="#local-6989586621682734800"><span class="hs-identifier hs-var">interpBytesCache</span></a></span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IFaststringSymbol"><span class="hs-identifier hs-type">IFaststringSymbol</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InterpSymbol 'Interpreted -&gt; MVar (UniqFM FastString (Ptr ())) -&gt; r
+</span><a href="#local-6989586621682734794"><span class="hs-identifier hs-var">k1</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol s
+InterpSymbol 'Interpreted
+</span><a href="#local-6989586621682734796"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (UniqFM FastString (Ptr ()))
+</span><a href="#local-6989586621682734801"><span class="hs-identifier hs-var">interpFaststringCache</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="annot"><span class="hs-comment">-- | Clear all symbol caches.</span></span><span>
+</span><span id="line-124"></span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#purgeInterpSymbolCache"><span class="hs-identifier hs-type">purgeInterpSymbolCache</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbolCache"><span class="hs-identifier hs-type">InterpSymbolCache</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span id="purgeInterpSymbolCache"><span class="annot"><span class="annottext">purgeInterpSymbolCache :: InterpSymbolCache -&gt; IO ()
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#purgeInterpSymbolCache"><span class="hs-identifier hs-var hs-var">purgeInterpSymbolCache</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbolCache"><span class="hs-identifier hs-type">InterpSymbolCache</span></a></span><span> </span><span id="local-6989586621682734807"><span class="annot"><span class="annottext">MVar (SymbolCache &quot;closure&quot;)
+</span><a href="#local-6989586621682734807"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621682734808"><span class="annot"><span class="annottext">MVar (SymbolCache &quot;con_info&quot;)
+</span><a href="#local-6989586621682734808"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621682734809"><span class="annot"><span class="annottext">MVar (SymbolCache &quot;static_info&quot;)
+</span><a href="#local-6989586621682734809"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621682734810"><span class="annot"><span class="annottext">MVar (SymbolCache &quot;bytes&quot;)
+</span><a href="#local-6989586621682734810"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span id="local-6989586621682734811"><span class="annot"><span class="annottext">MVar (UniqFM FastString (Ptr ()))
+</span><a href="#local-6989586621682734811"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;closure&quot;)
+-&gt; (SymbolCache &quot;closure&quot; -&gt; IO (SymbolCache &quot;closure&quot;)) -&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">modifyMVar_</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;closure&quot;)
+</span><a href="#local-6989586621682734807"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">SymbolCache &quot;closure&quot;
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>  </span><span class="hs-keyword">do</span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;con_info&quot;)
+-&gt; (SymbolCache &quot;con_info&quot; -&gt; IO (SymbolCache &quot;con_info&quot;)) -&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">modifyMVar_</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;con_info&quot;)
+</span><a href="#local-6989586621682734808"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">SymbolCache &quot;con_info&quot;
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-128"></span><span>      </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;static_info&quot;)
+-&gt; (SymbolCache &quot;static_info&quot; -&gt; IO (SymbolCache &quot;static_info&quot;))
+-&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">modifyMVar_</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;static_info&quot;)
+</span><a href="#local-6989586621682734809"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">SymbolCache &quot;static_info&quot;
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-129"></span><span>        </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;bytes&quot;)
+-&gt; (SymbolCache &quot;bytes&quot; -&gt; IO (SymbolCache &quot;bytes&quot;)) -&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">modifyMVar_</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;bytes&quot;)
+</span><a href="#local-6989586621682734810"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">SymbolCache &quot;bytes&quot;
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-130"></span><span>          </span><span class="annot"><span class="annottext">MVar (UniqFM FastString (Ptr ()))
+-&gt; (UniqFM FastString (Ptr ()) -&gt; IO (UniqFM FastString (Ptr ())))
+-&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">modifyMVar_</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (UniqFM FastString (Ptr ()))
+</span><a href="#local-6989586621682734811"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">UniqFM FastString (Ptr ())
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">UniqFM FastString (Ptr ()) -&gt; IO (UniqFM FastString (Ptr ()))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM FastString (Ptr ())
+forall {k} (key :: k) elt. UniqFM key elt
+</span><a href="GHC.Types.Unique.FM.html#emptyUFM"><span class="hs-identifier hs-var">emptyUFM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>          </span><span class="annot"><span class="annottext">SymbolCache &quot;bytes&quot; -&gt; IO (SymbolCache &quot;bytes&quot;)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;bytes&quot;
+forall (s :: Symbol). SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#emptySymbolCache"><span class="hs-identifier hs-var">emptySymbolCache</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>        </span><span class="annot"><span class="annottext">SymbolCache &quot;static_info&quot; -&gt; IO (SymbolCache &quot;static_info&quot;)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;static_info&quot;
+forall (s :: Symbol). SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#emptySymbolCache"><span class="hs-identifier hs-var">emptySymbolCache</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>      </span><span class="annot"><span class="annottext">SymbolCache &quot;con_info&quot; -&gt; IO (SymbolCache &quot;con_info&quot;)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;con_info&quot;
+forall (s :: Symbol). SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#emptySymbolCache"><span class="hs-identifier hs-var">emptySymbolCache</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><span class="annottext">SymbolCache &quot;closure&quot; -&gt; IO (SymbolCache &quot;closure&quot;)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;closure&quot;
+forall (s :: Symbol). SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#emptySymbolCache"><span class="hs-identifier hs-var">emptySymbolCache</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#mkInterpSymbolCache"><span class="hs-identifier hs-type">mkInterpSymbolCache</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbolCache"><span class="hs-identifier hs-type">InterpSymbolCache</span></a></span><span>
+</span><span id="line-137"></span><span id="mkInterpSymbolCache"><span class="annot"><span class="annottext">mkInterpSymbolCache :: IO InterpSymbolCache
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#mkInterpSymbolCache"><span class="hs-identifier hs-var hs-var">mkInterpSymbolCache</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-138"></span><span>  </span><span class="annot"><span class="annottext">MVar (SymbolCache &quot;closure&quot;)
+-&gt; MVar (SymbolCache &quot;con_info&quot;)
+-&gt; MVar (SymbolCache &quot;static_info&quot;)
+-&gt; MVar (SymbolCache &quot;bytes&quot;)
+-&gt; MVar (UniqFM FastString (Ptr ()))
+-&gt; InterpSymbolCache
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbolCache"><span class="hs-identifier hs-var">InterpSymbolCache</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar (SymbolCache &quot;closure&quot;)
+ -&gt; MVar (SymbolCache &quot;con_info&quot;)
+ -&gt; MVar (SymbolCache &quot;static_info&quot;)
+ -&gt; MVar (SymbolCache &quot;bytes&quot;)
+ -&gt; MVar (UniqFM FastString (Ptr ()))
+ -&gt; InterpSymbolCache)
+-&gt; IO (MVar (SymbolCache &quot;closure&quot;))
+-&gt; IO
+     (MVar (SymbolCache &quot;con_info&quot;)
+      -&gt; MVar (SymbolCache &quot;static_info&quot;)
+      -&gt; MVar (SymbolCache &quot;bytes&quot;)
+      -&gt; MVar (UniqFM FastString (Ptr ()))
+      -&gt; InterpSymbolCache)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;closure&quot; -&gt; IO (MVar (SymbolCache &quot;closure&quot;))
+forall a. a -&gt; IO (MVar a)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;closure&quot;
+forall (s :: Symbol). SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#emptySymbolCache"><span class="hs-identifier hs-var">emptySymbolCache</span></a></span><span>
+</span><span id="line-139"></span><span>                    </span><span class="annot"><span class="annottext">IO
+  (MVar (SymbolCache &quot;con_info&quot;)
+   -&gt; MVar (SymbolCache &quot;static_info&quot;)
+   -&gt; MVar (SymbolCache &quot;bytes&quot;)
+   -&gt; MVar (UniqFM FastString (Ptr ()))
+   -&gt; InterpSymbolCache)
+-&gt; IO (MVar (SymbolCache &quot;con_info&quot;))
+-&gt; IO
+     (MVar (SymbolCache &quot;static_info&quot;)
+      -&gt; MVar (SymbolCache &quot;bytes&quot;)
+      -&gt; MVar (UniqFM FastString (Ptr ()))
+      -&gt; InterpSymbolCache)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;con_info&quot; -&gt; IO (MVar (SymbolCache &quot;con_info&quot;))
+forall a. a -&gt; IO (MVar a)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;con_info&quot;
+forall (s :: Symbol). SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#emptySymbolCache"><span class="hs-identifier hs-var">emptySymbolCache</span></a></span><span>
+</span><span id="line-140"></span><span>                    </span><span class="annot"><span class="annottext">IO
+  (MVar (SymbolCache &quot;static_info&quot;)
+   -&gt; MVar (SymbolCache &quot;bytes&quot;)
+   -&gt; MVar (UniqFM FastString (Ptr ()))
+   -&gt; InterpSymbolCache)
+-&gt; IO (MVar (SymbolCache &quot;static_info&quot;))
+-&gt; IO
+     (MVar (SymbolCache &quot;bytes&quot;)
+      -&gt; MVar (UniqFM FastString (Ptr ())) -&gt; InterpSymbolCache)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;static_info&quot; -&gt; IO (MVar (SymbolCache &quot;static_info&quot;))
+forall a. a -&gt; IO (MVar a)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;static_info&quot;
+forall (s :: Symbol). SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#emptySymbolCache"><span class="hs-identifier hs-var">emptySymbolCache</span></a></span><span>
+</span><span id="line-141"></span><span>                    </span><span class="annot"><span class="annottext">IO
+  (MVar (SymbolCache &quot;bytes&quot;)
+   -&gt; MVar (UniqFM FastString (Ptr ())) -&gt; InterpSymbolCache)
+-&gt; IO (MVar (SymbolCache &quot;bytes&quot;))
+-&gt; IO (MVar (UniqFM FastString (Ptr ())) -&gt; InterpSymbolCache)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;bytes&quot; -&gt; IO (MVar (SymbolCache &quot;bytes&quot;))
+forall a. a -&gt; IO (MVar a)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">SymbolCache &quot;bytes&quot;
+forall (s :: Symbol). SymbolCache s
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#emptySymbolCache"><span class="hs-identifier hs-var">emptySymbolCache</span></a></span><span>
+</span><span id="line-142"></span><span>                    </span><span class="annot"><span class="annottext">IO (MVar (UniqFM FastString (Ptr ())) -&gt; InterpSymbolCache)
+-&gt; IO (MVar (UniqFM FastString (Ptr ()))) -&gt; IO InterpSymbolCache
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM FastString (Ptr ())
+-&gt; IO (MVar (UniqFM FastString (Ptr ())))
+forall a. a -&gt; IO (MVar a)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM FastString (Ptr ())
+forall {k} (key :: k) elt. UniqFM key elt
+</span><a href="GHC.Types.Unique.FM.html#emptyUFM"><span class="hs-identifier hs-var">emptyUFM</span></a></span><span>
+</span><span id="line-143"></span></pre></body></html>
