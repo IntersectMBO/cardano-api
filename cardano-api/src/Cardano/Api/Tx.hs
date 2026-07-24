@@ -740,7 +740,7 @@ module Cardano.Api.Tx
   , estimateOrCalculateBalancedTxBody
   , makeTransactionBodyAutoBalance
   , calcReturnAndTotalCollateral
-  , CollateralComputation (..)
+  , CollateralError (..)
   , AutoBalanceError (..)
   , BalancedTxBody (..)
   , FeeEstimationMode (..)

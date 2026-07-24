@@ -28,6 +28,7 @@ import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
+import Control.Monad (forM_)
 import Data.ByteString qualified as B
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
@@ -978,16 +979,17 @@ prop_makeTransactionBodyAutoBalance_return_collateral_with_tokens_below_min_utxo
     txBodyContent
     (Api.fromShelleyAddr sbe addr)
     Nothing of
+    -- Any failure passes here: this is a regression test against
+    -- successfully building an invalid transaction, and it predates the fix,
+    -- so it cannot name the specific error the fix introduces.
     Left _ -> pure ()
     Right (_, balancedContent) ->
       -- The ledger requires the ada in the return collateral output to cover
       -- the minimum UTxO value of the output.
-      case Exp.txReturnCollateral balancedContent of
-        Nothing -> pure ()
-        Just (Exp.TxReturnCollateral returnCollateralTxOut) -> do
-          let minUTxO = Exp.calculateMinimumUTxO ledgerPParams (Exp.TxOut returnCollateralTxOut)
-          H.note_ "Check that the return collateral output meets the minimum UTxO value"
-          H.assertWith (returnCollateralTxOut ^. L.coinTxOutL, minUTxO) $ uncurry (>=)
+      forM_ (Exp.txReturnCollateral balancedContent) $ \(Exp.TxReturnCollateral returnCollateralTxOut) -> do
+        let minUTxO = Exp.calculateMinimumUTxO ledgerPParams (Exp.TxOut returnCollateralTxOut)
+        H.note_ "Check that the return collateral output meets the minimum UTxO value"
+        H.assertWith (returnCollateralTxOut ^. L.coinTxOutL, minUTxO) $ uncurry (>=)
 
 -- | A well-funded transaction returns a positive fee from 'evaluateTransaction'.
 prop_evaluateTransaction_positive_fee :: Property

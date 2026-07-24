@@ -510,21 +510,23 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
 
   if
     | txInsColl == TxInsCollateralNone ->
-        -- no inputs - no collateral fields
-        NoCollateralNeeded === result
+        -- no inputs - no collateral fields; this is the only case producing
+        -- two empty fields, the pass-through and computed cases below always
+        -- set at least one of them
+        Right (TxReturnCollateralNone, TxTotalCollateralNone) === result
     | txRetColl /= TxReturnCollateralNone || txTotColl /= TxTotalCollateralNone ->
-        -- got collateral values as function arguments - not calculating anything
-        CollateralComputed txRetColl txTotColl === result
+        -- got collateral values as function arguments - passed through unchanged
+        Right (txRetColl, txTotColl) === result
     | totalCollateralAda < requiredCollateralAda ->
         -- provided collateral not enough, the caller has to raise an error
-        InsufficientCollateral totalCollateralAda requiredCollateralAda === result
+        Left (InsufficientCollateral totalCollateralAda requiredCollateralAda) === result
     | otherwise ->
         -- no explicit collateral or return collateral was provided, we do the calculation
         case result of
-          ReturnCollateralBelowMinimumUTxO returnAda minUTxO ->
+          Left (ReturnCollateralBelowMinimumUTxO returnAda minUTxO) ->
             -- the leftover cannot form a valid return collateral output
             H.assertWith (returnAda, minUTxO) $ uncurry (<)
-          CollateralComputed resRetColl resTotColl -> do
+          Right (resRetColl, resTotColl) -> do
             let resRetCollValue =
                   mconcat
                     [ txOutValue
@@ -768,6 +770,9 @@ prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_u
     content
     address
     Nothing of
+    -- Any failure passes here: this is a regression test against
+    -- successfully building an invalid transaction, and it predates the fix,
+    -- so it cannot name the specific error the fix introduces.
     Left _ -> pure ()
     Right (BalancedTxBody balancedContent _ _ _) ->
       -- The ledger requires the ada in the return collateral output to cover

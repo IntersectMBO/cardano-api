@@ -432,8 +432,11 @@ test_TxBodyErrorAutoBalance =
           (ScriptWitnessIndexTxIn 1)
           (fromList [(ScriptWitnessIndexTxIn 2, ExecutionUnits 1 1)])
       )
-    , ("TxBodyErrorInsufficientCollateral", TxBodyErrorInsufficientCollateral 1 2)
-    , ("TxBodyErrorReturnCollateralMinUTxONotMet", TxBodyErrorReturnCollateralMinUTxONotMet 1 2)
+    , ("TxBodyErrorCollateralInsufficient", TxBodyErrorCollateral $ InsufficientCollateral 1 2)
+    ,
+      ( "TxBodyErrorCollateralReturnBelowMinimumUTxO"
+      , TxBodyErrorCollateral $ ReturnCollateralBelowMinimumUTxO 1 2
+      )
     ]
 
 test_TxMetadataJsonError :: TestTree

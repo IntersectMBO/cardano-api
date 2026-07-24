@@ -61,7 +61,7 @@ import Cardano.Api.Tx.Internal.Body
   , toScriptIndex
   )
 import Cardano.Api.Tx.Internal.Fee
-  ( CollateralComputation (..)
+  ( CollateralError (..)
   , EvalTxExecutionUnitsLog
   , ResolvablePointers (..)
   , ScriptExecutionError (..)
@@ -141,24 +141,10 @@ data TxBodyErrorAutoBalance era
       -- ^ Total deposits
       L.MaryValue
       -- ^ Balance
-  | -- | The ada in the collateral inputs does not cover the required
-    -- collateral (fee * collateral percentage), so the collateral fields
-    -- cannot be computed. The transaction should be changed to provide
-    -- collateral inputs with more ada.
-    TxBodyErrorInsufficientCollateral
-      L.Coin
-      -- ^ Ada available in the collateral inputs
-      L.Coin
-      -- ^ Required collateral
-  | -- | The ada left over for the return collateral output after covering
-    -- the required collateral is below the output's minimum UTxO value. The
-    -- transaction should be changed to provide collateral inputs with more
-    -- ada.
-    TxBodyErrorReturnCollateralMinUTxONotMet
-      L.Coin
-      -- ^ Ada left for the return collateral output
-      L.Coin
-      -- ^ Minimum UTxO value of the return collateral output
+  | -- | The collateral fields could not be computed: the ledger would
+    -- reject a transaction built with them. The transaction should be
+    -- changed to provide collateral inputs with more ada.
+    TxBodyErrorCollateral CollateralError
   | TxBodyErrorMakeUnsignedTx MakeUnsignedTxError
 
 deriving instance Show (TxBodyErrorAutoBalance era)
@@ -223,22 +209,8 @@ instance Error (TxBodyErrorAutoBalance era) where
         , "\nBalance (UTxO value - deposits): "
         , pshow balance
         ]
-    TxBodyErrorInsufficientCollateral available required ->
-      mconcat
-        [ "The ada in the collateral inputs does not cover the required collateral. \n"
-        , "Ada in collateral inputs: " <> pretty available <> "\n"
-        , "Required collateral: "
-            <> pretty required
-            <> " (the transaction fee multiplied by the collateralPercentage protocol parameter). \n"
-        , "The usual solution is to provide collateral inputs with more ada."
-        ]
-    TxBodyErrorReturnCollateralMinUTxONotMet returnAda minUTxO ->
-      mconcat
-        [ "The return collateral output does not meet the minimum UTxO value. \n"
-        , "Ada left for the return collateral output: " <> pretty returnAda <> "\n"
-        , "Minimum required UTxO: " <> pretty minUTxO <> "\n"
-        , "The usual solution is to provide collateral inputs with more ada."
-        ]
+    TxBodyErrorCollateral collateralError ->
+      prettyError collateralError
     TxBodyErrorMakeUnsignedTx err ->
       prettyError err
 
@@ -435,25 +407,16 @@ estimateBalancedTxBody'
 
     -- Step 4. We use the fee to calculate the required collateral
     (maybeReturnTxCollateral, maybeTotalTxCollateral) <-
-      case obtainCommonConstraints (useEra @era) $
-        calcReturnAndTotalCollateral
-          fee
-          pparams
-          (txInsCollateral txbodycontent)
-          (txReturnCollateral txbodycontent)
-          (txTotalCollateral txbodycontent)
-          changeaddr
-          (L.inject totalPotentialCollateral) of
-        NoCollateralNeeded -> pure (Nothing, Nothing)
-        CollateralComputed retColl totColl -> pure (retColl, totColl)
-        InsufficientCollateral available required ->
-          Left $
-            TxFeeEstimationBalanceError $
-              TxBodyErrorInsufficientCollateral available required
-        ReturnCollateralBelowMinimumUTxO returnAda minUTxO ->
-          Left $
-            TxFeeEstimationBalanceError $
-              TxBodyErrorReturnCollateralMinUTxONotMet returnAda minUTxO
+      first (TxFeeEstimationBalanceError . TxBodyErrorCollateral) $
+        obtainCommonConstraints (useEra @era) $
+          calcReturnAndTotalCollateral
+            fee
+            pparams
+            (txInsCollateral txbodycontent)
+            (txReturnCollateral txbodycontent)
+            (txTotalCollateral txbodycontent)
+            changeaddr
+            (L.inject totalPotentialCollateral)
 
     -- Step 5. Now we can calculate the balance of the tx. What matter here are:
     --  1. The original outputs
@@ -741,6 +704,13 @@ hasPlutusScriptWitnesses txbodycontent =
 
 -- Calculation taken from validateInsufficientCollateral:
 -- https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
+
+-- | Compute the return and total collateral fields of the transaction.
+-- Both fields are returned as 'Nothing' if and only if the transaction uses
+-- no collateral inputs. Fields provided by the user are passed through
+-- unvalidated: 'Left' can only arise when the function computes the fields
+-- itself.
+--
 -- TODO: Bug Jared to expose a function from the ledger that returns total and
 -- return collateral.
 calcReturnAndTotalCollateral
@@ -760,8 +730,8 @@ calcReturnAndTotalCollateral
   -- ^ Change address
   -> L.MaryValue
   -- ^ Total available collateral (can include non-ada)
-  -> CollateralComputation (Maybe (TxReturnCollateral (LedgerEra era))) (Maybe TxTotalCollateral)
-calcReturnAndTotalCollateral _ _ [] _ _ _ _ = NoCollateralNeeded
+  -> Either CollateralError (Maybe (TxReturnCollateral (LedgerEra era)), Maybe TxTotalCollateral)
+calcReturnAndTotalCollateral _ _ [] _ _ _ _ = Right (Nothing, Nothing)
 calcReturnAndTotalCollateral fee pp' _ mTxReturnCollateral mTxTotalCollateral cAddr totalAvailableCollateral = do
   let colPerc = pp' ^. Ledger.ppCollateralPercentageL
       -- We must first figure out how much lovelace we have committed
@@ -784,25 +754,26 @@ calcReturnAndTotalCollateral fee pp' _ mTxReturnCollateral mTxTotalCollateral cA
       nonAdaCollateral = L.modifyCoin (const mempty) totalAvailableCollateral
       returnCollateral = returnAdaCollateral <> nonAdaCollateral
   case (mTxReturnCollateral, mTxTotalCollateral) of
-    (r@Just{}, t@Just{}) -> CollateralComputed r t
-    (r@Just{}, Nothing) -> CollateralComputed r Nothing
-    (Nothing, t@Just{}) -> CollateralComputed Nothing t
+    (r@Just{}, t@Just{}) -> Right (r, t)
+    (r@Just{}, Nothing) -> Right (r, Nothing)
+    (Nothing, t@Just{}) -> Right (Nothing, t)
     (Nothing, Nothing)
       | returnCollateralAmount < 0 ->
-          InsufficientCollateral totalCollateralLovelace totalCollateral
-      | otherwise ->
+          Left $ InsufficientCollateral totalCollateralLovelace totalCollateral
+      | otherwise -> do
           let returnCollateralTxOut =
                 obtainCommonConstraints (useEra @era) $
                   L.mkBasicTxOut (toShelleyAddr cAddr) returnCollateral
               minReturnUTxO =
                 obtainCommonConstraints (useEra @era) $
                   calculateMinimumUTxO pp' (TxOut returnCollateralTxOut)
-           in if returnCollateralAda < minReturnUTxO
-                then ReturnCollateralBelowMinimumUTxO returnCollateralAda minReturnUTxO
-                else
-                  CollateralComputed
-                    (Just $ TxReturnCollateral returnCollateralTxOut)
-                    (Just $ TxTotalCollateral totalCollateral)
+          if returnCollateralAda < minReturnUTxO
+            then Left $ ReturnCollateralBelowMinimumUTxO returnCollateralAda minReturnUTxO
+            else
+              Right
+                ( Just $ TxReturnCollateral returnCollateralTxOut
+                , Just $ TxTotalCollateral totalCollateral
+                )
 
 -- | Transaction fees can be computed for a proposed transaction based on the
 -- expected number of key witnesses (i.e. signatures).
@@ -1688,21 +1659,16 @@ makeTransactionBodyAutoBalance
             , Just txOut <- pure $ Map.lookup (toShelleyTxIn collTxIn) (L.unUTxO utxo)
             ]
     (maybeReturnTxCollateral, maybeTotalTxCollateral) <-
-      case obtainCommonConstraints (useEra @era) $
-        calcReturnAndTotalCollateral
-          fee
-          pp
-          (txInsCollateral txbodycontent)
-          (txReturnCollateral txbodycontent)
-          (txTotalCollateral txbodycontent)
-          changeaddr
-          totalPotentialCollateral of
-        NoCollateralNeeded -> pure (Nothing, Nothing)
-        CollateralComputed retColl totColl -> pure (retColl, totColl)
-        InsufficientCollateral available required ->
-          throwError $ TxBodyErrorInsufficientCollateral available required
-        ReturnCollateralBelowMinimumUTxO returnAda minUTxO ->
-          throwError $ TxBodyErrorReturnCollateralMinUTxONotMet returnAda minUTxO
+      either (throwError . TxBodyErrorCollateral) pure $
+        obtainCommonConstraints (useEra @era) $
+          calcReturnAndTotalCollateral
+            fee
+            pp
+            (txInsCollateral txbodycontent)
+            (txReturnCollateral txbodycontent)
+            (txTotalCollateral txbodycontent)
+            changeaddr
+            totalPotentialCollateral
 
     -- Make a txbody for calculating the balance. For this the size of the tx
     -- does not matter, instead it's just the values of the fee and outputs.
