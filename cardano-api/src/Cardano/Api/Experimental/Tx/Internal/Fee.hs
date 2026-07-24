@@ -298,7 +298,7 @@ estimateBalancedTxBody'
   -- ^ Total value of UTXOs being spent.
   -> Either (TxFeeEstimationError era) (TxBodyContent (LedgerEra era))
 estimateBalancedTxBody'
-  txbodycontent
+  providedTxbodycontent
   pparams
   poolids
   stakeDelegDeposits
@@ -310,6 +310,14 @@ estimateBalancedTxBody'
   sizeOfAllReferenceScripts
   changeaddr
   totalUTxOValue = do
+    -- The ledger requires collateral only for transactions that run Plutus
+    -- scripts. For transactions without them, remove the collateral inputs:
+    -- they cost fees and require the collateral UTxOs to stay unspent, but
+    -- the ledger ignores them, and no collateral fields are needed.
+    let txbodycontent
+          | hasPlutusScriptWitnesses providedTxbodycontent = providedTxbodycontent
+          | otherwise = providedTxbodycontent{txInsCollateral = []}
+
     -- Step 1. Substitute those execution units into the tx
 
     txbodycontent1 <-
@@ -671,6 +679,20 @@ createFakeUTxO txbodycontent totalAdaInUTxO =
    in -- Take one txin and one txout. Replace the out value with totalAdaInUTxO
       -- Return an empty UTxO if there are no txins or txouts
       L.UTxO $ fromList $ zip singleTxIn singleTxOut
+
+-- | Whether the transaction contains any Plutus script witness. The ledger
+-- requires collateral only for transactions that run Plutus scripts.
+hasPlutusScriptWitnesses
+  :: forall era
+   . IsEra era
+  => TxBodyContent (LedgerEra era)
+  -> Bool
+hasPlutusScriptWitnesses txbodycontent =
+  not $
+    null
+      [ ()
+      | (_, AnyScriptWitnessPlutus{}) <- collectTxBodyScriptWitnesses txbodycontent
+      ]
 
 -- Calculation taken from validateInsufficientCollateral:
 -- https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
@@ -1498,9 +1520,19 @@ makeTransactionBodyAutoBalance
   stakeDelegDeposits
   drepDelegDeposits
   utxo
-  txbodycontent
+  providedTxbodycontent
   changeaddr
   mnkeys = do
+    -- The ledger requires collateral only for transactions that run Plutus
+    -- scripts. For transactions without them, remove the collateral inputs:
+    -- they cost fees and require the collateral UTxOs to stay unspent, but
+    -- the ledger ignores them, and no collateral fields are needed. This is
+    -- the only case where the balancing functions modify the transaction
+    -- inputs; a transaction that should become invalid when some UTxO is
+    -- spent can use a reference input for that purpose.
+    let txbodycontent
+          | hasPlutusScriptWitnesses providedTxbodycontent = providedTxbodycontent
+          | otherwise = providedTxbodycontent{txInsCollateral = []}
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units
     -- 2. figure out the overall min fees
