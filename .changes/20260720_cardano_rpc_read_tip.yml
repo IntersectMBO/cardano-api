@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1259
+kind:
+  - feature
+description: |
+  Implement the ReadTip SyncService method: returns the current chain tip as slot, block hash, height and timestamp.
