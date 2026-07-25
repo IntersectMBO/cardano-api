@@ -14,7 +14,6 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
   )
 where
 
-import Cardano.Api.Address
 import Cardano.Api.Era
 import Cardano.Api.Error
 import Cardano.Api.Experimental.Era
@@ -36,9 +35,9 @@ import Cardano.Binary qualified as CBOR
 
 import RIO hiding (toList)
 
+import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Char8 qualified as BSC
 import Data.ProtoLens (defMessage)
-import Data.Text qualified as T
-import Data.Text.Encoding qualified as T
 import GHC.IsList
 import Network.GRPC.Spec
 
@@ -123,12 +122,12 @@ txOutToUtxoRpcTxOutput sbe (TxOut addressInEra txOutValue datum script) = do
         TxOutDatumInline _ hashableScriptData ->
           Just $
             defMessage
-              & U5c.hash .~ serialiseToCBOR hashableScriptData
+              & U5c.hash .~ serialiseToRawBytes (hashScriptDataBytes hashableScriptData)
               & U5c.payload .~ scriptDataToUtxoRpcPlutusData (getScriptData hashableScriptData)
               & U5c.originalCbor .~ getOriginalScriptDataBytes hashableScriptData
 
   defMessage
-    & U5c.address .~ T.encodeUtf8 (shelleyBasedEraConstraints sbe $ serialiseAddress addressInEra)
+    & U5c.address .~ shelleyBasedEraConstraints sbe (serialiseToRawBytes addressInEra)
     & U5c.coin .~ inject (L.unCoin (txOutValueToLovelace txOutValue))
     & U5c.assets .~ multiAsset
     & U5c.maybe'datum .~ datumRpc
@@ -143,11 +142,15 @@ utxoRpcTxOutputToTxOut
   -> m (TxOut CtxUTxO era)
 utxoRpcTxOutputToTxOut txOutput = do
   let era = useEra @era
-  addrUtf8 <- liftEitherError $ T.decodeUtf8' (txOutput ^. U5c.address)
+  let addressBytes = txOutput ^. U5c.address
+      annotateError (SerialiseAsRawBytesError msg) =
+        SerialiseAsRawBytesError $
+          msg <> ", address (hex): " <> BSC.unpack (Base16.encode addressBytes)
   address <-
-    maybe (throwM . stringException $ "Cannot decode address: " <> T.unpack addrUtf8) pure $
-      obtainCommonConstraints era $
-        deserialiseAddress asType addrUtf8
+    obtainCommonConstraints era $
+      liftEitherError $
+        first annotateError $
+          deserialiseFromRawBytes asType addressBytes
   datum <-
     case txOutput ^. U5c.maybe'datum of
       Just datumRpc ->

@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1258
+kind:
+  - bugfix
+description: |
+  Fix wire encoding of two TxOutput fields: address now carries raw ledger address bytes instead of bech32/base58 text, and Datum.hash now carries the 32-byte datum hash instead of the datum CBOR for inline datums, matching other UTxO RPC implementations.
