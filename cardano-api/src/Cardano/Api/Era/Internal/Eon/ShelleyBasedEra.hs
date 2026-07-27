@@ -323,6 +323,7 @@ instance FromJSON AnyShelleyBasedEra where
       "Alonzo" -> pure $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
       "Babbage" -> pure $ AnyShelleyBasedEra ShelleyBasedEraBabbage
       "Conway" -> pure $ AnyShelleyBasedEra ShelleyBasedEraConway
+      "Dijkstra" -> pure $ AnyShelleyBasedEra ShelleyBasedEraDijkstra
       wrong -> fail $ "Failed to parse unknown shelley-based era: " <> Text.unpack wrong
 
 -- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that
