@@ -10,6 +10,7 @@ import Cardano.Api.Ledger
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer)
+import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 
 import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
@@ -102,7 +103,7 @@ genEraBasedProtocolParametersUpdate era =
     AlonzoEra -> genAlonzoEraBasedProtocolParametersUpdate
     BabbageEra -> genBabbageEraBasedProtocolParametersUpdate
     ConwayEra -> genConwayEraBasedProtocolParametersUpdate
-    DijkstraEra -> error "TODO Dijkstra: genEraBasedProtocolParametersUpdate: era not supported"
+    DijkstraEra -> genDijkstraEraBasedProtocolParametersUpdate
 
 genShelleyEraBasedProtocolParametersUpdate
   :: MonadGen m => m (EraBasedProtocolParametersUpdate ShelleyEra)
@@ -157,3 +158,21 @@ genConwayEraBasedProtocolParametersUpdate =
     <*> genAlonzoOnwardsPParams
     <*> genIntroducedInBabbagePParams
     <*> genIntroducedInConwayPParams
+
+genIntroducedInDijkstraPParams :: MonadGen m => m (IntroducedInDijkstraPParams era)
+genIntroducedInDijkstraPParams =
+  IntroducedInDijkstraPParams
+    <$> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+
+genDijkstraEraBasedProtocolParametersUpdate
+  :: MonadGen m => m (EraBasedProtocolParametersUpdate DijkstraEra)
+genDijkstraEraBasedProtocolParametersUpdate =
+  DijkstraEraBasedProtocolParametersUpdate
+    <$> genCommonProtocolParametersUpdate
+    <*> genAlonzoOnwardsPParams
+    <*> genIntroducedInBabbagePParams
+    <*> genIntroducedInConwayPParams
+    <*> genIntroducedInDijkstraPParams

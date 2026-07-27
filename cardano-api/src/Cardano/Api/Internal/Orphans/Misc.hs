@@ -27,6 +27,7 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.PParams qualified as Ledger
+import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Plutus.Language qualified as L
 import Cardano.Ledger.Shelley.PParams qualified as Ledger
@@ -269,6 +270,50 @@ instance Semigroup (Ledger.ConwayPParams StrictMaybe era) where
       , Ledger.cppDRepActivity = lastMappendWithTHKD Ledger.cppDRepActivity p1 p2
       , Ledger.cppMinFeeRefScriptCostPerByte =
           lastMappendWithTHKD Ledger.cppMinFeeRefScriptCostPerByte p1 p2
+      }
+
+instance Semigroup (Ledger.DijkstraPParams StrictMaybe era) where
+  (<>) p1 p2 =
+    Ledger.DijkstraPParams
+      { Ledger.dppTxFeePerByte = lastMappendWithTHKD Ledger.dppTxFeePerByte p1 p2
+      , Ledger.dppTxFeeFixed = lastMappendWithTHKD Ledger.dppTxFeeFixed p1 p2
+      , Ledger.dppMaxBBSize = lastMappendWithTHKD Ledger.dppMaxBBSize p1 p2
+      , Ledger.dppMaxTxSize = lastMappendWithTHKD Ledger.dppMaxTxSize p1 p2
+      , Ledger.dppMaxBHSize = lastMappendWithTHKD Ledger.dppMaxBHSize p1 p2
+      , Ledger.dppKeyDeposit = lastMappendWithTHKD Ledger.dppKeyDeposit p1 p2
+      , Ledger.dppPoolDeposit = lastMappendWithTHKD Ledger.dppPoolDeposit p1 p2
+      , Ledger.dppEMax = lastMappendWithTHKD Ledger.dppEMax p1 p2
+      , Ledger.dppNOpt = lastMappendWithTHKD Ledger.dppNOpt p1 p2
+      , Ledger.dppA0 = lastMappendWithTHKD Ledger.dppA0 p1 p2
+      , Ledger.dppRho = lastMappendWithTHKD Ledger.dppRho p1 p2
+      , Ledger.dppTau = lastMappendWithTHKD Ledger.dppTau p1 p2
+      , Ledger.dppProtocolVersion = NoUpdate -- For Dijkstra, protocol version cannot be changed via PParamsUpdate
+      , Ledger.dppMinPoolCost = lastMappendWithTHKD Ledger.dppMinPoolCost p1 p2
+      , Ledger.dppCoinsPerUTxOByte = lastMappendWithTHKD Ledger.dppCoinsPerUTxOByte p1 p2
+      , Ledger.dppCostModels = lastMappendWithTHKD Ledger.dppCostModels p1 p2
+      , Ledger.dppPrices = lastMappendWithTHKD Ledger.dppPrices p1 p2
+      , Ledger.dppMaxTxExUnits = lastMappendWithTHKD Ledger.dppMaxTxExUnits p1 p2
+      , Ledger.dppMaxBlockExUnits = lastMappendWithTHKD Ledger.dppMaxBlockExUnits p1 p2
+      , Ledger.dppMaxValSize = lastMappendWithTHKD Ledger.dppMaxValSize p1 p2
+      , Ledger.dppCollateralPercentage = lastMappendWithTHKD Ledger.dppCollateralPercentage p1 p2
+      , Ledger.dppMaxCollateralInputs = lastMappendWithTHKD Ledger.dppMaxCollateralInputs p1 p2
+      , Ledger.dppPoolVotingThresholds = lastMappendWithTHKD Ledger.dppPoolVotingThresholds p1 p2
+      , Ledger.dppDRepVotingThresholds = lastMappendWithTHKD Ledger.dppDRepVotingThresholds p1 p2
+      , Ledger.dppCommitteeMinSize = lastMappendWithTHKD Ledger.dppCommitteeMinSize p1 p2
+      , Ledger.dppCommitteeMaxTermLength = lastMappendWithTHKD Ledger.dppCommitteeMaxTermLength p1 p2
+      , Ledger.dppGovActionLifetime = lastMappendWithTHKD Ledger.dppGovActionLifetime p1 p2
+      , Ledger.dppGovActionDeposit = lastMappendWithTHKD Ledger.dppGovActionDeposit p1 p2
+      , Ledger.dppDRepDeposit = lastMappendWithTHKD Ledger.dppDRepDeposit p1 p2
+      , Ledger.dppDRepActivity = lastMappendWithTHKD Ledger.dppDRepActivity p1 p2
+      , Ledger.dppMinFeeRefScriptCostPerByte =
+          lastMappendWithTHKD Ledger.dppMinFeeRefScriptCostPerByte p1 p2
+      , Ledger.dppMaxRefScriptSizePerBlock =
+          lastMappendWithTHKD Ledger.dppMaxRefScriptSizePerBlock p1 p2
+      , Ledger.dppMaxRefScriptSizePerTx =
+          lastMappendWithTHKD Ledger.dppMaxRefScriptSizePerTx p1 p2
+      , Ledger.dppRefScriptCostStride = lastMappendWithTHKD Ledger.dppRefScriptCostStride p1 p2
+      , Ledger.dppRefScriptCostMultiplier =
+          lastMappendWithTHKD Ledger.dppRefScriptCostMultiplier p1 p2
       }
 
 lastMappendWithTHKD :: (a -> Ledger.THKD g StrictMaybe b) -> a -> a -> Ledger.THKD g StrictMaybe b

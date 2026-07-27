@@ -2453,8 +2453,7 @@ extractWitnessableVotes
   :: ConwayEraOnwards era
   -> Maybe (Featured eon era (TxVotingProcedures BuildTx era))
   -> [(Witnessable VoterItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
-extractWitnessableVotes ConwayEraOnwardsDijkstra _ = error "TODO Dijkstra: extractWitnessableVotes: era not supported"
-extractWitnessableVotes e@ConwayEraOnwardsConway txVotingProcedures =
+extractWitnessableVotes e txVotingProcedures =
   List.nub
     [ (conwayEraOnwardsConstraints e $ WitVote vote, BuildTxWith wit)
     | (vote, wit) <- getVotes $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
