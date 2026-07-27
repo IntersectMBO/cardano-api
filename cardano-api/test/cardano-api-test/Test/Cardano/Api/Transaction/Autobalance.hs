@@ -481,19 +481,36 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
   let beo = BabbageEraOnwardsConway
       sbe = convert beo
       era = convert beo
+      address = AddressInEra (ShelleyAddressInEra sbe) (ShelleyAddress L.Testnet def L.StakeRefNull)
   feeCoin@(L.Coin fee) <- forAll genLovelace
-  totalCollateral <- forAll $ genLedgerValueForTxOut sbe
-  let totalCollateralAda = totalCollateral ^. Api.adaAssetL sbe
   pparams <-
     H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
   requiredCollateralPct <- H.noteShow . fromIntegral $ pparams ^. L.ppCollateralPercentageL
   requiredCollateralAda <-
     H.noteShow . L.rationalToCoinViaCeiling $ (fee * requiredCollateralPct) % 100
+  -- The ada left for the return collateral output is the collateral ada minus
+  -- the required collateral, so 'genLedgerValueForTxOut' alone (1 or 2
+  -- lovelace of ada) always lands far below the minimum UTxO value of that
+  -- output. Add ada around that minimum so that the property exercises both
+  -- sides of the boundary, and shrinks towards it.
+  let L.Coin adaOnlyMinUTxO =
+        calculateMinimumUTxO sbe pparams $
+          TxOut address (lovelaceToTxOutValue sbe 0) TxOutDatumNone ReferenceScriptNone
+  totalCollateral <- forAll $ do
+    generatedCollateral <- genLedgerValueForTxOut sbe
+    -- Keeping some collateral without the extra ada preserves the coverage of
+    -- the insufficient collateral case.
+    extraAda <-
+      Gen.frequency
+        [ (1, pure 0)
+        , (4, Gen.integral $ Range.linearFrom adaOnlyMinUTxO 0 (2 * adaOnlyMinUTxO))
+        ]
+    pure $ generatedCollateral <> Api.mkAdaValue sbe (L.Coin extraAda)
+  let totalCollateralAda = totalCollateral ^. Api.adaAssetL sbe
   txInsColl <- forAll $ genTxInsCollateral era
   txRetColl <-
     forAll $ Gen.frequency [(4, pure TxReturnCollateralNone), (1, genTxReturnCollateral sbe)]
   txTotColl <- forAll $ Gen.frequency [(4, pure TxTotalCollateralNone), (1, genTxTotalCollateral era)]
-  let address = AddressInEra (ShelleyAddressInEra sbe) (ShelleyAddress L.Testnet def L.StakeRefNull)
 
   let result =
         calcReturnAndTotalCollateral
@@ -555,6 +572,34 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
             H.assertWith collBalance $ L.pointwise (<=) (L.inject requiredCollateralAda)
             H.note_ "Check that collateral balance is equal to collateral in tx body"
             resTotCollValue === collBalance
+            -- Pin the minimum UTxO boundary of the return collateral output in
+            -- both directions: an output that is produced must be spendable,
+            -- and one that is omitted must have been impossible to produce.
+            case resRetColl of
+              TxReturnCollateral _ resRetCollTxOut@(TxOut _ resRetCollTxOutValue _ _) -> do
+                H.note_ "Check that the return collateral output meets its own minimum UTxO value"
+                H.diff
+                  (txOutValueToLovelace resRetCollTxOutValue)
+                  (>=)
+                  (calculateMinimumUTxO sbe pparams resRetCollTxOut)
+              TxReturnCollateralNone -> do
+                -- The return collateral output the function would have built
+                -- had it not folded the leftover ada into the total collateral.
+                let L.Coin candidateReturnAmount =
+                      totalCollateralAda * 100 - L.Coin (fee * requiredCollateralPct)
+                    candidateReturnAda = L.rationalToCoinViaFloor $ candidateReturnAmount % 100
+                    candidateReturnValue =
+                      Api.mkAdaValue sbe candidateReturnAda
+                        <> L.modifyCoin (const mempty) totalCollateral
+                candidateTxOut <-
+                  H.noteShow $
+                    TxOut
+                      address
+                      (TxOutValueShelleyBased sbe candidateReturnValue)
+                      TxOutDatumNone
+                      ReferenceScriptNone
+                H.note_ "Check that the omitted return collateral output could not have met its minimum UTxO value"
+                H.diff candidateReturnAda (<) (calculateMinimumUTxO sbe pparams candidateTxOut)
           Left err@InsufficientCollateral{} -> do
             H.annotateShow err
             H.annotate "Unreachable: the guard above ensures the collateral covers the requirement"
@@ -801,7 +846,7 @@ prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_u
 -- With an ada-only collateral input holding exactly the minimum UTxO value,
 -- the ada left after covering the required collateral (150% of the fee) is
 -- necessarily below the minimum UTxO value of a return collateral output.
--- Instead of failing, balancing must use the whole collateral input as total
+-- Instead of failing, balancing must use all of the collateral inputs as total
 -- collateral and omit the return collateral output: the extra ada is only
 -- lost if the Plutus script fails on chain.
 prop_make_transaction_body_autobalance_folds_dust_into_total_collateral :: Property

@@ -1373,8 +1373,8 @@ calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTo
                 Right (TxReturnCollateral w returnCollateralTxOut, totalCollateral)
             | L.isZero nonAdaCollateral ->
                 -- The ada left over is too small for a return collateral output, so
-                -- use the whole collateral as total collateral instead. The extra ada
-                -- is only lost if a Plutus script fails on chain.
+                -- use all of the collateral inputs as total collateral instead. The
+                -- extra ada is only lost if a Plutus script fails on chain.
                 Right (TxReturnCollateralNone, TxTotalCollateral w totalCollateralLovelace)
             | otherwise ->
                 Left $ ReturnCollateralBelowMinimumUTxO returnCollateralAda minReturnUTxO

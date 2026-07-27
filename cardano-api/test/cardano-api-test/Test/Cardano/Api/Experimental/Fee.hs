@@ -1003,7 +1003,7 @@ prop_makeTransactionBodyAutoBalance_return_collateral_with_tokens_below_min_utxo
 -- With an ada-only collateral input holding exactly the minimum UTxO value,
 -- the ada left after covering the required collateral (150% of the fee) is
 -- necessarily below the minimum UTxO value of a return collateral output.
--- Instead of failing, balancing must use the whole collateral input as total
+-- Instead of failing, balancing must use all of the collateral inputs as total
 -- collateral and omit the return collateral output: the extra ada is only
 -- lost if the Plutus script fails on chain.
 prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral :: Property
@@ -1082,12 +1082,14 @@ prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral = H.propert
         (Api.fromShelleyAddr sbe addr)
         Nothing
 
-  case (Exp.txReturnCollateral balancedContent, Exp.txTotalCollateral balancedContent) of
-    (Nothing, Just (Exp.TxTotalCollateral totalCollateral)) ->
-      totalCollateral H.=== minUTxOCollateral
-    _ -> do
-      H.annotate "Expected the whole collateral as total collateral, with no return collateral output"
-      H.failure
+  let returnCollateralAda =
+        (^. L.coinTxOutL) . Exp.unTxReturnCollateral <$> Exp.txReturnCollateral balancedContent
+      totalCollateralAda = Exp.unTxTotalCollateral <$> Exp.txTotalCollateral balancedContent
+
+  H.note_ "Check that there is no return collateral output"
+  returnCollateralAda H.=== Nothing
+  H.note_ "Check that all of the collateral inputs are used as total collateral"
+  totalCollateralAda H.=== Just minUTxOCollateral
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
 --
@@ -1167,12 +1169,14 @@ prop_estimateBalancedTxBody_folds_dust_into_total_collateral = H.propertyOnce $ 
         (Api.fromShelleyAddr sbe addr)
         (L.MaryValue (L.Coin 12_000_000) mempty)
 
-  case (Exp.txReturnCollateral balancedContent, Exp.txTotalCollateral balancedContent) of
-    (Nothing, Just (Exp.TxTotalCollateral totalCollateral)) ->
-      totalCollateral H.=== minUTxOCollateral
-    _ -> do
-      H.annotate "Expected the whole collateral as total collateral, with no return collateral output"
-      H.failure
+  let returnCollateralAda =
+        (^. L.coinTxOutL) . Exp.unTxReturnCollateral <$> Exp.txReturnCollateral balancedContent
+      totalCollateralAda = Exp.unTxTotalCollateral <$> Exp.txTotalCollateral balancedContent
+
+  H.note_ "Check that there is no return collateral output"
+  returnCollateralAda H.=== Nothing
+  H.note_ "Check that all of the collateral inputs are used as total collateral"
+  totalCollateralAda H.=== Just minUTxOCollateral
 
 -- | A well-funded transaction returns a positive fee from 'evaluateTransaction'.
 prop_evaluateTransaction_positive_fee :: Property
