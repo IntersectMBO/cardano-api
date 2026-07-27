@@ -536,7 +536,7 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
         case result of
           Left (ReturnCollateralBelowMinimumUTxO returnAda minUTxO) ->
             -- the leftover cannot form a valid return collateral output
-            H.assertWith (returnAda, minUTxO) $ uncurry (<)
+            H.diff returnAda (<) minUTxO
           Right (resRetColl, resTotColl) -> do
             let resRetCollValue =
                   mconcat
@@ -555,7 +555,10 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
             H.assertWith collBalance $ L.pointwise (<=) (L.inject requiredCollateralAda)
             H.note_ "Check that collateral balance is equal to collateral in tx body"
             resTotCollValue === collBalance
-          _ -> H.failure
+          Left err@InsufficientCollateral{} -> do
+            H.annotateShow err
+            H.annotate "Unreachable: the guard above ensures the collateral covers the requirement"
+            H.failure
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
 --
@@ -781,22 +784,17 @@ prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_u
     content
     address
     Nothing of
-    -- Only a collateral error passes: balancing must reject the transaction
-    -- because of its collateral. Any other failure is a broken test fixture.
-    Left (Api.TxBodyErrorCollateral _) -> pure ()
+    -- The leftover collateral ada cannot cover the token-carrying return
+    -- collateral output's minimum UTxO value, so balancing must fail with
+    -- exactly this error.
+    Left (Api.TxBodyErrorCollateral (ReturnCollateralBelowMinimumUTxO _ _)) -> H.success
     Left err -> do
       H.annotateShow err
-      H.annotate "Expected balancing to fail with a collateral error"
+      H.annotate "Expected balancing to fail with ReturnCollateralBelowMinimumUTxO"
       H.failure
-    Right (BalancedTxBody balancedContent _ _ _) ->
-      -- The ledger requires the ada in the return collateral output to cover
-      -- the minimum UTxO value of the output.
-      case txReturnCollateral balancedContent of
-        TxReturnCollateralNone -> pure ()
-        TxReturnCollateral _ txOut@(TxOut _ txOutValue _ _) -> do
-          let minUTxO = calculateMinimumUTxO sbe ledgerPParams txOut
-          H.note_ "Check that the return collateral output meets the minimum UTxO value"
-          H.assertWith (txOutValueToLovelace txOutValue, minUTxO) $ uncurry (>=)
+    Right _ -> do
+      H.annotate "Expected balancing to fail with ReturnCollateralBelowMinimumUTxO, but it succeeded"
+      H.failure
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-cli/issues/1073
 prop_ensure_gov_actions_are_preserved_by_autobalance :: Property

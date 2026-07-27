@@ -28,7 +28,6 @@ import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
-import Control.Monad (forM_)
 import Data.ByteString qualified as B
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
@@ -979,20 +978,17 @@ prop_makeTransactionBodyAutoBalance_return_collateral_with_tokens_below_min_utxo
     txBodyContent
     (Api.fromShelleyAddr sbe addr)
     Nothing of
-    -- Only a collateral error passes: balancing must reject the transaction
-    -- because of its collateral. Any other failure is a broken test fixture.
-    Left (Exp.TxBodyErrorCollateral _) -> pure ()
+    -- The leftover collateral ada cannot cover the token-carrying return
+    -- collateral output's minimum UTxO value, so balancing must fail with
+    -- exactly this error.
+    Left (Exp.TxBodyErrorCollateral (Api.ReturnCollateralBelowMinimumUTxO _ _)) -> H.success
     Left err -> do
       H.annotateShow err
-      H.annotate "Expected balancing to fail with a collateral error"
+      H.annotate "Expected balancing to fail with ReturnCollateralBelowMinimumUTxO"
       H.failure
-    Right (_, balancedContent) ->
-      -- The ledger requires the ada in the return collateral output to cover
-      -- the minimum UTxO value of the output.
-      forM_ (Exp.txReturnCollateral balancedContent) $ \(Exp.TxReturnCollateral returnCollateralTxOut) -> do
-        let minUTxO = Exp.calculateMinimumUTxO ledgerPParams (Exp.TxOut returnCollateralTxOut)
-        H.note_ "Check that the return collateral output meets the minimum UTxO value"
-        H.assertWith (returnCollateralTxOut ^. L.coinTxOutL, minUTxO) $ uncurry (>=)
+    Right _ -> do
+      H.annotate "Expected balancing to fail with ReturnCollateralBelowMinimumUTxO, but it succeeded"
+      H.failure
 
 -- | A well-funded transaction returns a positive fee from 'evaluateTransaction'.
 prop_evaluateTransaction_positive_fee :: Property

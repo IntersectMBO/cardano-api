@@ -1259,11 +1259,13 @@ data CollateralError
       -- ^ Ada available in the collateral inputs
       L.Coin
       -- ^ Required collateral
-  | -- | The ada left over for the return collateral output after covering
-    -- the required collateral is below the output's minimum UTxO value.
+  | -- | The ada in the return collateral output is below the output's
+    -- minimum UTxO value. The output is either computed from the collateral
+    -- inputs (the ada left over after covering the required collateral) or
+    -- provided explicitly by the user.
     ReturnCollateralBelowMinimumUTxO
       L.Coin
-      -- ^ Ada left for the return collateral output
+      -- ^ Ada in the return collateral output
       L.Coin
       -- ^ Minimum UTxO value of the return collateral output
   deriving (Eq, Show)
@@ -1326,9 +1328,8 @@ calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTo
       -- collateral tx inputs to cover the tx
       totalCollateralLovelace = totalAvailableCollateral ^. A.adaAssetL sbe
       requiredCollateral@(L.Coin reqAmt) = fromIntegral colPerc * fee
-      totalCollateral =
-        TxTotalCollateral w . L.rationalToCoinViaCeiling $
-          reqAmt % 100
+      requiredCollateralAda = L.rationalToCoinViaCeiling $ reqAmt % 100
+      totalCollateral = TxTotalCollateral w requiredCollateralAda
       -- Why * 100? requiredCollateral is the product of the collateral percentage and the tx fee
       -- We choose to multiply 100 rather than divide by 100 to make the calculation
       -- easier to manage. At the end of the calculation we then use % 100 to perform our division
@@ -1353,10 +1354,7 @@ calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTo
       Right (TxReturnCollateralNone, tc)
     (TxReturnCollateralNone, TxTotalCollateralNone)
       | returnCollateralAmount < 0 ->
-          Left $
-            InsufficientCollateral
-              totalCollateralLovelace
-              (L.rationalToCoinViaCeiling $ reqAmt % 100)
+          Left $ InsufficientCollateral totalCollateralLovelace requiredCollateralAda
       | otherwise -> do
           let returnCollateralTxOut =
                 TxOut
