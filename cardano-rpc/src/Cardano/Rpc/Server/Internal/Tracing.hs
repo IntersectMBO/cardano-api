@@ -101,6 +101,8 @@ data TraceRpcSync
     TraceRpcFetchBlockSpan TraceSpanEvent
   | -- | ReadTip span
     TraceRpcReadTipSpan TraceSpanEvent
+  | -- | FollowTip span
+    TraceRpcFollowTipSpan TraceSpanEvent
   | -- | Requested block was not found
     TraceRpcFetchBlockNotFound SlotNo
   | -- | Node kernel access is not yet available
@@ -113,6 +115,8 @@ instance Pretty TraceRpcSync where
     TraceRpcFetchBlockSpan (SpanEnd _) -> "Finished FetchBlock method"
     TraceRpcReadTipSpan (SpanBegin _) -> "Started ReadTip method"
     TraceRpcReadTipSpan (SpanEnd _) -> "Finished ReadTip method"
+    TraceRpcFollowTipSpan (SpanBegin _) -> "Started FollowTip method"
+    TraceRpcFollowTipSpan (SpanEnd _) -> "Finished FollowTip method"
     TraceRpcFetchBlockNotFound slot -> "Block not found at slot " <> pshow slot
     TraceRpcNodeKernelAccessUnavailable -> "Node kernel access not yet initialised"
 

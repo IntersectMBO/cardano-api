@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1268
+kind:
+  - feature
+description: |
+  Implement the FollowTip SyncService method: streams fully parsed blocks as the chain advances, starting from the first intersection point found on the chain (an empty-hash block ref denotes origin). An empty intersect list follows from the current tip; an unmatched intersect list fails with NOT_FOUND. Rollbacks are delivered as reset actions.

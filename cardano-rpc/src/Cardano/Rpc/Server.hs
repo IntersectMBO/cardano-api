@@ -84,7 +84,7 @@ methodsSyncRpc
 methodsSyncRpc =
   Method (mkNonStreaming $ const unimplemented) -- dumpHistory
     . Method (mkNonStreaming $ wrapInSpan TraceRpcFetchBlockSpan . fetchBlockMethod)
-    . Method (mkServerStreaming $ \_ _ -> unimplemented) -- followTip
+    . Method (mkServerStreaming $ \req -> wrapInSpan TraceRpcFollowTipSpan . followTipMethod req)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcReadTipSpan . readTipMethod)
     $ NoMoreMethods
  where
