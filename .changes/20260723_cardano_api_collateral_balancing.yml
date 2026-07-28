@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1267
+kind:
+  - bugfix
+description: |
+  Issue: when the collateral is ada-only and the ada left over after covering the required collateral is below the minimum UTxO value of a return collateral output, balancing fails, even though a valid transaction exists.
+  Solution: the ada left over is now folded into the total collateral, with no return collateral output: it is only lost if a Plutus script fails on chain. `estimateBalancedTxBody` cannot see the content of the collateral inputs, so it computes collateral under the documented assumption that they contain no native tokens.

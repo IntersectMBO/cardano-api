@@ -20,7 +20,9 @@ import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Monad.Error (failEitherWith)
 import Cardano.Api.Parser.Text qualified as Api
 
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Api qualified as UnexportedLedger
+import Cardano.Ledger.Conway.Scripts qualified as Conway
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Tools qualified as L (calcMinFeeTx)
@@ -118,12 +120,18 @@ tests =
         , testProperty
             "fails on return collateral with tokens below min UTxO"
             prop_makeTransactionBodyAutoBalance_return_collateral_with_tokens_below_min_utxo
+        , testProperty
+            "folds return collateral dust into the total collateral"
+            prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral
         ]
     , testGroup
         "estimateBalancedTxBody"
         [ testProperty
             "removes collateral without Plutus scripts"
             prop_estimateBalancedTxBody_no_collateral_without_plutus
+        , testProperty
+            "folds return collateral dust into the total collateral"
+            prop_estimateBalancedTxBody_folds_dust_into_total_collateral
         ]
     , testGroup
         "evaluateTransaction"
@@ -989,6 +997,186 @@ prop_makeTransactionBodyAutoBalance_return_collateral_with_tokens_below_min_utxo
     Right _ -> do
       H.annotate "Expected balancing to fail with ReturnCollateralBelowMinimumUTxO, but it succeeded"
       H.failure
+
+-- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
+--
+-- With an ada-only collateral input holding exactly the minimum UTxO value,
+-- the ada left after covering the required collateral (150% of the fee) is
+-- necessarily below the minimum UTxO value of a return collateral output.
+-- Instead of failing, balancing must use all of the collateral inputs as total
+-- collateral and omit the return collateral output: the extra ada is only
+-- lost if the Plutus script fails on chain.
+prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral :: Property
+prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral = H.propertyOnce $ do
+  let era = Exp.ConwayEra
+      sbe = convert era
+      systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
+      epochInfo =
+        Api.LedgerEpochInfo $
+          Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+
+  -- Protocol parameters with cost models, so that the Plutus script can run.
+  ledgerPParams <-
+    H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  scriptEnvelope <-
+    H.evalIO $ B.readFile "test/cardano-api-test/files/input/plutus/v3.alwaysTrue.json"
+  Exp.AnyPlutusScript plutusScript <- H.evalEither $ Exp.readAnyScriptBytes era scriptEnvelope
+
+  fundingTxIn <-
+    H.evalEither $
+      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+  collateralTxIn <-
+    H.evalEither $
+      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+
+  let addr =
+        L.Addr
+          L.Testnet
+          (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+          L.StakeRefNull
+      ledgerScriptHash = ExpPlutus.hashPlutusScriptInEra plutusScript
+      mintWitness =
+        Exp.AnyScriptWitnessPlutus $
+          Exp.AnyPlutusMintingScriptWitness $
+            Exp.PlutusScriptWitness
+              (ExpPlutus.plutusScriptInEraSLanguage plutusScript)
+              (Exp.PScript plutusScript)
+              Exp.NoScriptDatum
+              (Api.unsafeHashableScriptData (Api.ScriptDataMap []))
+              (Api.ExecutionUnits 0 0)
+      -- The ada-only collateral input holds exactly its minimum UTxO value.
+      minUTxOCollateral =
+        Exp.calculateMinimumUTxO ledgerPParams $
+          Exp.TxOut (L.mkBasicTxOut addr (L.MaryValue (L.Coin 0) mempty))
+      utxo =
+        L.UTxO $
+          Map.fromList
+            [ (Api.toShelleyTxIn fundingTxIn, L.mkBasicTxOut addr (L.MaryValue (L.Coin 12_000_000) mempty))
+            , (Api.toShelleyTxIn collateralTxIn, L.mkBasicTxOut addr (L.MaryValue minUTxOCollateral mempty))
+            ]
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(fundingTxIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxInsCollateral [collateralTxIn]
+          & Exp.setTxOuts [Exp.TxOut $ L.mkBasicTxOut addr (L.MaryValue (L.Coin 5_000_000) mempty)]
+          & Exp.setTxMintValue
+            ( Exp.TxMintValue $
+                Map.singleton
+                  (Api.PolicyId $ Api.ScriptHash ledgerScriptHash)
+                  (fromList [(Api.UnsafeAssetName "eeee", 1)], mintWitness)
+            )
+          & Exp.setTxProtocolParams ledgerPParams
+
+  (_, balancedContent) <-
+    H.leftFail $
+      Exp.makeTransactionBodyAutoBalance
+        systemStart
+        epochInfo
+        ledgerPParams
+        mempty
+        mempty
+        mempty
+        utxo
+        txBodyContent
+        (Api.fromShelleyAddr sbe addr)
+        Nothing
+
+  let returnCollateralAda =
+        (^. L.coinTxOutL) . Exp.unTxReturnCollateral <$> Exp.txReturnCollateral balancedContent
+      totalCollateralAda = Exp.unTxTotalCollateral <$> Exp.txTotalCollateral balancedContent
+
+  H.note_ "Check that there is no return collateral output"
+  returnCollateralAda H.=== Nothing
+  H.note_ "Check that all of the collateral inputs are used as total collateral"
+  totalCollateralAda H.=== Just minUTxOCollateral
+
+-- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
+--
+-- Like 'prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral',
+-- but for 'Exp.estimateBalancedTxBody'.
+prop_estimateBalancedTxBody_folds_dust_into_total_collateral :: Property
+prop_estimateBalancedTxBody_folds_dust_into_total_collateral = H.propertyOnce $ do
+  let era = Exp.ConwayEra
+      sbe = convert era
+
+  -- Protocol parameters with cost models, so that the Plutus script can run.
+  ledgerPParams <-
+    H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  scriptEnvelope <-
+    H.evalIO $ B.readFile "test/cardano-api-test/files/input/plutus/v3.alwaysTrue.json"
+  Exp.AnyPlutusScript plutusScript <- H.evalEither $ Exp.readAnyScriptBytes era scriptEnvelope
+
+  fundingTxIn <-
+    H.evalEither $
+      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+  collateralTxIn <-
+    H.evalEither $
+      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+
+  let addr =
+        L.Addr
+          L.Testnet
+          (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+          L.StakeRefNull
+      ledgerScriptHash = ExpPlutus.hashPlutusScriptInEra plutusScript
+      mintWitness =
+        Exp.AnyScriptWitnessPlutus $
+          Exp.AnyPlutusMintingScriptWitness $
+            Exp.PlutusScriptWitness
+              (ExpPlutus.plutusScriptInEraSLanguage plutusScript)
+              (Exp.PScript plutusScript)
+              Exp.NoScriptDatum
+              (Api.unsafeHashableScriptData (Api.ScriptDataMap []))
+              (Api.ExecutionUnits 0 0)
+      -- The smallest realistic ada-only collateral: exactly the minimum UTxO
+      -- value.
+      minUTxOCollateral =
+        Exp.calculateMinimumUTxO ledgerPParams $
+          Exp.TxOut (L.mkBasicTxOut addr (L.MaryValue (L.Coin 0) mempty))
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(fundingTxIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxInsCollateral [collateralTxIn]
+          & Exp.setTxOuts [Exp.TxOut $ L.mkBasicTxOut addr (L.MaryValue (L.Coin 5_000_000) mempty)]
+          & Exp.setTxMintValue
+            ( Exp.TxMintValue $
+                Map.singleton
+                  (Api.PolicyId $ Api.ScriptHash ledgerScriptHash)
+                  (fromList [(Api.UnsafeAssetName "eeee", 1)], mintWitness)
+            )
+          & Exp.setTxProtocolParams ledgerPParams
+      exUnitsMap =
+        Map.singleton
+          (Conway.ConwayMinting (Alonzo.AsIx 0))
+          (Api.ExecutionUnits 84_851_308 325_610)
+
+  balancedContent <-
+    H.leftFail $
+      Exp.estimateBalancedTxBody
+        era
+        txBodyContent
+        ledgerPParams
+        mempty
+        mempty
+        mempty
+        exUnitsMap
+        minUTxOCollateral
+        1
+        0
+        0
+        (Api.fromShelleyAddr sbe addr)
+        (L.MaryValue (L.Coin 12_000_000) mempty)
+
+  let returnCollateralAda =
+        (^. L.coinTxOutL) . Exp.unTxReturnCollateral <$> Exp.txReturnCollateral balancedContent
+      totalCollateralAda = Exp.unTxTotalCollateral <$> Exp.txTotalCollateral balancedContent
+
+  H.note_ "Check that there is no return collateral output"
+  returnCollateralAda H.=== Nothing
+  H.note_ "Check that all of the collateral inputs are used as total collateral"
+  totalCollateralAda H.=== Just minUTxOCollateral
 
 -- | A well-funded transaction returns a positive fee from 'evaluateTransaction'.
 prop_evaluateTransaction_positive_fee :: Property
