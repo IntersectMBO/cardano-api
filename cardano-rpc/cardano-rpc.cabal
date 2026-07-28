@@ -66,6 +66,7 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Sync
     Cardano.Rpc.Server.Internal.UtxoRpc.Type
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
