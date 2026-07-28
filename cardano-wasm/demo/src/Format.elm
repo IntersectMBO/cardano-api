@@ -5,11 +5,37 @@ module Format exposing (ada, adaToLovelace, amountError, lovelaceToAda, orDefaul
 
 
 {-| Parse a user-typed ADA amount ("1.5" → 1500000 lovelace).
+Exact decimal parsing — the digits are scaled as integers, so amounts never
+pick up float rounding. At most 6 decimals, no sign, no exponent.
 -}
 adaToLovelace : String -> Maybe Int
 adaToLovelace s =
-    String.toFloat (String.trim s)
-        |> Maybe.map (\f -> round (f * 1.0e6))
+    case String.split "." (String.trim s) of
+        [ whole ] ->
+            Maybe.map ((*) 1000000) (digits whole)
+
+        [ whole, frac ] ->
+            if frac == "" || String.length frac > 6 then
+                Nothing
+
+            else
+                Maybe.map2 (\w f -> w * 1000000 + f * 10 ^ (6 - String.length frac))
+                    (digits whole)
+                    (digits frac)
+
+        _ ->
+            Nothing
+
+
+{-| String.toInt restricted to plain digit runs (rejects signs and exponents).
+-}
+digits : String -> Maybe Int
+digits str =
+    if str /= "" && String.all Char.isDigit str then
+        String.toInt str
+
+    else
+        Nothing
 
 
 {-| True when a typed amount is non-empty but not a valid positive number (e.g. "1,5").

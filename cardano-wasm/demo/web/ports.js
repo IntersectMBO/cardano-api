@@ -52,7 +52,7 @@ function wire(app, api) {
     } catch (e) { app.ports.wasmAddressesDerived.send({ error: String(e) }); }
   });
 
-  app.ports.clipboardWrite.subscribe((t) => { if (navigator.clipboard) navigator.clipboard.writeText(t); });
+  app.ports.clipboardWrite.subscribe((t) => { if (navigator.clipboard) navigator.clipboard.writeText(t).catch(() => {}); });
 }
 
 async function boot() {

@@ -27,7 +27,7 @@ import Types exposing (..)
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { network = Mainnet
+    ( { network = Preview
       , wallets = []
       , nextWid = 1
       , modal = NoModal

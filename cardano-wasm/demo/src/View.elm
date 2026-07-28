@@ -82,7 +82,7 @@ viewWalletsCard model =
                     text ""
 
                 else
-                    a [ href url, target "_blank", class "faucet" ] [ button [ class "btn ghost sm block" ] [ text "🚰 Faucet" ] ]
+                    a [ href url, target "_blank", rel "noopener noreferrer", class "faucet btn ghost sm block" ] [ text "🚰 Faucet" ]
 
             Nothing ->
                 text ""
