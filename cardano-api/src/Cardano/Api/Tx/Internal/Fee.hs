@@ -478,6 +478,7 @@ estimateTransactionKeyWitnessCount
     , txWithdrawals
     , txCertificates
     , txUpdateProposal
+    , txVotingProcedures
     } =
     fromIntegral $
       sum (map estimateTxInWitnesses txIns)
@@ -502,6 +503,12 @@ estimateTransactionKeyWitnessCount
           TxUpdateProposal _ (UpdateProposal updatePerGenesisKey _) ->
             Map.size updatePerGenesisKey
           _ -> 0
+        + case maybe TxVotingProceduresNone unFeatured txVotingProcedures of
+          TxVotingProceduresNone -> 0
+          TxVotingProcedures votingProcedures _scriptWitnessMap ->
+            length $
+              filter voterRequiresKeyWitness $
+                Map.keys (L.unVotingProcedures votingProcedures)
    where
     estimateTxInWitnesses :: (TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era)) -> Int
     estimateTxInWitnesses (_, BuildTxWith (KeyWitness _)) = 1
@@ -523,6 +530,16 @@ estimateTransactionKeyWitnessCount
     maxWitnessesInSimpleScript (RequireAllOf simpleScripts) = sum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (RequireAnyOf simpleScripts) = maximum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (RequireMOf n simpleScripts) = sum $ take n $ sortBy (comparing Down) (map maxWitnessesInSimpleScript simpleScripts)
+
+    -- Mirrors ledger's 'Cardano.Ledger.Conway.UTxO.voterWitnesses': a
+    -- committee or DRep voter needs a VKey witness only when its credential
+    -- is key-based; a stake pool voter is always key-credentialed.
+    voterRequiresKeyWitness :: L.Voter -> Bool
+    voterRequiresKeyWitness (L.CommitteeVoter (L.KeyHashObj _)) = True
+    voterRequiresKeyWitness (L.CommitteeVoter (L.ScriptHashObj _)) = False
+    voterRequiresKeyWitness (L.DRepVoter (L.KeyHashObj _)) = True
+    voterRequiresKeyWitness (L.DRepVoter (L.ScriptHashObj _)) = False
+    voterRequiresKeyWitness (L.StakePoolVoter _) = True
 
 -- ----------------------------------------------------------------------------
 -- Script execution units

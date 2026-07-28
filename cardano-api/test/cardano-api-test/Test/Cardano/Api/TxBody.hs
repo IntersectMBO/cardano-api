@@ -33,7 +33,10 @@ import Hedgehog
   , (===)
   )
 import Hedgehog qualified as H
+import Hedgehog.Extras qualified as H
 import Hedgehog.Gen (shuffle)
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
@@ -147,6 +150,71 @@ prop_simple_script_witness_count = H.property $ do
   satisfyScript (RequireMOf n simpleScripts) = shuffle simpleScripts >>= satisfyScript . RequireAllOf . take n
   satisfyScript (RequireAnyOf simpleScripts) = satisfyScript (RequireMOf 1 simpleScripts)
 
+-- | Regression test for: a key-credentialed voter (e.g. a key-hash DRep)
+-- requires a VKey witness to satisfy the ledger, but the legacy
+-- 'estimateTransactionKeyWitnessCount' does not look at 'txVotingProcedures'
+-- at all.
+--
+-- We isolate the vote contribution rather than asserting an absolute count:
+-- 'genValidTxBody' may also populate ins/certs/withdrawals/its own votes
+-- randomly, so we compare the estimate for a body carrying our generated
+-- votes against the /same/ body with the votes field cleared. Everything
+-- else is identical on both sides and cancels out exactly, so the delta
+-- must equal exactly the number of key-credentialed voters.
+prop_estimateTransactionKeyWitnessCount_counts_vote_key_witnesses :: Property
+prop_estimateTransactionKeyWitnessCount_counts_vote_key_witnesses = H.property $ do
+  let sbe = ShelleyBasedEraConway
+      ceo = ConwayEraOnwardsConway
+  (_, baseContent) <- H.forAll $ genValidTxBody sbe
+  (voteEntries, expectedKeyWitnessCount) <- H.forAll $ genVotingProceduresWithKeyWitnessCount ceo
+  votingProcedures <- H.leftFail $ mkTxVotingProcedures voteEntries
+  let contentWithoutVotes = setTxVotingProcedures Nothing baseContent
+      contentWithVotes = setTxVotingProcedures (Just (Featured ceo votingProcedures)) baseContent
+  estimateTransactionKeyWitnessCount contentWithVotes
+    === estimateTransactionKeyWitnessCount contentWithoutVotes + fromIntegral expectedKeyWitnessCount
+ where
+  -- Generate a mix of key-credentialed voters (DRep/committee-hot over a
+  -- key hash, plus stake pool voters, which are always key-credentialed)
+  -- and script-credentialed voters (DRep/committee-hot over a script hash -
+  -- stake pool voters have no script-credentialed form). Each bucket draws
+  -- its hashes via 'Gen.set', so voters within a bucket never collide as
+  -- 'Map' keys; voters across buckets can never collide either, since they
+  -- differ in the 'Voter' or 'Credential' constructor regardless of the
+  -- underlying hash. Every entry is witnessed by 'Nothing': the legacy
+  -- estimator's vote-counting branch never consults the witness map at all
+  -- (it only exists for script witnesses, and this function is estimating
+  -- KEY witnesses), so the witness value is irrelevant here - only the
+  -- ledger-side 'Voter'/'Credential' constructor drives the count. Returns
+  -- the voting procedure entries (ready for 'mkTxVotingProcedures') together
+  -- with the number of key-credentialed voters.
+  genVotingProceduresWithKeyWitnessCount
+    :: ConwayEraOnwards era
+    -> H.Gen ([(VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))], Int)
+  genVotingProceduresWithKeyWitnessCount ceo = do
+    drepKeyHashes <- Gen.set (Range.linear 0 3) (unDRepKeyHash <$> genVerificationKeyHash AsDRepKey)
+    committeeKeyHashes <-
+      Gen.set (Range.linear 0 3) (unCommitteeHotKeyHash <$> genVerificationKeyHash AsCommitteeHotKey)
+    stakePoolKeyHashes <-
+      Gen.set (Range.linear 0 3) (unStakePoolKeyHash <$> genVerificationKeyHash AsStakePoolKey)
+    drepScriptHashes <- Gen.set (Range.linear 0 3) (toShelleyScriptHash <$> genScriptHash)
+    committeeScriptHashes <- Gen.set (Range.linear 0 3) (toShelleyScriptHash <$> genScriptHash)
+    let govActionId =
+          L.GovActionId
+            (L.TxId (L.unsafeMakeSafeHash "0000000000000000000000000000000000000000000000000000000000000000"))
+            (L.GovActionIx 0)
+        votingProcedureValue = L.VotingProcedure{L.vProcVote = L.VoteYes, L.vProcAnchor = L.SNothing}
+        keyVoters =
+          [L.DRepVoter (L.KeyHashObj kh) | kh <- toList drepKeyHashes]
+            <> [L.CommitteeVoter (L.KeyHashObj kh) | kh <- toList committeeKeyHashes]
+            <> [L.StakePoolVoter kh | kh <- toList stakePoolKeyHashes]
+        scriptVoters =
+          [L.DRepVoter (L.ScriptHashObj sh) | sh <- toList drepScriptHashes]
+            <> [L.CommitteeVoter (L.ScriptHashObj sh) | sh <- toList committeeScriptHashes]
+        mkEntry voter =
+          (singletonVotingProcedures ceo voter govActionId votingProcedureValue, Nothing)
+        entries = map mkEntry keyVoters <> map mkEntry scriptVoters
+    pure (entries, length keyVoters)
+
 tests :: TestTree
 tests =
   testGroup
@@ -161,4 +229,7 @@ tests =
     , testProperty
         "simple script witness count"
         prop_simple_script_witness_count
+    , testProperty
+        "vote key witness count"
+        prop_estimateTransactionKeyWitnessCount_counts_vote_key_witnesses
     ]
