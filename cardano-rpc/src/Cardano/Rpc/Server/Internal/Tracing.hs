@@ -105,8 +105,6 @@ data TraceRpcSync
     TraceRpcFetchBlockNotFound SlotNo
   | -- | Node kernel access is not yet available
     TraceRpcNodeKernelAccessUnavailable
-  | -- | Ledger forker error
-    TraceRpcForkerError String
   deriving Show
 
 instance Pretty TraceRpcSync where
@@ -117,7 +115,6 @@ instance Pretty TraceRpcSync where
     TraceRpcReadTipSpan (SpanEnd _) -> "Finished ReadTip method"
     TraceRpcFetchBlockNotFound slot -> "Block not found at slot " <> pshow slot
     TraceRpcNodeKernelAccessUnavailable -> "Node kernel access not yet initialised"
-    TraceRpcForkerError e -> "Ledger forker error: " <> pretty e
 
 instance Error TraceRpcSync where
   prettyError = pretty
