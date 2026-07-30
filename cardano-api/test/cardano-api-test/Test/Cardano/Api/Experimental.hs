@@ -36,7 +36,6 @@ import Cardano.Ledger.Conway qualified as L
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Mary.Value qualified as Mary
-import Cardano.Ledger.Plutus.Data qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting

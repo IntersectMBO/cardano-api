@@ -227,14 +227,14 @@ import Cardano.Ledger.Address (AccountAddress (..), Addr (..))
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), Timelock (..), showTimelock)
 import Cardano.Ledger.Alonzo.Core
   ( AlonzoEraScript (..)
-  , AlonzoEraTxOut (datumTxOutF)
   , AlonzoEraTxBody (..)
+  , AlonzoEraTxOut (datumTxOutF)
   , AlonzoEraTxWits (..)
   , AsIx (..)
   , AsIxItem (AsIxItem)
   , CoinPerWord (..)
   , EraGov
-  , EraTx (bodyTxL, witsTxL, auxDataTxL)
+  , EraTx (auxDataTxL, bodyTxL, witsTxL)
   , EraTxWits (..)
   , PParamsUpdate (..)
   , Tx
