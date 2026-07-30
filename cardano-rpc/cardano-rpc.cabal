@@ -66,6 +66,7 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Sync
     Cardano.Rpc.Server.Internal.UtxoRpc.Type
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
@@ -173,6 +174,7 @@ test-suite cardano-rpc-test
     hedgehog,
     hedgehog-extras,
     memory,
+    ouroboros-consensus:cardano,
     proto-lens,
     rio,
     tasty,
@@ -191,6 +193,7 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.ByronTx
     Test.Cardano.Rpc.Eval
     Test.Cardano.Rpc.FetchBlockTx
+    Test.Cardano.Rpc.FollowTipStream
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters

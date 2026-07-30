@@ -184,6 +184,7 @@ library
     prettyprinter-ansi-terminal,
     prettyprinter-configurable ^>=1.36,
     random,
+    resource-registry ^>=0.2,
     safe-exceptions,
     scientific,
     serialise,

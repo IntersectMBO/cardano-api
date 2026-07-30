@@ -25,4 +25,7 @@ data NodeKernelAccess = NodeKernelAccess
   -- always safe: the ledger state is at or ahead of any block in ChainDB,
   -- and era summaries only grow, so the returned history always covers the
   -- slot of any block fetched from ChainDB.
+  , securityParam :: Consensus.SecurityParam
+  -- ^ The protocol security parameter /k/: consensus never rolls back more
+  -- than /k/ blocks.
   }

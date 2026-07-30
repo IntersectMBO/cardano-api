@@ -2,12 +2,17 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NoFieldSelectors #-}
 
 module Cardano.Rpc.Server.NodeKernelAccess
   ( NodeKernelAccess (..)
   , mkNodeKernelAccess
   , fetchBlock
   , grabNodeKernelAccess
+  , ChainChange (..)
+  , ChainFollower (..)
+  , withFollower
   )
 where
 
@@ -16,7 +21,7 @@ import Cardano.Api.Consensus qualified as Consensus
 import Cardano.Rpc.Server.Internal.Monad (MonadRpc, grab)
 import Cardano.Rpc.Server.NodeKernelAccess.Type
 
-import RIO (atomically, throwIO)
+import RIO (MonadUnliftIO, atomically, bracket, throwIO, withRunInIO)
 
 import Control.Tracer (Tracer, traceWith)
 import Data.ByteString (ByteString)
@@ -34,17 +39,19 @@ mkNodeKernelAccess
   -> Consensus.BlockType blk
   -- ^ Block type witness
   -> Consensus.TopLevelConfig blk
-  -- ^ Top-level consensus config (for system start and era history)
+  -- ^ Top-level consensus config (for system start, era history and the
+  -- security parameter)
   -> Consensus.NodeKernel IO addrNTN addrNTC blk
   -- ^ Consensus node kernel
   -> m (Maybe NodeKernelAccess)
 mkNodeKernelAccess tracer blockType topLevelConfig kernel = case blockType of
   Consensus.CardanoBlockType ->
-    pure $ Just NodeKernelAccess{chainDb, systemStart, readEraHistory}
+    pure $ Just NodeKernelAccess{chainDb, systemStart, readEraHistory, securityParam}
    where
     chainDb = Consensus.getChainDB kernel
     ledgerConfig = Consensus.configLedger topLevelConfig
     systemStart = Consensus.nodeSystemStart topLevelConfig
+    securityParam = Consensus.configSecurityParam topLevelConfig
     -- Read the current ledger state (cheap STM TVar read) and recompute
     -- the era summary on every call - O(number_of_eras).
     -- This is the same approach consensus uses for GetInterpreter queries
@@ -94,3 +101,81 @@ fetchBlock NodeKernelAccess{chainDb} slot (HeaderHash shortHash) = do
   let point = Consensus.RealPoint slot (Consensus.OneEraHash shortHash)
       component = (,) <$> fmap BSL.toStrict Consensus.GetRawBlock <*> fmap fromConsensusBlock Consensus.GetBlock
   liftIO $ Consensus.getBlockComponent chainDb component point
+
+-- | A single instruction produced by a chain follower.
+--
+-- 'ChainApply' carries the raw CBOR block bytes together with the same block
+-- parsed into its era context - exactly the pair 'fetchBlock' returns.
+-- Consensus rollbacks are point-only: 'ChainRollBack' never carries the
+-- blocks being rolled back, only the point to roll back to.
+data ChainChange
+  = ChainApply (ByteString, BlockInMode)
+  | ChainRollBack ChainPoint
+
+-- | A handle to a running chain follower.
+data ChainFollower = ChainFollower
+  { nextChange :: forall m. MonadIO m => m ChainChange
+  -- ^ Block until the next chain update is available.
+  , findIntersect :: forall m. MonadIO m => [ChainPoint] -> m (Maybe ChainPoint)
+  -- ^ Move the follower to the first of the given points found on the
+  -- current chain, returning that point, or 'Nothing' if none of them are
+  -- on the chain.
+  }
+
+-- | Run an action with a 'ChainFollower' tracking the selected chain.
+--
+-- The follower and the resource registry backing it are closed on every
+-- exit path, including exceptions. The follower itself runs in 'IO',
+-- because the ChainDB handle is monomorphic, so the bracket runs there and
+-- the action is unlifted into it.
+--
+-- Creating a follower is cheap: a few in-memory STM operations, nothing
+-- proportional to chain length. The costs are steady-state instead. A
+-- caught-up follower receives an O(1) notification per adopted block. A
+-- follower catching up streams blocks from the ImmutableDB, paying a disk
+-- read and a deserialisation per block, with file handles owned by the
+-- registry. The node already runs one such follower per connected N2C
+-- ChainSync client, so one follower per stream scales the same way.
+withFollower
+  :: MonadUnliftIO m
+  => NodeKernelAccess
+  -> (ChainFollower -> m a)
+  -> m a
+withFollower NodeKernelAccess{chainDb} action =
+  withRunInIO $ \runInIO ->
+    Consensus.withRegistry $ \registry ->
+      bracket
+        (Consensus.newFollower chainDb registry Consensus.SelectedChain component)
+        Consensus.followerClose
+        (runInIO . action . toChainFollower)
+ where
+  component
+    :: Consensus.BlockComponent
+         (Consensus.CardanoBlock Consensus.StandardCrypto)
+         (ByteString, BlockInMode)
+  component =
+    (,) <$> fmap BSL.toStrict Consensus.GetRawBlock <*> fmap fromConsensusBlock Consensus.GetBlock
+
+  toChainFollower
+    :: Consensus.Follower
+         IO
+         (Consensus.CardanoBlock Consensus.StandardCrypto)
+         (ByteString, BlockInMode)
+    -> ChainFollower
+  toChainFollower follower =
+    ChainFollower
+      { nextChange = liftIO $ toChainChange <$> Consensus.followerInstructionBlocking follower
+      , findIntersect = \points ->
+          liftIO $
+            fmap fromConsensusPointHF
+              <$> Consensus.followerForward follower (map toConsensusPointHF points)
+      }
+
+  toChainChange
+    :: Consensus.ChainUpdate
+         (Consensus.CardanoBlock Consensus.StandardCrypto)
+         (ByteString, BlockInMode)
+    -> ChainChange
+  toChainChange = \case
+    Consensus.AddBlock rawBlock -> ChainApply rawBlock
+    Consensus.RollBack point -> ChainRollBack (fromConsensusPointHF point)

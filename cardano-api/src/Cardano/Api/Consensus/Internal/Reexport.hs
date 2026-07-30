@@ -2,10 +2,12 @@ module Cardano.Api.Consensus.Internal.Reexport
   ( BlockComponent (..)
   , ByronBlock
   , CardanoBlock
+  , ChainUpdate (..)
   , ConfigSupportsNode
   , ChainDepState
   , GenTx (..)
   , HasHeader
+  , Header
   , HeaderHash
   , EraMismatch (..)
   , NodeKernel (..)
@@ -15,6 +17,8 @@ module Cardano.Api.Consensus.Internal.Reexport
   , PraosProtocolSupportsNode
   , PraosProtocolSupportsNodeCrypto
   , RealPoint (..)
+  , ResourceRegistry
+  , SecurityParam (..)
   , ShelleyGenesisStaking (..)
   , StandardCrypto
   , TopLevelConfig
@@ -26,18 +30,21 @@ module Cardano.Api.Consensus.Internal.Reexport
   , byronIdTx
   , configBlock
   , configLedger
+  , configSecurityParam
   , condense
   , getOpCertCounters
   , interpreterToEpochInfo
   , mkInterpreter
   , unsafeExtendSafeZone
   , txId
+  , withRegistry
   )
 where
 
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Block
   ( HasHeader
+  , Header
   , HeaderHash
   , RealPoint (..)
   , blockHash
@@ -46,7 +53,13 @@ import Ouroboros.Consensus.Block
   )
 import Ouroboros.Consensus.Byron.Ledger (ByronBlock (byronBlockRaw), GenTx (..), byronIdTx)
 import Ouroboros.Consensus.Cardano.Block (CardanoBlock, EraMismatch (..))
-import Ouroboros.Consensus.Config (TopLevelConfig, configBlock, configLedger)
+import Ouroboros.Consensus.Config
+  ( TopLevelConfig
+  , configBlock
+  , configLedger
+  , configSecurityParam
+  )
+import Ouroboros.Consensus.Config.SecurityParam (SecurityParam (..))
 import Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode)
 import Ouroboros.Consensus.HardFork.Abstract (HasHardForkHistory (..))
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraHash (..))
@@ -68,3 +81,6 @@ import Ouroboros.Consensus.Protocol.Praos.Common
 import Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 import Ouroboros.Consensus.Storage.Common (BlockComponent (..))
 import Ouroboros.Consensus.Util.Condense (condense)
+import Ouroboros.Network.Block (ChainUpdate (..))
+
+import Control.ResourceRegistry (ResourceRegistry, withRegistry)
