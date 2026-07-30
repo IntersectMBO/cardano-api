@@ -74,7 +74,6 @@ module Cardano.Api.Ledger.Internal.Reexport
   , getScriptsNeeded
   , mkBasicTxOut
   , coinTxOutL
-  , valueTxOutL
   , toDeltaCoin
   , toEraCBOR
   , toSLanguage
@@ -245,14 +244,14 @@ import Cardano.Ledger.Address (AccountAddress (..), Addr (..))
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), Timelock (..), showTimelock)
 import Cardano.Ledger.Alonzo.Core
   ( AlonzoEraScript (..)
-  , AlonzoEraTxOut (datumTxOutF)
   , AlonzoEraTxBody (..)
+  , AlonzoEraTxOut (datumTxOutF)
   , AlonzoEraTxWits (..)
   , AsIx (..)
   , AsIxItem (AsIxItem)
   , CoinPerWord (..)
   , EraGov
-  , EraTx (bodyTxL, witsTxL, auxDataTxL)
+  , EraTx (auxDataTxL, bodyTxL, witsTxL)
   , EraTxWits (..)
   , PParamsUpdate (..)
   , Tx
@@ -292,7 +291,6 @@ import Cardano.Ledger.Api
   , treasuryDonationTxBodyL
   , unRedeemers
   , updateTxBodyL
-  , valueTxOutL
   , votingProceduresTxBodyL
   )
 import Cardano.Ledger.Api.Tx.Cert
