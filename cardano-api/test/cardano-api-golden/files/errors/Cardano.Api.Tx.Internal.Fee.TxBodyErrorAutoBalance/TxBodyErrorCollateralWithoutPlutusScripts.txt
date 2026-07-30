@@ -1,0 +1,3 @@
+The transaction has collateral inputs, but no Plutus scripts.
+The ledger requires collateral only for transactions that run Plutus scripts and ignores it otherwise: the collateral inputs would only cost fees and require the collateral UTxOs to stay unspent.
+The usual solution is to remove the collateral inputs from the transaction. A transaction that should become invalid when some UTxO is spent can use a reference input for that purpose.

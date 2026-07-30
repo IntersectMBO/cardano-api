@@ -604,18 +604,24 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
             H.annotateShow err
             H.annotate "Unreachable: the guard above ensures the collateral covers the requirement"
             H.failure
+          Left err@CollateralWithoutPlutusScripts -> do
+            H.annotateShow err
+            H.annotate
+              "Unreachable: calcReturnAndTotalCollateral does not check for Plutus scripts, \
+              \the balancing functions do before calling it"
+            H.failure
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
 --
 -- The ledger requires collateral only for transactions that run Plutus
--- scripts, so balancing a transaction without Plutus scripts must not
--- include any collateral: the collateral inputs are removed and no
--- collateral fields are set. In particular it must not compute a return
--- collateral output: with a collateral input holding exactly the minimum
--- UTxO value, the computed return collateral output would fall below its own
--- minimum UTxO value, and the ledger would reject the transaction.
-prop_make_transaction_body_autobalance_no_collateral_without_plutus :: Property
-prop_make_transaction_body_autobalance_no_collateral_without_plutus = H.propertyOnce $ do
+-- scripts, so balancing a transaction that provides collateral inputs but
+-- runs no Plutus scripts must fail with 'CollateralWithoutPlutusScripts'.
+-- In particular it must not compute a return collateral output: with a
+-- collateral input holding exactly the minimum UTxO value, the computed
+-- return collateral output would fall below its own minimum UTxO value,
+-- and the ledger would reject the transaction.
+prop_make_transaction_body_autobalance_fails_on_collateral_without_plutus :: Property
+prop_make_transaction_body_autobalance_fails_on_collateral_without_plutus = H.propertyOnce $ do
   let ceo = ConwayEraOnwardsConway
       beo = convert ceo
       aeo = convert beo
@@ -661,37 +667,35 @@ prop_make_transaction_body_autobalance_no_collateral_without_plutus = H.property
           & setTxOuts (mkTxOutput beo address (L.Coin 5_000_000) Nothing)
           & setTxProtocolParams (pure $ pure pparams)
 
-  BalancedTxBody balancedContent _ _ _ <-
-    H.leftFail $
-      makeTransactionBodyAutoBalance
-        sbe
-        systemStart
-        epochInfo
-        pparams
-        mempty
-        mempty
-        mempty
-        utxos
-        content
-        address
-        Nothing
-
-  case ( txInsCollateral balancedContent
-       , txReturnCollateral balancedContent
-       , txTotalCollateral balancedContent
-       ) of
-    (TxInsCollateralNone, TxReturnCollateralNone, TxTotalCollateralNone) -> pure ()
-    collateral -> do
-      H.annotateShow collateral
-      H.annotate "Expected no collateral in a transaction without Plutus scripts"
+  case makeTransactionBodyAutoBalance
+    sbe
+    systemStart
+    epochInfo
+    pparams
+    mempty
+    mempty
+    mempty
+    utxos
+    content
+    address
+    Nothing of
+    -- The transaction provides collateral inputs but runs no Plutus
+    -- scripts, so balancing must fail with exactly this error.
+    Left (Api.TxBodyErrorCollateral CollateralWithoutPlutusScripts) -> H.success
+    Left err -> do
+      H.annotateShow err
+      H.annotate "Expected balancing to fail with CollateralWithoutPlutusScripts"
+      H.failure
+    Right _ -> do
+      H.annotate "Expected balancing to fail with CollateralWithoutPlutusScripts, but it succeeded"
       H.failure
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
 --
--- Like 'prop_make_transaction_body_autobalance_no_collateral_without_plutus',
+-- Like 'prop_make_transaction_body_autobalance_fails_on_collateral_without_plutus',
 -- but for 'estimateBalancedTxBody'.
-prop_estimate_balanced_tx_body_no_collateral_without_plutus :: Property
-prop_estimate_balanced_tx_body_no_collateral_without_plutus = H.propertyOnce $ do
+prop_estimate_balanced_tx_body_fails_on_collateral_without_plutus :: Property
+prop_estimate_balanced_tx_body_fails_on_collateral_without_plutus = H.propertyOnce $ do
   let ceo = ConwayEraOnwardsConway
       beo = convert ceo
       aeo = convert beo
@@ -722,31 +726,30 @@ prop_estimate_balanced_tx_body_no_collateral_without_plutus = H.propertyOnce $ d
           & setTxOuts (mkTxOutput beo address (L.Coin 5_000_000) Nothing)
           & setTxProtocolParams (pure $ pure (LedgerProtocolParameters ledgerPParams))
 
-  BalancedTxBody balancedContent _ _ _ <-
-    H.leftFail $
-      estimateBalancedTxBody
-        meo
-        content
-        ledgerPParams
-        mempty
-        mempty
-        mempty
-        mempty
-        minUTxOCollateral
-        1
-        0
-        0
-        address
-        (lovelaceToValue 12_000_000)
-
-  case ( txInsCollateral balancedContent
-       , txReturnCollateral balancedContent
-       , txTotalCollateral balancedContent
-       ) of
-    (TxInsCollateralNone, TxReturnCollateralNone, TxTotalCollateralNone) -> pure ()
-    collateral -> do
-      H.annotateShow collateral
-      H.annotate "Expected no collateral in a transaction without Plutus scripts"
+  case estimateBalancedTxBody
+    meo
+    content
+    ledgerPParams
+    mempty
+    mempty
+    mempty
+    mempty
+    minUTxOCollateral
+    1
+    0
+    0
+    address
+    (lovelaceToValue 12_000_000) of
+    -- The transaction provides collateral inputs but runs no Plutus
+    -- scripts, so balancing must fail with exactly this error.
+    Left (TxFeeEstimationBalanceError (Api.TxBodyErrorCollateral CollateralWithoutPlutusScripts)) ->
+      H.success
+    Left err -> do
+      H.annotateShow err
+      H.annotate "Expected balancing to fail with CollateralWithoutPlutusScripts"
+      H.failure
+    Right _ -> do
+      H.annotate "Expected balancing to fail with CollateralWithoutPlutusScripts, but it succeeded"
       H.failure
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
@@ -1238,11 +1241,11 @@ tests =
         prop_make_transaction_body_autobalance_when_deregistering_certs
     , testProperty "calcReturnAndTotalCollateral constraints hold" prop_calcReturnAndTotalCollateral
     , testProperty
-        "makeTransactionBodyAutoBalance removes collateral on transactions without Plutus scripts"
-        prop_make_transaction_body_autobalance_no_collateral_without_plutus
+        "makeTransactionBodyAutoBalance fails on collateral without Plutus scripts"
+        prop_make_transaction_body_autobalance_fails_on_collateral_without_plutus
     , testProperty
-        "estimateBalancedTxBody removes collateral on transactions without Plutus scripts"
-        prop_estimate_balanced_tx_body_no_collateral_without_plutus
+        "estimateBalancedTxBody fails on collateral without Plutus scripts"
+        prop_estimate_balanced_tx_body_fails_on_collateral_without_plutus
     , testProperty
         "makeTransactionBodyAutoBalance fails on return collateral with tokens below min UTxO"
         prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_utxo
