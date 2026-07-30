@@ -459,7 +459,15 @@ genScriptInEra era =
     [ ScriptInEra langInEra <$> genValidScript lang
     | AnyScriptLanguage lang <- [minBound .. maxBound]
     , Just langInEra <- [scriptLanguageSupportedInEra era lang]
+    , hasCBORWitnessSupport langInEra
     ]
+ where
+  -- PlutusV4 inline script witnesses are not yet supported in Dijkstra era
+  -- CBOR encoding (AlonzoTxWitsRaw key 8 is a ledger TODO). Exclude them
+  -- from generators to prevent roundtrip failures.
+  hasCBORWitnessSupport :: ScriptLanguageInEra l e -> Bool
+  hasCBORWitnessSupport PlutusScriptV4InDijkstra = False
+  hasCBORWitnessSupport _ = True
 
 genScriptHash :: Gen ScriptHash
 genScriptHash = do
@@ -1169,7 +1177,13 @@ genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
 genTxScriptValidity =
   inEonForEra
     (pure TxScriptValidityNone)
-    (\w -> TxScriptValidity w <$> genScriptValidity)
+    ( \w ->
+        TxScriptValidity w <$> case w of
+          -- Dijkstra does not support IsValid False: the CBOR encoding omits the
+          -- isValid flag entirely and decoding always yields IsValid True.
+          AlonzoEraOnwardsDijkstra -> pure ScriptValid
+          _ -> genScriptValidity
+    )
 
 genScriptValidity :: Gen ScriptValidity
 genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]

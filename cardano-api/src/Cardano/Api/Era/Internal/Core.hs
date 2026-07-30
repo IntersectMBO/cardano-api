@@ -381,7 +381,7 @@ instance Eq AnyCardanoEra where
 
 instance Bounded AnyCardanoEra where
   minBound = AnyCardanoEra ByronEra
-  maxBound = AnyCardanoEra ConwayEra
+  maxBound = AnyCardanoEra DijkstraEra
 
 instance Enum AnyCardanoEra where
   -- [e..] = [e..maxBound]
@@ -405,6 +405,7 @@ instance Enum AnyCardanoEra where
     4 -> AnyCardanoEra AlonzoEra
     5 -> AnyCardanoEra BabbageEra
     6 -> AnyCardanoEra ConwayEra
+    7 -> AnyCardanoEra DijkstraEra
     n ->
       error $
         "AnyCardanoEra.toEnum: "
@@ -445,6 +446,7 @@ anyCardanoEraFromStringLike = \case
   "Alonzo" -> pure $ AnyCardanoEra AlonzoEra
   "Babbage" -> pure $ AnyCardanoEra BabbageEra
   "Conway" -> pure $ AnyCardanoEra ConwayEra
+  "Dijkstra" -> pure $ AnyCardanoEra DijkstraEra
   wrong -> Left wrong
 
 -- | Like the 'AnyCardanoEra' constructor but does not demand a 'IsCardanoEra'
