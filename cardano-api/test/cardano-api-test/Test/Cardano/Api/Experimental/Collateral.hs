@@ -16,7 +16,6 @@ import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Experimental.Plutus qualified as ExpPlutus
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Parser.Text qualified as Api
 
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Conway.Scripts qualified as Conway
@@ -33,43 +32,13 @@ import GHC.Exts (fromList)
 import Lens.Micro
 
 import Test.Cardano.Api.Experimental (exampleProtocolParams)
+import Test.Cardano.Api.Transaction.Fixtures (mkTxIn)
 
 import Hedgehog (Property)
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
-
--- | Tests in this module can be run by themselves by writing:
--- ```bash
--- cabal test cardano-api-test --test-options="--pattern=Test.Cardano.Api.Experimental.Collateral"
--- ```
-tests :: TestTree
-tests =
-  testGroup
-    "Test.Cardano.Api.Experimental.Collateral"
-    [ testGroup
-        "makeTransactionBodyAutoBalance"
-        [ testProperty
-            "fails on collateral without Plutus scripts"
-            prop_makeTransactionBodyAutoBalance_fails_on_collateral_without_plutus
-        , testProperty
-            "fails on return collateral with tokens below min UTxO"
-            prop_makeTransactionBodyAutoBalance_return_collateral_with_tokens_below_min_utxo
-        , testProperty
-            "folds return collateral dust into the total collateral"
-            prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral
-        ]
-    , testGroup
-        "estimateBalancedTxBody"
-        [ testProperty
-            "fails on collateral without Plutus scripts"
-            prop_estimateBalancedTxBody_fails_on_collateral_without_plutus
-        , testProperty
-            "folds return collateral dust into the total collateral"
-            prop_estimateBalancedTxBody_folds_dust_into_total_collateral
-        ]
-    ]
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
 --
@@ -89,14 +58,9 @@ prop_makeTransactionBodyAutoBalance_fails_on_collateral_without_plutus = H.prope
         Api.LedgerEpochInfo $
           Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
 
-  fundingTxIn <-
-    H.evalEither $
-      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
-  collateralTxIn <-
-    H.evalEither $
-      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
-
-  let addr =
+  let fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+      addr =
         L.Addr
           L.Testnet
           (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
@@ -149,14 +113,9 @@ prop_estimateBalancedTxBody_fails_on_collateral_without_plutus = H.propertyOnce 
   let era = Exp.ConwayEra
       sbe = convert era
 
-  fundingTxIn <-
-    H.evalEither $
-      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
-  collateralTxIn <-
-    H.evalEither $
-      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
-
-  let addr =
+  let fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+      addr =
         L.Addr
           L.Testnet
           (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
@@ -223,14 +182,9 @@ prop_makeTransactionBodyAutoBalance_return_collateral_with_tokens_below_min_utxo
     H.evalIO $ B.readFile "test/cardano-api-test/files/input/plutus/v3.alwaysTrue.json"
   Exp.AnyPlutusScript plutusScript <- H.evalEither $ Exp.readAnyScriptBytes era scriptEnvelope
 
-  fundingTxIn <-
-    H.evalEither $
-      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
-  collateralTxIn <-
-    H.evalEither $
-      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
-
-  let addr =
+  let fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+      addr =
         L.Addr
           L.Testnet
           (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
@@ -321,14 +275,9 @@ prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral = H.propert
     H.evalIO $ B.readFile "test/cardano-api-test/files/input/plutus/v3.alwaysTrue.json"
   Exp.AnyPlutusScript plutusScript <- H.evalEither $ Exp.readAnyScriptBytes era scriptEnvelope
 
-  fundingTxIn <-
-    H.evalEither $
-      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
-  collateralTxIn <-
-    H.evalEither $
-      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
-
-  let addr =
+  let fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+      addr =
         L.Addr
           L.Testnet
           (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
@@ -406,14 +355,9 @@ prop_estimateBalancedTxBody_folds_dust_into_total_collateral = H.propertyOnce $ 
     H.evalIO $ B.readFile "test/cardano-api-test/files/input/plutus/v3.alwaysTrue.json"
   Exp.AnyPlutusScript plutusScript <- H.evalEither $ Exp.readAnyScriptBytes era scriptEnvelope
 
-  fundingTxIn <-
-    H.evalEither $
-      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
-  collateralTxIn <-
-    H.evalEither $
-      Api.runParser Api.parseTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
-
-  let addr =
+  let fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
+      addr =
         L.Addr
           L.Testnet
           (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
@@ -475,3 +419,34 @@ prop_estimateBalancedTxBody_folds_dust_into_total_collateral = H.propertyOnce $ 
   returnCollateralAda H.=== Nothing
   H.note_ "Check that all of the collateral inputs are used as total collateral"
   totalCollateralAda H.=== Just minUTxOCollateral
+
+-- | Tests in this module can be run by themselves by writing:
+-- ```bash
+-- cabal test cardano-api-test --test-options="--pattern=Test.Cardano.Api.Experimental.Collateral"
+-- ```
+tests :: TestTree
+tests =
+  testGroup
+    "Test.Cardano.Api.Experimental.Collateral"
+    [ testGroup
+        "makeTransactionBodyAutoBalance"
+        [ testProperty
+            "fails on collateral without Plutus scripts"
+            prop_makeTransactionBodyAutoBalance_fails_on_collateral_without_plutus
+        , testProperty
+            "fails on return collateral with tokens below min UTxO"
+            prop_makeTransactionBodyAutoBalance_return_collateral_with_tokens_below_min_utxo
+        , testProperty
+            "folds return collateral dust into the total collateral"
+            prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral
+        ]
+    , testGroup
+        "estimateBalancedTxBody"
+        [ testProperty
+            "fails on collateral without Plutus scripts"
+            prop_estimateBalancedTxBody_fails_on_collateral_without_plutus
+        , testProperty
+            "folds return collateral dust into the total collateral"
+            prop_estimateBalancedTxBody_folds_dust_into_total_collateral
+        ]
+    ]

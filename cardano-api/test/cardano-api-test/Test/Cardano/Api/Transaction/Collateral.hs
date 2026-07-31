@@ -35,7 +35,7 @@ import Lens.Micro ((^.))
 import Test.Gen.Cardano.Api.Typed
 
 import Test.Cardano.Api.Orphans ()
-import Test.Cardano.Api.Transaction.Utils
+import Test.Cardano.Api.Transaction.Fixtures
 
 import Hedgehog (Property, forAll, (===))
 import Hedgehog qualified as H

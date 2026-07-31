@@ -1,6 +1,7 @@
 project: cardano-api
 pr: 1274
 kind:
+  - bugfix
   - breaking
 description: |
-  Since #1265, `makeTransactionBodyAutoBalance` and `estimateBalancedTxBody` (both the traditional and the experimental versions) silently remove the collateral inputs from transactions without Plutus scripts. From this PR, instead of silently dropping the collateral inputs, it fails with the new `CollateralWithoutPlutusScripts` error. The ledger requires collateral only for transactions that run Plutus scripts and ignores it otherwise: the collateral inputs would only cost fees and require the collateral UTxOs to stay unspent, so they are most likely a mistake.
+  `makeTransactionBodyAutoBalance` and `estimateBalancedTxBody` (both the traditional and the experimental versions) now fail with the new `CollateralWithoutPlutusScripts` error on transactions that provide collateral inputs but run no Plutus scripts. The ledger requires collateral only for transactions that run Plutus scripts and ignores it otherwise: the collateral inputs would only cost fees and require the collateral UTxOs to stay unspent. Previously, the collateral inputs were kept and the collateral fields were set; with a small collateral input, the computed return collateral output fell below the minimum UTxO value and the ledger rejected the transaction.

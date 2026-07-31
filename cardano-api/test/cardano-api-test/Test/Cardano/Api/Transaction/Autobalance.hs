@@ -4,6 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Test.Cardano.Api.Transaction.Autobalance
@@ -27,11 +28,12 @@ import Data.Bifunctor (first)
 import Data.Function
 import Data.Map.Strict qualified as M
 import GHC.Exts (IsList (..))
+import GHC.Stack
 
 import Test.Gen.Cardano.Api.Typed
 
 import Test.Cardano.Api.Orphans ()
-import Test.Cardano.Api.Transaction.Utils
+import Test.Cardano.Api.Transaction.Fixtures
 
 import Hedgehog (Property, forAll, (===))
 import Hedgehog qualified as H
@@ -465,6 +467,38 @@ prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
   balancedProposalProcedureList === [(proposalProcedure, ViewTx)]
 
 -- * Utilities
+
+mkSimpleUTxOs :: ShelleyBasedEra ConwayEra -> UTxO ConwayEra
+mkSimpleUTxOs sbe =
+  UTxO
+    [
+      ( mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      , TxOut
+          ( AddressInEra
+              (ShelleyAddressInEra sbe)
+              ( ShelleyAddress
+                  L.Testnet
+                  (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
+                  L.StakeRefNull
+              )
+          )
+          ( lovelaceToTxOutValue
+              sbe
+              2_000_000_000
+          )
+          TxOutDatumNone
+          ReferenceScriptNone
+      )
+    ]
+
+getTxOutCoin
+  :: forall era ctx m
+   . (HasCallStack, MonadFail m, IsMaryBasedEra era)
+  => TxOut ctx era
+  -> m L.Coin
+getTxOutCoin txout = withFrozenCallStack $ maryEraOnwardsConstraints (maryBasedEra @era) $ do
+  TxOut _ (TxOutValueShelleyBased _ (L.MaryValue changeCoin _)) _ _ <- pure txout
+  pure changeCoin
 
 tests :: TestTree
 tests =

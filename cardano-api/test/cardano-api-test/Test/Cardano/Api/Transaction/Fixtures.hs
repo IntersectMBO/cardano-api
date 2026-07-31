@@ -6,15 +6,13 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Test.Cardano.Api.Transaction.Utils
-  ( mkSimpleUTxOs
-  , loadPlutusWitness
-  , textEnvTypes
+-- | Hard-coded fixtures shared by the transaction balancing test modules.
+module Test.Cardano.Api.Transaction.Fixtures
+  ( loadPlutusWitness
   , mkUtxos
   , mkAddress
   , mkTxOutput
   , parseSystemStart
-  , getTxOutCoin
   , mkCredential
   , mkTxIn
   )
@@ -40,29 +38,6 @@ import Test.Cardano.Api.Orphans ()
 import Hedgehog (MonadTest)
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
-
-mkSimpleUTxOs :: ShelleyBasedEra ConwayEra -> UTxO ConwayEra
-mkSimpleUTxOs sbe =
-  UTxO
-    [
-      ( mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
-      , TxOut
-          ( AddressInEra
-              (ShelleyAddressInEra sbe)
-              ( ShelleyAddress
-                  L.Testnet
-                  (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
-                  L.StakeRefNull
-              )
-          )
-          ( lovelaceToTxOutValue
-              sbe
-              2_000_000_000
-          )
-          TxOutDatumNone
-          ReferenceScriptNone
-      )
-    ]
 
 loadPlutusWitness
   :: HasCallStack
@@ -176,15 +151,6 @@ parseSystemStart timeString =
   withFrozenCallStack $
     fmap SystemStart . H.evalIO $
       DT.parseTimeM True DT.defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" timeString
-
-getTxOutCoin
-  :: forall era ctx m
-   . (HasCallStack, MonadFail m, IsMaryBasedEra era)
-  => TxOut ctx era
-  -> m L.Coin
-getTxOutCoin txout = withFrozenCallStack $ maryEraOnwardsConstraints (maryBasedEra @era) $ do
-  TxOut _ (TxOutValueShelleyBased _ (L.MaryValue changeCoin _)) _ _ <- pure txout
-  pure changeCoin
 
 mkCredential :: HasCallStack => Text -> L.Credential k
 mkCredential = errorFail @String . L.parseCredential

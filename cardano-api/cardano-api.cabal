@@ -424,7 +424,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Transaction.Autobalance
     Test.Cardano.Api.Transaction.Body.Plutus.Scripts
     Test.Cardano.Api.Transaction.Collateral
-    Test.Cardano.Api.Transaction.Utils
+    Test.Cardano.Api.Transaction.Fixtures
     Test.Cardano.Api.TxBody
     Test.Cardano.Api.Value
 
