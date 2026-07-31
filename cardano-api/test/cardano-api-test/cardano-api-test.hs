@@ -15,6 +15,7 @@ import Test.Cardano.Api.Envelope qualified
 import Test.Cardano.Api.EpochLeadership qualified
 import Test.Cardano.Api.Eras qualified
 import Test.Cardano.Api.Experimental qualified
+import Test.Cardano.Api.Experimental.Collateral qualified
 import Test.Cardano.Api.Experimental.Fee qualified
 import Test.Cardano.Api.Genesis qualified
 import Test.Cardano.Api.GovAnchorValidation qualified
@@ -28,6 +29,7 @@ import Test.Cardano.Api.Ord qualified
 import Test.Cardano.Api.RawBytes qualified
 import Test.Cardano.Api.Transaction.Autobalance qualified
 import Test.Cardano.Api.Transaction.Body.Plutus.Scripts qualified
+import Test.Cardano.Api.Transaction.Collateral qualified
 import Test.Cardano.Api.TxBody qualified
 import Test.Cardano.Api.Value qualified
 
@@ -56,6 +58,7 @@ tests =
     , Test.Cardano.Api.EpochLeadership.tests
     , Test.Cardano.Api.Eras.tests
     , Test.Cardano.Api.Experimental.tests
+    , Test.Cardano.Api.Experimental.Collateral.tests
     , Test.Cardano.Api.Experimental.Fee.tests
     , Test.Cardano.Api.Genesis.tests
     , Test.Cardano.Api.IO.tests
@@ -68,6 +71,7 @@ tests =
     , Test.Cardano.Api.RawBytes.tests
     , Test.Cardano.Api.Transaction.Body.Plutus.Scripts.tests
     , Test.Cardano.Api.Transaction.Autobalance.tests
+    , Test.Cardano.Api.Transaction.Collateral.tests
     , Test.Cardano.Api.TxBody.tests
     , Test.Cardano.Api.Value.tests
     ]

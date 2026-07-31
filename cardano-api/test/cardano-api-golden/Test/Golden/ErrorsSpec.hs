@@ -437,6 +437,10 @@ test_TxBodyErrorAutoBalance =
       ( "TxBodyErrorCollateralReturnBelowMinimumUTxO"
       , TxBodyErrorCollateral $ ReturnCollateralBelowMinimumUTxO 1 2
       )
+    ,
+      ( "TxBodyErrorCollateralWithoutPlutusScripts"
+      , TxBodyErrorCollateral CollateralWithoutPlutusScripts
+      )
     ]
 
 test_TxMetadataJsonError :: TestTree
