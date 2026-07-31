@@ -4,7 +4,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Test.Cardano.Api.Transaction.Autobalance
@@ -28,7 +27,6 @@ import Data.Bifunctor (first)
 import Data.Function
 import Data.Map.Strict qualified as M
 import GHC.Exts (IsList (..))
-import GHC.Stack
 
 import Test.Gen.Cardano.Api.Typed
 
@@ -48,7 +46,6 @@ prop_make_transaction_body_autobalance_invariants = H.property $ do
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
 
-  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
   let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
 
   pparams <-
@@ -108,7 +105,7 @@ prop_make_transaction_body_autobalance_invariants = H.property $ do
     H.leftFail . first prettyError $
       makeTransactionBodyAutoBalance
         sbe
-        systemStart
+        testSystemStart
         epochInfo
         pparams
         mempty
@@ -140,7 +137,6 @@ prop_make_transaction_body_autobalance_no_change = H.propertyOnce $ do
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
 
-  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
   let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
 
   pparams <-
@@ -197,7 +193,7 @@ prop_make_transaction_body_autobalance_no_change = H.propertyOnce $ do
     H.leftFail . first prettyError $
       makeTransactionBodyAutoBalance
         sbe
-        systemStart
+        testSystemStart
         epochInfo
         pparams
         mempty
@@ -225,7 +221,6 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
       sbe = convert ceo
       aeo = convert beo
 
-  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
   let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
 
   pparams <-
@@ -238,7 +233,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
   let utxos = mkUtxos beo (Just scriptHash)
       txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
       txInputsCollateral = TxInsCollateral aeo $ toList . M.keys . unUTxO $ utxos
-  let address = mkAddress sbe scriptHash
+  let address = mkScriptAddress sbe scriptHash
 
   let txMint =
         TxMintValue
@@ -262,7 +257,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
     H.leftFail $
       makeTransactionBodyAutoBalance
         sbe
-        systemStart
+        testSystemStart
         epochInfo
         pparams
         mempty
@@ -292,7 +287,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
     H.leftFail $
       makeTransactionBodyAutoBalance
         sbe
-        systemStart
+        testSystemStart
         epochInfo
         pparams
         mempty
@@ -326,7 +321,6 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.property $ d
       beo = convert ceo
       sbe = convert beo
 
-  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
   let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
 
   pparams <-
@@ -337,8 +331,8 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.property $ d
 
   let utxos = mkUtxos beo Nothing
       txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
-      txInputsTotalCoin = mconcat $ getTxOutCoin =<< M.elems (unUTxO utxos)
-      address = mkAddress sbe scriptHash
+      txInputsTotalCoin = mconcat [txOutValueToLovelace value | TxOut _ value _ _ <- M.elems (unUTxO utxos)]
+      address = mkScriptAddress sbe scriptHash
       deregDeposit = L.Coin 20_000_000
       txOutCoin = L.Coin 20_800_000
       mkStakeKeyFromHash hashStr = do
@@ -373,7 +367,7 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.property $ d
     H.leftFail $
       makeTransactionBodyAutoBalance
         sbe
-        systemStart
+        testSystemStart
         epochInfo
         pparams
         mempty
@@ -384,7 +378,8 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.property $ d
         address
         Nothing
 
-  changeCoin <- getTxOutCoin changeOut
+  let TxOut _ changeValue _ _ = changeOut
+      changeCoin = txOutValueToLovelace changeValue
 
   H.note_ "Sanity check: inputs == outputs"
   mconcat [deregDeposit, txInputsTotalCoin] === mconcat [txOutCoin, fee, changeCoin]
@@ -397,7 +392,6 @@ prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
   let ceo = ConwayEraOnwardsConway
       sbe = convert ceo
 
-  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
   let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
 
   pparams <-
@@ -449,7 +443,7 @@ prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
     H.leftFail $
       makeTransactionBodyAutoBalance
         sbe
-        systemStart
+        testSystemStart
         epochInfo
         pparams
         mempty
@@ -474,14 +468,7 @@ mkSimpleUTxOs sbe =
     [
       ( mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
       , TxOut
-          ( AddressInEra
-              (ShelleyAddressInEra sbe)
-              ( ShelleyAddress
-                  L.Testnet
-                  (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
-                  L.StakeRefNull
-              )
-          )
+          (mkKeyHashAddress sbe)
           ( lovelaceToTxOutValue
               sbe
               2_000_000_000
@@ -490,15 +477,6 @@ mkSimpleUTxOs sbe =
           ReferenceScriptNone
       )
     ]
-
-getTxOutCoin
-  :: forall era ctx m
-   . (HasCallStack, MonadFail m, IsMaryBasedEra era)
-  => TxOut ctx era
-  -> m L.Coin
-getTxOutCoin txout = withFrozenCallStack $ maryEraOnwardsConstraints (maryBasedEra @era) $ do
-  TxOut _ (TxOutValueShelleyBased _ (L.MaryValue changeCoin _)) _ _ <- pure txout
-  pure changeCoin
 
 tests :: TestTree
 tests =

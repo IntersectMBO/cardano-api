@@ -1328,6 +1328,10 @@ instance Error CollateralError where
 -- minimum UTxO value; user-provided fields are otherwise passed through
 -- unvalidated.
 --
+-- This function does not check whether the transaction actually needs
+-- collateral: the ledger requires it only for transactions that run Plutus
+-- scripts, and the balancing functions check that before calling this one.
+--
 -- Calculation taken from validateInsufficientCollateral:
 -- https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
 -- TODO: Bug Jared to expose a function from the ledger that returns total and

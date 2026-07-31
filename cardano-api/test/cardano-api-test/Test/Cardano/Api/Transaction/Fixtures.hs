@@ -10,9 +10,10 @@
 module Test.Cardano.Api.Transaction.Fixtures
   ( loadPlutusWitness
   , mkUtxos
-  , mkAddress
+  , mkScriptAddress
+  , mkKeyHashAddress
   , mkTxOutput
-  , parseSystemStart
+  , testSystemStart
   , mkCredential
   , mkTxIn
   )
@@ -29,7 +30,7 @@ import Cardano.Ledger.Mary.Value qualified as L
 import Control.Monad.Trans.Fail (errorFail)
 import Data.ByteString qualified as B
 import Data.Maybe
-import Data.Time.Format qualified as DT
+import Data.Time (UTCTime (..), fromGregorian)
 import GHC.Exts (IsList (..))
 import GHC.Stack
 
@@ -109,13 +110,25 @@ mkUtxos beo mScriptHash = babbageEraOnwardsConstraints beo $ do
     ]
 
 -- | Make an address from a script hash
-mkAddress :: ShelleyBasedEra era -> L.ScriptHash -> AddressInEra era
-mkAddress sbe scriptHash =
+mkScriptAddress :: ShelleyBasedEra era -> L.ScriptHash -> AddressInEra era
+mkScriptAddress sbe scriptHash =
   AddressInEra
     (ShelleyAddressInEra sbe)
     ( ShelleyAddress
         L.Testnet
         (L.ScriptHashObj scriptHash)
+        L.StakeRefNull
+    )
+
+-- | A hard-coded key-hash address, the payment address used by the
+-- balancing tests.
+mkKeyHashAddress :: ShelleyBasedEra era -> AddressInEra era
+mkKeyHashAddress sbe =
+  AddressInEra
+    (ShelleyAddressInEra sbe)
+    ( ShelleyAddress
+        L.Testnet
+        (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
         L.StakeRefNull
     )
 
@@ -146,11 +159,9 @@ mkTxOutput beo address coin mScriptHash = babbageEraOnwardsConstraints beo $ do
       ReferenceScriptNone
     ]
 
-parseSystemStart :: (HasCallStack, MonadTest m, MonadIO m) => String -> m SystemStart
-parseSystemStart timeString =
-  withFrozenCallStack $
-    fmap SystemStart . H.evalIO $
-      DT.parseTimeM True DT.defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" timeString
+-- | 2021-09-01T00:00:00Z, the system start used by the balancing tests.
+testSystemStart :: SystemStart
+testSystemStart = SystemStart $ UTCTime (fromGregorian 2021 9 1) 0
 
 mkCredential :: HasCallStack => Text -> L.Credential k
 mkCredential = errorFail @String . L.parseCredential

@@ -53,7 +53,6 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
       meo = convert beo
       aeo = convert beo
 
-  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
   let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
 
   pparams <-
@@ -66,7 +65,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
   let utxos = mkUtxos beo (Just scriptHash)
       txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
       txInputsCollateral = TxInsCollateral aeo $ toList . M.keys . unUTxO $ utxos
-  let address = mkAddress sbe scriptHash
+  let address = mkScriptAddress sbe scriptHash
   let txMint =
         TxMintValue
           meo
@@ -85,7 +84,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
     H.leftFail $
       makeTransactionBodyAutoBalance
         sbe
-        systemStart
+        testSystemStart
         epochInfo
         pparams
         mempty
@@ -268,21 +267,13 @@ prop_make_transaction_body_autobalance_fails_on_collateral_without_plutus = H.pr
       aeo = convert beo
       sbe = convert ceo
 
-  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
   let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
 
   ledgerPParams <-
     H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
   let pparams = LedgerProtocolParameters ledgerPParams
 
-  let address =
-        AddressInEra
-          (ShelleyAddressInEra sbe)
-          ( ShelleyAddress
-              L.Testnet
-              (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
-              L.StakeRefNull
-          )
+  let address = mkKeyHashAddress sbe
       fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
       collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
       -- The smallest realistic collateral input: it holds exactly the
@@ -310,7 +301,7 @@ prop_make_transaction_body_autobalance_fails_on_collateral_without_plutus = H.pr
 
   case makeTransactionBodyAutoBalance
     sbe
-    systemStart
+    testSystemStart
     epochInfo
     pparams
     mempty
@@ -346,14 +337,7 @@ prop_estimate_balanced_tx_body_fails_on_collateral_without_plutus = H.propertyOn
   ledgerPParams <-
     H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
 
-  let address =
-        AddressInEra
-          (ShelleyAddressInEra sbe)
-          ( ShelleyAddress
-              L.Testnet
-              (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
-              L.StakeRefNull
-          )
+  let address = mkKeyHashAddress sbe
       fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
       collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
       -- The smallest realistic collateral: exactly the minimum UTxO value.
@@ -409,7 +393,6 @@ prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_u
       meo = convert beo
       sbe = convert ceo
 
-  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
   let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
 
   ledgerPParams <-
@@ -418,14 +401,7 @@ prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_u
 
   (sh@(ScriptHash scriptHash), plutusWitness) <- loadPlutusWitness ceo
   let policyId' = PolicyId sh
-      address =
-        AddressInEra
-          (ShelleyAddressInEra sbe)
-          ( ShelleyAddress
-              L.Testnet
-              (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
-              L.StakeRefNull
-          )
+      address = mkKeyHashAddress sbe
       fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
       collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
       tokenValue coin =
@@ -463,7 +439,7 @@ prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_u
 
   case makeTransactionBodyAutoBalance
     sbe
-    systemStart
+    testSystemStart
     epochInfo
     pparams
     mempty
@@ -501,7 +477,6 @@ prop_make_transaction_body_autobalance_folds_dust_into_total_collateral = H.prop
       meo = convert beo
       sbe = convert ceo
 
-  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
   let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
 
   ledgerPParams <-
@@ -510,14 +485,7 @@ prop_make_transaction_body_autobalance_folds_dust_into_total_collateral = H.prop
 
   (sh@(ScriptHash _), plutusWitness) <- loadPlutusWitness ceo
   let policyId' = PolicyId sh
-      address =
-        AddressInEra
-          (ShelleyAddressInEra sbe)
-          ( ShelleyAddress
-              L.Testnet
-              (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
-              L.StakeRefNull
-          )
+      address = mkKeyHashAddress sbe
       fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
       collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
       -- The ada-only collateral input holds exactly its minimum UTxO value.
@@ -551,7 +519,7 @@ prop_make_transaction_body_autobalance_folds_dust_into_total_collateral = H.prop
     H.leftFail $
       makeTransactionBodyAutoBalance
         sbe
-        systemStart
+        testSystemStart
         epochInfo
         pparams
         mempty
@@ -584,14 +552,7 @@ prop_estimate_balanced_tx_body_folds_dust_into_total_collateral = H.propertyOnce
 
   (sh@(ScriptHash _), plutusWitness) <- loadPlutusWitness ceo
   let policyId' = PolicyId sh
-      address =
-        AddressInEra
-          (ShelleyAddressInEra sbe)
-          ( ShelleyAddress
-              L.Testnet
-              (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
-              L.StakeRefNull
-          )
+      address = mkKeyHashAddress sbe
       fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
       collateralTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#1"
       -- The smallest realistic ada-only collateral: exactly the minimum UTxO

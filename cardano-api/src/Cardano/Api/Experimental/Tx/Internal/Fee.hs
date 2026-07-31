@@ -732,6 +732,10 @@ checkCollateralOnlyWithPlutusScripts txbodycontent =
 -- against its minimum UTxO value; user-provided fields are otherwise passed
 -- through unvalidated.
 --
+-- This function does not check whether the transaction actually needs
+-- collateral: the ledger requires it only for transactions that run Plutus
+-- scripts, and the balancing functions check that before calling this one.
+--
 -- TODO: Bug Jared to expose a function from the ledger that returns total and
 -- return collateral.
 calcReturnAndTotalCollateral
