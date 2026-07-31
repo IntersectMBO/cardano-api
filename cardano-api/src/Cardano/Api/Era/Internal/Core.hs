@@ -304,6 +304,7 @@ instance TestEquality CardanoEra where
   testEquality AlonzoEra AlonzoEra = Just Refl
   testEquality BabbageEra BabbageEra = Just Refl
   testEquality ConwayEra ConwayEra = Just Refl
+  testEquality DijkstraEra DijkstraEra = Just Refl
   testEquality _ _ = Nothing
 
 instance Eon CardanoEra where

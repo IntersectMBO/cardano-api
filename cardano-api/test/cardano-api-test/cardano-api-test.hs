@@ -15,6 +15,7 @@ import Test.Cardano.Api.Envelope qualified
 import Test.Cardano.Api.EpochLeadership qualified
 import Test.Cardano.Api.Eras qualified
 import Test.Cardano.Api.Experimental qualified
+import Test.Cardano.Api.Experimental.EraRange qualified
 import Test.Cardano.Api.Experimental.Fee qualified
 import Test.Cardano.Api.Genesis qualified
 import Test.Cardano.Api.GovAnchorValidation qualified
@@ -56,6 +57,7 @@ tests =
     , Test.Cardano.Api.EpochLeadership.tests
     , Test.Cardano.Api.Eras.tests
     , Test.Cardano.Api.Experimental.tests
+    , Test.Cardano.Api.Experimental.EraRange.tests
     , Test.Cardano.Api.Experimental.Fee.tests
     , Test.Cardano.Api.Genesis.tests
     , Test.Cardano.Api.IO.tests
