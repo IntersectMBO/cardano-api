@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-07-01T00:33:51Z
-  , cardano-haskell-packages 2026-06-29T12:05:19Z
+  , hackage.haskell.org 2026-08-02T17:21:34Z
+  , cardano-haskell-packages 2026-08-01T07:19:24Z
 
 active-repositories:
   , :rest
@@ -155,8 +155,6 @@ if impl(ghc >=9.14)
     , grapesy:tls
     , grpc-spec:base
     , grpc-spec:containers
-    , hedgehog-quickcheck:QuickCheck
-    , http2-tls:tls
     , lens-family:containers
     , lens-family-core:containers
     , lsm-tree:data-elevator
