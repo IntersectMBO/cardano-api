@@ -155,8 +155,6 @@ if impl(ghc >=9.14)
     , grapesy:tls
     , grpc-spec:base
     , grpc-spec:containers
-    , hedgehog-quickcheck:QuickCheck
-    , http2-tls:tls
     , lens-family:containers
     , lens-family-core:containers
     , lsm-tree:data-elevator
