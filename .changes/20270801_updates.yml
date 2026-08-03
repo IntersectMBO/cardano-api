@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1275
+kind:
+  - maintenance
+description: |
+  Minor updates including updating index-states and removing redundant orphan instances
