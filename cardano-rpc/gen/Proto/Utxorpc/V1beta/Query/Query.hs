@@ -4618,7 +4618,8 @@ data QueryService = QueryService {}
 instance Data.ProtoLens.Service.Types.Service QueryService where
   type ServiceName QueryService = "QueryService"
   type ServicePackage QueryService = "utxorpc.v1beta.query"
-  type ServiceMethods QueryService = '["readParams",
+  type ServiceMethods QueryService = '["readGenesis",
+                                       "readParams",
                                        "readUtxos",
                                        "searchUtxos"]
   packedServiceDescriptor _
@@ -4627,7 +4628,8 @@ instance Data.ProtoLens.Service.Types.Service QueryService where
       \\n\
       \ReadParams\DC2'.utxorpc.v1beta.query.ReadParamsRequest\SUB(.utxorpc.v1beta.query.ReadParamsResponse\DC2\\\n\
       \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponse\DC2b\n\
-      \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponse"
+      \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponse\DC2b\n\
+      \\vReadGenesis\DC2(.utxorpc.v1beta.query.ReadGenesisRequest\SUB).utxorpc.v1beta.query.ReadGenesisResponse"
 instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readParams" where
   type MethodName QueryService "readParams" = "ReadParams"
   type MethodInput QueryService "readParams" = ReadParamsRequest
@@ -4643,6 +4645,11 @@ instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "searchUtxos" w
   type MethodInput QueryService "searchUtxos" = SearchUtxosRequest
   type MethodOutput QueryService "searchUtxos" = SearchUtxosResponse
   type MethodStreamingType QueryService "searchUtxos" = 'Data.ProtoLens.Service.Types.NonStreaming
+instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readGenesis" where
+  type MethodName QueryService "readGenesis" = "ReadGenesis"
+  type MethodInput QueryService "readGenesis" = ReadGenesisRequest
+  type MethodOutput QueryService "readGenesis" = ReadGenesisResponse
+  type MethodStreamingType QueryService "readGenesis" = 'Data.ProtoLens.Service.Types.NonStreaming
 packedFileDescriptor :: Data.ByteString.ByteString
 packedFileDescriptor
   = "\n\
@@ -4752,15 +4759,16 @@ packedFileDescriptor
     \\SOReadTxResponse\DC20\n\
     \\STXtx\CAN\SOH \SOH(\v2 .utxorpc.v1beta.query.AnyChainTxR\STXtx\DC2?\n\
     \\n\
-    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip2\177\STX\n\
+    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip2\149\ETX\n\
     \\fQueryService\DC2_\n\
     \\n\
     \ReadParams\DC2'.utxorpc.v1beta.query.ReadParamsRequest\SUB(.utxorpc.v1beta.query.ReadParamsResponse\DC2\\\n\
     \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponse\DC2b\n\
-    \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponseB\152\SOH\n\
+    \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponse\DC2b\n\
+    \\vReadGenesis\DC2(.utxorpc.v1beta.query.ReadGenesisRequest\SUB).utxorpc.v1beta.query.ReadGenesisResponseB\152\SOH\n\
     \\CANcom.utxorpc.v1beta.queryB\n\
-    \QueryProtoP\SOH\162\STX\ETXUVQ\170\STX\DC4Utxorpc.V1beta.Query\202\STX\DC4Utxorpc\\V1beta\\Query\226\STX Utxorpc\\V1beta\\Query\\GPBMetadata\234\STX\SYNUtxorpc::V1beta::QueryJ\144;\n\
-    \\a\DC2\ENQ\STX\NUL\177\SOH\SOH\n\
+    \QueryProtoP\SOH\162\STX\ETXUVQ\170\STX\DC4Utxorpc.V1beta.Query\202\STX\DC4Utxorpc\\V1beta\\Query\226\STX Utxorpc\\V1beta\\Query\\GPBMetadata\234\STX\SYNUtxorpc::V1beta::QueryJ\236;\n\
+    \\a\DC2\ENQ\STX\NUL\178\SOH\SOH\n\
     \9\n\
     \\SOH\f\DC2\ETX\STX\NUL\DC22// A consistent view of the state of the ledger\n\
     \\n\
@@ -5451,7 +5459,7 @@ packedFileDescriptor
     \\r\n\
     \\ENQ\EOT\SYN\STX\SOH\ETX\DC2\EOT\165\SOH\SUB\ESC\n\
     \G\n\
-    \\STX\ACK\NUL\DC2\ACK\169\SOH\NUL\177\SOH\SOH\SUB9 Service definition for querying the state of the chain.\n\
+    \\STX\ACK\NUL\DC2\ACK\169\SOH\NUL\178\SOH\SOH\SUB9 Service definition for querying the state of the chain.\n\
     \\n\
     \\v\n\
     \\ETX\ACK\NUL\SOH\DC2\EOT\169\SOH\b\DC4\n\
@@ -5481,4 +5489,13 @@ packedFileDescriptor
     \\r\n\
     \\ENQ\ACK\NUL\STX\STX\STX\DC2\EOT\172\SOH\DC2$\n\
     \\r\n\
-    \\ENQ\ACK\NUL\STX\STX\ETX\DC2\EOT\172\SOH/Bb\ACKproto3"
+    \\ENQ\ACK\NUL\STX\STX\ETX\DC2\EOT\172\SOH/B\n\
+    \-\n\
+    \\EOT\ACK\NUL\STX\ETX\DC2\EOT\173\SOH\STXD\"\US Get the chain genesis config.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\ETX\SOH\DC2\EOT\173\SOH\ACK\DC1\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\ETX\STX\DC2\EOT\173\SOH\DC2$\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\ETX\ETX\DC2\EOT\173\SOH/Bb\ACKproto3"
