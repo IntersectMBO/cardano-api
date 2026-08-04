@@ -6,7 +6,9 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate
   ( txCertToUtxoRpcCertificate
   , credentialToUtxoRpcStakeCredential
   , anchorToUtxoRpcAnchor
+  , constitutionToUtxoRpcConstitution
   , scriptHashToBytes
+  , keyHashToBytes
   )
 where
 
@@ -311,6 +313,13 @@ anchorToUtxoRpcAnchor anchor =
   defMessage
     & U5c.url .~ L.urlToText (L.anchorUrl anchor)
     & U5c.contentHash .~ L.hashToBytes (L.extractHash (L.anchorDataHash anchor))
+
+-- | Convert a ledger constitution to the UTxO RPC 'UtxoRpc.Constitution' message.
+constitutionToUtxoRpcConstitution :: L.Constitution era -> Proto UtxoRpc.Constitution
+constitutionToUtxoRpcConstitution constitution =
+  defMessage
+    & U5c.anchor .~ anchorToUtxoRpcAnchor (L.constitutionAnchor constitution)
+    & U5c.hash .~ L.strictMaybe mempty scriptHashToBytes (L.constitutionGuardrailsScriptHash constitution)
 
 keyHashToBytes :: L.KeyHash kr -> ByteString
 keyHashToBytes = L.hashToBytes . L.unKeyHash

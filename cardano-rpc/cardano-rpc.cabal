@@ -70,6 +70,7 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Genesis
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
@@ -113,11 +114,13 @@ library
     data-default,
     errors,
     filepath,
+    formatting,
     generic-data,
     grapesy,
     grpc-spec,
     memory,
     mempack,
+    microlens,
     proto-lens >=0.7.1.7,
     proto-lens-protobuf-types,
     random,

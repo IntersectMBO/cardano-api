@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1222
+kind:
+  - feature
+description: |
+  Add the `QueryService.ReadGenesis` UTxO RPC method, returning the full per-era genesis configuration.

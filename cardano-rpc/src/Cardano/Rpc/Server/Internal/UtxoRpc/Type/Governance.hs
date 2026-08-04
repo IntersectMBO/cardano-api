@@ -16,6 +16,7 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate
   ( anchorToUtxoRpcAnchor
+  , constitutionToUtxoRpcConstitution
   , credentialToUtxoRpcStakeCredential
   , scriptHashToBytes
   )
@@ -112,15 +113,7 @@ govActionToUtxoRpcGovernanceAction = \case
         .~ ( defMessage
                & U5c.maybe'govActionId
                  .~ fmap govPurposeIdToUtxoRpcGovernanceActionId (L.strictMaybeToMaybe prevActionId)
-               & U5c.constitution
-                 .~ ( defMessage
-                        & U5c.anchor .~ anchorToUtxoRpcAnchor (L.constitutionAnchor constitution)
-                        & U5c.hash
-                          .~ L.strictMaybe
-                            mempty
-                            scriptHashToBytes
-                            (L.constitutionGuardrailsScriptHash constitution)
-                    )
+               & U5c.constitution .~ constitutionToUtxoRpcConstitution constitution
            )
   L.InfoAction ->
     defMessage & U5c.infoAction .~ defMessage

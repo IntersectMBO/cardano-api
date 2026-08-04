@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
@@ -14,6 +15,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   ( readParamsMethod
   , readUtxosMethod
   , searchUtxosMethod
+  , readGenesisMethod
   , paginateByTxIn
   )
 where
@@ -28,6 +30,11 @@ import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type
+import Cardano.Rpc.Server.NodeKernelAccess
+
+import Cardano.Crypto.Hash.Class qualified as Crypto (hashToBytes)
+import Cardano.Ledger.Api.Transition qualified as L (tcShelleyGenesisL)
+import Cardano.Ledger.Shelley.Genesis qualified as L (sgNetworkMagic)
 
 import RIO hiding (toList)
 
@@ -158,6 +165,37 @@ searchUtxosMethod req = do
         & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
         & U5c.items .~ map (uncurry txInTxOutToAnyUtxoData) page
         & U5c.maybe'nextToken .~ nextTok
+
+-- | Handle the @ReadGenesis@ RPC method.
+-- Returns the chain's identity - the Shelley genesis hash and the CAIP-2 chain
+-- identifier - together with the @cardano@ config, the Byron, Shelley, Alonzo
+-- and Conway genesis parameters mapped by 'genesisBundleToProto'.
+readGenesisMethod
+  :: MonadRpc e m
+  => Proto UtxoRpc.ReadGenesisRequest
+  -> m (Proto UtxoRpc.ReadGenesisResponse)
+readGenesisMethod _req = do
+  -- TODO: field masks are ignored for now (same as readParamsMethod)
+  NodeKernelAccess{genesisConfig = genesisBundle@GenesisBundle{shelleyGenesisHash, transitionConfig}} <-
+    grabNodeKernelAccess
+  let networkMagic = L.sgNetworkMagic $ transitionConfig ^. L.tcShelleyGenesisL
+  pure $
+    defMessage
+      & U5c.genesis .~ Crypto.hashToBytes (unGenesisHashShelley shelleyGenesisHash)
+      & U5c.caip2 .~ networkMagicToCaip2 networkMagic
+      & U5c.cardano .~ genesisBundleToProto genesisBundle
+
+-- | The CAIP-2 chain identifier for a Cardano network, keyed on the Shelley
+-- network magic.
+-- This follows Dolos, the reference UTxO RPC implementation: the three
+-- well-known networks get their conventional names, and any other network is
+-- identified by its magic.
+networkMagicToCaip2 :: Word32 -> Text
+networkMagicToCaip2 = \case
+  764824073 -> "cardano:mainnet"
+  1 -> "cardano:preprod"
+  2 -> "cardano:preview"
+  magic -> "cardano:" <> tshow magic
 
 -- | Paginate a list of UTxO entries using cursor-based pagination.
 -- Items are sorted by 'TxIn'\'s 'Ord' instance (lexicographic on 'TxId', then numeric on 'TxIx').
