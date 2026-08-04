@@ -15,6 +15,9 @@ module Cardano.Api.Consensus.Internal.Protocol
   , reflBlockType
   , Protocol (..)
   , ProtocolInfoArgs (..)
+  , cardanoLedgerTransitionConfig
+  , byronProtocolParams
+  , byronGenesis
   , ProtocolClient (..)
   , ProtocolClientInfoArgs (..)
   , nodeSystemStart

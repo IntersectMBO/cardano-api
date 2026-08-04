@@ -23,6 +23,7 @@ module Cardano.Api.Consensus.Internal.Reexport
   , StandardCrypto
   , TopLevelConfig
   , ledgerState
+  , shelleyLedgerGenesis
   , blockHash
   , blockNo
   , blockSlot
@@ -78,6 +79,7 @@ import Ouroboros.Consensus.Protocol.Praos.Common
   , PraosProtocolSupportsNodeCrypto
   , getOpCertCounters
   )
+import Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
 import Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 import Ouroboros.Consensus.Storage.Common (BlockComponent (..))
 import Ouroboros.Consensus.Util.Condense (condense)
