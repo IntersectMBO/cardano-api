@@ -1,1 +1,1 @@
-{-# OPTIONS_GHC -F -pgmF tasty-discover -optF --hide-successes #-}
+{-# OPTIONS_GHC -F -pgmF tasty-discover #-}

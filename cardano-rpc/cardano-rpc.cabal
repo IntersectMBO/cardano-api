@@ -156,30 +156,40 @@ test-suite cardano-rpc-test
   main-is: cardano-rpc-test.hs
   type: exitcode-stdio-1.0
   build-depends:
+    aeson,
     base,
+    base16-bytestring,
     bytestring,
     cardano-api,
     cardano-api:gen,
     cardano-crypto,
     cardano-crypto-wrapper,
     cardano-crypto-wrapper:testlib,
+    cardano-ledger-alonzo,
+    cardano-ledger-alonzo:testlib,
     cardano-ledger-api,
     cardano-ledger-binary,
     cardano-ledger-byron,
     cardano-ledger-byron:testlib,
     cardano-ledger-conway,
+    cardano-ledger-conway:testlib,
     cardano-ledger-core >=1.19,
     cardano-ledger-dijkstra,
     cardano-ledger-shelley,
+    cardano-ledger-shelley:testlib,
     cardano-rpc,
     containers,
+    formatting,
     grpc-spec,
     hedgehog,
     hedgehog-extras,
+    hedgehog-quickcheck,
     memory,
+    mtl,
     ouroboros-consensus:cardano,
     proto-lens,
     rio,
+    scientific,
     tasty,
     tasty-hedgehog,
     text,
@@ -197,6 +207,8 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.Eval
     Test.Cardano.Rpc.FetchBlockTx
     Test.Cardano.Rpc.FollowTipStream
+    Test.Cardano.Rpc.Genesis.Fixture
+    Test.Cardano.Rpc.Genesis.Property
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters
