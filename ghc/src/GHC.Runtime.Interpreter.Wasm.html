@@ -1,0 +1,221 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Wasm.html"><span class="hs-identifier">GHC.Runtime.Interpreter.Wasm</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Wasm.html#spawnWasmInterp"><span class="hs-identifier">spawnWasmInterp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html"><span class="hs-identifier">GHC.Runtime.Interpreter.Types</span></a></span><span class="hs-cpp">
+
+#if !defined(mingw32_HOST_OS)
+</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html"><span class="hs-identifier">GHC.Data.FastString</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Data.ShortText.html"><span class="hs-identifier">GHC.Data.ShortText</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ST</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Platform.html"><span class="hs-identifier">GHC.Platform</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.html"><span class="hs-identifier">GHC.Unit</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.Message.html"><span class="hs-identifier">GHCi.Message</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../directory-1.3.10.0-inplace/src/System.Directory.html"><span class="hs-identifier">System.Directory</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/System.Environment.Blank.html"><span class="hs-identifier">System.Environment.Blank</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/System.IO.html"><span class="hs-identifier">System.IO</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.IO.html"><span class="hs-identifier">System.Posix.IO</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Posix</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../process-1.6.26.1-inplace/src/System.Process.html"><span class="hs-identifier">System.Process</span></a></span><span class="hs-cpp">
+
+#else
+</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">GHC.Utils.Panic</span><span class="hs-cpp">
+
+#endif
+</span><span>
+</span><span id="line-31"></span><span class="annot"><a href="GHC.Runtime.Interpreter.Wasm.html#spawnWasmInterp"><span class="hs-identifier hs-type">spawnWasmInterp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#WasmInterpConfig"><span class="hs-identifier hs-type">WasmInterpConfig</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#ExtInterpInstance"><span class="hs-identifier hs-type">ExtInterpInstance</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+
+#if !defined(mingw32_HOST_OS)
+</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- See Note [The Wasm Dynamic Linker] for details</span><span>
+</span><span id="line-36"></span><span id="spawnWasmInterp"><span class="annot"><span class="annottext">spawnWasmInterp :: WasmInterpConfig -&gt; IO (ExtInterpInstance ())
+</span><a href="GHC.Runtime.Interpreter.Wasm.html#spawnWasmInterp"><span class="hs-identifier hs-var hs-var">spawnWasmInterp</span></a></span></span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#WasmInterpConfig"><span class="hs-identifier hs-type">WasmInterpConfig</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621683150746"><span id="local-6989586621683150747"><span id="local-6989586621683150748"><span id="local-6989586621683150749"><span id="local-6989586621683150750"><span id="local-6989586621683150751"><span id="local-6989586621683150752"><span id="local-6989586621683150753"><span id="local-6989586621683150754"><span id="local-6989586621683150755"><span id="local-6989586621683150756"><span id="local-6989586621683150757"><span id="local-6989586621683150758"><span id="local-6989586621683150759"><span class="annot"><span class="annottext">Bool
+Int
+String
+[String]
+Maybe String
+Platform
+UnitState
+wasmInterpDyLD :: String
+wasmInterpLibDir :: String
+wasmInterpOpts :: [String]
+wasmInterpBrowser :: Bool
+wasmInterpBrowserHost :: String
+wasmInterpBrowserPort :: Int
+wasmInterpBrowserRedirectWasiConsole :: Bool
+wasmInterpBrowserPuppeteerLaunchOpts :: Maybe String
+wasmInterpBrowserPlaywrightBrowserType :: Maybe String
+wasmInterpBrowserPlaywrightLaunchOpts :: Maybe String
+wasmInterpTargetPlatform :: Platform
+wasmInterpProfiled :: Bool
+wasmInterpHsSoSuffix :: String
+wasmInterpUnitState :: UnitState
+wasmInterpUnitState :: WasmInterpConfig -&gt; UnitState
+wasmInterpHsSoSuffix :: WasmInterpConfig -&gt; String
+wasmInterpProfiled :: WasmInterpConfig -&gt; Bool
+wasmInterpTargetPlatform :: WasmInterpConfig -&gt; Platform
+wasmInterpBrowserPlaywrightLaunchOpts :: WasmInterpConfig -&gt; Maybe String
+wasmInterpBrowserPlaywrightBrowserType :: WasmInterpConfig -&gt; Maybe String
+wasmInterpBrowserPuppeteerLaunchOpts :: WasmInterpConfig -&gt; Maybe String
+wasmInterpBrowserRedirectWasiConsole :: WasmInterpConfig -&gt; Bool
+wasmInterpBrowserPort :: WasmInterpConfig -&gt; Int
+wasmInterpBrowserHost :: WasmInterpConfig -&gt; String
+wasmInterpBrowser :: WasmInterpConfig -&gt; Bool
+wasmInterpOpts :: WasmInterpConfig -&gt; [String]
+wasmInterpLibDir :: WasmInterpConfig -&gt; String
+wasmInterpDyLD :: WasmInterpConfig -&gt; String
+</span><a href="#local-6989586621683150746"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683150774"><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621683150774"><span class="hs-identifier hs-var hs-var">ghci_unit_id</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-38"></span><span>        </span><span class="annot"><span class="annottext">UnitState -&gt; PackageName -&gt; Maybe UnitId
+</span><a href="GHC.Unit.State.html#lookupPackageName"><span class="hs-identifier hs-var">lookupPackageName</span></a></span><span>
+</span><span id="line-39"></span><span>          </span><span class="annot"><span class="annottext">UnitState
+</span><a href="#local-6989586621683150759"><span class="hs-identifier hs-var">wasmInterpUnitState</span></a></span><span>
+</span><span id="line-40"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FastString -&gt; PackageName
+</span><a href="GHC.Unit.Info.html#PackageName"><span class="hs-identifier hs-var">PackageName</span></a></span><span> </span><span class="annot"><span class="annottext">(FastString -&gt; PackageName) -&gt; FastString -&gt; PackageName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; FastString
+</span><a href="GHC.Data.FastString.html#fsLit"><span class="hs-identifier hs-var">fsLit</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ghci&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>      </span><span id="local-6989586621683150778"><span class="annot"><span class="annottext">ghci_unit_info :: UnitInfo
+</span><a href="#local-6989586621683150778"><span class="hs-identifier hs-var hs-var hs-var">ghci_unit_info</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasDebugCallStack =&gt; UnitState -&gt; UnitId -&gt; UnitInfo
+UnitState -&gt; UnitId -&gt; UnitInfo
+</span><a href="GHC.Unit.State.html#unsafeLookupUnitId"><span class="hs-identifier hs-var">unsafeLookupUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">UnitState
+</span><a href="#local-6989586621683150759"><span class="hs-identifier hs-var">wasmInterpUnitState</span></a></span><span> </span><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621683150774"><span class="hs-identifier hs-var">ghci_unit_id</span></a></span><span>
+</span><span id="line-42"></span><span>      </span><span id="local-6989586621683150780"><span class="annot"><span class="annottext">ghci_so_dirs :: [String]
+</span><a href="#local-6989586621683150780"><span class="hs-identifier hs-var hs-var hs-var">ghci_so_dirs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(FilePathST -&gt; String) -&gt; [FilePathST] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">FilePathST -&gt; String
+</span><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Data.ShortText.html#unpack"><span class="hs-identifier hs-var">ST.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">([FilePathST] -&gt; [String]) -&gt; [FilePathST] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UnitInfo -&gt; [FilePathST]
+forall srcpkgid srcpkgname uid modulename mod.
+GenericUnitInfo srcpkgid srcpkgname uid modulename mod
+-&gt; [FilePathST]
+</span><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Unit.Database.html#unitLibraryDynDirs"><span class="hs-identifier hs-var">unitLibraryDynDirs</span></a></span><span> </span><span class="annot"><span class="annottext">UnitInfo
+</span><a href="#local-6989586621683150778"><span class="hs-identifier hs-var">ghci_unit_info</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="hs-special">[</span><span id="local-6989586621683150783"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150783"><span class="hs-identifier hs-var hs-var">ghci_lib_name</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(FilePathST -&gt; String) -&gt; [FilePathST] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">FilePathST -&gt; String
+</span><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Data.ShortText.html#unpack"><span class="hs-identifier hs-var">ST.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">([FilePathST] -&gt; [String]) -&gt; [FilePathST] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UnitInfo -&gt; [FilePathST]
+forall srcpkgid srcpkgname uid modulename mod.
+GenericUnitInfo srcpkgid srcpkgname uid modulename mod
+-&gt; [FilePathST]
+</span><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Unit.Database.html#unitLibraries"><span class="hs-identifier hs-var">unitLibraries</span></a></span><span> </span><span class="annot"><span class="annottext">UnitInfo
+</span><a href="#local-6989586621683150778"><span class="hs-identifier hs-var">ghci_unit_info</span></a></span><span>
+</span><span id="line-44"></span><span>      </span><span id="local-6989586621683150785"><span class="annot"><span class="annottext">ghci_so_name :: String
+</span><a href="#local-6989586621683150785"><span class="hs-identifier hs-var hs-var hs-var">ghci_so_name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150783"><span class="hs-identifier hs-var">ghci_lib_name</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150758"><span class="hs-identifier hs-var">wasmInterpHsSoSuffix</span></a></span><span>
+</span><span id="line-45"></span><span>      </span><span id="local-6989586621683150786"><span class="annot"><span class="annottext">ghci_so_file :: String
+</span><a href="#local-6989586621683150786"><span class="hs-identifier hs-var hs-var hs-var">ghci_so_file</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Platform -&gt; String -&gt; String
+</span><a href="GHC.Platform.html#platformHsSOName"><span class="hs-identifier hs-var">platformHsSOName</span></a></span><span> </span><span class="annot"><span class="annottext">Platform
+</span><a href="#local-6989586621683150756"><span class="hs-identifier hs-var">wasmInterpTargetPlatform</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150785"><span class="hs-identifier hs-var">ghci_so_name</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683150788"><span class="annot"><a href="#local-6989586621683150788"><span class="hs-identifier hs-var">ghci_so_path</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String -&gt; IO (Maybe String)
+</span><a href="../../directory-1.3.10.0-inplace/src/System.Directory.html#findFile"><span class="hs-identifier hs-var">findFile</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621683150780"><span class="hs-identifier hs-var">ghci_so_dirs</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150786"><span class="hs-identifier hs-var">ghci_so_file</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621683150790"><span class="annot"><a href="#local-6989586621683150790"><span class="hs-identifier hs-var">rfd1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683150791"><span class="annot"><a href="#local-6989586621683150791"><span class="hs-identifier hs-var">wfd1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.IO.Common.html#createPipe"><span class="hs-identifier hs-type">Posix.createPipe</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621683150793"><span class="annot"><a href="#local-6989586621683150793"><span class="hs-identifier hs-var">rfd2</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683150794"><span class="annot"><a href="#local-6989586621683150794"><span class="hs-identifier hs-var">wfd2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.IO.Common.html#createPipe"><span class="hs-identifier hs-type">Posix.createPipe</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.IO.Common.html#setFdOption"><span class="hs-identifier hs-type">Posix.setFdOption</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150790"><span class="hs-identifier hs-type">rfd1</span></a></span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.IO.Common.html#CloseOnExec"><span class="hs-identifier hs-type">Posix.CloseOnExec</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#True"><span class="hs-identifier hs-type">True</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.IO.Common.html#setFdOption"><span class="hs-identifier hs-type">Posix.setFdOption</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150794"><span class="hs-identifier hs-type">wfd2</span></a></span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.IO.Common.html#CloseOnExec"><span class="hs-identifier hs-type">Posix.CloseOnExec</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#True"><span class="hs-identifier hs-type">True</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621683150797"><span class="annot"><a href="#local-6989586621683150797"><span class="hs-identifier hs-var">ghc_env</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.System.Environment.html#getEnvironment"><span class="hs-identifier hs-type">getEnvironment</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683150799"><span class="annot"><a href="#local-6989586621683150799"><span class="hs-identifier hs-var hs-var">dyld_env</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GHCI_BROWSER&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;1&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621683150749"><span class="hs-identifier hs-var">wasmInterpBrowser</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><span class="annottext">[(String, String)] -&gt; [(String, String)] -&gt; [(String, String)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GHCI_BROWSER_HOST&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150750"><span class="hs-identifier hs-var">wasmInterpBrowserHost</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GHCI_BROWSER_PORT&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621683150751"><span class="hs-identifier hs-var">wasmInterpBrowserPort</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-55"></span><span>        </span><span class="annot"><span class="annottext">[(String, String)] -&gt; [(String, String)] -&gt; [(String, String)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GHCI_BROWSER_REDIRECT_WASI_CONSOLE&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;1&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621683150752"><span class="hs-identifier hs-var">wasmInterpBrowserRedirectWasiConsole</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-56"></span><span>        </span><span class="annot"><span class="annottext">[(String, String)] -&gt; [(String, String)] -&gt; [(String, String)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GHCI_BROWSER_PUPPETEER_LAUNCH_OPTS&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150801"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621683150801"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150801"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; [String]
+forall a. Maybe a -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#maybeToList"><span class="hs-identifier hs-var">maybeToList</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621683150753"><span class="hs-identifier hs-var">wasmInterpBrowserPuppeteerLaunchOpts</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-57"></span><span>        </span><span class="annot"><span class="annottext">[(String, String)] -&gt; [(String, String)] -&gt; [(String, String)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GHCI_BROWSER_PLAYWRIGHT_BROWSER_TYPE&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150803"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621683150803"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150803"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; [String]
+forall a. Maybe a -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#maybeToList"><span class="hs-identifier hs-var">maybeToList</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621683150754"><span class="hs-identifier hs-var">wasmInterpBrowserPlaywrightBrowserType</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><span class="annottext">[(String, String)] -&gt; [(String, String)] -&gt; [(String, String)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GHCI_BROWSER_PLAYWRIGHT_LAUNCH_OPTS&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150804"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621683150804"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683150804"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; [String]
+forall a. Maybe a -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#maybeToList"><span class="hs-identifier hs-var">maybeToList</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621683150755"><span class="hs-identifier hs-var">wasmInterpBrowserPlaywrightLaunchOpts</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-59"></span><span>        </span><span class="annot"><span class="annottext">[(String, String)] -&gt; [(String, String)] -&gt; [(String, String)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[(String, String)]
+</span><a href="#local-6989586621683150797"><span class="hs-identifier hs-var">ghc_env</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683150805"><span class="annot"><a href="#local-6989586621683150805"><span class="hs-identifier hs-var">ph</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><a href="../../process-1.6.26.1-inplace/src/System.Process.html#createProcess"><span class="hs-identifier hs-type">createProcess</span></a></span><span>
+</span><span id="line-62"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="../../process-1.6.26.1-inplace/src/System.Process.html#proc"><span class="hs-identifier hs-type">proc</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150746"><span class="hs-identifier hs-type">wasmInterpDyLD</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-63"></span><span>          </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621683150747"><span class="hs-identifier hs-type">wasmInterpLibDir</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621683150788"><span class="hs-identifier hs-type">ghci_so_path</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#show"><span class="hs-identifier hs-type">show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150791"><span class="hs-identifier hs-type">wfd1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#show"><span class="hs-identifier hs-type">show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150793"><span class="hs-identifier hs-type">rfd2</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>            </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-type">++</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150748"><span class="hs-identifier hs-type">wasmInterpOpts</span></a></span><span>
+</span><span id="line-65"></span><span>            </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-type">++</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-string">&quot;+RTS&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;-H64m&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;-RTS&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-special">)</span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="../../process-1.6.26.1-inplace/src/System.Process.Common.html#env"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150799"><span class="hs-identifier hs-type">dyld_env</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.IO.Common.html#closeFd"><span class="hs-identifier hs-type">Posix.closeFd</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150791"><span class="hs-identifier hs-type">wfd1</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.IO.Common.html#closeFd"><span class="hs-identifier hs-type">Posix.closeFd</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150793"><span class="hs-identifier hs-type">rfd2</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621683150810"><span class="annot"><a href="#local-6989586621683150810"><span class="hs-identifier hs-var">rh</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.IO.Common.html#fdToHandle"><span class="hs-identifier hs-type">Posix.fdToHandle</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150790"><span class="hs-identifier hs-type">rfd1</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621683150812"><span class="annot"><a href="#local-6989586621683150812"><span class="hs-identifier hs-var">wh</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../unix-2.8.8.0-inplace/src/System.Posix.IO.Common.html#fdToHandle"><span class="hs-identifier hs-type">Posix.fdToHandle</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150794"><span class="hs-identifier hs-type">wfd2</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IO.Handle.html#hSetBuffering"><span class="hs-identifier hs-type">hSetBuffering</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150812"><span class="hs-identifier hs-type">wh</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IO.Handle.Types.html#NoBuffering"><span class="hs-identifier hs-type">NoBuffering</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IO.Handle.html#hSetBuffering"><span class="hs-identifier hs-type">hSetBuffering</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150810"><span class="hs-identifier hs-type">rh</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IO.Handle.Types.html#NoBuffering"><span class="hs-identifier hs-type">NoBuffering</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621683150815"><span class="annot"><a href="#local-6989586621683150815"><span class="hs-identifier hs-var">interpPipe</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.Message.html#mkPipeFromHandles"><span class="hs-identifier hs-type">mkPipeFromHandles</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150810"><span class="hs-identifier hs-type">rh</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683150812"><span class="hs-identifier hs-type">wh</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621683150817"><span class="annot"><a href="#local-6989586621683150817"><span class="hs-identifier hs-var">pending_frees</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#newMVar"><span class="hs-identifier hs-type">newMVar</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621683150819"><span class="annot"><a href="#local-6989586621683150819"><span class="hs-identifier hs-var">lock</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.MVar.html#newMVar"><span class="hs-identifier hs-type">newMVar</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#ExtInterpInstance"><span class="hs-identifier hs-type">ExtInterpInstance</span></a></span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#instProcess"><span class="hs-identifier hs-var">instProcess</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>          </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#InterpProcess"><span class="hs-identifier hs-type">InterpProcess</span></a></span><span>
+</span><span id="line-80"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#interpHandle"><span class="hs-identifier hs-var">interpHandle</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621683150805"><span class="hs-identifier hs-type">ph</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-81"></span><span>              </span><span class="annot"><a href="#local-6989586621683150815"><span class="hs-identifier hs-type hs-var">interpPipe</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-82"></span><span>              </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#interpLock"><span class="hs-identifier hs-var">interpLock</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621683150819"><span class="hs-identifier hs-type">lock</span></a></span><span>
+</span><span id="line-83"></span><span>            </span><span class="hs-special">}</span><span class="hs-special">,</span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#instPendingFrees"><span class="hs-identifier hs-var">instPendingFrees</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621683150817"><span class="hs-identifier hs-type">pending_frees</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#instExtra"><span class="hs-identifier hs-var">instExtra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-special">}</span><span class="hs-cpp">
+
+#else
+</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- Due to difficulty of using inherited pipe file descriptor in</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- nodejs, unfortunately we don't support Win32 host yet</span><span>
+</span><span id="line-92"></span><span class="hs-identifier">spawnWasmInterp</span><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">sorry</span><span> </span><span class="hs-string">&quot;Wasm iserv doesn't work on Win32 host yet&quot;</span><span class="hs-cpp">
+
+#endif
+</span></pre></body></html>

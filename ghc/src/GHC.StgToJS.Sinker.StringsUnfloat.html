@@ -1,0 +1,833 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.StgToJS.Sinker.StringsUnfloat.html"><span class="hs-identifier">GHC.StgToJS.Sinker.StringsUnfloat</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#unfloatStringLits"><span class="hs-identifier">unfloatStringLits</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html"><span class="hs-identifier">GHC.Types.Unique.Set</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html"><span class="hs-identifier">GHC.Types.Unique.FM</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html"><span class="hs-identifier">GHC.Stg.Syntax</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Id.html"><span class="hs-identifier">GHC.Types.Id</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.html"><span class="hs-identifier">GHC.Types.Name</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Literal.html"><span class="hs-identifier">GHC.Types.Literal</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Misc.html"><span class="hs-identifier">GHC.Utils.Misc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Utils.Misc.html#partitionWith"><span class="hs-identifier">partitionWith</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Data.Bifunctor.html#Bifunctor"><span class="hs-identifier">Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- | We suppose that every string shorter than 80 symbols is safe for sink.</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- Sinker is working on per module. It means that ALL locally defined strings</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- in a module shorter 80 symbols will be unfloated back.</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#STRING_LIT_MAX_LENGTH"><span class="hs-identifier hs-type">STRING_LIT_MAX_LENGTH</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">pattern</span><span> </span><span id="STRING_LIT_MAX_LENGTH"><span id="%24mSTRING_LIT_MAX_LENGTH"><span id="%24bSTRING_LIT_MAX_LENGTH"><span class="annot"><span class="annottext">$mSTRING_LIT_MAX_LENGTH :: forall {r}. Int -&gt; ((# #) -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bSTRING_LIT_MAX_LENGTH :: Int
+</span><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#STRING_LIT_MAX_LENGTH"><span class="hs-identifier hs-var hs-var hs-var">STRING_LIT_MAX_LENGTH</span></a></span></span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">80</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#unfloatStringLits"><span class="hs-identifier hs-type">unfloatStringLits</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html#UniqFM"><span class="hs-identifier hs-type">UniqFM</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgBinding"><span class="hs-identifier hs-type">CgStgBinding</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgBinding"><span class="hs-identifier hs-type">CgStgBinding</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span id="unfloatStringLits"><span class="annot"><span class="annottext">unfloatStringLits :: UniqSet Name
+-&gt; UniqFM Name ByteString
+-&gt; [CgStgBinding]
+-&gt; ([CgStgBinding], UniqSet Name)
+</span><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#unfloatStringLits"><span class="hs-identifier hs-var hs-var">unfloatStringLits</span></a></span></span><span> </span><span id="local-6989586621682819480"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819480"><span class="hs-identifier hs-var">usedOnceStringLits</span></a></span></span><span> </span><span id="local-6989586621682819481"><span class="annot"><span class="annottext">UniqFM Name ByteString
+</span><a href="#local-6989586621682819481"><span class="hs-identifier hs-var">stringLits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="annottext">UniqFM Name ByteString
+-&gt; [CgStgBinding] -&gt; ([CgStgBinding], UniqSet Name)
+</span><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#unfloatStringLits%27"><span class="hs-identifier hs-var">unfloatStringLits'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UniqSet Name -&gt; UniqFM Name ByteString -&gt; UniqFM Name ByteString
+</span><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#selectStringLitsForUnfloat"><span class="hs-identifier hs-var">selectStringLitsForUnfloat</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819480"><span class="hs-identifier hs-var">usedOnceStringLits</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM Name ByteString
+</span><a href="#local-6989586621682819481"><span class="hs-identifier hs-var">stringLits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | We are doing attempts to unfloat string literals back to</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- the call site. Further special JS optimizations</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- can generate more performant operations over them.</span><span>
+</span><span id="line-39"></span><span class="annot"><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#unfloatStringLits%27"><span class="hs-identifier hs-type">unfloatStringLits'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html#UniqFM"><span class="hs-identifier hs-type">UniqFM</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgBinding"><span class="hs-identifier hs-type">CgStgBinding</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgBinding"><span class="hs-identifier hs-type">CgStgBinding</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span id="unfloatStringLits%27"><span class="annot"><span class="annottext">unfloatStringLits' :: UniqFM Name ByteString
+-&gt; [CgStgBinding] -&gt; ([CgStgBinding], UniqSet Name)
+</span><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#unfloatStringLits%27"><span class="hs-identifier hs-var hs-var">unfloatStringLits'</span></a></span></span><span> </span><span id="local-6989586621682819484"><span class="annot"><span class="annottext">UniqFM Name ByteString
+</span><a href="#local-6989586621682819484"><span class="hs-identifier hs-var">stringLits</span></a></span></span><span> </span><span id="local-6989586621682819485"><span class="annot"><span class="annottext">[CgStgBinding]
+</span><a href="#local-6989586621682819485"><span class="hs-identifier hs-var">allBindings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[CgStgBinding]
+</span><a href="#local-6989586621682819486"><span class="hs-identifier hs-var">binderWithoutChanges</span></a></span><span> </span><span class="annot"><span class="annottext">[CgStgBinding] -&gt; [CgStgBinding] -&gt; [CgStgBinding]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[CgStgBinding]
+</span><a href="#local-6989586621682819487"><span class="hs-identifier hs-var">binderWithUnfloatedStringLit</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819488"><span class="hs-identifier hs-var">actuallyUsedStringLitNames</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621682819486"><span class="annot"><span class="annottext">[CgStgBinding]
+</span><a href="#local-6989586621682819486"><span class="hs-identifier hs-var">binderWithoutChanges</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819489"><span class="annot"><span class="annottext">[(CgStgBinding, UniqSet Name)]
+</span><a href="#local-6989586621682819489"><span class="hs-identifier hs-var">binderWithUnfloatedStringLitPairs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CgStgBinding -&gt; Either CgStgBinding (CgStgBinding, UniqSet Name))
+-&gt; [CgStgBinding]
+-&gt; ([CgStgBinding], [(CgStgBinding, UniqSet Name)])
+forall a b c. (a -&gt; Either b c) -&gt; [a] -&gt; ([b], [c])
+</span><a href="GHC.Utils.Misc.html#partitionWith"><span class="hs-identifier hs-var">partitionWith</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding -&gt; Either CgStgBinding (CgStgBinding, UniqSet Name)
+</span><a href="#local-6989586621682819490"><span class="hs-identifier hs-var">substituteStringLit</span></a></span><span> </span><span class="annot"><span class="annottext">[CgStgBinding]
+</span><a href="#local-6989586621682819485"><span class="hs-identifier hs-var">allBindings</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span>    </span><span id="local-6989586621682819487"><span class="annot"><span class="annottext">binderWithUnfloatedStringLit :: [CgStgBinding]
+</span><a href="#local-6989586621682819487"><span class="hs-identifier hs-var hs-var">binderWithUnfloatedStringLit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CgStgBinding, UniqSet Name) -&gt; CgStgBinding
+forall a b. (a, b) -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((CgStgBinding, UniqSet Name) -&gt; CgStgBinding)
+-&gt; [(CgStgBinding, UniqSet Name)] -&gt; [CgStgBinding]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(CgStgBinding, UniqSet Name)]
+</span><a href="#local-6989586621682819489"><span class="hs-identifier hs-var">binderWithUnfloatedStringLitPairs</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span id="local-6989586621682819488"><span class="annot"><span class="annottext">actuallyUsedStringLitNames :: UniqSet Name
+</span><a href="#local-6989586621682819488"><span class="hs-identifier hs-var hs-var">actuallyUsedStringLitNames</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[UniqSet Name] -&gt; UniqSet Name
+forall a. [UniqSet a] -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#unionManyUniqSets"><span class="hs-identifier hs-var">unionManyUniqSets</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(CgStgBinding, UniqSet Name) -&gt; UniqSet Name
+forall a b. (a, b) -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((CgStgBinding, UniqSet Name) -&gt; UniqSet Name)
+-&gt; [(CgStgBinding, UniqSet Name)] -&gt; [UniqSet Name]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(CgStgBinding, UniqSet Name)]
+</span><a href="#local-6989586621682819489"><span class="hs-identifier hs-var">binderWithUnfloatedStringLitPairs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><a href="#local-6989586621682819490"><span class="hs-identifier hs-type">substituteStringLit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgBinding"><span class="hs-identifier hs-type">CgStgBinding</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgBinding"><span class="hs-identifier hs-type">CgStgBinding</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgBinding"><span class="hs-identifier hs-type">CgStgBinding</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>    </span><span id="local-6989586621682819490"><span class="annot"><span class="annottext">substituteStringLit :: CgStgBinding -&gt; Either CgStgBinding (CgStgBinding, UniqSet Name)
+</span><a href="#local-6989586621682819490"><span class="hs-identifier hs-var hs-var">substituteStringLit</span></a></span></span><span> </span><span id="local-6989586621682819495"><span class="annot"><span class="annottext">x :: CgStgBinding
+</span><a href="#local-6989586621682819495"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRec"><span class="hs-identifier hs-type">StgRec</span></a></span><span> </span><span id="local-6989586621682819497"><span class="annot"><span class="annottext">[(BinderP 'CodeGen, GenStgRhs 'CodeGen)]
+</span><a href="#local-6989586621682819497"><span class="hs-identifier hs-var">bnds</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">UniqSet Name -&gt; Bool
+forall a. UniqSet a -&gt; Bool
+</span><a href="GHC.Types.Unique.Set.html#isEmptyUniqSet"><span class="hs-identifier hs-var">isEmptyUniqSet</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819499"><span class="hs-identifier hs-var">names</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CgStgBinding -&gt; Either CgStgBinding (CgStgBinding, UniqSet Name)
+forall a b. a -&gt; Either a b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819495"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-50"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CgStgBinding, UniqSet Name)
+-&gt; Either CgStgBinding (CgStgBinding, UniqSet Name)
+forall a b. b -&gt; Either a b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(BinderP 'CodeGen, GenStgRhs 'CodeGen)] -&gt; CgStgBinding
+forall (pass :: StgPass).
+[(BinderP pass, GenStgRhs pass)] -&gt; GenStgBinding pass
+</span><a href="GHC.Stg.Syntax.html#StgRec"><span class="hs-identifier hs-var">StgRec</span></a></span><span> </span><span class="annot"><span class="annottext">[(Id, GenStgRhs 'CodeGen)]
+[(BinderP 'CodeGen, GenStgRhs 'CodeGen)]
+</span><a href="#local-6989586621682819500"><span class="hs-identifier hs-var">bnds'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819499"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-52"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621682819500"><span class="annot"><span class="annottext">[(Id, GenStgRhs 'CodeGen)]
+</span><a href="#local-6989586621682819500"><span class="hs-identifier hs-var">bnds'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819499"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819499"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either
+   (Id, GenStgRhs 'CodeGen) ((Id, GenStgRhs 'CodeGen), UniqSet Name)
+ -&gt; Either
+      (Id, GenStgRhs 'CodeGen) ((Id, GenStgRhs 'CodeGen), UniqSet Name))
+-&gt; [Either
+      (Id, GenStgRhs 'CodeGen) ((Id, GenStgRhs 'CodeGen), UniqSet Name)]
+-&gt; ([(Id, GenStgRhs 'CodeGen)], UniqSet Name)
+forall a x.
+(a -&gt; Either x (x, UniqSet Name)) -&gt; [a] -&gt; ([x], UniqSet Name)
+</span><a href="#local-6989586621682819501"><span class="hs-identifier hs-var">extractNames</span></a></span><span> </span><span class="annot"><span class="annottext">Either
+  (Id, GenStgRhs 'CodeGen) ((Id, GenStgRhs 'CodeGen), UniqSet Name)
+-&gt; Either
+     (Id, GenStgRhs 'CodeGen) ((Id, GenStgRhs 'CodeGen), UniqSet Name)
+forall a. a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">([Either
+    (Id, GenStgRhs 'CodeGen) ((Id, GenStgRhs 'CodeGen), UniqSet Name)]
+ -&gt; ([(Id, GenStgRhs 'CodeGen)], UniqSet Name))
+-&gt; [Either
+      (Id, GenStgRhs 'CodeGen) ((Id, GenStgRhs 'CodeGen), UniqSet Name)]
+-&gt; ([(Id, GenStgRhs 'CodeGen)], UniqSet Name)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-53"></span><span>          </span><span class="hs-special">(</span><span id="local-6989586621682819503"><span class="annot"><a href="#local-6989586621682819503"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819504"><span class="annot"><a href="#local-6989586621682819504"><span class="hs-identifier hs-var">rhs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Id, GenStgRhs 'CodeGen)]
+[(BinderP 'CodeGen, GenStgRhs 'CodeGen)]
+</span><a href="#local-6989586621682819497"><span class="hs-identifier hs-var">bnds</span></a></span><span>
+</span><span id="line-54"></span><span>          </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621682819505"><span class="hs-identifier hs-type">processStgRhs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682819504"><span class="hs-identifier hs-type">rhs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-55"></span><span>            </span><span class="annot"><span class="annottext">Maybe (GenStgRhs 'CodeGen, UniqSet Name)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Id, GenStgRhs 'CodeGen)
+-&gt; Either
+     (Id, GenStgRhs 'CodeGen) ((Id, GenStgRhs 'CodeGen), UniqSet Name)
+forall a b. a -&gt; Either a b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682819503"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenStgRhs 'CodeGen
+</span><a href="#local-6989586621682819504"><span class="hs-identifier hs-var">rhs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>            </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819506"><span class="annot"><span class="annottext">GenStgRhs 'CodeGen
+</span><a href="#local-6989586621682819506"><span class="hs-identifier hs-var">rhs'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819507"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819507"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">((Id, GenStgRhs 'CodeGen), UniqSet Name)
+-&gt; Either
+     (Id, GenStgRhs 'CodeGen) ((Id, GenStgRhs 'CodeGen), UniqSet Name)
+forall a b. b -&gt; Either a b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682819503"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenStgRhs 'CodeGen
+</span><a href="#local-6989586621682819506"><span class="hs-identifier hs-var">rhs'</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819507"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><a href="#local-6989586621682819490"><span class="hs-identifier hs-var">substituteStringLit</span></a></span><span> </span><span id="local-6989586621682819508"><span class="annot"><span class="annottext">x :: CgStgBinding
+</span><a href="#local-6989586621682819508"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgNonRec"><span class="hs-identifier hs-type">StgNonRec</span></a></span><span> </span><span id="local-6989586621682819510"><span class="annot"><span class="annottext">BinderP 'CodeGen
+</span><a href="#local-6989586621682819510"><span class="hs-identifier hs-var">binder</span></a></span></span><span> </span><span id="local-6989586621682819511"><span class="annot"><span class="annottext">GenStgRhs 'CodeGen
+</span><a href="#local-6989586621682819511"><span class="hs-identifier hs-var">rhs</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either CgStgBinding (CgStgBinding, UniqSet Name)
+-&gt; ((GenStgRhs 'CodeGen, UniqSet Name)
+    -&gt; Either CgStgBinding (CgStgBinding, UniqSet Name))
+-&gt; Maybe (GenStgRhs 'CodeGen, UniqSet Name)
+-&gt; Either CgStgBinding (CgStgBinding, UniqSet Name)
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CgStgBinding -&gt; Either CgStgBinding (CgStgBinding, UniqSet Name)
+forall a b. a -&gt; Either a b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819508"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621682819513"><span class="annot"><span class="annottext">GenStgRhs 'CodeGen
+</span><a href="#local-6989586621682819513"><span class="hs-identifier hs-var">body'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819514"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819514"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(CgStgBinding, UniqSet Name)
+-&gt; Either CgStgBinding (CgStgBinding, UniqSet Name)
+forall a b. b -&gt; Either a b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BinderP 'CodeGen -&gt; GenStgRhs 'CodeGen -&gt; CgStgBinding
+forall (pass :: StgPass).
+BinderP pass -&gt; GenStgRhs pass -&gt; GenStgBinding pass
+</span><a href="GHC.Stg.Syntax.html#StgNonRec"><span class="hs-identifier hs-var">StgNonRec</span></a></span><span> </span><span class="annot"><span class="annottext">BinderP 'CodeGen
+</span><a href="#local-6989586621682819510"><span class="hs-identifier hs-var">binder</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgRhs 'CodeGen
+</span><a href="#local-6989586621682819513"><span class="hs-identifier hs-var">body'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819514"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenStgRhs 'CodeGen -&gt; Maybe (GenStgRhs 'CodeGen, UniqSet Name)
+</span><a href="#local-6989586621682819505"><span class="hs-identifier hs-var">processStgRhs</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgRhs 'CodeGen
+</span><a href="#local-6989586621682819511"><span class="hs-identifier hs-var">rhs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><a href="#local-6989586621682819505"><span class="hs-identifier hs-type">processStgRhs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgRhs"><span class="hs-identifier hs-type">CgStgRhs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgRhs"><span class="hs-identifier hs-type">CgStgRhs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>    </span><span id="local-6989586621682819505"><span class="annot"><span class="annottext">processStgRhs :: GenStgRhs 'CodeGen -&gt; Maybe (GenStgRhs 'CodeGen, UniqSet Name)
+</span><a href="#local-6989586621682819505"><span class="hs-identifier hs-var hs-var">processStgRhs</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRhsCon"><span class="hs-identifier hs-type">StgRhsCon</span></a></span><span> </span><span id="local-6989586621682819517"><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="#local-6989586621682819517"><span class="hs-identifier hs-var">ccs</span></a></span></span><span> </span><span id="local-6989586621682819518"><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682819518"><span class="hs-identifier hs-var">dataCon</span></a></span></span><span> </span><span id="local-6989586621682819519"><span class="annot"><span class="annottext">ConstructorNumber
+</span><a href="#local-6989586621682819519"><span class="hs-identifier hs-var">mu</span></a></span></span><span> </span><span id="local-6989586621682819520"><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682819520"><span class="hs-identifier hs-var">ticks</span></a></span></span><span> </span><span id="local-6989586621682819521"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819521"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span id="local-6989586621682819522"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682819522"><span class="hs-identifier hs-var">typ</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">UniqSet Name -&gt; Bool
+forall a. UniqSet a -&gt; Bool
+</span><a href="GHC.Types.Unique.Set.html#isEmptyUniqSet"><span class="hs-identifier hs-var">isEmptyUniqSet</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819523"><span class="hs-identifier hs-var">names</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgRhs 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GenStgRhs 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgRhs 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostCentreStack
+-&gt; DataCon
+-&gt; ConstructorNumber
+-&gt; [StgTickish]
+-&gt; [StgArg]
+-&gt; Type
+-&gt; GenStgRhs 'CodeGen
+forall (pass :: StgPass).
+CostCentreStack
+-&gt; DataCon
+-&gt; ConstructorNumber
+-&gt; [StgTickish]
+-&gt; [StgArg]
+-&gt; Type
+-&gt; GenStgRhs pass
+</span><a href="GHC.Stg.Syntax.html#StgRhsCon"><span class="hs-identifier hs-var">StgRhsCon</span></a></span><span> </span><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="#local-6989586621682819517"><span class="hs-identifier hs-var">ccs</span></a></span><span> </span><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682819518"><span class="hs-identifier hs-var">dataCon</span></a></span><span> </span><span class="annot"><span class="annottext">ConstructorNumber
+</span><a href="#local-6989586621682819519"><span class="hs-identifier hs-var">mu</span></a></span><span> </span><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682819520"><span class="hs-identifier hs-var">ticks</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819524"><span class="hs-identifier hs-var">unified</span></a></span><span> </span><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682819522"><span class="hs-identifier hs-var">typ</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819523"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621682819524"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819524"><span class="hs-identifier hs-var">unified</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819523"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819523"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[StgArg] -&gt; ([StgArg], UniqSet Name)
+</span><a href="#local-6989586621682819525"><span class="hs-identifier hs-var">substituteArgWithNames</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819521"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><a href="#local-6989586621682819505"><span class="hs-identifier hs-var">processStgRhs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRhsClosure"><span class="hs-identifier hs-type">StgRhsClosure</span></a></span><span> </span><span id="local-6989586621682819527"><span class="annot"><span class="annottext">XRhsClosure 'CodeGen
+</span><a href="#local-6989586621682819527"><span class="hs-identifier hs-var">fvs</span></a></span></span><span> </span><span id="local-6989586621682819528"><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="#local-6989586621682819528"><span class="hs-identifier hs-var">ccs</span></a></span></span><span> </span><span id="local-6989586621682819529"><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="#local-6989586621682819529"><span class="hs-identifier hs-var">upd</span></a></span></span><span> </span><span id="local-6989586621682819530"><span class="annot"><span class="annottext">[BinderP 'CodeGen]
+</span><a href="#local-6989586621682819530"><span class="hs-identifier hs-var">bndrs</span></a></span></span><span> </span><span id="local-6989586621682819531"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819531"><span class="hs-identifier hs-var">body</span></a></span></span><span> </span><span id="local-6989586621682819532"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682819532"><span class="hs-identifier hs-var">typ</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621682819533"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819533"><span class="hs-identifier hs-var">body'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819534"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819534"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">XRhsClosure 'CodeGen
+-&gt; CostCentreStack
+-&gt; UpdateFlag
+-&gt; [BinderP 'CodeGen]
+-&gt; GenStgExpr 'CodeGen
+-&gt; Type
+-&gt; GenStgRhs 'CodeGen
+forall (pass :: StgPass).
+XRhsClosure pass
+-&gt; CostCentreStack
+-&gt; UpdateFlag
+-&gt; [BinderP pass]
+-&gt; GenStgExpr pass
+-&gt; Type
+-&gt; GenStgRhs pass
+</span><a href="GHC.Stg.Syntax.html#StgRhsClosure"><span class="hs-identifier hs-var">StgRhsClosure</span></a></span><span> </span><span class="annot"><span class="annottext">XRhsClosure 'CodeGen
+</span><a href="#local-6989586621682819527"><span class="hs-identifier hs-var">fvs</span></a></span><span> </span><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="#local-6989586621682819528"><span class="hs-identifier hs-var">ccs</span></a></span><span> </span><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="#local-6989586621682819529"><span class="hs-identifier hs-var">upd</span></a></span><span> </span><span class="annot"><span class="annottext">[BinderP 'CodeGen]
+</span><a href="#local-6989586621682819530"><span class="hs-identifier hs-var">bndrs</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819533"><span class="hs-identifier hs-var">body'</span></a></span><span> </span><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682819532"><span class="hs-identifier hs-var">typ</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819534"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((GenStgExpr 'CodeGen, UniqSet Name)
+ -&gt; (GenStgRhs 'CodeGen, UniqSet Name))
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgRhs 'CodeGen, UniqSet Name)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen -&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819531"><span class="hs-identifier hs-var">body</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">-- Recursive expressions</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><a href="#local-6989586621682819535"><span class="hs-identifier hs-type">processStgExpr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgExpr"><span class="hs-identifier hs-type">CgStgExpr</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgExpr"><span class="hs-identifier hs-type">CgStgExpr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621682819535"><span class="annot"><span class="annottext">processStgExpr :: GenStgExpr 'CodeGen -&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="#local-6989586621682819535"><span class="hs-identifier hs-var hs-var">processStgExpr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgLit"><span class="hs-identifier hs-type">StgLit</span></a></span><span> </span><span class="annot"><span class="annottext">Literal
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgTick"><span class="hs-identifier hs-type">StgTick</span></a></span><span> </span><span class="annot"><span class="annottext">StgTickish
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgLet"><span class="hs-identifier hs-type">StgLet</span></a></span><span> </span><span id="local-6989586621682819540"><span class="annot"><span class="annottext">XLet 'CodeGen
+</span><a href="#local-6989586621682819540"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621682819541"><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819541"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621682819542"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819542"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-77"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CgStgBinding -&gt; Either CgStgBinding (CgStgBinding, UniqSet Name)
+</span><a href="#local-6989586621682819490"><span class="hs-identifier hs-var">substituteStringLit</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819541"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen -&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819542"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-78"></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819543"><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819543"><span class="hs-identifier hs-var">b'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819544"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819544"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">XLet 'CodeGen
+-&gt; CgStgBinding -&gt; GenStgExpr 'CodeGen -&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass).
+XLet pass
+-&gt; GenStgBinding pass -&gt; GenStgExpr pass -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgLet"><span class="hs-identifier hs-var">StgLet</span></a></span><span> </span><span class="annot"><span class="annottext">XLet 'CodeGen
+</span><a href="#local-6989586621682819540"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819543"><span class="hs-identifier hs-var">b'</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819542"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819544"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819545"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819545"><span class="hs-identifier hs-var">e'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819546"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819546"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">XLet 'CodeGen
+-&gt; CgStgBinding -&gt; GenStgExpr 'CodeGen -&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass).
+XLet pass
+-&gt; GenStgBinding pass -&gt; GenStgExpr pass -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgLet"><span class="hs-identifier hs-var">StgLet</span></a></span><span> </span><span class="annot"><span class="annottext">XLet 'CodeGen
+</span><a href="#local-6989586621682819540"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819541"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819545"><span class="hs-identifier hs-var">e'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819546"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819547"><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819547"><span class="hs-identifier hs-var">b'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819548"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819548"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819549"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819549"><span class="hs-identifier hs-var">e'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819550"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819550"><span class="hs-identifier hs-var">names'</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">XLet 'CodeGen
+-&gt; CgStgBinding -&gt; GenStgExpr 'CodeGen -&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass).
+XLet pass
+-&gt; GenStgBinding pass -&gt; GenStgExpr pass -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgLet"><span class="hs-identifier hs-var">StgLet</span></a></span><span> </span><span class="annot"><span class="annottext">XLet 'CodeGen
+</span><a href="#local-6989586621682819540"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819547"><span class="hs-identifier hs-var">b'</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819549"><span class="hs-identifier hs-var">e'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819548"><span class="hs-identifier hs-var">names</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name -&gt; UniqSet Name -&gt; UniqSet Name
+forall a. UniqSet a -&gt; UniqSet a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#unionUniqSets"><span class="hs-operator hs-var">`unionUniqSets`</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819550"><span class="hs-identifier hs-var">names'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgLetNoEscape"><span class="hs-identifier hs-type">StgLetNoEscape</span></a></span><span> </span><span id="local-6989586621682819553"><span class="annot"><span class="annottext">XLetNoEscape 'CodeGen
+</span><a href="#local-6989586621682819553"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621682819554"><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819554"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621682819555"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819555"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-83"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CgStgBinding -&gt; Either CgStgBinding (CgStgBinding, UniqSet Name)
+</span><a href="#local-6989586621682819490"><span class="hs-identifier hs-var">substituteStringLit</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819554"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen -&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819555"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-84"></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-85"></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819556"><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819556"><span class="hs-identifier hs-var">b'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819557"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819557"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">XLetNoEscape 'CodeGen
+-&gt; CgStgBinding -&gt; GenStgExpr 'CodeGen -&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass).
+XLetNoEscape pass
+-&gt; GenStgBinding pass -&gt; GenStgExpr pass -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgLetNoEscape"><span class="hs-identifier hs-var">StgLetNoEscape</span></a></span><span> </span><span class="annot"><span class="annottext">XLetNoEscape 'CodeGen
+</span><a href="#local-6989586621682819553"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819556"><span class="hs-identifier hs-var">b'</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819555"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819557"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819558"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819558"><span class="hs-identifier hs-var">e'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819559"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819559"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">XLetNoEscape 'CodeGen
+-&gt; CgStgBinding -&gt; GenStgExpr 'CodeGen -&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass).
+XLetNoEscape pass
+-&gt; GenStgBinding pass -&gt; GenStgExpr pass -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgLetNoEscape"><span class="hs-identifier hs-var">StgLetNoEscape</span></a></span><span> </span><span class="annot"><span class="annottext">XLetNoEscape 'CodeGen
+</span><a href="#local-6989586621682819553"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819554"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819558"><span class="hs-identifier hs-var">e'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819559"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819560"><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819560"><span class="hs-identifier hs-var">b'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819561"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819561"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819562"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819562"><span class="hs-identifier hs-var">e'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819563"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819563"><span class="hs-identifier hs-var">names'</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">XLetNoEscape 'CodeGen
+-&gt; CgStgBinding -&gt; GenStgExpr 'CodeGen -&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass).
+XLetNoEscape pass
+-&gt; GenStgBinding pass -&gt; GenStgExpr pass -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgLetNoEscape"><span class="hs-identifier hs-var">StgLetNoEscape</span></a></span><span> </span><span class="annot"><span class="annottext">XLetNoEscape 'CodeGen
+</span><a href="#local-6989586621682819553"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819560"><span class="hs-identifier hs-var">b'</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819562"><span class="hs-identifier hs-var">e'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819561"><span class="hs-identifier hs-var">names</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name -&gt; UniqSet Name -&gt; UniqSet Name
+forall a. UniqSet a -&gt; UniqSet a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#unionUniqSets"><span class="hs-operator hs-var">`unionUniqSets`</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819563"><span class="hs-identifier hs-var">names'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-comment">-- We should keep the order: See Note [Case expression invariants]</span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgCase"><span class="hs-identifier hs-type">StgCase</span></a></span><span> </span><span id="local-6989586621682819565"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819565"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span id="local-6989586621682819566"><span class="annot"><span class="annottext">BinderP 'CodeGen
+</span><a href="#local-6989586621682819566"><span class="hs-identifier hs-var">bndr</span></a></span></span><span> </span><span id="local-6989586621682819567"><span class="annot"><span class="annottext">AltType
+</span><a href="#local-6989586621682819567"><span class="hs-identifier hs-var">alt_type</span></a></span></span><span> </span><span id="local-6989586621682819568"><span class="annot"><span class="annottext">[GenStgAlt 'CodeGen]
+</span><a href="#local-6989586621682819568"><span class="hs-identifier hs-var">alts</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-90"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UniqSet Name -&gt; Bool
+forall a. UniqSet a -&gt; Bool
+</span><a href="GHC.Types.Unique.Set.html#isEmptyUniqSet"><span class="hs-identifier hs-var">isEmptyUniqSet</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819569"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen -&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819565"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-91"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819570"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819570"><span class="hs-identifier hs-var">e'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819571"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819571"><span class="hs-identifier hs-var">names'</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+-&gt; BinderP 'CodeGen
+-&gt; AltType
+-&gt; [GenStgAlt 'CodeGen]
+-&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass).
+GenStgExpr pass
+-&gt; BinderP pass -&gt; AltType -&gt; [GenStgAlt pass] -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgCase"><span class="hs-identifier hs-var">StgCase</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819570"><span class="hs-identifier hs-var">e'</span></a></span><span> </span><span class="annot"><span class="annottext">BinderP 'CodeGen
+</span><a href="#local-6989586621682819566"><span class="hs-identifier hs-var">bndr</span></a></span><span> </span><span class="annot"><span class="annottext">AltType
+</span><a href="#local-6989586621682819567"><span class="hs-identifier hs-var">alt_type</span></a></span><span> </span><span class="annot"><span class="annottext">[GenStgAlt 'CodeGen]
+</span><a href="#local-6989586621682819568"><span class="hs-identifier hs-var">alts</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819571"><span class="hs-identifier hs-var">names'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+-&gt; BinderP 'CodeGen
+-&gt; AltType
+-&gt; [GenStgAlt 'CodeGen]
+-&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass).
+GenStgExpr pass
+-&gt; BinderP pass -&gt; AltType -&gt; [GenStgAlt pass] -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgCase"><span class="hs-identifier hs-var">StgCase</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819565"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">BinderP 'CodeGen
+</span><a href="#local-6989586621682819566"><span class="hs-identifier hs-var">bndr</span></a></span><span> </span><span class="annot"><span class="annottext">AltType
+</span><a href="#local-6989586621682819567"><span class="hs-identifier hs-var">alt_type</span></a></span><span> </span><span class="annot"><span class="annottext">[GenStgAlt 'CodeGen]
+</span><a href="#local-6989586621682819572"><span class="hs-identifier hs-var">unified</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819569"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819573"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819573"><span class="hs-identifier hs-var">e'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819574"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819574"><span class="hs-identifier hs-var">names'</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+-&gt; BinderP 'CodeGen
+-&gt; AltType
+-&gt; [GenStgAlt 'CodeGen]
+-&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass).
+GenStgExpr pass
+-&gt; BinderP pass -&gt; AltType -&gt; [GenStgAlt pass] -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgCase"><span class="hs-identifier hs-var">StgCase</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819573"><span class="hs-identifier hs-var">e'</span></a></span><span> </span><span class="annot"><span class="annottext">BinderP 'CodeGen
+</span><a href="#local-6989586621682819566"><span class="hs-identifier hs-var">bndr</span></a></span><span> </span><span class="annot"><span class="annottext">AltType
+</span><a href="#local-6989586621682819567"><span class="hs-identifier hs-var">alt_type</span></a></span><span> </span><span class="annot"><span class="annottext">[GenStgAlt 'CodeGen]
+</span><a href="#local-6989586621682819572"><span class="hs-identifier hs-var">unified</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819569"><span class="hs-identifier hs-var">names</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name -&gt; UniqSet Name -&gt; UniqSet Name
+forall a. UniqSet a -&gt; UniqSet a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#unionUniqSets"><span class="hs-operator hs-var">`unionUniqSets`</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819574"><span class="hs-identifier hs-var">names'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621682819572"><span class="annot"><span class="annottext">[GenStgAlt 'CodeGen]
+</span><a href="#local-6989586621682819572"><span class="hs-identifier hs-var">unified</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819569"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819569"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GenStgAlt 'CodeGen
+ -&gt; Either (GenStgAlt 'CodeGen) (GenStgAlt 'CodeGen, UniqSet Name))
+-&gt; [GenStgAlt 'CodeGen] -&gt; ([GenStgAlt 'CodeGen], UniqSet Name)
+forall a x.
+(a -&gt; Either x (x, UniqSet Name)) -&gt; [a] -&gt; ([x], UniqSet Name)
+</span><a href="#local-6989586621682819501"><span class="hs-identifier hs-var">extractNames</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgAlt 'CodeGen
+-&gt; Either (GenStgAlt 'CodeGen) (GenStgAlt 'CodeGen, UniqSet Name)
+</span><a href="#local-6989586621682819575"><span class="hs-identifier hs-var">splitAlts</span></a></span><span> </span><span class="annot"><span class="annottext">[GenStgAlt 'CodeGen]
+</span><a href="#local-6989586621682819568"><span class="hs-identifier hs-var">alts</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>        </span><span class="annot"><a href="#local-6989586621682819575"><span class="hs-identifier hs-type">splitAlts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgAlt"><span class="hs-identifier hs-type">CgStgAlt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgAlt"><span class="hs-identifier hs-type">CgStgAlt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgAlt"><span class="hs-identifier hs-type">CgStgAlt</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>        </span><span id="local-6989586621682819575"><span class="annot"><span class="annottext">splitAlts :: GenStgAlt 'CodeGen
+-&gt; Either (GenStgAlt 'CodeGen) (GenStgAlt 'CodeGen, UniqSet Name)
+</span><a href="#local-6989586621682819575"><span class="hs-identifier hs-var hs-var">splitAlts</span></a></span></span><span> </span><span id="local-6989586621682819577"><span class="annot"><span class="annottext">alt :: GenStgAlt 'CodeGen
+</span><a href="#local-6989586621682819577"><span class="hs-identifier hs-var">alt</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#GenStgAlt"><span class="hs-identifier hs-type">GenStgAlt</span></a></span><span> </span><span id="local-6989586621682819579"><span class="annot"><span class="annottext">AltCon
+</span><a href="#local-6989586621682819579"><span class="hs-identifier hs-var">con</span></a></span></span><span> </span><span id="local-6989586621682819580"><span class="annot"><span class="annottext">[BinderP 'CodeGen]
+</span><a href="#local-6989586621682819580"><span class="hs-identifier hs-var">bndrs</span></a></span></span><span> </span><span id="local-6989586621682819581"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819581"><span class="hs-identifier hs-var">rhs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-100"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen -&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819581"><span class="hs-identifier hs-var">rhs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-101"></span><span>            </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">GenStgAlt 'CodeGen
+-&gt; Either (GenStgAlt 'CodeGen) (GenStgAlt 'CodeGen, UniqSet Name)
+forall a b. a -&gt; Either a b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgAlt 'CodeGen
+</span><a href="#local-6989586621682819577"><span class="hs-identifier hs-var">alt</span></a></span><span>
+</span><span id="line-102"></span><span>            </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682819582"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819582"><span class="hs-identifier hs-var">alt'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819583"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819583"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GenStgAlt 'CodeGen, UniqSet Name)
+-&gt; Either (GenStgAlt 'CodeGen) (GenStgAlt 'CodeGen, UniqSet Name)
+forall a b. b -&gt; Either a b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AltCon
+-&gt; [BinderP 'CodeGen] -&gt; GenStgExpr 'CodeGen -&gt; GenStgAlt 'CodeGen
+forall (pass :: StgPass).
+AltCon -&gt; [BinderP pass] -&gt; GenStgExpr pass -&gt; GenStgAlt pass
+</span><a href="GHC.Stg.Syntax.html#GenStgAlt"><span class="hs-identifier hs-var">GenStgAlt</span></a></span><span> </span><span class="annot"><span class="annottext">AltCon
+</span><a href="#local-6989586621682819579"><span class="hs-identifier hs-var">con</span></a></span><span> </span><span class="annot"><span class="annottext">[BinderP 'CodeGen]
+</span><a href="#local-6989586621682819580"><span class="hs-identifier hs-var">bndrs</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819582"><span class="hs-identifier hs-var">alt'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819583"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-comment">-- No args</span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgApp"><span class="hs-identifier hs-type">StgApp</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgConApp"><span class="hs-identifier hs-type">StgConApp</span></a></span><span> </span><span class="annot"><span class="annottext">DataCon
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ConstructorNumber
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[[PrimRep]]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgOpApp"><span class="hs-identifier hs-type">StgOpApp</span></a></span><span> </span><span class="annot"><span class="annottext">StgOp
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Type
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">-- Main targets. Preserving the order of args is important</span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgApp"><span class="hs-identifier hs-type">StgApp</span></a></span><span> </span><span id="local-6989586621682819587"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682819587"><span class="hs-identifier hs-var">fn</span></a></span></span><span> </span><span id="local-6989586621682819588"><span class="annot"><span class="annottext">args :: [StgArg]
+</span><a href="#local-6989586621682819588"><span class="hs-identifier hs-var">args</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="annottext">StgArg
+</span><span class="hs-identifier">_</span></span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span class="annot"><span class="annottext">[StgArg]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">UniqSet Name -&gt; Bool
+forall a. UniqSet a -&gt; Bool
+</span><a href="GHC.Types.Unique.Set.html#isEmptyUniqSet"><span class="hs-identifier hs-var">isEmptyUniqSet</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819589"><span class="hs-identifier hs-var">names</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-112"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id -&gt; [StgArg] -&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass). Id -&gt; [StgArg] -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgApp"><span class="hs-identifier hs-var">StgApp</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682819587"><span class="hs-identifier hs-var">fn</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819590"><span class="hs-identifier hs-var">unified</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819589"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-114"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621682819590"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819590"><span class="hs-identifier hs-var">unified</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819589"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819589"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[StgArg] -&gt; ([StgArg], UniqSet Name)
+</span><a href="#local-6989586621682819525"><span class="hs-identifier hs-var">substituteArgWithNames</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819588"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgConApp"><span class="hs-identifier hs-type">StgConApp</span></a></span><span> </span><span id="local-6989586621682819591"><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682819591"><span class="hs-identifier hs-var">dc</span></a></span></span><span> </span><span id="local-6989586621682819592"><span class="annot"><span class="annottext">ConstructorNumber
+</span><a href="#local-6989586621682819592"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621682819593"><span class="annot"><span class="annottext">args :: [StgArg]
+</span><a href="#local-6989586621682819593"><span class="hs-identifier hs-var">args</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="annottext">StgArg
+</span><span class="hs-identifier">_</span></span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span class="annot"><span class="annottext">[StgArg]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682819594"><span class="annot"><span class="annottext">[[PrimRep]]
+</span><a href="#local-6989586621682819594"><span class="hs-identifier hs-var">tys</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">UniqSet Name -&gt; Bool
+forall a. UniqSet a -&gt; Bool
+</span><a href="GHC.Types.Unique.Set.html#isEmptyUniqSet"><span class="hs-identifier hs-var">isEmptyUniqSet</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819595"><span class="hs-identifier hs-var">names</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-117"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataCon
+-&gt; ConstructorNumber
+-&gt; [StgArg]
+-&gt; [[PrimRep]]
+-&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass).
+DataCon
+-&gt; ConstructorNumber -&gt; [StgArg] -&gt; [[PrimRep]] -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgConApp"><span class="hs-identifier hs-var">StgConApp</span></a></span><span> </span><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682819591"><span class="hs-identifier hs-var">dc</span></a></span><span> </span><span class="annot"><span class="annottext">ConstructorNumber
+</span><a href="#local-6989586621682819592"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819596"><span class="hs-identifier hs-var">unified</span></a></span><span> </span><span class="annot"><span class="annottext">[[PrimRep]]
+</span><a href="#local-6989586621682819594"><span class="hs-identifier hs-var">tys</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819595"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-119"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621682819596"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819596"><span class="hs-identifier hs-var">unified</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819595"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819595"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[StgArg] -&gt; ([StgArg], UniqSet Name)
+</span><a href="#local-6989586621682819525"><span class="hs-identifier hs-var">substituteArgWithNames</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819593"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-120"></span><span>    </span><span class="annot"><a href="#local-6989586621682819535"><span class="hs-identifier hs-var">processStgExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgOpApp"><span class="hs-identifier hs-type">StgOpApp</span></a></span><span> </span><span id="local-6989586621682819597"><span class="annot"><span class="annottext">StgOp
+</span><a href="#local-6989586621682819597"><span class="hs-identifier hs-var">op</span></a></span></span><span> </span><span id="local-6989586621682819598"><span class="annot"><span class="annottext">args :: [StgArg]
+</span><a href="#local-6989586621682819598"><span class="hs-identifier hs-var">args</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="annottext">StgArg
+</span><span class="hs-identifier">_</span></span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span class="annot"><span class="annottext">[StgArg]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682819599"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682819599"><span class="hs-identifier hs-var">tys</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">UniqSet Name -&gt; Bool
+forall a. UniqSet a -&gt; Bool
+</span><a href="GHC.Types.Unique.Set.html#isEmptyUniqSet"><span class="hs-identifier hs-var">isEmptyUniqSet</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819600"><span class="hs-identifier hs-var">names</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-122"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GenStgExpr 'CodeGen, UniqSet Name)
+-&gt; Maybe (GenStgExpr 'CodeGen, UniqSet Name)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StgOp -&gt; [StgArg] -&gt; Type -&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass).
+StgOp -&gt; [StgArg] -&gt; Type -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#StgOpApp"><span class="hs-identifier hs-var">StgOpApp</span></a></span><span> </span><span class="annot"><span class="annottext">StgOp
+</span><a href="#local-6989586621682819597"><span class="hs-identifier hs-var">op</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819601"><span class="hs-identifier hs-var">unified</span></a></span><span> </span><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682819599"><span class="hs-identifier hs-var">tys</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819600"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-124"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621682819601"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819601"><span class="hs-identifier hs-var">unified</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819600"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819600"><span class="hs-identifier hs-var">names</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[StgArg] -&gt; ([StgArg], UniqSet Name)
+</span><a href="#local-6989586621682819525"><span class="hs-identifier hs-var">substituteArgWithNames</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819598"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><a href="#local-6989586621682819602"><span class="hs-identifier hs-type">substituteArg</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgArg"><span class="hs-identifier hs-type">StgArg</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgArg"><span class="hs-identifier hs-type">StgArg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgArg"><span class="hs-identifier hs-type">StgArg</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>    </span><span id="local-6989586621682819602"><span class="annot"><span class="annottext">substituteArg :: StgArg -&gt; Either StgArg (StgArg, Name)
+</span><a href="#local-6989586621682819602"><span class="hs-identifier hs-var hs-var">substituteArg</span></a></span></span><span> </span><span id="local-6989586621682819603"><span class="annot"><span class="annottext">a :: StgArg
+</span><a href="#local-6989586621682819603"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgLitArg"><span class="hs-identifier hs-type">StgLitArg</span></a></span><span> </span><span class="annot"><span class="annottext">Literal
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StgArg -&gt; Either StgArg (StgArg, Name)
+forall a b. a -&gt; Either a b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">StgArg
+</span><a href="#local-6989586621682819603"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="annot"><a href="#local-6989586621682819602"><span class="hs-identifier hs-var">substituteArg</span></a></span><span> </span><span id="local-6989586621682819605"><span class="annot"><span class="annottext">a :: StgArg
+</span><a href="#local-6989586621682819605"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Stg.Syntax.html#StgVarArg"><span class="hs-identifier hs-type">StgVarArg</span></a></span><span> </span><span id="local-6989586621682819607"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682819607"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-129"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621682819608"><span class="annot"><span class="annottext">name :: Name
+</span><a href="#local-6989586621682819608"><span class="hs-identifier hs-var hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Id -&gt; Name
+</span><a href="GHC.Types.Id.html#idName"><span class="hs-identifier hs-var">idName</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682819607"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-130"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">UniqFM Name ByteString -&gt; Name -&gt; Maybe ByteString
+forall key elt. Uniquable key =&gt; UniqFM key elt -&gt; key -&gt; Maybe elt
+</span><a href="GHC.Types.Unique.FM.html#lookupUFM"><span class="hs-identifier hs-var">lookupUFM</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM Name ByteString
+</span><a href="#local-6989586621682819484"><span class="hs-identifier hs-var">stringLits</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682819608"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-131"></span><span>        </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">StgArg -&gt; Either StgArg (StgArg, Name)
+forall a b. a -&gt; Either a b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">StgArg
+</span><a href="#local-6989586621682819605"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-132"></span><span>        </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621682819611"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621682819611"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(StgArg, Name) -&gt; Either StgArg (StgArg, Name)
+forall a b. b -&gt; Either a b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Literal -&gt; StgArg
+</span><a href="GHC.Stg.Syntax.html#StgLitArg"><span class="hs-identifier hs-var">StgLitArg</span></a></span><span> </span><span class="annot"><span class="annottext">(Literal -&gt; StgArg) -&gt; Literal -&gt; StgArg
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Literal
+</span><a href="GHC.Types.Literal.html#LitString"><span class="hs-identifier hs-var">LitString</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621682819611"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621682819608"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span>    </span><span id="local-6989586621682819525"><span class="annot"><span class="annottext">substituteArgWithNames :: [StgArg] -&gt; ([StgArg], UniqSet Name)
+</span><a href="#local-6989586621682819525"><span class="hs-identifier hs-var hs-var">substituteArgWithNames</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(StgArg -&gt; Either StgArg (StgArg, UniqSet Name))
+-&gt; [StgArg] -&gt; ([StgArg], UniqSet Name)
+forall a x.
+(a -&gt; Either x (x, UniqSet Name)) -&gt; [a] -&gt; ([x], UniqSet Name)
+</span><a href="#local-6989586621682819501"><span class="hs-identifier hs-var">extractNames</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((StgArg, Name) -&gt; (StgArg, UniqSet Name))
+-&gt; Either StgArg (StgArg, Name)
+-&gt; Either StgArg (StgArg, UniqSet Name)
+forall b c a. (b -&gt; c) -&gt; Either a b -&gt; Either a c
+forall (p :: * -&gt; * -&gt; *) b c a.
+Bifunctor p =&gt;
+(b -&gt; c) -&gt; p a b -&gt; p a c
+</span><a href="../../base-4.22.0.0-inplace/src/Data.Bifunctor.html#second"><span class="hs-identifier hs-var">second</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Name -&gt; UniqSet Name) -&gt; (StgArg, Name) -&gt; (StgArg, UniqSet Name)
+forall b c a. (b -&gt; c) -&gt; (a, b) -&gt; (a, c)
+forall (p :: * -&gt; * -&gt; *) b c a.
+Bifunctor p =&gt;
+(b -&gt; c) -&gt; p a b -&gt; p a c
+</span><a href="../../base-4.22.0.0-inplace/src/Data.Bifunctor.html#second"><span class="hs-identifier hs-var">second</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; UniqSet Name
+forall a. Uniquable a =&gt; a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#unitUniqSet"><span class="hs-identifier hs-var">unitUniqSet</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either StgArg (StgArg, Name)
+ -&gt; Either StgArg (StgArg, UniqSet Name))
+-&gt; (StgArg -&gt; Either StgArg (StgArg, Name))
+-&gt; StgArg
+-&gt; Either StgArg (StgArg, UniqSet Name)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">StgArg -&gt; Either StgArg (StgArg, Name)
+</span><a href="#local-6989586621682819602"><span class="hs-identifier hs-var">substituteArg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span>    </span><span id="local-6989586621682819396"><span id="local-6989586621682819397"><span class="annot"><a href="#local-6989586621682819501"><span class="hs-identifier hs-type">extractNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682819396"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682819397"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682819397"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621682819396"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621682819397"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-137"></span><span>    </span><span id="local-6989586621682819501"><span class="annot"><span class="annottext">extractNames :: forall a x.
+(a -&gt; Either x (x, UniqSet Name)) -&gt; [a] -&gt; ([x], UniqSet Name)
+</span><a href="#local-6989586621682819501"><span class="hs-identifier hs-var hs-var">extractNames</span></a></span></span><span> </span><span id="local-6989586621682819625"><span class="annot"><span class="annottext">a -&gt; Either x (x, UniqSet Name)
+</span><a href="#local-6989586621682819625"><span class="hs-identifier hs-var">splitter</span></a></span></span><span> </span><span id="local-6989586621682819626"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621682819626"><span class="hs-identifier hs-var">target</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-138"></span><span>      </span><span class="hs-keyword">let</span><span>
+</span><span id="line-139"></span><span>        </span><span id="local-6989586621682819627"><span class="annot"><span class="annottext">splitted :: [Either x (x, UniqSet Name)]
+</span><a href="#local-6989586621682819627"><span class="hs-identifier hs-var hs-var">splitted</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Either x (x, UniqSet Name)
+</span><a href="#local-6989586621682819625"><span class="hs-identifier hs-var">splitter</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Either x (x, UniqSet Name))
+-&gt; [a] -&gt; [Either x (x, UniqSet Name)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621682819626"><span class="hs-identifier hs-var">target</span></a></span><span>
+</span><span id="line-140"></span><span>        </span><span id="local-6989586621682819628"><span class="annot"><span class="annottext">combined :: [(x, UniqSet Name)]
+</span><a href="#local-6989586621682819628"><span class="hs-identifier hs-var hs-var">combined</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(x -&gt; (x, UniqSet Name))
+-&gt; ((x, UniqSet Name) -&gt; (x, UniqSet Name))
+-&gt; Either x (x, UniqSet Name)
+-&gt; (x, UniqSet Name)
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+forall a. UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#emptyUniqSet"><span class="hs-identifier hs-var">emptyUniqSet</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(x, UniqSet Name) -&gt; (x, UniqSet Name)
+forall a. a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">(Either x (x, UniqSet Name) -&gt; (x, UniqSet Name))
+-&gt; [Either x (x, UniqSet Name)] -&gt; [(x, UniqSet Name)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Either x (x, UniqSet Name)]
+</span><a href="#local-6989586621682819627"><span class="hs-identifier hs-var">splitted</span></a></span><span>
+</span><span id="line-141"></span><span>        </span><span id="local-6989586621682819631"><span class="annot"><span class="annottext">unified :: [x]
+</span><a href="#local-6989586621682819631"><span class="hs-identifier hs-var hs-var">unified</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(x, UniqSet Name) -&gt; x
+forall a b. (a, b) -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((x, UniqSet Name) -&gt; x) -&gt; [(x, UniqSet Name)] -&gt; [x]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(x, UniqSet Name)]
+</span><a href="#local-6989586621682819628"><span class="hs-identifier hs-var">combined</span></a></span><span>
+</span><span id="line-142"></span><span>        </span><span id="local-6989586621682819632"><span class="annot"><span class="annottext">names :: UniqSet Name
+</span><a href="#local-6989586621682819632"><span class="hs-identifier hs-var hs-var">names</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[UniqSet Name] -&gt; UniqSet Name
+forall a. [UniqSet a] -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#unionManyUniqSets"><span class="hs-identifier hs-var">unionManyUniqSets</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(x, UniqSet Name) -&gt; UniqSet Name
+forall a b. (a, b) -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((x, UniqSet Name) -&gt; UniqSet Name)
+-&gt; [(x, UniqSet Name)] -&gt; [UniqSet Name]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(x, UniqSet Name)]
+</span><a href="#local-6989586621682819628"><span class="hs-identifier hs-var">combined</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[x]
+</span><a href="#local-6989586621682819631"><span class="hs-identifier hs-var">unified</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819632"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="annot"><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#selectStringLitsForUnfloat"><span class="hs-identifier hs-type">selectStringLitsForUnfloat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html#UniqFM"><span class="hs-identifier hs-type">UniqFM</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html#UniqFM"><span class="hs-identifier hs-type">UniqFM</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-146"></span><span id="selectStringLitsForUnfloat"><span class="annot"><span class="annottext">selectStringLitsForUnfloat :: UniqSet Name -&gt; UniqFM Name ByteString -&gt; UniqFM Name ByteString
+</span><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#selectStringLitsForUnfloat"><span class="hs-identifier hs-var hs-var">selectStringLitsForUnfloat</span></a></span></span><span> </span><span id="local-6989586621682819633"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819633"><span class="hs-identifier hs-var">usedOnceStringLits</span></a></span></span><span> </span><span id="local-6989586621682819634"><span class="annot"><span class="annottext">UniqFM Name ByteString
+</span><a href="#local-6989586621682819634"><span class="hs-identifier hs-var">stringLits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqFM Name ByteString
+</span><a href="#local-6989586621682819635"><span class="hs-identifier hs-var">alwaysUnfloat</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM Name ByteString
+-&gt; UniqFM Name ByteString -&gt; UniqFM Name ByteString
+forall {k} (key :: k) elt.
+UniqFM key elt -&gt; UniqFM key elt -&gt; UniqFM key elt
+</span><a href="GHC.Types.Unique.FM.html#plusUFM"><span class="hs-operator hs-var">`plusUFM`</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM Name ByteString
+</span><a href="#local-6989586621682819637"><span class="hs-identifier hs-var">usedOnceUnfloat</span></a></span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-148"></span><span>    </span><span id="local-6989586621682819635"><span class="annot"><span class="annottext">alwaysUnfloat :: UniqFM Name ByteString
+</span><a href="#local-6989586621682819635"><span class="hs-identifier hs-var hs-var">alwaysUnfloat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqFM Name ByteString -&gt; UniqFM Name ByteString
+</span><a href="#local-6989586621682819638"><span class="hs-identifier hs-var">alwaysUnfloatStringLits</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM Name ByteString
+</span><a href="#local-6989586621682819634"><span class="hs-identifier hs-var">stringLits</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span id="local-6989586621682819637"><span class="annot"><span class="annottext">usedOnceUnfloat :: UniqFM Name ByteString
+</span><a href="#local-6989586621682819637"><span class="hs-identifier hs-var hs-var">usedOnceUnfloat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UniqSet Name -&gt; UniqFM Name ByteString -&gt; UniqFM Name ByteString
+</span><a href="#local-6989586621682819639"><span class="hs-identifier hs-var">selectUsedOnceStringLits</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819633"><span class="hs-identifier hs-var">usedOnceStringLits</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM Name ByteString
+</span><a href="#local-6989586621682819634"><span class="hs-identifier hs-var">stringLits</span></a></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><a href="#local-6989586621682819638"><span class="hs-identifier hs-type">alwaysUnfloatStringLits</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html#UniqFM"><span class="hs-identifier hs-type">UniqFM</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html#UniqFM"><span class="hs-identifier hs-type">UniqFM</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-152"></span><span>    </span><span id="local-6989586621682819638"><span class="annot"><span class="annottext">alwaysUnfloatStringLits :: UniqFM Name ByteString -&gt; UniqFM Name ByteString
+</span><a href="#local-6989586621682819638"><span class="hs-identifier hs-var hs-var">alwaysUnfloatStringLits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Bool)
+-&gt; UniqFM Name ByteString -&gt; UniqFM Name ByteString
+forall {k} elt (key :: k).
+(elt -&gt; Bool) -&gt; UniqFM key elt -&gt; UniqFM key elt
+</span><a href="GHC.Types.Unique.FM.html#filterUFM"><span class="hs-identifier hs-var">filterUFM</span></a></span><span> </span><span class="annot"><span class="annottext">((ByteString -&gt; Bool)
+ -&gt; UniqFM Name ByteString -&gt; UniqFM Name ByteString)
+-&gt; (ByteString -&gt; Bool)
+-&gt; UniqFM Name ByteString
+-&gt; UniqFM Name ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682819641"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621682819641"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">BS.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621682819641"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="GHC.StgToJS.Sinker.StringsUnfloat.html#STRING_LIT_MAX_LENGTH"><span class="hs-identifier hs-var">STRING_LIT_MAX_LENGTH</span></a></span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><a href="#local-6989586621682819639"><span class="hs-identifier hs-type">selectUsedOnceStringLits</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html#UniqFM"><span class="hs-identifier hs-type">UniqFM</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.FM.html#UniqFM"><span class="hs-identifier hs-type">UniqFM</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-155"></span><span>    </span><span id="local-6989586621682819639"><span class="annot"><span class="annottext">selectUsedOnceStringLits :: UniqSet Name -&gt; UniqFM Name ByteString -&gt; UniqFM Name ByteString
+</span><a href="#local-6989586621682819639"><span class="hs-identifier hs-var hs-var">selectUsedOnceStringLits</span></a></span></span><span> </span><span id="local-6989586621682819644"><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819644"><span class="hs-identifier hs-var">usedOnceStringLits</span></a></span></span><span> </span><span id="local-6989586621682819645"><span class="annot"><span class="annottext">UniqFM Name ByteString
+</span><a href="#local-6989586621682819645"><span class="hs-identifier hs-var">stringLits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-156"></span><span>      </span><span class="annot"><span class="annottext">UniqFM Name ByteString
+</span><a href="#local-6989586621682819645"><span class="hs-identifier hs-var">stringLits</span></a></span><span> </span><span class="annot"><span class="annottext">UniqFM Name ByteString
+-&gt; UniqFM Name Name -&gt; UniqFM Name ByteString
+forall {k} (key :: k) elt1 elt2.
+UniqFM key elt1 -&gt; UniqFM key elt2 -&gt; UniqFM key elt1
+</span><a href="GHC.Types.Unique.FM.html#intersectUFM"><span class="hs-operator hs-var">`intersectUFM`</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name -&gt; UniqFM Name Name
+forall a. UniqSet a -&gt; UniqFM a a
+</span><a href="GHC.Types.Unique.Set.html#getUniqSet"><span class="hs-identifier hs-var">getUniqSet</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet Name
+</span><a href="#local-6989586621682819644"><span class="hs-identifier hs-var">usedOnceStringLits</span></a></span><span>
+</span><span id="line-157"></span></pre></body></html>

@@ -1,0 +1,479 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-comment">-- | An abstract interface for a fast reachability data structure constructed</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-- from a 'GHC.Data.Graph.Directed' graph.</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html"><span class="hs-identifier">GHC.Data.Graph.Directed.Reachability</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier">ReachabilityIndex</span></a></span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Constructing a reachability index</span></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#graphReachability"><span class="hs-identifier">graphReachability</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#cyclicGraphReachability"><span class="hs-identifier">cyclicGraphReachability</span></a></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Reachability queries</span></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#allReachable"><span class="hs-identifier">allReachable</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#allReachableMany"><span class="hs-identifier">allReachableMany</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#isReachable"><span class="hs-identifier">isReachable</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#isReachableMany"><span class="hs-identifier">isReachableMany</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Debugging</span></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#reachabilityIndexMembers"><span class="hs-identifier">reachabilityIndexMembers</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.Maybe.html"><span class="hs-identifier">GHC.Data.Maybe</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html"><span class="hs-identifier">Data.Graph</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">G</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html"><span class="hs-identifier">Data.Graph</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#Vertex"><span class="hs-identifier">Vertex</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#SCC"><span class="hs-identifier">SCC</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../array-0.5.8.0-inplace/src/Data.Array.html"><span class="hs-identifier">Data.Array</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#%21"><span class="hs-operator">(!)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntMap.html"><span class="hs-identifier">Data.IntMap</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IM</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntSet.html"><span class="hs-identifier">Data.IntSet</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IS</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html"><span class="hs-identifier">GHC.Data.Graph.Directed.Internal</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-32"></span><span class="annot"><span class="hs-comment">-- * Reachability index</span></span><span>
+</span><span id="line-33"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><span class="hs-comment">-- | The abstract data structure for fast reachability queries</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">data</span><span> </span><span id="ReachabilityIndex"><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-var">ReachabilityIndex</span></a></span></span><span> </span><span id="local-6989586621682670429"><span class="annot"><a href="#local-6989586621682670429"><span class="hs-identifier hs-type">node</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ReachabilityIndex"><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-var">ReachabilityIndex</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-37"></span><span>    </span><span id="index"><span class="annot"><span class="annottext">forall node. ReachabilityIndex node -&gt; IntMap IntSet
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#index"><span class="hs-identifier hs-var hs-var">index</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#IntMap"><span class="hs-identifier hs-type">IM.IntMap</span></a></span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#IntSet"><span class="hs-identifier hs-type">IS.IntSet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>    </span><span id="from_vertex"><span class="annot"><span class="annottext">forall node. ReachabilityIndex node -&gt; Vertex -&gt; node
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#from_vertex"><span class="hs-identifier hs-var hs-var">from_vertex</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#Vertex"><span class="hs-identifier hs-type">Vertex</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682670429"><span class="hs-identifier hs-type">node</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>    </span><span id="to_vertex"><span class="annot"><span class="annottext">forall node. ReachabilityIndex node -&gt; node -&gt; Maybe Vertex
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#to_vertex"><span class="hs-identifier hs-var hs-var">to_vertex</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621682670429"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#Vertex"><span class="hs-identifier hs-type">Vertex</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-special">}</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">--</span><span>
+</span><span id="line-43"></span><span id="local-6989586621682670437"><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#reachabilityIndexMembers"><span class="hs-identifier hs-type">reachabilityIndexMembers</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670437"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621682670437"><span class="hs-identifier hs-type">node</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-44"></span><span id="reachabilityIndexMembers"><span class="annot"><span class="annottext">reachabilityIndexMembers :: forall node. ReachabilityIndex node -&gt; [node]
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#reachabilityIndexMembers"><span class="hs-identifier hs-var hs-var">reachabilityIndexMembers</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span id="local-6989586621682670505"><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670505"><span class="hs-identifier hs-var">index</span></a></span></span><span> </span><span id="local-6989586621682670506"><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670506"><span class="hs-identifier hs-var">from_vert</span></a></span></span><span> </span><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Vertex -&gt; node) -&gt; [Vertex] -&gt; [node]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670506"><span class="hs-identifier hs-var">from_vert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IntMap IntSet -&gt; [Vertex]
+forall a. IntMap a -&gt; [Vertex]
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#keys"><span class="hs-identifier hs-var">IM.keys</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670505"><span class="hs-identifier hs-var">index</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-47"></span><span class="annot"><span class="hs-comment">-- * Construction</span></span><span>
+</span><span id="line-48"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- | Construct a 'ReachabilityIndex' from an acyclic 'Graph'.</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- If the graph can have cycles, use 'cyclicGraphReachability'</span><span>
+</span><span id="line-52"></span><span id="local-6989586621682670442"><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#graphReachability"><span class="hs-identifier hs-type">graphReachability</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Graph"><span class="hs-identifier hs-type">Graph</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670442"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670442"><span class="hs-identifier hs-type">node</span></a></span></span><span>
+</span><span id="line-53"></span><span id="graphReachability"><span class="annot"><span class="annottext">graphReachability :: forall node. Graph node -&gt; ReachabilityIndex node
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#graphReachability"><span class="hs-identifier hs-var hs-var">graphReachability</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Graph"><span class="hs-identifier hs-type">Graph</span></a></span><span> </span><span id="local-6989586621682670514"><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670514"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span id="local-6989586621682670515"><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670515"><span class="hs-identifier hs-var">from</span></a></span></span><span> </span><span id="local-6989586621682670516"><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670516"><span class="hs-identifier hs-var">to</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">index :: IntMap IntSet
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#index"><span class="hs-identifier hs-var">index</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670517"><span class="hs-identifier hs-var">reachableGraph</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">from_vertex :: Vertex -&gt; node
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#from_vertex"><span class="hs-identifier hs-var">from_vertex</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670515"><span class="hs-identifier hs-var">from</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">to_vertex :: node -&gt; Maybe Vertex
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#to_vertex"><span class="hs-identifier hs-var">to_vertex</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670516"><span class="hs-identifier hs-var">to</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><a href="#local-6989586621682670517"><span class="hs-identifier hs-type">reachableGraph</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#IntMap"><span class="hs-identifier hs-type">IM.IntMap</span></a></span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#IntSet"><span class="hs-identifier hs-type">IS.IntSet</span></a></span><span>
+</span><span id="line-57"></span><span>      </span><span id="local-6989586621682670517"><span class="annot"><span class="annottext">reachableGraph :: IntMap IntSet
+</span><a href="#local-6989586621682670517"><span class="hs-identifier hs-var hs-var">reachableGraph</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Vertex, IntSet)] -&gt; IntMap IntSet
+forall a. [(Vertex, a)] -&gt; IntMap a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#fromList"><span class="hs-identifier hs-var">IM.fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670519"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntSet
+</span><a href="#local-6989586621682670520"><span class="hs-identifier hs-var">do_one</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670519"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621682670519"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670519"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IntGraph -&gt; [Vertex]
+</span><a href="../../containers-0.8-inplace/src/Data.Graph.html#vertices"><span class="hs-identifier hs-var">G.vertices</span></a></span><span> </span><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670514"><span class="hs-identifier hs-var">g</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span>      </span><span id="local-6989586621682670520"><span class="annot"><span class="annottext">do_one :: Vertex -&gt; IntSet
+</span><a href="#local-6989586621682670520"><span class="hs-identifier hs-var hs-var">do_one</span></a></span></span><span> </span><span id="local-6989586621682670522"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670522"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[IntSet] -&gt; IntSet
+forall (f :: * -&gt; *). Foldable f =&gt; f IntSet -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#unions"><span class="hs-identifier hs-var">IS.unions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Vertex] -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#fromList"><span class="hs-identifier hs-var">IS.fromList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670514"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">IntGraph -&gt; Vertex -&gt; [Vertex]
+forall i e. Ix i =&gt; Array i e -&gt; i -&gt; e
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#%21"><span class="hs-operator hs-var">!</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670522"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IntSet -&gt; [IntSet] -&gt; [IntSet]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">(Vertex -&gt; Maybe IntSet) -&gt; [Vertex] -&gt; [IntSet]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#mapMaybe"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet)
+-&gt; IntMap IntSet -&gt; Vertex -&gt; Maybe IntSet
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet
+forall a. Vertex -&gt; IntMap a -&gt; Maybe a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#lookup"><span class="hs-identifier hs-var">IM.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670517"><span class="hs-identifier hs-var">reachableGraph</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670514"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">IntGraph -&gt; Vertex -&gt; [Vertex]
+forall i e. Ix i =&gt; Array i e -&gt; i -&gt; e
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#%21"><span class="hs-operator hs-var">!</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670522"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- | Construct a 'ReachabilityIndex' from a 'Graph' which may have cycles.</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- If this reachability index is just going to be used once, it may make sense</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- to use 'reachablesG' instead, which will traverse the reachable nodes without</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- constructing the index -- which may be faster.</span><span>
+</span><span id="line-65"></span><span id="local-6989586621682670528"><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#cyclicGraphReachability"><span class="hs-identifier hs-type">cyclicGraphReachability</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Graph"><span class="hs-identifier hs-type">Graph</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670528"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670528"><span class="hs-identifier hs-type">node</span></a></span></span><span>
+</span><span id="line-66"></span><span id="cyclicGraphReachability"><span class="annot"><span class="annottext">cyclicGraphReachability :: forall node. Graph node -&gt; ReachabilityIndex node
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#cyclicGraphReachability"><span class="hs-identifier hs-var hs-var">cyclicGraphReachability</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Graph.Directed.Internal.html#Graph"><span class="hs-identifier hs-type">Graph</span></a></span><span> </span><span id="local-6989586621682670536"><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670536"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span id="local-6989586621682670537"><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670537"><span class="hs-identifier hs-var">from</span></a></span></span><span> </span><span id="local-6989586621682670538"><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670538"><span class="hs-identifier hs-var">to</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">index :: IntMap IntSet
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#index"><span class="hs-identifier hs-var">index</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670539"><span class="hs-identifier hs-var">reachableGraphCyclic</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">from_vertex :: Vertex -&gt; node
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#from_vertex"><span class="hs-identifier hs-var">from_vertex</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670537"><span class="hs-identifier hs-var">from</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">to_vertex :: node -&gt; Maybe Vertex
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#to_vertex"><span class="hs-identifier hs-var">to_vertex</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670538"><span class="hs-identifier hs-var">to</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>      </span><span class="annot"><a href="#local-6989586621682670539"><span class="hs-identifier hs-type">reachableGraphCyclic</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#IntMap"><span class="hs-identifier hs-type">IM.IntMap</span></a></span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#IntSet"><span class="hs-identifier hs-type">IS.IntSet</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span id="local-6989586621682670539"><span class="annot"><span class="annottext">reachableGraphCyclic :: IntMap IntSet
+</span><a href="#local-6989586621682670539"><span class="hs-identifier hs-var hs-var">reachableGraphCyclic</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(IntMap IntSet -&gt; SCC Vertex -&gt; IntMap IntSet)
+-&gt; IntMap IntSet -&gt; [SCC Vertex] -&gt; IntMap IntSet
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap IntSet -&gt; SCC Vertex -&gt; IntMap IntSet
+</span><a href="#local-6989586621682670541"><span class="hs-identifier hs-var">add_one_comp</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+forall a. Monoid a =&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">[SCC Vertex]
+</span><a href="#local-6989586621682670542"><span class="hs-identifier hs-var">comps</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>      </span><span id="local-6989586621682670543"><span class="annot"><span class="annottext">neighboursOf :: Vertex -&gt; [Vertex]
+</span><a href="#local-6989586621682670543"><span class="hs-identifier hs-var hs-var">neighboursOf</span></a></span></span><span> </span><span id="local-6989586621682670544"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670544"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670536"><span class="hs-identifier hs-var">g</span></a></span><span class="annot"><span class="annottext">IntGraph -&gt; Vertex -&gt; [Vertex]
+forall i e. Ix i =&gt; Array i e -&gt; i -&gt; e
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#%21"><span class="hs-operator hs-var">!</span></a></span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670544"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>      </span><span id="local-6989586621682670542"><span class="annot"><span class="annottext">comps :: [SCC Vertex]
+</span><a href="#local-6989586621682670542"><span class="hs-identifier hs-var hs-var">comps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IntGraph -&gt; [SCC Vertex]
+</span><a href="GHC.Data.Graph.Directed.Internal.html#scc"><span class="hs-identifier hs-var">scc</span></a></span><span> </span><span class="annot"><span class="annottext">IntGraph
+</span><a href="#local-6989586621682670536"><span class="hs-identifier hs-var">g</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>      </span><span class="hs-comment">-- To avoid divergence on cyclic input, we build the result</span><span>
+</span><span id="line-77"></span><span>      </span><span class="hs-comment">-- strongly connected component by component, in topological</span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-comment">-- order. For each SCC, we know that:</span><span>
+</span><span id="line-79"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span>      </span><span class="hs-comment">--   * All vertices in the component can reach all other vertices</span><span>
+</span><span id="line-81"></span><span>      </span><span class="hs-comment">--     in the component (&quot;local&quot; reachables)</span><span>
+</span><span id="line-82"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-83"></span><span>      </span><span class="hs-comment">--   * Other reachable vertices (&quot;remote&quot; reachables) must come</span><span>
+</span><span id="line-84"></span><span>      </span><span class="hs-comment">--     from earlier components, either via direct neighbourhood, or</span><span>
+</span><span id="line-85"></span><span>      </span><span class="hs-comment">--     transitively from earlier reachability map</span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-87"></span><span>      </span><span class="hs-comment">-- This allows us to build the extension of the reachability map</span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-comment">-- directly, without any self-reference, thereby avoiding a loop.</span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><a href="#local-6989586621682670541"><span class="hs-identifier hs-type">add_one_comp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#IntMap"><span class="hs-identifier hs-type">IM.IntMap</span></a></span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#IntSet"><span class="hs-identifier hs-type">IS.IntSet</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#SCC"><span class="hs-identifier hs-type">SCC</span></a></span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#Vertex"><span class="hs-identifier hs-type">Vertex</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#IntMap"><span class="hs-identifier hs-type">IM.IntMap</span></a></span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#IntSet"><span class="hs-identifier hs-type">IS.IntSet</span></a></span><span>
+</span><span id="line-90"></span><span>      </span><span id="local-6989586621682670541"><span class="annot"><span class="annottext">add_one_comp :: IntMap IntSet -&gt; SCC Vertex -&gt; IntMap IntSet
+</span><a href="#local-6989586621682670541"><span class="hs-identifier hs-var hs-var">add_one_comp</span></a></span></span><span> </span><span id="local-6989586621682670546"><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670546"><span class="hs-identifier hs-var">earlier</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#AcyclicSCC"><span class="hs-identifier hs-type">AcyclicSCC</span></a></span><span> </span><span id="local-6989586621682670548"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670548"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntSet -&gt; IntMap IntSet -&gt; IntMap IntSet
+forall a. Vertex -&gt; a -&gt; IntMap a -&gt; IntMap a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#insert"><span class="hs-identifier hs-var">IM.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670548"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">IntSet
+</span><a href="#local-6989586621682670550"><span class="hs-identifier hs-var">all_remotes</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670546"><span class="hs-identifier hs-var">earlier</span></a></span><span>
+</span><span id="line-91"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>          </span><span id="local-6989586621682670551"><span class="annot"><span class="annottext">earlier_neighbours :: [Vertex]
+</span><a href="#local-6989586621682670551"><span class="hs-identifier hs-var hs-var">earlier_neighbours</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; [Vertex]
+</span><a href="#local-6989586621682670543"><span class="hs-identifier hs-var">neighboursOf</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670548"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-93"></span><span>          </span><span id="local-6989586621682670552"><span class="annot"><span class="annottext">earlier_further :: [IntSet]
+</span><a href="#local-6989586621682670552"><span class="hs-identifier hs-var hs-var">earlier_further</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Vertex -&gt; Maybe IntSet) -&gt; [Vertex] -&gt; [IntSet]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#mapMaybe"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet)
+-&gt; IntMap IntSet -&gt; Vertex -&gt; Maybe IntSet
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet
+forall a. Vertex -&gt; IntMap a -&gt; Maybe a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#lookup"><span class="hs-identifier hs-var">IM.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670546"><span class="hs-identifier hs-var">earlier</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Vertex]
+</span><a href="#local-6989586621682670551"><span class="hs-identifier hs-var">earlier_neighbours</span></a></span><span>
+</span><span id="line-94"></span><span>          </span><span id="local-6989586621682670550"><span class="annot"><span class="annottext">all_remotes :: IntSet
+</span><a href="#local-6989586621682670550"><span class="hs-identifier hs-var hs-var">all_remotes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[IntSet] -&gt; IntSet
+forall (f :: * -&gt; *). Foldable f =&gt; f IntSet -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#unions"><span class="hs-identifier hs-var">IS.unions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Vertex] -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#fromList"><span class="hs-identifier hs-var">IS.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[Vertex]
+</span><a href="#local-6989586621682670551"><span class="hs-identifier hs-var">earlier_neighbours</span></a></span><span> </span><span class="annot"><span class="annottext">IntSet -&gt; [IntSet] -&gt; [IntSet]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[IntSet]
+</span><a href="#local-6989586621682670552"><span class="hs-identifier hs-var">earlier_further</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><a href="#local-6989586621682670541"><span class="hs-identifier hs-var">add_one_comp</span></a></span><span> </span><span id="local-6989586621682670553"><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670553"><span class="hs-identifier hs-var">earlier</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Graph.html#CyclicSCC"><span class="hs-identifier hs-type">CyclicSCC</span></a></span><span> </span><span id="local-6989586621682670555"><span class="annot"><span class="annottext">[Vertex]
+</span><a href="#local-6989586621682670555"><span class="hs-identifier hs-var">vs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IntMap IntSet -&gt; IntMap IntSet -&gt; IntMap IntSet
+forall a. IntMap a -&gt; IntMap a -&gt; IntMap a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#union"><span class="hs-identifier hs-var">IM.union</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Vertex, IntSet)] -&gt; IntMap IntSet
+forall a. [(Vertex, a)] -&gt; IntMap a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#fromList"><span class="hs-identifier hs-var">IM.fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670557"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntSet
+</span><a href="#local-6989586621682670558"><span class="hs-identifier hs-var">local</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670557"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">IntSet -&gt; IntSet -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#union"><span class="hs-operator hs-var">`IS.union`</span></a></span><span> </span><span class="annot"><span class="annottext">IntSet
+</span><a href="#local-6989586621682670560"><span class="hs-identifier hs-var">all_remotes</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621682670557"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670557"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Vertex]
+</span><a href="#local-6989586621682670555"><span class="hs-identifier hs-var">vs</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670553"><span class="hs-identifier hs-var">earlier</span></a></span><span>
+</span><span id="line-96"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-97"></span><span>          </span><span id="local-6989586621682670561"><span class="annot"><span class="annottext">all_locals :: IntSet
+</span><a href="#local-6989586621682670561"><span class="hs-identifier hs-var hs-var">all_locals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Vertex] -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#fromList"><span class="hs-identifier hs-var">IS.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[Vertex]
+</span><a href="#local-6989586621682670555"><span class="hs-identifier hs-var">vs</span></a></span><span>
+</span><span id="line-98"></span><span>          </span><span id="local-6989586621682670558"><span class="annot"><span class="annottext">local :: Vertex -&gt; IntSet
+</span><a href="#local-6989586621682670558"><span class="hs-identifier hs-var hs-var">local</span></a></span></span><span> </span><span id="local-6989586621682670562"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670562"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntSet -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#delete"><span class="hs-identifier hs-var">IS.delete</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670562"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">IntSet
+</span><a href="#local-6989586621682670561"><span class="hs-identifier hs-var">all_locals</span></a></span><span>
+</span><span id="line-99"></span><span>              </span><span class="hs-comment">-- Arguably, for a cyclic SCC we should include each</span><span>
+</span><span id="line-100"></span><span>              </span><span class="hs-comment">-- vertex in its own reachable set. However, this could</span><span>
+</span><span id="line-101"></span><span>              </span><span class="hs-comment">-- lead to a lot of extra pain in client code to avoid</span><span>
+</span><span id="line-102"></span><span>              </span><span class="hs-comment">-- looping when traversing the reachability map.</span><span>
+</span><span id="line-103"></span><span>          </span><span id="local-6989586621682670564"><span class="annot"><span class="annottext">all_neighbours :: IntSet
+</span><a href="#local-6989586621682670564"><span class="hs-identifier hs-var hs-var">all_neighbours</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Vertex] -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#fromList"><span class="hs-identifier hs-var">IS.fromList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Vertex -&gt; [Vertex]) -&gt; [Vertex] -&gt; [Vertex]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; [Vertex]
+</span><a href="#local-6989586621682670543"><span class="hs-identifier hs-var">neighboursOf</span></a></span><span> </span><span class="annot"><span class="annottext">[Vertex]
+</span><a href="#local-6989586621682670555"><span class="hs-identifier hs-var">vs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>          </span><span id="local-6989586621682670566"><span class="annot"><span class="annottext">earlier_neighbours :: IntSet
+</span><a href="#local-6989586621682670566"><span class="hs-identifier hs-var hs-var">earlier_neighbours</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IntSet
+</span><a href="#local-6989586621682670564"><span class="hs-identifier hs-var">all_neighbours</span></a></span><span> </span><span class="annot"><span class="annottext">IntSet -&gt; IntSet -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#%5C%5C"><span class="hs-operator hs-var">IS.\\</span></a></span><span> </span><span class="annot"><span class="annottext">IntSet
+</span><a href="#local-6989586621682670561"><span class="hs-identifier hs-var">all_locals</span></a></span><span>
+</span><span id="line-105"></span><span>          </span><span id="local-6989586621682670568"><span class="annot"><span class="annottext">earlier_further :: [IntSet]
+</span><a href="#local-6989586621682670568"><span class="hs-identifier hs-var hs-var">earlier_further</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Vertex -&gt; Maybe IntSet) -&gt; [Vertex] -&gt; [IntSet]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#mapMaybe"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet)
+-&gt; IntMap IntSet -&gt; Vertex -&gt; Maybe IntSet
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet
+forall a. Vertex -&gt; IntMap a -&gt; Maybe a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#lookup"><span class="hs-identifier hs-var">IM.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670553"><span class="hs-identifier hs-var">earlier</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IntSet -&gt; [Vertex]
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#toList"><span class="hs-identifier hs-var">IS.toList</span></a></span><span> </span><span class="annot"><span class="annottext">IntSet
+</span><a href="#local-6989586621682670566"><span class="hs-identifier hs-var">earlier_neighbours</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>          </span><span id="local-6989586621682670560"><span class="annot"><span class="annottext">all_remotes :: IntSet
+</span><a href="#local-6989586621682670560"><span class="hs-identifier hs-var hs-var">all_remotes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[IntSet] -&gt; IntSet
+forall (f :: * -&gt; *). Foldable f =&gt; f IntSet -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#unions"><span class="hs-identifier hs-var">IS.unions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IntSet
+</span><a href="#local-6989586621682670566"><span class="hs-identifier hs-var">earlier_neighbours</span></a></span><span> </span><span class="annot"><span class="annottext">IntSet -&gt; [IntSet] -&gt; [IntSet]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[IntSet]
+</span><a href="#local-6989586621682670568"><span class="hs-identifier hs-var">earlier_further</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-109"></span><span class="annot"><span class="hs-comment">-- * Reachability queries</span></span><span>
+</span><span id="line-110"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- | 'allReachable' returns the nodes reachable from the given @root@ node.</span><span>
+</span><span id="line-113"></span><span class="hs-comment">--</span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- Properties:</span><span>
+</span><span id="line-115"></span><span class="hs-comment">--  * The list of nodes /does not/ include the @root@ node!</span><span>
+</span><span id="line-116"></span><span class="hs-comment">--  * The list of nodes is deterministically ordered, but according to an</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--     internal order determined by the indices attributed to graph nodes.</span><span>
+</span><span id="line-118"></span><span class="hs-comment">--</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- If you need a topologically sorted list, consider using the functions exposed from 'GHC.Data.Graph.Directed' on 'Graph' instead.</span><span>
+</span><span id="line-120"></span><span id="local-6989586621682670471"><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#allReachable"><span class="hs-identifier hs-type">allReachable</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670471"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682670471"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="annot"><span class="hs-comment">{-^ The @root@ node -}</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621682670471"><span class="hs-identifier hs-type">node</span></a></span><span class="hs-special">]</span></span><span> </span><span class="annot"><span class="hs-comment">{-^ All nodes reachable from @root@ -}</span></span><span>
+</span><span id="line-121"></span><span id="allReachable"><span class="annot"><span class="annottext">allReachable :: forall node. ReachabilityIndex node -&gt; node -&gt; [node]
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#allReachable"><span class="hs-identifier hs-var hs-var">allReachable</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span id="local-6989586621682670575"><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670575"><span class="hs-identifier hs-var">index</span></a></span></span><span> </span><span id="local-6989586621682670576"><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670576"><span class="hs-identifier hs-var">from</span></a></span></span><span> </span><span id="local-6989586621682670577"><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670577"><span class="hs-identifier hs-var">to</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682670578"><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670578"><span class="hs-identifier hs-var">root</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Vertex -&gt; node) -&gt; [Vertex] -&gt; [node]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670576"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">[Vertex]
+</span><a href="#local-6989586621682670579"><span class="hs-identifier hs-var">result</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682670580"><span class="annot"><span class="annottext">root_i :: Vertex
+</span><a href="#local-6989586621682670580"><span class="hs-identifier hs-var hs-var">root_i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Vertex -&gt; Vertex
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="GHC.Data.Maybe.html#expectJust"><span class="hs-identifier hs-var">expectJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670577"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670578"><span class="hs-identifier hs-var">root</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>        </span><span id="local-6989586621682670582"><span class="annot"><span class="annottext">hits :: Maybe IntSet
+</span><a href="#local-6989586621682670582"><span class="hs-identifier hs-var hs-var">hits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-pragma">{-# SCC</span><span> </span><span class="hs-pragma">&quot;allReachable&quot;</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet
+forall a. Vertex -&gt; IntMap a -&gt; Maybe a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#lookup"><span class="hs-identifier hs-var">IM.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670580"><span class="hs-identifier hs-var">root_i</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670575"><span class="hs-identifier hs-var">index</span></a></span><span>
+</span><span id="line-124"></span><span>        </span><span id="local-6989586621682670579"><span class="annot"><span class="annottext">result :: [Vertex]
+</span><a href="#local-6989586621682670579"><span class="hs-identifier hs-var hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IntSet -&gt; [Vertex]
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#toList"><span class="hs-identifier hs-var">IS.toList</span></a></span><span> </span><span class="annot"><span class="annottext">(IntSet -&gt; [Vertex]) -&gt; IntSet -&gt; [Vertex]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe IntSet -&gt; IntSet
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="GHC.Data.Maybe.html#expectJust"><span class="hs-identifier hs-var">expectJust</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe IntSet
+</span><a href="#local-6989586621682670582"><span class="hs-identifier hs-var">hits</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- | 'allReachableMany' returns all nodes reachable from the many given @roots@.</span><span>
+</span><span id="line-127"></span><span class="hs-comment">--</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- Properties:</span><span>
+</span><span id="line-129"></span><span class="hs-comment">--  * The list of nodes /does not/ include the @roots@ node!</span><span>
+</span><span id="line-130"></span><span class="hs-comment">--  * The list of nodes is deterministically ordered, but according to an</span><span>
+</span><span id="line-131"></span><span class="hs-comment">--     internal order determined by the indices attributed to graph nodes.</span><span>
+</span><span id="line-132"></span><span class="hs-comment">--  * This function has $O(n)$ complexity where $n$ is the number of @roots@.</span><span>
+</span><span id="line-133"></span><span class="hs-comment">--</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- If you need a topologically sorted list, consider using the functions</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- exposed from 'GHC.Data.Graph.Directed' on 'Graph' instead ('reachableG').</span><span>
+</span><span id="line-136"></span><span id="local-6989586621682670480"><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#allReachableMany"><span class="hs-identifier hs-type">allReachableMany</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670480"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621682670480"><span class="hs-identifier hs-type">node</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-comment">{-^ The @roots@ -}</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621682670480"><span class="hs-identifier hs-type">node</span></a></span><span class="hs-special">]</span></span><span> </span><span class="annot"><span class="hs-comment">{-^ All nodes reachable from all @roots@ -}</span></span><span>
+</span><span id="line-137"></span><span id="allReachableMany"><span class="annot"><span class="annottext">allReachableMany :: forall node. ReachabilityIndex node -&gt; [node] -&gt; [node]
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#allReachableMany"><span class="hs-identifier hs-var hs-var">allReachableMany</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span id="local-6989586621682670587"><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670587"><span class="hs-identifier hs-var">index</span></a></span></span><span> </span><span id="local-6989586621682670588"><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670588"><span class="hs-identifier hs-var">from</span></a></span></span><span> </span><span id="local-6989586621682670589"><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670589"><span class="hs-identifier hs-var">to</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682670590"><span class="annot"><span class="annottext">[node]
+</span><a href="#local-6989586621682670590"><span class="hs-identifier hs-var">roots</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Vertex -&gt; node) -&gt; [Vertex] -&gt; [node]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><a href="#local-6989586621682670588"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IntSet -&gt; [Vertex]
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#toList"><span class="hs-identifier hs-var">IS.toList</span></a></span><span> </span><span class="annot"><span class="annottext">IntSet
+</span><a href="#local-6989586621682670591"><span class="hs-identifier hs-var">hits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682670592"><span class="annot"><span class="annottext">roots_i :: [Vertex]
+</span><a href="#local-6989586621682670592"><span class="hs-identifier hs-var hs-var">roots_i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670593"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621682670593"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670593"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(node -&gt; Maybe Vertex) -&gt; [node] -&gt; [Maybe Vertex]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670589"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">[node]
+</span><a href="#local-6989586621682670590"><span class="hs-identifier hs-var">roots</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-139"></span><span>        </span><span id="local-6989586621682670591"><span class="annot"><span class="annottext">hits :: IntSet
+</span><a href="#local-6989586621682670591"><span class="hs-identifier hs-var hs-var">hits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-pragma">{-# SCC</span><span> </span><span class="hs-pragma">&quot;allReachableMany&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-140"></span><span>               </span><span class="annot"><span class="annottext">[IntSet] -&gt; IntSet
+forall (f :: * -&gt; *). Foldable f =&gt; f IntSet -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#unions"><span class="hs-identifier hs-var">IS.unions</span></a></span><span> </span><span class="annot"><span class="annottext">([IntSet] -&gt; IntSet) -&gt; [IntSet] -&gt; IntSet
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Vertex -&gt; IntSet) -&gt; [Vertex] -&gt; [IntSet]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe IntSet -&gt; IntSet
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="GHC.Data.Maybe.html#expectJust"><span class="hs-identifier hs-var">expectJust</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe IntSet -&gt; IntSet)
+-&gt; (Vertex -&gt; Maybe IntSet) -&gt; Vertex -&gt; IntSet
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet)
+-&gt; IntMap IntSet -&gt; Vertex -&gt; Maybe IntSet
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet
+forall a. Vertex -&gt; IntMap a -&gt; Maybe a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#lookup"><span class="hs-identifier hs-var">IM.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670587"><span class="hs-identifier hs-var">index</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Vertex]
+</span><a href="#local-6989586621682670592"><span class="hs-identifier hs-var">roots_i</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- | Fast reachability query.</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--</span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- On graph @g@ with nodes @a@ and @b@, @isReachable g a b@</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- asks whether @b@ can be reached through @g@ starting from @a@.</span><span>
+</span><span id="line-146"></span><span class="hs-comment">--</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- Properties:</span><span>
+</span><span id="line-148"></span><span class="hs-comment">--  * No self loops, i.e. @isReachable _ a a == False@</span><span>
+</span><span id="line-149"></span><span id="local-6989586621682670489"><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#isReachable"><span class="hs-identifier hs-type">isReachable</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670489"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="annot"><span class="hs-comment">{-^ @g@ -}</span></span><span>
+</span><span id="line-150"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682670489"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @a@</span></span><span>
+</span><span id="line-151"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682670489"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @b@</span></span><span>
+</span><span id="line-152"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @b@ is reachable from @a@</span></span><span>
+</span><span id="line-153"></span><span id="isReachable"><span class="annot"><span class="annottext">isReachable :: forall node. ReachabilityIndex node -&gt; node -&gt; node -&gt; Bool
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#isReachable"><span class="hs-identifier hs-var hs-var">isReachable</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span id="local-6989586621682670601"><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670601"><span class="hs-identifier hs-var">index</span></a></span></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682670602"><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670602"><span class="hs-identifier hs-var">to</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682670603"><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670603"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621682670604"><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670604"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><span class="annottext">Vertex -&gt; IntSet -&gt; Bool
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#member"><span class="hs-identifier hs-var">IS.member</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670606"><span class="hs-identifier hs-var">b_i</span></a></span><span> </span><span class="annot"><span class="annottext">(IntSet -&gt; Bool) -&gt; IntSet -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-155"></span><span>    </span><span class="annot"><span class="annottext">Maybe IntSet -&gt; IntSet
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="GHC.Data.Maybe.html#expectJust"><span class="hs-identifier hs-var">expectJust</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe IntSet -&gt; IntSet) -&gt; Maybe IntSet -&gt; IntSet
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet
+forall a. Vertex -&gt; IntMap a -&gt; Maybe a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#lookup"><span class="hs-identifier hs-var">IM.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670607"><span class="hs-identifier hs-var">a_i</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670601"><span class="hs-identifier hs-var">index</span></a></span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621682670607"><span class="annot"><span class="annottext">a_i :: Vertex
+</span><a href="#local-6989586621682670607"><span class="hs-identifier hs-var hs-var">a_i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Vertex -&gt; Vertex
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="GHC.Data.Maybe.html#expectJust"><span class="hs-identifier hs-var">expectJust</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Vertex -&gt; Vertex) -&gt; Maybe Vertex -&gt; Vertex
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670602"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670603"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-157"></span><span>        </span><span id="local-6989586621682670606"><span class="annot"><span class="annottext">b_i :: Vertex
+</span><a href="#local-6989586621682670606"><span class="hs-identifier hs-var hs-var">b_i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Vertex -&gt; Vertex
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="GHC.Data.Maybe.html#expectJust"><span class="hs-identifier hs-var">expectJust</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Vertex -&gt; Vertex) -&gt; Maybe Vertex -&gt; Vertex
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670602"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670604"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- | Fast reachability query with many roots.</span><span>
+</span><span id="line-160"></span><span class="hs-comment">--</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- On graph @g@ with many nodes @roots@ and node @b@, @isReachableMany g as b@</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- asks whether @b@ can be reached through @g@ from any of the @roots@.</span><span>
+</span><span id="line-163"></span><span class="hs-comment">--</span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- By partially applying this function to a set of roots, the resulting function can</span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- be applied many times and share the initial work.</span><span>
+</span><span id="line-166"></span><span class="hs-comment">--</span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- Properties:</span><span>
+</span><span id="line-168"></span><span class="hs-comment">--  * No self loops, i.e. @isReachableMany _ [a] a == False@</span><span>
+</span><span id="line-169"></span><span id="local-6989586621682670491"><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#isReachableMany"><span class="hs-identifier hs-type">isReachableMany</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682670491"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @g@</span></span><span>
+</span><span id="line-170"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621682670491"><span class="hs-identifier hs-type">node</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-comment">-- ^ @roots@</span></span><span>
+</span><span id="line-171"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682670491"><span class="hs-identifier hs-type">node</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @b@ is reachable from any of the @roots@</span></span><span>
+</span><span id="line-172"></span><span id="isReachableMany"><span class="annot"><span class="annottext">isReachableMany :: forall node. ReachabilityIndex node -&gt; [node] -&gt; node -&gt; Bool
+</span><a href="GHC.Data.Graph.Directed.Reachability.html#isReachableMany"><span class="hs-identifier hs-var hs-var">isReachableMany</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.Graph.Directed.Reachability.html#ReachabilityIndex"><span class="hs-identifier hs-type">ReachabilityIndex</span></a></span><span> </span><span id="local-6989586621682670613"><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670613"><span class="hs-identifier hs-var">index</span></a></span></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; node
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682670614"><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670614"><span class="hs-identifier hs-var">to</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682670615"><span class="annot"><span class="annottext">[node]
+</span><a href="#local-6989586621682670615"><span class="hs-identifier hs-var">roots</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-173"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621682670616"><span class="annot"><span class="annottext">roots_i :: [Vertex]
+</span><a href="#local-6989586621682670616"><span class="hs-identifier hs-var hs-var">roots_i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670617"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621682670617"><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670617"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(node -&gt; Maybe Vertex) -&gt; [node] -&gt; [Maybe Vertex]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670614"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">[node]
+</span><a href="#local-6989586621682670615"><span class="hs-identifier hs-var">roots</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-174"></span><span>      </span><span id="local-6989586621682670618"><span class="annot"><span class="annottext">unions :: IntSet
+</span><a href="#local-6989586621682670618"><span class="hs-identifier hs-var hs-var">unions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-175"></span><span>          </span><span class="annot"><span class="annottext">[IntSet] -&gt; IntSet
+forall (f :: * -&gt; *). Foldable f =&gt; f IntSet -&gt; IntSet
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#unions"><span class="hs-identifier hs-var">IS.unions</span></a></span><span> </span><span class="annot"><span class="annottext">([IntSet] -&gt; IntSet) -&gt; [IntSet] -&gt; IntSet
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-176"></span><span>            </span><span class="annot"><span class="annottext">(Vertex -&gt; IntSet) -&gt; [Vertex] -&gt; [IntSet]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe IntSet -&gt; IntSet
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="GHC.Data.Maybe.html#expectJust"><span class="hs-identifier hs-var">expectJust</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe IntSet -&gt; IntSet)
+-&gt; (Vertex -&gt; Maybe IntSet) -&gt; Vertex -&gt; IntSet
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet)
+-&gt; IntMap IntSet -&gt; Vertex -&gt; Maybe IntSet
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntMap IntSet -&gt; Maybe IntSet
+forall a. Vertex -&gt; IntMap a -&gt; Maybe a
+</span><a href="../../containers-0.8-inplace/src/Data.IntMap.Internal.html#lookup"><span class="hs-identifier hs-var">IM.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap IntSet
+</span><a href="#local-6989586621682670613"><span class="hs-identifier hs-var">index</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Vertex]
+</span><a href="#local-6989586621682670616"><span class="hs-identifier hs-var">roots_i</span></a></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682670619"><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670619"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621682670620"><span class="annot"><span class="annottext">b_i :: Vertex
+</span><a href="#local-6989586621682670620"><span class="hs-identifier hs-var hs-var">b_i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Vertex -&gt; Vertex
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="GHC.Data.Maybe.html#expectJust"><span class="hs-identifier hs-var">expectJust</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Vertex -&gt; Vertex) -&gt; Maybe Vertex -&gt; Vertex
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">node -&gt; Maybe Vertex
+</span><a href="#local-6989586621682670614"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">node
+</span><a href="#local-6989586621682670619"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-178"></span><span>           </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Vertex -&gt; IntSet -&gt; Bool
+</span><a href="../../containers-0.8-inplace/src/Data.IntSet.Internal.html#member"><span class="hs-identifier hs-var">IS.member</span></a></span><span> </span><span class="annot"><span class="annottext">Vertex
+</span><a href="#local-6989586621682670620"><span class="hs-identifier hs-var">b_i</span></a></span><span> </span><span class="annot"><span class="annottext">IntSet
+</span><a href="#local-6989586621682670618"><span class="hs-identifier hs-var">unions</span></a></span><span>
+</span><span id="line-179"></span></pre></body></html>

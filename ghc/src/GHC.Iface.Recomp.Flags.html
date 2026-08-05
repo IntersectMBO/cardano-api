@@ -1,0 +1,1596 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | This module manages storing the various GHC option flags in a modules</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- interface file as part of the recompilation checking infrastructure.</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Iface.Recomp.Flags.html"><span class="hs-identifier">GHC.Iface.Recomp.Flags</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>        </span><span class="annot"><a href="GHC.Iface.Recomp.Flags.html#fingerprintDynFlags"><span class="hs-identifier">fingerprintDynFlags</span></a></span><span>
+</span><span id="line-7"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Iface.Recomp.Flags.html#fingerprintOptFlags"><span class="hs-identifier">fingerprintOptFlags</span></a></span><span>
+</span><span id="line-8"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Iface.Recomp.Flags.html#fingerprintHpcFlags"><span class="hs-identifier">fingerprintHpcFlags</span></a></span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Driver.Session.html"><span class="hs-identifier">GHC.Driver.Session</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Driver.Env.html"><span class="hs-identifier">GHC.Driver.Env</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Binary.html"><span class="hs-identifier">GHC.Utils.Binary</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.html"><span class="hs-identifier">GHC.Unit.Module</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.html"><span class="hs-identifier">GHC.Types.Name</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.SafeHaskell.html"><span class="hs-identifier">GHC.Types.SafeHaskell</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Fingerprint.html"><span class="hs-identifier">GHC.Utils.Fingerprint</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Iface.Recomp.Binary.html"><span class="hs-identifier">GHC.Iface.Recomp.Binary</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Iface.Flags.html"><span class="hs-identifier">GHC.Iface.Flags</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.EnumSet.html"><span class="hs-identifier">GHC.Data.EnumSet</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">EnumSet</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../filepath-1.5.4.0-inplace/src/System.FilePath.html"><span class="hs-identifier">System.FilePath</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../filepath-1.5.4.0-inplace/src/System.FilePath.Posix.html#normalise"><span class="hs-identifier">normalise</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- The subset of DynFlags which is used by the recompilation checker.</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | Produce a fingerprint of a @DynFlags@ value. We only base</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- the finger print on important fields in @DynFlags@ so that</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- the recompilation checker can use this fingerprint.</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- NB: The 'Module' parameter is the 'Module' recorded by the *interface*</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- file, not the actual 'Module' according to our 'DynFlags'.</span><span>
+</span><span id="line-36"></span><span class="annot"><a href="GHC.Iface.Recomp.Flags.html#fingerprintDynFlags"><span class="hs-identifier hs-type">fingerprintDynFlags</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Driver.Env.Types.html#HscEnv"><span class="hs-identifier hs-type">HscEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span>
+</span><span id="line-37"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Utils.Binary.html#WriteBinHandle"><span class="hs-identifier hs-type">WriteBinHandle</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Fingerprint.Type.html#Fingerprint"><span class="hs-identifier hs-type">Fingerprint</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Iface.Flags.html#IfaceDynFlags"><span class="hs-identifier hs-type">IfaceDynFlags</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span id="fingerprintDynFlags"><span class="annot"><span class="annottext">fingerprintDynFlags :: HscEnv
+-&gt; Module
+-&gt; (WriteBinHandle -&gt; Name -&gt; IO ())
+-&gt; (Fingerprint, IfaceDynFlags)
+</span><a href="GHC.Iface.Recomp.Flags.html#fingerprintDynFlags"><span class="hs-identifier hs-var hs-var">fingerprintDynFlags</span></a></span></span><span> </span><span id="local-6989586621683200434"><span class="annot"><span class="annottext">HscEnv
+</span><a href="#local-6989586621683200434"><span class="hs-identifier hs-var">hsc_env</span></a></span></span><span> </span><span id="local-6989586621683200435"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621683200435"><span class="hs-identifier hs-var">this_mod</span></a></span></span><span> </span><span id="local-6989586621683200436"><span class="annot"><span class="annottext">WriteBinHandle -&gt; Name -&gt; IO ()
+</span><a href="#local-6989586621683200436"><span class="hs-identifier hs-var">nameio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683200437"><span class="annot"><span class="annottext">dflags :: DynFlags
+</span><a href="#local-6989586621683200437"><span class="hs-identifier hs-var">dflags</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="GHC.Driver.DynFlags.html#DynFlags"><span class="hs-identifier hs-type">DynFlags</span></a></span><span class="hs-special">{</span><span id="local-6989586621683200438"><span id="local-6989586621683200439"><span id="local-6989586621683200440"><span id="local-6989586621683200441"><span id="local-6989586621683200442"><span id="local-6989586621683200443"><span id="local-6989586621683200444"><span id="local-6989586621683200445"><span id="local-6989586621683200446"><span id="local-6989586621683200447"><span id="local-6989586621683200448"><span id="local-6989586621683200449"><span id="local-6989586621683200450"><span id="local-6989586621683200451"><span id="local-6989586621683200452"><span id="local-6989586621683200453"><span id="local-6989586621683200454"><span id="local-6989586621683200455"><span id="local-6989586621683200456"><span id="local-6989586621683200457"><span id="local-6989586621683200458"><span id="local-6989586621683200459"><span id="local-6989586621683200460"><span id="local-6989586621683200461"><span id="local-6989586621683200462"><span id="local-6989586621683200463"><span id="local-6989586621683200464"><span id="local-6989586621683200465"><span id="local-6989586621683200466"><span id="local-6989586621683200467"><span id="local-6989586621683200468"><span id="local-6989586621683200469"><span id="local-6989586621683200470"><span id="local-6989586621683200471"><span id="local-6989586621683200472"><span id="local-6989586621683200473"><span id="local-6989586621683200474"><span id="local-6989586621683200475"><span id="local-6989586621683200476"><span id="local-6989586621683200477"><span id="local-6989586621683200478"><span id="local-6989586621683200479"><span id="local-6989586621683200480"><span id="local-6989586621683200481"><span id="local-6989586621683200482"><span id="local-6989586621683200483"><span id="local-6989586621683200484"><span id="local-6989586621683200485"><span id="local-6989586621683200486"><span id="local-6989586621683200487"><span id="local-6989586621683200488"><span id="local-6989586621683200489"><span id="local-6989586621683200490"><span id="local-6989586621683200491"><span id="local-6989586621683200492"><span id="local-6989586621683200493"><span id="local-6989586621683200494"><span id="local-6989586621683200495"><span id="local-6989586621683200496"><span id="local-6989586621683200497"><span id="local-6989586621683200498"><span id="local-6989586621683200499"><span id="local-6989586621683200500"><span id="local-6989586621683200501"><span id="local-6989586621683200502"><span id="local-6989586621683200503"><span id="local-6989586621683200504"><span id="local-6989586621683200505"><span id="local-6989586621683200506"><span id="local-6989586621683200507"><span id="local-6989586621683200508"><span id="local-6989586621683200509"><span id="local-6989586621683200510"><span id="local-6989586621683200511"><span id="local-6989586621683200512"><span id="local-6989586621683200513"><span id="local-6989586621683200514"><span id="local-6989586621683200515"><span id="local-6989586621683200516"><span id="local-6989586621683200517"><span id="local-6989586621683200518"><span id="local-6989586621683200519"><span id="local-6989586621683200520"><span id="local-6989586621683200521"><span id="local-6989586621683200522"><span id="local-6989586621683200523"><span id="local-6989586621683200524"><span id="local-6989586621683200525"><span id="local-6989586621683200526"><span id="local-6989586621683200527"><span id="local-6989586621683200528"><span id="local-6989586621683200529"><span id="local-6989586621683200530"><span id="local-6989586621683200531"><span id="local-6989586621683200532"><span id="local-6989586621683200533"><span id="local-6989586621683200534"><span id="local-6989586621683200535"><span id="local-6989586621683200536"><span id="local-6989586621683200537"><span id="local-6989586621683200538"><span id="local-6989586621683200539"><span id="local-6989586621683200540"><span id="local-6989586621683200541"><span id="local-6989586621683200542"><span id="local-6989586621683200543"><span id="local-6989586621683200544"><span id="local-6989586621683200545"><span id="local-6989586621683200546"><span id="local-6989586621683200547"><span id="local-6989586621683200548"><span id="local-6989586621683200549"><span id="local-6989586621683200550"><span id="local-6989586621683200551"><span id="local-6989586621683200552"><span id="local-6989586621683200553"><span id="local-6989586621683200554"><span id="local-6989586621683200555"><span id="local-6989586621683200556"><span id="local-6989586621683200557"><span id="local-6989586621683200558"><span id="local-6989586621683200559"><span id="local-6989586621683200560"><span id="local-6989586621683200561"><span id="local-6989586621683200562"><span id="local-6989586621683200563"><span id="local-6989586621683200564"><span id="local-6989586621683200565"><span id="local-6989586621683200566"><span id="local-6989586621683200567"><span id="local-6989586621683200568"><span id="local-6989586621683200569"><span id="local-6989586621683200570"><span id="local-6989586621683200571"><span id="local-6989586621683200572"><span id="local-6989586621683200573"><span id="local-6989586621683200574"><span id="local-6989586621683200575"><span id="local-6989586621683200576"><span id="local-6989586621683200577"><span id="local-6989586621683200578"><span id="local-6989586621683200579"><span id="local-6989586621683200580"><span id="local-6989586621683200581"><span id="local-6989586621683200582"><span id="local-6989586621683200583"><span id="local-6989586621683200584"><span id="local-6989586621683200585"><span id="local-6989586621683200586"><span id="local-6989586621683200587"><span id="local-6989586621683200588"><span id="local-6989586621683200589"><span id="local-6989586621683200590"><span id="local-6989586621683200591"><span id="local-6989586621683200592"><span id="local-6989586621683200593"><span id="local-6989586621683200594"><span id="local-6989586621683200595"><span id="local-6989586621683200596"><span id="local-6989586621683200597"><span id="local-6989586621683200598"><span id="local-6989586621683200599"><span id="local-6989586621683200600"><span id="local-6989586621683200601"><span class="annot"><span class="annottext">Bool
+Int
+String
+[Int]
+[String]
+[(String, String)]
+[(ModuleName, String)]
+[(ModuleName, Module)]
+[ModuleName]
+[Option]
+[ExternalPluginSpec]
+[OnOff Extension]
+[CallerCcFilter]
+[ReexportedModule]
+[PackageDBFlag]
+[PackageFlag]
+[TrustFlag]
+[IgnorePackageFlag]
+Maybe Int
+Maybe String
+Maybe Word
+Maybe (String, Int)
+Maybe UnitId
+Maybe Language
+Maybe BmiVersion
+Maybe SseVersion
+Maybe ParMakeCount
+Word64
+Set ModuleName
+Ways
+OverridingBool
+Scheme
+ModuleName
+UnitId
+UnfoldingOpts
+ProfAuto
+IncludeSpecs
+Weights
+SrcSpan
+EnumSet Extension
+EnumSet WarningFlag
+EnumSet GeneralFlag
+EnumSet DumpFlag
+SafeHaskellMode
+IntWithInf
+PlatformMisc
+Platform
+WarningCategorySet
+GhcNameVersion
+FileSettings
+ToolSettings
+UnitSettings
+TempDir
+Backend
+RtsOptsEnabled
+DynLibLoader
+GhcLink
+GhcMode
+FlushOut
+ghcMode :: GhcMode
+ghcLink :: GhcLink
+backend :: Backend
+ghcNameVersion :: GhcNameVersion
+fileSettings :: FileSettings
+unitSettings :: UnitSettings
+targetPlatform :: Platform
+toolSettings :: ToolSettings
+platformMisc :: PlatformMisc
+rawSettings :: [(String, String)]
+tmpDir :: TempDir
+llvmOptLevel :: Int
+verbosity :: Int
+debugLevel :: Int
+simplPhases :: Int
+maxSimplIterations :: Int
+ruleCheck :: Maybe String
+strictnessBefore :: [Int]
+parMakeCount :: Maybe ParMakeCount
+enableTimeStats :: Bool
+ghcHeapSize :: Maybe Int
+maxRelevantBinds :: Maybe Int
+maxValidHoleFits :: Maybe Int
+maxRefHoleFits :: Maybe Int
+refLevelHoleFits :: Maybe Int
+maxUncoveredPatterns :: Int
+maxPmCheckModels :: Int
+simplTickFactor :: Int
+dmdUnboxWidth :: Int
+ifCompression :: Int
+specConstrThreshold :: Maybe Int
+specConstrCount :: Maybe Int
+specConstrRecursive :: Int
+binBlobThreshold :: Maybe Word
+liberateCaseThreshold :: Maybe Int
+floatLamArgs :: Maybe Int
+liftLamsRecArgs :: Maybe Int
+liftLamsNonRecArgs :: Maybe Int
+liftLamsKnown :: Bool
+cmmProcAlignment :: Maybe Int
+historySize :: Int
+importPaths :: [String]
+mainModuleNameIs :: ModuleName
+mainFunIs :: Maybe String
+reductionDepth :: IntWithInf
+solverIterations :: IntWithInf
+givensFuel :: Int
+wantedsFuel :: Int
+qcsFuel :: Int
+homeUnitId_ :: UnitId
+homeUnitInstanceOf_ :: Maybe UnitId
+homeUnitInstantiations_ :: [(ModuleName, Module)]
+workingDirectory :: Maybe String
+thisPackageName :: Maybe String
+hiddenModules :: Set ModuleName
+reexportedModules :: [ReexportedModule]
+targetWays_ :: Ways
+splitInfo :: Maybe (String, Int)
+objectDir :: Maybe String
+dylibInstallName :: Maybe String
+hiDir :: Maybe String
+hieDir :: Maybe String
+stubDir :: Maybe String
+dumpDir :: Maybe String
+objectSuf_ :: String
+hcSuf :: String
+hiSuf_ :: String
+hieSuf :: String
+dynObjectSuf_ :: String
+dynHiSuf_ :: String
+outputFile_ :: Maybe String
+dynOutputFile_ :: Maybe String
+outputHi :: Maybe String
+dynOutputHi :: Maybe String
+dynLibLoader :: DynLibLoader
+dynamicNow :: Bool
+dumpPrefix :: String
+dumpPrefixForce :: Maybe String
+ldInputs :: [Option]
+includePaths :: IncludeSpecs
+libraryPaths :: [String]
+frameworkPaths :: [String]
+cmdlineFrameworks :: [String]
+rtsOpts :: Maybe String
+rtsOptsEnabled :: RtsOptsEnabled
+rtsOptsSuggestions :: Bool
+hpcDir :: String
+pluginModNames :: [ModuleName]
+pluginModNameOpts :: [(ModuleName, String)]
+frontendPluginOpts :: [String]
+externalPluginSpecs :: [ExternalPluginSpec]
+depMakefile :: String
+depIncludePkgDeps :: Bool
+depIncludeCppDeps :: Bool
+depExcludeMods :: [ModuleName]
+depSuffixes :: [String]
+packageDBFlags :: [PackageDBFlag]
+ignorePackageFlags :: [IgnorePackageFlag]
+packageFlags :: [PackageFlag]
+pluginPackageFlags :: [PackageFlag]
+trustFlags :: [TrustFlag]
+packageEnv :: Maybe String
+dumpFlags :: EnumSet DumpFlag
+generalFlags :: EnumSet GeneralFlag
+warningFlags :: EnumSet WarningFlag
+fatalWarningFlags :: EnumSet WarningFlag
+customWarningCategories :: WarningCategorySet
+fatalCustomWarningCategories :: WarningCategorySet
+language :: Maybe Language
+safeHaskell :: SafeHaskellMode
+safeInfer :: Bool
+safeInferred :: Bool
+thOnLoc :: SrcSpan
+newDerivOnLoc :: SrcSpan
+deriveViaOnLoc :: SrcSpan
+overlapInstLoc :: SrcSpan
+incoherentOnLoc :: SrcSpan
+pkgTrustOnLoc :: SrcSpan
+warnSafeOnLoc :: SrcSpan
+warnUnsafeOnLoc :: SrcSpan
+trustworthyOnLoc :: SrcSpan
+extensions :: [OnOff Extension]
+extensionFlags :: EnumSet Extension
+unfoldingOpts :: UnfoldingOpts
+maxWorkerArgs :: Int
+maxForcedSpecArgs :: Int
+ghciHistSize :: Int
+ghciBrowserHost :: String
+ghciBrowserPort :: Int
+ghciBrowserPuppeteerLaunchOpts :: Maybe String
+ghciBrowserPlaywrightBrowserType :: Maybe String
+ghciBrowserPlaywrightLaunchOpts :: Maybe String
+flushOut :: FlushOut
+ghcVersionFile :: Maybe String
+haddockOptions :: Maybe String
+ghciScripts :: [String]
+pprUserLength :: Int
+pprCols :: Int
+useUnicode :: Bool
+useColor :: OverridingBool
+canUseColor :: Bool
+useErrorLinks :: OverridingBool
+canUseErrorLinks :: Bool
+colScheme :: Scheme
+profAuto :: ProfAuto
+callerCcFilters :: [CallerCcFilter]
+interactivePrint :: Maybe String
+sseVersion :: Maybe SseVersion
+bmiVersion :: Maybe BmiVersion
+avx :: Bool
+avx2 :: Bool
+avx512cd :: Bool
+avx512er :: Bool
+avx512f :: Bool
+avx512pf :: Bool
+fma :: Bool
+maxInlineAllocSize :: Int
+maxInlineMemcpyInsns :: Int
+maxInlineMemsetInsns :: Int
+reverseErrors :: Bool
+maxErrors :: Maybe Int
+initialUnique :: Word64
+uniqueIncrement :: Int
+cfgWeights :: Weights
+cfgWeights :: DynFlags -&gt; Weights
+uniqueIncrement :: DynFlags -&gt; Int
+initialUnique :: DynFlags -&gt; Word64
+maxErrors :: DynFlags -&gt; Maybe Int
+reverseErrors :: DynFlags -&gt; Bool
+maxInlineMemsetInsns :: DynFlags -&gt; Int
+maxInlineMemcpyInsns :: DynFlags -&gt; Int
+maxInlineAllocSize :: DynFlags -&gt; Int
+fma :: DynFlags -&gt; Bool
+avx512pf :: DynFlags -&gt; Bool
+avx512f :: DynFlags -&gt; Bool
+avx512er :: DynFlags -&gt; Bool
+avx512cd :: DynFlags -&gt; Bool
+avx2 :: DynFlags -&gt; Bool
+avx :: DynFlags -&gt; Bool
+bmiVersion :: DynFlags -&gt; Maybe BmiVersion
+sseVersion :: DynFlags -&gt; Maybe SseVersion
+interactivePrint :: DynFlags -&gt; Maybe String
+callerCcFilters :: DynFlags -&gt; [CallerCcFilter]
+profAuto :: DynFlags -&gt; ProfAuto
+colScheme :: DynFlags -&gt; Scheme
+canUseErrorLinks :: DynFlags -&gt; Bool
+useErrorLinks :: DynFlags -&gt; OverridingBool
+canUseColor :: DynFlags -&gt; Bool
+useColor :: DynFlags -&gt; OverridingBool
+useUnicode :: DynFlags -&gt; Bool
+pprCols :: DynFlags -&gt; Int
+pprUserLength :: DynFlags -&gt; Int
+ghciScripts :: DynFlags -&gt; [String]
+haddockOptions :: DynFlags -&gt; Maybe String
+ghcVersionFile :: DynFlags -&gt; Maybe String
+flushOut :: DynFlags -&gt; FlushOut
+ghciBrowserPlaywrightLaunchOpts :: DynFlags -&gt; Maybe String
+ghciBrowserPlaywrightBrowserType :: DynFlags -&gt; Maybe String
+ghciBrowserPuppeteerLaunchOpts :: DynFlags -&gt; Maybe String
+ghciBrowserPort :: DynFlags -&gt; Int
+ghciBrowserHost :: DynFlags -&gt; String
+ghciHistSize :: DynFlags -&gt; Int
+maxForcedSpecArgs :: DynFlags -&gt; Int
+maxWorkerArgs :: DynFlags -&gt; Int
+unfoldingOpts :: DynFlags -&gt; UnfoldingOpts
+extensionFlags :: DynFlags -&gt; EnumSet Extension
+extensions :: DynFlags -&gt; [OnOff Extension]
+trustworthyOnLoc :: DynFlags -&gt; SrcSpan
+warnUnsafeOnLoc :: DynFlags -&gt; SrcSpan
+warnSafeOnLoc :: DynFlags -&gt; SrcSpan
+pkgTrustOnLoc :: DynFlags -&gt; SrcSpan
+incoherentOnLoc :: DynFlags -&gt; SrcSpan
+overlapInstLoc :: DynFlags -&gt; SrcSpan
+deriveViaOnLoc :: DynFlags -&gt; SrcSpan
+newDerivOnLoc :: DynFlags -&gt; SrcSpan
+thOnLoc :: DynFlags -&gt; SrcSpan
+safeInferred :: DynFlags -&gt; Bool
+safeInfer :: DynFlags -&gt; Bool
+safeHaskell :: DynFlags -&gt; SafeHaskellMode
+language :: DynFlags -&gt; Maybe Language
+fatalCustomWarningCategories :: DynFlags -&gt; WarningCategorySet
+customWarningCategories :: DynFlags -&gt; WarningCategorySet
+fatalWarningFlags :: DynFlags -&gt; EnumSet WarningFlag
+warningFlags :: DynFlags -&gt; EnumSet WarningFlag
+generalFlags :: DynFlags -&gt; EnumSet GeneralFlag
+dumpFlags :: DynFlags -&gt; EnumSet DumpFlag
+packageEnv :: DynFlags -&gt; Maybe String
+trustFlags :: DynFlags -&gt; [TrustFlag]
+pluginPackageFlags :: DynFlags -&gt; [PackageFlag]
+packageFlags :: DynFlags -&gt; [PackageFlag]
+ignorePackageFlags :: DynFlags -&gt; [IgnorePackageFlag]
+packageDBFlags :: DynFlags -&gt; [PackageDBFlag]
+depSuffixes :: DynFlags -&gt; [String]
+depExcludeMods :: DynFlags -&gt; [ModuleName]
+depIncludeCppDeps :: DynFlags -&gt; Bool
+depIncludePkgDeps :: DynFlags -&gt; Bool
+depMakefile :: DynFlags -&gt; String
+externalPluginSpecs :: DynFlags -&gt; [ExternalPluginSpec]
+frontendPluginOpts :: DynFlags -&gt; [String]
+pluginModNameOpts :: DynFlags -&gt; [(ModuleName, String)]
+pluginModNames :: DynFlags -&gt; [ModuleName]
+hpcDir :: DynFlags -&gt; String
+rtsOptsSuggestions :: DynFlags -&gt; Bool
+rtsOptsEnabled :: DynFlags -&gt; RtsOptsEnabled
+rtsOpts :: DynFlags -&gt; Maybe String
+cmdlineFrameworks :: DynFlags -&gt; [String]
+frameworkPaths :: DynFlags -&gt; [String]
+libraryPaths :: DynFlags -&gt; [String]
+includePaths :: DynFlags -&gt; IncludeSpecs
+ldInputs :: DynFlags -&gt; [Option]
+dumpPrefixForce :: DynFlags -&gt; Maybe String
+dumpPrefix :: DynFlags -&gt; String
+dynamicNow :: DynFlags -&gt; Bool
+dynLibLoader :: DynFlags -&gt; DynLibLoader
+dynOutputHi :: DynFlags -&gt; Maybe String
+outputHi :: DynFlags -&gt; Maybe String
+dynOutputFile_ :: DynFlags -&gt; Maybe String
+outputFile_ :: DynFlags -&gt; Maybe String
+dynHiSuf_ :: DynFlags -&gt; String
+dynObjectSuf_ :: DynFlags -&gt; String
+hieSuf :: DynFlags -&gt; String
+hiSuf_ :: DynFlags -&gt; String
+hcSuf :: DynFlags -&gt; String
+objectSuf_ :: DynFlags -&gt; String
+dumpDir :: DynFlags -&gt; Maybe String
+stubDir :: DynFlags -&gt; Maybe String
+hieDir :: DynFlags -&gt; Maybe String
+hiDir :: DynFlags -&gt; Maybe String
+dylibInstallName :: DynFlags -&gt; Maybe String
+objectDir :: DynFlags -&gt; Maybe String
+splitInfo :: DynFlags -&gt; Maybe (String, Int)
+targetWays_ :: DynFlags -&gt; Ways
+reexportedModules :: DynFlags -&gt; [ReexportedModule]
+hiddenModules :: DynFlags -&gt; Set ModuleName
+thisPackageName :: DynFlags -&gt; Maybe String
+workingDirectory :: DynFlags -&gt; Maybe String
+homeUnitInstantiations_ :: DynFlags -&gt; [(ModuleName, Module)]
+homeUnitInstanceOf_ :: DynFlags -&gt; Maybe UnitId
+homeUnitId_ :: DynFlags -&gt; UnitId
+qcsFuel :: DynFlags -&gt; Int
+wantedsFuel :: DynFlags -&gt; Int
+givensFuel :: DynFlags -&gt; Int
+solverIterations :: DynFlags -&gt; IntWithInf
+reductionDepth :: DynFlags -&gt; IntWithInf
+mainFunIs :: DynFlags -&gt; Maybe String
+mainModuleNameIs :: DynFlags -&gt; ModuleName
+importPaths :: DynFlags -&gt; [String]
+historySize :: DynFlags -&gt; Int
+cmmProcAlignment :: DynFlags -&gt; Maybe Int
+liftLamsKnown :: DynFlags -&gt; Bool
+liftLamsNonRecArgs :: DynFlags -&gt; Maybe Int
+liftLamsRecArgs :: DynFlags -&gt; Maybe Int
+floatLamArgs :: DynFlags -&gt; Maybe Int
+liberateCaseThreshold :: DynFlags -&gt; Maybe Int
+binBlobThreshold :: DynFlags -&gt; Maybe Word
+specConstrRecursive :: DynFlags -&gt; Int
+specConstrCount :: DynFlags -&gt; Maybe Int
+specConstrThreshold :: DynFlags -&gt; Maybe Int
+ifCompression :: DynFlags -&gt; Int
+dmdUnboxWidth :: DynFlags -&gt; Int
+simplTickFactor :: DynFlags -&gt; Int
+maxPmCheckModels :: DynFlags -&gt; Int
+maxUncoveredPatterns :: DynFlags -&gt; Int
+refLevelHoleFits :: DynFlags -&gt; Maybe Int
+maxRefHoleFits :: DynFlags -&gt; Maybe Int
+maxValidHoleFits :: DynFlags -&gt; Maybe Int
+maxRelevantBinds :: DynFlags -&gt; Maybe Int
+ghcHeapSize :: DynFlags -&gt; Maybe Int
+enableTimeStats :: DynFlags -&gt; Bool
+parMakeCount :: DynFlags -&gt; Maybe ParMakeCount
+strictnessBefore :: DynFlags -&gt; [Int]
+ruleCheck :: DynFlags -&gt; Maybe String
+maxSimplIterations :: DynFlags -&gt; Int
+simplPhases :: DynFlags -&gt; Int
+debugLevel :: DynFlags -&gt; Int
+verbosity :: DynFlags -&gt; Int
+llvmOptLevel :: DynFlags -&gt; Int
+tmpDir :: DynFlags -&gt; TempDir
+rawSettings :: DynFlags -&gt; [(String, String)]
+platformMisc :: DynFlags -&gt; PlatformMisc
+toolSettings :: DynFlags -&gt; ToolSettings
+targetPlatform :: DynFlags -&gt; Platform
+unitSettings :: DynFlags -&gt; UnitSettings
+fileSettings :: DynFlags -&gt; FileSettings
+ghcNameVersion :: DynFlags -&gt; GhcNameVersion
+backend :: DynFlags -&gt; Backend
+ghcLink :: DynFlags -&gt; GhcLink
+ghcMode :: DynFlags -&gt; GhcMode
+</span><a href="#local-6989586621683200438"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HscEnv -&gt; DynFlags
+</span><a href="GHC.Driver.Env.Types.html#hsc_dflags"><span class="hs-identifier hs-var">hsc_dflags</span></a></span><span> </span><span class="annot"><span class="annottext">HscEnv
+</span><a href="#local-6989586621683200434"><span class="hs-identifier hs-var">hsc_env</span></a></span><span>
+</span><span id="line-42"></span><span>        </span><span id="local-6989586621683200767"><span class="annot"><span class="annottext">mainis :: Maybe (Maybe String)
+</span><a href="#local-6989586621683200767"><span class="hs-identifier hs-var hs-var">mainis</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">HomeUnitEnv -&gt; Module
+</span><a href="GHC.Driver.Env.html#mainModIs"><span class="hs-identifier hs-var">mainModIs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HscEnv -&gt; HomeUnitEnv
+</span><a href="GHC.Driver.Env.html#hsc_HUE"><span class="hs-identifier hs-var">hsc_HUE</span></a></span><span> </span><span class="annot"><span class="annottext">HscEnv
+</span><a href="#local-6989586621683200434"><span class="hs-identifier hs-var">hsc_env</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Module -&gt; Module -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621683200435"><span class="hs-identifier hs-var">this_mod</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; Maybe (Maybe String)
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621683200481"><span class="hs-identifier hs-var">mainFunIs</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe (Maybe String)
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-43"></span><span>                      </span><span class="hs-comment">-- see #5878</span><span>
+</span><span id="line-44"></span><span>        </span><span class="hs-comment">-- pkgopts  = (homeUnit home_unit, sort $ packageFlags dflags)</span><span>
+</span><span id="line-45"></span><span>        </span><span id="local-6989586621683200770"><span class="annot"><span class="annottext">safeHs :: IfaceTrustInfo
+</span><a href="#local-6989586621683200770"><span class="hs-identifier hs-var hs-var">safeHs</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SafeHaskellMode -&gt; IfaceTrustInfo
+</span><a href="GHC.Types.SafeHaskell.html#setSafeMode"><span class="hs-identifier hs-var">setSafeMode</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHaskellMode
+</span><a href="#local-6989586621683200547"><span class="hs-identifier hs-var">safeHaskell</span></a></span><span>
+</span><span id="line-46"></span><span>        </span><span class="hs-comment">-- oflags   = sort $ filter filterOFlags $ flags dflags</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>        </span><span class="hs-comment">-- all the extension flags and the language</span><span>
+</span><span id="line-49"></span><span>        </span><span id="local-6989586621683200772"><span class="annot"><span class="annottext">lang :: Maybe IfaceLanguage
+</span><a href="#local-6989586621683200772"><span class="hs-identifier hs-var hs-var">lang</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Language -&gt; IfaceLanguage)
+-&gt; Maybe Language -&gt; Maybe IfaceLanguage
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Language -&gt; IfaceLanguage
+</span><a href="GHC.Iface.Flags.html#IfaceLanguage"><span class="hs-identifier hs-var">IfaceLanguage</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Language
+</span><a href="#local-6989586621683200546"><span class="hs-identifier hs-var">language</span></a></span><span>
+</span><span id="line-50"></span><span>        </span><span id="local-6989586621683200774"><span class="annot"><span class="annottext">exts :: [IfaceExtension]
+</span><a href="#local-6989586621683200774"><span class="hs-identifier hs-var hs-var">exts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Extension -&gt; IfaceExtension) -&gt; [Extension] -&gt; [IfaceExtension]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Extension -&gt; IfaceExtension
+</span><a href="GHC.Iface.Flags.html#IfaceExtension"><span class="hs-identifier hs-var">IfaceExtension</span></a></span><span> </span><span class="annot"><span class="annottext">([Extension] -&gt; [IfaceExtension])
+-&gt; [Extension] -&gt; [IfaceExtension]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EnumSet Extension -&gt; [Extension]
+forall a. Enum a =&gt; EnumSet a -&gt; [a]
+</span><a href="GHC.Data.EnumSet.html#toList"><span class="hs-identifier hs-var">EnumSet.toList</span></a></span><span> </span><span class="annot"><span class="annottext">EnumSet Extension
+</span><a href="#local-6989586621683200560"><span class="hs-identifier hs-var">extensionFlags</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span>        </span><span class="hs-comment">-- avoid fingerprinting the absolute path to the directory of the source file</span><span>
+</span><span id="line-53"></span><span>        </span><span class="hs-comment">-- see Note [Implicit include paths]</span><span>
+</span><span id="line-54"></span><span>        </span><span id="local-6989586621683200777"><span class="annot"><span class="annottext">includePathsMinusImplicit :: IncludeSpecs
+</span><a href="#local-6989586621683200777"><span class="hs-identifier hs-var hs-var">includePathsMinusImplicit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IncludeSpecs
+</span><a href="#local-6989586621683200517"><span class="hs-identifier hs-var">includePaths</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="GHC.Driver.IncludeSpecs.html#includePathsQuoteImplicit"><span class="hs-identifier hs-var">includePathsQuoteImplicit</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span>        </span><span class="hs-comment">-- -I, -D and -U flags affect Haskell C/CPP Preprocessor</span><span>
+</span><span id="line-57"></span><span>        </span><span id="local-6989586621683200779"><span class="annot"><span class="annottext">cpp :: IfaceCppOptions
+</span><a href="#local-6989586621683200779"><span class="hs-identifier hs-var hs-var">cpp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="GHC.Iface.Flags.html#IfaceCppOptions"><span class="hs-identifier hs-type">IfaceCppOptions</span></a></span><span>
+</span><span id="line-58"></span><span>                </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ifaceCppIncludes :: [String]
+</span><a href="GHC.Iface.Flags.html#ifaceCppIncludes"><span class="hs-identifier hs-var">ifaceCppIncludes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="../../filepath-1.5.4.0-inplace/src/System.FilePath.Posix.html#normalise"><span class="hs-identifier hs-var">normalise</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; [String]) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IncludeSpecs -&gt; [String]
+</span><a href="GHC.Driver.IncludeSpecs.html#flattenIncludes"><span class="hs-identifier hs-var">flattenIncludes</span></a></span><span> </span><span class="annot"><span class="annottext">IncludeSpecs
+</span><a href="#local-6989586621683200777"><span class="hs-identifier hs-var">includePathsMinusImplicit</span></a></span><span>
+</span><span id="line-59"></span><span>                </span><span class="hs-comment">-- normalise: eliminate spurious differences due to &quot;./foo&quot; vs &quot;foo&quot;</span><span>
+</span><span id="line-60"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ifaceCppOpts :: [String]
+</span><a href="GHC.Iface.Flags.html#ifaceCppOpts"><span class="hs-identifier hs-var">ifaceCppOpts</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DynFlags -&gt; [String]
+</span><a href="GHC.Driver.Session.html#picPOpts"><span class="hs-identifier hs-var">picPOpts</span></a></span><span> </span><span class="annot"><span class="annottext">DynFlags
+</span><a href="#local-6989586621683200437"><span class="hs-identifier hs-var">dflags</span></a></span><span>
+</span><span id="line-61"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ifaceCppSig :: ([String], Fingerprint)
+</span><a href="GHC.Iface.Flags.html#ifaceCppSig"><span class="hs-identifier hs-var">ifaceCppSig</span></a></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">DynFlags -&gt; ([String], Fingerprint)
+</span><a href="GHC.Driver.Session.html#opt_P_signature"><span class="hs-identifier hs-var">opt_P_signature</span></a></span><span> </span><span class="annot"><span class="annottext">DynFlags
+</span><a href="#local-6989586621683200437"><span class="hs-identifier hs-var">dflags</span></a></span><span>
+</span><span id="line-62"></span><span>                </span><span class="hs-special">}</span><span>
+</span><span id="line-63"></span><span>            </span><span class="hs-comment">-- See Note [Repeated -optP hashing]</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>        </span><span class="hs-comment">-- -I, -D and -U flags affect JavaScript C/CPP Preprocessor</span><span>
+</span><span id="line-67"></span><span>        </span><span id="local-6989586621683200787"><span class="annot"><span class="annottext">js :: IfaceCppOptions
+</span><a href="#local-6989586621683200787"><span class="hs-identifier hs-var hs-var">js</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="GHC.Iface.Flags.html#IfaceCppOptions"><span class="hs-identifier hs-type">IfaceCppOptions</span></a></span><span>
+</span><span id="line-68"></span><span>              </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ifaceCppIncludes :: [String]
+</span><a href="GHC.Iface.Flags.html#ifaceCppIncludes"><span class="hs-identifier hs-var">ifaceCppIncludes</span></a></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="../../filepath-1.5.4.0-inplace/src/System.FilePath.Posix.html#normalise"><span class="hs-identifier hs-var">normalise</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; [String]) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IncludeSpecs -&gt; [String]
+</span><a href="GHC.Driver.IncludeSpecs.html#flattenIncludes"><span class="hs-identifier hs-var">flattenIncludes</span></a></span><span> </span><span class="annot"><span class="annottext">IncludeSpecs
+</span><a href="#local-6989586621683200777"><span class="hs-identifier hs-var">includePathsMinusImplicit</span></a></span><span>
+</span><span id="line-69"></span><span>            </span><span class="hs-comment">-- normalise: eliminate spurious differences due to &quot;./foo&quot; vs &quot;foo&quot;</span><span>
+</span><span id="line-70"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ifaceCppOpts :: [String]
+</span><a href="GHC.Iface.Flags.html#ifaceCppOpts"><span class="hs-identifier hs-var">ifaceCppOpts</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DynFlags -&gt; [String]
+</span><a href="GHC.Driver.Session.html#picPOpts"><span class="hs-identifier hs-var">picPOpts</span></a></span><span> </span><span class="annot"><span class="annottext">DynFlags
+</span><a href="#local-6989586621683200437"><span class="hs-identifier hs-var">dflags</span></a></span><span>
+</span><span id="line-71"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ifaceCppSig :: ([String], Fingerprint)
+</span><a href="GHC.Iface.Flags.html#ifaceCppSig"><span class="hs-identifier hs-var">ifaceCppSig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DynFlags -&gt; ([String], Fingerprint)
+</span><a href="GHC.Driver.Session.html#opt_JSP_signature"><span class="hs-identifier hs-var">opt_JSP_signature</span></a></span><span> </span><span class="annot"><span class="annottext">DynFlags
+</span><a href="#local-6989586621683200437"><span class="hs-identifier hs-var">dflags</span></a></span><span>
+</span><span id="line-72"></span><span>              </span><span class="hs-special">}</span><span>
+</span><span id="line-73"></span><span>            </span><span class="hs-comment">-- See Note [Repeated -optP hashing]</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>        </span><span class="hs-comment">-- -I, -D and -U flags affect C-- CPP Preprocessor</span><span>
+</span><span id="line-76"></span><span>        </span><span id="local-6989586621683200789"><span class="annot"><span class="annottext">cmm :: IfaceCppOptions
+</span><a href="#local-6989586621683200789"><span class="hs-identifier hs-var hs-var">cmm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="GHC.Iface.Flags.html#IfaceCppOptions"><span class="hs-identifier hs-type">IfaceCppOptions</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-77"></span><span>              </span><span class="annot"><span class="annottext">ifaceCppIncludes :: [String]
+</span><a href="GHC.Iface.Flags.html#ifaceCppIncludes"><span class="hs-identifier hs-var">ifaceCppIncludes</span></a></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="../../filepath-1.5.4.0-inplace/src/System.FilePath.Posix.html#normalise"><span class="hs-identifier hs-var">normalise</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; [String]) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IncludeSpecs -&gt; [String]
+</span><a href="GHC.Driver.IncludeSpecs.html#flattenIncludes"><span class="hs-identifier hs-var">flattenIncludes</span></a></span><span> </span><span class="annot"><span class="annottext">IncludeSpecs
+</span><a href="#local-6989586621683200777"><span class="hs-identifier hs-var">includePathsMinusImplicit</span></a></span><span>
+</span><span id="line-78"></span><span>            </span><span class="hs-comment">-- normalise: eliminate spurious differences due to &quot;./foo&quot; vs &quot;foo&quot;</span><span>
+</span><span id="line-79"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ifaceCppOpts :: [String]
+</span><a href="GHC.Iface.Flags.html#ifaceCppOpts"><span class="hs-identifier hs-var">ifaceCppOpts</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DynFlags -&gt; [String]
+</span><a href="GHC.Driver.Session.html#picPOpts"><span class="hs-identifier hs-var">picPOpts</span></a></span><span> </span><span class="annot"><span class="annottext">DynFlags
+</span><a href="#local-6989586621683200437"><span class="hs-identifier hs-var">dflags</span></a></span><span>
+</span><span id="line-80"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ifaceCppSig :: ([String], Fingerprint)
+</span><a href="GHC.Iface.Flags.html#ifaceCppSig"><span class="hs-identifier hs-var">ifaceCppSig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DynFlags -&gt; Fingerprint
+</span><a href="GHC.Driver.Session.html#opt_CmmP_signature"><span class="hs-identifier hs-var">opt_CmmP_signature</span></a></span><span> </span><span class="annot"><span class="annottext">DynFlags
+</span><a href="#local-6989586621683200437"><span class="hs-identifier hs-var">dflags</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>              </span><span class="hs-special">}</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span>        </span><span class="hs-comment">-- Note [path flags and recompilation]</span><span>
+</span><span id="line-84"></span><span>        </span><span id="local-6989586621683200791"><span class="annot"><span class="annottext">paths :: [String]
+</span><a href="#local-6989586621683200791"><span class="hs-identifier hs-var hs-var">paths</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683200503"><span class="hs-identifier hs-var">hcSuf</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>        </span><span class="hs-comment">-- -fprof-auto etc.</span><span>
+</span><span id="line-87"></span><span>        </span><span id="local-6989586621683200792"><span class="annot"><span class="annottext">prof :: Maybe IfaceProfAuto
+</span><a href="#local-6989586621683200792"><span class="hs-identifier hs-var hs-var">prof</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">DynFlags -&gt; Bool
+</span><a href="GHC.Driver.Session.html#sccProfilingEnabled"><span class="hs-identifier hs-var">sccProfilingEnabled</span></a></span><span> </span><span class="annot"><span class="annottext">DynFlags
+</span><a href="#local-6989586621683200437"><span class="hs-identifier hs-var">dflags</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">IfaceProfAuto -&gt; Maybe IfaceProfAuto
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProfAuto -&gt; IfaceProfAuto
+</span><a href="GHC.Iface.Flags.html#IfaceProfAuto"><span class="hs-identifier hs-var">IfaceProfAuto</span></a></span><span> </span><span class="annot"><span class="annottext">ProfAuto
+</span><a href="#local-6989586621683200582"><span class="hs-identifier hs-var">profAuto</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe IfaceProfAuto
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>        </span><span class="hs-comment">-- Ticky</span><span>
+</span><span id="line-90"></span><span>        </span><span id="local-6989586621683200795"><span class="annot"><span class="annottext">ticky :: [IfaceGeneralFlag]
+</span><a href="#local-6989586621683200795"><span class="hs-identifier hs-var hs-var">ticky</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-91"></span><span>          </span><span class="annot"><span class="annottext">(GeneralFlag -&gt; Maybe IfaceGeneralFlag)
+-&gt; [GeneralFlag] -&gt; [IfaceGeneralFlag]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#mapMaybe"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621683200797"><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="#local-6989586621683200797"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="#local-6989586621683200797"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">GeneralFlag -&gt; DynFlags -&gt; Bool
+</span><a href="GHC.Driver.DynFlags.html#gopt"><span class="hs-operator hs-var">`gopt`</span></a></span><span> </span><span class="annot"><span class="annottext">DynFlags
+</span><a href="#local-6989586621683200437"><span class="hs-identifier hs-var">dflags</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">IfaceGeneralFlag -&gt; Maybe IfaceGeneralFlag
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GeneralFlag -&gt; IfaceGeneralFlag
+</span><a href="GHC.Iface.Flags.html#IfaceGeneralFlag"><span class="hs-identifier hs-var">IfaceGeneralFlag</span></a></span><span> </span><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="#local-6989586621683200797"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe IfaceGeneralFlag
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="GHC.Driver.Flags.html#Opt_Ticky"><span class="hs-identifier hs-var">Opt_Ticky</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="GHC.Driver.Flags.html#Opt_Ticky_Allocd"><span class="hs-identifier hs-var">Opt_Ticky_Allocd</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="GHC.Driver.Flags.html#Opt_Ticky_LNE"><span class="hs-identifier hs-var">Opt_Ticky_LNE</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="GHC.Driver.Flags.html#Opt_Ticky_Dyn_Thunk"><span class="hs-identifier hs-var">Opt_Ticky_Dyn_Thunk</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="GHC.Driver.Flags.html#Opt_Ticky_Tag"><span class="hs-identifier hs-var">Opt_Ticky_Tag</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span>        </span><span class="hs-comment">-- Other flags which affect code generation</span><span>
+</span><span id="line-94"></span><span>        </span><span id="local-6989586621683200805"><span class="annot"><span class="annottext">codegen :: [IfaceGeneralFlag]
+</span><a href="#local-6989586621683200805"><span class="hs-identifier hs-var hs-var">codegen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GeneralFlag -&gt; Maybe IfaceGeneralFlag)
+-&gt; [GeneralFlag] -&gt; [IfaceGeneralFlag]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#mapMaybe"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621683200806"><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="#local-6989586621683200806"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="#local-6989586621683200806"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">GeneralFlag -&gt; DynFlags -&gt; Bool
+</span><a href="GHC.Driver.DynFlags.html#gopt"><span class="hs-operator hs-var">`gopt`</span></a></span><span> </span><span class="annot"><span class="annottext">DynFlags
+</span><a href="#local-6989586621683200437"><span class="hs-identifier hs-var">dflags</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">IfaceGeneralFlag -&gt; Maybe IfaceGeneralFlag
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GeneralFlag -&gt; IfaceGeneralFlag
+</span><a href="GHC.Iface.Flags.html#IfaceGeneralFlag"><span class="hs-identifier hs-var">IfaceGeneralFlag</span></a></span><span> </span><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="#local-6989586621683200806"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe IfaceGeneralFlag
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EnumSet GeneralFlag -&gt; [GeneralFlag]
+forall a. Enum a =&gt; EnumSet a -&gt; [a]
+</span><a href="GHC.Data.EnumSet.html#toList"><span class="hs-identifier hs-var">EnumSet.toList</span></a></span><span> </span><span class="annot"><span class="annottext">EnumSet GeneralFlag
+</span><a href="GHC.Driver.Flags.html#codeGenFlags"><span class="hs-identifier hs-var">codeGenFlags</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span>        </span><span class="hs-comment">-- Did we include core for all bindings?</span><span>
+</span><span id="line-97"></span><span>        </span><span id="local-6989586621683200808"><span class="annot"><span class="annottext">fat_iface :: Bool
+</span><a href="#local-6989586621683200808"><span class="hs-identifier hs-var hs-var">fat_iface</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GeneralFlag -&gt; DynFlags -&gt; Bool
+</span><a href="GHC.Driver.DynFlags.html#gopt"><span class="hs-identifier hs-var">gopt</span></a></span><span> </span><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="GHC.Driver.Flags.html#Opt_WriteIfSimplifiedCore"><span class="hs-identifier hs-var">Opt_WriteIfSimplifiedCore</span></a></span><span> </span><span class="annot"><span class="annottext">DynFlags
+</span><a href="#local-6989586621683200437"><span class="hs-identifier hs-var">dflags</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span>        </span><span id="local-6989586621683200810"><span class="annot"><span class="annottext">f :: IfaceDynFlags
+</span><a href="#local-6989586621683200810"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Maybe String)
+-&gt; IfaceTrustInfo
+-&gt; Maybe IfaceLanguage
+-&gt; [IfaceExtension]
+-&gt; IfaceCppOptions
+-&gt; IfaceCppOptions
+-&gt; IfaceCppOptions
+-&gt; [String]
+-&gt; Maybe IfaceProfAuto
+-&gt; [IfaceGeneralFlag]
+-&gt; [IfaceGeneralFlag]
+-&gt; Bool
+-&gt; Int
+-&gt; [CallerCcFilter]
+-&gt; IfaceDynFlags
+</span><a href="GHC.Iface.Flags.html#IfaceDynFlags"><span class="hs-identifier hs-var">IfaceDynFlags</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Maybe String)
+</span><a href="#local-6989586621683200767"><span class="hs-identifier hs-var">mainis</span></a></span><span> </span><span class="annot"><span class="annottext">IfaceTrustInfo
+</span><a href="#local-6989586621683200770"><span class="hs-identifier hs-var">safeHs</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe IfaceLanguage
+</span><a href="#local-6989586621683200772"><span class="hs-identifier hs-var">lang</span></a></span><span> </span><span class="annot"><span class="annottext">[IfaceExtension]
+</span><a href="#local-6989586621683200774"><span class="hs-identifier hs-var">exts</span></a></span><span> </span><span class="annot"><span class="annottext">IfaceCppOptions
+</span><a href="#local-6989586621683200779"><span class="hs-identifier hs-var">cpp</span></a></span><span> </span><span class="annot"><span class="annottext">IfaceCppOptions
+</span><a href="#local-6989586621683200787"><span class="hs-identifier hs-var">js</span></a></span><span> </span><span class="annot"><span class="annottext">IfaceCppOptions
+</span><a href="#local-6989586621683200789"><span class="hs-identifier hs-var">cmm</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621683200791"><span class="hs-identifier hs-var">paths</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe IfaceProfAuto
+</span><a href="#local-6989586621683200792"><span class="hs-identifier hs-var">prof</span></a></span><span> </span><span class="annot"><span class="annottext">[IfaceGeneralFlag]
+</span><a href="#local-6989586621683200795"><span class="hs-identifier hs-var">ticky</span></a></span><span> </span><span class="annot"><span class="annottext">[IfaceGeneralFlag]
+</span><a href="#local-6989586621683200805"><span class="hs-identifier hs-var">codegen</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621683200808"><span class="hs-identifier hs-var">fat_iface</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621683200451"><span class="hs-identifier hs-var">debugLevel</span></a></span><span> </span><span class="annot"><span class="annottext">[CallerCcFilter]
+</span><a href="#local-6989586621683200583"><span class="hs-identifier hs-var">callerCcFilters</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(WriteBinHandle -&gt; Name -&gt; IO ()) -&gt; IfaceDynFlags -&gt; Fingerprint
+forall a.
+Binary a =&gt;
+(WriteBinHandle -&gt; Name -&gt; IO ()) -&gt; a -&gt; Fingerprint
+</span><a href="GHC.Iface.Recomp.Binary.html#computeFingerprint"><span class="hs-identifier hs-var">computeFingerprint</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Name -&gt; IO ()
+</span><a href="#local-6989586621683200436"><span class="hs-identifier hs-var">nameio</span></a></span><span> </span><span class="annot"><span class="annottext">IfaceDynFlags
+</span><a href="#local-6989586621683200810"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IfaceDynFlags
+</span><a href="#local-6989586621683200810"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- Fingerprint the optimisation info. We keep this separate from the rest of</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- the flags because GHCi users (especially) may wish to ignore changes in</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- optimisation level or optimisation flags so as to use as many pre-existing</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- object files as they can.</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- See Note [Ignoring some flag changes]</span><span>
+</span><span id="line-108"></span><span class="annot"><a href="GHC.Iface.Recomp.Flags.html#fingerprintOptFlags"><span class="hs-identifier hs-type">fingerprintOptFlags</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Driver.DynFlags.html#DynFlags"><span class="hs-identifier hs-type">DynFlags</span></a></span><span>
+</span><span id="line-109"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Utils.Binary.html#WriteBinHandle"><span class="hs-identifier hs-type">WriteBinHandle</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Fingerprint.Type.html#Fingerprint"><span class="hs-identifier hs-type">Fingerprint</span></a></span><span>
+</span><span id="line-111"></span><span id="fingerprintOptFlags"><span class="annot"><span class="annottext">fingerprintOptFlags :: DynFlags -&gt; (WriteBinHandle -&gt; Name -&gt; IO ()) -&gt; Fingerprint
+</span><a href="GHC.Iface.Recomp.Flags.html#fingerprintOptFlags"><span class="hs-identifier hs-var hs-var">fingerprintOptFlags</span></a></span></span><span> </span><span class="annot"><a href="GHC.Driver.DynFlags.html#DynFlags"><span class="hs-identifier hs-type">DynFlags</span></a></span><span class="hs-special">{</span><span id="local-6989586621683200813"><span id="local-6989586621683200814"><span id="local-6989586621683200815"><span id="local-6989586621683200816"><span id="local-6989586621683200817"><span id="local-6989586621683200818"><span id="local-6989586621683200819"><span id="local-6989586621683200820"><span id="local-6989586621683200821"><span id="local-6989586621683200822"><span id="local-6989586621683200823"><span id="local-6989586621683200824"><span id="local-6989586621683200825"><span id="local-6989586621683200826"><span id="local-6989586621683200827"><span id="local-6989586621683200828"><span id="local-6989586621683200829"><span id="local-6989586621683200830"><span id="local-6989586621683200831"><span id="local-6989586621683200832"><span id="local-6989586621683200833"><span id="local-6989586621683200834"><span id="local-6989586621683200835"><span id="local-6989586621683200836"><span id="local-6989586621683200837"><span id="local-6989586621683200838"><span id="local-6989586621683200839"><span id="local-6989586621683200840"><span id="local-6989586621683200841"><span id="local-6989586621683200842"><span id="local-6989586621683200843"><span id="local-6989586621683200844"><span id="local-6989586621683200845"><span id="local-6989586621683200846"><span id="local-6989586621683200847"><span id="local-6989586621683200848"><span id="local-6989586621683200849"><span id="local-6989586621683200850"><span id="local-6989586621683200851"><span id="local-6989586621683200852"><span id="local-6989586621683200853"><span id="local-6989586621683200854"><span id="local-6989586621683200855"><span id="local-6989586621683200856"><span id="local-6989586621683200857"><span id="local-6989586621683200858"><span id="local-6989586621683200859"><span id="local-6989586621683200860"><span id="local-6989586621683200861"><span id="local-6989586621683200862"><span id="local-6989586621683200863"><span id="local-6989586621683200864"><span id="local-6989586621683200865"><span id="local-6989586621683200866"><span id="local-6989586621683200867"><span id="local-6989586621683200868"><span id="local-6989586621683200869"><span id="local-6989586621683200870"><span id="local-6989586621683200871"><span id="local-6989586621683200872"><span id="local-6989586621683200873"><span id="local-6989586621683200874"><span id="local-6989586621683200875"><span id="local-6989586621683200876"><span id="local-6989586621683200877"><span id="local-6989586621683200878"><span id="local-6989586621683200879"><span id="local-6989586621683200880"><span id="local-6989586621683200881"><span id="local-6989586621683200882"><span id="local-6989586621683200883"><span id="local-6989586621683200884"><span id="local-6989586621683200885"><span id="local-6989586621683200886"><span id="local-6989586621683200887"><span id="local-6989586621683200888"><span id="local-6989586621683200889"><span id="local-6989586621683200890"><span id="local-6989586621683200891"><span id="local-6989586621683200892"><span id="local-6989586621683200893"><span id="local-6989586621683200894"><span id="local-6989586621683200895"><span id="local-6989586621683200896"><span id="local-6989586621683200897"><span id="local-6989586621683200898"><span id="local-6989586621683200899"><span id="local-6989586621683200900"><span id="local-6989586621683200901"><span id="local-6989586621683200902"><span id="local-6989586621683200903"><span id="local-6989586621683200904"><span id="local-6989586621683200905"><span id="local-6989586621683200906"><span id="local-6989586621683200907"><span id="local-6989586621683200908"><span id="local-6989586621683200909"><span id="local-6989586621683200910"><span id="local-6989586621683200911"><span id="local-6989586621683200912"><span id="local-6989586621683200913"><span id="local-6989586621683200914"><span id="local-6989586621683200915"><span id="local-6989586621683200916"><span id="local-6989586621683200917"><span id="local-6989586621683200918"><span id="local-6989586621683200919"><span id="local-6989586621683200920"><span id="local-6989586621683200921"><span id="local-6989586621683200922"><span id="local-6989586621683200923"><span id="local-6989586621683200924"><span id="local-6989586621683200925"><span id="local-6989586621683200926"><span id="local-6989586621683200927"><span id="local-6989586621683200928"><span id="local-6989586621683200929"><span id="local-6989586621683200930"><span id="local-6989586621683200931"><span id="local-6989586621683200932"><span id="local-6989586621683200933"><span id="local-6989586621683200934"><span id="local-6989586621683200935"><span id="local-6989586621683200936"><span id="local-6989586621683200937"><span id="local-6989586621683200938"><span id="local-6989586621683200939"><span id="local-6989586621683200940"><span id="local-6989586621683200941"><span id="local-6989586621683200942"><span id="local-6989586621683200943"><span id="local-6989586621683200944"><span id="local-6989586621683200945"><span id="local-6989586621683200946"><span id="local-6989586621683200947"><span id="local-6989586621683200948"><span id="local-6989586621683200949"><span id="local-6989586621683200950"><span id="local-6989586621683200951"><span id="local-6989586621683200952"><span id="local-6989586621683200953"><span id="local-6989586621683200954"><span id="local-6989586621683200955"><span id="local-6989586621683200956"><span id="local-6989586621683200957"><span id="local-6989586621683200958"><span id="local-6989586621683200959"><span id="local-6989586621683200960"><span id="local-6989586621683200961"><span id="local-6989586621683200962"><span id="local-6989586621683200963"><span id="local-6989586621683200964"><span id="local-6989586621683200965"><span id="local-6989586621683200966"><span id="local-6989586621683200967"><span id="local-6989586621683200968"><span id="local-6989586621683200969"><span id="local-6989586621683200970"><span id="local-6989586621683200971"><span id="local-6989586621683200972"><span id="local-6989586621683200973"><span id="local-6989586621683200974"><span id="local-6989586621683200975"><span id="local-6989586621683200976"><span class="annot"><span class="annottext">Bool
+Int
+String
+[Int]
+[String]
+[(String, String)]
+[(ModuleName, String)]
+[(ModuleName, Module)]
+[ModuleName]
+[Option]
+[ExternalPluginSpec]
+[OnOff Extension]
+[CallerCcFilter]
+[ReexportedModule]
+[PackageDBFlag]
+[PackageFlag]
+[TrustFlag]
+[IgnorePackageFlag]
+Maybe Int
+Maybe String
+Maybe Word
+Maybe (String, Int)
+Maybe UnitId
+Maybe Language
+Maybe BmiVersion
+Maybe SseVersion
+Maybe ParMakeCount
+Word64
+Set ModuleName
+Ways
+OverridingBool
+Scheme
+ModuleName
+UnitId
+UnfoldingOpts
+ProfAuto
+IncludeSpecs
+Weights
+SrcSpan
+EnumSet Extension
+EnumSet WarningFlag
+EnumSet GeneralFlag
+EnumSet DumpFlag
+SafeHaskellMode
+IntWithInf
+PlatformMisc
+Platform
+WarningCategorySet
+GhcNameVersion
+FileSettings
+ToolSettings
+UnitSettings
+TempDir
+Backend
+RtsOptsEnabled
+DynLibLoader
+GhcLink
+GhcMode
+FlushOut
+cfgWeights :: DynFlags -&gt; Weights
+uniqueIncrement :: DynFlags -&gt; Int
+initialUnique :: DynFlags -&gt; Word64
+maxErrors :: DynFlags -&gt; Maybe Int
+reverseErrors :: DynFlags -&gt; Bool
+maxInlineMemsetInsns :: DynFlags -&gt; Int
+maxInlineMemcpyInsns :: DynFlags -&gt; Int
+maxInlineAllocSize :: DynFlags -&gt; Int
+fma :: DynFlags -&gt; Bool
+avx512pf :: DynFlags -&gt; Bool
+avx512f :: DynFlags -&gt; Bool
+avx512er :: DynFlags -&gt; Bool
+avx512cd :: DynFlags -&gt; Bool
+avx2 :: DynFlags -&gt; Bool
+avx :: DynFlags -&gt; Bool
+bmiVersion :: DynFlags -&gt; Maybe BmiVersion
+sseVersion :: DynFlags -&gt; Maybe SseVersion
+interactivePrint :: DynFlags -&gt; Maybe String
+callerCcFilters :: DynFlags -&gt; [CallerCcFilter]
+profAuto :: DynFlags -&gt; ProfAuto
+colScheme :: DynFlags -&gt; Scheme
+canUseErrorLinks :: DynFlags -&gt; Bool
+useErrorLinks :: DynFlags -&gt; OverridingBool
+canUseColor :: DynFlags -&gt; Bool
+useColor :: DynFlags -&gt; OverridingBool
+useUnicode :: DynFlags -&gt; Bool
+pprCols :: DynFlags -&gt; Int
+pprUserLength :: DynFlags -&gt; Int
+ghciScripts :: DynFlags -&gt; [String]
+haddockOptions :: DynFlags -&gt; Maybe String
+ghcVersionFile :: DynFlags -&gt; Maybe String
+flushOut :: DynFlags -&gt; FlushOut
+ghciBrowserPlaywrightLaunchOpts :: DynFlags -&gt; Maybe String
+ghciBrowserPlaywrightBrowserType :: DynFlags -&gt; Maybe String
+ghciBrowserPuppeteerLaunchOpts :: DynFlags -&gt; Maybe String
+ghciBrowserPort :: DynFlags -&gt; Int
+ghciBrowserHost :: DynFlags -&gt; String
+ghciHistSize :: DynFlags -&gt; Int
+maxForcedSpecArgs :: DynFlags -&gt; Int
+maxWorkerArgs :: DynFlags -&gt; Int
+unfoldingOpts :: DynFlags -&gt; UnfoldingOpts
+extensionFlags :: DynFlags -&gt; EnumSet Extension
+extensions :: DynFlags -&gt; [OnOff Extension]
+trustworthyOnLoc :: DynFlags -&gt; SrcSpan
+warnUnsafeOnLoc :: DynFlags -&gt; SrcSpan
+warnSafeOnLoc :: DynFlags -&gt; SrcSpan
+pkgTrustOnLoc :: DynFlags -&gt; SrcSpan
+incoherentOnLoc :: DynFlags -&gt; SrcSpan
+overlapInstLoc :: DynFlags -&gt; SrcSpan
+deriveViaOnLoc :: DynFlags -&gt; SrcSpan
+newDerivOnLoc :: DynFlags -&gt; SrcSpan
+thOnLoc :: DynFlags -&gt; SrcSpan
+safeInferred :: DynFlags -&gt; Bool
+safeInfer :: DynFlags -&gt; Bool
+safeHaskell :: DynFlags -&gt; SafeHaskellMode
+language :: DynFlags -&gt; Maybe Language
+fatalCustomWarningCategories :: DynFlags -&gt; WarningCategorySet
+customWarningCategories :: DynFlags -&gt; WarningCategorySet
+fatalWarningFlags :: DynFlags -&gt; EnumSet WarningFlag
+warningFlags :: DynFlags -&gt; EnumSet WarningFlag
+generalFlags :: DynFlags -&gt; EnumSet GeneralFlag
+dumpFlags :: DynFlags -&gt; EnumSet DumpFlag
+packageEnv :: DynFlags -&gt; Maybe String
+trustFlags :: DynFlags -&gt; [TrustFlag]
+pluginPackageFlags :: DynFlags -&gt; [PackageFlag]
+packageFlags :: DynFlags -&gt; [PackageFlag]
+ignorePackageFlags :: DynFlags -&gt; [IgnorePackageFlag]
+packageDBFlags :: DynFlags -&gt; [PackageDBFlag]
+depSuffixes :: DynFlags -&gt; [String]
+depExcludeMods :: DynFlags -&gt; [ModuleName]
+depIncludeCppDeps :: DynFlags -&gt; Bool
+depIncludePkgDeps :: DynFlags -&gt; Bool
+depMakefile :: DynFlags -&gt; String
+externalPluginSpecs :: DynFlags -&gt; [ExternalPluginSpec]
+frontendPluginOpts :: DynFlags -&gt; [String]
+pluginModNameOpts :: DynFlags -&gt; [(ModuleName, String)]
+pluginModNames :: DynFlags -&gt; [ModuleName]
+hpcDir :: DynFlags -&gt; String
+rtsOptsSuggestions :: DynFlags -&gt; Bool
+rtsOptsEnabled :: DynFlags -&gt; RtsOptsEnabled
+rtsOpts :: DynFlags -&gt; Maybe String
+cmdlineFrameworks :: DynFlags -&gt; [String]
+frameworkPaths :: DynFlags -&gt; [String]
+libraryPaths :: DynFlags -&gt; [String]
+includePaths :: DynFlags -&gt; IncludeSpecs
+ldInputs :: DynFlags -&gt; [Option]
+dumpPrefixForce :: DynFlags -&gt; Maybe String
+dumpPrefix :: DynFlags -&gt; String
+dynamicNow :: DynFlags -&gt; Bool
+dynLibLoader :: DynFlags -&gt; DynLibLoader
+dynOutputHi :: DynFlags -&gt; Maybe String
+outputHi :: DynFlags -&gt; Maybe String
+dynOutputFile_ :: DynFlags -&gt; Maybe String
+outputFile_ :: DynFlags -&gt; Maybe String
+dynHiSuf_ :: DynFlags -&gt; String
+dynObjectSuf_ :: DynFlags -&gt; String
+hieSuf :: DynFlags -&gt; String
+hiSuf_ :: DynFlags -&gt; String
+hcSuf :: DynFlags -&gt; String
+objectSuf_ :: DynFlags -&gt; String
+dumpDir :: DynFlags -&gt; Maybe String
+stubDir :: DynFlags -&gt; Maybe String
+hieDir :: DynFlags -&gt; Maybe String
+hiDir :: DynFlags -&gt; Maybe String
+dylibInstallName :: DynFlags -&gt; Maybe String
+objectDir :: DynFlags -&gt; Maybe String
+splitInfo :: DynFlags -&gt; Maybe (String, Int)
+targetWays_ :: DynFlags -&gt; Ways
+reexportedModules :: DynFlags -&gt; [ReexportedModule]
+hiddenModules :: DynFlags -&gt; Set ModuleName
+thisPackageName :: DynFlags -&gt; Maybe String
+workingDirectory :: DynFlags -&gt; Maybe String
+homeUnitInstantiations_ :: DynFlags -&gt; [(ModuleName, Module)]
+homeUnitInstanceOf_ :: DynFlags -&gt; Maybe UnitId
+homeUnitId_ :: DynFlags -&gt; UnitId
+qcsFuel :: DynFlags -&gt; Int
+wantedsFuel :: DynFlags -&gt; Int
+givensFuel :: DynFlags -&gt; Int
+solverIterations :: DynFlags -&gt; IntWithInf
+reductionDepth :: DynFlags -&gt; IntWithInf
+mainFunIs :: DynFlags -&gt; Maybe String
+mainModuleNameIs :: DynFlags -&gt; ModuleName
+importPaths :: DynFlags -&gt; [String]
+historySize :: DynFlags -&gt; Int
+cmmProcAlignment :: DynFlags -&gt; Maybe Int
+liftLamsKnown :: DynFlags -&gt; Bool
+liftLamsNonRecArgs :: DynFlags -&gt; Maybe Int
+liftLamsRecArgs :: DynFlags -&gt; Maybe Int
+floatLamArgs :: DynFlags -&gt; Maybe Int
+liberateCaseThreshold :: DynFlags -&gt; Maybe Int
+binBlobThreshold :: DynFlags -&gt; Maybe Word
+specConstrRecursive :: DynFlags -&gt; Int
+specConstrCount :: DynFlags -&gt; Maybe Int
+specConstrThreshold :: DynFlags -&gt; Maybe Int
+ifCompression :: DynFlags -&gt; Int
+dmdUnboxWidth :: DynFlags -&gt; Int
+simplTickFactor :: DynFlags -&gt; Int
+maxPmCheckModels :: DynFlags -&gt; Int
+maxUncoveredPatterns :: DynFlags -&gt; Int
+refLevelHoleFits :: DynFlags -&gt; Maybe Int
+maxRefHoleFits :: DynFlags -&gt; Maybe Int
+maxValidHoleFits :: DynFlags -&gt; Maybe Int
+maxRelevantBinds :: DynFlags -&gt; Maybe Int
+ghcHeapSize :: DynFlags -&gt; Maybe Int
+enableTimeStats :: DynFlags -&gt; Bool
+parMakeCount :: DynFlags -&gt; Maybe ParMakeCount
+strictnessBefore :: DynFlags -&gt; [Int]
+ruleCheck :: DynFlags -&gt; Maybe String
+maxSimplIterations :: DynFlags -&gt; Int
+simplPhases :: DynFlags -&gt; Int
+debugLevel :: DynFlags -&gt; Int
+verbosity :: DynFlags -&gt; Int
+llvmOptLevel :: DynFlags -&gt; Int
+tmpDir :: DynFlags -&gt; TempDir
+rawSettings :: DynFlags -&gt; [(String, String)]
+platformMisc :: DynFlags -&gt; PlatformMisc
+toolSettings :: DynFlags -&gt; ToolSettings
+targetPlatform :: DynFlags -&gt; Platform
+unitSettings :: DynFlags -&gt; UnitSettings
+fileSettings :: DynFlags -&gt; FileSettings
+ghcNameVersion :: DynFlags -&gt; GhcNameVersion
+backend :: DynFlags -&gt; Backend
+ghcLink :: DynFlags -&gt; GhcLink
+ghcMode :: DynFlags -&gt; GhcMode
+ghcMode :: GhcMode
+ghcLink :: GhcLink
+backend :: Backend
+ghcNameVersion :: GhcNameVersion
+fileSettings :: FileSettings
+unitSettings :: UnitSettings
+targetPlatform :: Platform
+toolSettings :: ToolSettings
+platformMisc :: PlatformMisc
+rawSettings :: [(String, String)]
+tmpDir :: TempDir
+llvmOptLevel :: Int
+verbosity :: Int
+debugLevel :: Int
+simplPhases :: Int
+maxSimplIterations :: Int
+ruleCheck :: Maybe String
+strictnessBefore :: [Int]
+parMakeCount :: Maybe ParMakeCount
+enableTimeStats :: Bool
+ghcHeapSize :: Maybe Int
+maxRelevantBinds :: Maybe Int
+maxValidHoleFits :: Maybe Int
+maxRefHoleFits :: Maybe Int
+refLevelHoleFits :: Maybe Int
+maxUncoveredPatterns :: Int
+maxPmCheckModels :: Int
+simplTickFactor :: Int
+dmdUnboxWidth :: Int
+ifCompression :: Int
+specConstrThreshold :: Maybe Int
+specConstrCount :: Maybe Int
+specConstrRecursive :: Int
+binBlobThreshold :: Maybe Word
+liberateCaseThreshold :: Maybe Int
+floatLamArgs :: Maybe Int
+liftLamsRecArgs :: Maybe Int
+liftLamsNonRecArgs :: Maybe Int
+liftLamsKnown :: Bool
+cmmProcAlignment :: Maybe Int
+historySize :: Int
+importPaths :: [String]
+mainModuleNameIs :: ModuleName
+mainFunIs :: Maybe String
+reductionDepth :: IntWithInf
+solverIterations :: IntWithInf
+givensFuel :: Int
+wantedsFuel :: Int
+qcsFuel :: Int
+homeUnitId_ :: UnitId
+homeUnitInstanceOf_ :: Maybe UnitId
+homeUnitInstantiations_ :: [(ModuleName, Module)]
+workingDirectory :: Maybe String
+thisPackageName :: Maybe String
+hiddenModules :: Set ModuleName
+reexportedModules :: [ReexportedModule]
+targetWays_ :: Ways
+splitInfo :: Maybe (String, Int)
+objectDir :: Maybe String
+dylibInstallName :: Maybe String
+hiDir :: Maybe String
+hieDir :: Maybe String
+stubDir :: Maybe String
+dumpDir :: Maybe String
+objectSuf_ :: String
+hcSuf :: String
+hiSuf_ :: String
+hieSuf :: String
+dynObjectSuf_ :: String
+dynHiSuf_ :: String
+outputFile_ :: Maybe String
+dynOutputFile_ :: Maybe String
+outputHi :: Maybe String
+dynOutputHi :: Maybe String
+dynLibLoader :: DynLibLoader
+dynamicNow :: Bool
+dumpPrefix :: String
+dumpPrefixForce :: Maybe String
+ldInputs :: [Option]
+includePaths :: IncludeSpecs
+libraryPaths :: [String]
+frameworkPaths :: [String]
+cmdlineFrameworks :: [String]
+rtsOpts :: Maybe String
+rtsOptsEnabled :: RtsOptsEnabled
+rtsOptsSuggestions :: Bool
+hpcDir :: String
+pluginModNames :: [ModuleName]
+pluginModNameOpts :: [(ModuleName, String)]
+frontendPluginOpts :: [String]
+externalPluginSpecs :: [ExternalPluginSpec]
+depMakefile :: String
+depIncludePkgDeps :: Bool
+depIncludeCppDeps :: Bool
+depExcludeMods :: [ModuleName]
+depSuffixes :: [String]
+packageDBFlags :: [PackageDBFlag]
+ignorePackageFlags :: [IgnorePackageFlag]
+packageFlags :: [PackageFlag]
+pluginPackageFlags :: [PackageFlag]
+trustFlags :: [TrustFlag]
+packageEnv :: Maybe String
+dumpFlags :: EnumSet DumpFlag
+generalFlags :: EnumSet GeneralFlag
+warningFlags :: EnumSet WarningFlag
+fatalWarningFlags :: EnumSet WarningFlag
+customWarningCategories :: WarningCategorySet
+fatalCustomWarningCategories :: WarningCategorySet
+language :: Maybe Language
+safeHaskell :: SafeHaskellMode
+safeInfer :: Bool
+safeInferred :: Bool
+thOnLoc :: SrcSpan
+newDerivOnLoc :: SrcSpan
+deriveViaOnLoc :: SrcSpan
+overlapInstLoc :: SrcSpan
+incoherentOnLoc :: SrcSpan
+pkgTrustOnLoc :: SrcSpan
+warnSafeOnLoc :: SrcSpan
+warnUnsafeOnLoc :: SrcSpan
+trustworthyOnLoc :: SrcSpan
+extensions :: [OnOff Extension]
+extensionFlags :: EnumSet Extension
+unfoldingOpts :: UnfoldingOpts
+maxWorkerArgs :: Int
+maxForcedSpecArgs :: Int
+ghciHistSize :: Int
+ghciBrowserHost :: String
+ghciBrowserPort :: Int
+ghciBrowserPuppeteerLaunchOpts :: Maybe String
+ghciBrowserPlaywrightBrowserType :: Maybe String
+ghciBrowserPlaywrightLaunchOpts :: Maybe String
+flushOut :: FlushOut
+ghcVersionFile :: Maybe String
+haddockOptions :: Maybe String
+ghciScripts :: [String]
+pprUserLength :: Int
+pprCols :: Int
+useUnicode :: Bool
+useColor :: OverridingBool
+canUseColor :: Bool
+useErrorLinks :: OverridingBool
+canUseErrorLinks :: Bool
+colScheme :: Scheme
+profAuto :: ProfAuto
+callerCcFilters :: [CallerCcFilter]
+interactivePrint :: Maybe String
+sseVersion :: Maybe SseVersion
+bmiVersion :: Maybe BmiVersion
+avx :: Bool
+avx2 :: Bool
+avx512cd :: Bool
+avx512er :: Bool
+avx512f :: Bool
+avx512pf :: Bool
+fma :: Bool
+maxInlineAllocSize :: Int
+maxInlineMemcpyInsns :: Int
+maxInlineMemsetInsns :: Int
+reverseErrors :: Bool
+maxErrors :: Maybe Int
+initialUnique :: Word64
+uniqueIncrement :: Int
+cfgWeights :: Weights
+</span><a href="GHC.Driver.DynFlags.html#cfgWeights"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621683200977"><span class="annot"><span class="annottext">WriteBinHandle -&gt; Name -&gt; IO ()
+</span><a href="#local-6989586621683200977"><span class="hs-identifier hs-var">nameio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>      </span><span class="hs-keyword">let</span><span>
+</span><span id="line-113"></span><span>        </span><span class="hs-comment">-- See https://gitlab.haskell.org/ghc/ghc/issues/10923</span><span>
+</span><span id="line-114"></span><span>        </span><span class="hs-comment">-- We used to fingerprint the optimisation level, but as Joachim</span><span>
+</span><span id="line-115"></span><span>        </span><span class="hs-comment">-- Breitner pointed out in comment 9 on that ticket, it's better</span><span>
+</span><span id="line-116"></span><span>        </span><span class="hs-comment">-- to ignore that and just look at the individual optimisation flags.</span><span>
+</span><span id="line-117"></span><span>        </span><span id="local-6989586621683200978"><span class="annot"><span class="annottext">opt_flags :: [Int]
+</span><a href="#local-6989586621683200978"><span class="hs-identifier hs-var hs-var">opt_flags</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GeneralFlag -&gt; Int) -&gt; [GeneralFlag] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">GeneralFlag -&gt; Int
+forall a. Enum a =&gt; a -&gt; Int
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#fromEnum"><span class="hs-identifier hs-var">fromEnum</span></a></span><span> </span><span class="annot"><span class="annottext">([GeneralFlag] -&gt; [Int]) -&gt; [GeneralFlag] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(GeneralFlag -&gt; Bool) -&gt; [GeneralFlag] -&gt; [GeneralFlag]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GeneralFlag -&gt; EnumSet GeneralFlag -&gt; Bool
+forall a. Enum a =&gt; a -&gt; EnumSet a -&gt; Bool
+</span><a href="GHC.Data.EnumSet.html#member"><span class="hs-operator hs-var">`EnumSet.member`</span></a></span><span> </span><span class="annot"><span class="annottext">EnumSet GeneralFlag
+</span><a href="GHC.Driver.Flags.html#optimisationFlags"><span class="hs-identifier hs-var">optimisationFlags</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>                                          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EnumSet GeneralFlag -&gt; [GeneralFlag]
+forall a. Enum a =&gt; EnumSet a -&gt; [a]
+</span><a href="GHC.Data.EnumSet.html#toList"><span class="hs-identifier hs-var">EnumSet.toList</span></a></span><span> </span><span class="annot"><span class="annottext">EnumSet GeneralFlag
+</span><a href="#local-6989586621683200916"><span class="hs-identifier hs-var">generalFlags</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(WriteBinHandle -&gt; Name -&gt; IO ()) -&gt; [Int] -&gt; Fingerprint
+forall a.
+Binary a =&gt;
+(WriteBinHandle -&gt; Name -&gt; IO ()) -&gt; a -&gt; Fingerprint
+</span><a href="GHC.Iface.Recomp.Binary.html#computeFingerprint"><span class="hs-identifier hs-var">computeFingerprint</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Name -&gt; IO ()
+</span><a href="#local-6989586621683200977"><span class="hs-identifier hs-var">nameio</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621683200978"><span class="hs-identifier hs-var">opt_flags</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- Fingerprint the HPC info. We keep this separate from the rest of</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- the flags because GHCi users (especially) may wish to use an object</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- file compiled for HPC when not actually using HPC.</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- See Note [Ignoring some flag changes]</span><span>
+</span><span id="line-126"></span><span class="annot"><a href="GHC.Iface.Recomp.Flags.html#fingerprintHpcFlags"><span class="hs-identifier hs-type">fingerprintHpcFlags</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Driver.DynFlags.html#DynFlags"><span class="hs-identifier hs-type">DynFlags</span></a></span><span>
+</span><span id="line-127"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Utils.Binary.html#WriteBinHandle"><span class="hs-identifier hs-type">WriteBinHandle</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Fingerprint.Type.html#Fingerprint"><span class="hs-identifier hs-type">Fingerprint</span></a></span><span>
+</span><span id="line-129"></span><span id="fingerprintHpcFlags"><span class="annot"><span class="annottext">fingerprintHpcFlags :: DynFlags -&gt; (WriteBinHandle -&gt; Name -&gt; IO ()) -&gt; Fingerprint
+</span><a href="GHC.Iface.Recomp.Flags.html#fingerprintHpcFlags"><span class="hs-identifier hs-var hs-var">fingerprintHpcFlags</span></a></span></span><span> </span><span id="local-6989586621683200982"><span class="annot"><span class="annottext">dflags :: DynFlags
+</span><a href="#local-6989586621683200982"><span class="hs-identifier hs-var">dflags</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="GHC.Driver.DynFlags.html#DynFlags"><span class="hs-identifier hs-type">DynFlags</span></a></span><span class="hs-special">{</span><span id="local-6989586621683200983"><span id="local-6989586621683200984"><span id="local-6989586621683200985"><span id="local-6989586621683200986"><span id="local-6989586621683200987"><span id="local-6989586621683200988"><span id="local-6989586621683200989"><span id="local-6989586621683200990"><span id="local-6989586621683200991"><span id="local-6989586621683200992"><span id="local-6989586621683200993"><span id="local-6989586621683200994"><span id="local-6989586621683200995"><span id="local-6989586621683200996"><span id="local-6989586621683200997"><span id="local-6989586621683200998"><span id="local-6989586621683200999"><span id="local-6989586621683201000"><span id="local-6989586621683201001"><span id="local-6989586621683201002"><span id="local-6989586621683201003"><span id="local-6989586621683201004"><span id="local-6989586621683201005"><span id="local-6989586621683201006"><span id="local-6989586621683201007"><span id="local-6989586621683201008"><span id="local-6989586621683201009"><span id="local-6989586621683201010"><span id="local-6989586621683201011"><span id="local-6989586621683201012"><span id="local-6989586621683201013"><span id="local-6989586621683201014"><span id="local-6989586621683201015"><span id="local-6989586621683201016"><span id="local-6989586621683201017"><span id="local-6989586621683201018"><span id="local-6989586621683201019"><span id="local-6989586621683201020"><span id="local-6989586621683201021"><span id="local-6989586621683201022"><span id="local-6989586621683201023"><span id="local-6989586621683201024"><span id="local-6989586621683201025"><span id="local-6989586621683201026"><span id="local-6989586621683201027"><span id="local-6989586621683201028"><span id="local-6989586621683201029"><span id="local-6989586621683201030"><span id="local-6989586621683201031"><span id="local-6989586621683201032"><span id="local-6989586621683201033"><span id="local-6989586621683201034"><span id="local-6989586621683201035"><span id="local-6989586621683201036"><span id="local-6989586621683201037"><span id="local-6989586621683201038"><span id="local-6989586621683201039"><span id="local-6989586621683201040"><span id="local-6989586621683201041"><span id="local-6989586621683201042"><span id="local-6989586621683201043"><span id="local-6989586621683201044"><span id="local-6989586621683201045"><span id="local-6989586621683201046"><span id="local-6989586621683201047"><span id="local-6989586621683201048"><span id="local-6989586621683201049"><span id="local-6989586621683201050"><span id="local-6989586621683201051"><span id="local-6989586621683201052"><span id="local-6989586621683201053"><span id="local-6989586621683201054"><span id="local-6989586621683201055"><span id="local-6989586621683201056"><span id="local-6989586621683201057"><span id="local-6989586621683201058"><span id="local-6989586621683201059"><span id="local-6989586621683201060"><span id="local-6989586621683201061"><span id="local-6989586621683201062"><span id="local-6989586621683201063"><span id="local-6989586621683201064"><span id="local-6989586621683201065"><span id="local-6989586621683201066"><span id="local-6989586621683201067"><span id="local-6989586621683201068"><span id="local-6989586621683201069"><span id="local-6989586621683201070"><span id="local-6989586621683201071"><span id="local-6989586621683201072"><span id="local-6989586621683201073"><span id="local-6989586621683201074"><span id="local-6989586621683201075"><span id="local-6989586621683201076"><span id="local-6989586621683201077"><span id="local-6989586621683201078"><span id="local-6989586621683201079"><span id="local-6989586621683201080"><span id="local-6989586621683201081"><span id="local-6989586621683201082"><span id="local-6989586621683201083"><span id="local-6989586621683201084"><span id="local-6989586621683201085"><span id="local-6989586621683201086"><span id="local-6989586621683201087"><span id="local-6989586621683201088"><span id="local-6989586621683201089"><span id="local-6989586621683201090"><span id="local-6989586621683201091"><span id="local-6989586621683201092"><span id="local-6989586621683201093"><span id="local-6989586621683201094"><span id="local-6989586621683201095"><span id="local-6989586621683201096"><span id="local-6989586621683201097"><span id="local-6989586621683201098"><span id="local-6989586621683201099"><span id="local-6989586621683201100"><span id="local-6989586621683201101"><span id="local-6989586621683201102"><span id="local-6989586621683201103"><span id="local-6989586621683201104"><span id="local-6989586621683201105"><span id="local-6989586621683201106"><span id="local-6989586621683201107"><span id="local-6989586621683201108"><span id="local-6989586621683201109"><span id="local-6989586621683201110"><span id="local-6989586621683201111"><span id="local-6989586621683201112"><span id="local-6989586621683201113"><span id="local-6989586621683201114"><span id="local-6989586621683201115"><span id="local-6989586621683201116"><span id="local-6989586621683201117"><span id="local-6989586621683201118"><span id="local-6989586621683201119"><span id="local-6989586621683201120"><span id="local-6989586621683201121"><span id="local-6989586621683201122"><span id="local-6989586621683201123"><span id="local-6989586621683201124"><span id="local-6989586621683201125"><span id="local-6989586621683201126"><span id="local-6989586621683201127"><span id="local-6989586621683201128"><span id="local-6989586621683201129"><span id="local-6989586621683201130"><span id="local-6989586621683201131"><span id="local-6989586621683201132"><span id="local-6989586621683201133"><span id="local-6989586621683201134"><span id="local-6989586621683201135"><span id="local-6989586621683201136"><span id="local-6989586621683201137"><span id="local-6989586621683201138"><span id="local-6989586621683201139"><span id="local-6989586621683201140"><span id="local-6989586621683201141"><span id="local-6989586621683201142"><span id="local-6989586621683201143"><span id="local-6989586621683201144"><span id="local-6989586621683201145"><span id="local-6989586621683201146"><span class="annot"><span class="annottext">Bool
+Int
+String
+[Int]
+[String]
+[(String, String)]
+[(ModuleName, String)]
+[(ModuleName, Module)]
+[ModuleName]
+[Option]
+[ExternalPluginSpec]
+[OnOff Extension]
+[CallerCcFilter]
+[ReexportedModule]
+[PackageDBFlag]
+[PackageFlag]
+[TrustFlag]
+[IgnorePackageFlag]
+Maybe Int
+Maybe String
+Maybe Word
+Maybe (String, Int)
+Maybe UnitId
+Maybe Language
+Maybe BmiVersion
+Maybe SseVersion
+Maybe ParMakeCount
+Word64
+Set ModuleName
+Ways
+OverridingBool
+Scheme
+ModuleName
+UnitId
+UnfoldingOpts
+ProfAuto
+IncludeSpecs
+Weights
+SrcSpan
+EnumSet Extension
+EnumSet WarningFlag
+EnumSet GeneralFlag
+EnumSet DumpFlag
+SafeHaskellMode
+IntWithInf
+PlatformMisc
+Platform
+WarningCategorySet
+GhcNameVersion
+FileSettings
+ToolSettings
+UnitSettings
+TempDir
+Backend
+RtsOptsEnabled
+DynLibLoader
+GhcLink
+GhcMode
+FlushOut
+cfgWeights :: DynFlags -&gt; Weights
+uniqueIncrement :: DynFlags -&gt; Int
+initialUnique :: DynFlags -&gt; Word64
+maxErrors :: DynFlags -&gt; Maybe Int
+reverseErrors :: DynFlags -&gt; Bool
+maxInlineMemsetInsns :: DynFlags -&gt; Int
+maxInlineMemcpyInsns :: DynFlags -&gt; Int
+maxInlineAllocSize :: DynFlags -&gt; Int
+fma :: DynFlags -&gt; Bool
+avx512pf :: DynFlags -&gt; Bool
+avx512f :: DynFlags -&gt; Bool
+avx512er :: DynFlags -&gt; Bool
+avx512cd :: DynFlags -&gt; Bool
+avx2 :: DynFlags -&gt; Bool
+avx :: DynFlags -&gt; Bool
+bmiVersion :: DynFlags -&gt; Maybe BmiVersion
+sseVersion :: DynFlags -&gt; Maybe SseVersion
+interactivePrint :: DynFlags -&gt; Maybe String
+callerCcFilters :: DynFlags -&gt; [CallerCcFilter]
+profAuto :: DynFlags -&gt; ProfAuto
+colScheme :: DynFlags -&gt; Scheme
+canUseErrorLinks :: DynFlags -&gt; Bool
+useErrorLinks :: DynFlags -&gt; OverridingBool
+canUseColor :: DynFlags -&gt; Bool
+useColor :: DynFlags -&gt; OverridingBool
+useUnicode :: DynFlags -&gt; Bool
+pprCols :: DynFlags -&gt; Int
+pprUserLength :: DynFlags -&gt; Int
+ghciScripts :: DynFlags -&gt; [String]
+haddockOptions :: DynFlags -&gt; Maybe String
+ghcVersionFile :: DynFlags -&gt; Maybe String
+flushOut :: DynFlags -&gt; FlushOut
+ghciBrowserPlaywrightLaunchOpts :: DynFlags -&gt; Maybe String
+ghciBrowserPlaywrightBrowserType :: DynFlags -&gt; Maybe String
+ghciBrowserPuppeteerLaunchOpts :: DynFlags -&gt; Maybe String
+ghciBrowserPort :: DynFlags -&gt; Int
+ghciBrowserHost :: DynFlags -&gt; String
+ghciHistSize :: DynFlags -&gt; Int
+maxForcedSpecArgs :: DynFlags -&gt; Int
+maxWorkerArgs :: DynFlags -&gt; Int
+unfoldingOpts :: DynFlags -&gt; UnfoldingOpts
+extensionFlags :: DynFlags -&gt; EnumSet Extension
+extensions :: DynFlags -&gt; [OnOff Extension]
+trustworthyOnLoc :: DynFlags -&gt; SrcSpan
+warnUnsafeOnLoc :: DynFlags -&gt; SrcSpan
+warnSafeOnLoc :: DynFlags -&gt; SrcSpan
+pkgTrustOnLoc :: DynFlags -&gt; SrcSpan
+incoherentOnLoc :: DynFlags -&gt; SrcSpan
+overlapInstLoc :: DynFlags -&gt; SrcSpan
+deriveViaOnLoc :: DynFlags -&gt; SrcSpan
+newDerivOnLoc :: DynFlags -&gt; SrcSpan
+thOnLoc :: DynFlags -&gt; SrcSpan
+safeInferred :: DynFlags -&gt; Bool
+safeInfer :: DynFlags -&gt; Bool
+safeHaskell :: DynFlags -&gt; SafeHaskellMode
+language :: DynFlags -&gt; Maybe Language
+fatalCustomWarningCategories :: DynFlags -&gt; WarningCategorySet
+customWarningCategories :: DynFlags -&gt; WarningCategorySet
+fatalWarningFlags :: DynFlags -&gt; EnumSet WarningFlag
+warningFlags :: DynFlags -&gt; EnumSet WarningFlag
+generalFlags :: DynFlags -&gt; EnumSet GeneralFlag
+dumpFlags :: DynFlags -&gt; EnumSet DumpFlag
+packageEnv :: DynFlags -&gt; Maybe String
+trustFlags :: DynFlags -&gt; [TrustFlag]
+pluginPackageFlags :: DynFlags -&gt; [PackageFlag]
+packageFlags :: DynFlags -&gt; [PackageFlag]
+ignorePackageFlags :: DynFlags -&gt; [IgnorePackageFlag]
+packageDBFlags :: DynFlags -&gt; [PackageDBFlag]
+depSuffixes :: DynFlags -&gt; [String]
+depExcludeMods :: DynFlags -&gt; [ModuleName]
+depIncludeCppDeps :: DynFlags -&gt; Bool
+depIncludePkgDeps :: DynFlags -&gt; Bool
+depMakefile :: DynFlags -&gt; String
+externalPluginSpecs :: DynFlags -&gt; [ExternalPluginSpec]
+frontendPluginOpts :: DynFlags -&gt; [String]
+pluginModNameOpts :: DynFlags -&gt; [(ModuleName, String)]
+pluginModNames :: DynFlags -&gt; [ModuleName]
+hpcDir :: DynFlags -&gt; String
+rtsOptsSuggestions :: DynFlags -&gt; Bool
+rtsOptsEnabled :: DynFlags -&gt; RtsOptsEnabled
+rtsOpts :: DynFlags -&gt; Maybe String
+cmdlineFrameworks :: DynFlags -&gt; [String]
+frameworkPaths :: DynFlags -&gt; [String]
+libraryPaths :: DynFlags -&gt; [String]
+includePaths :: DynFlags -&gt; IncludeSpecs
+ldInputs :: DynFlags -&gt; [Option]
+dumpPrefixForce :: DynFlags -&gt; Maybe String
+dumpPrefix :: DynFlags -&gt; String
+dynamicNow :: DynFlags -&gt; Bool
+dynLibLoader :: DynFlags -&gt; DynLibLoader
+dynOutputHi :: DynFlags -&gt; Maybe String
+outputHi :: DynFlags -&gt; Maybe String
+dynOutputFile_ :: DynFlags -&gt; Maybe String
+outputFile_ :: DynFlags -&gt; Maybe String
+dynHiSuf_ :: DynFlags -&gt; String
+dynObjectSuf_ :: DynFlags -&gt; String
+hieSuf :: DynFlags -&gt; String
+hiSuf_ :: DynFlags -&gt; String
+hcSuf :: DynFlags -&gt; String
+objectSuf_ :: DynFlags -&gt; String
+dumpDir :: DynFlags -&gt; Maybe String
+stubDir :: DynFlags -&gt; Maybe String
+hieDir :: DynFlags -&gt; Maybe String
+hiDir :: DynFlags -&gt; Maybe String
+dylibInstallName :: DynFlags -&gt; Maybe String
+objectDir :: DynFlags -&gt; Maybe String
+splitInfo :: DynFlags -&gt; Maybe (String, Int)
+targetWays_ :: DynFlags -&gt; Ways
+reexportedModules :: DynFlags -&gt; [ReexportedModule]
+hiddenModules :: DynFlags -&gt; Set ModuleName
+thisPackageName :: DynFlags -&gt; Maybe String
+workingDirectory :: DynFlags -&gt; Maybe String
+homeUnitInstantiations_ :: DynFlags -&gt; [(ModuleName, Module)]
+homeUnitInstanceOf_ :: DynFlags -&gt; Maybe UnitId
+homeUnitId_ :: DynFlags -&gt; UnitId
+qcsFuel :: DynFlags -&gt; Int
+wantedsFuel :: DynFlags -&gt; Int
+givensFuel :: DynFlags -&gt; Int
+solverIterations :: DynFlags -&gt; IntWithInf
+reductionDepth :: DynFlags -&gt; IntWithInf
+mainFunIs :: DynFlags -&gt; Maybe String
+mainModuleNameIs :: DynFlags -&gt; ModuleName
+importPaths :: DynFlags -&gt; [String]
+historySize :: DynFlags -&gt; Int
+cmmProcAlignment :: DynFlags -&gt; Maybe Int
+liftLamsKnown :: DynFlags -&gt; Bool
+liftLamsNonRecArgs :: DynFlags -&gt; Maybe Int
+liftLamsRecArgs :: DynFlags -&gt; Maybe Int
+floatLamArgs :: DynFlags -&gt; Maybe Int
+liberateCaseThreshold :: DynFlags -&gt; Maybe Int
+binBlobThreshold :: DynFlags -&gt; Maybe Word
+specConstrRecursive :: DynFlags -&gt; Int
+specConstrCount :: DynFlags -&gt; Maybe Int
+specConstrThreshold :: DynFlags -&gt; Maybe Int
+ifCompression :: DynFlags -&gt; Int
+dmdUnboxWidth :: DynFlags -&gt; Int
+simplTickFactor :: DynFlags -&gt; Int
+maxPmCheckModels :: DynFlags -&gt; Int
+maxUncoveredPatterns :: DynFlags -&gt; Int
+refLevelHoleFits :: DynFlags -&gt; Maybe Int
+maxRefHoleFits :: DynFlags -&gt; Maybe Int
+maxValidHoleFits :: DynFlags -&gt; Maybe Int
+maxRelevantBinds :: DynFlags -&gt; Maybe Int
+ghcHeapSize :: DynFlags -&gt; Maybe Int
+enableTimeStats :: DynFlags -&gt; Bool
+parMakeCount :: DynFlags -&gt; Maybe ParMakeCount
+strictnessBefore :: DynFlags -&gt; [Int]
+ruleCheck :: DynFlags -&gt; Maybe String
+maxSimplIterations :: DynFlags -&gt; Int
+simplPhases :: DynFlags -&gt; Int
+debugLevel :: DynFlags -&gt; Int
+verbosity :: DynFlags -&gt; Int
+llvmOptLevel :: DynFlags -&gt; Int
+tmpDir :: DynFlags -&gt; TempDir
+rawSettings :: DynFlags -&gt; [(String, String)]
+platformMisc :: DynFlags -&gt; PlatformMisc
+toolSettings :: DynFlags -&gt; ToolSettings
+targetPlatform :: DynFlags -&gt; Platform
+unitSettings :: DynFlags -&gt; UnitSettings
+fileSettings :: DynFlags -&gt; FileSettings
+ghcNameVersion :: DynFlags -&gt; GhcNameVersion
+backend :: DynFlags -&gt; Backend
+ghcLink :: DynFlags -&gt; GhcLink
+ghcMode :: DynFlags -&gt; GhcMode
+ghcMode :: GhcMode
+ghcLink :: GhcLink
+backend :: Backend
+ghcNameVersion :: GhcNameVersion
+fileSettings :: FileSettings
+unitSettings :: UnitSettings
+targetPlatform :: Platform
+toolSettings :: ToolSettings
+platformMisc :: PlatformMisc
+rawSettings :: [(String, String)]
+tmpDir :: TempDir
+llvmOptLevel :: Int
+verbosity :: Int
+debugLevel :: Int
+simplPhases :: Int
+maxSimplIterations :: Int
+ruleCheck :: Maybe String
+strictnessBefore :: [Int]
+parMakeCount :: Maybe ParMakeCount
+enableTimeStats :: Bool
+ghcHeapSize :: Maybe Int
+maxRelevantBinds :: Maybe Int
+maxValidHoleFits :: Maybe Int
+maxRefHoleFits :: Maybe Int
+refLevelHoleFits :: Maybe Int
+maxUncoveredPatterns :: Int
+maxPmCheckModels :: Int
+simplTickFactor :: Int
+dmdUnboxWidth :: Int
+ifCompression :: Int
+specConstrThreshold :: Maybe Int
+specConstrCount :: Maybe Int
+specConstrRecursive :: Int
+binBlobThreshold :: Maybe Word
+liberateCaseThreshold :: Maybe Int
+floatLamArgs :: Maybe Int
+liftLamsRecArgs :: Maybe Int
+liftLamsNonRecArgs :: Maybe Int
+liftLamsKnown :: Bool
+cmmProcAlignment :: Maybe Int
+historySize :: Int
+importPaths :: [String]
+mainModuleNameIs :: ModuleName
+mainFunIs :: Maybe String
+reductionDepth :: IntWithInf
+solverIterations :: IntWithInf
+givensFuel :: Int
+wantedsFuel :: Int
+qcsFuel :: Int
+homeUnitId_ :: UnitId
+homeUnitInstanceOf_ :: Maybe UnitId
+homeUnitInstantiations_ :: [(ModuleName, Module)]
+workingDirectory :: Maybe String
+thisPackageName :: Maybe String
+hiddenModules :: Set ModuleName
+reexportedModules :: [ReexportedModule]
+targetWays_ :: Ways
+splitInfo :: Maybe (String, Int)
+objectDir :: Maybe String
+dylibInstallName :: Maybe String
+hiDir :: Maybe String
+hieDir :: Maybe String
+stubDir :: Maybe String
+dumpDir :: Maybe String
+objectSuf_ :: String
+hcSuf :: String
+hiSuf_ :: String
+hieSuf :: String
+dynObjectSuf_ :: String
+dynHiSuf_ :: String
+outputFile_ :: Maybe String
+dynOutputFile_ :: Maybe String
+outputHi :: Maybe String
+dynOutputHi :: Maybe String
+dynLibLoader :: DynLibLoader
+dynamicNow :: Bool
+dumpPrefix :: String
+dumpPrefixForce :: Maybe String
+ldInputs :: [Option]
+includePaths :: IncludeSpecs
+libraryPaths :: [String]
+frameworkPaths :: [String]
+cmdlineFrameworks :: [String]
+rtsOpts :: Maybe String
+rtsOptsEnabled :: RtsOptsEnabled
+rtsOptsSuggestions :: Bool
+hpcDir :: String
+pluginModNames :: [ModuleName]
+pluginModNameOpts :: [(ModuleName, String)]
+frontendPluginOpts :: [String]
+externalPluginSpecs :: [ExternalPluginSpec]
+depMakefile :: String
+depIncludePkgDeps :: Bool
+depIncludeCppDeps :: Bool
+depExcludeMods :: [ModuleName]
+depSuffixes :: [String]
+packageDBFlags :: [PackageDBFlag]
+ignorePackageFlags :: [IgnorePackageFlag]
+packageFlags :: [PackageFlag]
+pluginPackageFlags :: [PackageFlag]
+trustFlags :: [TrustFlag]
+packageEnv :: Maybe String
+dumpFlags :: EnumSet DumpFlag
+generalFlags :: EnumSet GeneralFlag
+warningFlags :: EnumSet WarningFlag
+fatalWarningFlags :: EnumSet WarningFlag
+customWarningCategories :: WarningCategorySet
+fatalCustomWarningCategories :: WarningCategorySet
+language :: Maybe Language
+safeHaskell :: SafeHaskellMode
+safeInfer :: Bool
+safeInferred :: Bool
+thOnLoc :: SrcSpan
+newDerivOnLoc :: SrcSpan
+deriveViaOnLoc :: SrcSpan
+overlapInstLoc :: SrcSpan
+incoherentOnLoc :: SrcSpan
+pkgTrustOnLoc :: SrcSpan
+warnSafeOnLoc :: SrcSpan
+warnUnsafeOnLoc :: SrcSpan
+trustworthyOnLoc :: SrcSpan
+extensions :: [OnOff Extension]
+extensionFlags :: EnumSet Extension
+unfoldingOpts :: UnfoldingOpts
+maxWorkerArgs :: Int
+maxForcedSpecArgs :: Int
+ghciHistSize :: Int
+ghciBrowserHost :: String
+ghciBrowserPort :: Int
+ghciBrowserPuppeteerLaunchOpts :: Maybe String
+ghciBrowserPlaywrightBrowserType :: Maybe String
+ghciBrowserPlaywrightLaunchOpts :: Maybe String
+flushOut :: FlushOut
+ghcVersionFile :: Maybe String
+haddockOptions :: Maybe String
+ghciScripts :: [String]
+pprUserLength :: Int
+pprCols :: Int
+useUnicode :: Bool
+useColor :: OverridingBool
+canUseColor :: Bool
+useErrorLinks :: OverridingBool
+canUseErrorLinks :: Bool
+colScheme :: Scheme
+profAuto :: ProfAuto
+callerCcFilters :: [CallerCcFilter]
+interactivePrint :: Maybe String
+sseVersion :: Maybe SseVersion
+bmiVersion :: Maybe BmiVersion
+avx :: Bool
+avx2 :: Bool
+avx512cd :: Bool
+avx512er :: Bool
+avx512f :: Bool
+avx512pf :: Bool
+fma :: Bool
+maxInlineAllocSize :: Int
+maxInlineMemcpyInsns :: Int
+maxInlineMemsetInsns :: Int
+reverseErrors :: Bool
+maxErrors :: Maybe Int
+initialUnique :: Word64
+uniqueIncrement :: Int
+cfgWeights :: Weights
+</span><a href="GHC.Driver.DynFlags.html#cfgWeights"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621683201147"><span class="annot"><span class="annottext">WriteBinHandle -&gt; Name -&gt; IO ()
+</span><a href="#local-6989586621683201147"><span class="hs-identifier hs-var">nameio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-130"></span><span>      </span><span class="hs-keyword">let</span><span>
+</span><span id="line-131"></span><span>        </span><span class="hs-comment">-- -fhpc, see https://gitlab.haskell.org/ghc/ghc/issues/11798</span><span>
+</span><span id="line-132"></span><span>        </span><span class="hs-comment">-- hpcDir is output-only, so we should recompile if it changes</span><span>
+</span><span id="line-133"></span><span>        </span><span id="local-6989586621683201148"><span class="annot"><span class="annottext">hpc :: Maybe String
+</span><a href="#local-6989586621683201148"><span class="hs-identifier hs-var hs-var">hpc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">GeneralFlag -&gt; DynFlags -&gt; Bool
+</span><a href="GHC.Driver.DynFlags.html#gopt"><span class="hs-identifier hs-var">gopt</span></a></span><span> </span><span class="annot"><span class="annottext">GeneralFlag
+</span><a href="GHC.Driver.Flags.html#Opt_Hpc"><span class="hs-identifier hs-var">Opt_Hpc</span></a></span><span> </span><span class="annot"><span class="annottext">DynFlags
+</span><a href="#local-6989586621683200982"><span class="hs-identifier hs-var">dflags</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621683201069"><span class="hs-identifier hs-var">hpcDir</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(WriteBinHandle -&gt; Name -&gt; IO ()) -&gt; Maybe String -&gt; Fingerprint
+forall a.
+Binary a =&gt;
+(WriteBinHandle -&gt; Name -&gt; IO ()) -&gt; a -&gt; Fingerprint
+</span><a href="GHC.Iface.Recomp.Binary.html#computeFingerprint"><span class="hs-identifier hs-var">computeFingerprint</span></a></span><span> </span><span class="annot"><span class="annottext">WriteBinHandle -&gt; Name -&gt; IO ()
+</span><a href="#local-6989586621683201147"><span class="hs-identifier hs-var">nameio</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621683201148"><span class="hs-identifier hs-var">hpc</span></a></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-comment">{- Note [path flags and recompilation]
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+There are several flags that we deliberately omit from the
+recompilation check; here we explain why.
+
+-osuf, -odir, -hisuf, -hidir
+  If GHC decides that it does not need to recompile, then
+  it must have found an up-to-date .hi file and .o file.
+  There is no point recording these flags - the user must
+  have passed the correct ones.  Indeed, the user may
+  have compiled the source file in one-shot mode using
+  -o to specify the .o file, and then loaded it in GHCi
+  using -odir.
+
+-stubdir
+  We omit this one because it is automatically set by -outputdir, and
+  we don't want changes in -outputdir to automatically trigger
+  recompilation.  This could be wrong, but only in very rare cases.
+
+-i (importPaths)
+  For the same reason as -osuf etc. above: if GHC decides not to
+  recompile, then it must have already checked all the .hi files on
+  which the current module depends, so it must have found them
+  successfully.  It is occasionally useful to be able to cd to a
+  different directory and use -i flags to enable GHC to find the .hi
+  files; we don't want this to force recompilation.
+
+The only path-related flag left is -hcsuf.
+-}</span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span class="hs-comment">{- Note [Ignoring some flag changes]
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Normally, --make tries to reuse only compilation products that are
+the same as those that would have been produced compiling from
+scratch. Sometimes, however, users would like to be more aggressive
+about recompilation avoidance. This is particularly likely when
+developing using GHCi (see #13604). Currently, we allow users to
+ignore optimisation changes using -fignore-optim-changes, and to
+ignore HPC option changes using -fignore-hpc-changes. If there's a
+demand for it, we could also allow changes to -fprof-auto-* flags
+(although we can't allow -prof flags to differ). The key thing about
+these options is that we can still successfully link a library or
+executable when some of its components differ in these ways.
+
+The way we accomplish this is to leave the optimization and HPC
+options out of the flag hash, hashing them separately.
+-}</span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span class="hs-comment">{- Note [Repeated -optP hashing]
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+We invoke fingerprintDynFlags for each compiled module to include
+the hash of relevant DynFlags in the resulting interface file.
+-optP (preprocessor) flags are part of that hash.
+-optP flags can come from multiple places:
+
+  1. -optP flags directly passed on command line.
+  2. -optP flags implied by other flags. Eg. -DPROFILING implied by -prof.
+  3. -optP flags added with {-# OPTIONS -optP-D__F__ #-} in a file.
+
+When compiling many modules at once with many -optP command line arguments
+the work of hashing -optP flags would be repeated. This can get expensive
+and as noted on #14697 it can take 7% of time and 14% of allocations on
+a real codebase.
+
+The obvious solution is to cache the hash of -optP flags per GHC invocation.
+However, one has to be careful there, as the flags that were added in 3. way
+have to be accounted for.
+
+The current strategy is as follows:
+
+  1. Lazily compute the hash of sOpt_p in sOpt_P_fingerprint whenever sOpt_p
+     is modified. This serves dual purpose. It ensures correctness for when
+     we add per file -optP flags and lets us save work for when we don't.
+  2. When computing the fingerprint in fingerprintDynFlags use the cached
+     value *and* fingerprint the additional implied (see 2. above) -optP flags.
+     This is relatively cheap and saves the headache of fingerprinting all
+     the -optP flags and tracking all the places that could invalidate the
+     cache.
+-}</span><span>
+</span><span id="line-217"></span></pre></body></html>

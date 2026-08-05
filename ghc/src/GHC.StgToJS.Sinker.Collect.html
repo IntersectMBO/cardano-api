@@ -1,0 +1,261 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.StgToJS.Sinker.Collect.html"><span class="hs-identifier">GHC.StgToJS.Sinker.Collect</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.StgToJS.Sinker.Collect.html#collectArgsTop"><span class="hs-identifier">collectArgsTop</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.StgToJS.Sinker.Collect.html#collectArgs"><span class="hs-identifier">collectArgs</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.StgToJS.Sinker.Collect.html#selectUsedOnce"><span class="hs-identifier">selectUsedOnce</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html"><span class="hs-identifier">GHC.Types.Unique.Set</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html"><span class="hs-identifier">GHC.Stg.Syntax</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Id.html"><span class="hs-identifier">GHC.Types.Id</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.html"><span class="hs-identifier">GHC.Types.Unique</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="annot"><span class="hs-comment">-- | fold over all id in StgArg used at the top level in an StgRhsCon</span></span><span>
+</span><span id="line-17"></span><span class="annot"><a href="GHC.StgToJS.Sinker.Collect.html#collectArgsTop"><span class="hs-identifier hs-type">collectArgsTop</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgBinding"><span class="hs-identifier hs-type">CgStgBinding</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-18"></span><span id="collectArgsTop"><span class="annot"><span class="annottext">collectArgsTop :: CgStgBinding -&gt; [Id]
+</span><a href="GHC.StgToJS.Sinker.Collect.html#collectArgsTop"><span class="hs-identifier hs-var hs-var">collectArgsTop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgNonRec"><span class="hs-identifier hs-type">StgNonRec</span></a></span><span> </span><span id="local-6989586621682819723"><span class="annot"><span class="annottext">BinderP 'CodeGen
+</span><a href="#local-6989586621682819723"><span class="hs-identifier hs-var">_b</span></a></span></span><span> </span><span id="local-6989586621682819724"><span class="annot"><span class="annottext">GenStgRhs 'CodeGen
+</span><a href="#local-6989586621682819724"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">GenStgRhs 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819725"><span class="hs-identifier hs-var">collectArgsTopRhs</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgRhs 'CodeGen
+</span><a href="#local-6989586621682819724"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRec"><span class="hs-identifier hs-type">StgRec</span></a></span><span> </span><span id="local-6989586621682819727"><span class="annot"><span class="annottext">[(BinderP 'CodeGen, GenStgRhs 'CodeGen)]
+</span><a href="#local-6989586621682819727"><span class="hs-identifier hs-var">bs</span></a></span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">((Id, GenStgRhs 'CodeGen) -&gt; [Id])
+-&gt; [(Id, GenStgRhs 'CodeGen)] -&gt; [Id]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenStgRhs 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819725"><span class="hs-identifier hs-var">collectArgsTopRhs</span></a></span><span> </span><span class="annot"><span class="annottext">(GenStgRhs 'CodeGen -&gt; [Id])
+-&gt; ((Id, GenStgRhs 'CodeGen) -&gt; GenStgRhs 'CodeGen)
+-&gt; (Id, GenStgRhs 'CodeGen)
+-&gt; [Id]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Id, GenStgRhs 'CodeGen) -&gt; GenStgRhs 'CodeGen
+forall a b. (a, b) -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Id, GenStgRhs 'CodeGen)]
+[(BinderP 'CodeGen, GenStgRhs 'CodeGen)]
+</span><a href="#local-6989586621682819727"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="#local-6989586621682819725"><span class="hs-identifier hs-type">collectArgsTopRhs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgRhs"><span class="hs-identifier hs-type">CgStgRhs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-23"></span><span>    </span><span id="local-6989586621682819725"><span class="annot"><span class="annottext">collectArgsTopRhs :: GenStgRhs 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819725"><span class="hs-identifier hs-var hs-var">collectArgsTopRhs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-24"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRhsCon"><span class="hs-identifier hs-type">StgRhsCon</span></a></span><span> </span><span id="local-6989586621682819733"><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="#local-6989586621682819733"><span class="hs-identifier hs-var">_ccs</span></a></span></span><span> </span><span id="local-6989586621682819734"><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682819734"><span class="hs-identifier hs-var">_dc</span></a></span></span><span> </span><span id="local-6989586621682819735"><span class="annot"><span class="annottext">ConstructorNumber
+</span><a href="#local-6989586621682819735"><span class="hs-identifier hs-var">_mu</span></a></span></span><span> </span><span id="local-6989586621682819736"><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682819736"><span class="hs-identifier hs-var">_ticks</span></a></span></span><span> </span><span id="local-6989586621682819737"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819737"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span id="local-6989586621682819738"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682819738"><span class="hs-identifier hs-var">_typ</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(StgArg -&gt; [Id]) -&gt; [StgArg] -&gt; [Id]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">StgArg -&gt; [Id]
+</span><a href="GHC.StgToJS.Sinker.Collect.html#collectArgsA"><span class="hs-identifier hs-var">collectArgsA</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819737"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-25"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRhsClosure"><span class="hs-identifier hs-type">StgRhsClosure</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>                        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="annot"><span class="hs-comment">-- | fold over all Id in StgArg in the AST</span></span><span>
+</span><span id="line-28"></span><span class="annot"><a href="GHC.StgToJS.Sinker.Collect.html#collectArgs"><span class="hs-identifier hs-type">collectArgs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgBinding"><span class="hs-identifier hs-type">CgStgBinding</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-29"></span><span id="collectArgs"><span class="annot"><span class="annottext">collectArgs :: CgStgBinding -&gt; [Id]
+</span><a href="GHC.StgToJS.Sinker.Collect.html#collectArgs"><span class="hs-identifier hs-var hs-var">collectArgs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgNonRec"><span class="hs-identifier hs-type">StgNonRec</span></a></span><span> </span><span id="local-6989586621682819741"><span class="annot"><span class="annottext">BinderP 'CodeGen
+</span><a href="#local-6989586621682819741"><span class="hs-identifier hs-var">_b</span></a></span></span><span> </span><span id="local-6989586621682819742"><span class="annot"><span class="annottext">GenStgRhs 'CodeGen
+</span><a href="#local-6989586621682819742"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">GenStgRhs 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819743"><span class="hs-identifier hs-var">collectArgsR</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgRhs 'CodeGen
+</span><a href="#local-6989586621682819742"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRec"><span class="hs-identifier hs-type">StgRec</span></a></span><span> </span><span id="local-6989586621682819744"><span class="annot"><span class="annottext">[(BinderP 'CodeGen, GenStgRhs 'CodeGen)]
+</span><a href="#local-6989586621682819744"><span class="hs-identifier hs-var">bs</span></a></span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">((Id, GenStgRhs 'CodeGen) -&gt; [Id])
+-&gt; [(Id, GenStgRhs 'CodeGen)] -&gt; [Id]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenStgRhs 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819743"><span class="hs-identifier hs-var">collectArgsR</span></a></span><span> </span><span class="annot"><span class="annottext">(GenStgRhs 'CodeGen -&gt; [Id])
+-&gt; ((Id, GenStgRhs 'CodeGen) -&gt; GenStgRhs 'CodeGen)
+-&gt; (Id, GenStgRhs 'CodeGen)
+-&gt; [Id]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Id, GenStgRhs 'CodeGen) -&gt; GenStgRhs 'CodeGen
+forall a b. (a, b) -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Id, GenStgRhs 'CodeGen)]
+[(BinderP 'CodeGen, GenStgRhs 'CodeGen)]
+</span><a href="#local-6989586621682819744"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><a href="#local-6989586621682819743"><span class="hs-identifier hs-type">collectArgsR</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgRhs"><span class="hs-identifier hs-type">CgStgRhs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-34"></span><span>    </span><span id="local-6989586621682819743"><span class="annot"><span class="annottext">collectArgsR :: GenStgRhs 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819743"><span class="hs-identifier hs-var hs-var">collectArgsR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-35"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRhsClosure"><span class="hs-identifier hs-type">StgRhsClosure</span></a></span><span> </span><span id="local-6989586621682819745"><span class="annot"><span class="annottext">XRhsClosure 'CodeGen
+</span><a href="#local-6989586621682819745"><span class="hs-identifier hs-var">_x0</span></a></span></span><span> </span><span id="local-6989586621682819746"><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="#local-6989586621682819746"><span class="hs-identifier hs-var">_x1</span></a></span></span><span> </span><span id="local-6989586621682819747"><span class="annot"><span class="annottext">UpdateFlag
+</span><a href="#local-6989586621682819747"><span class="hs-identifier hs-var">_x2</span></a></span></span><span> </span><span id="local-6989586621682819748"><span class="annot"><span class="annottext">[BinderP 'CodeGen]
+</span><a href="#local-6989586621682819748"><span class="hs-identifier hs-var">_x3</span></a></span></span><span> </span><span id="local-6989586621682819749"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819749"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span id="local-6989586621682819750"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682819750"><span class="hs-identifier hs-var">_typ</span></a></span></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819751"><span class="hs-identifier hs-var">collectArgsE</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819749"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-36"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgRhsCon"><span class="hs-identifier hs-type">StgRhsCon</span></a></span><span> </span><span id="local-6989586621682819752"><span class="annot"><span class="annottext">CostCentreStack
+</span><a href="#local-6989586621682819752"><span class="hs-identifier hs-var">_ccs</span></a></span></span><span> </span><span id="local-6989586621682819753"><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682819753"><span class="hs-identifier hs-var">_con</span></a></span></span><span> </span><span id="local-6989586621682819754"><span class="annot"><span class="annottext">ConstructorNumber
+</span><a href="#local-6989586621682819754"><span class="hs-identifier hs-var">_mu</span></a></span></span><span> </span><span id="local-6989586621682819755"><span class="annot"><span class="annottext">[StgTickish]
+</span><a href="#local-6989586621682819755"><span class="hs-identifier hs-var">_ticks</span></a></span></span><span> </span><span id="local-6989586621682819756"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819756"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span id="local-6989586621682819757"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682819757"><span class="hs-identifier hs-var">_typ</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(StgArg -&gt; [Id]) -&gt; [StgArg] -&gt; [Id]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">StgArg -&gt; [Id]
+</span><a href="GHC.StgToJS.Sinker.Collect.html#collectArgsA"><span class="hs-identifier hs-var">collectArgsA</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819756"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><a href="#local-6989586621682819758"><span class="hs-identifier hs-type">collectArgsAlt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgAlt"><span class="hs-identifier hs-type">CgStgAlt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621682819758"><span class="annot"><span class="annottext">collectArgsAlt :: CgStgAlt -&gt; [Id]
+</span><a href="#local-6989586621682819758"><span class="hs-identifier hs-var hs-var">collectArgsAlt</span></a></span></span><span> </span><span id="local-6989586621682819759"><span class="annot"><span class="annottext">CgStgAlt
+</span><a href="#local-6989586621682819759"><span class="hs-identifier hs-var">alt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819751"><span class="hs-identifier hs-var">collectArgsE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CgStgAlt -&gt; GenStgExpr 'CodeGen
+forall (pass :: StgPass). GenStgAlt pass -&gt; GenStgExpr pass
+</span><a href="GHC.Stg.Syntax.html#alt_rhs"><span class="hs-identifier hs-var">alt_rhs</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgAlt
+</span><a href="#local-6989586621682819759"><span class="hs-identifier hs-var">alt</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><a href="#local-6989586621682819751"><span class="hs-identifier hs-type">collectArgsE</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#CgStgExpr"><span class="hs-identifier hs-type">CgStgExpr</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-42"></span><span>    </span><span id="local-6989586621682819751"><span class="annot"><span class="annottext">collectArgsE :: GenStgExpr 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819751"><span class="hs-identifier hs-var hs-var">collectArgsE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgApp"><span class="hs-identifier hs-type">StgApp</span></a></span><span> </span><span id="local-6989586621682819763"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682819763"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621682819764"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819764"><span class="hs-identifier hs-var">args</span></a></span></span><span>
+</span><span id="line-44"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682819763"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Id -&gt; [Id] -&gt; [Id]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">(StgArg -&gt; [Id]) -&gt; [StgArg] -&gt; [Id]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">StgArg -&gt; [Id]
+</span><a href="GHC.StgToJS.Sinker.Collect.html#collectArgsA"><span class="hs-identifier hs-var">collectArgsA</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819764"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-45"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgConApp"><span class="hs-identifier hs-type">StgConApp</span></a></span><span> </span><span id="local-6989586621682819766"><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621682819766"><span class="hs-identifier hs-var">_con</span></a></span></span><span> </span><span id="local-6989586621682819767"><span class="annot"><span class="annottext">ConstructorNumber
+</span><a href="#local-6989586621682819767"><span class="hs-identifier hs-var">_mn</span></a></span></span><span> </span><span id="local-6989586621682819768"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819768"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span id="local-6989586621682819769"><span class="annot"><span class="annottext">[[PrimRep]]
+</span><a href="#local-6989586621682819769"><span class="hs-identifier hs-var">_ts</span></a></span></span><span>
+</span><span id="line-46"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(StgArg -&gt; [Id]) -&gt; [StgArg] -&gt; [Id]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">StgArg -&gt; [Id]
+</span><a href="GHC.StgToJS.Sinker.Collect.html#collectArgsA"><span class="hs-identifier hs-var">collectArgsA</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819768"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgOpApp"><span class="hs-identifier hs-type">StgOpApp</span></a></span><span> </span><span id="local-6989586621682819771"><span class="annot"><span class="annottext">StgOp
+</span><a href="#local-6989586621682819771"><span class="hs-identifier hs-var">_x</span></a></span></span><span> </span><span id="local-6989586621682819772"><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819772"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span id="local-6989586621682819773"><span class="annot"><span class="annottext">Type
+</span><a href="#local-6989586621682819773"><span class="hs-identifier hs-var">_t</span></a></span></span><span>
+</span><span id="line-48"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(StgArg -&gt; [Id]) -&gt; [StgArg] -&gt; [Id]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">StgArg -&gt; [Id]
+</span><a href="GHC.StgToJS.Sinker.Collect.html#collectArgsA"><span class="hs-identifier hs-var">collectArgsA</span></a></span><span> </span><span class="annot"><span class="annottext">[StgArg]
+</span><a href="#local-6989586621682819772"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgCase"><span class="hs-identifier hs-type">StgCase</span></a></span><span> </span><span id="local-6989586621682819775"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819775"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span id="local-6989586621682819776"><span class="annot"><span class="annottext">BinderP 'CodeGen
+</span><a href="#local-6989586621682819776"><span class="hs-identifier hs-var">_b</span></a></span></span><span> </span><span id="local-6989586621682819777"><span class="annot"><span class="annottext">AltType
+</span><a href="#local-6989586621682819777"><span class="hs-identifier hs-var">_a</span></a></span></span><span> </span><span id="local-6989586621682819778"><span class="annot"><span class="annottext">[CgStgAlt]
+</span><a href="#local-6989586621682819778"><span class="hs-identifier hs-var">alts</span></a></span></span><span>
+</span><span id="line-50"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819751"><span class="hs-identifier hs-var">collectArgsE</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819775"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">[Id] -&gt; [Id] -&gt; [Id]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">(CgStgAlt -&gt; [Id]) -&gt; [CgStgAlt] -&gt; [Id]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgAlt -&gt; [Id]
+</span><a href="#local-6989586621682819758"><span class="hs-identifier hs-var">collectArgsAlt</span></a></span><span> </span><span class="annot"><span class="annottext">[CgStgAlt]
+</span><a href="#local-6989586621682819778"><span class="hs-identifier hs-var">alts</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgLet"><span class="hs-identifier hs-type">StgLet</span></a></span><span> </span><span id="local-6989586621682819780"><span class="annot"><span class="annottext">XLet 'CodeGen
+</span><a href="#local-6989586621682819780"><span class="hs-identifier hs-var">_x</span></a></span></span><span> </span><span id="local-6989586621682819781"><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819781"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621682819782"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819782"><span class="hs-identifier hs-var">e</span></a></span></span><span>
+</span><span id="line-52"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">CgStgBinding -&gt; [Id]
+</span><a href="GHC.StgToJS.Sinker.Collect.html#collectArgs"><span class="hs-identifier hs-var">collectArgs</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819781"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">[Id] -&gt; [Id] -&gt; [Id]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819751"><span class="hs-identifier hs-var">collectArgsE</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819782"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgLetNoEscape"><span class="hs-identifier hs-type">StgLetNoEscape</span></a></span><span> </span><span id="local-6989586621682819784"><span class="annot"><span class="annottext">XLetNoEscape 'CodeGen
+</span><a href="#local-6989586621682819784"><span class="hs-identifier hs-var">_x</span></a></span></span><span> </span><span id="local-6989586621682819785"><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819785"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621682819786"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819786"><span class="hs-identifier hs-var">e</span></a></span></span><span>
+</span><span id="line-54"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">CgStgBinding -&gt; [Id]
+</span><a href="GHC.StgToJS.Sinker.Collect.html#collectArgs"><span class="hs-identifier hs-var">collectArgs</span></a></span><span> </span><span class="annot"><span class="annottext">CgStgBinding
+</span><a href="#local-6989586621682819785"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">[Id] -&gt; [Id] -&gt; [Id]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819751"><span class="hs-identifier hs-var">collectArgsE</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819786"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-55"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgTick"><span class="hs-identifier hs-type">StgTick</span></a></span><span> </span><span id="local-6989586621682819788"><span class="annot"><span class="annottext">StgTickish
+</span><a href="#local-6989586621682819788"><span class="hs-identifier hs-var">_i</span></a></span></span><span> </span><span id="local-6989586621682819789"><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819789"><span class="hs-identifier hs-var">e</span></a></span></span><span>
+</span><span id="line-56"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen -&gt; [Id]
+</span><a href="#local-6989586621682819751"><span class="hs-identifier hs-var">collectArgsE</span></a></span><span> </span><span class="annot"><span class="annottext">GenStgExpr 'CodeGen
+</span><a href="#local-6989586621682819789"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgLit"><span class="hs-identifier hs-type">StgLit</span></a></span><span> </span><span class="annot"><span class="annottext">Literal
+</span><span class="hs-identifier">_</span></span><span>
+</span><span id="line-58"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="GHC.StgToJS.Sinker.Collect.html#collectArgsA"><span class="hs-identifier hs-type">collectArgsA</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgArg"><span class="hs-identifier hs-type">StgArg</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Var.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span id="collectArgsA"><span class="annot"><span class="annottext">collectArgsA :: StgArg -&gt; [Id]
+</span><a href="GHC.StgToJS.Sinker.Collect.html#collectArgsA"><span class="hs-identifier hs-var hs-var">collectArgsA</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgVarArg"><span class="hs-identifier hs-type">StgVarArg</span></a></span><span> </span><span id="local-6989586621682819792"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682819792"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621682819792"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="GHC.Stg.Syntax.html#StgLitArg"><span class="hs-identifier hs-type">StgLitArg</span></a></span><span> </span><span class="annot"><span class="annottext">Literal
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span id="local-6989586621682819695"><span id="local-6989586621682819696"><span class="annot"><a href="GHC.StgToJS.Sinker.Collect.html#selectUsedOnce"><span class="hs-identifier hs-type">selectUsedOnce</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682819695"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.html#Uniquable"><span class="hs-identifier hs-type">Uniquable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682819696"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682819695"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682819696"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Unique.Set.html#UniqSet"><span class="hs-identifier hs-type">UniqSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682819696"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-66"></span><span id="selectUsedOnce"><span class="annot"><span class="annottext">selectUsedOnce :: forall (t :: * -&gt; *) a.
+(Foldable t, Uniquable a) =&gt;
+t a -&gt; UniqSet a
+</span><a href="GHC.StgToJS.Sinker.Collect.html#selectUsedOnce"><span class="hs-identifier hs-var hs-var">selectUsedOnce</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(UniqSet a, UniqSet a) -&gt; UniqSet a
+forall a b. (a, b) -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((UniqSet a, UniqSet a) -&gt; UniqSet a)
+-&gt; (t a -&gt; (UniqSet a, UniqSet a)) -&gt; t a -&gt; UniqSet a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; (UniqSet a, UniqSet a) -&gt; (UniqSet a, UniqSet a))
+-&gt; (UniqSet a, UniqSet a) -&gt; t a -&gt; (UniqSet a, UniqSet a)
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; (UniqSet a, UniqSet a) -&gt; (UniqSet a, UniqSet a)
+forall {a}.
+Uniquable a =&gt;
+a -&gt; (UniqSet a, UniqSet a) -&gt; (UniqSet a, UniqSet a)
+</span><a href="#local-6989586621682819800"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UniqSet a
+forall a. UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#emptyUniqSet"><span class="hs-identifier hs-var">emptyUniqSet</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet a
+forall a. UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#emptyUniqSet"><span class="hs-identifier hs-var">emptyUniqSet</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>    </span><span id="local-6989586621682819800"><span class="annot"><span class="annottext">g :: a -&gt; (UniqSet a, UniqSet a) -&gt; (UniqSet a, UniqSet a)
+</span><a href="#local-6989586621682819800"><span class="hs-identifier hs-var hs-var">g</span></a></span></span><span> </span><span id="local-6989586621682819808"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682819808"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621682819809"><span class="annot"><span class="annottext">t :: (UniqSet a, UniqSet a)
+</span><a href="#local-6989586621682819809"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621682819810"><span class="annot"><span class="annottext">UniqSet a
+</span><a href="#local-6989586621682819810"><span class="hs-identifier hs-var">once</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682819811"><span class="annot"><span class="annottext">UniqSet a
+</span><a href="#local-6989586621682819811"><span class="hs-identifier hs-var">mult</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682819808"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; UniqSet a -&gt; Bool
+forall a. Uniquable a =&gt; a -&gt; UniqSet a -&gt; Bool
+</span><a href="GHC.Types.Unique.Set.html#elementOfUniqSet"><span class="hs-operator hs-var">`elementOfUniqSet`</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet a
+</span><a href="#local-6989586621682819811"><span class="hs-identifier hs-var">mult</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(UniqSet a, UniqSet a)
+</span><a href="#local-6989586621682819809"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682819808"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; UniqSet a -&gt; Bool
+forall a. Uniquable a =&gt; a -&gt; UniqSet a -&gt; Bool
+</span><a href="GHC.Types.Unique.Set.html#elementOfUniqSet"><span class="hs-operator hs-var">`elementOfUniqSet`</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet a
+</span><a href="#local-6989586621682819810"><span class="hs-identifier hs-var">once</span></a></span><span>
+</span><span id="line-71"></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UniqSet a -&gt; a -&gt; UniqSet a
+forall a. Uniquable a =&gt; UniqSet a -&gt; a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#delOneFromUniqSet"><span class="hs-identifier hs-var">delOneFromUniqSet</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet a
+</span><a href="#local-6989586621682819810"><span class="hs-identifier hs-var">once</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682819808"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet a -&gt; a -&gt; UniqSet a
+forall a. Uniquable a =&gt; UniqSet a -&gt; a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#addOneToUniqSet"><span class="hs-identifier hs-var">addOneToUniqSet</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet a
+</span><a href="#local-6989586621682819811"><span class="hs-identifier hs-var">mult</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682819808"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UniqSet a -&gt; a -&gt; UniqSet a
+forall a. Uniquable a =&gt; UniqSet a -&gt; a -&gt; UniqSet a
+</span><a href="GHC.Types.Unique.Set.html#addOneToUniqSet"><span class="hs-identifier hs-var">addOneToUniqSet</span></a></span><span> </span><span class="annot"><span class="annottext">UniqSet a
+</span><a href="#local-6989586621682819810"><span class="hs-identifier hs-var">once</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682819808"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UniqSet a
+</span><a href="#local-6989586621682819811"><span class="hs-identifier hs-var">mult</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span></pre></body></html>

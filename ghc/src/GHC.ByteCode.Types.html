@@ -1,0 +1,1421 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP                        #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards            #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications           #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MagicHash                  #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE UnliftedNewtypes           #-}</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--  (c) The University of Glasgow 2002-2006</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="annot"><span class="hs-comment">-- | Bytecode assembler types</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html"><span class="hs-identifier">GHC.ByteCode.Types</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#CompiledByteCode"><span class="hs-identifier">CompiledByteCode</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#seqCompiledByteCode"><span class="hs-identifier">seqCompiledByteCode</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#BCOByteArray"><span class="hs-identifier">BCOByteArray</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#mkBCOByteArray"><span class="hs-identifier">mkBCOByteArray</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#FFIInfo"><span class="hs-identifier">FFIInfo</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#RegBitmap"><span class="hs-identifier">RegBitmap</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#NativeCallType"><span class="hs-identifier">NativeCallType</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#NativeCallInfo"><span class="hs-identifier">NativeCallInfo</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#voidTupleReturnInfo"><span class="hs-identifier">voidTupleReturnInfo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#voidPrimCallInfo"><span class="hs-identifier">voidPrimCallInfo</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#ByteOff"><span class="hs-identifier">ByteOff</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#WordOff"><span class="hs-identifier">WordOff</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#HalfWord"><span class="hs-identifier">HalfWord</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#UnlinkedBCO"><span class="hs-identifier">UnlinkedBCO</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtr"><span class="hs-identifier">BCOPtr</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtr"><span class="hs-identifier">BCONPtr</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#ItblEnv"><span class="hs-identifier">ItblEnv</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#ItblPtr"><span class="hs-identifier">ItblPtr</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#AddrEnv"><span class="hs-identifier">AddrEnv</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#AddrPtr"><span class="hs-identifier">AddrPtr</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.FlatBag.html#FlatBag"><span class="hs-identifier">FlatBag</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.FlatBag.html#sizeFlatBag"><span class="hs-identifier">sizeFlatBag</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.FlatBag.html#fromSmallArray"><span class="hs-identifier">fromSmallArray</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Data.FlatBag.html#elemsFlatBag"><span class="hs-identifier">elemsFlatBag</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Mod Breaks</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier">ModBreaks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakpointId"><span class="hs-identifier">BreakpointId</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakTickIndex"><span class="hs-identifier">BreakTickIndex</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Internal Mod Breaks</span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier">InternalModBreaks</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#CgBreakInfo"><span class="hs-identifier">CgBreakInfo</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#seqInternalModBreaks"><span class="hs-identifier">seqInternalModBreaks</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Internal breakpoint identifier</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier">InternalBreakpointId</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#BreakInfoIndex"><span class="hs-identifier">BreakInfoIndex</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html"><span class="hs-identifier">GHC.Data.FastString</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.FlatBag.html"><span class="hs-identifier">GHC.Data.FlatBag</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.html"><span class="hs-identifier">GHC.Types.Name</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.Env.html"><span class="hs-identifier">GHC.Types.Name.Env</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Builtin.PrimOps.html"><span class="hs-identifier">GHC.Builtin.PrimOps</span></a></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.SptEntry.html"><span class="hs-identifier">GHC.Types.SptEntry</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html"><span class="hs-identifier">GHC.HsToCore.Breakpoints</span></a></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html"><span class="hs-identifier">GHC.ByteCode.Breakpoints</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.Message.html"><span class="hs-identifier">GHCi.Message</span></a></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html"><span class="hs-identifier">GHCi.RemoteTypes</span></a></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.FFI.html"><span class="hs-identifier">GHCi.FFI</span></a></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html"><span class="hs-identifier">GHCi.ResolvedBCO</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#BCOByteArray"><span class="hs-identifier">BCOByteArray</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#mkBCOByteArray"><span class="hs-identifier">mkBCOByteArray</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Foreign.html"><span class="hs-identifier">Foreign</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../ghc-heap-9.14.1-inplace/src/GHC.Exts.Heap.html"><span class="hs-identifier">GHC.Exts.Heap</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Heap</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Cmm.Expr.html"><span class="hs-identifier">GHC.Cmm.Expr</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Cmm.Expr.html#GlobalRegSet"><span class="hs-identifier">GlobalRegSet</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Cmm.Expr.html#emptyRegSet"><span class="hs-identifier">emptyRegSet</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Cmm.Expr.html#regSetToList"><span class="hs-identifier">regSetToList</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.html"><span class="hs-identifier">GHC.Unit.Module</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- Compiled Byte Code</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">data</span><span> </span><span id="CompiledByteCode"><span class="annot"><a href="GHC.ByteCode.Types.html#CompiledByteCode"><span class="hs-identifier hs-var">CompiledByteCode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CompiledByteCode"><span class="annot"><a href="GHC.ByteCode.Types.html#CompiledByteCode"><span class="hs-identifier hs-var">CompiledByteCode</span></a></span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="bc_bcos"><span class="annot"><span class="annottext">CompiledByteCode -&gt; FlatBag UnlinkedBCO
+</span><a href="GHC.ByteCode.Types.html#bc_bcos"><span class="hs-identifier hs-var hs-var">bc_bcos</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Data.FlatBag.html#FlatBag"><span class="hs-identifier hs-type">FlatBag</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#UnlinkedBCO"><span class="hs-identifier hs-type">UnlinkedBCO</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ Bunch of interpretable bindings</span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="bc_itbls"><span class="annot"><span class="annottext">CompiledByteCode -&gt; [(Name, ConInfoTable)]
+</span><a href="GHC.ByteCode.Types.html#bc_itbls"><span class="hs-identifier hs-var hs-var">bc_itbls</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.Message.html#ConInfoTable"><span class="hs-identifier hs-type">ConInfoTable</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ Mapping from DataCons to their info tables</span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="bc_strs"><span class="annot"><span class="annottext">CompiledByteCode -&gt; [(Name, ByteString)]
+</span><a href="GHC.ByteCode.Types.html#bc_strs"><span class="hs-identifier hs-var hs-var">bc_strs</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ top-level strings (heap allocated)</span></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="bc_breaks"><span class="annot"><span class="annottext">CompiledByteCode -&gt; Maybe InternalModBreaks
+</span><a href="GHC.ByteCode.Types.html#bc_breaks"><span class="hs-identifier hs-var hs-var">bc_breaks</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalModBreaks"><span class="hs-identifier hs-type">InternalModBreaks</span></a></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">-- ^ All breakpoint information (no information if breakpoints are disabled).</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">-- This information is used when loading a bytecode object: we will</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">-- construct the arrays to be used at runtime to trigger breakpoints at load time</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-comment">-- from it (in 'allocateBreakArrays' and 'allocateCCS' in 'GHC.ByteCode.Loader').</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="bc_spt_entries"><span class="annot"><span class="annottext">CompiledByteCode -&gt; [SptEntry]
+</span><a href="GHC.ByteCode.Types.html#bc_spt_entries"><span class="hs-identifier hs-var hs-var">bc_spt_entries</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.SptEntry.html#SptEntry"><span class="hs-identifier hs-type">SptEntry</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- ^ Static pointer table entries which should be loaded along with the</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-comment">-- BCOs. See Note [Grand plan for static forms] in</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- &quot;GHC.Iface.Tidy.StaticPtrTable&quot;.</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="annot"><span class="hs-comment">-- | A libffi ffi_cif function prototype.</span></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">data</span><span> </span><span id="FFIInfo"><span class="annot"><a href="GHC.ByteCode.Types.html#FFIInfo"><span class="hs-identifier hs-var">FFIInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="FFIInfo"><span class="annot"><a href="GHC.ByteCode.Types.html#FFIInfo"><span class="hs-identifier hs-var">FFIInfo</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="ffiInfoArgs"><span class="annot"><span class="annottext">FFIInfo -&gt; [FFIType]
+</span><a href="GHC.ByteCode.Types.html#ffiInfoArgs"><span class="hs-identifier hs-var hs-var">ffiInfoArgs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.FFI.html#FFIType"><span class="hs-identifier hs-type">FFIType</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span id="ffiInfoRet"><span class="annot"><span class="annottext">FFIInfo -&gt; FFIType
+</span><a href="GHC.ByteCode.Types.html#ffiInfoRet"><span class="hs-identifier hs-var hs-var">ffiInfoRet</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.FFI.html#FFIType"><span class="hs-identifier hs-type">FFIType</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683134779"><span id="local-6989586621683134787"><span id="local-6989586621683134791"><span class="annot"><span class="annottext">Int -&gt; FFIInfo -&gt; ShowS
+[FFIInfo] -&gt; ShowS
+FFIInfo -&gt; String
+(Int -&gt; FFIInfo -&gt; ShowS)
+-&gt; (FFIInfo -&gt; String) -&gt; ([FFIInfo] -&gt; ShowS) -&gt; Show FFIInfo
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; FFIInfo -&gt; ShowS
+showsPrec :: Int -&gt; FFIInfo -&gt; ShowS
+$cshow :: FFIInfo -&gt; String
+show :: FFIInfo -&gt; String
+$cshowList :: [FFIInfo] -&gt; ShowS
+showList :: [FFIInfo] -&gt; ShowS
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#CompiledByteCode"><span class="hs-identifier hs-type">CompiledByteCode</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621683134803"><span class="annot"><span class="annottext">ppr :: CompiledByteCode -&gt; SDoc
+</span><a href="#local-6989586621683134803"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#CompiledByteCode"><span class="hs-identifier hs-type">CompiledByteCode</span></a></span><span class="hs-special">{</span><span id="local-6989586621683134805"><span id="local-6989586621683134806"><span id="local-6989586621683134807"><span id="local-6989586621683134808"><span id="local-6989586621683134809"><span class="annot"><span class="annottext">[(Name, ByteString)]
+[(Name, ConInfoTable)]
+[SptEntry]
+Maybe InternalModBreaks
+FlatBag UnlinkedBCO
+bc_bcos :: CompiledByteCode -&gt; FlatBag UnlinkedBCO
+bc_itbls :: CompiledByteCode -&gt; [(Name, ConInfoTable)]
+bc_strs :: CompiledByteCode -&gt; [(Name, ByteString)]
+bc_breaks :: CompiledByteCode -&gt; Maybe InternalModBreaks
+bc_spt_entries :: CompiledByteCode -&gt; [SptEntry]
+bc_bcos :: FlatBag UnlinkedBCO
+bc_itbls :: [(Name, ConInfoTable)]
+bc_strs :: [(Name, ByteString)]
+bc_breaks :: Maybe InternalModBreaks
+bc_spt_entries :: [SptEntry]
+</span><a href="GHC.ByteCode.Types.html#bc_bcos"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[UnlinkedBCO] -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">([UnlinkedBCO] -&gt; SDoc) -&gt; [UnlinkedBCO] -&gt; SDoc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FlatBag UnlinkedBCO -&gt; [UnlinkedBCO]
+forall a. FlatBag a -&gt; [a]
+</span><a href="GHC.Data.FlatBag.html#elemsFlatBag"><span class="hs-identifier hs-var">elemsFlatBag</span></a></span><span> </span><span class="annot"><span class="annottext">FlatBag UnlinkedBCO
+</span><a href="#local-6989586621683134805"><span class="hs-identifier hs-var">bc_bcos</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- Not a real NFData instance, because ModBreaks contains some things</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- we can't rnf</span><span>
+</span><span id="line-91"></span><span class="annot"><a href="GHC.ByteCode.Types.html#seqCompiledByteCode"><span class="hs-identifier hs-type">seqCompiledByteCode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#CompiledByteCode"><span class="hs-identifier hs-type">CompiledByteCode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span id="seqCompiledByteCode"><span class="annot"><span class="annottext">seqCompiledByteCode :: CompiledByteCode -&gt; ()
+</span><a href="GHC.ByteCode.Types.html#seqCompiledByteCode"><span class="hs-identifier hs-var hs-var">seqCompiledByteCode</span></a></span></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#CompiledByteCode"><span class="hs-identifier hs-type">CompiledByteCode</span></a></span><span class="hs-special">{</span><span id="local-6989586621683134810"><span id="local-6989586621683134811"><span id="local-6989586621683134812"><span id="local-6989586621683134813"><span id="local-6989586621683134814"><span class="annot"><span class="annottext">[(Name, ByteString)]
+[(Name, ConInfoTable)]
+[SptEntry]
+Maybe InternalModBreaks
+FlatBag UnlinkedBCO
+bc_bcos :: CompiledByteCode -&gt; FlatBag UnlinkedBCO
+bc_itbls :: CompiledByteCode -&gt; [(Name, ConInfoTable)]
+bc_strs :: CompiledByteCode -&gt; [(Name, ByteString)]
+bc_breaks :: CompiledByteCode -&gt; Maybe InternalModBreaks
+bc_spt_entries :: CompiledByteCode -&gt; [SptEntry]
+bc_bcos :: FlatBag UnlinkedBCO
+bc_itbls :: [(Name, ConInfoTable)]
+bc_strs :: [(Name, ByteString)]
+bc_breaks :: Maybe InternalModBreaks
+bc_spt_entries :: [SptEntry]
+</span><a href="GHC.ByteCode.Types.html#bc_bcos"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><span class="annottext">FlatBag UnlinkedBCO -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">FlatBag UnlinkedBCO
+</span><a href="#local-6989586621683134810"><span class="hs-identifier hs-var">bc_bcos</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="annottext">[(Name, ConInfoTable)] -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">[(Name, ConInfoTable)]
+</span><a href="#local-6989586621683134811"><span class="hs-identifier hs-var">bc_itbls</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><span class="annottext">[(Name, ByteString)] -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">[(Name, ByteString)]
+</span><a href="#local-6989586621683134812"><span class="hs-identifier hs-var">bc_strs</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe InternalModBreaks
+</span><a href="#local-6989586621683134813"><span class="hs-identifier hs-var">bc_breaks</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><span class="annottext">Maybe InternalModBreaks
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683134816"><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621683134816"><span class="hs-identifier hs-var">ibks</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InternalModBreaks -&gt; ()
+</span><a href="GHC.ByteCode.Breakpoints.html#seqInternalModBreaks"><span class="hs-identifier hs-var">seqInternalModBreaks</span></a></span><span> </span><span class="annot"><span class="annottext">InternalModBreaks
+</span><a href="#local-6989586621683134816"><span class="hs-identifier hs-var">ibks</span></a></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">newtype</span><span> </span><span id="ByteOff"><span class="annot"><a href="GHC.ByteCode.Types.html#ByteOff"><span class="hs-identifier hs-var">ByteOff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ByteOff"><span class="annot"><a href="GHC.ByteCode.Types.html#ByteOff"><span class="hs-identifier hs-var">ByteOff</span></a></span></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683134819"><span id="local-6989586621683134824"><span id="local-6989586621683134828"><span id="local-6989586621683134832"><span id="local-6989586621683134836"><span id="local-6989586621683134840"><span id="local-6989586621683134844"><span id="local-6989586621683134848"><span class="annot"><span class="annottext">Int -&gt; ByteOff
+ByteOff -&gt; Int
+ByteOff -&gt; [ByteOff]
+ByteOff -&gt; ByteOff
+ByteOff -&gt; ByteOff -&gt; [ByteOff]
+ByteOff -&gt; ByteOff -&gt; ByteOff -&gt; [ByteOff]
+(ByteOff -&gt; ByteOff)
+-&gt; (ByteOff -&gt; ByteOff)
+-&gt; (Int -&gt; ByteOff)
+-&gt; (ByteOff -&gt; Int)
+-&gt; (ByteOff -&gt; [ByteOff])
+-&gt; (ByteOff -&gt; ByteOff -&gt; [ByteOff])
+-&gt; (ByteOff -&gt; ByteOff -&gt; [ByteOff])
+-&gt; (ByteOff -&gt; ByteOff -&gt; ByteOff -&gt; [ByteOff])
+-&gt; Enum ByteOff
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: ByteOff -&gt; ByteOff
+succ :: ByteOff -&gt; ByteOff
+$cpred :: ByteOff -&gt; ByteOff
+pred :: ByteOff -&gt; ByteOff
+$ctoEnum :: Int -&gt; ByteOff
+toEnum :: Int -&gt; ByteOff
+$cfromEnum :: ByteOff -&gt; Int
+fromEnum :: ByteOff -&gt; Int
+$cenumFrom :: ByteOff -&gt; [ByteOff]
+enumFrom :: ByteOff -&gt; [ByteOff]
+$cenumFromThen :: ByteOff -&gt; ByteOff -&gt; [ByteOff]
+enumFromThen :: ByteOff -&gt; ByteOff -&gt; [ByteOff]
+$cenumFromTo :: ByteOff -&gt; ByteOff -&gt; [ByteOff]
+enumFromTo :: ByteOff -&gt; ByteOff -&gt; [ByteOff]
+$cenumFromThenTo :: ByteOff -&gt; ByteOff -&gt; ByteOff -&gt; [ByteOff]
+enumFromThenTo :: ByteOff -&gt; ByteOff -&gt; ByteOff -&gt; [ByteOff]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683134858"><span id="local-6989586621683134863"><span class="annot"><span class="annottext">ByteOff -&gt; ByteOff -&gt; Bool
+(ByteOff -&gt; ByteOff -&gt; Bool)
+-&gt; (ByteOff -&gt; ByteOff -&gt; Bool) -&gt; Eq ByteOff
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ByteOff -&gt; ByteOff -&gt; Bool
+== :: ByteOff -&gt; ByteOff -&gt; Bool
+$c/= :: ByteOff -&gt; ByteOff -&gt; Bool
+/= :: ByteOff -&gt; ByteOff -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683134870"><span id="local-6989586621683134875"><span id="local-6989586621683134879"><span class="annot"><span class="annottext">Int -&gt; ByteOff -&gt; ShowS
+[ByteOff] -&gt; ShowS
+ByteOff -&gt; String
+(Int -&gt; ByteOff -&gt; ShowS)
+-&gt; (ByteOff -&gt; String) -&gt; ([ByteOff] -&gt; ShowS) -&gt; Show ByteOff
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ByteOff -&gt; ShowS
+showsPrec :: Int -&gt; ByteOff -&gt; ShowS
+$cshow :: ByteOff -&gt; String
+show :: ByteOff -&gt; String
+$cshowList :: [ByteOff] -&gt; ShowS
+showList :: [ByteOff] -&gt; ShowS
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683134887"><span id="local-6989586621683134892"><span id="local-6989586621683134896"><span id="local-6989586621683134900"><span id="local-6989586621683134904"><span id="local-6989586621683134908"><span id="local-6989586621683134912"><span class="annot"><span class="annottext">Enum ByteOff
+Real ByteOff
+(Real ByteOff, Enum ByteOff) =&gt;
+(ByteOff -&gt; ByteOff -&gt; ByteOff)
+-&gt; (ByteOff -&gt; ByteOff -&gt; ByteOff)
+-&gt; (ByteOff -&gt; ByteOff -&gt; ByteOff)
+-&gt; (ByteOff -&gt; ByteOff -&gt; ByteOff)
+-&gt; (ByteOff -&gt; ByteOff -&gt; (ByteOff, ByteOff))
+-&gt; (ByteOff -&gt; ByteOff -&gt; (ByteOff, ByteOff))
+-&gt; (ByteOff -&gt; Integer)
+-&gt; Integral ByteOff
+ByteOff -&gt; Integer
+ByteOff -&gt; ByteOff -&gt; (ByteOff, ByteOff)
+ByteOff -&gt; ByteOff -&gt; ByteOff
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: ByteOff -&gt; ByteOff -&gt; ByteOff
+quot :: ByteOff -&gt; ByteOff -&gt; ByteOff
+$crem :: ByteOff -&gt; ByteOff -&gt; ByteOff
+rem :: ByteOff -&gt; ByteOff -&gt; ByteOff
+$cdiv :: ByteOff -&gt; ByteOff -&gt; ByteOff
+div :: ByteOff -&gt; ByteOff -&gt; ByteOff
+$cmod :: ByteOff -&gt; ByteOff -&gt; ByteOff
+mod :: ByteOff -&gt; ByteOff -&gt; ByteOff
+$cquotRem :: ByteOff -&gt; ByteOff -&gt; (ByteOff, ByteOff)
+quotRem :: ByteOff -&gt; ByteOff -&gt; (ByteOff, ByteOff)
+$cdivMod :: ByteOff -&gt; ByteOff -&gt; (ByteOff, ByteOff)
+divMod :: ByteOff -&gt; ByteOff -&gt; (ByteOff, ByteOff)
+$ctoInteger :: ByteOff -&gt; Integer
+toInteger :: ByteOff -&gt; Integer
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683134924"><span id="local-6989586621683134929"><span id="local-6989586621683134933"><span id="local-6989586621683134937"><span id="local-6989586621683134941"><span id="local-6989586621683134945"><span id="local-6989586621683134949"><span class="annot"><span class="annottext">Integer -&gt; ByteOff
+ByteOff -&gt; ByteOff
+ByteOff -&gt; ByteOff -&gt; ByteOff
+(ByteOff -&gt; ByteOff -&gt; ByteOff)
+-&gt; (ByteOff -&gt; ByteOff -&gt; ByteOff)
+-&gt; (ByteOff -&gt; ByteOff -&gt; ByteOff)
+-&gt; (ByteOff -&gt; ByteOff)
+-&gt; (ByteOff -&gt; ByteOff)
+-&gt; (ByteOff -&gt; ByteOff)
+-&gt; (Integer -&gt; ByteOff)
+-&gt; Num ByteOff
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: ByteOff -&gt; ByteOff -&gt; ByteOff
++ :: ByteOff -&gt; ByteOff -&gt; ByteOff
+$c- :: ByteOff -&gt; ByteOff -&gt; ByteOff
+- :: ByteOff -&gt; ByteOff -&gt; ByteOff
+$c* :: ByteOff -&gt; ByteOff -&gt; ByteOff
+* :: ByteOff -&gt; ByteOff -&gt; ByteOff
+$cnegate :: ByteOff -&gt; ByteOff
+negate :: ByteOff -&gt; ByteOff
+$cabs :: ByteOff -&gt; ByteOff
+abs :: ByteOff -&gt; ByteOff
+$csignum :: ByteOff -&gt; ByteOff
+signum :: ByteOff -&gt; ByteOff
+$cfromInteger :: Integer -&gt; ByteOff
+fromInteger :: Integer -&gt; ByteOff
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683134961"><span id="local-6989586621683134965"><span id="local-6989586621683134969"><span id="local-6989586621683134973"><span id="local-6989586621683134977"><span id="local-6989586621683134981"><span id="local-6989586621683134985"><span class="annot"><span class="annottext">Eq ByteOff
+Eq ByteOff =&gt;
+(ByteOff -&gt; ByteOff -&gt; Ordering)
+-&gt; (ByteOff -&gt; ByteOff -&gt; Bool)
+-&gt; (ByteOff -&gt; ByteOff -&gt; Bool)
+-&gt; (ByteOff -&gt; ByteOff -&gt; Bool)
+-&gt; (ByteOff -&gt; ByteOff -&gt; Bool)
+-&gt; (ByteOff -&gt; ByteOff -&gt; ByteOff)
+-&gt; (ByteOff -&gt; ByteOff -&gt; ByteOff)
+-&gt; Ord ByteOff
+ByteOff -&gt; ByteOff -&gt; Bool
+ByteOff -&gt; ByteOff -&gt; Ordering
+ByteOff -&gt; ByteOff -&gt; ByteOff
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ByteOff -&gt; ByteOff -&gt; Ordering
+compare :: ByteOff -&gt; ByteOff -&gt; Ordering
+$c&lt; :: ByteOff -&gt; ByteOff -&gt; Bool
+&lt; :: ByteOff -&gt; ByteOff -&gt; Bool
+$c&lt;= :: ByteOff -&gt; ByteOff -&gt; Bool
+&lt;= :: ByteOff -&gt; ByteOff -&gt; Bool
+$c&gt; :: ByteOff -&gt; ByteOff -&gt; Bool
+&gt; :: ByteOff -&gt; ByteOff -&gt; Bool
+$c&gt;= :: ByteOff -&gt; ByteOff -&gt; Bool
+&gt;= :: ByteOff -&gt; ByteOff -&gt; Bool
+$cmax :: ByteOff -&gt; ByteOff -&gt; ByteOff
+max :: ByteOff -&gt; ByteOff -&gt; ByteOff
+$cmin :: ByteOff -&gt; ByteOff -&gt; ByteOff
+min :: ByteOff -&gt; ByteOff -&gt; ByteOff
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135001"><span class="annot"><span class="annottext">Num ByteOff
+Ord ByteOff
+(Num ByteOff, Ord ByteOff) =&gt; (ByteOff -&gt; Rational) -&gt; Real ByteOff
+ByteOff -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+$ctoRational :: ByteOff -&gt; Rational
+toRational :: ByteOff -&gt; Rational
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135007"><span class="annot"><span class="annottext">ByteOff -&gt; SDoc
+(ByteOff -&gt; SDoc) -&gt; Outputable ByteOff
+forall a. (a -&gt; SDoc) -&gt; Outputable a
+$cppr :: ByteOff -&gt; SDoc
+ppr :: ByteOff -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-var hs-var hs-var hs-var">Outputable</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">newtype</span><span> </span><span id="WordOff"><span class="annot"><a href="GHC.ByteCode.Types.html#WordOff"><span class="hs-identifier hs-var">WordOff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="WordOff"><span class="annot"><a href="GHC.ByteCode.Types.html#WordOff"><span class="hs-identifier hs-var">WordOff</span></a></span></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683135014"><span id="local-6989586621683135018"><span id="local-6989586621683135022"><span id="local-6989586621683135026"><span id="local-6989586621683135030"><span id="local-6989586621683135034"><span id="local-6989586621683135038"><span id="local-6989586621683135042"><span class="annot"><span class="annottext">Int -&gt; WordOff
+WordOff -&gt; Int
+WordOff -&gt; [WordOff]
+WordOff -&gt; WordOff
+WordOff -&gt; WordOff -&gt; [WordOff]
+WordOff -&gt; WordOff -&gt; WordOff -&gt; [WordOff]
+(WordOff -&gt; WordOff)
+-&gt; (WordOff -&gt; WordOff)
+-&gt; (Int -&gt; WordOff)
+-&gt; (WordOff -&gt; Int)
+-&gt; (WordOff -&gt; [WordOff])
+-&gt; (WordOff -&gt; WordOff -&gt; [WordOff])
+-&gt; (WordOff -&gt; WordOff -&gt; [WordOff])
+-&gt; (WordOff -&gt; WordOff -&gt; WordOff -&gt; [WordOff])
+-&gt; Enum WordOff
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: WordOff -&gt; WordOff
+succ :: WordOff -&gt; WordOff
+$cpred :: WordOff -&gt; WordOff
+pred :: WordOff -&gt; WordOff
+$ctoEnum :: Int -&gt; WordOff
+toEnum :: Int -&gt; WordOff
+$cfromEnum :: WordOff -&gt; Int
+fromEnum :: WordOff -&gt; Int
+$cenumFrom :: WordOff -&gt; [WordOff]
+enumFrom :: WordOff -&gt; [WordOff]
+$cenumFromThen :: WordOff -&gt; WordOff -&gt; [WordOff]
+enumFromThen :: WordOff -&gt; WordOff -&gt; [WordOff]
+$cenumFromTo :: WordOff -&gt; WordOff -&gt; [WordOff]
+enumFromTo :: WordOff -&gt; WordOff -&gt; [WordOff]
+$cenumFromThenTo :: WordOff -&gt; WordOff -&gt; WordOff -&gt; [WordOff]
+enumFromThenTo :: WordOff -&gt; WordOff -&gt; WordOff -&gt; [WordOff]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135047"><span id="local-6989586621683135051"><span class="annot"><span class="annottext">WordOff -&gt; WordOff -&gt; Bool
+(WordOff -&gt; WordOff -&gt; Bool)
+-&gt; (WordOff -&gt; WordOff -&gt; Bool) -&gt; Eq WordOff
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: WordOff -&gt; WordOff -&gt; Bool
+== :: WordOff -&gt; WordOff -&gt; Bool
+$c/= :: WordOff -&gt; WordOff -&gt; Bool
+/= :: WordOff -&gt; WordOff -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135056"><span id="local-6989586621683135060"><span id="local-6989586621683135064"><span class="annot"><span class="annottext">Int -&gt; WordOff -&gt; ShowS
+[WordOff] -&gt; ShowS
+WordOff -&gt; String
+(Int -&gt; WordOff -&gt; ShowS)
+-&gt; (WordOff -&gt; String) -&gt; ([WordOff] -&gt; ShowS) -&gt; Show WordOff
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; WordOff -&gt; ShowS
+showsPrec :: Int -&gt; WordOff -&gt; ShowS
+$cshow :: WordOff -&gt; String
+show :: WordOff -&gt; String
+$cshowList :: [WordOff] -&gt; ShowS
+showList :: [WordOff] -&gt; ShowS
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135072"><span id="local-6989586621683135076"><span id="local-6989586621683135080"><span id="local-6989586621683135084"><span id="local-6989586621683135088"><span id="local-6989586621683135092"><span id="local-6989586621683135096"><span class="annot"><span class="annottext">Enum WordOff
+Real WordOff
+(Real WordOff, Enum WordOff) =&gt;
+(WordOff -&gt; WordOff -&gt; WordOff)
+-&gt; (WordOff -&gt; WordOff -&gt; WordOff)
+-&gt; (WordOff -&gt; WordOff -&gt; WordOff)
+-&gt; (WordOff -&gt; WordOff -&gt; WordOff)
+-&gt; (WordOff -&gt; WordOff -&gt; (WordOff, WordOff))
+-&gt; (WordOff -&gt; WordOff -&gt; (WordOff, WordOff))
+-&gt; (WordOff -&gt; Integer)
+-&gt; Integral WordOff
+WordOff -&gt; Integer
+WordOff -&gt; WordOff -&gt; (WordOff, WordOff)
+WordOff -&gt; WordOff -&gt; WordOff
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: WordOff -&gt; WordOff -&gt; WordOff
+quot :: WordOff -&gt; WordOff -&gt; WordOff
+$crem :: WordOff -&gt; WordOff -&gt; WordOff
+rem :: WordOff -&gt; WordOff -&gt; WordOff
+$cdiv :: WordOff -&gt; WordOff -&gt; WordOff
+div :: WordOff -&gt; WordOff -&gt; WordOff
+$cmod :: WordOff -&gt; WordOff -&gt; WordOff
+mod :: WordOff -&gt; WordOff -&gt; WordOff
+$cquotRem :: WordOff -&gt; WordOff -&gt; (WordOff, WordOff)
+quotRem :: WordOff -&gt; WordOff -&gt; (WordOff, WordOff)
+$cdivMod :: WordOff -&gt; WordOff -&gt; (WordOff, WordOff)
+divMod :: WordOff -&gt; WordOff -&gt; (WordOff, WordOff)
+$ctoInteger :: WordOff -&gt; Integer
+toInteger :: WordOff -&gt; Integer
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135101"><span id="local-6989586621683135105"><span id="local-6989586621683135109"><span id="local-6989586621683135113"><span id="local-6989586621683135117"><span id="local-6989586621683135121"><span id="local-6989586621683135125"><span class="annot"><span class="annottext">Integer -&gt; WordOff
+WordOff -&gt; WordOff
+WordOff -&gt; WordOff -&gt; WordOff
+(WordOff -&gt; WordOff -&gt; WordOff)
+-&gt; (WordOff -&gt; WordOff -&gt; WordOff)
+-&gt; (WordOff -&gt; WordOff -&gt; WordOff)
+-&gt; (WordOff -&gt; WordOff)
+-&gt; (WordOff -&gt; WordOff)
+-&gt; (WordOff -&gt; WordOff)
+-&gt; (Integer -&gt; WordOff)
+-&gt; Num WordOff
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: WordOff -&gt; WordOff -&gt; WordOff
++ :: WordOff -&gt; WordOff -&gt; WordOff
+$c- :: WordOff -&gt; WordOff -&gt; WordOff
+- :: WordOff -&gt; WordOff -&gt; WordOff
+$c* :: WordOff -&gt; WordOff -&gt; WordOff
+* :: WordOff -&gt; WordOff -&gt; WordOff
+$cnegate :: WordOff -&gt; WordOff
+negate :: WordOff -&gt; WordOff
+$cabs :: WordOff -&gt; WordOff
+abs :: WordOff -&gt; WordOff
+$csignum :: WordOff -&gt; WordOff
+signum :: WordOff -&gt; WordOff
+$cfromInteger :: Integer -&gt; WordOff
+fromInteger :: Integer -&gt; WordOff
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135131"><span id="local-6989586621683135135"><span id="local-6989586621683135139"><span id="local-6989586621683135143"><span id="local-6989586621683135147"><span id="local-6989586621683135151"><span id="local-6989586621683135155"><span class="annot"><span class="annottext">Eq WordOff
+Eq WordOff =&gt;
+(WordOff -&gt; WordOff -&gt; Ordering)
+-&gt; (WordOff -&gt; WordOff -&gt; Bool)
+-&gt; (WordOff -&gt; WordOff -&gt; Bool)
+-&gt; (WordOff -&gt; WordOff -&gt; Bool)
+-&gt; (WordOff -&gt; WordOff -&gt; Bool)
+-&gt; (WordOff -&gt; WordOff -&gt; WordOff)
+-&gt; (WordOff -&gt; WordOff -&gt; WordOff)
+-&gt; Ord WordOff
+WordOff -&gt; WordOff -&gt; Bool
+WordOff -&gt; WordOff -&gt; Ordering
+WordOff -&gt; WordOff -&gt; WordOff
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: WordOff -&gt; WordOff -&gt; Ordering
+compare :: WordOff -&gt; WordOff -&gt; Ordering
+$c&lt; :: WordOff -&gt; WordOff -&gt; Bool
+&lt; :: WordOff -&gt; WordOff -&gt; Bool
+$c&lt;= :: WordOff -&gt; WordOff -&gt; Bool
+&lt;= :: WordOff -&gt; WordOff -&gt; Bool
+$c&gt; :: WordOff -&gt; WordOff -&gt; Bool
+&gt; :: WordOff -&gt; WordOff -&gt; Bool
+$c&gt;= :: WordOff -&gt; WordOff -&gt; Bool
+&gt;= :: WordOff -&gt; WordOff -&gt; Bool
+$cmax :: WordOff -&gt; WordOff -&gt; WordOff
+max :: WordOff -&gt; WordOff -&gt; WordOff
+$cmin :: WordOff -&gt; WordOff -&gt; WordOff
+min :: WordOff -&gt; WordOff -&gt; WordOff
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135164"><span class="annot"><span class="annottext">Num WordOff
+Ord WordOff
+(Num WordOff, Ord WordOff) =&gt; (WordOff -&gt; Rational) -&gt; Real WordOff
+WordOff -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+$ctoRational :: WordOff -&gt; Rational
+toRational :: WordOff -&gt; Rational
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135168"><span class="annot"><span class="annottext">WordOff -&gt; SDoc
+(WordOff -&gt; SDoc) -&gt; Outputable WordOff
+forall a. (a -&gt; SDoc) -&gt; Outputable a
+$cppr :: WordOff -&gt; SDoc
+ppr :: WordOff -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-var hs-var hs-var hs-var">Outputable</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- A type for values that are half the size of a word on the target</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- platform where the interpreter runs (which may be a different</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- wordsize than the compiler).</span><span>
+</span><span id="line-109"></span><span class="hs-keyword">newtype</span><span> </span><span id="HalfWord"><span class="annot"><a href="GHC.ByteCode.Types.html#HalfWord"><span class="hs-identifier hs-var">HalfWord</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="HalfWord"><span class="annot"><a href="GHC.ByteCode.Types.html#HalfWord"><span class="hs-identifier hs-var">HalfWord</span></a></span></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683135174"><span id="local-6989586621683135179"><span id="local-6989586621683135183"><span id="local-6989586621683135187"><span id="local-6989586621683135191"><span id="local-6989586621683135195"><span id="local-6989586621683135199"><span id="local-6989586621683135203"><span class="annot"><span class="annottext">Int -&gt; HalfWord
+HalfWord -&gt; Int
+HalfWord -&gt; [HalfWord]
+HalfWord -&gt; HalfWord
+HalfWord -&gt; HalfWord -&gt; [HalfWord]
+HalfWord -&gt; HalfWord -&gt; HalfWord -&gt; [HalfWord]
+(HalfWord -&gt; HalfWord)
+-&gt; (HalfWord -&gt; HalfWord)
+-&gt; (Int -&gt; HalfWord)
+-&gt; (HalfWord -&gt; Int)
+-&gt; (HalfWord -&gt; [HalfWord])
+-&gt; (HalfWord -&gt; HalfWord -&gt; [HalfWord])
+-&gt; (HalfWord -&gt; HalfWord -&gt; [HalfWord])
+-&gt; (HalfWord -&gt; HalfWord -&gt; HalfWord -&gt; [HalfWord])
+-&gt; Enum HalfWord
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: HalfWord -&gt; HalfWord
+succ :: HalfWord -&gt; HalfWord
+$cpred :: HalfWord -&gt; HalfWord
+pred :: HalfWord -&gt; HalfWord
+$ctoEnum :: Int -&gt; HalfWord
+toEnum :: Int -&gt; HalfWord
+$cfromEnum :: HalfWord -&gt; Int
+fromEnum :: HalfWord -&gt; Int
+$cenumFrom :: HalfWord -&gt; [HalfWord]
+enumFrom :: HalfWord -&gt; [HalfWord]
+$cenumFromThen :: HalfWord -&gt; HalfWord -&gt; [HalfWord]
+enumFromThen :: HalfWord -&gt; HalfWord -&gt; [HalfWord]
+$cenumFromTo :: HalfWord -&gt; HalfWord -&gt; [HalfWord]
+enumFromTo :: HalfWord -&gt; HalfWord -&gt; [HalfWord]
+$cenumFromThenTo :: HalfWord -&gt; HalfWord -&gt; HalfWord -&gt; [HalfWord]
+enumFromThenTo :: HalfWord -&gt; HalfWord -&gt; HalfWord -&gt; [HalfWord]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135208"><span id="local-6989586621683135213"><span class="annot"><span class="annottext">HalfWord -&gt; HalfWord -&gt; Bool
+(HalfWord -&gt; HalfWord -&gt; Bool)
+-&gt; (HalfWord -&gt; HalfWord -&gt; Bool) -&gt; Eq HalfWord
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: HalfWord -&gt; HalfWord -&gt; Bool
+== :: HalfWord -&gt; HalfWord -&gt; Bool
+$c/= :: HalfWord -&gt; HalfWord -&gt; Bool
+/= :: HalfWord -&gt; HalfWord -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135218"><span id="local-6989586621683135223"><span id="local-6989586621683135227"><span class="annot"><span class="annottext">Int -&gt; HalfWord -&gt; ShowS
+[HalfWord] -&gt; ShowS
+HalfWord -&gt; String
+(Int -&gt; HalfWord -&gt; ShowS)
+-&gt; (HalfWord -&gt; String) -&gt; ([HalfWord] -&gt; ShowS) -&gt; Show HalfWord
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; HalfWord -&gt; ShowS
+showsPrec :: Int -&gt; HalfWord -&gt; ShowS
+$cshow :: HalfWord -&gt; String
+show :: HalfWord -&gt; String
+$cshowList :: [HalfWord] -&gt; ShowS
+showList :: [HalfWord] -&gt; ShowS
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135235"><span id="local-6989586621683135240"><span id="local-6989586621683135244"><span id="local-6989586621683135248"><span id="local-6989586621683135252"><span id="local-6989586621683135256"><span id="local-6989586621683135260"><span class="annot"><span class="annottext">Enum HalfWord
+Real HalfWord
+(Real HalfWord, Enum HalfWord) =&gt;
+(HalfWord -&gt; HalfWord -&gt; HalfWord)
+-&gt; (HalfWord -&gt; HalfWord -&gt; HalfWord)
+-&gt; (HalfWord -&gt; HalfWord -&gt; HalfWord)
+-&gt; (HalfWord -&gt; HalfWord -&gt; HalfWord)
+-&gt; (HalfWord -&gt; HalfWord -&gt; (HalfWord, HalfWord))
+-&gt; (HalfWord -&gt; HalfWord -&gt; (HalfWord, HalfWord))
+-&gt; (HalfWord -&gt; Integer)
+-&gt; Integral HalfWord
+HalfWord -&gt; Integer
+HalfWord -&gt; HalfWord -&gt; (HalfWord, HalfWord)
+HalfWord -&gt; HalfWord -&gt; HalfWord
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: HalfWord -&gt; HalfWord -&gt; HalfWord
+quot :: HalfWord -&gt; HalfWord -&gt; HalfWord
+$crem :: HalfWord -&gt; HalfWord -&gt; HalfWord
+rem :: HalfWord -&gt; HalfWord -&gt; HalfWord
+$cdiv :: HalfWord -&gt; HalfWord -&gt; HalfWord
+div :: HalfWord -&gt; HalfWord -&gt; HalfWord
+$cmod :: HalfWord -&gt; HalfWord -&gt; HalfWord
+mod :: HalfWord -&gt; HalfWord -&gt; HalfWord
+$cquotRem :: HalfWord -&gt; HalfWord -&gt; (HalfWord, HalfWord)
+quotRem :: HalfWord -&gt; HalfWord -&gt; (HalfWord, HalfWord)
+$cdivMod :: HalfWord -&gt; HalfWord -&gt; (HalfWord, HalfWord)
+divMod :: HalfWord -&gt; HalfWord -&gt; (HalfWord, HalfWord)
+$ctoInteger :: HalfWord -&gt; Integer
+toInteger :: HalfWord -&gt; Integer
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135265"><span id="local-6989586621683135270"><span id="local-6989586621683135274"><span id="local-6989586621683135278"><span id="local-6989586621683135282"><span id="local-6989586621683135286"><span id="local-6989586621683135290"><span class="annot"><span class="annottext">Integer -&gt; HalfWord
+HalfWord -&gt; HalfWord
+HalfWord -&gt; HalfWord -&gt; HalfWord
+(HalfWord -&gt; HalfWord -&gt; HalfWord)
+-&gt; (HalfWord -&gt; HalfWord -&gt; HalfWord)
+-&gt; (HalfWord -&gt; HalfWord -&gt; HalfWord)
+-&gt; (HalfWord -&gt; HalfWord)
+-&gt; (HalfWord -&gt; HalfWord)
+-&gt; (HalfWord -&gt; HalfWord)
+-&gt; (Integer -&gt; HalfWord)
+-&gt; Num HalfWord
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: HalfWord -&gt; HalfWord -&gt; HalfWord
++ :: HalfWord -&gt; HalfWord -&gt; HalfWord
+$c- :: HalfWord -&gt; HalfWord -&gt; HalfWord
+- :: HalfWord -&gt; HalfWord -&gt; HalfWord
+$c* :: HalfWord -&gt; HalfWord -&gt; HalfWord
+* :: HalfWord -&gt; HalfWord -&gt; HalfWord
+$cnegate :: HalfWord -&gt; HalfWord
+negate :: HalfWord -&gt; HalfWord
+$cabs :: HalfWord -&gt; HalfWord
+abs :: HalfWord -&gt; HalfWord
+$csignum :: HalfWord -&gt; HalfWord
+signum :: HalfWord -&gt; HalfWord
+$cfromInteger :: Integer -&gt; HalfWord
+fromInteger :: Integer -&gt; HalfWord
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135297"><span id="local-6989586621683135302"><span id="local-6989586621683135306"><span id="local-6989586621683135310"><span id="local-6989586621683135314"><span id="local-6989586621683135318"><span id="local-6989586621683135322"><span class="annot"><span class="annottext">Eq HalfWord
+Eq HalfWord =&gt;
+(HalfWord -&gt; HalfWord -&gt; Ordering)
+-&gt; (HalfWord -&gt; HalfWord -&gt; Bool)
+-&gt; (HalfWord -&gt; HalfWord -&gt; Bool)
+-&gt; (HalfWord -&gt; HalfWord -&gt; Bool)
+-&gt; (HalfWord -&gt; HalfWord -&gt; Bool)
+-&gt; (HalfWord -&gt; HalfWord -&gt; HalfWord)
+-&gt; (HalfWord -&gt; HalfWord -&gt; HalfWord)
+-&gt; Ord HalfWord
+HalfWord -&gt; HalfWord -&gt; Bool
+HalfWord -&gt; HalfWord -&gt; Ordering
+HalfWord -&gt; HalfWord -&gt; HalfWord
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: HalfWord -&gt; HalfWord -&gt; Ordering
+compare :: HalfWord -&gt; HalfWord -&gt; Ordering
+$c&lt; :: HalfWord -&gt; HalfWord -&gt; Bool
+&lt; :: HalfWord -&gt; HalfWord -&gt; Bool
+$c&lt;= :: HalfWord -&gt; HalfWord -&gt; Bool
+&lt;= :: HalfWord -&gt; HalfWord -&gt; Bool
+$c&gt; :: HalfWord -&gt; HalfWord -&gt; Bool
+&gt; :: HalfWord -&gt; HalfWord -&gt; Bool
+$c&gt;= :: HalfWord -&gt; HalfWord -&gt; Bool
+&gt;= :: HalfWord -&gt; HalfWord -&gt; Bool
+$cmax :: HalfWord -&gt; HalfWord -&gt; HalfWord
+max :: HalfWord -&gt; HalfWord -&gt; HalfWord
+$cmin :: HalfWord -&gt; HalfWord -&gt; HalfWord
+min :: HalfWord -&gt; HalfWord -&gt; HalfWord
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135331"><span class="annot"><span class="annottext">Num HalfWord
+Ord HalfWord
+(Num HalfWord, Ord HalfWord) =&gt;
+(HalfWord -&gt; Rational) -&gt; Real HalfWord
+HalfWord -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+$ctoRational :: HalfWord -&gt; Rational
+toRational :: HalfWord -&gt; Rational
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135336"><span class="annot"><span class="annottext">HalfWord -&gt; SDoc
+(HalfWord -&gt; SDoc) -&gt; Outputable HalfWord
+forall a. (a -&gt; SDoc) -&gt; Outputable a
+$cppr :: HalfWord -&gt; SDoc
+ppr :: HalfWord -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-var hs-var hs-var hs-var">Outputable</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">newtype</span><span> </span><span id="RegBitmap"><span class="annot"><a href="GHC.ByteCode.Types.html#RegBitmap"><span class="hs-identifier hs-var">RegBitmap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="RegBitmap"><span class="annot"><a href="GHC.ByteCode.Types.html#RegBitmap"><span class="hs-identifier hs-var">RegBitmap</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unRegBitmap"><span class="annot"><span class="annottext">RegBitmap -&gt; Word32
+</span><a href="GHC.ByteCode.Types.html#unRegBitmap"><span class="hs-identifier hs-var hs-var">unRegBitmap</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683135344"><span id="local-6989586621683135349"><span id="local-6989586621683135353"><span id="local-6989586621683135357"><span id="local-6989586621683135361"><span id="local-6989586621683135365"><span id="local-6989586621683135369"><span id="local-6989586621683135373"><span class="annot"><span class="annottext">Int -&gt; RegBitmap
+RegBitmap -&gt; Int
+RegBitmap -&gt; [RegBitmap]
+RegBitmap -&gt; RegBitmap
+RegBitmap -&gt; RegBitmap -&gt; [RegBitmap]
+RegBitmap -&gt; RegBitmap -&gt; RegBitmap -&gt; [RegBitmap]
+(RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap)
+-&gt; (Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int)
+-&gt; (RegBitmap -&gt; [RegBitmap])
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; [RegBitmap])
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; [RegBitmap])
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; RegBitmap -&gt; [RegBitmap])
+-&gt; Enum RegBitmap
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: RegBitmap -&gt; RegBitmap
+succ :: RegBitmap -&gt; RegBitmap
+$cpred :: RegBitmap -&gt; RegBitmap
+pred :: RegBitmap -&gt; RegBitmap
+$ctoEnum :: Int -&gt; RegBitmap
+toEnum :: Int -&gt; RegBitmap
+$cfromEnum :: RegBitmap -&gt; Int
+fromEnum :: RegBitmap -&gt; Int
+$cenumFrom :: RegBitmap -&gt; [RegBitmap]
+enumFrom :: RegBitmap -&gt; [RegBitmap]
+$cenumFromThen :: RegBitmap -&gt; RegBitmap -&gt; [RegBitmap]
+enumFromThen :: RegBitmap -&gt; RegBitmap -&gt; [RegBitmap]
+$cenumFromTo :: RegBitmap -&gt; RegBitmap -&gt; [RegBitmap]
+enumFromTo :: RegBitmap -&gt; RegBitmap -&gt; [RegBitmap]
+$cenumFromThenTo :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap -&gt; [RegBitmap]
+enumFromThenTo :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap -&gt; [RegBitmap]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135378"><span id="local-6989586621683135383"><span class="annot"><span class="annottext">RegBitmap -&gt; RegBitmap -&gt; Bool
+(RegBitmap -&gt; RegBitmap -&gt; Bool)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; Bool) -&gt; Eq RegBitmap
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: RegBitmap -&gt; RegBitmap -&gt; Bool
+== :: RegBitmap -&gt; RegBitmap -&gt; Bool
+$c/= :: RegBitmap -&gt; RegBitmap -&gt; Bool
+/= :: RegBitmap -&gt; RegBitmap -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135388"><span id="local-6989586621683135393"><span id="local-6989586621683135397"><span class="annot"><span class="annottext">Int -&gt; RegBitmap -&gt; ShowS
+[RegBitmap] -&gt; ShowS
+RegBitmap -&gt; String
+(Int -&gt; RegBitmap -&gt; ShowS)
+-&gt; (RegBitmap -&gt; String)
+-&gt; ([RegBitmap] -&gt; ShowS)
+-&gt; Show RegBitmap
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; RegBitmap -&gt; ShowS
+showsPrec :: Int -&gt; RegBitmap -&gt; ShowS
+$cshow :: RegBitmap -&gt; String
+show :: RegBitmap -&gt; String
+$cshowList :: [RegBitmap] -&gt; ShowS
+showList :: [RegBitmap] -&gt; ShowS
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135405"><span id="local-6989586621683135410"><span id="local-6989586621683135414"><span id="local-6989586621683135418"><span id="local-6989586621683135422"><span id="local-6989586621683135426"><span id="local-6989586621683135430"><span class="annot"><span class="annottext">Enum RegBitmap
+Real RegBitmap
+(Real RegBitmap, Enum RegBitmap) =&gt;
+(RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; (RegBitmap, RegBitmap))
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; (RegBitmap, RegBitmap))
+-&gt; (RegBitmap -&gt; Integer)
+-&gt; Integral RegBitmap
+RegBitmap -&gt; Integer
+RegBitmap -&gt; RegBitmap -&gt; (RegBitmap, RegBitmap)
+RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+quot :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+$crem :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+rem :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+$cdiv :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+div :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+$cmod :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+mod :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+$cquotRem :: RegBitmap -&gt; RegBitmap -&gt; (RegBitmap, RegBitmap)
+quotRem :: RegBitmap -&gt; RegBitmap -&gt; (RegBitmap, RegBitmap)
+$cdivMod :: RegBitmap -&gt; RegBitmap -&gt; (RegBitmap, RegBitmap)
+divMod :: RegBitmap -&gt; RegBitmap -&gt; (RegBitmap, RegBitmap)
+$ctoInteger :: RegBitmap -&gt; Integer
+toInteger :: RegBitmap -&gt; Integer
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135435"><span id="local-6989586621683135440"><span id="local-6989586621683135444"><span id="local-6989586621683135448"><span id="local-6989586621683135452"><span id="local-6989586621683135456"><span id="local-6989586621683135460"><span class="annot"><span class="annottext">Integer -&gt; RegBitmap
+RegBitmap -&gt; RegBitmap
+RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+(RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap)
+-&gt; (Integer -&gt; RegBitmap)
+-&gt; Num RegBitmap
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
++ :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+$c- :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+- :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+$c* :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+* :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+$cnegate :: RegBitmap -&gt; RegBitmap
+negate :: RegBitmap -&gt; RegBitmap
+$cabs :: RegBitmap -&gt; RegBitmap
+abs :: RegBitmap -&gt; RegBitmap
+$csignum :: RegBitmap -&gt; RegBitmap
+signum :: RegBitmap -&gt; RegBitmap
+$cfromInteger :: Integer -&gt; RegBitmap
+fromInteger :: Integer -&gt; RegBitmap
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135467"><span id="local-6989586621683135472"><span id="local-6989586621683135476"><span id="local-6989586621683135480"><span id="local-6989586621683135484"><span id="local-6989586621683135488"><span id="local-6989586621683135492"><span class="annot"><span class="annottext">Eq RegBitmap
+Eq RegBitmap =&gt;
+(RegBitmap -&gt; RegBitmap -&gt; Ordering)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; Bool)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; Bool)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; Bool)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; Bool)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; Ord RegBitmap
+RegBitmap -&gt; RegBitmap -&gt; Bool
+RegBitmap -&gt; RegBitmap -&gt; Ordering
+RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: RegBitmap -&gt; RegBitmap -&gt; Ordering
+compare :: RegBitmap -&gt; RegBitmap -&gt; Ordering
+$c&lt; :: RegBitmap -&gt; RegBitmap -&gt; Bool
+&lt; :: RegBitmap -&gt; RegBitmap -&gt; Bool
+$c&lt;= :: RegBitmap -&gt; RegBitmap -&gt; Bool
+&lt;= :: RegBitmap -&gt; RegBitmap -&gt; Bool
+$c&gt; :: RegBitmap -&gt; RegBitmap -&gt; Bool
+&gt; :: RegBitmap -&gt; RegBitmap -&gt; Bool
+$c&gt;= :: RegBitmap -&gt; RegBitmap -&gt; Bool
+&gt;= :: RegBitmap -&gt; RegBitmap -&gt; Bool
+$cmax :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+max :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+$cmin :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+min :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135501"><span class="annot"><span class="annottext">Num RegBitmap
+Ord RegBitmap
+(Num RegBitmap, Ord RegBitmap) =&gt;
+(RegBitmap -&gt; Rational) -&gt; Real RegBitmap
+RegBitmap -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+$ctoRational :: RegBitmap -&gt; Rational
+toRational :: RegBitmap -&gt; Rational
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135508"><span id="local-6989586621683135513"><span id="local-6989586621683135517"><span id="local-6989586621683135521"><span id="local-6989586621683135525"><span id="local-6989586621683135529"><span id="local-6989586621683135533"><span id="local-6989586621683135537"><span id="local-6989586621683135541"><span id="local-6989586621683135545"><span id="local-6989586621683135549"><span id="local-6989586621683135553"><span id="local-6989586621683135557"><span id="local-6989586621683135561"><span id="local-6989586621683135565"><span id="local-6989586621683135569"><span id="local-6989586621683135573"><span id="local-6989586621683135577"><span id="local-6989586621683135581"><span id="local-6989586621683135585"><span id="local-6989586621683135589"><span id="local-6989586621683135593"><span class="annot"><span class="annottext">Eq RegBitmap
+RegBitmap
+Eq RegBitmap =&gt;
+(RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int -&gt; RegBitmap)
+-&gt; RegBitmap
+-&gt; (Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int -&gt; Bool)
+-&gt; (RegBitmap -&gt; Maybe Int)
+-&gt; (RegBitmap -&gt; Int)
+-&gt; (RegBitmap -&gt; Bool)
+-&gt; (RegBitmap -&gt; Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int -&gt; RegBitmap)
+-&gt; (RegBitmap -&gt; Int)
+-&gt; Bits RegBitmap
+Int -&gt; RegBitmap
+RegBitmap -&gt; Bool
+RegBitmap -&gt; Int
+RegBitmap -&gt; Maybe Int
+RegBitmap -&gt; RegBitmap
+RegBitmap -&gt; Int -&gt; Bool
+RegBitmap -&gt; Int -&gt; RegBitmap
+RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; Int -&gt; a)
+-&gt; (a -&gt; Int -&gt; a)
+-&gt; a
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int -&gt; a)
+-&gt; (a -&gt; Int -&gt; a)
+-&gt; (a -&gt; Int -&gt; a)
+-&gt; (a -&gt; Int -&gt; Bool)
+-&gt; (a -&gt; Maybe Int)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; Bool)
+-&gt; (a -&gt; Int -&gt; a)
+-&gt; (a -&gt; Int -&gt; a)
+-&gt; (a -&gt; Int -&gt; a)
+-&gt; (a -&gt; Int -&gt; a)
+-&gt; (a -&gt; Int -&gt; a)
+-&gt; (a -&gt; Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; Bits a
+$c.&amp;. :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+.&amp;. :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+$c.|. :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+.|. :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+$cxor :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+xor :: RegBitmap -&gt; RegBitmap -&gt; RegBitmap
+$ccomplement :: RegBitmap -&gt; RegBitmap
+complement :: RegBitmap -&gt; RegBitmap
+$cshift :: RegBitmap -&gt; Int -&gt; RegBitmap
+shift :: RegBitmap -&gt; Int -&gt; RegBitmap
+$crotate :: RegBitmap -&gt; Int -&gt; RegBitmap
+rotate :: RegBitmap -&gt; Int -&gt; RegBitmap
+$czeroBits :: RegBitmap
+zeroBits :: RegBitmap
+$cbit :: Int -&gt; RegBitmap
+bit :: Int -&gt; RegBitmap
+$csetBit :: RegBitmap -&gt; Int -&gt; RegBitmap
+setBit :: RegBitmap -&gt; Int -&gt; RegBitmap
+$cclearBit :: RegBitmap -&gt; Int -&gt; RegBitmap
+clearBit :: RegBitmap -&gt; Int -&gt; RegBitmap
+$ccomplementBit :: RegBitmap -&gt; Int -&gt; RegBitmap
+complementBit :: RegBitmap -&gt; Int -&gt; RegBitmap
+$ctestBit :: RegBitmap -&gt; Int -&gt; Bool
+testBit :: RegBitmap -&gt; Int -&gt; Bool
+$cbitSizeMaybe :: RegBitmap -&gt; Maybe Int
+bitSizeMaybe :: RegBitmap -&gt; Maybe Int
+$cbitSize :: RegBitmap -&gt; Int
+bitSize :: RegBitmap -&gt; Int
+$cisSigned :: RegBitmap -&gt; Bool
+isSigned :: RegBitmap -&gt; Bool
+$cshiftL :: RegBitmap -&gt; Int -&gt; RegBitmap
+shiftL :: RegBitmap -&gt; Int -&gt; RegBitmap
+$cunsafeShiftL :: RegBitmap -&gt; Int -&gt; RegBitmap
+unsafeShiftL :: RegBitmap -&gt; Int -&gt; RegBitmap
+$cshiftR :: RegBitmap -&gt; Int -&gt; RegBitmap
+shiftR :: RegBitmap -&gt; Int -&gt; RegBitmap
+$cunsafeShiftR :: RegBitmap -&gt; Int -&gt; RegBitmap
+unsafeShiftR :: RegBitmap -&gt; Int -&gt; RegBitmap
+$crotateL :: RegBitmap -&gt; Int -&gt; RegBitmap
+rotateL :: RegBitmap -&gt; Int -&gt; RegBitmap
+$crotateR :: RegBitmap -&gt; Int -&gt; RegBitmap
+rotateR :: RegBitmap -&gt; Int -&gt; RegBitmap
+$cpopCount :: RegBitmap -&gt; Int
+popCount :: RegBitmap -&gt; Int
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bits.html#Bits"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Bits</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135623"><span id="local-6989586621683135628"><span id="local-6989586621683135632"><span class="annot"><span class="annottext">Bits RegBitmap
+Bits RegBitmap =&gt;
+(RegBitmap -&gt; Int)
+-&gt; (RegBitmap -&gt; Int) -&gt; (RegBitmap -&gt; Int) -&gt; FiniteBits RegBitmap
+RegBitmap -&gt; Int
+forall b.
+Bits b =&gt;
+(b -&gt; Int) -&gt; (b -&gt; Int) -&gt; (b -&gt; Int) -&gt; FiniteBits b
+$cfiniteBitSize :: RegBitmap -&gt; Int
+finiteBitSize :: RegBitmap -&gt; Int
+$ccountLeadingZeros :: RegBitmap -&gt; Int
+countLeadingZeros :: RegBitmap -&gt; Int
+$ccountTrailingZeros :: RegBitmap -&gt; Int
+countTrailingZeros :: RegBitmap -&gt; Int
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Bits.html#FiniteBits"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FiniteBits</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135641"><span class="annot"><span class="annottext">RegBitmap -&gt; SDoc
+(RegBitmap -&gt; SDoc) -&gt; Outputable RegBitmap
+forall a. (a -&gt; SDoc) -&gt; Outputable a
+$cppr :: RegBitmap -&gt; SDoc
+ppr :: RegBitmap -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-var hs-var hs-var hs-var">Outputable</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-comment">{- Note [GHCi TupleInfo]
+~~~~~~~~~~~~~~~~~~~~~~~~
+   This contains the data we need for passing unboxed tuples between
+   bytecode and native code
+
+   In general we closely follow the native calling convention that
+   GHC uses for unboxed tuples, but we don't use any registers in
+   bytecode. All tuple elements are expanded to use a full register
+   or a full word on the stack.
+
+   The position of tuple elements that are returned on the stack in
+   the native calling convention is unchanged when returning the same
+   tuple in bytecode.
+
+   The order of the remaining elements is determined by the register in
+   which they would have been returned, rather than by their position in
+   the tuple in the Haskell source code. This makes jumping between bytecode
+   and native code easier: A map of live registers is enough to convert the
+   tuple.
+
+   See GHC.StgToByteCode.layoutTuple for more details.
+-}</span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-keyword">data</span><span> </span><span id="NativeCallType"><span class="annot"><a href="GHC.ByteCode.Types.html#NativeCallType"><span class="hs-identifier hs-var">NativeCallType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NativePrimCall"><span class="annot"><a href="GHC.ByteCode.Types.html#NativePrimCall"><span class="hs-identifier hs-var">NativePrimCall</span></a></span></span><span>
+</span><span id="line-139"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="NativeTupleReturn"><span class="annot"><a href="GHC.ByteCode.Types.html#NativeTupleReturn"><span class="hs-identifier hs-var">NativeTupleReturn</span></a></span></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683135649"><span id="local-6989586621683135654"><span class="annot"><span class="annottext">NativeCallType -&gt; NativeCallType -&gt; Bool
+(NativeCallType -&gt; NativeCallType -&gt; Bool)
+-&gt; (NativeCallType -&gt; NativeCallType -&gt; Bool) -&gt; Eq NativeCallType
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NativeCallType -&gt; NativeCallType -&gt; Bool
+== :: NativeCallType -&gt; NativeCallType -&gt; Bool
+$c/= :: NativeCallType -&gt; NativeCallType -&gt; Bool
+/= :: NativeCallType -&gt; NativeCallType -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-keyword">data</span><span> </span><span id="NativeCallInfo"><span class="annot"><a href="GHC.ByteCode.Types.html#NativeCallInfo"><span class="hs-identifier hs-var">NativeCallInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NativeCallInfo"><span class="annot"><a href="GHC.ByteCode.Types.html#NativeCallInfo"><span class="hs-identifier hs-var">NativeCallInfo</span></a></span></span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="nativeCallType"><span class="annot"><span class="annottext">NativeCallInfo -&gt; NativeCallType
+</span><a href="GHC.ByteCode.Types.html#nativeCallType"><span class="hs-identifier hs-var hs-var">nativeCallType</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.ByteCode.Types.html#NativeCallType"><span class="hs-identifier hs-type">NativeCallType</span></a></span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nativeCallSize"><span class="annot"><span class="annottext">NativeCallInfo -&gt; WordOff
+</span><a href="GHC.ByteCode.Types.html#nativeCallSize"><span class="hs-identifier hs-var hs-var">nativeCallSize</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.ByteCode.Types.html#WordOff"><span class="hs-identifier hs-type">WordOff</span></a></span><span>   </span><span class="hs-comment">-- total size of arguments in words</span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nativeCallRegs"><span class="annot"><span class="annottext">NativeCallInfo -&gt; GlobalRegSet
+</span><a href="GHC.ByteCode.Types.html#nativeCallRegs"><span class="hs-identifier hs-var hs-var">nativeCallRegs</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Cmm.Expr.html#GlobalRegSet"><span class="hs-identifier hs-type">GlobalRegSet</span></a></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nativeCallStackSpillSize"><span class="annot"><span class="annottext">NativeCallInfo -&gt; WordOff
+</span><a href="GHC.ByteCode.Types.html#nativeCallStackSpillSize"><span class="hs-identifier hs-var hs-var">nativeCallStackSpillSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.ByteCode.Types.html#WordOff"><span class="hs-identifier hs-type">WordOff</span></a></span><span> </span><span class="hs-comment">{- words spilled on the stack by
+                                            GHCs native calling convention -}</span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#NativeCallInfo"><span class="hs-identifier hs-type">NativeCallInfo</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-151"></span><span>  </span><span id="local-6989586621683135683"><span class="annot"><span class="annottext">ppr :: NativeCallInfo -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#NativeCallInfo"><span class="hs-identifier hs-type">NativeCallInfo</span></a></span><span class="hs-special">{</span><span id="local-6989586621683135684"><span id="local-6989586621683135685"><span id="local-6989586621683135686"><span id="local-6989586621683135687"><span class="annot"><span class="annottext">GlobalRegSet
+NativeCallType
+WordOff
+nativeCallType :: NativeCallInfo -&gt; NativeCallType
+nativeCallSize :: NativeCallInfo -&gt; WordOff
+nativeCallRegs :: NativeCallInfo -&gt; GlobalRegSet
+nativeCallStackSpillSize :: NativeCallInfo -&gt; WordOff
+nativeCallType :: NativeCallType
+nativeCallSize :: WordOff
+nativeCallRegs :: GlobalRegSet
+nativeCallStackSpillSize :: WordOff
+</span><a href="GHC.ByteCode.Types.html#nativeCallType"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;arg_size&quot;</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">WordOff -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">WordOff
+</span><a href="#local-6989586621683135685"><span class="hs-identifier hs-var">nativeCallSize</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span>
+</span><span id="line-152"></span><span>                           </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;stack&quot;</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">WordOff -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">WordOff
+</span><a href="#local-6989586621683135687"><span class="hs-identifier hs-var">nativeCallStackSpillSize</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span>
+</span><span id="line-153"></span><span>                           </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;regs&quot;</span></span><span>  </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span>
+</span><span id="line-154"></span><span>                           </span><span class="annot"><span class="annottext">[SDoc] -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(GlobalReg -&gt; SDoc) -&gt; [GlobalReg] -&gt; [SDoc]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="GHC.Utils.Outputable.html#SDoc"><span class="hs-identifier hs-type">SDoc</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; SDoc) -&gt; (GlobalReg -&gt; String) -&gt; GlobalReg -&gt; SDoc
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GlobalReg -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([GlobalReg] -&gt; [SDoc]) -&gt; [GlobalReg] -&gt; [SDoc]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GlobalRegSet -&gt; [GlobalReg]
+forall r. RegSet r -&gt; [r]
+</span><a href="GHC.Cmm.Expr.html#regSetToList"><span class="hs-identifier hs-var">regSetToList</span></a></span><span> </span><span class="annot"><span class="annottext">GlobalRegSet
+</span><a href="#local-6989586621683135686"><span class="hs-identifier hs-var">nativeCallRegs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>
+</span><span id="line-155"></span><span>                           </span><span class="annot"><span class="annottext">Char -&gt; SDoc
+forall doc. IsLine doc =&gt; Char -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#char"><span class="hs-identifier hs-var">char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&gt;'</span></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="annot"><a href="GHC.ByteCode.Types.html#voidTupleReturnInfo"><span class="hs-identifier hs-type">voidTupleReturnInfo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#NativeCallInfo"><span class="hs-identifier hs-type">NativeCallInfo</span></a></span><span>
+</span><span id="line-159"></span><span id="voidTupleReturnInfo"><span class="annot"><span class="annottext">voidTupleReturnInfo :: NativeCallInfo
+</span><a href="GHC.ByteCode.Types.html#voidTupleReturnInfo"><span class="hs-identifier hs-var hs-var">voidTupleReturnInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NativeCallType
+-&gt; WordOff -&gt; GlobalRegSet -&gt; WordOff -&gt; NativeCallInfo
+</span><a href="GHC.ByteCode.Types.html#NativeCallInfo"><span class="hs-identifier hs-var">NativeCallInfo</span></a></span><span> </span><span class="annot"><span class="annottext">NativeCallType
+</span><a href="GHC.ByteCode.Types.html#NativeTupleReturn"><span class="hs-identifier hs-var">NativeTupleReturn</span></a></span><span> </span><span class="annot"><span class="annottext">WordOff
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">GlobalRegSet
+forall r. RegSet r
+</span><a href="GHC.Cmm.Expr.html#emptyRegSet"><span class="hs-identifier hs-var">emptyRegSet</span></a></span><span> </span><span class="annot"><span class="annottext">WordOff
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="annot"><a href="GHC.ByteCode.Types.html#voidPrimCallInfo"><span class="hs-identifier hs-type">voidPrimCallInfo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#NativeCallInfo"><span class="hs-identifier hs-type">NativeCallInfo</span></a></span><span>
+</span><span id="line-162"></span><span id="voidPrimCallInfo"><span class="annot"><span class="annottext">voidPrimCallInfo :: NativeCallInfo
+</span><a href="GHC.ByteCode.Types.html#voidPrimCallInfo"><span class="hs-identifier hs-var hs-var">voidPrimCallInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NativeCallType
+-&gt; WordOff -&gt; GlobalRegSet -&gt; WordOff -&gt; NativeCallInfo
+</span><a href="GHC.ByteCode.Types.html#NativeCallInfo"><span class="hs-identifier hs-var">NativeCallInfo</span></a></span><span> </span><span class="annot"><span class="annottext">NativeCallType
+</span><a href="GHC.ByteCode.Types.html#NativePrimCall"><span class="hs-identifier hs-var">NativePrimCall</span></a></span><span> </span><span class="annot"><span class="annottext">WordOff
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">GlobalRegSet
+forall r. RegSet r
+</span><a href="GHC.Cmm.Expr.html#emptyRegSet"><span class="hs-identifier hs-var">emptyRegSet</span></a></span><span> </span><span class="annot"><span class="annottext">WordOff
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="hs-keyword">type</span><span> </span><span id="ItblEnv"><span class="annot"><a href="GHC.ByteCode.Types.html#ItblEnv"><span class="hs-identifier hs-var">ItblEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="GHC.Types.Name.Env.html#NameEnv"><span class="hs-identifier hs-type">NameEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#ItblPtr"><span class="hs-identifier hs-type">ItblPtr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span class="hs-keyword">type</span><span> </span><span id="AddrEnv"><span class="annot"><a href="GHC.ByteCode.Types.html#AddrEnv"><span class="hs-identifier hs-var">AddrEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="GHC.Types.Name.Env.html#NameEnv"><span class="hs-identifier hs-type">NameEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#AddrPtr"><span class="hs-identifier hs-type">AddrPtr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>        </span><span class="hs-comment">-- We need the Name in the range so we know which</span><span>
+</span><span id="line-167"></span><span>        </span><span class="hs-comment">-- elements to filter out when unloading a module</span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="hs-keyword">newtype</span><span> </span><span id="ItblPtr"><span class="annot"><a href="GHC.ByteCode.Types.html#ItblPtr"><span class="hs-identifier hs-var">ItblPtr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ItblPtr"><span class="annot"><a href="GHC.ByteCode.Types.html#ItblPtr"><span class="hs-identifier hs-var">ItblPtr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#RemotePtr"><span class="hs-identifier hs-type">RemotePtr</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Heap.InfoTable.Types.html#StgInfoTable"><span class="hs-identifier hs-type">Heap.StgInfoTable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683135697"><span id="local-6989586621683135702"><span id="local-6989586621683135706"><span class="annot"><span class="annottext">Int -&gt; ItblPtr -&gt; ShowS
+[ItblPtr] -&gt; ShowS
+ItblPtr -&gt; String
+(Int -&gt; ItblPtr -&gt; ShowS)
+-&gt; (ItblPtr -&gt; String) -&gt; ([ItblPtr] -&gt; ShowS) -&gt; Show ItblPtr
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ItblPtr -&gt; ShowS
+showsPrec :: Int -&gt; ItblPtr -&gt; ShowS
+$cshow :: ItblPtr -&gt; String
+show :: ItblPtr -&gt; String
+$cshowList :: [ItblPtr] -&gt; ShowS
+showList :: [ItblPtr] -&gt; ShowS
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683135709"><span class="annot"><span class="annottext">ItblPtr -&gt; ()
+(ItblPtr -&gt; ()) -&gt; NFData ItblPtr
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: ItblPtr -&gt; ()
+rnf :: ItblPtr -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span class="hs-keyword">newtype</span><span> </span><span id="AddrPtr"><span class="annot"><a href="GHC.ByteCode.Types.html#AddrPtr"><span class="hs-identifier hs-var">AddrPtr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AddrPtr"><span class="annot"><a href="GHC.ByteCode.Types.html#AddrPtr"><span class="hs-identifier hs-var">AddrPtr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#RemotePtr"><span class="hs-identifier hs-type">RemotePtr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683135717"><span class="annot"><span class="annottext">AddrPtr -&gt; ()
+(AddrPtr -&gt; ()) -&gt; NFData AddrPtr
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: AddrPtr -&gt; ()
+rnf :: AddrPtr -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="hs-comment">{-
+--------------------------------------------------------------------------------
+-- * Byte Code Objects (BCOs)
+--------------------------------------------------------------------------------
+
+Note [Case continuation BCOs]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A stack with a BCO stack frame at the top looks like:
+
+                                      (an StgBCO)
+         |       ...        |      +---&gt; +---------[1]--+
+         +------------------+      |     | info_tbl_ptr | ------+
+         |    OTHER FRAME   |      |     +--------------+       |
+         +------------------+      |     | StgArrBytes* | &lt;--- the byte code
+         |       ...        |      |     +--------------+       |
+         +------------------+      |     |     ...      |       |
+         |       fvs1       |      |                            |
+         +------------------+      |                            |
+         |       ...        |      |        (StgInfoTable)      |
+         +------------------+      |           +----------+ &lt;---+
+         |      args1       |      |           |    ...   |
+         +------------------+      |           +----------+
+         |   some StgBCO*   | -----+           | type=BCO |
+         +------------------+                  +----------+
+      Sp | stg_apply_interp | -----+           |   ...    |
+         +------------------+      |
+                                   |
+                                   |   (StgInfoTable)
+                                   +----&gt; +--------------+
+                                          |     ...      |
+                                          +--------------+
+                                          | type=RET_BCO |
+                                          +--------------+
+                                          |     ...      |
+
+
+In the case of bytecode objects found on the heap (e.g. thunks and functions),
+the bytecode may refer to free variables recorded in the BCO closure itself.
+By contrast, in /case continuation/ BCOs the code may additionally refer to free
+variables in their stack frame. These are references by way of statically known
+stack offsets (tracked using `BCEnv` in `StgToByteCode`).
+
+For instance, consider the function:
+
+    f x y = case y of ... -&gt; g x
+
+Here the RHS of the alternative refers to `x`, which will be recorded in the
+continuation stack frame of the `case`.
+
+Even less obvious is that case continuation BCOs may also refer to free
+variables in *parent* stack frames. For instance,
+
+    f x y = case y of
+      ... -&gt; case g x of
+        ... -&gt; x
+
+Here, the RHS of the first alternative still refers to the `x` in the stack
+frame of the `case`. Additionally, the RHS of the second alternative also
+refers to `x` but it must traverse to its case's *parent* stack frame to find `x`.
+
+However, in /case continuation/ BCOs, the code may additionally refer to free
+variables that are outside of that BCO's stack frame -- some free variables of a
+case continuation BCO may only be found in the stack frame of a parent BCO.
+
+Yet, references to these out-of-frame variables are also done in terms of stack
+offsets. Thus, they rely on the position of /another frame/ to be fixed. (See
+Note [PUSH_L underflow] for more information about references to previous
+frames and nested BCOs)
+
+This makes case continuation BCOs special: unlike normal BCOs, case cont BCO
+frames cannot be moved on the stack independently from their parent BCOs.
+-}</span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span class="hs-keyword">data</span><span> </span><span id="UnlinkedBCO"><span class="annot"><a href="GHC.ByteCode.Types.html#UnlinkedBCO"><span class="hs-identifier hs-var">UnlinkedBCO</span></a></span></span><span>
+</span><span id="line-249"></span><span>   </span><span class="hs-glyph">=</span><span> </span><span id="UnlinkedBCO"><span class="annot"><a href="GHC.ByteCode.Types.html#UnlinkedBCO"><span class="hs-identifier hs-var">UnlinkedBCO</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-250"></span><span>        </span><span id="unlinkedBCOName"><span class="annot"><span class="annottext">UnlinkedBCO -&gt; Name
+</span><a href="GHC.ByteCode.Types.html#unlinkedBCOName"><span class="hs-identifier hs-var hs-var">unlinkedBCOName</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-251"></span><span>        </span><span id="unlinkedBCOArity"><span class="annot"><span class="annottext">UnlinkedBCO -&gt; Int
+</span><a href="GHC.ByteCode.Types.html#unlinkedBCOArity"><span class="hs-identifier hs-var hs-var">unlinkedBCOArity</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-252"></span><span>        </span><span id="unlinkedBCOInstrs"><span class="annot"><span class="annottext">UnlinkedBCO -&gt; BCOByteArray Word16
+</span><a href="GHC.ByteCode.Types.html#unlinkedBCOInstrs"><span class="hs-identifier hs-var hs-var">unlinkedBCOInstrs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#BCOByteArray"><span class="hs-identifier hs-type">BCOByteArray</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>      </span><span class="hs-comment">-- insns</span><span>
+</span><span id="line-253"></span><span>        </span><span id="unlinkedBCOBitmap"><span class="annot"><span class="annottext">UnlinkedBCO -&gt; BCOByteArray Word
+</span><a href="GHC.ByteCode.Types.html#unlinkedBCOBitmap"><span class="hs-identifier hs-var hs-var">unlinkedBCOBitmap</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#BCOByteArray"><span class="hs-identifier hs-type">BCOByteArray</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>      </span><span class="hs-comment">-- bitmap</span><span>
+</span><span id="line-254"></span><span>        </span><span id="unlinkedBCOLits"><span class="annot"><span class="annottext">UnlinkedBCO -&gt; FlatBag BCONPtr
+</span><a href="GHC.ByteCode.Types.html#unlinkedBCOLits"><span class="hs-identifier hs-var hs-var">unlinkedBCOLits</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.FlatBag.html#FlatBag"><span class="hs-identifier hs-type">FlatBag</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtr"><span class="hs-identifier hs-type">BCONPtr</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>       </span><span class="hs-comment">-- non-ptrs</span><span>
+</span><span id="line-255"></span><span>        </span><span id="unlinkedBCOPtrs"><span class="annot"><span class="annottext">UnlinkedBCO -&gt; FlatBag BCOPtr
+</span><a href="GHC.ByteCode.Types.html#unlinkedBCOPtrs"><span class="hs-identifier hs-var hs-var">unlinkedBCOPtrs</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.FlatBag.html#FlatBag"><span class="hs-identifier hs-type">FlatBag</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtr"><span class="hs-identifier hs-type">BCOPtr</span></a></span><span class="hs-special">)</span><span>         </span><span class="hs-comment">-- ptrs</span><span>
+</span><span id="line-256"></span><span>   </span><span class="hs-special">}</span><span>
+</span><span id="line-257"></span><span>
+</span><span id="line-258"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#UnlinkedBCO"><span class="hs-identifier hs-type">UnlinkedBCO</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-259"></span><span>  </span><span id="local-6989586621683135735"><span class="annot"><span class="annottext">rnf :: UnlinkedBCO -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#UnlinkedBCO"><span class="hs-identifier hs-type">UnlinkedBCO</span></a></span><span class="hs-special">{</span><span id="local-6989586621683135736"><span id="local-6989586621683135737"><span id="local-6989586621683135738"><span id="local-6989586621683135739"><span id="local-6989586621683135740"><span id="local-6989586621683135741"><span class="annot"><span class="annottext">Int
+BCOByteArray Word
+BCOByteArray Word16
+Name
+FlatBag BCONPtr
+FlatBag BCOPtr
+unlinkedBCOName :: UnlinkedBCO -&gt; Name
+unlinkedBCOArity :: UnlinkedBCO -&gt; Int
+unlinkedBCOInstrs :: UnlinkedBCO -&gt; BCOByteArray Word16
+unlinkedBCOBitmap :: UnlinkedBCO -&gt; BCOByteArray Word
+unlinkedBCOLits :: UnlinkedBCO -&gt; FlatBag BCONPtr
+unlinkedBCOPtrs :: UnlinkedBCO -&gt; FlatBag BCOPtr
+unlinkedBCOName :: Name
+unlinkedBCOArity :: Int
+unlinkedBCOInstrs :: BCOByteArray Word16
+unlinkedBCOBitmap :: BCOByteArray Word
+unlinkedBCOLits :: FlatBag BCONPtr
+unlinkedBCOPtrs :: FlatBag BCOPtr
+</span><a href="GHC.ByteCode.Types.html#unlinkedBCOName"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-260"></span><span>    </span><span class="annot"><span class="annottext">FlatBag BCONPtr -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">FlatBag BCONPtr
+</span><a href="#local-6989586621683135740"><span class="hs-identifier hs-var">unlinkedBCOLits</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span>
+</span><span id="line-261"></span><span>    </span><span class="annot"><span class="annottext">FlatBag BCOPtr -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">FlatBag BCOPtr
+</span><a href="#local-6989586621683135741"><span class="hs-identifier hs-var">unlinkedBCOPtrs</span></a></span><span>
+</span><span id="line-262"></span><span>
+</span><span id="line-263"></span><span class="hs-keyword">data</span><span> </span><span id="BCOPtr"><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtr"><span class="hs-identifier hs-var">BCOPtr</span></a></span></span><span>
+</span><span id="line-264"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="BCOPtrName"><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtrName"><span class="hs-identifier hs-var">BCOPtrName</span></a></span></span><span>   </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span>
+</span><span id="line-265"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BCOPtrPrimOp"><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtrPrimOp"><span class="hs-identifier hs-var">BCOPtrPrimOp</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Builtin.PrimOps.html#PrimOp"><span class="hs-identifier hs-type">PrimOp</span></a></span><span>
+</span><span id="line-266"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BCOPtrBCO"><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtrBCO"><span class="hs-identifier hs-var">BCOPtrBCO</span></a></span></span><span>    </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.ByteCode.Types.html#UnlinkedBCO"><span class="hs-identifier hs-type">UnlinkedBCO</span></a></span><span>
+</span><span id="line-267"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BCOPtrBreakArray"><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtrBreakArray"><span class="hs-identifier hs-var">BCOPtrBreakArray</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span>
+</span><span id="line-268"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ Converted to the actual 'BreakArray' remote pointer at link-time</span></span><span>
+</span><span id="line-269"></span><span>
+</span><span id="line-270"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtr"><span class="hs-identifier hs-type">BCOPtr</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-271"></span><span>  </span><span id="local-6989586621683135750"><span class="annot"><span class="annottext">rnf :: BCOPtr -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtrBCO"><span class="hs-identifier hs-type">BCOPtrBCO</span></a></span><span> </span><span id="local-6989586621683135751"><span class="annot"><span class="annottext">UnlinkedBCO
+</span><a href="#local-6989586621683135751"><span class="hs-identifier hs-var">bco</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnlinkedBCO -&gt; ()
+forall a. NFData a =&gt; a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span class="annot"><span class="annottext">UnlinkedBCO
+</span><a href="#local-6989586621683135751"><span class="hs-identifier hs-var">bco</span></a></span><span>
+</span><span id="line-272"></span><span>  </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var">rnf</span></a></span><span> </span><span id="local-6989586621683135752"><span class="annot"><span class="annottext">BCOPtr
+</span><a href="#local-6989586621683135752"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BCOPtr
+</span><a href="#local-6989586621683135752"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">BCOPtr -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-273"></span><span>
+</span><span id="line-274"></span><span class="hs-keyword">data</span><span> </span><span id="BCONPtr"><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtr"><span class="hs-identifier hs-var">BCONPtr</span></a></span></span><span>
+</span><span id="line-275"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="BCONPtrWord"><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrWord"><span class="hs-identifier hs-var">BCONPtrWord</span></a></span></span><span>  </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span>
+</span><span id="line-276"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BCONPtrLbl"><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrLbl"><span class="hs-identifier hs-var">BCONPtrLbl</span></a></span></span><span>   </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span>
+</span><span id="line-277"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BCONPtrItbl"><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrItbl"><span class="hs-identifier hs-var">BCONPtrItbl</span></a></span></span><span>  </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span>
+</span><span id="line-278"></span><span>  </span><span class="hs-comment">-- | A reference to a top-level string literal; see</span><span>
+</span><span id="line-279"></span><span>  </span><span class="hs-comment">-- Note [Generating code for top-level string literal bindings] in GHC.StgToByteCode.</span><span>
+</span><span id="line-280"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BCONPtrAddr"><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrAddr"><span class="hs-identifier hs-var">BCONPtrAddr</span></a></span></span><span>  </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span>
+</span><span id="line-281"></span><span>  </span><span class="hs-comment">-- | A top-level string literal.</span><span>
+</span><span id="line-282"></span><span>  </span><span class="hs-comment">-- Also see Note [Allocating string literals] in GHC.ByteCode.Asm.</span><span>
+</span><span id="line-283"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BCONPtrStr"><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrStr"><span class="hs-identifier hs-var">BCONPtrStr</span></a></span></span><span>   </span><span class="hs-glyph">!</span><span class="annot"><a href="../../bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-284"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Same as 'BCONPtrStr' but with benefits of 'FastString' interning logic.</span></span><span>
+</span><span id="line-285"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BCONPtrFS"><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrFS"><span class="hs-identifier hs-var">BCONPtrFS</span></a></span></span><span>    </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span>
+</span><span id="line-286"></span><span>  </span><span class="annot"><span class="hs-comment">-- | A libffi ffi_cif function prototype.</span></span><span>
+</span><span id="line-287"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BCONPtrFFIInfo"><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrFFIInfo"><span class="hs-identifier hs-var">BCONPtrFFIInfo</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.ByteCode.Types.html#FFIInfo"><span class="hs-identifier hs-type">FFIInfo</span></a></span><span>
+</span><span id="line-288"></span><span>  </span><span class="annot"><span class="hs-comment">-- | A 'CostCentre' remote pointer array's respective 'BreakpointId'</span></span><span>
+</span><span id="line-289"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BCONPtrCostCentre"><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrCostCentre"><span class="hs-identifier hs-var">BCONPtrCostCentre</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span>
+</span><span id="line-290"></span><span>
+</span><span id="line-291"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtr"><span class="hs-identifier hs-type">BCONPtr</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-292"></span><span>  </span><span id="local-6989586621683135765"><span class="annot"><span class="annottext">rnf :: BCONPtr -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rnf"><span class="hs-identifier hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span id="local-6989586621683135766"><span class="annot"><span class="annottext">BCONPtr
+</span><a href="#local-6989586621683135766"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BCONPtr
+</span><a href="#local-6989586621683135766"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">BCONPtr -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-293"></span><span>
+</span><span id="line-294"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#UnlinkedBCO"><span class="hs-identifier hs-type">UnlinkedBCO</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-295"></span><span>   </span><span id="local-6989586621683135777"><span class="annot"><span class="annottext">ppr :: UnlinkedBCO -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.ByteCode.Types.html#UnlinkedBCO"><span class="hs-identifier hs-type">UnlinkedBCO</span></a></span><span> </span><span id="local-6989586621683135778"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683135778"><span class="hs-identifier hs-var">nm</span></a></span></span><span> </span><span id="local-6989586621683135779"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621683135779"><span class="hs-identifier hs-var">_arity</span></a></span></span><span> </span><span id="local-6989586621683135780"><span class="annot"><span class="annottext">BCOByteArray Word16
+</span><a href="#local-6989586621683135780"><span class="hs-identifier hs-var">_insns</span></a></span></span><span> </span><span id="local-6989586621683135781"><span class="annot"><span class="annottext">BCOByteArray Word
+</span><a href="#local-6989586621683135781"><span class="hs-identifier hs-var">_bitmap</span></a></span></span><span> </span><span id="local-6989586621683135782"><span class="annot"><span class="annottext">FlatBag BCONPtr
+</span><a href="#local-6989586621683135782"><span class="hs-identifier hs-var">lits</span></a></span></span><span> </span><span id="local-6989586621683135783"><span class="annot"><span class="annottext">FlatBag BCOPtr
+</span><a href="#local-6989586621683135783"><span class="hs-identifier hs-var">ptrs</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-296"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[SDoc] -&gt; SDoc
+forall doc. IsLine doc =&gt; [doc] -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#sep"><span class="hs-identifier hs-var">sep</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;BCO&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Name -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683135778"><span class="hs-identifier hs-var">nm</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;with&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-297"></span><span>             </span><span class="annot"><span class="annottext">Word -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FlatBag BCONPtr -&gt; Word
+forall a. FlatBag a -&gt; Word
+</span><a href="GHC.Data.FlatBag.html#sizeFlatBag"><span class="hs-identifier hs-var">sizeFlatBag</span></a></span><span> </span><span class="annot"><span class="annottext">FlatBag BCONPtr
+</span><a href="#local-6989586621683135782"><span class="hs-identifier hs-var">lits</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;lits&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-298"></span><span>             </span><span class="annot"><span class="annottext">Word -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FlatBag BCOPtr -&gt; Word
+forall a. FlatBag a -&gt; Word
+</span><a href="GHC.Data.FlatBag.html#sizeFlatBag"><span class="hs-identifier hs-var">sizeFlatBag</span></a></span><span> </span><span class="annot"><span class="annottext">FlatBag BCOPtr
+</span><a href="#local-6989586621683135783"><span class="hs-identifier hs-var">ptrs</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ptrs&quot;</span></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-299"></span><span>
+</span><span id="line-300"></span></pre></body></html>

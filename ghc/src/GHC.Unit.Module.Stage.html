@@ -1,0 +1,225 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span id="local-6989586621682664515"><span id="local-6989586621682664516"></span></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html"><span class="hs-identifier">GHC.Unit.Module.Stage</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier">ModuleStage</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-2"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#allStages"><span class="hs-identifier">allStages</span></a></span><span>
+</span><span id="line-3"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#nowAndFutureStages"><span class="hs-identifier">nowAndFutureStages</span></a></span><span>
+</span><span id="line-4"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#onlyFutureStages"><span class="hs-identifier">onlyFutureStages</span></a></span><span>
+</span><span id="line-5"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#minStage"><span class="hs-identifier">minStage</span></a></span><span>
+</span><span id="line-6"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#maxStage"><span class="hs-identifier">maxStage</span></a></span><span>
+</span><span id="line-7"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#zeroStage"><span class="hs-identifier">zeroStage</span></a></span><span>
+</span><span id="line-8"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#decModuleStage"><span class="hs-identifier">decModuleStage</span></a></span><span>
+</span><span id="line-9"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#incModuleStage"><span class="hs-identifier">incModuleStage</span></a></span><span>
+</span><span id="line-10"></span><span>                             </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">{- Note [Stage vs Level]
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Modules are compiled at a specific stage. Levels within a module are interpreted
+as offsets to the specific stage at which the module is being compiled.
+
+* A **level** is a typechecking concept. The type checker performs level checking
+  to ensure that the evaluation can proceed in a well-staged manner.
+* A **stage** is an operational construct. The execution of the program happens
+  in stages.
+
+GHC at the moment knows about two stages, a module is either compiled for
+compile time (*C*) or runtime (*R*), with *C* before *R*. Then:
+
+* The main module is compiled for `R`.
+
+* A normal import does not shift the stage at which the dependent module is required.
+
+* If a module `M` splice imports module `A`, then compiling `M` at stage
+  *R* requires compiling module `A` at stage *C*.
+
+* If a module `N` quote imports module `B`, then compiling `N` at stage
+  *C* requires compiling module `B` at stage *R*.
+
+The compiler can then choose appropiately how modules needed at `C` are compiled
+and how modules needed at `R` are compiled.
+
+For example:
+
+* In `-fno-code` mode, `C` modules may be compiled in dynamic way, but `R` modules
+  are not compiled at all.
+* When using a profiled GHC. `C` modules must be compiled in profiled way but `R` modules
+  will be compiled in static way.
+
+Further structure as needed by cross-compilation settings may require more stages.
+
+-}</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- The order of these constructors is important for definitions such as</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- 'futureStages'.</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">data</span><span> </span><span id="ModuleStage"><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-var">ModuleStage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CompileStage"><span class="annot"><a href="GHC.Unit.Module.Stage.html#CompileStage"><span class="hs-identifier hs-var">CompileStage</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="RunStage"><span class="annot"><a href="GHC.Unit.Module.Stage.html#RunStage"><span class="hs-identifier hs-var">RunStage</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682664541"><span id="local-6989586621682664546"><span class="annot"><span class="annottext">ModuleStage -&gt; ModuleStage -&gt; Bool
+(ModuleStage -&gt; ModuleStage -&gt; Bool)
+-&gt; (ModuleStage -&gt; ModuleStage -&gt; Bool) -&gt; Eq ModuleStage
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ModuleStage -&gt; ModuleStage -&gt; Bool
+== :: ModuleStage -&gt; ModuleStage -&gt; Bool
+$c/= :: ModuleStage -&gt; ModuleStage -&gt; Bool
+/= :: ModuleStage -&gt; ModuleStage -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682664552"><span id="local-6989586621682664554"><span id="local-6989586621682664556"><span id="local-6989586621682664560"><span id="local-6989586621682664563"><span id="local-6989586621682664566"><span id="local-6989586621682664569"><span class="annot"><span class="annottext">Eq ModuleStage
+Eq ModuleStage =&gt;
+(ModuleStage -&gt; ModuleStage -&gt; Ordering)
+-&gt; (ModuleStage -&gt; ModuleStage -&gt; Bool)
+-&gt; (ModuleStage -&gt; ModuleStage -&gt; Bool)
+-&gt; (ModuleStage -&gt; ModuleStage -&gt; Bool)
+-&gt; (ModuleStage -&gt; ModuleStage -&gt; Bool)
+-&gt; (ModuleStage -&gt; ModuleStage -&gt; ModuleStage)
+-&gt; (ModuleStage -&gt; ModuleStage -&gt; ModuleStage)
+-&gt; Ord ModuleStage
+ModuleStage -&gt; ModuleStage -&gt; Bool
+ModuleStage -&gt; ModuleStage -&gt; Ordering
+ModuleStage -&gt; ModuleStage -&gt; ModuleStage
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ModuleStage -&gt; ModuleStage -&gt; Ordering
+compare :: ModuleStage -&gt; ModuleStage -&gt; Ordering
+$c&lt; :: ModuleStage -&gt; ModuleStage -&gt; Bool
+&lt; :: ModuleStage -&gt; ModuleStage -&gt; Bool
+$c&lt;= :: ModuleStage -&gt; ModuleStage -&gt; Bool
+&lt;= :: ModuleStage -&gt; ModuleStage -&gt; Bool
+$c&gt; :: ModuleStage -&gt; ModuleStage -&gt; Bool
+&gt; :: ModuleStage -&gt; ModuleStage -&gt; Bool
+$c&gt;= :: ModuleStage -&gt; ModuleStage -&gt; Bool
+&gt;= :: ModuleStage -&gt; ModuleStage -&gt; Bool
+$cmax :: ModuleStage -&gt; ModuleStage -&gt; ModuleStage
+max :: ModuleStage -&gt; ModuleStage -&gt; ModuleStage
+$cmin :: ModuleStage -&gt; ModuleStage -&gt; ModuleStage
+min :: ModuleStage -&gt; ModuleStage -&gt; ModuleStage
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682664577"><span id="local-6989586621682664584"><span id="local-6989586621682664589"><span id="local-6989586621682664595"><span id="local-6989586621682664598"><span id="local-6989586621682664603"><span id="local-6989586621682664610"><span id="local-6989586621682664613"><span class="annot"><span class="annottext">Int -&gt; ModuleStage
+ModuleStage -&gt; Int
+ModuleStage -&gt; [ModuleStage]
+ModuleStage -&gt; ModuleStage
+ModuleStage -&gt; ModuleStage -&gt; [ModuleStage]
+ModuleStage -&gt; ModuleStage -&gt; ModuleStage -&gt; [ModuleStage]
+(ModuleStage -&gt; ModuleStage)
+-&gt; (ModuleStage -&gt; ModuleStage)
+-&gt; (Int -&gt; ModuleStage)
+-&gt; (ModuleStage -&gt; Int)
+-&gt; (ModuleStage -&gt; [ModuleStage])
+-&gt; (ModuleStage -&gt; ModuleStage -&gt; [ModuleStage])
+-&gt; (ModuleStage -&gt; ModuleStage -&gt; [ModuleStage])
+-&gt; (ModuleStage -&gt; ModuleStage -&gt; ModuleStage -&gt; [ModuleStage])
+-&gt; Enum ModuleStage
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: ModuleStage -&gt; ModuleStage
+succ :: ModuleStage -&gt; ModuleStage
+$cpred :: ModuleStage -&gt; ModuleStage
+pred :: ModuleStage -&gt; ModuleStage
+$ctoEnum :: Int -&gt; ModuleStage
+toEnum :: Int -&gt; ModuleStage
+$cfromEnum :: ModuleStage -&gt; Int
+fromEnum :: ModuleStage -&gt; Int
+$cenumFrom :: ModuleStage -&gt; [ModuleStage]
+enumFrom :: ModuleStage -&gt; [ModuleStage]
+$cenumFromThen :: ModuleStage -&gt; ModuleStage -&gt; [ModuleStage]
+enumFromThen :: ModuleStage -&gt; ModuleStage -&gt; [ModuleStage]
+$cenumFromTo :: ModuleStage -&gt; ModuleStage -&gt; [ModuleStage]
+enumFromTo :: ModuleStage -&gt; ModuleStage -&gt; [ModuleStage]
+$cenumFromThenTo :: ModuleStage -&gt; ModuleStage -&gt; ModuleStage -&gt; [ModuleStage]
+enumFromThenTo :: ModuleStage -&gt; ModuleStage -&gt; ModuleStage -&gt; [ModuleStage]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682664621"><span id="local-6989586621682664623"><span class="annot"><span class="annottext">ModuleStage
+ModuleStage -&gt; ModuleStage -&gt; Bounded ModuleStage
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: ModuleStage
+minBound :: ModuleStage
+$cmaxBound :: ModuleStage
+maxBound :: ModuleStage
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><a href="GHC.Unit.Module.Stage.html#allStages"><span class="hs-identifier hs-type">allStages</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-type">ModuleStage</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span id="allStages"><span class="annot"><span class="annottext">allStages :: [ModuleStage]
+</span><a href="GHC.Unit.Module.Stage.html#allStages"><span class="hs-identifier hs-var hs-var">allStages</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ModuleStage
+forall a. Bounded a =&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#minBound"><span class="hs-identifier hs-var">minBound</span></a></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">ModuleStage
+forall a. Bounded a =&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="GHC.Unit.Module.Stage.html#nowAndFutureStages"><span class="hs-identifier hs-type">nowAndFutureStages</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-type">ModuleStage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-type">ModuleStage</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span id="nowAndFutureStages"><span class="annot"><span class="annottext">nowAndFutureStages :: ModuleStage -&gt; [ModuleStage]
+</span><a href="GHC.Unit.Module.Stage.html#nowAndFutureStages"><span class="hs-identifier hs-var hs-var">nowAndFutureStages</span></a></span></span><span> </span><span id="local-6989586621682664627"><span class="annot"><span class="annottext">ModuleStage
+</span><a href="#local-6989586621682664627"><span class="hs-identifier hs-var">cur_st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="#local-6989586621682664627"><span class="hs-identifier hs-var">cur_st</span></a></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><a href="GHC.Unit.Module.Stage.html#onlyFutureStages"><span class="hs-identifier hs-type">onlyFutureStages</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-type">ModuleStage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-type">ModuleStage</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span id="onlyFutureStages"><span class="annot"><span class="annottext">onlyFutureStages :: ModuleStage -&gt; [ModuleStage]
+</span><a href="GHC.Unit.Module.Stage.html#onlyFutureStages"><span class="hs-identifier hs-var hs-var">onlyFutureStages</span></a></span></span><span> </span><span id="local-6989586621682664628"><span class="annot"><span class="annottext">ModuleStage
+</span><a href="#local-6989586621682664628"><span class="hs-identifier hs-var">cur_st</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="#local-6989586621682664628"><span class="hs-identifier hs-var">cur_st</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleStage -&gt; ModuleStage -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleStage
+forall a. Bounded a =&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-65"></span><span class="annot"><a href="GHC.Unit.Module.Stage.html#onlyFutureStages"><span class="hs-identifier hs-var">onlyFutureStages</span></a></span><span> </span><span id="local-6989586621682664629"><span class="annot"><span class="annottext">ModuleStage
+</span><a href="#local-6989586621682664629"><span class="hs-identifier hs-var">cur_st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ModuleStage -&gt; ModuleStage
+forall a. Enum a =&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#succ"><span class="hs-identifier hs-var">succ</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="#local-6989586621682664629"><span class="hs-identifier hs-var">cur_st</span></a></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="GHC.Unit.Module.Stage.html#minStage"><span class="hs-identifier hs-type">minStage</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-type">ModuleStage</span></a></span><span>
+</span><span id="line-68"></span><span id="minStage"><span class="annot"><span class="annottext">minStage :: ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#minStage"><span class="hs-identifier hs-var hs-var">minStage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleStage
+forall a. Bounded a =&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#minBound"><span class="hs-identifier hs-var">minBound</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="GHC.Unit.Module.Stage.html#maxStage"><span class="hs-identifier hs-type">maxStage</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-type">ModuleStage</span></a></span><span>
+</span><span id="line-71"></span><span id="maxStage"><span class="annot"><span class="annottext">maxStage :: ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#maxStage"><span class="hs-identifier hs-var hs-var">maxStage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleStage
+forall a. Bounded a =&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-type">ModuleStage</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621682664636"><span class="annot"><span class="annottext">ppr :: ModuleStage -&gt; SDoc
+</span><a href="#local-6989586621682664636"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#CompileStage"><span class="hs-identifier hs-var">CompileStage</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;compile&quot;</span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#RunStage"><span class="hs-identifier hs-var">RunStage</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SDoc
+forall doc. IsLine doc =&gt; String -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;run&quot;</span></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="annot"><a href="GHC.Unit.Module.Stage.html#zeroStage"><span class="hs-identifier hs-type">zeroStage</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-type">ModuleStage</span></a></span><span>
+</span><span id="line-78"></span><span id="zeroStage"><span class="annot"><span class="annottext">zeroStage :: ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#zeroStage"><span class="hs-identifier hs-var hs-var">zeroStage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#RunStage"><span class="hs-identifier hs-var">RunStage</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="annot"><a href="GHC.Unit.Module.Stage.html#decModuleStage"><span class="hs-identifier hs-type">decModuleStage</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#incModuleStage"><span class="hs-identifier hs-type">incModuleStage</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-type">ModuleStage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Stage.html#ModuleStage"><span class="hs-identifier hs-type">ModuleStage</span></a></span><span>
+</span><span id="line-81"></span><span id="incModuleStage"><span class="annot"><span class="annottext">incModuleStage :: ModuleStage -&gt; ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#incModuleStage"><span class="hs-identifier hs-var hs-var">incModuleStage</span></a></span></span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#RunStage"><span class="hs-identifier hs-var">RunStage</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#RunStage"><span class="hs-identifier hs-var">RunStage</span></a></span><span>
+</span><span id="line-82"></span><span class="annot"><a href="GHC.Unit.Module.Stage.html#incModuleStage"><span class="hs-identifier hs-var">incModuleStage</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#CompileStage"><span class="hs-identifier hs-var">CompileStage</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#RunStage"><span class="hs-identifier hs-var">RunStage</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span id="decModuleStage"><span class="annot"><span class="annottext">decModuleStage :: ModuleStage -&gt; ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#decModuleStage"><span class="hs-identifier hs-var hs-var">decModuleStage</span></a></span></span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#RunStage"><span class="hs-identifier hs-var">RunStage</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#CompileStage"><span class="hs-identifier hs-var">CompileStage</span></a></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="GHC.Unit.Module.Stage.html#decModuleStage"><span class="hs-identifier hs-var">decModuleStage</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#CompileStage"><span class="hs-identifier hs-var">CompileStage</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleStage
+</span><a href="GHC.Unit.Module.Stage.html#RunStage"><span class="hs-identifier hs-var">RunStage</span></a></span><span>
+</span><span id="line-86"></span></pre></body></html>
