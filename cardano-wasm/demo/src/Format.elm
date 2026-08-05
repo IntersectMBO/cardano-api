@@ -1,4 +1,4 @@
-module Format exposing (ada, adaToLovelace, amountError, lovelaceToAda, orDefault, shorten)
+module Format exposing (ada, adaToLovelace, amountError, digits, lovelaceToAda, orDefault, shorten)
 
 {-| String formatting and parsing: ada ↔ lovelace, abbreviation, small text helpers.
 -}
@@ -28,6 +28,7 @@ adaToLovelace s =
 
 
 {-| String.toInt restricted to plain digit runs (rejects signs and exponents).
+Also the parser for Blockfrost's decimal quantity strings.
 -}
 digits : String -> Maybe Int
 digits str =
@@ -67,11 +68,17 @@ lovelaceToAda l =
         a =
             abs l
 
+        rest =
+            modBy 1000000 a
+
         whole =
-            a // 1000000
+            -- Elm's // truncates through a 32-bit cast, which garbles whole-ADA
+            -- counts above ~2.1e9. Subtracting the remainder first makes the
+            -- float division exact, so floor is safe for the full Int range.
+            floor (toFloat (a - rest) / 1.0e6)
 
         frac =
-            String.padLeft 6 '0' (String.fromInt (modBy 1000000 a)) |> stripTrailingZeros
+            String.padLeft 6 '0' (String.fromInt rest) |> stripTrailingZeros
     in
     sign
         ++ String.fromInt whole

@@ -1,15 +1,19 @@
 module State exposing
     ( addWallet
     , aliasOf
+    , currentKey
     , emptyRestoreForm
     , getWallet
     , init
     , log
     , mapWallet
+    , setCurrentKey
     , setRestorePay
     , setRestoreStake
     , toastNow
     , toggleRestore
+    , utxosTruncated
+    , walletBalance
     )
 
 {-| Everything about the Model: the initial state, derived queries (what the view
@@ -28,9 +32,11 @@ import Types exposing (..)
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { network = Preview
+      , deriving = False
       , wallets = []
       , nextWid = 1
       , modal = NoModal
+      , bfKeys = { mainnet = "", preprod = "", preview = "" }
       , restore = emptyRestoreForm
       , console =
             [ LogLine LogInfo "cardano-wasm loaded · post-link module ready" ]
@@ -44,6 +50,49 @@ init _ =
 emptyRestoreForm : RestoreForm
 emptyRestoreForm =
     { open = False, paymentSkey = "", stakeSkey = "" }
+
+
+
+-- BLOCKFROST KEY (stored per network, in memory only)
+
+
+currentKey : Model -> String
+currentKey model =
+    case model.network of
+        Mainnet ->
+            model.bfKeys.mainnet
+
+        Preprod ->
+            model.bfKeys.preprod
+
+        Preview ->
+            model.bfKeys.preview
+
+
+setCurrentKey : String -> Model -> Model
+setCurrentKey v model =
+    let
+        -- project ids are plain ASCII; pasted whitespace or invisible characters
+        -- (a zero-width space would even make the request header throw) must not
+        -- reach the header
+        cleaned =
+            String.filter (\c -> Char.toCode c > 32 && Char.toCode c < 127) v
+
+        k =
+            model.bfKeys
+    in
+    { model
+        | bfKeys =
+            case model.network of
+                Mainnet ->
+                    { k | mainnet = cleaned }
+
+                Preprod ->
+                    { k | preprod = cleaned }
+
+                Preview ->
+                    { k | preview = cleaned }
+    }
 
 
 
@@ -94,11 +143,42 @@ addWallet p model =
             , alias = "Wallet " ++ String.fromInt model.nextWid
             , address = p.address
             , keys = p.keys
+            , utxos = NotAsked
             , expanded = True
             , color = color
             }
     in
     { model | wallets = model.wallets ++ [ w ], nextWid = model.nextWid + 1 }
+
+
+{-| The wallet's on-chain ADA. It includes lovelace sitting on token-carrying
+UTxOs the demo cannot spend: this is the real chain balance, not a spendable
+amount (a later slice distinguishes the two when building payments).
+-}
+walletBalance : Wallet -> Loadable Int
+walletBalance w =
+    case w.utxos of
+        NotAsked ->
+            NotAsked
+
+        Loading ->
+            Loading
+
+        Failed e ->
+            Failed e
+
+        Loaded page ->
+            Loaded (List.map .lovelace page.utxos |> List.sum)
+
+
+utxosTruncated : Wallet -> Bool
+utxosTruncated w =
+    case w.utxos of
+        Loaded page ->
+            page.truncated
+
+        _ ->
+            False
 
 
 
