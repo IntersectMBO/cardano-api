@@ -1,0 +1,9 @@
+project: cardano-wasm
+
+pr: 1278
+
+kind:
+  - feature
+
+description: |
+  Demo: payment builder — address book with inspectAddress validation, outputs with change, input selection.

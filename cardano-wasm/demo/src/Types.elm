@@ -4,7 +4,9 @@ module Types exposing (..)
 and the Msg (everything that can happen).
 -}
 
+import Dict exposing (Dict)
 import Http
+import Set exposing (Set)
 
 
 type Network
@@ -31,6 +33,7 @@ type alias Utxo =
     { txId : String
     , txIx : Int
     , lovelace : Int
+    , selected : Bool -- ticked as an input in the payment builder
     , hasAssets : Bool -- carries native tokens; unusable as input in this ADA-only demo
     }
 
@@ -62,9 +65,47 @@ type alias Wallet =
     }
 
 
+type alias BookEntry =
+    { alias : String
+    , address : String
+    }
+
+
+type OutputAmount
+    = Lovelace String
+    | Change
+
+
+type alias Output =
+    { address : String
+    , alias : String
+    , amount : OutputAmount
+    }
+
+
+{-| Which family of networks an address belongs to. Addresses only encode
+mainnet-vs-testnet, so preprod and preview cannot be told apart.
+-}
+type NetKind
+    = MainKind
+    | TestKind
+
+
+{-| Result of cardano-wasm's inspectAddress for one address.
+-}
+type AddrCheck
+    = CheckInvalid
+    | CheckValid NetKind
+    | CheckFailed -- the checker itself errored; not a verdict about the address
+
+
 type Modal
     = NoModal
     | ForgetDialog WalletId
+
+
+type alias BookForm =
+    { open : Bool, alias : String, address : String }
 
 
 type alias RestoreForm =
@@ -91,14 +132,22 @@ type alias Model =
 
     -- a network switch re-derives addresses asynchronously; loads wait for it
     , deriving : Bool
+
+    -- wallets whose Loaded UTxO page is being refreshed; the page (and its
+    -- ticked inputs) stays visible until the response lands
+    , reloading : Set WalletId
     , wallets : List Wallet
     , nextWid : Int
+    , book : List BookEntry
+    , outputs : List Output
     , modal : Modal
     , bfKeys : BfKeys
     , restore : RestoreForm
+    , bookForm : BookForm
     , console : List LogLine
     , toast : Maybe String
     , toastSeq : Int
+    , addrChecks : Dict String AddrCheck -- inspectAddress results, keyed by address
     }
 
 
@@ -126,6 +175,20 @@ type Msg
     | ClickLoadUtxos WalletId
     | ClickLoadAll
     | GotUtxos WalletId Network (Result String UtxoPage)
+    | ToggleUtxoSelected WalletId String Int
+    | ClickAddBookToggle
+    | UpdateBookAlias String
+    | UpdateBookAddr String
+    | SaveBookEntry
+    | CancelBookEntry
+    | DeleteBookEntry Int
+    | UseBookAddress String String
+    | UpdateOutputAmount Int String
+    | ToggleOutputChange Int
+    | DeleteOutput Int
+    | ClearInputs
+    | ClearOutputs
+    | GotAddressInspected (Result String ( String, AddrCheck ))
     | Copy String
     | ClearConsole
     | ClearToast Int
