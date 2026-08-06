@@ -2,6 +2,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Api.Experimental.Fee
@@ -31,7 +32,13 @@ import Data.Sequence.Strict qualified as Seq
 import Data.Time.Clock.POSIX qualified as Time
 import Lens.Micro
 
-import Test.Gen.Cardano.Api.Typed (genAddressInEra, genStakeCredential, genTxIn)
+import Test.Gen.Cardano.Api.Typed
+  ( genAddressInEra
+  , genScriptHash
+  , genStakeCredential
+  , genTxIn
+  , genVerificationKeyHash
+  )
 
 import Test.Cardano.Api.Experimental (exampleProtocolParams, exampleProtocolParamsEra)
 
@@ -62,6 +69,12 @@ tests =
         [ testProperty
             "unwitnessed certs produce no script witnesses"
             prop_collectTxBodyScriptWitnesses_ignores_unwitnessed_certs
+        ]
+    , testGroup
+        "estimateTransactionKeyWitnessCount"
+        [ testProperty
+            "counts key witnesses required by key-credentialed voters"
+            prop_estimateTransactionKeyWitnessCount_counts_vote_key_witnesses
         ]
     , testGroup
         "createCompatibleTx"
@@ -852,6 +865,24 @@ prop_createCompatibleTx_preserves_all_certs = H.property $ do
   let bodyCerts = ledgerTx ^. L.bodyTxL . L.certsTxBodyL
   Seq.length bodyCerts H.=== expectedCount
 
+-- | Regression test for: a key-credentialed voter (e.g. a key-hash DRep)
+-- requires a VKey witness to satisfy the ledger, but
+-- 'estimateTransactionKeyWitnessCount''s record pattern does not destructure
+-- 'txVotingProcedures' at all, so a vote witnessed by
+-- 'AnyKeyWitnessPlaceholder' contributes zero to the estimate. A transaction
+-- containing only a generated mix of key-credentialed and script-credentialed
+-- votes (and nothing else) must be estimated to need exactly one key witness
+-- per key-credentialed voter - script-credentialed votes must not add to the
+-- count.
+prop_estimateTransactionKeyWitnessCount_counts_vote_key_witnesses :: Property
+prop_estimateTransactionKeyWitnessCount_counts_vote_key_witnesses = H.property $ do
+  (txVotingProcedures, expectedKeyWitnessCount) <- H.forAll genVotingProceduresWithKeyWitnessCount
+  let txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxVotingProcedures txVotingProcedures
+      keyWitnessCount = Exp.estimateTransactionKeyWitnessCount @Exp.ConwayEra txBodyContent
+  keyWitnessCount H.=== fromIntegral expectedKeyWitnessCount
+
 -- ---------------------------------------------------------------------------
 -- Shared cert generators
 -- ---------------------------------------------------------------------------
@@ -909,3 +940,61 @@ genShuffledCertsWithCount = do
       ]
   shuffled <- Gen.shuffle allCerts
   pure (shuffled, length shuffled)
+
+-- ---------------------------------------------------------------------------
+-- Shared vote generators
+-- ---------------------------------------------------------------------------
+
+-- | Generate a 'TxVotingProcedures' whose witness map mixes key-credentialed
+-- voters ('L.DRepVoter'/'L.CommitteeVoter' over a key hash, plus
+-- 'L.StakePoolVoter', which is always key-credentialed - all witnessed by
+-- 'AnyKeyWitnessPlaceholder') with script-credentialed voters
+-- ('L.DRepVoter'/'L.CommitteeVoter' over a script hash, witnessed by a
+-- reference-input simple script - 'L.StakePoolVoter' has no
+-- script-credentialed form). Each bucket draws its hashes via 'Gen.set', so
+-- voters within a bucket never collide as witness-map keys; voters across
+-- buckets can never collide either, since they differ in the 'L.Voter' or
+-- 'L.Credential' constructor regardless of the underlying hash bytes.
+-- Returns the generated voting procedures together with the number of
+-- key-credentialed voters, i.e. the key-witness count
+-- 'estimateTransactionKeyWitnessCount' must report for a transaction
+-- containing only these votes.
+genVotingProceduresWithKeyWitnessCount
+  :: Gen (Exp.TxVotingProcedures (Exp.LedgerEra Exp.ConwayEra), Int)
+genVotingProceduresWithKeyWitnessCount = do
+  drepKeyHashes <-
+    Gen.set (Range.linear 0 5) (Api.unDRepKeyHash <$> genVerificationKeyHash Api.AsDRepKey)
+  committeeKeyHashes <-
+    Gen.set
+      (Range.linear 0 5)
+      (Api.unCommitteeHotKeyHash <$> genVerificationKeyHash Api.AsCommitteeHotKey)
+  stakePoolKeyHashes <-
+    Gen.set (Range.linear 0 5) (Api.unStakePoolKeyHash <$> genVerificationKeyHash Api.AsStakePoolKey)
+  drepScriptHashes <- Gen.set (Range.linear 0 5) (Api.toShelleyScriptHash <$> genScriptHash)
+  committeeScriptHashes <- Gen.set (Range.linear 0 5) (Api.toShelleyScriptHash <$> genScriptHash)
+  refTxIn <- genTxIn
+
+  let keyVoters =
+        [L.DRepVoter (L.KeyHashObj kh) | kh <- toList drepKeyHashes]
+          <> [L.CommitteeVoter (L.KeyHashObj kh) | kh <- toList committeeKeyHashes]
+          <> [L.StakePoolVoter kh | kh <- toList stakePoolKeyHashes]
+      scriptVoters =
+        [L.DRepVoter (L.ScriptHashObj sh) | sh <- toList drepScriptHashes]
+          <> [L.CommitteeVoter (L.ScriptHashObj sh) | sh <- toList committeeScriptHashes]
+
+      govActionId =
+        L.GovActionId
+          (L.TxId (L.unsafeMakeSafeHash "0000000000000000000000000000000000000000000000000000000000000000"))
+          (L.GovActionIx 0)
+      votingProcedure = L.VotingProcedure{L.vProcVote = L.VoteYes, L.vProcAnchor = L.SNothing}
+      scriptWitness = Exp.AnySimpleScriptWitness (Exp.SReferenceScript refTxIn)
+      allVoters = keyVoters <> scriptVoters
+      votingProcedures =
+        L.VotingProcedures $
+          Map.fromList [(voter, Map.singleton govActionId votingProcedure) | voter <- allVoters]
+      witnessMap =
+        Map.fromList $
+          [(voter, Exp.AnyKeyWitnessPlaceholder) | voter <- keyVoters]
+            <> [(voter, scriptWitness) | voter <- scriptVoters]
+
+  pure (Exp.TxVotingProcedures votingProcedures witnessMap, length keyVoters)
