@@ -140,7 +140,7 @@ toPlutusScriptPurpose
   -> Witnessable thing era
   -> L.PlutusPurpose L.AsIx era
 toPlutusScriptPurpose index WitTxIn{} = L.mkSpendingPurpose (L.AsIx index)
-toPlutusScriptPurpose index WitWithdrawal{} = L.mkRewardingPurpose (L.AsIx index)
+toPlutusScriptPurpose index WitWithdrawal{} = L.mkWithdrawingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitMint{} = L.mkMintingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitTxCert{} = L.mkCertifyingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitVote{} = L.mkVotingPurpose (L.AsIx index)
@@ -168,24 +168,24 @@ toPlutusScriptPurposeIndex = \case
     L.AlonzoSpending (L.AsIx i) -> (SpendingScript, i)
     L.AlonzoMinting (L.AsIx i) -> (MintingScript, i)
     L.AlonzoCertifying (L.AsIx i) -> (CertifyingScript, i)
-    L.AlonzoRewarding (L.AsIx i) -> (WithdrawingScript, i)
+    L.AlonzoWithdrawing (L.AsIx i) -> (WithdrawingScript, i)
   ShelleyBasedEraBabbage -> \case
     L.AlonzoSpending (L.AsIx i) -> (SpendingScript, i)
     L.AlonzoMinting (L.AsIx i) -> (MintingScript, i)
     L.AlonzoCertifying (L.AsIx i) -> (CertifyingScript, i)
-    L.AlonzoRewarding (L.AsIx i) -> (WithdrawingScript, i)
+    L.AlonzoWithdrawing (L.AsIx i) -> (WithdrawingScript, i)
   ShelleyBasedEraConway -> \case
     L.ConwaySpending (L.AsIx i) -> (SpendingScript, i)
     L.ConwayMinting (L.AsIx i) -> (MintingScript, i)
     L.ConwayCertifying (L.AsIx i) -> (CertifyingScript, i)
-    L.ConwayRewarding (L.AsIx i) -> (WithdrawingScript, i)
+    L.ConwayWithdrawing (L.AsIx i) -> (WithdrawingScript, i)
     L.ConwayVoting (L.AsIx i) -> (VotingScript, i)
     L.ConwayProposing (L.AsIx i) -> (ProposingScript, i)
   ShelleyBasedEraDijkstra -> \case
     L.DijkstraSpending (L.AsIx i) -> (SpendingScript, i)
     L.DijkstraMinting (L.AsIx i) -> (MintingScript, i)
     L.DijkstraCertifying (L.AsIx i) -> (CertifyingScript, i)
-    L.DijkstraRewarding (L.AsIx i) -> (WithdrawingScript, i)
+    L.DijkstraWithdrawing (L.AsIx i) -> (WithdrawingScript, i)
     L.DijkstraVoting (L.AsIx i) -> (VotingScript, i)
     L.DijkstraProposing (L.AsIx i) -> (ProposingScript, i)
     L.DijkstraGuarding (L.AsIx i) -> (GuardingScript, i)

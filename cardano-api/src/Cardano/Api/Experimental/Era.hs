@@ -50,6 +50,7 @@ import Cardano.Api.Pretty.Internal.ShowOf
 
 import Cardano.Binary
 import Cardano.Ledger.Alonzo.Plutus.Context qualified as L
+import Cardano.Ledger.Alonzo.UTxO qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Conway qualified as Ledger
@@ -293,6 +294,7 @@ type EraCommonConstraints era =
   ( L.AllegraEraScript (LedgerEra era)
   , L.AlonzoEraScript (LedgerEra era)
   , L.AlonzoEraTx (LedgerEra era)
+  , L.AlonzoEraUTxO (LedgerEra era)
   , L.BabbageEraPParams (LedgerEra era)
   , L.BabbageEraTxBody (LedgerEra era)
   , L.ConwayEraCertState (LedgerEra era)

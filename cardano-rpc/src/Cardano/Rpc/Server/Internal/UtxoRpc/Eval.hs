@@ -59,13 +59,13 @@ evalTxMethod request = do
           Set.map fromShelleyTxIn $
             ledgerTx ^. L.bodyTxL . L.allInputsTxBodyF
 
-  let (unregStakeCreds, unregDRepCreds, regPoolIds) =
+  let (unregStakeCreds, _unregDRepCreds, regPoolIds) =
         extractBalanceCheckCreds eon $ ledgerTx ^. L.bodyTxL
       apiStakeCreds = Set.map fromShelleyStakeCredential unregStakeCreds
       apiPoolIds = Set.map StakePoolKeyHash regPoolIds
 
   let target = VolatileTip
-  (protocolParams, utxo, systemStart, eraHistory, stakeDelegDeposits, drepStates, registeredPools) <-
+  (protocolParams, utxo, systemStart, eraHistory, stakeDelegDeposits, registeredPools) <-
     liftIO . (throwEither =<<) $
       executeLocalStateQueryExpr nodeConnInfo target $ do
         protocolParams <- throwEither =<< throwEither =<< queryProtocolParameters (convert eon)
@@ -74,15 +74,13 @@ evalTxMethod request = do
         eraHistory <- throwEither =<< queryEraHistory
         stakeDelegDeposits <-
           throwEither =<< throwEither =<< queryStakeDelegDeposits (convert eon) apiStakeCreds
-        drepStates <- throwEither =<< throwEither =<< queryDRepState (convert eon) unregDRepCreds
         registeredPools <- throwEither =<< throwEither =<< queryStakePoolParameters (convert eon) apiPoolIds
         pure
-          (protocolParams, utxo, systemStart, eraHistory, stakeDelegDeposits, drepStates, registeredPools)
+          (protocolParams, utxo, systemStart, eraHistory, stakeDelegDeposits, registeredPools)
 
   obtainCommonConstraints eon $ do
     let ledgerUtxo = toLedgerUTxO (convert eon) utxo
         epochInfo = toLedgerEpochInfo eraHistory
-        drepDeposits = Map.map (L.fromCompact . L.drepDeposit) drepStates
         poolIdSet = Map.keysSet registeredPools
         Exp.TxEvaluationResult fee evalUnits balance =
           Exp.evaluateTransaction
@@ -91,7 +89,6 @@ evalTxMethod request = do
             protocolParams
             poolIdSet
             stakeDelegDeposits
-            drepDeposits
             ledgerUtxo
             ledgerTx
         redeemerData =

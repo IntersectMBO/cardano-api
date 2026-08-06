@@ -85,6 +85,7 @@ import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.TextEnvelope.Internal
 import Cardano.Api.Tx.Internal.TxIn (AsType (AsTxId))
 
+import Cardano.Binary.FixedSizeCodec qualified as Crypto
 import Cardano.Chain.Common qualified as Byron
 import Cardano.Chain.UTxO qualified as Byron
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
@@ -107,9 +108,11 @@ import Cardano.Ledger.Keys qualified as Shelley
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Short qualified as SBS
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
@@ -270,7 +273,7 @@ getTxBody (ShelleyTx sbe tx) =
               scriptWits = tx ^. L.witsTxL . L.scriptTxWitsL
               datsWits = tx ^. L.witsTxL . L.datsTxWitsL
               redeemerWits = tx ^. L.witsTxL . L.rdmrsTxWitsL
-              isValid = tx ^. L.isValidTxL
+              isValid = tx ^. L.isPhase2ValidTxL
            in ShelleyTxBody
                 sbe
                 txBody
@@ -593,13 +596,13 @@ instance CBOR.EncCBOR ScriptValidity where
 instance CBOR.DecCBOR ScriptValidity where
   decCBOR = isValidToScriptValidity <$> CBOR.decCBOR
 
-scriptValidityToIsValid :: ScriptValidity -> L.IsValid
-scriptValidityToIsValid ScriptInvalid = L.IsValid False
-scriptValidityToIsValid ScriptValid = L.IsValid True
+scriptValidityToIsValid :: ScriptValidity -> L.IsPhase2Valid
+scriptValidityToIsValid ScriptInvalid = L.Phase2Invalid
+scriptValidityToIsValid ScriptValid = L.Phase2Valid
 
-isValidToScriptValidity :: L.IsValid -> ScriptValidity
-isValidToScriptValidity (L.IsValid False) = ScriptInvalid
-isValidToScriptValidity (L.IsValid True) = ScriptValid
+isValidToScriptValidity :: L.IsPhase2Valid -> ScriptValidity
+isValidToScriptValidity L.Phase2Invalid = ScriptInvalid
+isValidToScriptValidity L.Phase2Valid = ScriptValid
 
 -- | A representation of whether the era supports tx script validity.
 --
@@ -621,7 +624,7 @@ txScriptValidityToScriptValidity :: TxScriptValidity era -> ScriptValidity
 txScriptValidityToScriptValidity TxScriptValidityNone = ScriptValid
 txScriptValidityToScriptValidity (TxScriptValidity _ scriptValidity) = scriptValidity
 
-txScriptValidityToIsValid :: TxScriptValidity era -> L.IsValid
+txScriptValidityToIsValid :: TxScriptValidity era -> L.IsPhase2Valid
 txScriptValidityToIsValid = scriptValidityToIsValid . txScriptValidityToScriptValidity
 
 data KeyWitness era where
@@ -780,10 +783,10 @@ decodeShelleyBasedWitness
   -> Either CBOR.DecoderError (KeyWitness era)
 decodeShelleyBasedWitness sbe bs =
   let e =
-        Valid.toEither $
+        Valid.foldValidation Left Right $
           mconcat $
             map
-              (Valid.liftError return)
+              (either (Valid.Failure . (: [])) Valid.Success)
               [ bootstrapWitnessDecoder bs
               , shelleyKeyWitnessDecoder bs
               , legacyKeyWitnessDecoder bs
@@ -796,7 +799,7 @@ decodeShelleyBasedWitness sbe bs =
  where
   shelleyKeyWitnessDecoder b =
     ShelleyKeyWitness sbe
-      <$> CBOR.decodeFullAnnotator
+      <$> CBOR.decodeFullDecoder
         (L.eraProtVerHigh @(ShelleyLedgerEra era))
         "Shelley Witness"
         CBOR.decCBOR
@@ -804,27 +807,27 @@ decodeShelleyBasedWitness sbe bs =
 
   bootstrapWitnessDecoder b =
     ShelleyBootstrapWitness sbe
-      <$> CBOR.decodeFullAnnotator
+      <$> CBOR.decodeFullDecoder
         (L.eraProtVerHigh @(ShelleyLedgerEra era))
         "Shelley Witness"
         CBOR.decCBOR
         (LBS.fromStrict b)
 
   legacyKeyWitnessDecoder b =
-    CBOR.decodeFullAnnotator
+    CBOR.decodeFullDecoder
       (L.eraProtVerHigh @(ShelleyLedgerEra era))
       "Shelley Witness"
       decodeLegacy
       (LBS.fromStrict b)
 
   -- Non-CDDL compliant legacy decoder.
-  decodeLegacy :: CBOR.Decoder s (CBOR.Annotator (KeyWitness era))
+  decodeLegacy :: CBOR.Decoder s (KeyWitness era)
   decodeLegacy = do
     CBOR.decodeListLenOf 2
     t <- CBOR.decodeWord
     case t of
-      0 -> fmap (fmap (ShelleyKeyWitness sbe)) CBOR.decCBOR
-      1 -> fmap (fmap (ShelleyBootstrapWitness sbe)) CBOR.decCBOR
+      0 -> ShelleyKeyWitness sbe <$> CBOR.decCBOR
+      1 -> ShelleyBootstrapWitness sbe <$> CBOR.decCBOR
       _ ->
         CBOR.cborError $
           CBOR.DecoderErrorUnknownTag
@@ -896,7 +899,7 @@ makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
   fromXSignature =
     Crypto.SignedDSIGN
       . fromMaybe impossible
-      . Crypto.rawDeserialiseSigDSIGN
+      . Crypto.rawDecodeFixedSized
       . Crypto.HD.unXSignature
 
   impossible =
@@ -1036,7 +1039,7 @@ makeSignedTransaction
         ( txCommon
             & L.witsTxL . L.datsTxWitsL .~ datums
             & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
-            & L.isValidTxL .~ txScriptValidityToIsValid scriptValidity
+            & L.isPhase2ValidTxL .~ txScriptValidityToIsValid scriptValidity
         )
      where
       (datums, redeemers) =
@@ -1121,7 +1124,7 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
       { Shelley.bwKey = vk
       , Shelley.bwSignature = signature
       , Shelley.bwChainCode = chainCode
-      , Shelley.bwAttributes = attributes
+      , Shelley.bwAttributes = byteArrayFromShortByteString (SBS.toShort attributes)
       }
  where
   -- Starting with the easy bits: we /can/ convert the Byron verification key

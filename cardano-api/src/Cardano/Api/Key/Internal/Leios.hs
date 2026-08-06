@@ -35,6 +35,7 @@ import Cardano.Api.Serialise.Raw
 import Cardano.Api.Serialise.SerialiseUsing
 import Cardano.Api.Serialise.TextEnvelope.Internal
 
+import Cardano.Binary.FixedSizeCodec qualified as Crypto
 import Cardano.Crypto.DSIGN.BLS12381 qualified as Crypto
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as Crypto
@@ -91,19 +92,19 @@ instance Key BlsKey where
 
 instance SerialiseAsRawBytes (VerificationKey BlsKey) where
   serialiseToRawBytes (BlsVerificationKey vk) =
-    Crypto.rawSerialiseVerKeyDSIGN vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsBlsKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey BlsKey") $
-      BlsVerificationKey <$> Crypto.rawDeserialiseVerKeyDSIGN bs
+      BlsVerificationKey <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey BlsKey) where
   serialiseToRawBytes (BlsSigningKey sk) =
-    Crypto.rawSerialiseSignKeyDSIGN sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsBlsKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey BlsKey") $
-      BlsSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
+      BlsSigningKey <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsBech32 (VerificationKey BlsKey) where
   bech32PrefixFor _ = unsafeHumanReadablePartFromText "bls_vk"
@@ -173,11 +174,11 @@ instance Pretty BlsPossessionProof where
 
 instance SerialiseAsRawBytes BlsPossessionProof where
   serialiseToRawBytes (BlsPossessionProof proof) =
-    Crypto.rawSerialisePossessionProofDSIGN proof
+    Crypto.rawEncodeFixedSized proof
 
   deserialiseFromRawBytes AsBlsPossessionProof bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise BlsPossessionProof") $
-      BlsPossessionProof <$> Crypto.rawDeserialisePossessionProofDSIGN bs
+      BlsPossessionProof <$> Crypto.rawDecodeFixedSized bs
 
 -- | Construct a 'BlsPossessionProof' from a hex-encoded raw 'ByteString'.
 --
@@ -190,23 +191,6 @@ blsPossessionProof hexBs =
     Left e -> error $ "blsPossessionProof: " ++ show e
     Right p -> p
 
--- | Signing context including the Domain Separation Tag (DST) for the proofs-of-possession of
--- BLS keys using the minimal-signature-size BLS12-381 variant.
---
--- A Domain Separation Tag is a unique tag (like a magic number) that we add to ensure that
--- the signature is used only in the context that it was intended for.
--- This is because BLS keys and signatures can be used for multiple purposes, and
--- we don't want a proof of possession for one purpose to be interpreted as something different
--- in a different context.
-minSigPoPContext :: Crypto.BLS12381SignContext
-minSigPoPContext = Crypto.BLS12381SignContext (Just minSigPoPDST) Nothing
-
--- TODO: This is a provisional definition. Import @minSigPoPDST@ from
--- @Cardano.Crypto.DSIGN.BLS12381@ (cardano-crypto-class) when
--- IntersectMBO/cardano-base#635 is merged and the dependency is bumped.
-minSigPoPDST :: ByteString
-minSigPoPDST = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_"
-
 -- | Create a proof of possession for a BLS signing key.
 --
 -- This proof demonstrates that the holder of a BLS verification key knows the corresponding
@@ -215,7 +199,7 @@ minSigPoPDST = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_"
 -- honest participants' keys during aggregation (a rogue key attack).
 createBlsPossessionProof :: SigningKey BlsKey -> BlsPossessionProof
 createBlsPossessionProof (BlsSigningKey sk) =
-  BlsPossessionProof (Crypto.createPossessionProofDSIGN minSigPoPContext sk)
+  BlsPossessionProof (Crypto.createPossessionProofDSIGN Crypto.minSigPoPDST sk)
 
 instance HasTypeProxy BlsPossessionProof where
   data AsType BlsPossessionProof = AsBlsPossessionProof

@@ -1,0 +1,13 @@
+description: |
+  Integration for cardano-node 11.1. Breaking changes:
+
+  - `initialLedgerState`, `foldBlocks`, `foldEpochState`, `mkProtocolInfoCardano` and `genesisConfigToEnv` (all in `Cardano.Api.LedgerState`) take a new `SomeHasFS IO` argument, used by consensus to stream genesis data from disk.
+  - In `Cardano.Api.Consensus`, the `ProtocolInfoArgs` data family is now parameterised by the monad (`ProtocolInfoArgs m blk`) and `protocolInfo` returns its result monadically. The `ProtocolInfoArgsCardano` and `ProtocolInfoArgsShelley` constructors gain a `SomeHasFS m` field.
+  - The first type parameter of `Ledger.LedgerTables` is now the block (e.g. `HardForkBlock (CardanoEras StandardCrypto)`) rather than `LedgerState` of the block. This propagates through exported `Cardano.Api.LedgerState` items including `AnyNewEpochState`, `getLedgerTablesUTxOValues`, `toLedgerStateEvents`, `tickThenReapplyCheckHash` and `tickThenApply`.
+  - Removed orphan `ToJSON` instances (previously made visible by `import Cardano.Api`) for `NonEmptyMap`, `NonEmptySet`, `Ledger.StakeSnapshots` and `Ledger.StakeSnapshot`. These instances are now provided upstream.
+  - The transaction-balancing API drops its `drepDelegDeposits` (`Map (Credential DRepRole) Coin`) parameter, following cardano-ledger 1.14 removing the DRep-deposit lookup from `evalBalanceTxBody` (ledger PR 5919). Affected exported functions: `evaluateTransactionBalance`, `estimateBalancedTxBody`, `estimateOrCalculateBalancedTxBody`, `makeTransactionBodyAutoBalance`, `constructBalancedTx` and their `Cardano.Api.Experimental.Tx` counterparts plus `evaluateTransaction`, `evaluateSignedTx`, `calcMinFeeRecursive`.
+  - Dependency bound bumps: `cardano-crypto-class ^>=2.5`, `fs-api ^>=0.4`, `cardano-ledger-api ^>=1.14`.
+kind:
+  - breaking
+pr: 1221
+project: cardano-api

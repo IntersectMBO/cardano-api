@@ -130,11 +130,12 @@ instance
     let plutusScript :: Plutus.Plutus lang
         plutusScript = L.Plutus $ L.PlutusBinary scriptShortBs
 
-    case Plutus.decodePlutusRunnable v plutusScript of
+    let plutusRunnable = Plutus.decodePlutusRunnable v plutusScript
+    case Plutus.plutusRunnableResult plutusRunnable of
       Left e ->
         Left $
           CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.pack . show $ pretty e)
-      Right s -> Right $ PlutusScriptInEra s
+      Right{} -> Right $ PlutusScriptInEra plutusRunnable
 
 deserialisePlutusScriptInEra
   :: forall era lang

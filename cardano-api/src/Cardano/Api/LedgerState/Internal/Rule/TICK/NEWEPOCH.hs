@@ -22,6 +22,7 @@ import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Rules qualified as Shelley
 
+import Control.State.Transition (Event)
 import Data.Map.Strict qualified as Map
 
 type LatestTickEventConstraints ledgerera =

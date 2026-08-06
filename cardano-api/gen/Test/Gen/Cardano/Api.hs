@@ -21,7 +21,9 @@ import Cardano.Ledger.Plutus.CostModels qualified as Plutus
 import Cardano.Ledger.Plutus.Language qualified as Alonzo
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 
+import Data.ByteString.Short qualified as SBS
 import Data.Map.Strict qualified as Map
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Word (Word64)
 import GHC.Exts (IsList (..))
 
@@ -41,7 +43,10 @@ genMetadata = do
 genMetadatum :: Gen Metadatum
 genMetadatum = do
   int <- Gen.list (Range.linear 1 5) (I <$> Gen.integral (Range.linear 1 100))
-  bytes <- Gen.list (Range.linear 1 5) (B <$> Gen.bytes (Range.linear 1 20))
+  bytes <-
+    Gen.list
+      (Range.linear 1 5)
+      (B . byteArrayFromShortByteString . SBS.toShort <$> Gen.bytes (Range.linear 1 20))
   str <- Gen.list (Range.linear 1 5) (S <$> Gen.text (Range.linear 1 20) Gen.alphaNum)
   let mDatumList = int ++ bytes ++ str
 
@@ -113,7 +118,7 @@ genAlonzoGenesis = do
                 Nothing -> Map.empty
             )
             [Alonzo.PlutusV2 .. maxBound]
-      extraConfig = Just $ Alonzo.AlonzoExtraConfig $ Just $ L.mkCostModels v2OnwardsCostModels
+      extraConfig = Ledger.SJust $ Alonzo.AlonzoExtraConfig $ Just $ L.mkCostModels v2OnwardsCostModels
   prices' <- genPrices
   maxTxExUnits' <- genExUnits
   maxBlockExUnits' <- genExUnits

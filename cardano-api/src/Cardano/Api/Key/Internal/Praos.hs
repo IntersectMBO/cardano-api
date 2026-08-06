@@ -35,6 +35,7 @@ import Cardano.Api.Serialise.Raw
 import Cardano.Api.Serialise.SerialiseUsing
 import Cardano.Api.Serialise.TextEnvelope.Internal
 
+import Cardano.Binary.FixedSizeCodec qualified as Crypto
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Crypto.KES.Class qualified as Crypto
@@ -92,19 +93,19 @@ instance Key KesKey where
 
 instance SerialiseAsRawBytes (VerificationKey KesKey) where
   serialiseToRawBytes (KesVerificationKey vk) =
-    Crypto.rawSerialiseVerKeyKES vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsKesKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey KesKey") $
-      KesVerificationKey <$> Crypto.rawDeserialiseVerKeyKES bs
+      KesVerificationKey <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey KesKey) where
   serialiseToRawBytes (KesSigningKey sk) =
-    Crypto.rawSerialiseUnsoundPureSignKeyKES sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsKesKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey KesKey") $
-      KesSigningKey <$> Crypto.rawDeserialiseUnsoundPureSignKeyKES bs
+      KesSigningKey <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsBech32 (VerificationKey KesKey) where
   bech32PrefixFor _ = unsafeHumanReadablePartFromText "kes_vk"
@@ -204,19 +205,19 @@ instance Key VrfKey where
 
 instance SerialiseAsRawBytes (VerificationKey VrfKey) where
   serialiseToRawBytes (VrfVerificationKey vk) =
-    Crypto.rawSerialiseVerKeyVRF vk
+    Crypto.rawEncodeFixedSized vk
 
   deserialiseFromRawBytes (AsVerificationKey AsVrfKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey VrfKey") $
-      VrfVerificationKey <$> Crypto.rawDeserialiseVerKeyVRF bs
+      VrfVerificationKey <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsRawBytes (SigningKey VrfKey) where
   serialiseToRawBytes (VrfSigningKey sk) =
-    Crypto.rawSerialiseSignKeyVRF sk
+    Crypto.rawEncodeFixedSized sk
 
   deserialiseFromRawBytes (AsSigningKey AsVrfKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey VrfKey") $
-      VrfSigningKey <$> Crypto.rawDeserialiseSignKeyVRF bs
+      VrfSigningKey <$> Crypto.rawDecodeFixedSized bs
 
 instance SerialiseAsBech32 (VerificationKey VrfKey) where
   bech32PrefixFor _ = unsafeHumanReadablePartFromText "vrf_vk"

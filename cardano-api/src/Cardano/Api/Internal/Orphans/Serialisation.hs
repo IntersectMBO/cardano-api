@@ -5,9 +5,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans -Wno-unused-imports #-}
@@ -33,6 +33,7 @@ import Cardano.Api.Tx.Internal.TxIn
 
 import Cardano.Binary (DecoderError (..))
 import Cardano.Binary qualified as CBOR
+import Cardano.Binary.FixedSizeCodec qualified as Crypto
 import Cardano.Chain.Byron.API qualified as L
 import Cardano.Chain.Common qualified as L
 import Cardano.Chain.Delegation.Validation.Scheduling qualified as L.Scheduling
@@ -52,7 +53,6 @@ import Cardano.Ledger.Alonzo.Rules qualified as Alonzo
 import Cardano.Ledger.Alonzo.Rules qualified as L
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Api.State.Query qualified as Ledger
 import Cardano.Ledger.Babbage qualified as Babbage (ApplyTxError (..))
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
 import Cardano.Ledger.Babbage.Rules qualified as Babbage
@@ -84,7 +84,8 @@ import Cardano.Ledger.Shelley.TxBody qualified as L
 import Cardano.Ledger.Shelley.TxCert qualified as L
 import Cardano.Protocol.Crypto qualified as P
 import Cardano.Protocol.TPraos.API qualified as Ledger
-import Cardano.Protocol.TPraos.BHeader (HashHeader (..))
+import Cardano.Protocol.TPraos.BlockHeader (HashHeader (..))
+import Cardano.Protocol.TPraos.OCert qualified as Ledger
 import Cardano.Protocol.TPraos.Rules.Prtcl qualified as L
 import Cardano.Protocol.TPraos.Rules.Prtcl qualified as Ledger
 import Cardano.Protocol.TPraos.Rules.Tickn qualified as Ledger
@@ -129,11 +130,8 @@ import Data.Kind (Constraint, Type)
 import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
 import Data.Map.NonEmpty (NonEmptyMap)
-import Data.Map.NonEmpty qualified as NonEmptyMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid
-import Data.Set.NonEmpty (NonEmptySet)
-import Data.Set.NonEmpty qualified as NonEmptySet
 import Data.Text qualified as T
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -262,9 +260,7 @@ deriving newtype instance ToJSON (Babbage.ApplyTxError Consensus.BabbageEra)
 
 deriving newtype instance ToJSON (Conway.ApplyTxError Consensus.ConwayEra)
 
--- TODO Dijkstra: fix this ToJSON instance when the era is stable in Ledger
-instance ToJSON (Dijkstra.ApplyTxError Consensus.DijkstraEra) where
-  toJSON = error "TODO Dijkstra: toJSON @(ApplyTxError DijkstraEra): era not active"
+deriving newtype instance ToJSON (Dijkstra.ApplyTxError Consensus.DijkstraEra)
 
 deriving via
   ShowOf (L.Keys.VKey L.Keys.Witness)
@@ -290,6 +286,11 @@ deriving via
   ShowOf (L.ConwayLedgerPredFailure ledgerera)
   instance
     Show (L.ConwayLedgerPredFailure ledgerera) => ToJSON (L.ConwayLedgerPredFailure ledgerera)
+
+deriving via
+  ShowOf (L.DijkstraMempoolPredFailure ledgerera)
+  instance
+    Show (L.DijkstraMempoolPredFailure ledgerera) => ToJSON (L.DijkstraMempoolPredFailure ledgerera)
 
 deriving via
   ShowOf (L.ShelleyDelegsPredFailure ledgerera)
@@ -325,47 +326,6 @@ instance Pretty L.PolicyID where
 
 instance Pretty L.AssetName where
   pretty = pretty . L.assetNameToTextAsHex
-
--- Orphan instances involved in the JSON output of the API queries.
--- We will remove/replace these as we provide more API wrapper types
-
-instance ToJSON Ledger.StakeSnapshots where
-  toJSON = object . stakeSnapshotsToPair
-  toEncoding = pairs . mconcat . stakeSnapshotsToPair
-
-stakeSnapshotsToPair
-  :: Aeson.KeyValue e a => Ledger.StakeSnapshots -> [a]
-stakeSnapshotsToPair
-  Ledger.StakeSnapshots
-    { Ledger.ssStakeSnapshots
-    , Ledger.ssMarkTotal
-    , Ledger.ssSetTotal
-    , Ledger.ssGoTotal
-    } =
-    [ "pools" .= ssStakeSnapshots
-    , "total"
-        .= object
-          [ "stakeMark" .= ssMarkTotal
-          , "stakeSet" .= ssSetTotal
-          , "stakeGo" .= ssGoTotal
-          ]
-    ]
-
-instance ToJSON Ledger.StakeSnapshot where
-  toJSON = object . stakeSnapshotToPair
-  toEncoding = pairs . mconcat . stakeSnapshotToPair
-
-stakeSnapshotToPair :: Aeson.KeyValue e a => Ledger.StakeSnapshot -> [a]
-stakeSnapshotToPair
-  Ledger.StakeSnapshot
-    { Ledger.ssMarkPool
-    , Ledger.ssSetPool
-    , Ledger.ssGoPool
-    } =
-    [ "stakeMark" .= ssMarkPool
-    , "stakeSet" .= ssSetPool
-    , "stakeGo" .= ssGoPool
-    ]
 
 instance ToJSON (OneEraHash xs) where
   toJSON =
@@ -513,3 +473,16 @@ instance HasTypeProxy (L.SLanguage L.PlutusV3) where
 instance HasTypeProxy (L.SLanguage L.PlutusV4) where
   data AsType (L.SLanguage L.PlutusV4) = AsPlutusScriptV4
   proxyToAsType _ = AsPlutusScriptV4
+
+-- TODO: drop these and use EncCBOR/DecCBOR
+instance ToCBOR (Ledger.OCert P.StandardCrypto) where
+  toCBOR = L.toEraCBOR @L.ShelleyEra
+
+instance FromCBOR (Ledger.OCert P.StandardCrypto) where
+  fromCBOR = L.fromEraCBOR @L.ShelleyEra
+
+instance Typeable kd => ToCBOR (L.Keys.VKey kd) where
+  toCBOR (L.Keys.VKey vk) = Crypto.encodeFixedSized vk
+
+instance Typeable kd => FromCBOR (L.Keys.VKey kd) where
+  fromCBOR = L.Keys.VKey <$> Crypto.decodeFixedSized

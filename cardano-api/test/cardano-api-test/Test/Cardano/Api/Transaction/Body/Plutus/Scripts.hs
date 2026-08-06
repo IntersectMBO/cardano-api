@@ -248,7 +248,7 @@ prop_toPlutusScriptPurposeIndex_matches_toScriptIndex = property $ do
     verify eon (L.mkSpendingPurpose @(Api.ShelleyLedgerEra era) (L.AsIx ix))
     verify eon (L.mkMintingPurpose @(Api.ShelleyLedgerEra era) (L.AsIx ix))
     verify eon (L.mkCertifyingPurpose @(Api.ShelleyLedgerEra era) (L.AsIx ix))
-    verify eon (L.mkRewardingPurpose @(Api.ShelleyLedgerEra era) (L.AsIx ix))
+    verify eon (L.mkWithdrawingPurpose @(Api.ShelleyLedgerEra era) (L.AsIx ix))
 
   checkConwayFamily
     :: forall era

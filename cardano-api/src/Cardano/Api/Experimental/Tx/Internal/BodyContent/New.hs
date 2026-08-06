@@ -253,7 +253,7 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
       L.mkBasicTx eraSpecificTxBody
         & L.witsTxL .~ scriptWitnesses
         & L.auxDataTxL .~ L.maybeToStrictMaybe (toAuxiliaryData (txMetadata bc) (txAuxScripts bc))
-        & L.isValidTxL .~ scriptValidity
+        & L.isPhase2ValidTxL .~ scriptValidity
 
 convTxIns :: [(TxIn, AnyWitness era)] -> Set L.TxIn
 convTxIns inputs =
@@ -615,7 +615,7 @@ babbageOnwardsTxOutParseJson baseTxOut o = do
         fail "babbageOnwardsTxOutParseJson: inlineDatumhash present without inlineDatumRaw"
       pure $ maybe L.NoDatum L.DatumHash mDatumHash
   -- Determine reference script
-  refScript <- fmap L.maybeToStrictMaybe $ forM mRefScript scriptInAnyLangToLedgerScript
+  refScript <- L.maybeToStrictMaybe <$> forM mRefScript scriptInAnyLangToLedgerScript
   -- Construct TxOut
   pure . TxOut $
     baseTxOut

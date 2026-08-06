@@ -24,6 +24,7 @@ import Cardano.Api.Key.Internal
 import Cardano.Api.Key.Internal.Praos
 import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
 
+import Cardano.Base.IP (mkIPv4, mkIPv6, unIPv4, unIPv6)
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.State qualified as Ledger
 
@@ -125,8 +126,8 @@ toShelleyPoolParams
     toShelleyStakePoolRelay (StakePoolRelayIp mipv4 mipv6 mport) =
       Ledger.SingleHostAddr
         (fromIntegral <$> Ledger.maybeToStrictMaybe mport)
-        (Ledger.maybeToStrictMaybe mipv4)
-        (Ledger.maybeToStrictMaybe mipv6)
+        (Ledger.maybeToStrictMaybe (mkIPv4 <$> mipv4))
+        (Ledger.maybeToStrictMaybe (mkIPv6 <$> mipv6))
     toShelleyStakePoolRelay (StakePoolRelayDnsARecord dnsname mport) =
       Ledger.SingleHostName
         (fromIntegral <$> Ledger.maybeToStrictMaybe mport)
@@ -192,8 +193,8 @@ fromShelleyPoolParams
     fromShelleyStakePoolRelay :: Ledger.StakePoolRelay -> StakePoolRelay
     fromShelleyStakePoolRelay (Ledger.SingleHostAddr mport mipv4 mipv6) =
       StakePoolRelayIp
-        (Ledger.strictMaybeToMaybe mipv4)
-        (Ledger.strictMaybeToMaybe mipv6)
+        (fmap unIPv4 (Ledger.strictMaybeToMaybe mipv4))
+        (fmap unIPv6 (Ledger.strictMaybeToMaybe mipv6))
         (fromIntegral . Ledger.portToWord16 <$> Ledger.strictMaybeToMaybe mport)
     fromShelleyStakePoolRelay (Ledger.SingleHostName mport dnsname) =
       StakePoolRelayDnsARecord

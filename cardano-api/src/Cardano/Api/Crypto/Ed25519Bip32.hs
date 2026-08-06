@@ -19,6 +19,7 @@ module Cardano.Api.Crypto.Ed25519Bip32
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary.FixedSizeCodec (FixedSizeCodec (..), decodeFixedSized, encodeFixedSized)
 import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.Seed
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -101,44 +102,48 @@ instance DSIGNAlgorithm Ed25519Bip32DSIGN where
         (mempty :: ScrubbedBytes)
         (mempty :: ScrubbedBytes)
 
-  --
-  -- raw serialise/deserialise
-  --
+instance FixedSizeCodec (VerKeyDSIGN Ed25519Bip32DSIGN) where
+  type FixedSize (VerKeyDSIGN Ed25519Bip32DSIGN) = 64
+  rawEncodeFixedSized (VerKeyEd25519Bip32DSIGN vk) = CC.unXPub vk
+  rawDecodeFixedSized bs =
+    either fail (pure . VerKeyEd25519Bip32DSIGN) (CC.xpub bs)
 
-  rawSerialiseVerKeyDSIGN (VerKeyEd25519Bip32DSIGN vk) = CC.unXPub vk
-  rawSerialiseSignKeyDSIGN (SignKeyEd25519Bip32DSIGN sk) = xPrvToBytes sk
-  rawSerialiseSigDSIGN = BA.convert
+instance FixedSizeCodec (SignKeyDSIGN Ed25519Bip32DSIGN) where
+  type FixedSize (SignKeyDSIGN Ed25519Bip32DSIGN) = 96
+  rawEncodeFixedSized (SignKeyEd25519Bip32DSIGN sk) = xPrvToBytes sk
+  rawDecodeFixedSized bs =
+    maybe (fail "invalid Ed25519Bip32DSIGN signing key") (pure . SignKeyEd25519Bip32DSIGN) $
+      xPrvFromBytes bs
 
-  rawDeserialiseVerKeyDSIGN =
-    either (const Nothing) (Just . VerKeyEd25519Bip32DSIGN) . CC.xpub
-  rawDeserialiseSignKeyDSIGN =
-    fmap SignKeyEd25519Bip32DSIGN . xPrvFromBytes
-  rawDeserialiseSigDSIGN =
-    either (const Nothing) (Just . SigEd25519Bip32DSIGN) . CC.xsignature
+instance FixedSizeCodec (SigDSIGN Ed25519Bip32DSIGN) where
+  type FixedSize (SigDSIGN Ed25519Bip32DSIGN) = 64
+  rawEncodeFixedSized = BA.convert
+  rawDecodeFixedSized bs =
+    either fail (pure . SigEd25519Bip32DSIGN) (CC.xsignature bs)
 
 instance Show (SignKeyDSIGN Ed25519Bip32DSIGN) where
   show (SignKeyEd25519Bip32DSIGN sk) = show $ xPrvToBytes sk
 
 instance ToCBOR (VerKeyDSIGN Ed25519Bip32DSIGN) where
-  toCBOR = encodeVerKeyDSIGN
+  toCBOR = encodeFixedSized
   encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
 
 instance FromCBOR (VerKeyDSIGN Ed25519Bip32DSIGN) where
-  fromCBOR = decodeVerKeyDSIGN
+  fromCBOR = decodeFixedSized
 
 instance ToCBOR (SignKeyDSIGN Ed25519Bip32DSIGN) where
-  toCBOR = encodeSignKeyDSIGN
+  toCBOR = encodeFixedSized
   encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
 
 instance FromCBOR (SignKeyDSIGN Ed25519Bip32DSIGN) where
-  fromCBOR = decodeSignKeyDSIGN
+  fromCBOR = decodeFixedSized
 
 instance ToCBOR (SigDSIGN Ed25519Bip32DSIGN) where
-  toCBOR = encodeSigDSIGN
+  toCBOR = encodeFixedSized
   encodedSizeExpr _ = encodedSigDSIGNSizeExpr
 
 instance FromCBOR (SigDSIGN Ed25519Bip32DSIGN) where
-  fromCBOR = decodeSigDSIGN
+  fromCBOR = decodeFixedSized
 
 -- | Serialise an 'CC.XPrv' to a 'ByteString' (96 bytes).
 --

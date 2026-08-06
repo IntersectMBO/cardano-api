@@ -97,6 +97,7 @@ type AlonzoEraOnwardsConstraints era =
   , L.AlonzoEraTxBody (ShelleyLedgerEra era)
   , L.AlonzoEraTxOut (ShelleyLedgerEra era)
   , L.AlonzoEraTxWits (ShelleyLedgerEra era)
+  , L.AlonzoEraUTxO (ShelleyLedgerEra era)
   , L.Era (ShelleyLedgerEra era)
   , L.EraPParams (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)

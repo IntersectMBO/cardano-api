@@ -172,12 +172,14 @@ toNewPlutusScriptWitness
 toNewPlutusScriptWitness eon w l (Old.PScript (Old.PlutusScriptSerialised scriptShortBs)) scriptRedeemer execUnits datum = do
   let protocolVersion = getVersion eon
       plutusScript = L.Plutus $ L.PlutusBinary scriptShortBs
+      plutusScriptRunnable =
+        L.decodePlutusRunnable @(Old.ToLedgerPlutusLanguage lang) protocolVersion plutusScript
 
-  case L.decodePlutusRunnable @(Old.ToLedgerPlutusLanguage lang) protocolVersion plutusScript of
+  case L.plutusRunnableResult plutusScriptRunnable of
     Left e ->
       Left $
         CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.pack . show $ pretty e)
-    Right plutusScriptRunnable ->
+    Right{} ->
       return $
         mkPlutusScriptWitness
           eon

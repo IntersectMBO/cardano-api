@@ -16,10 +16,6 @@ index-state:
   , hackage.haskell.org 2026-08-02T17:21:34Z
   , cardano-haskell-packages 2026-08-01T07:19:24Z
 
-active-repositories:
-  , :rest
-  , cardano-haskell-packages:override
-
 packages:
     cardano-api
     cardano-api-gen
@@ -166,7 +162,7 @@ if impl(ghc >=9.14)
     , serialise:base
     , serialise:containers
     , serialise:time
+    , tdigest:base
     , time-locale-compat:time
     , with-utf8:base
 -- cabal-allow-newer end
-

@@ -176,7 +176,7 @@ txToUtxoRpcTxProjections sbe = H.withTests 40 . H.property $ anyEraTxConstraints
         -> PropertyT IO ()
       alonzoOnwardsChecks aeo (hasCollateralReturn, hasTotalCollateral) = do
         H.note_ "Phase-2 validation flag"
-        let L.IsValid isValid = ledgerTx ^. L.isValidTxL
+        let isValid = ledgerTx ^. L.isPhase2ValidTxL == L.Phase2Valid
         protoTx ^. U5c.successful === isValid
 
         H.note_ "Plutus datum and redeemer counts"
@@ -422,7 +422,7 @@ hprop_tx_to_utxorpc_tx_redeemer_wiring = H.withTests 10 . H.property $ do
             .~ L.Redeemers
               ( fromList
                   [ (L.ConwaySpending (L.AsIx 0), (mkRedeemerDatum 42, L.ExUnits 1 2))
-                  , (L.ConwayRewarding (L.AsIx 0), (mkRedeemerDatum 43, L.ExUnits 3 4))
+                  , (L.ConwayWithdrawing (L.AsIx 0), (mkRedeemerDatum 43, L.ExUnits 3 4))
                   , (L.ConwayCertifying (L.AsIx 0), (mkRedeemerDatum 44, L.ExUnits 5 6))
                   ]
               )

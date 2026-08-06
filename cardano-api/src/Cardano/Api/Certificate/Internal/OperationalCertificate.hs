@@ -22,6 +22,7 @@ import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
 import Cardano.Api.Error
 import Cardano.Api.HasTypeProxy
+import Cardano.Api.Internal.Orphans ()
 import Cardano.Api.Key.Internal
 import Cardano.Api.Key.Internal.Class
 import Cardano.Api.Key.Internal.Praos
