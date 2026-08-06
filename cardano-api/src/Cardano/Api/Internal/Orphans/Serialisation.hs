@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans -Wno-unused-imports #-}
@@ -32,6 +33,7 @@ import Cardano.Api.Tx.Internal.TxIn
 
 import Cardano.Binary (DecoderError (..))
 import Cardano.Binary qualified as CBOR
+import Cardano.Binary.FixedSizeCodec qualified as Crypto
 import Cardano.Chain.Byron.API qualified as L
 import Cardano.Chain.Common qualified as L
 import Cardano.Chain.Delegation.Validation.Scheduling qualified as L.Scheduling
@@ -83,6 +85,7 @@ import Cardano.Ledger.Shelley.TxCert qualified as L
 import Cardano.Protocol.Crypto qualified as P
 import Cardano.Protocol.TPraos.API qualified as Ledger
 import Cardano.Protocol.TPraos.BlockHeader (HashHeader (..))
+import Cardano.Protocol.TPraos.OCert qualified as Ledger
 import Cardano.Protocol.TPraos.Rules.Prtcl qualified as L
 import Cardano.Protocol.TPraos.Rules.Prtcl qualified as Ledger
 import Cardano.Protocol.TPraos.Rules.Tickn qualified as Ledger
@@ -470,3 +473,16 @@ instance HasTypeProxy (L.SLanguage L.PlutusV3) where
 instance HasTypeProxy (L.SLanguage L.PlutusV4) where
   data AsType (L.SLanguage L.PlutusV4) = AsPlutusScriptV4
   proxyToAsType _ = AsPlutusScriptV4
+
+-- TODO: drop these and use EncCBOR/DecCBOR
+instance ToCBOR (Ledger.OCert P.StandardCrypto) where
+  toCBOR = L.toEraCBOR @L.ShelleyEra
+
+instance FromCBOR (Ledger.OCert P.StandardCrypto) where
+  fromCBOR = L.fromEraCBOR @L.ShelleyEra
+
+instance Typeable kd => ToCBOR (L.Keys.VKey kd) where
+  toCBOR (L.Keys.VKey vk) = Crypto.encodeFixedSized vk
+
+instance Typeable kd => FromCBOR (L.Keys.VKey kd) where
+  fromCBOR = L.Keys.VKey <$> Crypto.decodeFixedSized

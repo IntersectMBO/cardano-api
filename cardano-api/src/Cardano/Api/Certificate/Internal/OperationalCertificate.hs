@@ -1,9 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Operational certificates
 module Cardano.Api.Certificate.Internal.OperationalCertificate
@@ -25,6 +22,7 @@ import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
 import Cardano.Api.Error
 import Cardano.Api.HasTypeProxy
+import Cardano.Api.Internal.Orphans ()
 import Cardano.Api.Key.Internal
 import Cardano.Api.Key.Internal.Class
 import Cardano.Api.Key.Internal.Praos
@@ -34,8 +32,6 @@ import Cardano.Api.Serialise.TextEnvelope.Internal
 import Cardano.Api.Tx.Internal.Sign
 
 import Cardano.Crypto.DSIGN qualified as DSIGN
-import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Keys qualified as Shelley
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.OCert qualified as Shelley
@@ -61,12 +57,6 @@ data OperationalCertificateIssueCounter
   }
   deriving (Eq, Show)
   deriving anyclass SerialiseAsCBOR
-
-instance ToCBOR (Shelley.OCert StandardCrypto) where
-  toCBOR = L.toEraCBOR @L.ShelleyEra
-
-instance FromCBOR (Shelley.OCert StandardCrypto) where
-  fromCBOR = L.fromEraCBOR @L.ShelleyEra
 
 instance ToCBOR OperationalCertificate where
   toCBOR (OperationalCertificate ocert vkey) =

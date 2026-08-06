@@ -11,7 +11,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -53,6 +52,7 @@ where
 import Cardano.Api.Error
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Hash
+import Cardano.Api.Internal.Orphans ()
 import Cardano.Api.Key.Internal.Class
 import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Pretty
@@ -83,14 +83,6 @@ import Data.ByteString qualified as BS
 import Data.Either.Combinators (maybeToRight)
 import Data.Maybe
 import Data.String (IsString (..))
-import Data.Typeable (Typeable)
-
--- TODO: drop these and use EncCBOR/DecCBOR
-instance Typeable kd => ToCBOR (Shelley.VKey kd) where
-  toCBOR (Shelley.VKey vk) = Crypto.encodeFixedSized vk
-
-instance Typeable kd => FromCBOR (Shelley.VKey kd) where
-  fromCBOR = Shelley.VKey <$> Crypto.decodeFixedSized
 
 --
 -- Shelley payment keys
