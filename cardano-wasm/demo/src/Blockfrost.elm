@@ -139,6 +139,7 @@ utxosDecoder =
                 { txId = h
                 , txIx = i
                 , lovelace = lovelaceIn units
+                , selected = False
 
                 -- any non-lovelace unit = native tokens (unusable in this ADA-only demo)
                 , hasAssets = List.any (\( u, _ ) -> u /= "lovelace") units

@@ -5,11 +5,31 @@ helpers; effects go through Wasm (ports).
 -}
 
 import Blockfrost
+import Dict
+import Format
 import Net exposing (netName)
 import Ports exposing (clipboardWrite)
+import Set
 import State exposing (..)
 import Types exposing (..)
 import Wasm
+
+
+{-| Inspect an address via cardano-wasm unless we already have a verdict for it.
+A failed check is not a verdict, so it does not block a retry: re-adding or
+re-using the address inspects it again, as the "check failed" badge promises.
+-}
+inspectIfNew : Model -> String -> Cmd Msg
+inspectIfNew model a =
+    case Dict.get a model.addrChecks of
+        Just CheckFailed ->
+            Wasm.inspectAddress a
+
+        Just _ ->
+            Cmd.none
+
+        Nothing ->
+            Wasm.inspectAddress a
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -28,6 +48,8 @@ update msg model =
                 | network = n
                 , wallets = List.map (\w -> { w | utxos = NotAsked }) model.wallets
                 , deriving = not (List.isEmpty model.wallets)
+                , reloading = Set.empty
+                , outputs = []
               }
                 |> log LogInfo ("switched to " ++ netName n)
             , if List.isEmpty model.wallets then
@@ -52,7 +74,7 @@ update msg model =
                         )
                         model.wallets
               }
-            , Cmd.none
+            , Cmd.batch (List.map (\( _, addr ) -> inspectIfNew model addr) pairs)
             )
 
         GotDerivedAddresses (Err e) ->
@@ -65,7 +87,7 @@ update msg model =
             )
 
         GotGeneratedWallet (Ok p) ->
-            ( addWallet p model |> log LogOk "generated wallet", Cmd.none )
+            ( addWallet p model |> log LogOk "generated wallet", inspectIfNew model p.address )
 
         GotGeneratedWallet (Err e) ->
             ( log LogWarn ("generate failed: " ++ e) model, Cmd.none )
@@ -89,7 +111,7 @@ update msg model =
 
         GotRestoredWallet (Ok p) ->
             ( addWallet p { model | restore = emptyRestoreForm } |> log LogOk "restored wallet"
-            , Cmd.none
+            , inspectIfNew model p.address
             )
 
         GotRestoredWallet (Err e) ->
@@ -129,12 +151,12 @@ update msg model =
                     else if model.deriving then
                         toastNow "Re-deriving addresses — try again in a moment" model
 
-                    else if w.utxos == Loading then
+                    else if fetching w model then
                         -- a request is already in flight
                         ( model, Cmd.none )
 
                     else
-                        ( mapWallet wid (\x -> { x | utxos = Loading }) model
+                        ( startFetch w model
                             |> log LogInfo ("GET blockfrost /addresses/…/utxos · " ++ w.alias)
                         , Blockfrost.fetchUtxos (currentKey model) model.network wid w.address
                         )
@@ -154,38 +176,41 @@ update msg model =
                 -- requests; one predicate decides both the sweep and the commands
                 let
                     toLoad =
-                        List.filter (\w -> w.utxos /= Loading) model.wallets
-
-                    loadingIds =
-                        List.map .id toLoad
+                        List.filter (\w -> not (fetching w model)) model.wallets
                 in
-                ( { model
-                    | wallets =
-                        List.map
-                            (\w ->
-                                if List.member w.id loadingIds then
-                                    { w | utxos = Loading }
-
-                                else
-                                    w
-                            )
-                            model.wallets
-                  }
+                ( List.foldl startFetch model toLoad
                     |> log LogInfo ("GET blockfrost /addresses/…/utxos × " ++ String.fromInt (List.length toLoad))
                 , Cmd.batch (List.map (\w -> Blockfrost.fetchUtxos (currentKey model) model.network w.id w.address) toLoad)
                 )
 
         GotUtxos wid net result ->
+            let
+                settled =
+                    { model | reloading = Set.remove wid model.reloading }
+            in
             if net /= model.network then
                 -- fired before a network switch; the wallet was already swept
-                ( log LogWarn (aliasOf wid model ++ ": dropped a UTxO response from the previous network") model
+                ( log LogWarn (aliasOf wid settled ++ ": dropped a UTxO response from the previous network") settled
                 , Cmd.none
                 )
 
             else
                 case result of
                     Ok page ->
+                        -- On a reload the previous page is still in place, so ticks are
+                        -- kept for UTxOs that still exist.
                         let
+                            prevSelected =
+                                case getWallet wid settled |> Maybe.map .utxos of
+                                    Just (Loaded old) ->
+                                        old.utxos |> List.filter .selected |> List.map (\u -> ( u.txId, u.txIx ))
+
+                                    _ ->
+                                        []
+
+                            restored =
+                                List.map (\u -> { u | selected = List.member ( u.txId, u.txIx ) prevSelected }) page.utxos
+
                             warnTruncated m =
                                 if page.truncated then
                                     log LogWarn (aliasOf wid m ++ " has more UTxOs than one page — the balance is a lower bound") m
@@ -193,17 +218,99 @@ update msg model =
                                 else
                                     m
                         in
-                        ( mapWallet wid (\w -> { w | utxos = Loaded page }) model
-                            |> log LogOk (aliasOf wid model ++ ": loaded " ++ String.fromInt (List.length page.utxos) ++ " UTxOs")
+                        ( mapWallet wid (\w -> { w | utxos = Loaded { page | utxos = restored } }) settled
+                            |> log LogOk (aliasOf wid settled ++ ": loaded " ++ String.fromInt (List.length restored) ++ " UTxOs")
                             |> warnTruncated
                         , Cmd.none
                         )
 
                     Err err ->
-                        ( mapWallet wid (\w -> { w | utxos = Failed err }) model
-                            |> log LogWarn (aliasOf wid model ++ ": UTxO load failed: " ++ err)
-                        , Cmd.none
-                        )
+                        case getWallet wid settled |> Maybe.map .utxos of
+                            Just (Loaded _) ->
+                                -- a failed reload keeps showing the last known page
+                                ( log LogWarn (aliasOf wid settled ++ ": UTxO reload failed (showing last known data): " ++ err) settled
+                                , Cmd.none
+                                )
+
+                            _ ->
+                                ( mapWallet wid (\w -> { w | utxos = Failed err }) settled
+                                    |> log LogWarn (aliasOf wid settled ++ ": UTxO load failed: " ++ err)
+                                , Cmd.none
+                                )
+
+        ToggleUtxoSelected wid txId txIx ->
+            ( mapWallet wid (toggleUtxo txId txIx) model, Cmd.none )
+
+        -- ── address book ───────────────────────────────────────────────────────
+        ClickAddBookToggle ->
+            ( { model | bookForm = toggleBook model.bookForm }, Cmd.none )
+
+        UpdateBookAlias s ->
+            ( { model | bookForm = setBookAlias s model.bookForm }, Cmd.none )
+
+        UpdateBookAddr s ->
+            ( { model | bookForm = setBookAddr s model.bookForm }, Cmd.none )
+
+        CancelBookEntry ->
+            ( { model | bookForm = emptyBookForm }, Cmd.none )
+
+        SaveBookEntry ->
+            -- pasted addresses often carry stray whitespace; store them clean so the
+            -- verdict cache and the inspection see the address the chain would
+            let
+                addr =
+                    String.trim model.bookForm.address
+            in
+            if addr == "" then
+                toastNow "Enter an address" model
+
+            else
+                ( { model
+                    | book = model.book ++ [ BookEntry (Format.orDefault "Saved address" model.bookForm.alias) addr ]
+                    , bookForm = emptyBookForm
+                  }
+                    |> log LogInfo "added address to book"
+                , inspectIfNew model addr
+                )
+
+        DeleteBookEntry i ->
+            ( { model | book = removeAt i model.book }, Cmd.none )
+
+        GotAddressInspected (Ok ( a, verdict )) ->
+            ( { model | addrChecks = Dict.insert a verdict model.addrChecks }
+                |> (if verdict == CheckInvalid then
+                        log LogWarn ("invalid address: " ++ Format.shorten a)
+
+                    else
+                        identity
+                   )
+            , Cmd.none
+            )
+
+        GotAddressInspected (Err e) ->
+            ( log LogWarn ("address inspection failed: " ++ e) model, Cmd.none )
+
+        -- ── outputs ────────────────────────────────────────────────────────────
+        UseBookAddress alias addr ->
+            ( { model | outputs = model.outputs ++ [ Output addr alias (Lovelace "") ] }
+            , inspectIfNew model addr
+            )
+
+        UpdateOutputAmount i s ->
+            ( { model | outputs = updateAt i (\o -> { o | amount = Lovelace s }) model.outputs }, Cmd.none )
+
+        ToggleOutputChange i ->
+            ( { model | outputs = toggleOutputChange i model.outputs }, Cmd.none )
+
+        DeleteOutput i ->
+            ( { model | outputs = removeAt i model.outputs }, Cmd.none )
+
+        -- ── clearing ───────────────────────────────────────────────────────────
+        ClearInputs ->
+            ( deselectInputs model, Cmd.none )
+
+        ClearOutputs ->
+            ( { model | outputs = [] }, Cmd.none )
 
         -- ── misc ───────────────────────────────────────────────────────────────
         Copy t ->
