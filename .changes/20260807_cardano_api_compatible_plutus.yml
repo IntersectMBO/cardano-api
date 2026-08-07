@@ -1,0 +1,8 @@
+project: cardano-api
+pr: 1268
+kind:
+  - feature
+  - breaking
+  - bugfix
+description: |
+  Extend createCompatibleTx with plutus spending witness support: per-input AnyWitness, spending redeemer pointers, witness datums in TxDats, script integrity hash, collateral inputs, transaction metadata and validity upper bound via new CompatibleTxExtraContent record and CompatibleTxError error type. Breaking: ins parameter is now [(TxIn, AnyWitness (ShelleyLedgerEra era))] and a new trailing CompatibleTxExtraContent record parameter was added; error type changed from ProtocolParametersConversionError to CompatibleTxError. Export new mkSpendingScriptDatum smart constructor from Cardano.Api.Experimental (spending-purpose PlutusScriptDatum across V1-V4 with CIP-69 awareness). Fix: plutus scripts attached via certificate and proposal witnesses were never added to the transaction witness set (scriptTxWitsL). Fix: createCompatibleTx silently overwrote reference inputs contributed by proposal-procedure witnesses.
