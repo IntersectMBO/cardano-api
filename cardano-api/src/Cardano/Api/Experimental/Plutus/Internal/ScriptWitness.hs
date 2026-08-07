@@ -21,6 +21,7 @@ module Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
   , PlutusScriptPurpose (..)
   , PlutusScriptDatum (..)
   , NoScriptDatum
+  , mkSpendingScriptDatum
 
     -- * Helpers
   , getSpendingPlutusWitnessData
@@ -211,6 +212,18 @@ data PlutusScriptDatum (lang :: L.Language) (purpose :: PlutusScriptPurpose) whe
   InlineDatum :: PlutusScriptDatum lang purpose
   NoScriptDatum
     :: PlutusScriptDatum lang purpose
+
+-- | Construct the datum of a spending-purpose Plutus script witness from a plain
+-- 'HashableScriptData', dispatching on the script's Plutus language as required by
+-- CIP-69 (https://github.com/cardano-foundation/CIPs/tree/master/CIP-0069): 'L.PlutusV1'
+-- and 'L.PlutusV2' scripts take the datum bare, while 'L.PlutusV3' and 'L.PlutusV4'
+-- scripts wrap it in the optional datum introduced by that CIP.
+mkSpendingScriptDatum
+  :: L.SLanguage lang -> HashableScriptData -> PlutusScriptDatum lang SpendingScript
+mkSpendingScriptDatum L.SPlutusV1 datum = SpendingScriptDatum datum
+mkSpendingScriptDatum L.SPlutusV2 datum = SpendingScriptDatum datum
+mkSpendingScriptDatum L.SPlutusV3 datum = SpendingScriptDatum (Just datum)
+mkSpendingScriptDatum L.SPlutusV4 datum = SpendingScriptDatum (Just datum)
 
 instance Eq (PlutusScriptDatumF lang SpendingScript) => Eq (PlutusScriptDatum lang SpendingScript) where
   (==) (SpendingScriptDatum d1) (SpendingScriptDatum d2) = d1 == d2
