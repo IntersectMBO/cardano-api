@@ -1,7 +1,7 @@
 module View exposing (view)
 
-{-| The UI: wallets + address book column · transaction builder · console
-column, the forget dialog and the toast. Pure Model → Html.
+{-| The UI: wallets + address book column · transaction builder · inspector +
+console column, the forget dialog and the toast. Pure Model → Html.
 -}
 
 import Format exposing (ada, adaToLovelace, amountError, lovelaceToAda, shorten)
@@ -9,7 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, stopPropagationOn)
 import Json.Decode as D
-import Net exposing (expectedNetKind, faucetUrl, netMagic, netName, netTag)
+import Net exposing (cliFlag, eraTag, expectedNetKind, faucetUrl, netMagic, netName, netTag)
 import State exposing (..)
 import Types exposing (..)
 
@@ -22,7 +22,7 @@ view model =
         , div [ class "grid" ]
             [ div [ class "col" ] [ viewDataSource model, viewWalletsCard model, viewBookCard model ]
             , div [ class "col" ] [ viewBuilder model ]
-            , div [ class "col" ] [ viewConsole model ]
+            , div [ class "col" ] [ viewInspector model, viewConsole model ]
             ]
         , viewModal model
         , viewToast model
@@ -331,11 +331,38 @@ viewAddrBadge model a =
 viewBuilder : Model -> Html Msg
 viewBuilder model =
     div [ class "card" ]
-        [ h3 [] [ text "Transaction builder" ]
+        [ h3 []
+            [ text "Transaction builder"
+            , span [ class "hrow" ]
+                [ button [ class "btn ghost xs", onClick ClearTx ] [ text "clear tx" ]
+                , span [ class "seg" ]
+                    [ button [ classList [ ( "on", model.era == Conway ) ], onClick (SelectEra Conway) ] [ text "Conway" ]
+                    , button [ classList [ ( "on", model.era == Dijkstra ) ], onClick (SelectEra Dijkstra) ] [ text "Dijkstra" ]
+                    ]
+                ]
+            ]
         , sectionLabel "Inputs — tick UTxOs inside a wallet panel" (not (List.isEmpty (selectedInputs model))) ClearInputs
         , viewInputs model
         , sectionLabel "Outputs — add recipients from the address book" (not (List.isEmpty model.outputs)) ClearOutputs
         , viewOutputs model
+        , viewSummary model
+        , div [ class "hrow", style "margin-top" "12px" ]
+            [ button [ class "btn ghost", disabled (not (txReady model)), onClick ClickEstimateFee ] [ text "⚙ estimateMinFee()" ]
+            , input [ class "feeinput", placeholder "or set fee (lovelace)", value model.feeText, onInput UpdateFeeText ] []
+            ]
+        , div [ class "hrow", style "margin-top" "12px" ]
+            [ button [ class "btn", disabled (not (canSign model)), onClick ClickSign ]
+                [ text
+                    (if model.tx == Signing then
+                        "signing…"
+
+                     else
+                        "✍ sign"
+                    )
+                ]
+            ]
+        , label [ style "margin-top" "16px" ] [ text "Signed transaction" ]
+        , viewExport model
         ]
 
 
@@ -381,6 +408,18 @@ viewOutputs model =
                     )
                     model.outputs
 
+            hasTooSmall =
+                List.any
+                    (\o ->
+                        case o.amount of
+                            Lovelace s ->
+                                amountBelowMin model s
+
+                            Change ->
+                                False
+                    )
+                    model.outputs
+
             addrProblems =
                 model.outputs |> List.filterMap (\o -> addrFlagged model o.address)
 
@@ -393,6 +432,14 @@ viewOutputs model =
                  else
                     []
                 )
+                    ++ (if hasTooSmall then
+                            [ div [ class "small", style "color" "var(--bad)", style "margin-top" "4px" ]
+                                [ text ("⚠ amount below the ≈" ++ lovelaceToAda (adaOnlyMinUtxo model.protocol) ++ " ₳ minimum a UTxO can hold") ]
+                            ]
+
+                        else
+                            []
+                       )
                     ++ (case addrProblems of
                             [] ->
                                 []
@@ -412,7 +459,7 @@ viewOutputs model =
                             div [ class "orec chg center" ] [ b [] [ text "change" ], span [] [ text "remaining" ] ]
 
                         Lovelace s ->
-                            input [ classList [ ( "amt", True ), ( "bad", amountError s ) ], placeholder "₳", value s, onInput (UpdateOutputAmount i) ] []
+                            input [ classList [ ( "amt", True ), ( "bad", amountError s || amountBelowMin model s ) ], placeholder "₳", value s, onInput (UpdateOutputAmount i) ] []
                     , button [ classList [ ( "chgbtn", True ), ( "on", o.amount == Change ) ], title "use as change", onClick (ToggleOutputChange i) ]
                         [ text
                             (if o.amount == Change then
@@ -438,6 +485,203 @@ sectionLabel txt canClear clearMsg =
           else
             text ""
         ]
+
+
+viewSummary : Model -> Html Msg
+viewSummary model =
+    let
+        ( changeLabel, changeText ) =
+            case ( model.fee, balance model ) of
+                ( FeeSet _, Balanced ch ) ->
+                    ( changeLabelText model, ada ch )
+
+                ( FeeSet _, Insufficient short ) ->
+                    ( "⚠ insufficient funds", "short " ++ ada short )
+
+                ( FeeSet _, DustChange ch _ ) ->
+                    ( "⚠ change below min-UTxO", ada ch )
+
+                _ ->
+                    ( changeLabelText model, "—" )
+    in
+    div [ class "summary" ]
+        [ kv "Input total" (ada (inputsTotal model))
+        , kv "Output total" (ada (explicitOutputsTotal model))
+        , kv "Fee" (feeDisplay model)
+        , kv changeLabel changeText
+        , kv "Witnesses" (witnessSummary model)
+        ]
+
+
+changeLabelText : Model -> String
+changeLabelText model =
+    case changeRow model of
+        Just o ->
+            "Change → "
+                ++ (if o.alias == "" then
+                        o.address
+
+                    else
+                        o.alias
+                   )
+
+        Nothing ->
+            "Change → first input wallet"
+
+
+feeDisplay : Model -> String
+feeDisplay model =
+    case model.fee of
+        NoFee ->
+            "— not set —"
+
+        EstimatingFee ->
+            "estimating…"
+
+        FeeSet n ->
+            ada n
+
+
+witnessSummary : Model -> String
+witnessSummary model =
+    let
+        pays =
+            paymentWalletIds model |> List.map (\wid -> aliasOf wid model ++ " (payment)")
+    in
+    if List.isEmpty pays then
+        "—"
+
+    else
+        String.join ", " pays ++ " · " ++ String.fromInt (witnessCount model)
+
+
+viewExport : Model -> Html Msg
+viewExport model =
+    case model.tx of
+        Signed s ->
+            div []
+                [ div [ class "small", style "margin-bottom" "8px" ]
+                    [ span [ class "muted" ] [ text "txid " ]
+                    , span [ class "mono", style "word-break" "break-all" ] [ text s.txId ]
+                    , text " "
+                    , button [ class "btn ghost xs", onClick (Copy s.txId) ] [ text "copy" ]
+                    ]
+                , div [ class "muted small", style "margin-bottom" "8px" ]
+                    [ text
+                        ("signed with "
+                            ++ String.fromInt s.paymentWits
+                            ++ " payment witness"
+                            ++ (if s.paymentWits == 1 then
+                                    ""
+
+                                else
+                                    "es"
+                               )
+                            ++ (if s.stakeWits > 0 then
+                                    " + " ++ String.fromInt s.stakeWits ++ " stake"
+
+                                else
+                                    ""
+                               )
+                        )
+                    ]
+                , div [ class "hrow" ]
+                    [ button [ class "btn good", onClick ClickDownloadCli ] [ text "⤓ download cardano-cli tx file" ]
+                    , button [ class "btn ghost sm", onClick (Copy s.cbor) ] [ text "copy CBOR" ]
+                    ]
+                , -- the era command group matches the envelope's type; for the upcoming
+                  -- era this assumes the cardano-cli release that ships it
+                  div [ class "clihint mono" ] [ text ("broadcast yourself: cardano-cli " ++ eraTag model.era ++ " transaction submit --tx-file tx.signed " ++ cliFlag model.network) ]
+                ]
+
+        _ ->
+            div [ class "empty" ] [ text "sign the transaction to enable export" ]
+
+
+viewInspector : Model -> Html Msg
+viewInspector model =
+    div [ class "card" ]
+        [ h3 [] [ text "Live tx inspector", span [ classList [ ( "pill", True ), ( "signed", isSigned model ) ] ] [ text (txStateLabel model) ] ]
+        , pre [ class "inspector" ] [ text (inspectorText model) ]
+        ]
+
+
+isSigned : Model -> Bool
+isSigned model =
+    case model.tx of
+        Signed _ ->
+            True
+
+        _ ->
+            False
+
+
+txStateLabel : Model -> String
+txStateLabel model =
+    case model.tx of
+        Draft ->
+            "draft"
+
+        Signing ->
+            "signing"
+
+        Signed _ ->
+            "signed"
+
+
+inspectorText : Model -> String
+inspectorText model =
+    let
+        ins =
+            selectedInputs model
+                |> List.map (\( w, u ) -> "    \"" ++ u.txId ++ "#" ++ String.fromInt u.txIx ++ "\"  // " ++ w.alias)
+                |> String.join ",\n"
+
+        implicitChange =
+            -- mirror Wasm.finalOutputs: with no row marked as change, a positive
+            -- remainder goes back to the first input wallet
+            case ( changeRow model, changeAddress model ) of
+                ( Nothing, Just addr ) ->
+                    [ "    { addr: \"" ++ addr ++ "\", lovelace: \"<remaining>\" }  // change → first input wallet" ]
+
+                _ ->
+                    []
+
+        outs =
+            model.outputs
+                |> List.filterMap
+                    (\o ->
+                        case o.amount of
+                            Change ->
+                                Just ("    { addr: \"" ++ o.address ++ "\", lovelace: \"<remaining>\" }")
+
+                            Lovelace s ->
+                                if s == "" then
+                                    Nothing
+
+                                else
+                                    Just
+                                        ("    { addr: \""
+                                            ++ o.address
+                                            ++ "\", lovelace: "
+                                            ++ (adaToLovelace s |> Maybe.map String.fromInt |> Maybe.withDefault "\"<invalid>\"")
+                                            ++ " }"
+                                        )
+                    )
+                |> (\explicit -> explicit ++ implicitChange)
+                |> String.join ",\n"
+    in
+    "{\n  era: \""
+        ++ eraTag model.era
+        ++ "\",\n  inputs: [\n"
+        ++ ins
+        ++ "\n  ],\n  outputs: [\n"
+        ++ outs
+        ++ "\n  ],\n  fee: "
+        ++ feeDisplay model
+        ++ ",\n  requiredWitnesses: "
+        ++ String.fromInt (witnessCount model)
+        ++ "\n}"
 
 
 viewConsole : Model -> Html Msg
