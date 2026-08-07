@@ -18,6 +18,7 @@ module Cardano.Rpc.Server
   , TraceRpcSubmit (..)
   , TraceRpcQuery (..)
   , TraceRpcSync (..)
+  , TraceRpcNodeKernelAccess (..)
   , TraceSpanEvent (..)
   )
 where
@@ -37,7 +38,10 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Eval
 import Cardano.Rpc.Server.Internal.UtxoRpc.Query
 import Cardano.Rpc.Server.Internal.UtxoRpc.Submit
 import Cardano.Rpc.Server.Internal.UtxoRpc.Sync
-import Cardano.Rpc.Server.NodeKernelAccess (NodeKernelAccess, mkNodeKernelAccess)
+import Cardano.Rpc.Server.NodeKernelAccess
+  ( NodeKernelAccess
+  , mkNodeKernelAccess
+  )
 
 import RIO
 
@@ -62,7 +66,8 @@ methodsUtxoRpc
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf UtxoRpc.QueryService)
 methodsUtxoRpc =
-  Method (mkNonStreaming $ wrapInSpan TraceRpcQueryParamsSpan . readParamsMethod)
+  Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadGenesisSpan . readGenesisMethod)
+    . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryParamsSpan . readParamsMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadUtxosSpan . readUtxosMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcQuerySearchUtxosSpan . searchUtxosMethod)
     $ NoMoreMethods

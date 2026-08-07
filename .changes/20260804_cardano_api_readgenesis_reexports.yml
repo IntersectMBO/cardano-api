@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1222
+kind:
+  - compatible
+description: |
+  Export `readShelleyGenesis`, `ShelleyGenesisError (..)` and `renderShelleyGenesisError` from `Cardano.Api.LedgerState`, and re-export `cardanoLedgerTransitionConfig`, `byronProtocolParams`, `byronGenesis` and `shelleyLedgerGenesis` from `Cardano.Api.Consensus`.

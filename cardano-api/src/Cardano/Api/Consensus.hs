@@ -43,6 +43,9 @@ module Cardano.Api.Consensus
   , reflBlockType
   , Protocol (..)
   , ProtocolInfoArgs (..)
+  , cardanoLedgerTransitionConfig
+  , byronProtocolParams
+  , byronGenesis
   , ProtocolClient (..)
   , ProtocolClientInfoArgs (..)
   , nodeSystemStart
@@ -79,6 +82,7 @@ module Cardano.Api.Consensus
   , StandardCrypto
   , TopLevelConfig
   , ledgerState
+  , shelleyLedgerGenesis
   , blockHash
   , blockNo
   , blockSlot
