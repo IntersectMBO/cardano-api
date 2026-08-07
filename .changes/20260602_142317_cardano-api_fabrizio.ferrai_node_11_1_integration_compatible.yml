@@ -1,8 +1,0 @@
-description: |
-  Integration for cardano-node 11.1. Compatible changes:
-
-  - `shelleyGenesisDefaults` and `conwayGenesisDefaults` populate the new `sgExtraConfig` / `cgExtraConfig` ledger fields with their default values.
-kind:
-  - compatible
-pr: 1221
-project: cardano-api

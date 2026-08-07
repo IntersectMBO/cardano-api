@@ -1,5 +1,106 @@
 # Changelog for cardano-api
 
+## 11.4.0.0 -- 2026-08-06
+
+- `makeTransactionBodyAutoBalance` and `estimateBalancedTxBody` (both the traditional and the experimental versions) now fail with the new `CollateralWithoutPlutusScripts` error on transactions that provide collateral inputs but run no Plutus scripts. The ledger requires collateral only for transactions that run Plutus scripts and ignores it otherwise: the collateral inputs would only cost fees and require the collateral UTxOs to stay unspent. Previously, the collateral inputs were kept and the collateral fields were set; with a small collateral input, the computed return collateral output fell below the minimum UTxO value and the ledger rejected the transaction.
+  (bugfix, breaking)
+  [PR 1274](https://github.com/intersectmbo/cardano-api/pull/1274)
+
+- Re-export the ChainDB follower API from Cardano.Api.Consensus: newFollower, Follower, ChainType, ChainUpdate, withRegistry, ResourceRegistry, configSecurityParam and SecurityParam.
+  (compatible)
+  [PR 1268](https://github.com/intersectmbo/cardano-api/pull/1268)
+
+- Issue: when the collateral is ada-only and the ada left over after covering the required collateral is below the minimum UTxO value of a return collateral output, balancing fails, even though a valid transaction exists.
+  Solution: the ada left over is now folded into the total collateral, with no return collateral output: it is only lost if a Plutus script fails on chain. `estimateBalancedTxBody` cannot see the content of the collateral inputs, so it computes collateral under the documented assumption that they contain no native tokens.
+  (bugfix)
+  [PR 1267](https://github.com/intersectmbo/cardano-api/pull/1267)
+
+- Issue: `makeTransactionBodyAutoBalance` and `estimateBalancedTxBody` (both the traditional and the experimental versions) could build transactions that the ledger rejects: with a return collateral output (computed or explicitly provided) below the minimum UTxO value, or with insufficient collateral.
+  Solution: balancing now fails with the new `TxBodyErrorCollateral` error instead of building a rejected transaction. `calcReturnAndTotalCollateral` now returns the collateral fields in an `Either CollateralError` instead of a plain pair.
+  (bugfix, breaking)
+  [PR 1266](https://github.com/intersectmbo/cardano-api/pull/1266)
+
+- Remove the unused `ByronToAlonzoEra` eon (the `Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra` module and its `Cardano.Api.Era` re-export); it had no consumers, and the same era-gating is available via `forEraInEon`/`inEonForEra` on `toCardanoEra era`.
+  (breaking)
+  [PR 1260](https://github.com/intersectmbo/cardano-api/pull/1260)
+
+- Remove the closed-range eons `ShelleyToAllegraEra`, `ShelleyToMaryEra` and `ShelleyToAlonzoEra` and their eliminators `caseShelleyToAllegraOrMaryEraOnwards`, `caseShelleyToMaryOrAlonzoEraOnwards` and `caseShelleyToAlonzoOrBabbageEraOnwards`; achieve the same era-gating with `forEraInEon` (or `inEonForEra`) on `toCardanoEra era`, keyed on the surviving `MaryEraOnwards`/`AlonzoEraOnwards`/`BabbageEraOnwards` eon.
+  (breaking)
+  [PR 1260](https://github.com/intersectmbo/cardano-api/pull/1260)
+
+- Re-export getTipHeader, blockHash and blockSlot from Cardano.Api.Consensus.
+  (compatible)
+  [PR 1259](https://github.com/intersectmbo/cardano-api/pull/1259)
+
+- Remove the deprecated 'pattern Block :: BlockHeader -> [Tx era] -> Block era' pattern synonym from 'Cardano.Api.Block'. Use 'getBlockHeader' and 'getBlockTxs' instead. The 'Block' data type and its constructors ('ByronBlock', 'ShelleyBlock') are unchanged.
+  (breaking)
+  [PR 1252](https://github.com/intersectmbo/cardano-api/pull/1252)
+
+- Fixed `writeSecrets` creating secret files with the process-default permissions and only restricting them afterwards, leaving a window during which the secrets could be readable by other users. Secret files are now created with owner-only permissions from the start. Write failures are now thrown as `ErrorAsException` carrying the file path and a call stack, instead of a bare `IOException`.
+  (bugfix)
+  [PR 1250](https://github.com/intersectmbo/cardano-api/pull/1250)
+
+- Fixed `deserialiseInput`, `deserialiseInputAnyOf` and `deserialiseAnyVerificationKeyBech32` (and thereby `deserialiseAnyVerificationKey`) to return an error instead of throwing an impure exception when the input is not valid UTF-8. Added a `Bech32InvalidUtf8` constructor to `Bech32DecodeError`, which carries the UTF-8 decoding error.
+  (bugfix)
+  [PR 1249](https://github.com/intersectmbo/cardano-api/pull/1249)
+
+- Added `writeFileTextEnvelopeWithOwnerPermissions`, a variant of `writeFileTextEnvelope` that creates the output file with owner-only permissions. Use it when writing sensitive data such as signing keys, since `writeFileTextEnvelope` creates files with the default permissions. Additionally, on POSIX systems, files created by the `WithOwnerPermissions` family of functions now get `0600` permissions instead of `0700` (the owner-execute bit is no longer set), and pre-existing files are now truncated on open, so overwriting a file with shorter content no longer leaves stale trailing bytes.
+  (feature)
+  [PR 1248](https://github.com/intersectmbo/cardano-api/pull/1248)
+
+- Re-export `byronBlockRaw` from `Cardano.Api.Consensus`, giving access to the underlying ledger block of a consensus `ByronBlock`.
+  (compatible)
+  [PR 1247](https://github.com/intersectmbo/cardano-api/pull/1247)
+
+- Add `toPlutusScriptPurposeIndex`, the inverse of `toPlutusScriptPurpose`, classifying a ledger redeemer pointer into its experimental `PlutusScriptPurpose` category and index given an `AlonzoEraOnwards` witness. Add the `GuardingScript` constructor to `PlutusScriptPurpose` for Dijkstra's new guard script purpose.
+  (feature, breaking)
+  [PR 1247](https://github.com/intersectmbo/cardano-api/pull/1247)
+
+- Add ConwayEraPParams to EraCommonConstraints. Both Conway and Dijkstra satisfy it, so obtainCommonConstraints now provides protocol parameter constraints without needing conwayEraOnwardsConstraints.
+  (breaking)
+  [PR 1247](https://github.com/intersectmbo/cardano-api/pull/1247)
+
+- Add `readAnyScriptBytes` and `readFileAnyScript` to the experimental API, decoding an `AnyScript` from a text envelope (simple or Plutus script CBOR) with a fallback to the legacy JSON simple script encoding. Introduce `AnyScriptDecodeError` for the JSON and CBOR failure cases.
+  (feature)
+  [PR 1245](https://github.com/intersectmbo/cardano-api/pull/1245)
+
+- Re-export consensus types from Cardano.Api.Consensus for node kernel access: NodeKernel, ChainDB, BlockComponent, RealPoint, OneEraHash, HeaderHash, HasHeader, BlockType, StandardCrypto, CardanoBlock, blockNo, getCurrentLedger, TopLevelConfig, configLedger, configBlock, ledgerState, HasHardForkHistory(..), ConfigSupportsNode, nodeSystemStart, mkInterpreter.
+  (compatible)
+  [PR 1242](https://github.com/intersectmbo/cardano-api/pull/1242)
+
+- Re-export more consensus types from Cardano.Api.Consensus for node kernel access: getCurrentLedger, TopLevelConfig, configLedger, configBlock, ledgerState, HasHardForkHistory(..), ConfigSupportsNode, mkInterpreter. Add nodeSystemStart helper extracting SystemStart from TopLevelConfig.
+  (compatible)
+  [PR 1242](https://github.com/intersectmbo/cardano-api/pull/1242)
+
+- Fix PlutusV4 scripts being mislabelled as V3 in several conversion functions, causing silent hash mismatches for V4 reference scripts. Fix `toShelleyScript` and `getPlutusDatum` crashing for V4. Fix scrambled `ToPlutusScriptPurpose` type family.
+  (bugfix)
+  [PR 1237](https://github.com/intersectmbo/cardano-api/pull/1237)
+
+- Remove deprecated era conversion functions that were superseded by 'convert': shelleyToAlonzoEraToShelleyToBabbageEra, alonzoEraOnwardsToMaryEraOnwards, babbageEraOnwardsToMaryEraOnwards, babbageEraOnwardsToAlonzoEraOnwards, eraToSbe, eraToBabbageEraOnwards, shelleyToMaryEraToShelleyBasedEra, conwayEraOnwardsToShelleyBasedEra, conwayEraOnwardsToBabbageEraOnwards, maryEraOnwardsToShelleyBasedEra, babbageEraOnwardsToShelleyBasedEra, shelleyEraOnlyToShelleyBasedEra, alonzoEraOnwardsToShelleyBasedEra, shelleyToBabbageEraToShelleyBasedEra, allegraEraOnwardsToShelleyBasedEra, shelleyToAllegraEraToShelleyBasedEra. Use 'convert' instead.
+  (breaking)
+  [PR 1234](https://github.com/intersectmbo/cardano-api/pull/1234)
+
+- Integration for cardano-node 11.1. Breaking changes:
+  
+  - `initialLedgerState`, `foldBlocks`, `foldEpochState`, `mkProtocolInfoCardano` and `genesisConfigToEnv` (all in `Cardano.Api.LedgerState`) take a new `SomeHasFS IO` argument, used by consensus to stream genesis data from disk.
+  - In `Cardano.Api.Consensus`, the `ProtocolInfoArgs` data family is now parameterised by the monad (`ProtocolInfoArgs m blk`) and `protocolInfo` returns its result monadically. The `ProtocolInfoArgsCardano` and `ProtocolInfoArgsShelley` constructors gain a `SomeHasFS m` field.
+  - The first type parameter of `Ledger.LedgerTables` is now the block (e.g. `HardForkBlock (CardanoEras StandardCrypto)`) rather than `LedgerState` of the block. This propagates through exported `Cardano.Api.LedgerState` items including `AnyNewEpochState`, `getLedgerTablesUTxOValues`, `toLedgerStateEvents`, `tickThenReapplyCheckHash` and `tickThenApply`.
+  - Removed orphan `ToJSON` instances (previously made visible by `import Cardano.Api`) for `NonEmptyMap`, `NonEmptySet`, `Ledger.StakeSnapshots` and `Ledger.StakeSnapshot`. These instances are now provided upstream.
+  - The transaction-balancing API drops its `drepDelegDeposits` (`Map (Credential DRepRole) Coin`) parameter, following cardano-ledger 1.14 removing the DRep-deposit lookup from `evalBalanceTxBody` (ledger PR 5919). Affected exported functions: `evaluateTransactionBalance`, `estimateBalancedTxBody`, `estimateOrCalculateBalancedTxBody`, `makeTransactionBodyAutoBalance`, `constructBalancedTx` and their `Cardano.Api.Experimental.Tx` counterparts plus `evaluateTransaction`, `evaluateSignedTx`, `calcMinFeeRecursive`.
+  - Dependency bound bumps: `cardano-crypto-class ^>=2.5`, `fs-api ^>=0.4`, `cardano-ledger-api ^>=1.14`.
+  (breaking)
+  [PR 1221](https://github.com/intersectmbo/cardano-api/pull/1221)
+
+- Integration for cardano-node 11.1. Compatible changes:
+  
+  - `shelleyGenesisDefaults` and `conwayGenesisDefaults` populate the new `sgExtraConfig` / `cgExtraConfig` ledger fields with their default values.
+  (compatible)
+  [PR 1221](https://github.com/intersectmbo/cardano-api/pull/1221)
+
+- Add `FromJSON` instances for the new experimental `TxOut` type.
+  (feature)
+  [PR 1179](https://github.com/intersectmbo/cardano-api/pull/1179)
+
 ## 11.3.0.0 -- 2026-05-26
 
 - Bump plutus-core and plutus-ledger-api from ^>=1.61 to ^>=1.65. No ledger API changes ([releases](https://github.com/IntersectMBO/plutus/releases/tag/1.65.0.0)); bump driven by plutus-core fixes.
