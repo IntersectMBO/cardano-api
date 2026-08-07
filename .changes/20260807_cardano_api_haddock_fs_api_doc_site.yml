@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1284
+kind:
+  - maintenance
+description: |
+  Fix the Haddock dead-link CI failure on master (#1279): add the fs-sim repository's documentation site (which hosts `fs-api`'s Haddocks) to `IOG_DOC_BASES` in `scripts/fix-haddock-links.sh`.
