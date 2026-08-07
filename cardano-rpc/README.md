@@ -16,7 +16,7 @@ It implements [UTxO RPC](https://utxorpc.org/introduction) protobuf communicatio
 | [SearchUtxos](https://utxorpc.org/query/spec/#searchutxosrequest) | ✅ Supported |
 | [ReadData](https://utxorpc.org/query/spec/#readdatarequest) | ⬜ Not supported |
 | [ReadTx](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
-| [ReadGenesis](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
+| [ReadGenesis](https://utxorpc.org/query/spec/#queryservice) | ✅ Supported |
 | [ReadEraSummary](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
 
 ### [SubmitService](https://utxorpc.org/submit/spec/)

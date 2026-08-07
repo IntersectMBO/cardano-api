@@ -7,6 +7,7 @@
 
 module Cardano.Rpc.Server.NodeKernelAccess
   ( NodeKernelAccess (..)
+  , GenesisBundle (..)
   , mkNodeKernelAccess
   , fetchBlock
   , grabNodeKernelAccess
@@ -19,6 +20,7 @@ where
 import Cardano.Api
 import Cardano.Api.Consensus qualified as Consensus
 import Cardano.Rpc.Server.Internal.Monad (MonadRpc, grab)
+import Cardano.Rpc.Server.Internal.Tracing
 import Cardano.Rpc.Server.NodeKernelAccess.Type
 
 import RIO (MonadUnliftIO, atomically, bracket, throwIO, withRunInIO)
@@ -34,24 +36,28 @@ import Network.GRPC.Spec
 -- Returns 'Nothing' and traces the block type for non-Cardano block types.
 mkNodeKernelAccess
   :: Monad m
-  => Tracer m Text
-  -- ^ Tracer for unsupported block type warnings
+  => Tracer m TraceRpc
+  -- ^ Tracer for RPC events
+  -> GenesisHashShelley
+  -- ^ Boot-time Shelley genesis hash
+  -> Consensus.ProtocolInfoArgs blk
+  -- ^ Protocol info arguments (carrying the parsed genesis and transition
+  -- config)
   -> Consensus.BlockType blk
   -- ^ Block type witness
-  -> Consensus.TopLevelConfig blk
-  -- ^ Top-level consensus config (for system start, era history and the
-  -- security parameter)
   -> Consensus.NodeKernel IO addrNTN addrNTC blk
   -- ^ Consensus node kernel
   -> m (Maybe NodeKernelAccess)
-mkNodeKernelAccess tracer blockType topLevelConfig kernel = case blockType of
+mkNodeKernelAccess tracer shelleyGenesisHash protocolInfoArgs blockType kernel = case blockType of
   Consensus.CardanoBlockType ->
-    pure $ Just NodeKernelAccess{chainDb, systemStart, readEraHistory, securityParam}
+    pure $ Just NodeKernelAccess{chainDb, systemStart, readEraHistory, securityParam, genesisConfig}
    where
     chainDb = Consensus.getChainDB kernel
+    topLevelConfig = Consensus.getTopLevelConfig kernel
     ledgerConfig = Consensus.configLedger topLevelConfig
     systemStart = Consensus.nodeSystemStart topLevelConfig
     securityParam = Consensus.configSecurityParam topLevelConfig
+    genesisConfig = readGenesisBundle shelleyGenesisHash protocolInfoArgs
     -- Read the current ledger state (cheap STM TVar read) and recompute
     -- the era summary on every call - O(number_of_eras).
     -- This is the same approach consensus uses for GetInterpreter queries
@@ -64,8 +70,21 @@ mkNodeKernelAccess tracer blockType topLevelConfig kernel = case blockType of
         Consensus.hardForkSummary ledgerConfig (Consensus.ledgerState extLedger)
   _ -> do
     -- unsupported block type
-    traceWith tracer $ pack (show blockType)
+    traceWith tracer . inject . TraceRpcUnsupportedBlockType . pack $ show blockType
     pure Nothing
+
+-- | Gather the network's genesis configuration from the node's boot-time
+-- 'Consensus.ProtocolInfoArgs'.
+readGenesisBundle
+  :: GenesisHashShelley
+  -> Consensus.ProtocolInfoArgs (Consensus.CardanoBlock Consensus.StandardCrypto)
+  -> GenesisBundle
+readGenesisBundle shelleyGenesisHash (Consensus.ProtocolInfoArgsCardano cardanoProtocolParams) =
+  GenesisBundle
+    { byronConfig = Consensus.byronGenesis $ Consensus.byronProtocolParams cardanoProtocolParams
+    , shelleyGenesisHash
+    , transitionConfig = Consensus.cardanoLedgerTransitionConfig cardanoProtocolParams
+    }
 
 -- | Grab the current 'NodeKernelAccess' from the environment, or throw
 -- gRPC UNAVAILABLE if the node kernel has not yet initialised.

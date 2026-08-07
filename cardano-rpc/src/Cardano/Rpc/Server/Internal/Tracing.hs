@@ -21,6 +21,7 @@ data TraceRpc
   = TraceRpcQuery TraceRpcQuery
   | TraceRpcSubmit TraceRpcSubmit
   | TraceRpcSync TraceRpcSync
+  | TraceRpcNodeKernelAccess TraceRpcNodeKernelAccess
   | TraceRpcError SomeException
   | TraceRpcFatalError SomeException
 
@@ -32,6 +33,8 @@ data TraceRpcQuery
     TraceRpcQueryReadUtxosSpan TraceSpanEvent
   | -- | Span trace marking SearchUtxos query
     TraceRpcQuerySearchUtxosSpan TraceSpanEvent
+  | -- | Span trace marking ReadGenesis query
+    TraceRpcQueryReadGenesisSpan TraceSpanEvent
   deriving Show
 
 instance Pretty TraceRpc where
@@ -39,6 +42,7 @@ instance Pretty TraceRpc where
     TraceRpcQuery t -> pretty t
     TraceRpcSubmit t -> pretty t
     TraceRpcSync t -> pretty t
+    TraceRpcNodeKernelAccess t -> pretty t
     TraceRpcError e -> "Exception when processing RPC request:\n" <> prettyException e
     TraceRpcFatalError e -> "RPC server fatal error: " <> prettyException e
 
@@ -61,6 +65,8 @@ instance Pretty TraceRpcQuery where
     TraceRpcQueryReadUtxosSpan (SpanEnd _) -> "Finished query read UTXO method"
     TraceRpcQuerySearchUtxosSpan (SpanBegin _) -> "Started query search UTXO method"
     TraceRpcQuerySearchUtxosSpan (SpanEnd _) -> "Finished query search UTXO method"
+    TraceRpcQueryReadGenesisSpan (SpanBegin _) -> "Started query read genesis method"
+    TraceRpcQueryReadGenesisSpan (SpanEnd _) -> "Finished query read genesis method"
 
 instance Error TraceRpcQuery where
   prettyError = pretty
@@ -123,6 +129,24 @@ instance Pretty TraceRpcSync where
 instance Error TraceRpcSync where
   prettyError = pretty
 
+-- | Traces emitted while setting up in-process node kernel access.
+--
+-- None of these are fatal: the node always starts, and RPC either serves
+-- reduced data or reports @UNAVAILABLE@.
+newtype TraceRpcNodeKernelAccess
+  = -- | Node kernel access is not supported for the running block type,
+    -- given here by name.
+    TraceRpcUnsupportedBlockType Text
+  deriving Show
+
+instance Pretty TraceRpcNodeKernelAccess where
+  pretty = \case
+    TraceRpcUnsupportedBlockType blockType ->
+      "Node kernel access is not supported for block type: " <> pretty blockType
+
+instance Error TraceRpcNodeKernelAccess where
+  prettyError = pretty
+
 instance Inject TraceRpcSubmit TraceRpc where
   inject = TraceRpcSubmit
 
@@ -131,3 +155,6 @@ instance Inject TraceRpcQuery TraceRpc where
 
 instance Inject TraceRpcSync TraceRpc where
   inject = TraceRpcSync
+
+instance Inject TraceRpcNodeKernelAccess TraceRpc where
+  inject = TraceRpcNodeKernelAccess
