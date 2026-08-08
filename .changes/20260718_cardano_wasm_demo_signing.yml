@@ -1,0 +1,9 @@
+project: cardano-wasm
+
+pr: 1283
+
+kind:
+  - feature
+
+description: |
+  Demo: fee estimation, balance/min-UTxO checks, signing with tx id, cardano-cli TextEnvelope export.

@@ -6,8 +6,10 @@ helpers; effects go through Wasm (ports).
 
 import Blockfrost
 import Dict
+import File.Download as Download
 import Format
-import Net exposing (netName)
+import Json.Encode as E
+import Net exposing (cliType, netName)
 import Ports exposing (clipboardWrite)
 import Set
 import State exposing (..)
@@ -51,6 +53,7 @@ update msg model =
                 , reloading = Set.empty
                 , outputs = []
               }
+                |> invalidateShape
                 |> log LogInfo ("switched to " ++ netName n)
             , if List.isEmpty model.wallets then
                 Cmd.none
@@ -134,6 +137,7 @@ update msg model =
                 | wallets = List.filter (\w -> w.id /= wid) model.wallets
                 , modal = NoModal
               }
+                |> invalidateShape
                 |> log LogWarn "forgot wallet"
             , Cmd.none
             )
@@ -198,7 +202,8 @@ update msg model =
                 case result of
                     Ok page ->
                         -- On a reload the previous page is still in place, so ticks are
-                        -- kept for UTxOs that still exist.
+                        -- kept for UTxOs that still exist. If a ticked UTxO disappeared
+                        -- (it was spent), the tx shape changed under us — invalidate.
                         let
                             prevSelected =
                                 case getWallet wid settled |> Maybe.map .utxos of
@@ -211,6 +216,9 @@ update msg model =
                             restored =
                                 List.map (\u -> { u | selected = List.member ( u.txId, u.txIx ) prevSelected }) page.utxos
 
+                            lostSelection =
+                                List.length (List.filter .selected restored) /= List.length prevSelected
+
                             warnTruncated m =
                                 if page.truncated then
                                     log LogWarn (aliasOf wid m ++ " has more UTxOs than one page — the balance is a lower bound") m
@@ -219,6 +227,12 @@ update msg model =
                                     m
                         in
                         ( mapWallet wid (\w -> { w | utxos = Loaded { page | utxos = restored } }) settled
+                            |> (if lostSelection then
+                                    invalidateShape
+
+                                else
+                                    identity
+                               )
                             |> log LogOk (aliasOf wid settled ++ ": loaded " ++ String.fromInt (List.length restored) ++ " UTxOs")
                             |> warnTruncated
                         , Cmd.none
@@ -239,7 +253,7 @@ update msg model =
                                 )
 
         ToggleUtxoSelected wid txId txIx ->
-            ( mapWallet wid (toggleUtxo txId txIx) model, Cmd.none )
+            ( mapWallet wid (toggleUtxo txId txIx) model |> invalidateShape, Cmd.none )
 
         -- ── address book ───────────────────────────────────────────────────────
         ClickAddBookToggle ->
@@ -292,25 +306,146 @@ update msg model =
 
         -- ── outputs ────────────────────────────────────────────────────────────
         UseBookAddress alias addr ->
-            ( { model | outputs = model.outputs ++ [ Output addr alias (Lovelace "") ] }
+            ( { model | outputs = model.outputs ++ [ Output addr alias (Lovelace "") ] } |> invalidateShape
             , inspectIfNew model addr
             )
 
         UpdateOutputAmount i s ->
-            ( { model | outputs = updateAt i (\o -> { o | amount = Lovelace s }) model.outputs }, Cmd.none )
+            ( { model | outputs = updateAt i (\o -> { o | amount = Lovelace s }) model.outputs } |> invalidateShape, Cmd.none )
 
         ToggleOutputChange i ->
-            ( { model | outputs = toggleOutputChange i model.outputs }, Cmd.none )
+            ( { model | outputs = toggleOutputChange i model.outputs }
+                |> invalidateShape
+            , Cmd.none
+            )
 
         DeleteOutput i ->
-            ( { model | outputs = removeAt i model.outputs }, Cmd.none )
+            ( { model | outputs = removeAt i model.outputs } |> invalidateShape, Cmd.none )
 
         -- ── clearing ───────────────────────────────────────────────────────────
         ClearInputs ->
-            ( deselectInputs model, Cmd.none )
+            ( deselectInputs model |> invalidateShape, Cmd.none )
 
         ClearOutputs ->
-            ( { model | outputs = [] }, Cmd.none )
+            ( { model | outputs = [] } |> invalidateShape, Cmd.none )
+
+        ClearTx ->
+            ( deselectInputs { model | outputs = [] } |> invalidateShape, Cmd.none )
+
+        -- ── era & fee ──────────────────────────────────────────────────────────
+        SelectEra e ->
+            ( { model | era = e }
+                |> invalidateShape
+                |> log LogCmd
+                    ("tx = "
+                        ++ (if e == Conway then
+                                "newTx()"
+
+                            else
+                                "newUpcomingEraTx()"
+                           )
+                    )
+            , Cmd.none
+            )
+
+        ClickEstimateFee ->
+            if not (txReady model) then
+                toastNow "Add inputs and a recipient, and fix any flagged issues" model
+
+            else
+                -- a fresh estimate makes any existing signature's fee basis stale
+                ( { model | fee = EstimatingFee }
+                    |> invalidate
+                    |> log LogCmd ("tx.estimateMinFee(pparams, " ++ String.fromInt (witnessCount model) ++ ", 0, 0)")
+                , Wasm.estimateFee model
+                )
+
+        GotFeeEstimated result ->
+            -- accepted only if the request that produced it is still the live one;
+            -- an invalidating edit while it was in flight makes it stale (the same
+            -- rule GotUtxos applies with its network stamp)
+            if model.fee /= EstimatingFee then
+                ( log LogWarn "dropped a stale fee estimate" model, Cmd.none )
+
+            else
+                case result of
+                    Ok n ->
+                        ( { model | fee = FeeSet n, feeText = String.fromInt n } |> log LogOk ("minFee = " ++ String.fromInt n ++ " lovelace"), Cmd.none )
+
+                    Err e ->
+                        ( { model | fee = NoFee, feeText = "" } |> log LogWarn ("fee estimate failed: " ++ e), Cmd.none )
+
+        UpdateFeeText s ->
+            -- Manual fee entry: only a positive integer counts. Plain `invalidate` here —
+            -- `invalidateShape` would wipe the very fee being typed.
+            ( { model
+                | feeText = s
+                , fee =
+                    case String.toInt s of
+                        Just n ->
+                            if n > 0 then
+                                FeeSet n
+
+                            else
+                                NoFee
+
+                        Nothing ->
+                            NoFee
+              }
+                |> invalidate
+            , Cmd.none
+            )
+
+        -- ── sign / export ──────────────────────────────────────────────────────
+        ClickSign ->
+            -- same predicate that enables the button (fee set + balanced + draft + ready)
+            case ( canSign model, model.fee ) of
+                ( True, FeeSet fee ) ->
+                    ( { model | tx = Signing } |> log LogCmd "signWithPaymentKey(…) + alsoSign…"
+                    , Wasm.signTx fee model
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        GotTxSigned result ->
+            -- accepted only while still Signing: an invalidating edit mid-flight
+            -- must not let a stale signature resurrect itself
+            if model.tx /= Signing then
+                ( log LogWarn "dropped a stale signing result" model, Cmd.none )
+
+            else
+                case result of
+                    Ok p ->
+                        ( { model | tx = Signed (SignedTx p.cbor p.txId (List.length (paymentWalletIds model)) 0) }
+                            |> log LogOk ("transaction signed · txid " ++ p.txId)
+                        , Cmd.none
+                        )
+
+                    Err e ->
+                        ( { model | tx = Draft } |> log LogWarn ("sign failed: " ++ e), Cmd.none )
+
+        ClickDownloadCli ->
+            case model.tx of
+                Signed s ->
+                    -- cardano-cli TextEnvelope; broadcast with:
+                    --   cardano-cli <era> transaction submit --tx-file tx.signed <network-flag>
+                    let
+                        envelope =
+                            E.encode 4
+                                (E.object
+                                    [ ( "type", E.string (cliType model.era) )
+                                    , ( "description", E.string "Ledger Cddl Format" )
+                                    , ( "cborHex", E.string s.cbor )
+                                    ]
+                                )
+                    in
+                    ( log LogOk ("wrote tx.signed (" ++ cliType model.era ++ ")") model
+                    , Download.string "tx.signed" "application/json" envelope
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
 
         -- ── misc ───────────────────────────────────────────────────────────────
         Copy t ->
