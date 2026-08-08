@@ -632,6 +632,16 @@ txStateLabel model =
 inspectorText : Model -> String
 inspectorText model =
     let
+        -- the fee exactly as the spec sends it: a lovelace integer, or null
+        -- while unset/estimating (the summary row shows the friendly version)
+        specFee =
+            case model.fee of
+                FeeSet n ->
+                    String.fromInt n
+
+                _ ->
+                    "null"
+
         ins =
             selectedInputs model
                 |> List.map (\( w, u ) -> "    \"" ++ u.txId ++ "#" ++ String.fromInt u.txIx ++ "\"  // " ++ w.alias)
@@ -678,7 +688,7 @@ inspectorText model =
         ++ "\n  ],\n  outputs: [\n"
         ++ outs
         ++ "\n  ],\n  fee: "
-        ++ feeDisplay model
+        ++ specFee
         ++ ",\n  requiredWitnesses: "
         ++ String.fromInt (witnessCount model)
         ++ "\n}"

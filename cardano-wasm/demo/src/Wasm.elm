@@ -196,7 +196,9 @@ encodeSpec maybeFee model =
 
 {-| The explicit outputs plus the computed change output (if there is a remainder).
 For fee estimation the fee is still unknown (0) — the change is then slightly too
-large, but the transaction _size_ is the same, which is all the estimate needs.
+large, and if the real change turns out to be exactly 0 the estimated transaction
+even carries one output more. Either way the real transaction is never larger
+than the estimated one, so the estimate can only over-pay, never under-pay.
 -}
 finalOutputs : Int -> Model -> List E.Value
 finalOutputs feeForChange model =
