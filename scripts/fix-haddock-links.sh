@@ -146,6 +146,7 @@ IOG_DOC_BASES=(
   "https://ouroboros-network.cardano.intersectmbo.org"
   "https://intersectmbo.github.io/io-sim"
   "https://intersectmbo.github.io/typed-protocols"
+  "https://input-output-hk.github.io/fs-sim"
 )
 
 # CHaP packages we've confirmed have no public Haddocks anywhere (no
