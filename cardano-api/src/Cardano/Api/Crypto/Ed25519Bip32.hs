@@ -19,6 +19,7 @@ module Cardano.Api.Crypto.Ed25519Bip32
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary.FixedSizeCodec (FixedSizeCodec (..))
 import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.Seed
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -115,6 +116,26 @@ instance DSIGNAlgorithm Ed25519Bip32DSIGN where
     fmap SignKeyEd25519Bip32DSIGN . xPrvFromBytes
   rawDeserialiseSigDSIGN =
     either (const Nothing) (Just . SigEd25519Bip32DSIGN) . CC.xsignature
+
+-- | FixedSizeCodec superclasses required by the newer cardano-base DSIGNAlgorithm,
+-- built from the existing raw (de)serialise; sizes match the VerKey/SignKey/Sig type families.
+instance FixedSizeCodec (VerKeyDSIGN Ed25519Bip32DSIGN) where
+  type FixedSize (VerKeyDSIGN Ed25519Bip32DSIGN) = 64
+  rawEncodeFixedSized = rawSerialiseVerKeyDSIGN
+  rawDecodeFixedSized =
+    maybe (fail "invalid Ed25519Bip32 verification key") pure . rawDeserialiseVerKeyDSIGN
+
+instance FixedSizeCodec (SignKeyDSIGN Ed25519Bip32DSIGN) where
+  type FixedSize (SignKeyDSIGN Ed25519Bip32DSIGN) = 96
+  rawEncodeFixedSized = rawSerialiseSignKeyDSIGN
+  rawDecodeFixedSized =
+    maybe (fail "invalid Ed25519Bip32 signing key") pure . rawDeserialiseSignKeyDSIGN
+
+instance FixedSizeCodec (SigDSIGN Ed25519Bip32DSIGN) where
+  type FixedSize (SigDSIGN Ed25519Bip32DSIGN) = 64
+  rawEncodeFixedSized = rawSerialiseSigDSIGN
+  rawDecodeFixedSized =
+    maybe (fail "invalid Ed25519Bip32 signature") pure . rawDeserialiseSigDSIGN
 
 instance Show (SignKeyDSIGN Ed25519Bip32DSIGN) where
   show (SignKeyEd25519Bip32DSIGN sk) = show $ xPrvToBytes sk
