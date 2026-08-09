@@ -70,9 +70,18 @@ testDSIGNAlgorithm _ n =
             ]
         , testGroup
             "direct CBOR"
+<<<<<<< HEAD
             [ testProperty "VerKey" $ prop_cbor_fixed_sized @(VerKeyDSIGN v)
             , testProperty "SignKey" $ prop_cbor_fixed_sized @(SignKeyDSIGN v)
             , testProperty "Sig" $ prop_cbor_fixed_sized @(SigDSIGN v)
+=======
+            [ testProperty "VerKey" $
+                prop_cbor_fixed_sized @(VerKeyDSIGN v)
+            , testProperty "SignKey" $
+                prop_cbor_fixed_sized @(SignKeyDSIGN v)
+            , testProperty "Sig" $
+                prop_cbor_fixed_sized @(SigDSIGN v)
+>>>>>>> f5ee53d4c (Fix tests)
             ]
         , testGroup
             "To/FromCBOR class"
