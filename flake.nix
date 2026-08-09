@@ -37,6 +37,19 @@
 
     cardano-dev.url = "github:input-output-hk/cardano-dev";
 
+    cardano-ledger-src = {
+      url = "git+file:///media/nvme/git/cardano-node-release-ai/cardano-ledger";
+      flake = false;
+    };
+    ouroboros-network-src = {
+      url = "git+file:///media/nvme/git/cardano-node-release-ai/ouroboros-network";
+      flake = false;
+    };
+    ouroboros-consensus-src = {
+      url = "git+file:///media/nvme/git/cardano-node-release-ai/ouroboros-consensus";
+      flake = false;
+    };
+
     # wasm specific inputs
     wasm-nixpkgs.follows = "ghc-wasm-meta/nixpkgs";
     ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
@@ -139,6 +152,9 @@
           #
           inputMap = {
             "https://chap.intersectmbo.org/" = inputs.CHaP;
+            "file:///media/nvme/git/cardano-node-release-ai/cardano-ledger" = inputs.cardano-ledger-src;
+            "file:///media/nvme/git/cardano-node-release-ai/ouroboros-network" = inputs.ouroboros-network-src;
+            "file:///media/nvme/git/cardano-node-release-ai/ouroboros-consensus" = inputs.ouroboros-consensus-src;
           };
           # Also currently needed to make `nix flake lock --update-input CHaP` work.
           cabalProjectLocal = ''
