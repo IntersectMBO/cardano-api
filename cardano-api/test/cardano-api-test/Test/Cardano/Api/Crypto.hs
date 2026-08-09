@@ -89,17 +89,11 @@ testDSIGNAlgorithm _ n =
         , testGroup
             "direct CBOR"
             [ testProperty "VerKey" $
-                prop_cbor_with @(VerKeyDSIGN v)
-                  encodeVerKeyDSIGN
-                  decodeVerKeyDSIGN
+                prop_cbor_fixed_sized @(VerKeyDSIGN v)
             , testProperty "SignKey" $
-                prop_cbor_with @(SignKeyDSIGN v)
-                  encodeSignKeyDSIGN
-                  decodeSignKeyDSIGN
+                prop_cbor_fixed_sized @(SignKeyDSIGN v)
             , testProperty "Sig" $
-                prop_cbor_with @(SigDSIGN v)
-                  encodeSigDSIGN
-                  decodeSigDSIGN
+                prop_cbor_fixed_sized @(SigDSIGN v)
             ]
         , testGroup
             "To/FromCBOR class"
@@ -116,14 +110,11 @@ testDSIGNAlgorithm _ n =
         , testGroup
             "direct matches class"
             [ testProperty "VerKey" $
-                prop_cbor_direct_vs_class @(VerKeyDSIGN v)
-                  encodeVerKeyDSIGN
+                prop_cbor_fixed_sized_vs_class @(VerKeyDSIGN v)
             , testProperty "SignKey" $
-                prop_cbor_direct_vs_class @(SignKeyDSIGN v)
-                  encodeSignKeyDSIGN
+                prop_cbor_fixed_sized_vs_class @(SignKeyDSIGN v)
             , testProperty "Sig" $
-                prop_cbor_direct_vs_class @(SigDSIGN v)
-                  encodeSigDSIGN
+                prop_cbor_fixed_sized_vs_class @(SigDSIGN v)
             ]
         ]
     , testGroup
