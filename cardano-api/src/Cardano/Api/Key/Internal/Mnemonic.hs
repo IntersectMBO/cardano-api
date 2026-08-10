@@ -15,6 +15,7 @@ module Cardano.Api.Key.Internal.Mnemonic
   )
 where
 
+import Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
 import Cardano.Api.Error (Error (..))
 import Cardano.Api.Key.Internal
   ( AsType
@@ -27,6 +28,8 @@ import Cardano.Api.Key.Internal
   )
 import Cardano.Api.Key.Internal.Class (Key (..))
 
+import Cardano.Crypto.Wallet qualified as CC
+
 import Cardano.Address.Derivation
   ( Depth (..)
   , DerivationType (..)
@@ -35,6 +38,7 @@ import Cardano.Address.Derivation
   , XPrv
   , genMasterKeyFromMnemonic
   , indexFromWord32
+  , xprvToBytes
   )
 import Cardano.Address.Style.Shelley
   ( Role (..)
@@ -71,6 +75,9 @@ import Prettyprinter (Doc, Pretty (..))
 import Basement.Compat.IsList qualified as Basement
 import Basement.String qualified as Basement
 import Crypto.Encoding.BIP39.English (english)
+
+caXPrvToCCXPrv :: XPrv -> CC.XPrv
+caXPrvToCCXPrv = fromMaybe (error "caXPrvToCCXPrv: impossible") . xPrvFromBytes . xprvToBytes
 
 -- | The size of a mnemonic sentence.
 -- The size is given in the number of words in the sentence.
@@ -154,7 +161,11 @@ instance IndexedSigningKeyFromRootKey PaymentExtendedKey where
     -> Either Word32 (SigningKey PaymentExtendedKey)
   deriveSigningKeyFromAccountWithPaymentKeyIndex _ accK idx = do
     payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
-    return $ PaymentExtendedSigningKey $ getKey $ deriveAddressPrivateKey accK UTxOExternal payKeyIx
+    return $
+      PaymentExtendedSigningKey $
+        caXPrvToCCXPrv $
+          getKey $
+            deriveAddressPrivateKey accK UTxOExternal payKeyIx
 
 instance IndexedSigningKeyFromRootKey StakeExtendedKey where
   deriveSigningKeyFromAccountWithPaymentKeyIndex
@@ -164,7 +175,11 @@ instance IndexedSigningKeyFromRootKey StakeExtendedKey where
     -> Either Word32 (SigningKey StakeExtendedKey)
   deriveSigningKeyFromAccountWithPaymentKeyIndex _ accK idx = do
     payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
-    return $ StakeExtendedSigningKey $ getKey $ deriveAddressPrivateKey accK Stake payKeyIx
+    return $
+      StakeExtendedSigningKey $
+        caXPrvToCCXPrv $
+          getKey $
+            deriveAddressPrivateKey accK Stake payKeyIx
 
 instance SigningKeyFromRootKey DRepExtendedKey where
   deriveSigningKeyFromAccount
@@ -172,7 +187,7 @@ instance SigningKeyFromRootKey DRepExtendedKey where
     -> Shelley 'AccountK XPrv
     -> SigningKey DRepExtendedKey
   deriveSigningKeyFromAccount _ accK =
-    DRepExtendedSigningKey $ getKey $ deriveDRepPrivateKey accK
+    DRepExtendedSigningKey $ caXPrvToCCXPrv $ getKey $ deriveDRepPrivateKey accK
 
 instance SigningKeyFromRootKey CommitteeColdExtendedKey where
   deriveSigningKeyFromAccount
@@ -180,7 +195,7 @@ instance SigningKeyFromRootKey CommitteeColdExtendedKey where
     -> Shelley 'AccountK XPrv
     -> SigningKey CommitteeColdExtendedKey
   deriveSigningKeyFromAccount _ accK =
-    CommitteeColdExtendedSigningKey $ getKey $ deriveCCColdPrivateKey accK
+    CommitteeColdExtendedSigningKey $ caXPrvToCCXPrv $ getKey $ deriveCCColdPrivateKey accK
 
 instance SigningKeyFromRootKey CommitteeHotExtendedKey where
   deriveSigningKeyFromAccount
@@ -188,7 +203,7 @@ instance SigningKeyFromRootKey CommitteeHotExtendedKey where
     -> Shelley 'AccountK XPrv
     -> SigningKey CommitteeHotExtendedKey
   deriveSigningKeyFromAccount _ accK =
-    CommitteeHotExtendedSigningKey $ getKey $ deriveCCHotPrivateKey accK
+    CommitteeHotExtendedSigningKey $ caXPrvToCCXPrv $ getKey $ deriveCCHotPrivateKey accK
 
 -- | Generate a signing key from a mnemonic sentence given a function that
 -- derives a key from an account extended key.

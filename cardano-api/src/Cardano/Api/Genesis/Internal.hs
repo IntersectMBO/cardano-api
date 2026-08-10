@@ -203,6 +203,8 @@ dijkstraGenesisDefaults =
           , udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
           , udppRefScriptCostStride = knownNonZeroBounded @25600 -- 25 KiB
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          , udppMaxPledgeLeverage = MaxPledgeLeverage SNothing
+          , udppMinPoolMargin = fromJust $ boundRational 0.015
           }
     }
 

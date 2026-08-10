@@ -1527,6 +1527,8 @@ exampleDijkstraGenesis =
           , Ledger.udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
           , Ledger.udppRefScriptCostStride = knownNonZeroBounded @25600 -- 25 KiB
           , Ledger.udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          , Ledger.udppMaxPledgeLeverage = Core.MaxPledgeLeverage ShelleyAPI.SNothing
+          , Ledger.udppMinPoolMargin = fromJust $ boundRational 0.015
           }
     }
 

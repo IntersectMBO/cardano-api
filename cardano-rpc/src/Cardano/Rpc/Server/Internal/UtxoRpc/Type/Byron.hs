@@ -37,6 +37,7 @@ import Cardano.Crypto qualified as Byron
   , hashToBytes
   )
 import Cardano.Crypto.Wallet qualified as WC
+import Crypto.PubKey.Ed25519 qualified as Ed25519 (Signature)
 import Cardano.Ledger.Keys qualified as L (VKey (..))
 import Cardano.Ledger.Keys.Bootstrap qualified as L (ChainCode (..), unpackByronVKey)
 
@@ -110,7 +111,7 @@ byronTxToUtxoRpcTx txAux = do
       vkeyWitnesses =
         [ defMessage
             & U5c.vkey .~ Byron.fromVerificationKeyToByteString redeemKey
-            & U5c.signature .~ BA.convert redeemSignature
+            & U5c.signature .~ BA.convert (redeemSignature :: Ed25519.Signature)
         | RedeemWitness
             (Byron.RedeemVerificationKey redeemKey)
             (Byron.RedeemSignature redeemSignature) <-
