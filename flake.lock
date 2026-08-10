@@ -177,6 +177,22 @@
         "type": "github"
       }
     },
+    "cardano-ledger-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786323122,
+        "narHash": "sha256-lMKv6BLcIt0FHrT5CzCMtaHnMerOfBEy/2wjKe/7oCc=",
+        "ref": "refs/heads/claude/prepare-11.2",
+        "rev": "82a9b1b0d9c99065edde89517578900dfe568880",
+        "revCount": 12819,
+        "type": "git",
+        "url": "file:///media/nvme/git/cardano-node-release-ai/cardano-ledger"
+      },
+      "original": {
+        "type": "git",
+        "url": "file:///media/nvme/git/cardano-node-release-ai/cardano-ledger"
+      }
+    },
     "cardano-shell": {
       "flake": false,
       "locked": {
@@ -1533,6 +1549,38 @@
         "type": "github"
       }
     },
+    "ouroboros-consensus-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786313678,
+        "narHash": "sha256-1U02C271D8qnnI8RMB9Z+b9kZ8TvdQhuAT6FmQJYUmA=",
+        "ref": "refs/heads/claude/prepare-11.2",
+        "rev": "ebbba51d8f92f26d48479d69b56a44f6e77d0241",
+        "revCount": 11030,
+        "type": "git",
+        "url": "file:///media/nvme/git/cardano-node-release-ai/ouroboros-consensus"
+      },
+      "original": {
+        "type": "git",
+        "url": "file:///media/nvme/git/cardano-node-release-ai/ouroboros-consensus"
+      }
+    },
+    "ouroboros-network-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786003790,
+        "narHash": "sha256-dihVKmCrfRRcRqb7z4XxSDrjRqk90yJIAv7+FLYA7Ws=",
+        "ref": "refs/heads/claude/prepare-11.2",
+        "rev": "c5117705f6d5f8ea57ce3e772b6f9c35bfdb9167",
+        "revCount": 10496,
+        "type": "git",
+        "url": "file:///media/nvme/git/cardano-node-release-ai/ouroboros-network"
+      },
+      "original": {
+        "type": "git",
+        "url": "file:///media/nvme/git/cardano-node-release-ai/ouroboros-network"
+      }
+    },
     "pre-commit-hooks": {
       "inputs": {
         "flake-compat": "flake-compat_4",
@@ -1557,6 +1605,7 @@
       "inputs": {
         "CHaP": "CHaP",
         "cardano-dev": "cardano-dev",
+        "cardano-ledger-src": "cardano-ledger-src",
         "flake-compat": "flake-compat_2",
         "flake-utils": "flake-utils",
         "ghc-wasm-meta": "ghc-wasm-meta",
@@ -1566,6 +1615,8 @@
         "incl": "incl",
         "iohkNix": "iohkNix_2",
         "nixpkgs": "nixpkgs_4",
+        "ouroboros-consensus-src": "ouroboros-consensus-src",
+        "ouroboros-network-src": "ouroboros-network-src",
         "pre-commit-hooks": "pre-commit-hooks",
         "unstable": "unstable",
         "wasm-nixpkgs": [
