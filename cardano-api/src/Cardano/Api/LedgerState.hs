@@ -85,6 +85,9 @@ module Cardano.Api.LedgerState
   , ShelleyConfig (..)
   , GenesisHashShelley (..)
   , readShelleyGenesisConfig
+  , readShelleyGenesis
+  , ShelleyGenesisError (..)
+  , renderShelleyGenesisError
   , shelleyPraosNonce
 
     -- *** Alonzo Genesis Config
