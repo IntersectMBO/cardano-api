@@ -62,6 +62,7 @@ import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
 import Data.Either.Combinators (mapLeft, maybeToRight)
 import Data.Either.Extra (maybeToEither)
+import Data.Maybe (fromMaybe)
 import Data.Foldable (toList)
 import Data.Text (Text)
 import Data.Text qualified as Text
