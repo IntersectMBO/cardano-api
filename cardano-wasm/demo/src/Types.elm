@@ -128,6 +128,13 @@ type TxState
     | Signed SignedTx
 
 
+type SubmitState
+    = NotSubmitted
+    | Submitting
+    | Submitted String
+    | SubmitFailed String
+
+
 type Modal
     = NoModal
     | ForgetDialog WalletId
@@ -184,6 +191,7 @@ type alias Model =
     , fee : FeeState
     , feeText : String
     , tx : TxState
+    , submit : SubmitState
     , modal : Modal
     , bfKeys : BfKeys
     , restore : RestoreForm
@@ -242,6 +250,8 @@ type Msg
     | ClickSign
     | GotTxSigned (Result String SignedPayload)
     | ClickDownloadCli
+    | ClickSubmit
+    | GotSubmitted String (Result String String)
     | Copy String
     | ClearConsole
     | ClearToast Int

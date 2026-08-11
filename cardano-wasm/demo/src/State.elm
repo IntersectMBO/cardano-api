@@ -37,6 +37,7 @@ module State exposing
     , setRestorePay
     , setRestoreStake
     , startFetch
+    , submitLocked
     , toastNow
     , toggleBook
     , toggleOutputChange
@@ -79,6 +80,7 @@ init protocol =
       , fee = NoFee
       , feeText = ""
       , tx = Draft
+      , submit = NotSubmitted
       , modal = NoModal
       , bfKeys = { mainnet = "", preprod = "", preview = "" }
       , restore = emptyRestoreForm
@@ -686,7 +688,25 @@ canSign model =
 -- A signed tx is a snapshot: any later edit makes it stale.
 
 
-{-| Drop back to Draft. For edits that do NOT change the transaction body
+{-| In flight or already accepted — states from which the submit button must
+not fire again (re-broadcasting an accepted tx only produces a confusing
+duplicate-rejection). Retrying after SubmitFailed stays allowed.
+-}
+submitLocked : SubmitState -> Bool
+submitLocked s =
+    case s of
+        Submitting ->
+            True
+
+        Submitted _ ->
+            True
+
+        _ ->
+            False
+
+
+{-| Drop back to Draft, forgetting any submission state with it (both referred
+to the previous signature). For edits that do NOT change the transaction body
 (e.g. typing a new fee).
 -}
 invalidate : Model -> Model
@@ -696,16 +716,17 @@ invalidate model =
             model
 
         _ ->
-            { model | tx = Draft }
+            { model | tx = Draft, submit = NotSubmitted }
 
 
 {-| For edits that change the transaction _shape_ (inputs, outputs, certificates,
-era). Those also reset the fee: a previously estimated fee would now be wrong
-(possibly below the minimum, which the node only rejects at submission).
+era). Those also reset the fee — a previously estimated fee would now be wrong
+(possibly below the minimum, which the node only rejects at submission) — and
+the submission state, which referred to the now-stale signed CBOR.
 -}
 invalidateShape : Model -> Model
 invalidateShape model =
-    { model | tx = Draft, fee = NoFee, feeText = "" }
+    { model | tx = Draft, submit = NotSubmitted, fee = NoFee, feeText = "" }
 
 
 {-| Deduplicate, keeping the first occurrence of each element (stable order).

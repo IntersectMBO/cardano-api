@@ -1,12 +1,14 @@
-module Blockfrost exposing (fetchUtxos, isBlockfrostNotFound, pageSize, utxosDecoder)
+module Blockfrost exposing (fetchUtxos, isBlockfrostNotFound, pageSize, submitTx, utxosDecoder)
 
 {-| The Blockfrost boundary (plain HTTP, CORS-friendly from a static page).
-Supplies UTxOs, authenticated with the per-network project id the user types
-into the UI. Deliberately independent of `State`, so state helpers can build
-on this module without an import cycle.
+Supplies UTxOs and submits transactions — authenticated with the per-network
+project id the user types into the UI. Deliberately kept
+independent of `State`, so state helpers can build on this module without an
+import cycle.
 -}
 
 import Format
+import Hex
 import Http
 import Json.Decode as D
 import Net exposing (blockfrostBase)
@@ -30,7 +32,15 @@ fetchUtxos key network wid addr =
         (expectUtxos (GotUtxos wid network))
 
 
-{-| Blockfrost's maximum page size; a full page means more UTxOs may exist.
+{-| POST the signed CBOR. The reply is stamped with the id of the transaction
+it answers, so a superseded submission's late reply can be told apart.
+-}
+submitTx : String -> Network -> String -> String -> Cmd Msg
+submitTx key network txId cborHex =
+    request key network "POST" "/tx/submit" (Http.bytesBody "application/cbor" (Hex.hexToBytes cborHex)) (expectSubmit (GotSubmitted txId))
+
+
+{-| Blockfrost's maximum page size; a full page means more entries may exist.
 -}
 pageSize : Int
 pageSize =
@@ -99,6 +109,64 @@ expectUtxos =
             else
                 Err (statusErrStr meta body)
         )
+
+
+{-| /tx/submit returns the tx hash as a JSON string on success, a JSON error
+otherwise. A 2xx only counts as success when the body actually is a tx hash —
+a proxy's page or an empty body must not become a confident "submitted".
+-}
+expectSubmit : (Result String String -> Msg) -> Http.Expect Msg
+expectSubmit =
+    expectResponse
+        (\meta body ->
+            let
+                parsed =
+                    D.decodeString D.string body |> Result.withDefault (String.trim body)
+            in
+            if meta.statusCode >= 200 && meta.statusCode < 300 then
+                if isTxHash parsed then
+                    Ok parsed
+
+                else
+                    Err ("unexpected response body: " ++ String.left 120 parsed)
+
+            else
+                Err (submitErrStr meta body)
+        )
+
+
+{-| A transaction id: 64 lowercase hex characters.
+-}
+isTxHash : String -> Bool
+isTxHash s =
+    String.length s == 64 && String.all (\c -> Char.isDigit c || (c >= 'a' && c <= 'f')) s
+
+
+{-| Like statusErrStr, but falls back to the raw body when Blockfrost's message
+field is absent (a gateway may answer plain text), and keeps more of it: the
+ledger's rejection reason — the part the user actually needs — can be long.
+Truncation is marked, so a cut message can't pass for a complete one.
+-}
+submitErrStr : Http.Metadata -> String -> String
+submitErrStr meta body =
+    let
+        full =
+            "HTTP "
+                ++ String.fromInt meta.statusCode
+                ++ " — "
+                ++ (case D.decodeString (D.field "message" D.string) body of
+                        Ok message ->
+                            message
+
+                        Err _ ->
+                            String.trim body
+                   )
+    in
+    if String.length full > 500 then
+        String.left 500 full ++ "…"
+
+    else
+        full
 
 
 {-| Exposed for the test suite.

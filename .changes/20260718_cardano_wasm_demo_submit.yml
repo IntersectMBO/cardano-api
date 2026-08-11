@@ -1,0 +1,9 @@
+project: cardano-wasm
+
+pr: 1287
+
+kind:
+  - feature
+
+description: |
+  Demo: transaction submission via Blockfrost with tx-id cross-check and explorer links.

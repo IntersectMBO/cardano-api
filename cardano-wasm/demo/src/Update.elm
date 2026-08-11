@@ -417,13 +417,89 @@ update msg model =
             else
                 case result of
                     Ok p ->
-                        ( { model | tx = Signed (SignedTx p.cbor p.txId (List.length (paymentWalletIds model)) 0) }
+                        ( { model | tx = Signed (SignedTx p.cbor p.txId (List.length (paymentWalletIds model)) 0), submit = NotSubmitted }
                             |> log LogOk ("transaction signed · txid " ++ p.txId)
                         , Cmd.none
                         )
 
                     Err e ->
                         ( { model | tx = Draft } |> log LogWarn ("sign failed: " ++ e), Cmd.none )
+
+        ClickSubmit ->
+            case model.tx of
+                Signed s ->
+                    if submitLocked model.submit then
+                        -- a request is already in flight, or this tx is already accepted
+                        ( model, Cmd.none )
+
+                    else if currentKey model == "" then
+                        toastNow "Enter a Blockfrost project id first" model
+
+                    else
+                        ( { model | submit = Submitting } |> log LogInfo "POST blockfrost /tx/submit"
+                        , Blockfrost.submitTx (currentKey model) model.network s.txId s.cbor
+                        )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        GotSubmitted expected result ->
+            let
+                -- accepted only while still Submitting AND only for the submission of
+                -- the currently signed transaction: a superseded submit's late reply
+                -- must not masquerade as the live one (the GotUtxos stamp idiom)
+                live =
+                    case ( model.submit, model.tx ) of
+                        ( Submitting, Signed s ) ->
+                            s.txId == expected
+
+                        _ ->
+                            False
+            in
+            if not live then
+                -- the broadcast may still have happened — keep its outcome on record
+                ( log LogWarn
+                    ("dropped a stale submit result for "
+                        ++ Format.shorten expected
+                        ++ " — "
+                        ++ (case result of
+                                Ok txid ->
+                                    "accepted · txid " ++ txid
+
+                                Err e ->
+                                    "failed: " ++ e
+                           )
+                    )
+                    model
+                , Cmd.none
+                )
+
+            else
+                case result of
+                    Ok txid ->
+                        -- Blockfrost returns the tx hash; it must equal the id cardano-wasm
+                        -- computed. A difference means a serialization/hash bug — the view
+                        -- warns next to the accepted id, which is the authoritative one.
+                        let
+                            consistency =
+                                if txid == expected then
+                                    identity
+
+                                else
+                                    log LogWarn ("txid mismatch! wasm said " ++ expected ++ " but Blockfrost returned " ++ txid)
+                        in
+                        ( { model | submit = Submitted txid } |> log LogOk ("submitted · txid " ++ txid) |> consistency, Cmd.none )
+
+                    Err e ->
+                        let
+                            shown =
+                                if e == "timeout" then
+                                    "no answer in 30 s — the transaction may still have been submitted"
+
+                                else
+                                    e
+                        in
+                        ( { model | submit = SubmitFailed shown } |> log LogWarn ("submit failed: " ++ shown), Cmd.none )
 
         ClickDownloadCli ->
             case model.tx of
