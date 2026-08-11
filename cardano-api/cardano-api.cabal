@@ -350,7 +350,7 @@ library gen
     text,
 
 test-suite cardano-api-test
-  import: project-config
+  import: project-config, maybe-unix
   hs-source-dirs: test/cardano-api-test
   main-is: cardano-api-test.hs
   type: exitcode-stdio-1.0

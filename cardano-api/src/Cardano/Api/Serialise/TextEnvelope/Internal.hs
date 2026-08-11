@@ -298,18 +298,25 @@ writeFileTextEnvelope outputFile mbDescr a =
   writeLazyByteStringFile outputFile (textEnvelopeToJSON mbDescr a)
 
 -- | Like 'writeFileTextEnvelope', but the file is created so that only its
--- owner has access to it, to the extent the platform allows it:
+-- owner has access to it, to the extent the platform allows it.
+--
+-- On POSIX and Windows, the contents are written to a freshly created
+-- temporary file which is then renamed over the target path. The target file
+-- therefore never exists in a partially written state: if writing fails
+-- midway (e.g. on a crash or a full disk), its previous contents are left
+-- untouched. A pre-existing file is replaced wholesale: its previous
+-- permission bits are not preserved, and a symlink is replaced by a regular
+-- file rather than written through.
 --
 -- * On POSIX systems, the file is created with @0600@ permissions (read
 --   and write for the file owner only, further filtered by the process's
---   @umask@), and its ownership is set to the current (real) user. If the
---   file already exists, it is truncated, but its permission bits are
---   left unchanged.
+--   @umask@) and is owned by the current user. The contents are synced to
+--   disk before the rename, so a power failure doesn't leave an empty file
+--   at the target path.
 --
--- * On Windows, the contents are written to a freshly created temporary
---   file which is then renamed to the target path. This guarantees the
---   file is owned by the current user, but no explicit ACL is set: the
---   file inherits the access control list of the target directory.
+-- * On Windows, the file is owned by the current user, but no explicit
+--   ACL is set: the file inherits the access control list of the target
+--   directory.
 --
 -- * On WASM, this is currently a no-op: no file is written at all.
 --

@@ -25,6 +25,10 @@ handleFileForWritingWithOwnerPermission
   -> IO (Either (FileError e) ())
 handleFileForWritingWithOwnerPermission = handleFileForWritingWithOwnerPermissionImpl
 
+-- | Write a list of secrets to individual files in the given directory, as
+-- @\<prefix\>.\<3-digit index\>.\<suffix\>@. Each file is written atomically
+-- (the contents go to a temporary file which is then renamed into place) and
+-- ends up readable only by its owner.
 writeSecrets
   :: HasCallStack => FilePath -> [Char] -> [Char] -> (a -> ByteString) -> [a] -> IO ()
 writeSecrets = writeSecretsImpl

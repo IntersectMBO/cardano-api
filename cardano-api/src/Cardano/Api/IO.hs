@@ -103,6 +103,13 @@ writeByteStringFile fp bs =
     handleIOExceptT (FileIOError (unFile fp)) $
       BS.writeFile (unFile fp) bs
 
+-- | Like 'writeByteStringFile', but the file is created readable and
+-- writable only by its owner (@0600@ on POSIX), and it is replaced
+-- atomically: the contents are written to a temporary file which is then
+-- renamed over the target path, so a failed write never destroys the
+-- previous contents. The detailed per-platform guarantees are documented on
+-- @writeFileTextEnvelopeWithOwnerPermissions@ in
+-- "Cardano.Api.Serialise.TextEnvelope".
 writeByteStringFileWithOwnerPermissions
   :: FilePath
   -> BS.ByteString
@@ -133,6 +140,9 @@ writeLazyByteStringFile fp bs =
     handleIOExceptT (FileIOError (unFile fp)) $
       LBS.writeFile (unFile fp) bs
 
+-- | Like 'writeLazyByteStringFile', but with the same owner-only
+-- permissions and atomic replacement as
+-- 'writeByteStringFileWithOwnerPermissions'.
 writeLazyByteStringFileWithOwnerPermissions
   :: File content Out
   -> LBS.ByteString
@@ -163,6 +173,8 @@ writeTextFile fp t =
     handleIOExceptT (FileIOError (unFile fp)) $
       Text.writeFile (unFile fp) t
 
+-- | Like 'writeTextFile', but with the same owner-only permissions and
+-- atomic replacement as 'writeByteStringFileWithOwnerPermissions'.
 writeTextFileWithOwnerPermissions
   :: File content Out
   -> Text
