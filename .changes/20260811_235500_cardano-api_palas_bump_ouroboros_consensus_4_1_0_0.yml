@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1289
+kind:
+  - maintenance
+description: Updated the `ouroboros-consensus` dependency to 4.1.0.0.
