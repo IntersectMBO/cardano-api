@@ -376,6 +376,7 @@ test-suite cardano-api-test
     cardano-crypto,
     cardano-crypto-class:{cardano-crypto-class, testlib} ^>=2.5,
     cardano-crypto-wrapper:testlib,
+    cardano-data >=1.0,
     cardano-ledger-alonzo,
     cardano-ledger-api ^>=1.14,
     cardano-ledger-babbage,
@@ -432,6 +433,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Orphans
     Test.Cardano.Api.RawBytes
     Test.Cardano.Api.Transaction.Autobalance
+    Test.Cardano.Api.Transaction.Body.Plutus.RedeemerIndex
     Test.Cardano.Api.Transaction.Body.Plutus.Scripts
     Test.Cardano.Api.Transaction.Collateral
     Test.Cardano.Api.Transaction.Fixtures

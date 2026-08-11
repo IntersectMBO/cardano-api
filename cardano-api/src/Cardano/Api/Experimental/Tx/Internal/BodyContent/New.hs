@@ -6,7 +6,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -666,11 +665,12 @@ newtype TxWithdrawals era = TxWithdrawals {unTxWithdrawals :: [(StakeAddress, L.
 
 newtype TxCertificates era
   = TxCertificates
-  {unTxCertificates :: OMap (Exp.Certificate era) (Maybe (StakeCredential, AnyWitness era))}
+  {unTxCertificates :: OMap (Exp.Certificate era) (Maybe (AnyWitness era))}
   deriving (Show, Eq)
 
--- | Create 'TxCertificates'. Note that 'Certificate era' will be deduplicated. Only Certificates with a
--- stake credential will be in the result.
+-- | Create 'TxCertificates'. Note that 'Certificate era' will be deduplicated. Certificates that
+-- require a witness will be stored with 'Just' the caller-supplied witness; those that do not (e.g.
+-- deposit-less stake registration in Conway) will be stored with 'Nothing'.
 --
 -- Note that, when building a transaction in Conway era, a witness is not required for staking credential
 -- registration, but this is only the case during the transitional period of Conway era and only for staking
@@ -686,10 +686,10 @@ mkTxCertificates era certs = TxCertificates . OMap.fromList $ map getStakeCred c
   getStakeCred
     :: (Exp.Certificate (LedgerEra era), AnyWitness (LedgerEra era))
     -> ( Exp.Certificate (LedgerEra era)
-       , Maybe (StakeCredential, AnyWitness (LedgerEra era))
+       , Maybe (AnyWitness (LedgerEra era))
        )
   getStakeCred (c@(Exp.Certificate cert), wit) =
-    (c, (,wit) <$> getTxCertWitness (convert era) (obtainCommonConstraints era cert))
+    (c, wit <$ getTxCertWitness (convert era) (obtainCommonConstraints era cert))
 
 newtype TxMintValue era
   = TxMintValue
@@ -866,21 +866,30 @@ extractWitnessableTxIns tIns =
   obtainCommonConstraints (useEra @era) $
     List.nub [(WitTxIn txin, wit) | (txin, wit) <- tIns]
 
+-- | Wrap every certificate as a 'Witnessable', paired with its witness.
+--
+-- An unwitnessed certificate still occupies a redeemer index slot: the
+-- ledger indexes the 'Certifying' purpose by position in the full
+-- certificate sequence, not just the witnessed subset, so the result below
+-- keeps one entry per certificate in insertion order.
+--
+-- In the Conway era only, a certificate may legitimately have no witness
+-- (deposit-less stake registration), so a missing witness defaults to
+-- 'AnyKeyWitnessPlaceholder'. From Dijkstra onwards 'mkTxCertificates'
+-- guarantees every entry has a 'Just' witness, so the placeholder is dead
+-- code for those eras.
 extractWitnessableCertificates
   :: forall era
    . IsEra era
   => TxCertificates (LedgerEra era)
   -> [(Witnessable CertItem (LedgerEra era), AnyWitness (LedgerEra era))]
-extractWitnessableCertificates txCerts =
+extractWitnessableCertificates (TxCertificates certs) =
   obtainCommonConstraints (useEra @era) $
     List.nub
-      [ ( WitTxCert cert stakeCred
-        , wit
-        )
-      | (Exp.Certificate cert, Just (stakeCred, wit)) <- getCertificates txCerts
+      [ (WitTxCert cert, wit)
+      | (Exp.Certificate cert, mWit) <- toList certs
+      , let wit = fromMaybe AnyKeyWitnessPlaceholder mWit
       ]
- where
-  getCertificates (TxCertificates txcs) = toList txcs
 
 extractWitnessableMints
   :: forall era
@@ -923,13 +932,20 @@ extractWitnessableVotes (Just txVoteProc) =
       | (vote, wit) <- getVotes txVoteProc
       ]
  where
+  -- Uses a total 'Map.findWithDefault' (placeholder witness on a miss),
+  -- not a lookup that skips missing voters. A skipped voter would shrink
+  -- this list and shift every later voter's redeemer index.
+  --
+  -- 'mkTxVotingProcedures' builds 'scriptWitnessedVotes' in lockstep with
+  -- 'allVotingProcedures', assuming exactly one voter per merged
+  -- 'L.VotingProcedures' value, so a miss should not normally happen.
   getVotes
     :: TxVotingProcedures (LedgerEra era)
     -> [(L.Voter, AnyWitness (LedgerEra era))]
   getVotes (TxVotingProcedures allVotingProcedures scriptWitnessedVotes) =
     [ (voter, wit)
     | (voter, _) <- toList $ L.unVotingProcedures allVotingProcedures
-    , wit <- maybe [] return (Map.lookup voter scriptWitnessedVotes)
+    , let wit = Map.findWithDefault AnyKeyWitnessPlaceholder voter scriptWitnessedVotes
     ]
 
 extractWitnessableProposals

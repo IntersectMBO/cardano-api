@@ -1,0 +1,8 @@
+project: cardano-api
+pr: 1288
+kind:
+  - bugfix
+  - breaking
+  - test
+description: |
+  Fix plutus redeemer pointer indexing: proposal pointers now follow the transaction's insertion order and certificate pointers count unwitnessed certificates, in both the experimental and the deprecated transaction builders. Remove the unused StakeCredential field from the WitTxCert constructor. Add property tests checking every redeemer pointer against the ledger's own resolution.

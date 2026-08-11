@@ -17,7 +17,11 @@ where
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.AnyScriptWitness
-  ( AnyPlutusScriptWitness (AnyPlutusSpendingScriptWitness)
+  ( AnyPlutusScriptWitness
+      ( AnyPlutusCertifyingScriptWitness
+      , AnyPlutusProposingScriptWitness
+      , AnyPlutusSpendingScriptWitness
+      )
   , PlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV3)
   )
 import Cardano.Api.Experimental.Era (convert)
@@ -30,6 +34,7 @@ import Cardano.Api.Plutus qualified as Script
 import Cardano.Api.Tx (Tx (ShelleyTx))
 
 import Cardano.Ledger.Address qualified as L
+import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Babbage.TxBody qualified as L
 import Cardano.Ledger.Conway qualified as L
@@ -59,7 +64,9 @@ import Test.Gen.Cardano.Api.Experimental (genAnyScript)
 import Test.Gen.Cardano.Api.Typed
   ( genAddressInEra
   , genPlutusScriptInEra
+  , genProposal
   , genSimpleScript
+  , genStakeCredential
   , genTx
   , genTxIn
   )
@@ -122,6 +129,12 @@ tests =
         [ testProperty
             "Plutus scripts without protocol params returns MakeUnsignedTxMissingProtocolParams"
             prop_makeUnsignedTx_plutus_without_pparams
+        , testProperty
+            "Proposal-procedure redeemer pointers follow OMap insertion order, not Ord order"
+            prop_makeUnsignedTx_proposal_redeemer_indices_follow_insertion_order
+        , testProperty
+            "Certifying redeemer indices count unwitnessed certs preceding a plutus-witnessed one"
+            prop_makeUnsignedTx_cert_redeemer_indices_count_unwitnessed_certs
         ]
     , testGroup
         "calcMinFeeRecursive"
@@ -672,6 +685,136 @@ prop_makeUnsignedTx_plutus_without_pparams = H.propertyOnce $ do
           & Exp.setTxFee 0
   Exp.makeUnsignedTx Exp.ConwayEra txBodyContent
     H.=== Left Exp.MakeUnsignedTxMissingProtocolParams
+
+-- | 'makeUnsignedTx' must index plutus-witnessed governance proposals'
+-- redeemer pointers ('L.ConwayProposing') by insertion order, never by
+-- 'Ord' order. Insertion order is what the ledger's 'OSet'-backed
+-- 'proposalProceduresTxBodyL' stores them in.
+--
+-- 'propA' and 'propB' only differ in 'pProcDeposit' (the first field
+-- 'Ord' compares), chosen so 'propB' sorts before 'propA' by 'Ord' but is
+-- inserted after it. A regression to 'Ord'-sorted indexing would swap
+-- which redeemer lands at which index.
+prop_makeUnsignedTx_proposal_redeemer_indices_follow_insertion_order :: Property
+prop_makeUnsignedTx_proposal_redeemer_indices_follow_insertion_order = H.property $ do
+  scriptTxIn <- H.forAll genTxIn
+  baseA <- H.forAll (genProposal Api.ConwayEraOnwardsConway)
+  baseB <- H.forAll (genProposal Api.ConwayEraOnwardsConway)
+  let propA = baseA{L.pProcDeposit = 2_000_000}
+      propB = baseB{L.pProcDeposit = 1_000_000}
+
+      mkRedeemer :: Integer -> Script.HashableScriptData
+      mkRedeemer n = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor n []
+
+      mkProposingWitness redeemer =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusProposingScriptWitness $
+            Exp.PlutusScriptWitness
+              Plutus.SPlutusV3
+              (Exp.PReferenceScript scriptTxIn)
+              Exp.NoScriptDatum
+              redeemer
+              (Script.ExecutionUnits 0 0)
+
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxProtocolParams exampleProtocolParams
+          & Exp.setTxProposalProcedures
+            ( Exp.mkTxProposalProcedures
+                [ (propA, mkProposingWitness (mkRedeemer 1))
+                , (propB, mkProposingWitness (mkRedeemer 2))
+                ]
+            )
+          & Exp.setTxFee 0
+
+  Exp.UnsignedTx ledgerTx <- H.evalEither $ Exp.makeUnsignedTx Exp.ConwayEra txBodyContent
+
+  -- Sanity check: the body itself is in insertion order regardless of the
+  -- bug under test (the bug only affects redeemer indexing, not the body).
+  let bodyProposals = toList $ ledgerTx ^. L.bodyTxL . UnexportedLedger.proposalProceduresTxBodyL
+  bodyProposals H.=== [propA, propB]
+
+  -- The redeemer map must key 'propA''s witness to index 0 and 'propB''s
+  -- to index 1 (insertion order). 'Ord'-sorted indexing would give the
+  -- opposite, since 'propB' has the smaller deposit and sorts first.
+  let redeemers = ledgerTx ^. L.witsTxL . Alonzo.rdmrsTxWitsL
+      expectedRedeemers =
+        L.Redeemers $
+          Map.fromList
+            [
+              ( L.ConwayProposing (L.AsIx 0)
+              , (Api.toAlonzoData (mkRedeemer 1), Api.toAlonzoExUnits (Script.ExecutionUnits 0 0))
+              )
+            ,
+              ( L.ConwayProposing (L.AsIx 1)
+              , (Api.toAlonzoData (mkRedeemer 2), Api.toAlonzoExUnits (Script.ExecutionUnits 0 0))
+              )
+            ]
+  redeemers H.=== expectedRedeemers
+
+-- | 'makeUnsignedTx' must index a plutus-witnessed certificate's
+-- 'L.ConwayCertifying' redeemer pointer by its position among all
+-- certificates, witnessed and unwitnessed alike, never just among the
+-- witnessed subset.
+--
+-- 'unwitnessedCert' (a plain stake registration, which the ledger never
+-- requires a witness for) is placed before 'witnessedCert'. If unwitnessed
+-- certs were skipped when assigning indices, 'witnessedCert' would land
+-- at index 0 instead of the correct index 1.
+prop_makeUnsignedTx_cert_redeemer_indices_count_unwitnessed_certs :: Property
+prop_makeUnsignedTx_cert_redeemer_indices_count_unwitnessed_certs = H.property $ do
+  stakeCred1 <- H.forAll genStakeCredential
+  stakeCred2 <- H.forAll genStakeCredential
+  scriptTxIn <- H.forAll genTxIn
+  let shelleyCred1 = Api.toShelleyStakeCredential stakeCred1
+      shelleyCred2 = Api.toShelleyStakeCredential stakeCred2
+
+      -- Unwitnessed: a plain stake registration cert needs no witness.
+      unwitnessedCert =
+        Exp.Certificate $ L.ConwayTxCertDeleg (L.ConwayRegCert shelleyCred1 L.SNothing)
+
+      -- Plutus-witnessed: a stake delegation cert witnessed by a plutus script.
+      witnessedCert =
+        Exp.Certificate $
+          L.ConwayTxCertDeleg (L.ConwayDelegCert shelleyCred2 (L.DelegVote L.DRepAlwaysAbstain))
+
+      redeemer = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor 0 []
+
+      certWitness =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusCertifyingScriptWitness $
+            Exp.PlutusScriptWitness
+              Plutus.SPlutusV3
+              (Exp.PReferenceScript scriptTxIn)
+              Exp.NoScriptDatum
+              redeemer
+              (Script.ExecutionUnits 0 0)
+
+      certs =
+        Exp.mkTxCertificates
+          Exp.ConwayEra
+          [ (unwitnessedCert, Exp.AnyKeyWitnessPlaceholder)
+          , (witnessedCert, certWitness)
+          ]
+
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxCertificates certs
+          & Exp.setTxProtocolParams exampleProtocolParams
+          & Exp.setTxFee 0
+
+  Exp.UnsignedTx ledgerTx <- H.evalEither $ Exp.makeUnsignedTx Exp.ConwayEra txBodyContent
+
+  let redeemers = ledgerTx ^. L.witsTxL . Alonzo.rdmrsTxWitsL
+      expectedRedeemers =
+        L.Redeemers $
+          Map.fromList
+            [
+              ( L.ConwayCertifying (L.AsIx 1)
+              , (Api.toAlonzoData redeemer, Api.toAlonzoExUnits (Script.ExecutionUnits 0 0))
+              )
+            ]
+  redeemers H.=== expectedRedeemers
 
 -- ---------------------------------------------------------------------------
 -- Property tests for calcMinFeeRecursive

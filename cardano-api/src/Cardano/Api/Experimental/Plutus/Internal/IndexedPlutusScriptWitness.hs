@@ -79,7 +79,6 @@ data Witnessable (thing :: WitnessableItem) era where
   WitTxCert
     :: (L.EraTxCert era, L.AlonzoEraScript era)
     => L.TxCert era
-    -> StakeCredential
     -> Witnessable CertItem era
   WitMint
     :: L.AlonzoEraScript era
@@ -111,11 +110,16 @@ compareWitnesses :: Witnessable thing era -> Witnessable thing era -> Ordering
 compareWitnesses a b =
   case (a, b) of
     (WitTxIn txinA, WitTxIn txinB) -> compare txinA txinB
-    (WitTxCert{}, WitTxCert{}) -> LT -- Certificates in the ledger are in an `OSet` therefore we preserve the order.
+    -- Certificates are stored in an `OSet` but resolved positionally, via
+    -- `certsTxBodyL`'s `findIndexL`. `EQ` lets the stable sort in
+    -- `createIndexedPlutusScriptWitnesses` preserve insertion order.
+    (WitTxCert{}, WitTxCert{}) -> EQ
     (WitMint polIdA _, WitMint polIdB _) -> compare polIdA polIdB
     (WitWithdrawal stakeAddrA _, WitWithdrawal stakeAddrB _) -> compare stakeAddrA stakeAddrB
     (WitVote voterA, WitVote voterB) -> compare voterA voterB
-    (WitProposal propA, WitProposal propB) -> compare propA propB
+    -- Proposals are also stored in an `OSet` and resolved positionally
+    -- (`StrictSeq.findIndexL`), same as `WitTxCert` above.
+    (WitProposal{}, WitProposal{}) -> EQ
 
 data WitnessableItem
   = TxInItem
