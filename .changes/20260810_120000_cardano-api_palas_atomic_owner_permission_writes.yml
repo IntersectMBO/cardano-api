@@ -3,6 +3,7 @@ project: cardano-api
 pr: 1286
 
 kind:
+  - breaking
   - bugfix
 
 description: |

@@ -33,10 +33,11 @@ import           System.FilePath (splitFileName, (<.>), (</>))
 import qualified System.IO as IO
 import           System.IO (Handle)
 import           System.Posix.Files (fileMode, getFileStatus, groupModes, intersectFileModes,
-                   nullFileMode, otherModes, ownerReadMode, setFileMode)
+                   nullFileMode, otherModes, ownerReadMode, setFdOwnerAndGroup, setFileMode)
 import           System.Posix.IO (closeFd, handleToFd)
 import           System.Posix.Types (FileMode)
 import           System.Posix.Unistd (fileSynchronise)
+import           System.Posix.User (getRealUserID)
 import           Text.Printf (printf)
 
 handleFileForWritingWithOwnerPermissionImpl
@@ -48,6 +49,7 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
   -- 'IO.openTempFile' creates with owner-only permissions) and rename it over
   -- the target path once the contents are safely on disk. The target path thus
   -- always holds either its previous contents or the complete new contents.
+  user <- getRealUserID
   result <-
     try $
       bracketOnError
@@ -59,10 +61,14 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
         ( \(tmpPath, h) -> do
             f h
             -- 'handleToFd' flushes the handle's buffers and closes it, handing
-            -- us the raw file descriptor. Syncing the descriptor before the
-            -- rename ensures a power failure cannot leave an empty file at the
-            -- target path.
-            bracket (handleToFd h) closeFd fileSynchronise
+            -- us the raw file descriptor. Before the rename, we set the file's
+            -- ownership to the real user (which can differ from the effective
+            -- user in setuid programs) and sync the descriptor, so a power
+            -- failure cannot leave an empty file at the target path.
+            bracket
+              (handleToFd h)
+              closeFd
+              (\fd -> setFdOwnerAndGroup fd user (-1) >> fileSynchronise fd)
             IO.renameFile tmpPath path
         )
   case result of
