@@ -12,7 +12,8 @@ import Data.ByteString qualified as BS
 import Data.Either (isLeft)
 import System.Directory (removeFile)
 import System.FilePath ((</>))
-import System.PosixCompat.Files (setFileMode)
+
+import Test.Cardano.Api.IO.Compat (makeGroupOtherReadable)
 
 import Hedgehog
 import Hedgehog.Extras qualified as H
@@ -55,7 +56,7 @@ prop_overwriteFileWithOwnerPermissions =
     -- (e.g. under umask 077). Skipped at runtime on Windows, which has no
     -- group/other permission bits to loosen.
     unless isWin32 $ do
-      liftIO $ setFileMode file 0o644
+      liftIO $ makeGroupOtherReadable file
 
       preResult <- liftIO . runExceptT $ checkVrfFilePermissions (File file)
 

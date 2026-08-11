@@ -350,13 +350,19 @@ library gen
     text,
 
 test-suite cardano-api-test
-  import: project-config
+  import: project-config, maybe-unix
   hs-source-dirs: test/cardano-api-test
   main-is: cardano-api-test.hs
   type: exitcode-stdio-1.0
 
   if arch(wasm32)
     buildable: False
+
+  if os(windows)
+    hs-source-dirs: test/cardano-api-test-compat/windows
+  else
+    hs-source-dirs: test/cardano-api-test-compat/posix
+
   build-depends:
     FailT,
     QuickCheck,
@@ -398,7 +404,6 @@ test-suite cardano-api-test
     tasty-quickcheck,
     text,
     time,
-    unix-compat,
 
   other-modules:
     Test.Cardano.Api.Address
@@ -415,6 +420,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Genesis
     Test.Cardano.Api.GovAnchorValidation
     Test.Cardano.Api.IO
+    Test.Cardano.Api.IO.Compat
     Test.Cardano.Api.Json
     Test.Cardano.Api.KeysByron
     Test.Cardano.Api.Ledger
