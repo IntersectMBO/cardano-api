@@ -111,9 +111,10 @@ writeByteStringFile fp bs =
 -- @writeFileTextEnvelopeWithOwnerPermissions@ in
 -- "Cardano.Api.Serialise.TextEnvelope".
 writeByteStringFileWithOwnerPermissions
-  :: FilePath
+  :: MonadIO m
+  => FilePath
   -> BS.ByteString
-  -> IO (Either (FileError e) ())
+  -> m (Either (FileError e) ())
 writeByteStringFileWithOwnerPermissions fp bs =
   handleFileForWritingWithOwnerPermission fp $ \h ->
     BS.hPut h bs
@@ -144,9 +145,10 @@ writeLazyByteStringFile fp bs =
 -- permissions and atomic replacement as
 -- 'writeByteStringFileWithOwnerPermissions'.
 writeLazyByteStringFileWithOwnerPermissions
-  :: File content Out
+  :: MonadIO m
+  => File content Out
   -> LBS.ByteString
-  -> IO (Either (FileError e) ())
+  -> m (Either (FileError e) ())
 writeLazyByteStringFileWithOwnerPermissions fp lbs =
   handleFileForWritingWithOwnerPermission (unFile fp) $ \h ->
     LBS.hPut h lbs
@@ -176,9 +178,10 @@ writeTextFile fp t =
 -- | Like 'writeTextFile', but with the same owner-only permissions and
 -- atomic replacement as 'writeByteStringFileWithOwnerPermissions'.
 writeTextFileWithOwnerPermissions
-  :: File content Out
+  :: MonadIO m
+  => File content Out
   -> Text
-  -> IO (Either (FileError e) ())
+  -> m (Either (FileError e) ())
 writeTextFileWithOwnerPermissions fp t =
   handleFileForWritingWithOwnerPermission (unFile fp) $ \h ->
     Text.hPutStr h t

@@ -52,6 +52,7 @@ import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Cbor
 
 import Control.Monad (unless)
+import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
@@ -324,10 +325,11 @@ writeFileTextEnvelope outputFile mbDescr a =
 -- Use this when writing sensitive data such as signing keys.
 writeFileTextEnvelopeWithOwnerPermissions
   :: HasTextEnvelope a
+  => MonadIO m
   => File content Out
   -> Maybe TextEnvelopeDescr
   -> a
-  -> IO (Either (FileError ()) ())
+  -> m (Either (FileError ()) ())
 writeFileTextEnvelopeWithOwnerPermissions outputFile mbDescr a =
   writeLazyByteStringFileWithOwnerPermissions outputFile (textEnvelopeToJSON mbDescr a)
 
