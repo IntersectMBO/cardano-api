@@ -35,7 +35,7 @@ import qualified System.IO as IO
 import           System.IO (Handle)
 import           System.Posix.Files (fileMode, getFileStatus, groupModes, intersectFileModes,
                    nullFileMode, otherModes, ownerReadMode, setFdOwnerAndGroup, setFileMode)
-import           System.Posix.IO (closeFd, handleToFd)
+import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, handleToFd, openFd)
 import           System.Posix.Types (FileMode)
 import           System.Posix.Unistd (fileSynchronise)
 import           System.Posix.User (getRealUserID)
@@ -71,6 +71,12 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
               closeFd
               (\fd -> setFdOwnerAndGroup fd user (-1) >> fileSynchronise fd)
             IO.renameFile tmpPath path
+            -- Sync the directory as well, so the rename itself (and not just
+            -- the file contents) survives a power failure.
+            bracket
+              (openFd targetDir ReadOnly defaultFileFlags)
+              closeFd
+              fileSynchronise
         )
  where
   (targetDir, targetFile) = splitFileName path

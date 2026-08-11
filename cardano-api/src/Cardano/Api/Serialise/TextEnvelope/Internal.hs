@@ -311,8 +311,9 @@ writeFileTextEnvelope outputFile mbDescr a =
 -- * On POSIX systems, the file is created with @0600@ permissions (read
 --   and write for the file owner only, further filtered by the process's
 --   @umask@), and its ownership is set to the current (real) user. The
---   contents are synced to disk before the rename, so a power failure
---   doesn't leave an empty file at the target path.
+--   contents are synced to disk before the rename and the directory after
+--   it, so a power failure can neither leave an empty file at the target
+--   path nor undo a completed write.
 --
 -- * On Windows, the file is owned by the current user, but no explicit
 --   ACL is set: the file inherits the access control list of the target

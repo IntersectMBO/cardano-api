@@ -39,7 +39,7 @@ common project-config
 
 common maybe-unix
   if !(os(windows) || arch(wasm32))
-    build-depends: unix
+    build-depends: unix >=2.8
 
 common maybe-Win32
   if os(windows)
