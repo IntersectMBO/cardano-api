@@ -21,23 +21,23 @@ where
 import           Cardano.Api.Error (FileError (..), throwErrorM)
 import           Cardano.Api.IO.Internal.Base
 
-import           Control.Exception (IOException, bracket, bracketOnError, try)
+import           Control.Exception (bracket, bracketOnError, try)
 import           Control.Monad (forM_, when)
-import           Control.Monad.Except (ExceptT, runExceptT)
+import           Control.Monad.Except (ExceptT)
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
+import           Control.Monad.Trans.Except.Extra (left)
+import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import           GHC.Stack (HasCallStack)
-import           System.Directory ()
-import           System.FilePath ((</>))
+import qualified System.Directory as IO
+import           System.FilePath (splitFileName, (<.>), (</>))
 import qualified System.IO as IO
 import           System.IO (Handle)
 import           System.Posix.Files (fileMode, getFileStatus, groupModes, intersectFileModes,
-                   nullFileMode, otherModes, ownerReadMode, ownerWriteMode, setFdOwnerAndGroup,
-                   setFileMode, stdFileMode, unionFileModes)
-import           System.Posix.IO (OpenFileFlags (..), OpenMode (..), closeFd, defaultFileFlags,
-                   fdToHandle, openFd)
-import           System.Posix.Types (Fd, FileMode)
+                   nullFileMode, otherModes, ownerReadMode, setFdOwnerAndGroup, setFileMode)
+import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, handleToFd, openFd)
+import           System.Posix.Types (FileMode)
+import           System.Posix.Unistd (fileSynchronise)
 import           System.Posix.User (getRealUserID)
 import           Text.Printf (printf)
 
@@ -46,27 +46,40 @@ handleFileForWritingWithOwnerPermissionImpl
   -> (Handle -> IO ())
   -> IO (Either (FileError e) ())
 handleFileForWritingWithOwnerPermissionImpl path f = do
-  -- On a unix based system, we grab a file descriptor and set ourselves as owner.
-  -- Since we're holding the file descriptor at this point, we can be sure that
-  -- what we're about to write to is owned by us if an error didn't occur.
+  -- On a unix based system, we write to a fresh temporary file (which
+  -- 'IO.openTempFile' creates with owner-only permissions) and rename it over
+  -- the target path once the contents are safely on disk. The target path thus
+  -- always holds either its previous contents or the complete new contents.
   user <- getRealUserID
-  ownedFile <-
+  fmap (first $ FileIOError path) $
     try $
-      -- We only close the FD on error here, otherwise we let it leak out, since
-      -- it will be immediately turned into a Handle (which will be closed when
-      -- the Handle is closed)
       bracketOnError
-        (openFileDescriptor path WriteOnly)
-        closeFd
-        (\fd -> setFdOwnerAndGroup fd user (-1) >> pure fd)
-  case ownedFile of
-    Left (err :: IOException) -> do
-      pure $ Left $ FileIOError path err
-    Right fd -> do
-      bracket
-        (fdToHandle fd)
-        IO.hClose
-        (runExceptT . handleIOExceptT (FileIOError path) . f)
+        (IO.openTempFile targetDir $ targetFile <.> "tmp")
+        ( \(tmpPath, h) -> do
+            IO.hClose h
+            IO.removeFile tmpPath
+        )
+        ( \(tmpPath, h) -> do
+            f h
+            -- 'handleToFd' flushes the handle's buffers and closes it, handing
+            -- us the raw file descriptor. Before the rename, we set the file's
+            -- ownership to the real user (which can differ from the effective
+            -- user in setuid programs) and sync the descriptor, so a power
+            -- failure cannot leave an empty file at the target path.
+            bracket
+              (handleToFd h)
+              closeFd
+              (\fd -> setFdOwnerAndGroup fd user (-1) >> fileSynchronise fd)
+            IO.renameFile tmpPath path
+            -- Sync the directory as well, so the rename itself (and not just
+            -- the file contents) survives a power failure.
+            bracket
+              (openFd targetDir ReadOnly defaultFileFlags)
+              closeFd
+              fileSynchronise
+        )
+ where
+  (targetDir, targetFile) = splitFileName path
 
 writeSecretsImpl
   :: HasCallStack => FilePath -> [Char] -> [Char] -> (a -> BS.ByteString) -> [a] -> IO ()
@@ -104,46 +117,4 @@ checkVrfFilePermissionsImpl (File vrfPrivKey) = do
 
   hasGroupPermissions :: FileMode -> Bool
   hasGroupPermissions fm' = fm' `hasPermission` groupModes
-
--- | Read and write permissions for the file owner only (@0600@). Files
--- created for writing are data files, so the execute bit is not set.
-ownerReadWriteMode :: FileMode
-ownerReadWriteMode = ownerReadMode `unionFileModes` ownerWriteMode
-
--- | Opens a file from disk. In 'WriteOnly' mode, the file is truncated if
--- it already exists.
-openFileDescriptor :: FilePath -> OpenMode -> IO Fd
-# if MIN_VERSION_unix(2,8,0)
-openFileDescriptor fp openMode =
-  openFd fp openMode fileFlags
- where
-  fileFlags =
-    case openMode of
-      ReadOnly ->
-        defaultFileFlags
-      ReadWrite ->
-        defaultFileFlags{creat = Just stdFileMode}
-      WriteOnly ->
-        defaultFileFlags{creat = Just ownerReadWriteMode, trunc = True}
-
-# else
-openFileDescriptor fp openMode =
-  openFd fp openMode fMode fileFlags
- where
-  (fMode, fileFlags) =
-    case openMode of
-      ReadOnly ->
-        ( Nothing
-        , defaultFileFlags
-        )
-      ReadWrite ->
-        ( Just stdFileMode
-        , defaultFileFlags
-        )
-      WriteOnly ->
-        ( Just ownerReadWriteMode
-        , defaultFileFlags{trunc = True}
-        )
-
-# endif
 #endif
