@@ -30,7 +30,18 @@ handleFileForWritingWithOwnerPermission = handleFileForWritingWithOwnerPermissio
 -- (the contents go to a temporary file which is then renamed into place) and
 -- ends up readable only by its owner.
 writeSecrets
-  :: HasCallStack => FilePath -> [Char] -> [Char] -> (a -> ByteString) -> [a] -> IO ()
+  :: HasCallStack
+  => FilePath
+  -- ^ Output directory
+  -> [Char]
+  -- ^ Filename prefix
+  -> [Char]
+  -- ^ Filename suffix
+  -> (a -> ByteString)
+  -- ^ Serialisation function for the secrets
+  -> [a]
+  -- ^ Secrets to write, one file each
+  -> IO ()
 writeSecrets = writeSecretsImpl
 
 checkVrfFilePermissions :: File content direction -> ExceptT VRFPrivateKeyFilePermissionError IO ()

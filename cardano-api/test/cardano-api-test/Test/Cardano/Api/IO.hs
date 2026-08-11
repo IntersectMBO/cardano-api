@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Api.IO
@@ -8,14 +7,16 @@ where
 
 import Cardano.Api
 
+import Control.Monad (unless)
 import Data.ByteString qualified as BS
+import Data.Either (isLeft)
 import System.Directory (removeFile)
-#ifndef mingw32_HOST_OS
-import System.Posix.Files (setFileMode)
-#endif
+import System.FilePath ((</>))
+import System.PosixCompat.Files (setFileMode)
 
 import Hedgehog
 import Hedgehog.Extras qualified as H
+import Hedgehog.Extras.Stock.OS (isWin32)
 import Hedgehog.Internal.Property
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog
@@ -46,40 +47,49 @@ prop_overwriteFileWithOwnerPermissions =
     -- replaces them.
     firstResult <- liftIO $ writeByteStringFile (File file) "old contents"
 
-    case firstResult of
-      Left err -> failWith Nothing $ docToString $ prettyError @(FileError ()) err
-      Right () -> return ()
+    H.leftFail (firstResult :: Either (FileError ()) ())
 
-#ifndef mingw32_HOST_OS
     -- 'writeByteStringFile' creates the file with umask-dependent permissions,
     -- so loosen them explicitly and verify the file really is group/other
     -- readable: otherwise the owner-only assertion below could pass vacuously
-    -- (e.g. under umask 077). Windows has no group/other permission bits, so
-    -- there is no precondition to establish there.
-    liftIO $ setFileMode file 0o644
+    -- (e.g. under umask 077). Skipped at runtime on Windows, which has no
+    -- group/other permission bits to loosen.
+    unless isWin32 $ do
+      liftIO $ setFileMode file 0o644
 
-    preResult <- liftIO . runExceptT $ checkVrfFilePermissions (File file)
+      preResult <- liftIO . runExceptT $ checkVrfFilePermissions (File file)
 
-    case preResult of
-      Left _ -> return ()
-      Right () ->
+      unless (isLeft preResult) $
         failWith Nothing "precondition failed: file is not group/other readable before the overwrite"
-#endif
 
     result <- liftIO $ writeLazyByteStringFileWithOwnerPermissions (File file) "new contents"
 
-    case result of
-      Left err -> failWith Nothing $ docToString $ prettyError @(FileError ()) err
-      Right () -> return ()
+    H.leftFail (result :: Either (FileError ()) ())
 
     contents <- liftIO $ BS.readFile file
     contents === "new contents"
 
     fResult <- liftIO . runExceptT $ checkVrfFilePermissions (File file)
 
-    case fResult of
-      Left err -> failWith Nothing $ show err
-      Right () -> liftIO (removeFile file) >> success
+    H.leftFail fResult
+
+    liftIO $ removeFile file
+
+prop_writeSecretsOverwritesItsOwnOutput :: Property
+prop_writeSecretsOverwritesItsOwnOutput =
+  H.propertyOnce . H.moduleWorkspace "help" $ \ws ->
+    -- Windows sets the read-only attribute on the secret files, which blocks
+    -- replacing them there (pre-existing behaviour): the rerun-overwrite
+    -- guarantee is POSIX-only.
+    unless isWin32 $ do
+      -- The first run leaves 0400, owner-read-only files behind.
+      liftIO $ writeSecrets ws "secret" "key" id ["old"]
+
+      -- The second run must replace them regardless.
+      liftIO $ writeSecrets ws "secret" "key" id ["new"]
+
+      contents <- liftIO $ BS.readFile (ws </> "secret.000.key")
+      contents === "new"
 
 tests :: TestTree
 tests =
@@ -87,4 +97,5 @@ tests =
     "Test.Cardano.Api.IO"
     [ testProperty "Create VRF File with Owner Permissions" prop_createVrfFileWithOwnerPermissions
     , testProperty "Overwrite file with Owner Permissions" prop_overwriteFileWithOwnerPermissions
+    , testProperty "writeSecrets overwrites its own output" prop_writeSecretsOverwritesItsOwnOutput
     ]

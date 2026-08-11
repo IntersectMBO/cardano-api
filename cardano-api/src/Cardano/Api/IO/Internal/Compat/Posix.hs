@@ -21,11 +21,12 @@ where
 import           Cardano.Api.Error (FileError (..), throwErrorM)
 import           Cardano.Api.IO.Internal.Base
 
-import           Control.Exception (IOException, bracket, bracketOnError, try)
+import           Control.Exception (bracket, bracketOnError, try)
 import           Control.Monad (forM_, when)
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except.Extra (left)
+import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import           GHC.Stack (HasCallStack)
 import qualified System.Directory as IO
@@ -50,7 +51,7 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
   -- the target path once the contents are safely on disk. The target path thus
   -- always holds either its previous contents or the complete new contents.
   user <- getRealUserID
-  result <-
+  fmap (first $ FileIOError path) $
     try $
       bracketOnError
         (IO.openTempFile targetDir $ targetFile <.> "tmp")
@@ -71,9 +72,6 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
               (\fd -> setFdOwnerAndGroup fd user (-1) >> fileSynchronise fd)
             IO.renameFile tmpPath path
         )
-  case result of
-    Left (err :: IOException) -> pure $ Left $ FileIOError path err
-    Right () -> pure $ Right ()
  where
   (targetDir, targetFile) = splitFileName path
 

@@ -350,7 +350,7 @@ library gen
     text,
 
 test-suite cardano-api-test
-  import: project-config, maybe-unix
+  import: project-config
   hs-source-dirs: test/cardano-api-test
   main-is: cardano-api-test.hs
   type: exitcode-stdio-1.0
@@ -385,6 +385,7 @@ test-suite cardano-api-test
     containers,
     data-default,
     directory,
+    filepath,
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,
@@ -397,6 +398,7 @@ test-suite cardano-api-test
     tasty-quickcheck,
     text,
     time,
+    unix-compat,
 
   other-modules:
     Test.Cardano.Api.Address
