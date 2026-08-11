@@ -15,7 +15,6 @@ module Cardano.Api.Compatible.Tx
   )
 where
 
-import Cardano.Api.Address (StakeCredential)
 import Cardano.Api.Era
 import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Era (obtainCommonConstraints)
@@ -134,7 +133,7 @@ createCompatibleTx sbe ins outs extraDatums txFee' anyProtocolUpdate anyVote txC
 
         apiScriptWitnesses =
           [ (ix, witness)
-          | (ix, _, Just (_, witness)) <- indexedTxCerts
+          | (ix, _, Just witness) <- indexedTxCerts
           ]
 
     pure
@@ -157,7 +156,7 @@ createCompatibleTx sbe ins outs extraDatums txFee' anyProtocolUpdate anyVote txC
   setRefInputs = do
     let refInputs =
           [ toShelleyTxIn refInput
-          | (_, _, Just (_, wit)) <- indexedTxCerts
+          | (_, _, Just wit) <- indexedTxCerts
           , refInput <- maybeToList $ getAnyWitnessReferenceInput wit
           ]
 
@@ -178,7 +177,7 @@ createCompatibleTx sbe ins outs extraDatums txFee' anyProtocolUpdate anyVote txC
   indexedTxCerts
     :: [ ( ScriptWitnessIndex
          , Exp.Certificate (ShelleyLedgerEra era)
-         , Maybe (StakeCredential, Exp.AnyWitness (ShelleyLedgerEra era))
+         , Maybe (Exp.AnyWitness (ShelleyLedgerEra era))
          )
        ]
   indexedTxCerts = indexTxCertificates txCertificates'
@@ -334,7 +333,7 @@ indexTxCertificates
   :: Exp.TxCertificates (ShelleyLedgerEra era)
   -> [ ( ScriptWitnessIndex
        , Exp.Certificate (ShelleyLedgerEra era)
-       , Maybe (StakeCredential, AnyWitness (ShelleyLedgerEra era))
+       , Maybe (AnyWitness (ShelleyLedgerEra era))
        )
      ]
 indexTxCertificates (Exp.TxCertificates certsWits) =

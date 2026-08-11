@@ -29,6 +29,7 @@ import Test.Cardano.Api.NodeConfig qualified
 import Test.Cardano.Api.Ord qualified
 import Test.Cardano.Api.RawBytes qualified
 import Test.Cardano.Api.Transaction.Autobalance qualified
+import Test.Cardano.Api.Transaction.Body.Plutus.RedeemerIndex qualified
 import Test.Cardano.Api.Transaction.Body.Plutus.Scripts qualified
 import Test.Cardano.Api.Transaction.Collateral qualified
 import Test.Cardano.Api.TxBody qualified
@@ -71,6 +72,7 @@ tests =
     , Test.Cardano.Api.NodeConfig.tests
     , Test.Cardano.Api.Ord.tests
     , Test.Cardano.Api.RawBytes.tests
+    , Test.Cardano.Api.Transaction.Body.Plutus.RedeemerIndex.tests
     , Test.Cardano.Api.Transaction.Body.Plutus.Scripts.tests
     , Test.Cardano.Api.Transaction.Autobalance.tests
     , Test.Cardano.Api.Transaction.Collateral.tests
