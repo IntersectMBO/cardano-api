@@ -1,4 +1,4 @@
-module Blockfrost exposing (fetchPools, fetchUtxos, isBlockfrostNotFound, pageSize, submitTx, utxosDecoder)
+module Blockfrost exposing (fetchPools, fetchUtxos, isBlockfrostNotFound, pageSize, poolsDecoder, submitTx, utxosDecoder)
 
 {-| The Blockfrost boundary (plain HTTP, CORS-friendly from a static page).
 Supplies UTxOs and the pool list, submits transactions — authenticated with
@@ -32,7 +32,10 @@ fetchUtxos key network wid addr =
         (expectUtxos (GotUtxos wid network))
 
 
-{-| One page of registered pools (pages are 1-based). The picker appends pages.
+{-| One page of registered pools (pages are 1-based; each reply replaces the
+shown page). The result is stamped with the network and page it was requested
+for, so a late reply that lands after a network switch or another page click
+can be dropped.
 -}
 fetchPools : String -> Network -> Int -> Cmd Msg
 fetchPools key network page =
@@ -41,7 +44,7 @@ fetchPools key network page =
         "GET"
         ("/pools/extended?count=" ++ String.fromInt pageSize ++ "&page=" ++ String.fromInt page)
         Http.emptyBody
-        (expectPools GotPools)
+        (expectPools (GotPools network page))
 
 
 {-| POST the signed CBOR. The reply is stamped with the id of the transaction
@@ -123,12 +126,14 @@ expectUtxos =
         )
 
 
-expectPools : (Result String (List Pool) -> Msg) -> Http.Expect Msg
+expectPools : (Result String PoolPage -> Msg) -> Http.Expect Msg
 expectPools =
     expectResponse
         (\meta body ->
             if meta.statusCode >= 200 && meta.statusCode < 300 then
-                D.decodeString poolsDecoder body |> Result.mapError D.errorToString
+                D.decodeString poolsDecoder body
+                    |> Result.map (\ps -> { pools = ps, hasMore = List.length ps == pageSize })
+                    |> Result.mapError D.errorToString
 
             else
                 Err (statusErrStr meta body)
@@ -287,9 +292,12 @@ lovelaceIn units =
 poolsDecoder : D.Decoder (List Pool)
 poolsDecoder =
     D.list
-        (D.map4 Pool
+        (D.map5 Pool
             (D.field "pool_id" D.string)
             (D.field "hex" D.string)
+            -- `metadata` is null for pools that never registered any, and `ticker`
+            -- is nullable within it — D.maybe absorbs every shape
+            (D.maybe (D.at [ "metadata", "ticker" ] D.string))
             (D.field "live_stake" (D.nullable lovelaceStringDecoder) |> D.map (Maybe.withDefault 0))
             (D.field "live_saturation" (D.nullable D.float) |> D.map (Maybe.withDefault 0))
         )

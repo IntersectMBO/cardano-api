@@ -15,6 +15,7 @@ module State exposing
     , changeRow
     , computeBalance
     , currentKey
+    , delegKindCode
     , depositTotal
     , deselectInputs
     , distinct
@@ -35,8 +36,6 @@ module State exposing
     , outputsComplete
     , ownBook
     , paymentWalletIds
-    , poolByIdIn
-    , poolHex
     , removeAt
     , selectedInputs
     , setBookAddr
@@ -66,7 +65,6 @@ module State exposing
 and update read), and the small pure updaters. No commands except the toast timer.
 -}
 
-import Bech32
 import Dict
 import Format exposing (adaToLovelace)
 import Net exposing (expectedNetKind)
@@ -655,8 +653,9 @@ addrFlagged model a =
 
 
 -- CERTIFICATES
--- One certificate per wallet, chosen from a small menu. The menu codes below are the
--- single source of truth shared by the view (options) and the update (parsing).
+-- One certificate per wallet, chosen from a small menu. The menu codes below feed
+-- the view's options; Update.SetWalletCert matches on the same literals, and
+-- certCode/delegKindCode map the model types back to them.
 
 
 certMenu : List ( String, String )
@@ -685,6 +684,19 @@ certCode action =
             "unreg"
 
 
+{-| The menu code a delegation pick would commit to — used by the view to show
+the pending choice while the pool picker is open.
+-}
+delegKindCode : DelegKind -> String
+delegKindCode kind =
+    case kind of
+        RegThenDeleg ->
+            "deleg"
+
+        DelegOnly ->
+            "delegonly"
+
+
 {-| The menu code of the wallet's current certificate ("" = none) — keeps the
 per-wallet select in sync with the certificate list.
 -}
@@ -701,16 +713,16 @@ addCert c model =
     { model | certs = model.certs ++ [ c ] } |> invalidateShape
 
 
-setCertPool : String -> Certificate -> Certificate
-setCertPool pid c =
+setCertPool : PoolRef -> Certificate -> Certificate
+setCertPool ref c =
     { c
         | action =
             case c.action of
                 RegisterAndDelegate _ ->
-                    RegisterAndDelegate pid
+                    RegisterAndDelegate ref
 
                 DelegateOnly _ ->
-                    DelegateOnly pid
+                    DelegateOnly ref
 
                 other ->
                     other
@@ -729,29 +741,11 @@ stakeHashOf wid model =
 loadedPools : Model -> List Pool
 loadedPools model =
     case model.pools of
-        Loaded ps ->
-            ps
+        Loaded page ->
+            page.pools
 
         _ ->
             []
-
-
-poolByIdIn : List Pool -> String -> Maybe Pool
-poolByIdIn ps pid =
-    List.filter (\p -> p.idBech32 == pid) ps |> List.head
-
-
-{-| Pool base16 id for the delegation certificate. Prefer Blockfrost's `hex`; fall
-back to the provisional Elm bech32 decoder if the pool isn't in the loaded set.
--}
-poolHex : Model -> String -> String
-poolHex model pid =
-    case poolByIdIn (loadedPools model) pid of
-        Just p ->
-            p.idHex
-
-        Nothing ->
-            Bech32.bech32ToHex pid |> Maybe.withDefault pid
 
 
 

@@ -1,5 +1,9 @@
 module Types exposing (..)
 
+{-| Every data type in the application: the Model (all state in one record)
+and the Msg (everything that can happen).
+-}
+
 import Dict exposing (Dict)
 import Http
 import Set exposing (Set)
@@ -81,9 +85,21 @@ type alias Output =
 
 type CertAction
     = Register
-    | RegisterAndDelegate String
-    | DelegateOnly String
+    | RegisterAndDelegate PoolRef
+    | DelegateOnly PoolRef
     | Unregister
+
+
+{-| What a certificate remembers about its pool, captured at pick time: the
+bech32 id and ticker for display, and Blockfrost's authoritative hex, which is
+what goes into the certificate. Pinning these here means a certificate never
+depends on which picker page happens to be loaded later.
+-}
+type alias PoolRef =
+    { bech32 : String
+    , hex : String
+    , ticker : Maybe String
+    }
 
 
 type alias Certificate =
@@ -95,8 +111,18 @@ type alias Certificate =
 type alias Pool =
     { idBech32 : String
     , idHex : String
+    , ticker : Maybe String -- pools without registered metadata have none
     , liveStake : Int
     , saturation : Float
+    }
+
+
+{-| One fetched page of the pool list. `hasMore` is computed at the fetch
+boundary: a full Blockfrost page means a next one probably exists.
+-}
+type alias PoolPage =
+    { pools : List Pool
+    , hasMore : Bool
     }
 
 
@@ -192,8 +218,8 @@ type alias GenPayload =
 
 
 {-| The two protocol parameters the Elm side needs for its balance arithmetic.
-Read from web/pparams.json at startup (see web/ports.js) so the pinned file is
-the single source of truth; everything else in that file is consumed only by
+Read from web/pparams.js at startup (see web/ports.js) so the pinned object is
+the single source of truth; everything else in it is consumed only by
 cardano-wasm's estimateMinFee.
 -}
 type alias Protocol =
@@ -221,8 +247,8 @@ type alias Model =
     , feeText : String
     , tx : TxState
     , submit : SubmitState
-    , pools : Loadable (List Pool) -- the page of pools currently shown in the picker
-    , poolPage : Int -- its 1-based page number (Blockfrost pages, 100 pools each)
+    , pools : Loadable PoolPage -- the page of pools currently shown in the picker
+    , poolPage : Int -- its 1-based page number (one server page per view)
     , modal : Modal
     , restore : RestoreForm
     , bookForm : BookForm
@@ -278,11 +304,11 @@ type Msg
     | ClearCerts
     | ClearTx
     | UpdatePoolSearch String
-    | PickPool String
+    | PickPool PoolRef
     | ClosePoolModal
     | ClickLoadPools
     | ClickPoolPage Int
-    | GotPools (Result String (List Pool))
+    | GotPools Network Int (Result String PoolPage)
     | SelectEra Era
     | ClickEstimateFee
     | GotFeeEstimated (Result String Int)

@@ -1,12 +1,14 @@
 module Bech32 exposing (bech32ToHex)
 
-{-| PROVISIONAL bech32 → base16 decoder.
+{-| Bech32 → base16 decoder for pool ids.
 
-The delegation certificate needs the pool id in base16, while the pool picker
-carries the bech32 id from the provider. Blockfrost already returns the hex
-directly, so this decoder is only a fallback for pools missing from the loaded
-set. It performs no checksum validation. Ideally cardano-wasm would expose this
-conversion and this module would disappear.
+The delegation certificate needs the pool id in base16; the picker pins
+Blockfrost's hex at pick time, so the application no longer performs this
+conversion itself. The module is kept as the safe path should a manual pool-id
+entry ever be added: it validates fully (checksum, `pool` prefix, 28-byte
+payload, no mixed case), so a mistyped id can never silently decode to a
+different pool. Ideally cardano-wasm would expose this conversion and this
+module would disappear.
 
 -}
 
@@ -19,28 +21,89 @@ bech32Charset =
     "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 
 
-{-| Decode a bech32 string (e.g. "pool1…") to the base16 of its data payload,
-dropping the human-readable prefix and the 6-symbol checksum.
-No checksum validation — provisional.
+{-| Decode a `pool1…` id to the base16 of its data payload, dropping the
+prefix and the 6-symbol checksum. Full BIP-173 validation: rejects mixed case,
+a prefix other than `pool`, a bad checksum, and any payload that is not
+exactly the 28 bytes of a pool key hash.
 -}
 bech32ToHex : String -> Maybe String
 bech32ToHex input =
     let
+        lower =
+            String.toLower input
+
         chars =
-            String.toList (String.toLower input)
+            String.toList lower
 
         sep =
             lastIndexOfChar '1' chars 0 -1
 
+        hrp =
+            List.take sep chars
+
         vals =
             List.drop (sep + 1) chars |> List.map charIndex
+
+        -- BIP-173: a string must be all-lowercase or all-uppercase
+        mixedCase =
+            input /= lower && input /= String.toUpper input
     in
-    if sep < 0 || List.any (\v -> v < 0) vals || List.length vals < 6 then
+    if mixedCase || sep < 0 || List.any (\v -> v < 0) vals || List.length vals < 6 then
+        Nothing
+
+    else if hrp /= String.toList "pool" || polymod (hrpExpand hrp ++ vals) /= 1 then
         Nothing
 
     else
         convertBits 5 8 False (List.take (List.length vals - 6) vals)
-            |> Maybe.map Hex.bytesToHex
+            |> Maybe.andThen
+                (\bytes ->
+                    if List.length bytes == 28 then
+                        Just (Hex.bytesToHex bytes)
+
+                    else
+                        Nothing
+                )
+
+
+{-| The BIP-173 checksum: over `hrpExpand hrp ++ data` (data including the
+6 checksum symbols) a valid bech32 string yields exactly 1.
+-}
+polymod : List Int -> Int
+polymod values =
+    let
+        generator =
+            [ 0x3B6A57B2, 0x26508E6D, 0x1EA119FA, 0x3D4233DD, 0x2A1462B3 ]
+
+        step v chk =
+            let
+                b =
+                    Bitwise.shiftRightZfBy 25 chk
+
+                shifted =
+                    Bitwise.xor (Bitwise.shiftLeftBy 5 (Bitwise.and chk 0x01FFFFFF)) v
+            in
+            List.foldl
+                (\( i, g ) acc ->
+                    if Bitwise.and (Bitwise.shiftRightZfBy i b) 1 == 1 then
+                        Bitwise.xor acc g
+
+                    else
+                        acc
+                )
+                shifted
+                (List.indexedMap Tuple.pair generator)
+    in
+    List.foldl step 1 values
+
+
+hrpExpand : List Char -> List Int
+hrpExpand hrp =
+    let
+        codes =
+            List.map Char.toCode hrp
+    in
+    List.map (Bitwise.shiftRightBy 5) codes ++ [ 0 ] ++ List.map (Bitwise.and 31) codes
 
 
 charIndex : Char -> Int
