@@ -39,30 +39,17 @@ inspectIfNew model a =
 openPool : PoolPurpose -> Model -> ( Model, Cmd Msg )
 openPool purpose model =
     let
-        shouldFetch =
-            currentKey model /= "" && (model.pools == NotAsked || isFailed model.pools)
+        opened =
+            { model | modal = PoolPicker purpose "" }
     in
-    ( { model
-        | modal = PoolPicker purpose ""
-        , pools =
-            if shouldFetch then
-                Loading
+    if currentKey model /= "" && (model.pools == NotAsked || isFailed model.pools) then
+        ( { opened | pools = Loading, poolPage = 1 }
+            |> log LogInfo "GET blockfrost /pools/extended · page 1"
+        , Blockfrost.fetchPools (currentKey model) model.network 1
+        )
 
-            else
-                model.pools
-        , poolPage =
-            if shouldFetch then
-                1
-
-            else
-                model.poolPage
-      }
-    , if shouldFetch then
-        Blockfrost.fetchPools (currentKey model) model.network 1
-
-      else
-        Cmd.none
-    )
+    else
+        ( opened, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -366,27 +353,35 @@ update msg model =
 
         -- ── certificates ───────────────────────────────────────────────────────
         SetWalletCert wid raw ->
-            -- The select is bound to the wallet's current certificate: changing it
-            -- replaces (or clears) that wallet's cert; "" = no certificate.
+            -- The select is bound to the wallet's current certificate: "reg"/"unreg"
+            -- and "" replace or clear it immediately; the delegation entries only
+            -- open the picker — the replacement happens at PickPool, so cancelling
+            -- the picker leaves the previous certificate (and the fee) untouched.
             let
-                cleared =
-                    { model | certs = List.filter (\c -> c.wallet /= wid) model.certs } |> invalidateShape
+                without =
+                    List.filter (\c -> c.wallet /= wid) model.certs
             in
             case raw of
                 "reg" ->
-                    ( addCert (Certificate wid Register) cleared |> log LogCmd (aliasOf wid model ++ ": register cert"), Cmd.none )
+                    ( addCert (Certificate wid Register) { model | certs = without }
+                        |> log LogInfo (aliasOf wid model ++ ": register cert")
+                    , Cmd.none
+                    )
 
                 "unreg" ->
-                    ( addCert (Certificate wid Unregister) cleared |> log LogCmd (aliasOf wid model ++ ": unregister cert"), Cmd.none )
+                    ( addCert (Certificate wid Unregister) { model | certs = without }
+                        |> log LogInfo (aliasOf wid model ++ ": unregister cert")
+                    , Cmd.none
+                    )
 
                 "deleg" ->
-                    openPool (ForNewCert wid RegThenDeleg) cleared
+                    openPool (ForNewCert wid RegThenDeleg) model
 
                 "delegonly" ->
-                    openPool (ForNewCert wid DelegOnly) cleared
+                    openPool (ForNewCert wid DelegOnly) model
 
                 _ ->
-                    ( cleared, Cmd.none )
+                    ( { model | certs = without } |> invalidateShape, Cmd.none )
 
         DeleteCertificate i ->
             ( { model | certs = removeAt i model.certs } |> invalidateShape, Cmd.none )
@@ -408,25 +403,31 @@ update msg model =
             , Cmd.none
             )
 
-        PickPool pid ->
+        PickPool ref ->
             case model.modal of
                 PoolPicker (ForNewCert wid kind) _ ->
                     let
                         action =
                             case kind of
                                 RegThenDeleg ->
-                                    RegisterAndDelegate pid
+                                    RegisterAndDelegate ref
 
                                 DelegOnly ->
-                                    DelegateOnly pid
+                                    DelegateOnly ref
                     in
-                    ( addCert (Certificate wid action) { model | modal = NoModal }
-                        |> log LogCmd (aliasOf wid model ++ ": delegate to " ++ pid)
+                    -- the wallet's previous certificate is replaced only now, on a
+                    -- confirmed pick — closing the picker instead leaves it as it was
+                    ( addCert (Certificate wid action)
+                        { model
+                            | certs = List.filter (\c -> c.wallet /= wid) model.certs
+                            , modal = NoModal
+                        }
+                        |> log LogInfo (aliasOf wid model ++ ": delegate to " ++ ref.bech32)
                     , Cmd.none
                     )
 
                 PoolPicker (ForEditCert i) _ ->
-                    ( { model | certs = updateAt i (setCertPool pid) model.certs, modal = NoModal } |> invalidateShape, Cmd.none )
+                    ( { model | certs = updateAt i (setCertPool ref) model.certs, modal = NoModal } |> invalidateShape, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -442,31 +443,45 @@ update msg model =
 
             else
                 ( { model | pools = Loading, poolPage = 1 }
+                    |> log LogInfo "GET blockfrost /pools/extended · page 1"
                 , Blockfrost.fetchPools (currentKey model) model.network 1
                 )
 
         ClickPoolPage page ->
             -- prev/next navigation: each view is exactly one server page, so shifting
             -- offsets can never show duplicates. Only fetched on click.
-            if page < 1 || currentKey model == "" then
+            if currentKey model == "" then
+                toastNow "Enter a Blockfrost project id first" model
+
+            else if page < 1 then
                 ( model, Cmd.none )
 
             else
                 ( { model | pools = Loading, poolPage = page }
+                    |> log LogInfo ("GET blockfrost /pools/extended · page " ++ String.fromInt page)
                 , Blockfrost.fetchPools (currentKey model) model.network page
                 )
 
-        GotPools (Ok ps) ->
-            ( { model | pools = Loaded ps }
-                |> log LogOk ("loaded " ++ String.fromInt (List.length ps) ++ " pools (page " ++ String.fromInt model.poolPage ++ ")")
-            , Cmd.none
-            )
+        GotPools network page result ->
+            -- accepted only for the network and page currently asked for: a reply
+            -- that was in flight across a network switch (or a second page click)
+            -- must not resurface as the shown list (the GotUtxos stamp idiom)
+            if network /= model.network || page /= model.poolPage then
+                ( model |> log LogWarn "dropped a stale pool list (network or page changed)", Cmd.none )
 
-        GotPools (Err e) ->
-            ( { model | pools = Failed e }
-                |> log LogWarn ("pool list failed: " ++ e)
-            , Cmd.none
-            )
+            else
+                case result of
+                    Ok pp ->
+                        ( { model | pools = Loaded pp }
+                            |> log LogOk ("loaded " ++ String.fromInt (List.length pp.pools) ++ " pools (page " ++ String.fromInt page ++ ")")
+                        , Cmd.none
+                        )
+
+                    Err e ->
+                        ( { model | pools = Failed e }
+                            |> log LogWarn ("pool list failed: " ++ e)
+                        , Cmd.none
+                        )
 
         -- ── era & fee ──────────────────────────────────────────────────────────
         SelectEra e ->
@@ -623,8 +638,22 @@ update msg model =
 
                                 else
                                     log LogWarn ("txid mismatch! wasm said " ++ expected ++ " but Blockfrost returned " ++ txid)
+
+                            -- an already-executed certificate left in the builder makes
+                            -- the NEXT transaction invalid outright — worth a nudge
+                            certReminder =
+                                if List.isEmpty model.certs then
+                                    identity
+
+                                else
+                                    log LogInfo "certificates stay in the builder — clear them before building the next transaction"
                         in
-                        ( { model | submit = Submitted txid } |> log LogOk ("submitted · txid " ++ txid) |> consistency, Cmd.none )
+                        ( { model | submit = Submitted txid }
+                            |> log LogOk ("submitted · txid " ++ txid)
+                            |> consistency
+                            |> certReminder
+                        , Cmd.none
+                        )
 
                     Err e ->
                         let

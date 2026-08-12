@@ -98,6 +98,9 @@ function wire(app, api, pparams) {
     try {
       let tx = await buildUnsigned(api, spec);
       tx = tx.setFee(BigInt(spec.fee)); // fluent, synchronous
+      // An empty key list would pass undefined into the wrapper, whose promise then
+      // never settles (wedging this instance's certificate path) — fail loudly instead.
+      if (!paymentKeys.length) throw new Error("no payment keys (select at least one input)");
       // Payment witnesses (for the spent inputs) — signWithPaymentKey / alsoSignWithPaymentKey.
       let signed = await tx.signWithPaymentKey(paymentKeys[0]); // async → SignedTx
       for (const k of paymentKeys.slice(1)) signed = signed.alsoSignWithPaymentKey(k); // fluent, sync
@@ -134,7 +137,18 @@ async function boot() {
 }
 
 boot().catch((e) => {
-  document.getElementById("app").innerHTML =
-    '<div style="color:#e6edff;font-family:sans-serif;padding:30px">Failed to load cardano-wasm:<br><pre>' +
-    String(e) + "</pre>Make sure the page is served over http(s), not opened as a file://</div>";
+  const app = document.getElementById("app");
+  if (!app) return;
+
+  const msg = document.createElement("div");
+  msg.style.cssText = "color:#e6edff;font-family:sans-serif;padding:30px";
+  msg.append("Failed to load cardano-wasm:");
+
+  const pre = document.createElement("pre");
+  pre.textContent = String(e);
+  msg.appendChild(document.createElement("br"));
+  msg.appendChild(pre);
+  msg.append("Make sure the page is served over http(s), not opened as a file://");
+
+  app.replaceChildren(msg);
 });

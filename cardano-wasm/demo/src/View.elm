@@ -158,8 +158,21 @@ viewWallet model w =
                 -- bound to the wallet's current certificate; options come from
                 -- State.certMenu (the same codes the update parses)
                 , let
+                    -- While the picker is open for this wallet, show the pending
+                    -- choice: the certificate itself only changes at PickPool, so on
+                    -- cancel `cur` falls back and the vdom re-syncs the DOM select
+                    -- (a `selected` property is only patched when this value changes).
                     cur =
-                        walletCertAction w.id model
+                        case model.modal of
+                            PoolPicker (ForNewCert wid kind) _ ->
+                                if wid == w.id then
+                                    delegKindCode kind
+
+                                else
+                                    walletCertAction w.id model
+
+                            _ ->
+                                walletCertAction w.id model
                   in
                   select [ class "certsel", onChange (SetWalletCert w.id) ]
                     (List.map
@@ -507,8 +520,8 @@ viewCerts model =
                         wAlias =
                             aliasOf c.wallet model
 
-                        ( label_, poolMaybe ) =
-                            certLabel (loadedPools model) c.action
+                        ( label_, hasPool ) =
+                            certLabel c.action
                     in
                     div [ class "certrow" ]
                         [ span [ class "wav small", style "background" (getWallet c.wallet model |> Maybe.map .color |> Maybe.withDefault "#555") ]
@@ -517,12 +530,11 @@ viewCerts model =
                             [ b [] [ text wAlias ]
                             , div [ class "muted small" ] [ text label_ ]
                             ]
-                        , case poolMaybe of
-                            Just _ ->
-                                button [ class "btn ghost xs", onClick (ChangeCertPool i) ] [ text "pool" ]
+                        , if hasPool then
+                            button [ class "btn ghost xs", onClick (ChangeCertPool i) ] [ text "pool" ]
 
-                            Nothing ->
-                                text ""
+                          else
+                            text ""
                         , button [ class "x", onClick (DeleteCertificate i) ] [ text "×" ]
                         ]
                 )
@@ -530,29 +542,27 @@ viewCerts model =
             )
 
 
-certLabel : List Pool -> CertAction -> ( String, Maybe String )
-certLabel ps action =
+{-| Label + whether the action carries a pool (and so can offer a "pool" button).
+The pool is named by the ticker pinned at pick time, or its shortened bech32 id.
+-}
+certLabel : CertAction -> ( String, Bool )
+certLabel action =
     let
-        poolName pid =
-            case poolByIdIn ps pid of
-                Just p ->
-                    shorten p.idBech32
-
-                Nothing ->
-                    shorten pid
+        poolName ref =
+            Maybe.withDefault (shorten ref.bech32) ref.ticker
     in
     case action of
         Register ->
-            ( "Register", Nothing )
+            ( "Register", False )
 
         Unregister ->
-            ( "Unregister", Nothing )
+            ( "Unregister", False )
 
-        DelegateOnly pid ->
-            ( "Delegate only → " ++ poolName pid, Just pid )
+        DelegateOnly ref ->
+            ( "Delegate only → " ++ poolName ref, True )
 
-        RegisterAndDelegate pid ->
-            ( "Register + delegate → " ++ poolName pid, Just pid )
+        RegisterAndDelegate ref ->
+            ( "Register + delegate → " ++ poolName ref, True )
 
 
 viewSummary : Model -> Html Msg
@@ -815,7 +825,7 @@ inspectorText model =
                     (\c ->
                         let
                             ( lbl, _ ) =
-                                certLabel (loadedPools model) c.action
+                                certLabel c.action
                         in
                         "    { stakeKey: \"" ++ aliasOf c.wallet model ++ "\", action: \"" ++ lbl ++ "\" }"
                     )
@@ -950,13 +960,18 @@ viewPoolList model query =
                 ]
             ]
 
-        Loaded ps ->
+        Loaded page ->
             let
                 ql =
                     String.toLower query
 
                 matches =
-                    List.filter (\p -> String.contains ql (String.toLower p.idBech32)) ps
+                    List.filter
+                        (\p ->
+                            String.contains ql (String.toLower p.idBech32)
+                                || String.contains ql (String.toLower (Maybe.withDefault "" p.ticker))
+                        )
+                        page.pools
 
                 cards =
                     if List.isEmpty matches then
@@ -965,29 +980,30 @@ viewPoolList model query =
                     else
                         List.map viewPoolCard matches
             in
-            cards ++ [ viewPoolPager model (List.length ps) ]
+            cards ++ [ viewPoolPager model (List.length page.pools) page.hasMore ]
 
 
-{-| Prev/next pager. A full page (100) means there is probably a next one; a short
-page is the end of the list. Pages are only ever fetched on these clicks.
+{-| Prev/next pager. `hasMore` was computed where the page was fetched (a full
+Blockfrost page means a next one probably exists); a short page is the end of
+the list. Pages are only ever fetched on these clicks.
 -}
-viewPoolPager : Model -> Int -> Html Msg
-viewPoolPager model pageSize =
+viewPoolPager : Model -> Int -> Bool -> Html Msg
+viewPoolPager model count hasMore =
     div [ class "empty" ]
         [ button
             [ class "btn ghost xs", disabled (model.poolPage <= 1), onClick (ClickPoolPage (model.poolPage - 1)) ]
             [ text "◂ prev" ]
-        , text (" page " ++ String.fromInt model.poolPage ++ " · " ++ String.fromInt pageSize ++ " pools ")
+        , text (" page " ++ String.fromInt model.poolPage ++ " · " ++ String.fromInt count ++ " pools ")
         , button
-            [ class "btn ghost xs", disabled (pageSize < 100), onClick (ClickPoolPage (model.poolPage + 1)) ]
+            [ class "btn ghost xs", disabled (not hasMore), onClick (ClickPoolPage (model.poolPage + 1)) ]
             [ text "next ▸" ]
         ]
 
 
 viewPoolCard : Pool -> Html Msg
 viewPoolCard p =
-    div [ class "poolcard", onClick (PickPool p.idBech32) ]
-        [ span [ class "tk" ] [ text "◆" ]
+    div [ class "poolcard", onClick (PickPool { bech32 = p.idBech32, hex = p.idHex, ticker = p.ticker }) ]
+        [ span [ class "tk" ] [ text (Maybe.withDefault "◆" p.ticker) ]
         , div [ class "pm grow" ]
             [ b [ class "mono" ] [ text (shorten p.idBech32) ]
             , div [ class "d mono" ] [ text ("hex " ++ String.left 16 p.idHex ++ "…") ]
@@ -1030,4 +1046,4 @@ kvSecret k v =
 
 stopClick : Attribute Msg
 stopClick =
-    Html.Events.stopPropagationOn "click" (D.succeed ( NoOp, True ))
+    stopPropagationOn "click" (D.succeed ( NoOp, True ))

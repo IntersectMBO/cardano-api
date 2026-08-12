@@ -1,5 +1,6 @@
 module Wasm exposing
     ( addrsDecoder
+    , certJson
     , decodeResult
     , deriveAddresses
     , estimateFee
@@ -15,9 +16,10 @@ module Wasm exposing
 
 {-| The cardano-wasm boundary. Commands encode a request and send it out a port;
 results come back on the matching incoming port and are decoded here (see the
-subscriptions in Main). The Cardano processing itself — key handling, transaction
-building, fee estimation, signing — happens on the JS side (web/ports.js) through
-the cardano-wasm wrapper; the JSON built here just describes the transaction.
+subscriptions in Main). The Cardano processing itself — key handling, certificate
+building, transaction building, fee estimation, signing — happens on the JS side
+(web/ports.js) through the cardano-wasm wrapper; the JSON built here just
+describes the transaction.
 -}
 
 import Format
@@ -188,11 +190,13 @@ certJson model c =
         unreg =
             E.object [ ( "action", E.string "unregister" ), ( "stakeKeyHash", E.string skh ), ( "deposit", E.int model.protocol.keyDeposit ) ]
 
-        deleg pid =
+        deleg ref =
             E.object
                 [ ( "action", E.string "delegate" )
                 , ( "stakeKeyHash", E.string skh )
-                , ( "poolId", E.string (poolHex model pid) )
+
+                -- Blockfrost's hex, pinned into the certificate at pick time
+                , ( "poolId", E.string ref.hex )
                 ]
     in
     case c.action of
@@ -202,18 +206,20 @@ certJson model c =
         Unregister ->
             [ unreg ]
 
-        DelegateOnly pid ->
-            [ deleg pid ]
+        DelegateOnly ref ->
+            [ deleg ref ]
 
-        RegisterAndDelegate pid ->
-            [ reg, deleg pid ]
+        RegisterAndDelegate ref ->
+            [ reg, deleg ref ]
 
 
 
 -- SIGNING KEYS
 -- Payment witnesses for the wallets whose UTxOs are spent; stake witnesses
--- (alsoSignWithStakeKey) for the wallets that carry a certificate. Registration
--- alone wouldn't need a stake witness, but an extra witness is harmless.
+-- (alsoSignWithStakeKey) for the wallets that carry a certificate. All of them
+-- need one: our registration certificates carry an explicit deposit, and that
+-- form requires the credential's witness just like delegation and
+-- unregistration do.
 
 
 paymentSigningKeys : Model -> List String
