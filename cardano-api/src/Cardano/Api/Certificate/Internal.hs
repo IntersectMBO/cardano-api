@@ -50,6 +50,9 @@ data StakePoolParameters
   = StakePoolParameters
   { stakePoolId :: PoolId
   , stakePoolVRF :: Hash VrfKey
+  , stakePoolBlsKey :: Maybe Ledger.BlsKey
+  -- ^ The pool's BLS voting key and its proof of possession. Only registrable
+  -- from the Dijkstra era onwards; 'Nothing' for a pool that does not vote.
   , stakePoolCost :: L.Coin
   , stakePoolMargin :: Rational
   , stakePoolRewardAccount :: StakeAddress
@@ -91,6 +94,7 @@ toShelleyPoolParams
   StakePoolParameters
     { stakePoolId = StakePoolKeyHash poolkh
     , stakePoolVRF = VrfKeyHash vrfkh
+    , stakePoolBlsKey
     , stakePoolCost
     , stakePoolMargin
     , stakePoolRewardAccount
@@ -120,6 +124,7 @@ toShelleyPoolParams
       , Ledger.sppMetadata =
           toShelleyPoolMetadata
             <$> Ledger.maybeToStrictMaybe stakePoolMetadata
+      , Ledger.sppBlsKey = Ledger.maybeToStrictMaybe stakePoolBlsKey
       }
    where
     toShelleyStakePoolRelay :: StakePoolRelay -> Ledger.StakePoolRelay
@@ -172,10 +177,12 @@ fromShelleyPoolParams
     , Ledger.sppOwners
     , Ledger.sppRelays
     , Ledger.sppMetadata
+    , Ledger.sppBlsKey
     } =
     StakePoolParameters
       { stakePoolId = StakePoolKeyHash sppId
       , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash sppVrf)
+      , stakePoolBlsKey = Ledger.strictMaybeToMaybe sppBlsKey
       , stakePoolCost = sppCost
       , stakePoolMargin = Ledger.unboundRational sppMargin
       , stakePoolRewardAccount = fromShelleyStakeAddr sppAccountAddress
