@@ -132,10 +132,16 @@ library
     bytestring,
     bytestring-trie,
     cardano-addresses ^>=4.0.0,
+<<<<<<< HEAD
     cardano-base ^>=0.1,
     cardano-binary,
     cardano-crypto,
     cardano-crypto-class ^>=2.5 || ^>=2.6,
+=======
+    cardano-binary >=1.9.1,
+    cardano-crypto,
+    cardano-crypto-class ^>=2.6,
+>>>>>>> e9b8beea3 (Update all DSIGN operations to FixedSizeCodec ops)
     cardano-crypto-wrapper ^>=1.7 || ^>=1.8,
     cardano-data >=1.0,
     cardano-diffusion:{api, cardano-diffusion} ^>=1.1,
@@ -329,8 +335,13 @@ library gen
     base16-bytestring,
     bytestring,
     cardano-api,
+<<<<<<< HEAD
     cardano-binary >=1.6 && <1.10,
     cardano-crypto-class ^>=2.5 || ^>=2.6,
+=======
+    cardano-binary >=1.9.1 && <1.10,
+    cardano-crypto-class ^>=2.6,
+>>>>>>> e9b8beea3 (Update all DSIGN operations to FixedSizeCodec ops)
     cardano-crypto-wrapper:testlib ^>=1.7 || ^>=1.8,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-byron:testlib,
