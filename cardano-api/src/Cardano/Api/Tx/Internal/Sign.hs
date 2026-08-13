@@ -782,20 +782,24 @@ decodeShelleyBasedWitness
   -> ByteString
   -> Either CBOR.DecoderError (KeyWitness era)
 decodeShelleyBasedWitness sbe bs =
-  let e =
-        Valid.foldValidation Left Right $
-          mconcat $
-            map
-              (either (Valid.Failure . (: [])) Valid.Success)
-              [ bootstrapWitnessDecoder bs
-              , shelleyKeyWitnessDecoder bs
-              , legacyKeyWitnessDecoder bs
-              ]
-   in case e of
-        Left errs ->
-          let allErrs = Text.unlines $ map renderBuildable errs
-           in Left $ CBOR.DecoderErrorCustom "Failed to deserialise key witness" allErrs
-        Right res -> return res
+  -- NB: built directly from 'Valid.Failure'/'Valid.Success' (rather than via
+  -- 'Valid.liftError'/'Valid.toEither') since those convenience functions were
+  -- removed from the "validation" package's newer, lens-based API; the
+  -- constructors and the 'Semigroup'/'Monoid' instances used here are stable
+  -- across both APIs.
+  case
+    mconcat $
+      map
+        (either (Valid.Failure . return) Valid.Success)
+        [ bootstrapWitnessDecoder bs
+        , shelleyKeyWitnessDecoder bs
+        , legacyKeyWitnessDecoder bs
+        ]
+    of
+    Valid.Failure errs ->
+      let allErrs = Text.unlines $ map renderBuildable errs
+       in Left $ CBOR.DecoderErrorCustom "Failed to deserialise key witness" allErrs
+    Valid.Success res -> return res
  where
   shelleyKeyWitnessDecoder b =
     ShelleyKeyWitness sbe
