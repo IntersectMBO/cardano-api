@@ -22,6 +22,9 @@ module Cardano.Api.Key.Internal.Leios
   , BlsPossessionProof
   , blsPossessionProof
   , createBlsPossessionProof
+
+    -- * Internal conversion functions
+  , toLedgerBlsKey
   )
 where
 
@@ -40,6 +43,7 @@ import Cardano.Crypto.DSIGN.BLS12381 qualified as Crypto
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Ledger.Hashes (HASH)
+import Cardano.Ledger.State qualified as Ledger
 
 import Data.ByteString (ByteString)
 import Data.Either.Combinators (maybeToRight)
@@ -216,3 +220,13 @@ instance HasTextEnvelope BlsPossessionProof where
 
   textEnvelopeDefaultDescr :: BlsPossessionProof -> TextEnvelopeDescr
   textEnvelopeDefaultDescr _ = "BLS12-381 possession proof"
+
+toLedgerBlsKey :: SigningKey BlsKey -> Ledger.BlsKey
+toLedgerBlsKey skey =
+  Ledger.BlsKey
+    { Ledger.blsPubKey = vkey
+    , Ledger.blsPossessionProof = proof
+    }
+ where
+  BlsVerificationKey vkey = getVerificationKey skey
+  BlsPossessionProof proof = createBlsPossessionProof skey
