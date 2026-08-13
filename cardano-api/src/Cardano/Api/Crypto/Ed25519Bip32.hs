@@ -40,15 +40,6 @@ data Ed25519Bip32DSIGN
 instance DSIGNAlgorithm Ed25519Bip32DSIGN where
   type SeedSizeDSIGN Ed25519Bip32DSIGN = 32
 
-  -- \| BIP32-Ed25519 extended verification key size is 64 octets.
-  type VerKeySizeDSIGN Ed25519Bip32DSIGN = 64
-
-  -- \| BIP32-Ed25519 extended signing key size is 96 octets.
-  type SignKeySizeDSIGN Ed25519Bip32DSIGN = 96
-
-  -- \| BIP32-Ed25519 extended signature size is 64 octets.
-  type SigSizeDSIGN Ed25519Bip32DSIGN = 64
-
   --
   -- Key and signature types
   --
@@ -102,21 +93,33 @@ instance DSIGNAlgorithm Ed25519Bip32DSIGN where
         (mempty :: ScrubbedBytes)
         (mempty :: ScrubbedBytes)
 
+--
+-- raw serialise/deserialise, in fixed-size raw format
+--
+
 instance FixedSizeCodec (VerKeyDSIGN Ed25519Bip32DSIGN) where
+  -- \| BIP32-Ed25519 extended verification key size is 64 octets.
   type FixedSize (VerKeyDSIGN Ed25519Bip32DSIGN) = 64
+
   rawEncodeFixedSized (VerKeyEd25519Bip32DSIGN vk) = CC.unXPub vk
   rawDecodeFixedSized bs =
     either fail (pure . VerKeyEd25519Bip32DSIGN) (CC.xpub bs)
 
 instance FixedSizeCodec (SignKeyDSIGN Ed25519Bip32DSIGN) where
+  -- \| BIP32-Ed25519 extended signing key size is 96 octets.
   type FixedSize (SignKeyDSIGN Ed25519Bip32DSIGN) = 96
+
   rawEncodeFixedSized (SignKeyEd25519Bip32DSIGN sk) = xPrvToBytes sk
   rawDecodeFixedSized bs =
-    maybe (fail "invalid Ed25519Bip32DSIGN signing key") (pure . SignKeyEd25519Bip32DSIGN) $
-      xPrvFromBytes bs
+    maybe
+      (fail "Ed25519Bip32DSIGN: invalid SignKeyDSIGN")
+      (pure . SignKeyEd25519Bip32DSIGN)
+      (xPrvFromBytes bs)
 
 instance FixedSizeCodec (SigDSIGN Ed25519Bip32DSIGN) where
+  -- \| BIP32-Ed25519 extended signature size is 64 octets.
   type FixedSize (SigDSIGN Ed25519Bip32DSIGN) = 64
+
   rawEncodeFixedSized = BA.convert
   rawDecodeFixedSized bs =
     either fail (pure . SigEd25519Bip32DSIGN) (CC.xsignature bs)
