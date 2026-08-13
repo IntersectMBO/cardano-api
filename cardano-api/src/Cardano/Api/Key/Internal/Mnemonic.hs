@@ -76,6 +76,8 @@ import Basement.Compat.IsList qualified as Basement
 import Basement.String qualified as Basement
 import Crypto.Encoding.BIP39.English (english)
 
+-- | Convert a @cardano-addresses@ 'XPrv' to a @cardano-crypto-class@
+-- 'CC.XPrv' (from "Cardano.Crypto.Wallet") via a byte-level roundtrip.
 caXPrvToCCXPrv :: XPrv -> CC.XPrv
 caXPrvToCCXPrv = fromMaybe (error "caXPrvToCCXPrv: impossible") . xPrvFromBytes . xprvToBytes
 
