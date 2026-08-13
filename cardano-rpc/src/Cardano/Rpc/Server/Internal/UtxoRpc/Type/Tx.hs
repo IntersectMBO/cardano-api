@@ -43,7 +43,7 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
   , txOutToUtxoRpcTxOutput
   )
 
-import Cardano.Binary.FixedSizeCodec (rawEncodeFixedSized)
+import Cardano.Binary.FixedSizeCodec qualified as DSIGN
 import Cardano.Crypto.DSIGN.Class qualified as DSIGN
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
@@ -131,20 +131,18 @@ txToUtxoRpcTx ledgerTx = anyEraTxConstraints sbe $ do
       vkeyWitnesses =
         toList (wits ^. L.addrTxWitsL) <&> \(L.WitVKey (L.VKey vkey) (DSIGN.SignedDSIGN signature)) ->
           defMessage
-            & U5c.vkey .~ rawEncodeFixedSized vkey
-            & U5c.signature .~ rawEncodeFixedSized signature
+            & U5c.vkey .~ DSIGN.rawEncodeFixedSized vkey
+            & U5c.signature .~ DSIGN.rawEncodeFixedSized signature
       bootstrapWitnesses :: [Proto UtxoRpc.BootstrapWitness]
       bootstrapWitnesses =
         toList (wits ^. L.bootAddrTxWitsL) <&> \bootstrapWitness -> do
           let L.VKey bootstrapKey = L.bwKey bootstrapWitness
               DSIGN.SignedDSIGN bootstrapSignature = L.bwSignature bootstrapWitness
           defMessage
-            & U5c.vkey .~ rawEncodeFixedSized bootstrapKey
-            & U5c.signature .~ rawEncodeFixedSized bootstrapSignature
-            & U5c.chainCode
-              .~ SBS.fromShort (byteArrayToShortByteString (L.unChainCode (L.bwChainCode bootstrapWitness)))
-            & U5c.attributes
-              .~ SBS.fromShort (byteArrayToShortByteString (L.bwAttributes bootstrapWitness))
+            & U5c.vkey .~ DSIGN.rawEncodeFixedSized bootstrapKey
+            & U5c.signature .~ DSIGN.rawEncodeFixedSized bootstrapSignature
+            & U5c.chainCode .~ L.unChainCode (L.bwChainCode bootstrapWitness)
+            & U5c.attributes .~ L.bwAttributes bootstrapWitness
       scriptWitnesses :: [Proto UtxoRpc.Script]
       scriptWitnesses =
         M.elems (wits ^. L.scriptTxWitsL) <&> ledgerScriptToUtxoRpcScript sbe
