@@ -1,5 +1,18 @@
 # Changelog for cardano-api
 
+## 11.5.0.0 -- 2026-08-17
+
+- On POSIX, the `WithOwnerPermissions` family of functions (`writeFileTextEnvelopeWithOwnerPermissions`, `writeByteStringFileWithOwnerPermissions`, `writeLazyByteStringFileWithOwnerPermissions`, `writeTextFileWithOwnerPermissions`) and `writeSecrets` now write atomically: the contents go to a temporary file, are synced to disk, and the temporary file is renamed over the target, as was already the case on Windows.
+  If writing fails midway (crash, full disk, power loss), the previous contents of the target file are kept instead of being destroyed.
+  Behaviour change: a pre-existing target no longer keeps its permission bits (the replacement is always owner-only, `0600` filtered by `umask`), and a symlink at the target path is replaced by a regular file instead of being written through.
+  The affected functions (and `writeSecrets`) are also generalised from `IO` to any `MonadIO m`.
+  (breaking, bugfix)
+  [PR 1286](https://github.com/intersectmbo/cardano-api/pull/1286)
+
+- Export `readShelleyGenesis`, `ShelleyGenesisError (..)` and `renderShelleyGenesisError` from `Cardano.Api.LedgerState`, and re-export `cardanoLedgerTransitionConfig`, `byronProtocolParams`, `byronGenesis` and `shelleyLedgerGenesis` from `Cardano.Api.Consensus`.
+  (compatible)
+  [PR 1277](https://github.com/intersectmbo/cardano-api/pull/1277)
+
 ## 11.4.0.0 -- 2026-08-06
 
 - `makeTransactionBodyAutoBalance` and `estimateBalancedTxBody` (both the traditional and the experimental versions) now fail with the new `CollateralWithoutPlutusScripts` error on transactions that provide collateral inputs but run no Plutus scripts. The ledger requires collateral only for transactions that run Plutus scripts and ignores it otherwise: the collateral inputs would only cost fees and require the collateral UTxOs to stay unspent. Previously, the collateral inputs were kept and the collateral fields were set; with a small collateral input, the computed return collateral output fell below the minimum UTxO value and the ledger rejected the transaction.
