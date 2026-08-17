@@ -1,7 +1,0 @@
-project: cardano-rpc
-pr: 1242
-kind:
-  - feature
-  - breaking
-description: |
-  FetchBlock: add Block.timestamp via slot-to-UTC conversion using EraHistory. Breaking: `mkNodeKernelAccess` now takes `TopLevelConfig`; `NodeKernelAccess` field `nkaChainDB` renamed to `chainDb`.
