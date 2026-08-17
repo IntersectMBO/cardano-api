@@ -1,5 +1,47 @@
 # Changelog for cardano-rpc
 
+## 11.1.0.0 -- 2026-08-17
+
+- Add the `QueryService.ReadGenesis` UTxO RPC method, returning the full per-era genesis configuration.
+  (feature)
+  [PR 1277](https://github.com/intersectmbo/cardano-api/pull/1277)
+
+- Implement the FollowTip SyncService method: streams fully parsed blocks as the chain advances, starting from the first intersection point found on the chain (an empty-hash block ref denotes origin). An empty intersect list follows from the current tip; an unmatched intersect list fails with NOT_FOUND. Rollbacks are delivered as undo actions carrying the rolled-back blocks where they can be reconstructed from ChainDB, falling back to reset otherwise.
+  (feature)
+  [PR 1268](https://github.com/intersectmbo/cardano-api/pull/1268)
+
+- Implement the ReadTip SyncService method: returns the current chain tip as slot, block hash, height and timestamp.
+  (feature)
+  [PR 1259](https://github.com/intersectmbo/cardano-api/pull/1259)
+
+- Fix wire encoding of two TxOutput fields: address now carries raw ledger address bytes instead of bech32/base58 text, and Datum.hash now carries the 32-byte datum hash instead of the datum CBOR for inline datums, matching other UTxO RPC implementations.
+  (bugfix)
+  [PR 1258](https://github.com/intersectmbo/cardano-api/pull/1258)
+
+- Approximate out-of-range rationals in RationalNumber conversions instead of wrapping. Preparatory refactoring for FetchBlock transaction bodies: split UtxoRpc.Type into Type.* modules, use Proto-wrapped messages in conversion functions, generalise txOutToUtxoRpcTxOutput over eras, expose request helpers, and return the parsed block from fetchBlock.
+  (bugfix, refactoring)
+  [PR 1253](https://github.com/intersectmbo/cardano-api/pull/1253)
+
+- Fix server crash when a client-supplied RationalNumber has a zero denominator (the protobuf field default): the value is now rejected as invalid instead of throwing.
+  (bugfix)
+  [PR 1253](https://github.com/intersectmbo/cardano-api/pull/1253)
+
+- FetchBlock now returns fully populated transactions for blocks in every era, including Byron. Previously the response contained only the block header and raw block bytes.
+  (feature)
+  [PR 1247](https://github.com/intersectmbo/cardano-api/pull/1247)
+
+- FetchBlock: add Block.timestamp via slot-to-UTC conversion using EraHistory. Breaking: `mkNodeKernelAccess` now takes `TopLevelConfig`; `NodeKernelAccess` field `nkaChainDB` renamed to `chainDb`.
+  (feature, breaking)
+  [PR 1242](https://github.com/intersectmbo/cardano-api/pull/1242)
+
+- FetchBlock: add Block.timestamp via slot-to-UTC conversion using EraHistory. Breaking: `mkNodeKernelAccess` now takes `TopLevelConfig`; `NodeKernelAccess` field `nkaChainDB` renamed to `chainDb`.
+  (feature, breaking)
+  [PR 1242](https://github.com/intersectmbo/cardano-api/pull/1242)
+
+- `Cardano.Rpc.Server.Internal.UtxoRpc.Type.txInTxOutToAnyUtxoData` now serialises the UTxO RPC `nativeBytes` for tx outputs using the era's ledger CBOR (`L.serialize' (eraProtVerHigh era)`) instead of the unversioned `Cardano.Binary.serialize'`. Downstream gRPC consumers will see the era's canonical encoding rather than the previous era-agnostic bytes.
+  (bugfix)
+  [PR 1221](https://github.com/intersectmbo/cardano-api/pull/1221)
+
 ## 11.0.0.0 -- 2026-05-26
 
 - gRPC: Guard against fetching the entire UTxO set. ReadUtxos now returns an empty response when no keys are provided. SearchUtxos now rejects predicates that cannot be narrowed to specific addresses with INVALID_ARGUMENT, instead of falling back to QueryUTxOWhole.
