@@ -27,6 +27,8 @@ import Cardano.Api.Tx.Internal.Sign
 import Cardano.Api.UTxO (UTxO (..))
 
 import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Credential qualified as L
+import Cardano.Ledger.Keys qualified as L
 
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
@@ -56,6 +58,7 @@ constructBalancedTx
   -> Set PoolId
   -- ^ The set of registered stake pools
   -> Map.Map StakeCredential L.Coin
+  -> Map.Map (L.Credential L.DRepRole) L.Coin
   -> [ShelleyWitnessSigningKey]
   -> Either (TxBodyErrorAutoBalance era) (Tx era)
 constructBalancedTx
@@ -69,6 +72,7 @@ constructBalancedTx
   systemStart
   stakePools
   stakeDelegDeposits
+  drepDelegDeposits
   shelleyWitSigningKeys = do
     BalancedTxBody _ txbody _txBalanceOutput _fee <-
       makeTransactionBodyAutoBalance
@@ -78,6 +82,7 @@ constructBalancedTx
         lpp
         stakePools
         stakeDelegDeposits
+        drepDelegDeposits
         utxo
         txbodcontent
         changeAddr

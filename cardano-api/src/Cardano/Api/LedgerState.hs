@@ -177,10 +177,9 @@ import Cardano.Ledger.Shelley.Genesis qualified as Ledger
 import Cardano.Ledger.Slot qualified as Ledger
 import Cardano.Ledger.State qualified as SL
 import Cardano.Protocol.Crypto qualified as Crypto
-import Cardano.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import Cardano.Protocol.TPraos.API qualified as TPraos
-import Cardano.Protocol.TPraos.BlockHeader (checkLeaderNatValue)
-import Cardano.Protocol.TPraos.BlockHeader qualified as TPraos
+import Cardano.Protocol.TPraos.BHeader (checkLeaderNatValue)
+import Cardano.Protocol.TPraos.BHeader qualified as TPraos
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.EpochInfo.API qualified as Slot
 import Cardano.Slotting.Slot (WithOrigin (At, Origin))
@@ -207,6 +206,7 @@ import Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (
 import Ouroboros.Consensus.Protocol.Praos qualified as Praos
 import Ouroboros.Consensus.Protocol.Praos.AgentClient
 import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
+import Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import Ouroboros.Consensus.Protocol.TPraos qualified as TPraos
 import Ouroboros.Consensus.Shelley.HFEras qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Block qualified as Shelley
@@ -2101,6 +2101,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
           ShelleyBasedEraAlonzo -> pp ^. Core.ppExtraEntropyL
           ShelleyBasedEraBabbage -> Ledger.NeutralNonce
           ShelleyBasedEraConway -> Ledger.NeutralNonce
+          ShelleyBasedEraDijkstra -> Ledger.NeutralNonce
 
         nextEpochsNonce = candidateNonce ⭒ previousLabNonce ⭒ extraEntropy
 

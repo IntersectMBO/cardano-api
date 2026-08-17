@@ -84,7 +84,7 @@ import Cardano.Ledger.Shelley.TxBody qualified as L
 import Cardano.Ledger.Shelley.TxCert qualified as L
 import Cardano.Protocol.Crypto qualified as P
 import Cardano.Protocol.TPraos.API qualified as Ledger
-import Cardano.Protocol.TPraos.BlockHeader (HashHeader (..))
+import Cardano.Protocol.TPraos.BHeader (HashHeader (..))
 import Cardano.Protocol.TPraos.OCert qualified as Ledger
 import Cardano.Protocol.TPraos.Rules.Prtcl qualified as L
 import Cardano.Protocol.TPraos.Rules.Prtcl qualified as Ledger
@@ -291,7 +291,7 @@ deriving via
   ShowOf (L.DijkstraMempoolPredFailure ledgerera)
   instance
     Show (L.DijkstraMempoolPredFailure ledgerera) => ToJSON (L.DijkstraMempoolPredFailure ledgerera)
-    
+
 deriving via
   ShowOf (L.DijkstraLedgerPredFailure ledgerera)
   instance
@@ -478,16 +478,3 @@ instance HasTypeProxy (L.SLanguage L.PlutusV3) where
 instance HasTypeProxy (L.SLanguage L.PlutusV4) where
   data AsType (L.SLanguage L.PlutusV4) = AsPlutusScriptV4
   proxyToAsType _ = AsPlutusScriptV4
-
--- TODO: drop these and use EncCBOR/DecCBOR
-instance ToCBOR (Ledger.OCert P.StandardCrypto) where
-  toCBOR = L.toEraCBOR @L.ShelleyEra
-
-instance FromCBOR (Ledger.OCert P.StandardCrypto) where
-  fromCBOR = L.fromEraCBOR @L.ShelleyEra
-
-instance Typeable kd => ToCBOR (L.Keys.VKey kd) where
-  toCBOR (L.Keys.VKey vk) = Crypto.encodeFixedSized vk
-
-instance Typeable kd => FromCBOR (L.Keys.VKey kd) where
-  fromCBOR = L.Keys.VKey <$> Crypto.decodeFixedSized

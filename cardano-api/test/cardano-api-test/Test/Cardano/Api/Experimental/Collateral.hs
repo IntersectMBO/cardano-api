@@ -88,6 +88,7 @@ prop_makeTransactionBodyAutoBalance_fails_on_collateral_without_plutus = H.prope
     exampleProtocolParams
     mempty
     mempty
+    mempty
     utxo
     txBodyContent
     (Api.fromShelleyAddr sbe addr)
@@ -133,6 +134,7 @@ prop_estimateBalancedTxBody_fails_on_collateral_without_plutus = H.propertyOnce 
     era
     txBodyContent
     exampleProtocolParams
+    mempty
     mempty
     mempty
     mempty
@@ -231,6 +233,7 @@ prop_makeTransactionBodyAutoBalance_return_collateral_with_tokens_below_min_utxo
     ledgerPParams
     mempty
     mempty
+    mempty
     utxo
     txBodyContent
     (Api.fromShelleyAddr sbe addr)
@@ -320,6 +323,7 @@ prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral = H.propert
         ledgerPParams
         mempty
         mempty
+        mempty
         utxo
         txBodyContent
         (Api.fromShelleyAddr sbe addr)
@@ -396,6 +400,7 @@ prop_estimateBalancedTxBody_folds_dust_into_total_collateral = H.propertyOnce $ 
         era
         txBodyContent
         ledgerPParams
+        mempty
         mempty
         mempty
         exUnitsMap

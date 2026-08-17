@@ -110,6 +110,7 @@ prop_make_transaction_body_autobalance_invariants = H.property $ do
         pparams
         mempty
         mempty
+        mempty
         utxos
         content
         changeAddress
@@ -197,6 +198,7 @@ prop_make_transaction_body_autobalance_no_change = H.propertyOnce $ do
         pparams
         mempty
         mempty
+        mempty
         utxos
         content
         address
@@ -260,6 +262,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
         pparams
         mempty
         mempty
+        mempty
         utxos
         contentWithTxoutAsset
         address
@@ -287,6 +290,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
         testSystemStart
         epochInfo
         pparams
+        mempty
         mempty
         mempty
         utxos
@@ -368,6 +372,7 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.property $ d
         pparams
         mempty
         [(stakeCred, deregDeposit)]
+        mempty
         utxos
         content
         address
@@ -441,6 +446,7 @@ prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
         testSystemStart
         epochInfo
         pparams
+        mempty
         mempty
         mempty
         utxos

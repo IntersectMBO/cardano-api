@@ -9,6 +9,7 @@ module Cardano.Api.Era.Internal.Case
   -- Case on ShelleyBasedEra
   , caseShelleyEraOnlyOrAllegraEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
+  , caseShelleyToBabbageOrConwayOrDijkstra
   )
 where
 
@@ -64,6 +65,22 @@ caseShelleyToBabbageOrConwayEraOnwards
   -> ShelleyBasedEra era
   -> a
 caseShelleyToBabbageOrConwayEraOnwards l r = \case
+  ShelleyBasedEraShelley -> l ShelleyToBabbageEraShelley
+  ShelleyBasedEraAllegra -> l ShelleyToBabbageEraAllegra
+  ShelleyBasedEraMary -> l ShelleyToBabbageEraMary
+  ShelleyBasedEraAlonzo -> l ShelleyToBabbageEraAlonzo
+  ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
+  ShelleyBasedEraConway -> r ConwayEraOnwardsConway
+  ShelleyBasedEraDijkstra -> r ConwayEraOnwardsDijkstra
+
+-- | Alias for 'caseShelleyToBabbageOrConwayEraOnwards'.
+caseShelleyToBabbageOrConwayOrDijkstra
+  :: ()
+  => (ShelleyToBabbageEraConstraints era => ShelleyToBabbageEra era -> a)
+  -> (ConwayEraOnwards era -> a)
+  -> ShelleyBasedEra era
+  -> a
+caseShelleyToBabbageOrConwayOrDijkstra l r = \case
   ShelleyBasedEraShelley -> l ShelleyToBabbageEraShelley
   ShelleyBasedEraAllegra -> l ShelleyToBabbageEraAllegra
   ShelleyBasedEraMary -> l ShelleyToBabbageEraMary

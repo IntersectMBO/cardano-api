@@ -74,7 +74,6 @@ import Data.Aeson qualified as Aeson
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (Foldable (toList))
-import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Lens.Micro
 
@@ -159,7 +158,7 @@ getShelleyBlockTxs
   => ShelleyBasedEra era
   -> Ledger.Block blockheader ledgerera
   -> [Tx era]
-getShelleyBlockTxs era block =
+getShelleyBlockTxs era (Ledger.Block _header txs) =
   [ ShelleyTx era txinblock
   | txinblock <- toList (txs ^. Ledger.txSeqBlockBodyL)
   ]
@@ -317,9 +316,7 @@ toConsensusPoint
   -> Consensus.Point (Consensus.ShelleyBlock protocol ledgerera)
 toConsensusPoint ChainPointAtGenesis = Consensus.GenesisPoint
 toConsensusPoint (ChainPoint slot (HeaderHash h)) =
-  Consensus.BlockPoint
-    slot
-    (fromMaybe (error "toConsensusPoint: hash size mismatch") (Consensus.fromShortRawHash proxy h))
+  Consensus.BlockPoint slot (Consensus.fromShortRawHash proxy h)
  where
   proxy :: Proxy (Consensus.ShelleyBlock protocol ledgerera)
   proxy = Proxy
