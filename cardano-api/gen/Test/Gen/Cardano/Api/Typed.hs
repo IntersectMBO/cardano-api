@@ -1171,7 +1171,15 @@ genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
 genTxScriptValidity =
   inEonForEra
     (pure TxScriptValidityNone)
-    (\w -> TxScriptValidity w <$> genScriptValidity)
+    ( \w ->
+        TxScriptValidity w <$> case w of
+          AlonzoEraOnwardsAlonzo -> genScriptValidity
+          AlonzoEraOnwardsBabbage -> genScriptValidity
+          AlonzoEraOnwardsConway -> genScriptValidity
+          -- Dijkstra does not support IsValid False: the CBOR encoding omits the
+          -- isValid flag entirely and decoding always yields IsValid True.
+          AlonzoEraOnwardsDijkstra -> pure ScriptValid
+    )
 
 genScriptValidity :: Gen ScriptValidity
 genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]
