@@ -103,9 +103,8 @@ instance
     tryPlutusScript script = do
       ps <- L.toPlutusScript script
       L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) ->
-        let plutusRunnable = Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus
-         in AnyPlutusScript . PlutusScriptInEra
-              <$> (plutusRunnable <$ rightToMaybe (Plutus.plutusRunnableResult plutusRunnable))
+        AnyPlutusScript . PlutusScriptInEra
+          <$> rightToMaybe (Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus)
 
     noParseError :: CBOR.DecoderError
     noParseError =

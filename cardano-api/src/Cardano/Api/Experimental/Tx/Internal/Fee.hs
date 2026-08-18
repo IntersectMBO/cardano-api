@@ -606,6 +606,7 @@ evaluateTransaction systemStart epochInfo protocolParams poolIds stakeDelegDepos
           L.evalBalanceTxBody
             protocolParams
             lookupDelegDeposit
+            lookupDRepDeposit
             isRegPool
             utxo
             $ txWithEvaluatedExUnits ^. L.bodyTxL
@@ -618,6 +619,12 @@ evaluateTransaction systemStart epochInfo protocolParams poolIds stakeDelegDepos
     :: Ledger.Credential Ledger.Staking -> Maybe L.Coin
   lookupDelegDeposit stakeCred =
     Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
+
+  -- See the note on the non-experimental evaluateTransactionBalance:
+  -- a real lookup arrives with the DRep-deposit threading in the next
+  -- commit.
+  lookupDRepDeposit :: Ledger.Credential Ledger.DRepRole -> Maybe L.Coin
+  lookupDRepDeposit _ = Nothing
 
 -- | Compute the total balance of the proposed transaction. Ultimately, a valid
 -- transaction must be fully balanced, which means that it has a total value
@@ -640,12 +647,19 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits utxo (UnsignedTx unsign
         L.evalBalanceTxBody
           pp
           lookupDelegDeposit
+          lookupDRepDeposit
           isRegPool
           utxo
           txbody
  where
   isRegPool :: Ledger.KeyHash Ledger.StakePool -> Bool
   isRegPool kh = Api.StakePoolKeyHash kh `Set.member` poolids
+
+  -- See the note on the non-experimental evaluateTransactionBalance:
+  -- a real lookup arrives with the DRep-deposit threading in the next
+  -- commit.
+  lookupDRepDeposit :: Ledger.Credential Ledger.DRepRole -> Maybe L.Coin
+  lookupDRepDeposit _ = Nothing
 
   lookupDelegDeposit
     :: Ledger.Credential Ledger.Staking -> Maybe L.Coin

@@ -260,7 +260,7 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
       L.mkBasicTx eraSpecificTxBody
         & L.witsTxL .~ scriptWitnesses
         & L.auxDataTxL .~ L.maybeToStrictMaybe (toAuxiliaryData (txMetadata bc) (txAuxScripts bc))
-        & L.isPhase2ValidTxL .~ scriptValidity
+        & L.isValidTxL .~ scriptValidity
 
 convTxIns :: [(TxIn, AnyWitness era)] -> Set L.TxIn
 convTxIns inputs =

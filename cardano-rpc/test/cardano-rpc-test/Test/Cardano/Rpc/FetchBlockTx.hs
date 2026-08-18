@@ -176,7 +176,7 @@ txToUtxoRpcTxProjections sbe = H.withTests 40 . H.property $ anyEraTxConstraints
         -> PropertyT IO ()
       alonzoOnwardsChecks aeo (hasCollateralReturn, hasTotalCollateral) = do
         H.note_ "Phase-2 validation flag"
-        let isValid = ledgerTx ^. L.isPhase2ValidTxL == L.Phase2Valid
+        let isValid = ledgerTx ^. L.isValidTxL == L.IsValid True
         protoTx ^. U5c.successful === isValid
 
         H.note_ "Plutus datum and redeemer counts"

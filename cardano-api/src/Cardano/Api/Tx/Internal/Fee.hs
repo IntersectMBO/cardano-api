@@ -775,12 +775,20 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits utxo (ShelleyTxBody
       L.evalBalanceTxBody
         pp
         lookupDelegDeposit
+        lookupDRepDeposit
         isRegPool
         (toLedgerUTxO sbe utxo)
         txbody
  where
   isRegPool :: Ledger.KeyHash Ledger.StakePool -> Bool
   isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
+
+  -- The pinned ledger's evalBalanceTxBody still takes a DRep-deposit
+  -- lookup; a real lookup arrives with the DRep-deposit threading in
+  -- the next commit. Conway-onwards unregistration certificates carry
+  -- their deposit explicitly, so this fallback is never consulted.
+  lookupDRepDeposit :: Ledger.Credential Ledger.DRepRole -> Maybe L.Coin
+  lookupDRepDeposit _ = Nothing
 
   lookupDelegDeposit
     :: Ledger.Credential Ledger.Staking -> Maybe L.Coin

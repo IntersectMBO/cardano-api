@@ -273,7 +273,7 @@ getTxBody (ShelleyTx sbe tx) =
               scriptWits = tx ^. L.witsTxL . L.scriptTxWitsL
               datsWits = tx ^. L.witsTxL . L.datsTxWitsL
               redeemerWits = tx ^. L.witsTxL . L.rdmrsTxWitsL
-              isValid = tx ^. L.isPhase2ValidTxL
+              isValid = tx ^. L.isValidTxL
            in ShelleyTxBody
                 sbe
                 txBody
@@ -596,13 +596,13 @@ instance CBOR.EncCBOR ScriptValidity where
 instance CBOR.DecCBOR ScriptValidity where
   decCBOR = isValidToScriptValidity <$> CBOR.decCBOR
 
-scriptValidityToIsValid :: ScriptValidity -> L.IsPhase2Valid
-scriptValidityToIsValid ScriptInvalid = L.Phase2Invalid
-scriptValidityToIsValid ScriptValid = L.Phase2Valid
+scriptValidityToIsValid :: ScriptValidity -> L.IsValid
+scriptValidityToIsValid ScriptInvalid = L.IsValid False
+scriptValidityToIsValid ScriptValid = L.IsValid True
 
-isValidToScriptValidity :: L.IsPhase2Valid -> ScriptValidity
-isValidToScriptValidity L.Phase2Invalid = ScriptInvalid
-isValidToScriptValidity L.Phase2Valid = ScriptValid
+isValidToScriptValidity :: L.IsValid -> ScriptValidity
+isValidToScriptValidity (L.IsValid False) = ScriptInvalid
+isValidToScriptValidity (L.IsValid True) = ScriptValid
 
 -- | A representation of whether the era supports tx script validity.
 --
@@ -624,7 +624,7 @@ txScriptValidityToScriptValidity :: TxScriptValidity era -> ScriptValidity
 txScriptValidityToScriptValidity TxScriptValidityNone = ScriptValid
 txScriptValidityToScriptValidity (TxScriptValidity _ scriptValidity) = scriptValidity
 
-txScriptValidityToIsValid :: TxScriptValidity era -> L.IsPhase2Valid
+txScriptValidityToIsValid :: TxScriptValidity era -> L.IsValid
 txScriptValidityToIsValid = scriptValidityToIsValid . txScriptValidityToScriptValidity
 
 data KeyWitness era where
@@ -1039,7 +1039,7 @@ makeSignedTransaction
         ( txCommon
             & L.witsTxL . L.datsTxWitsL .~ datums
             & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
-            & L.isPhase2ValidTxL .~ txScriptValidityToIsValid scriptValidity
+            & L.isValidTxL .~ txScriptValidityToIsValid scriptValidity
         )
      where
       (datums, redeemers) =

@@ -123,7 +123,7 @@ txToUtxoRpcTx ledgerTx = anyEraTxConstraints sbe $ do
       -- a transaction marked invalid during phase-2 validation consumes its
       -- collateral instead of producing its outputs; before Alonzo every
       -- transaction is valid
-      isValid = fromMaybe L.Phase2Valid (ledgerTx ^. L.isPhase2ValidTxG) == L.Phase2Valid
+      isValid = fromMaybe (L.IsValid True) (ledgerTx ^. L.isValidTxG) == L.IsValid True
       vkeyWitnesses :: [Proto UtxoRpc.VKeyWitness]
       vkeyWitnesses =
         toList (wits ^. L.addrTxWitsL) <&> \(L.WitVKey (L.VKey vkey) (DSIGN.SignedDSIGN signature)) ->

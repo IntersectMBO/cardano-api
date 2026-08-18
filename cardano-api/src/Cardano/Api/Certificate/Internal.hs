@@ -120,6 +120,9 @@ toShelleyPoolParams
       , Ledger.sppMetadata =
           toShelleyPoolMetadata
             <$> Ledger.maybeToStrictMaybe stakePoolMetadata
+      , -- The pinned ledger's pool parameters carry an optional Leios
+        -- key; the API wiring for it arrives in a later commit.
+        Ledger.sppLeiosKey = Ledger.SNothing
       }
    where
     toShelleyStakePoolRelay :: StakePoolRelay -> Ledger.StakePoolRelay
