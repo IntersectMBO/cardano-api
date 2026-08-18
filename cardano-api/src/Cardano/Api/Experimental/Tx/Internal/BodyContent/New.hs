@@ -187,8 +187,7 @@ makeUnsignedTx
    . Era era
   -> TxBodyContent (LedgerEra era)
   -> Either MakeUnsignedTxError (UnsignedTx (LedgerEra era))
-makeUnsignedTx DijkstraEra _ = error "TODO Dijkstra: makeUnsignedTx: era not supported"
-makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
+makeUnsignedTx era bc = obtainCommonConstraints era $ do
   let TxScriptWitnessRequirements languages scripts datums redeemers = collectTxBodyScriptWitnessRequirements bc
 
   -- cardano-api types
@@ -219,23 +218,31 @@ makeUnsignedTx era@ConwayEra bc = obtainCommonConstraints era $ do
 
   let setMint = convMintValue apiMintValue
       setReqSignerHashes = convExtraKeyWitnesses apiExtraKeyWitnesses
+      -- reqSignerHashesTxBodyL is gated AtMostEra "Conway" in the ledger;
+      -- Dijkstra replaced required signer hashes with guards, and a key-hash
+      -- guard makes the ledger demand that key's signature: translate,
+      -- appending so any other guards stay intact.
+      applyReqSignerHashes b = case era of
+        ConwayEra -> b & L.reqSignerHashesTxBodyL .~ setReqSignerHashes
+        DijkstraEra ->
+          b & L.guardsTxBodyL %~ (<> OSet.fromSet (Set.map L.KeyHashObj setReqSignerHashes))
       ledgerTxBody =
-        L.mkBasicTxBody
-          & L.inputsTxBodyL .~ txins
-          & L.collateralInputsTxBodyL .~ collTxIns
-          & L.referenceInputsTxBodyL .~ refTxIns
-          & L.outputsTxBodyL .~ outs
-          & L.totalCollateralTxBodyL .~ L.maybeToStrictMaybe totCollateral
-          & L.collateralReturnTxBodyL .~ L.maybeToStrictMaybe retCollateral
-          & L.feeTxBodyL .~ fee
-          & L.vldtTxBodyL . L.invalidBeforeL .~ L.maybeToStrictMaybe (txValidityLowerBound bc)
-          & L.vldtTxBodyL . L.invalidHereAfterL .~ L.maybeToStrictMaybe (txValidityUpperBound bc)
-          & L.reqSignerHashesTxBodyL .~ setReqSignerHashes
-          & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-          & L.withdrawalsTxBodyL .~ withdrawals
-          & L.certsTxBodyL .~ certs
-          & L.mintTxBodyL .~ setMint
-          & L.auxDataHashTxBodyL .~ L.maybeToStrictMaybe (Ledger.hashTxAuxData <$> txAuxData)
+        applyReqSignerHashes $
+          L.mkBasicTxBody
+            & L.inputsTxBodyL .~ txins
+            & L.collateralInputsTxBodyL .~ collTxIns
+            & L.referenceInputsTxBodyL .~ refTxIns
+            & L.outputsTxBodyL .~ outs
+            & L.totalCollateralTxBodyL .~ L.maybeToStrictMaybe totCollateral
+            & L.collateralReturnTxBodyL .~ L.maybeToStrictMaybe retCollateral
+            & L.feeTxBodyL .~ fee
+            & L.vldtTxBodyL . L.invalidBeforeL .~ L.maybeToStrictMaybe (txValidityLowerBound bc)
+            & L.vldtTxBodyL . L.invalidHereAfterL .~ L.maybeToStrictMaybe (txValidityUpperBound bc)
+            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+            & L.withdrawalsTxBodyL .~ withdrawals
+            & L.certsTxBodyL .~ certs
+            & L.mintTxBodyL .~ setMint
+            & L.auxDataHashTxBodyL .~ L.maybeToStrictMaybe (Ledger.hashTxAuxData <$> txAuxData)
 
       scriptWitnesses =
         L.mkBasicTxWits
@@ -910,13 +917,11 @@ extractWitnessableVotes
   -> [(Witnessable VoterItem (LedgerEra era), AnyWitness (LedgerEra era))]
 extractWitnessableVotes Nothing = []
 extractWitnessableVotes (Just txVoteProc) =
-  case useEra @era of
-    DijkstraEra -> error "TODO Dijkstra: extractWitnessableVotes: era not supported"
-    ConwayEra ->
-      List.nub
-        [ (WitVote vote, wit)
-        | (vote, wit) <- getVotes txVoteProc
-        ]
+  obtainCommonConstraints (useEra @era) $
+    List.nub
+      [ (WitVote vote, wit)
+      | (vote, wit) <- getVotes txVoteProc
+      ]
  where
   getVotes
     :: TxVotingProcedures (LedgerEra era)
