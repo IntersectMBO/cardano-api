@@ -279,7 +279,7 @@ instance Eq AnyShelleyBasedEra where
 
 instance Bounded AnyShelleyBasedEra where
   minBound = AnyShelleyBasedEra ShelleyBasedEraShelley
-  maxBound = AnyShelleyBasedEra ShelleyBasedEraConway
+  maxBound = AnyShelleyBasedEra ShelleyBasedEraDijkstra
 
 instance Enum AnyShelleyBasedEra where
   enumFrom e = enumFromTo e maxBound
@@ -300,6 +300,7 @@ instance Enum AnyShelleyBasedEra where
     4 -> AnyShelleyBasedEra ShelleyBasedEraAlonzo
     5 -> AnyShelleyBasedEra ShelleyBasedEraBabbage
     6 -> AnyShelleyBasedEra ShelleyBasedEraConway
+    7 -> AnyShelleyBasedEra ShelleyBasedEraDijkstra
     n ->
       error $
         "AnyShelleyBasedEra.toEnum: "
@@ -318,6 +319,7 @@ instance FromJSON AnyShelleyBasedEra where
       "Alonzo" -> pure $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
       "Babbage" -> pure $ AnyShelleyBasedEra ShelleyBasedEraBabbage
       "Conway" -> pure $ AnyShelleyBasedEra ShelleyBasedEraConway
+      "Dijkstra" -> pure $ AnyShelleyBasedEra ShelleyBasedEraDijkstra
       wrong -> fail $ "Failed to parse unknown shelley-based era: " <> Text.unpack wrong
 
 -- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that

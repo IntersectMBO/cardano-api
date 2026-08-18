@@ -130,7 +130,7 @@ instance Eq (Some Era) where
 
 instance Bounded (Some Era) where
   minBound = Some ConwayEra
-  maxBound = Some ConwayEra
+  maxBound = Some DijkstraEra
 
 instance Enum (Some Era) where
   toEnum 0 = Some ConwayEra
