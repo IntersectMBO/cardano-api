@@ -89,6 +89,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
         pparams
         mempty
         mempty
+        mempty
         utxos
         content
         address
@@ -305,6 +306,7 @@ prop_make_transaction_body_autobalance_fails_on_collateral_without_plutus = H.pr
     pparams
     mempty
     mempty
+    mempty
     utxos
     content
     address
@@ -353,6 +355,7 @@ prop_estimate_balanced_tx_body_fails_on_collateral_without_plutus = H.propertyOn
     meo
     content
     ledgerPParams
+    mempty
     mempty
     mempty
     mempty
@@ -441,6 +444,7 @@ prop_make_transaction_body_autobalance_return_collateral_with_tokens_below_min_u
     pparams
     mempty
     mempty
+    mempty
     utxos
     content
     address
@@ -520,6 +524,7 @@ prop_make_transaction_body_autobalance_folds_dust_into_total_collateral = H.prop
         pparams
         mempty
         mempty
+        mempty
         utxos
         content
         address
@@ -575,6 +580,7 @@ prop_estimate_balanced_tx_body_folds_dust_into_total_collateral = H.propertyOnce
         meo
         content
         ledgerPParams
+        mempty
         mempty
         mempty
         exUnitsMap
