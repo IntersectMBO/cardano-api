@@ -39,6 +39,7 @@ module Cardano.Api.ProtocolParameters
   , ShelleyToAlonzoPParams (..)
   , IntroducedInBabbagePParams (..)
   , IntroducedInConwayPParams (..)
+  , IntroducedInDijkstraPParams (..)
   , createEraBasedProtocolParamUpdate
   , createPParams
 
@@ -112,6 +113,7 @@ import Cardano.Ledger.Babbage.Core qualified as Ledger
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.PParams qualified as Ledger
+import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
 import Cardano.Ledger.Hashes (HASH)
 import Cardano.Ledger.Plutus.CostModels qualified as Plutus
 import Cardano.Ledger.Plutus.Language qualified as Plutus
@@ -214,6 +216,13 @@ data EraBasedProtocolParametersUpdate era where
     -> IntroducedInBabbagePParams ConwayEra
     -> IntroducedInConwayPParams (ShelleyLedgerEra ConwayEra)
     -> EraBasedProtocolParametersUpdate ConwayEra
+  DijkstraEraBasedProtocolParametersUpdate
+    :: CommonProtocolParametersUpdate
+    -> AlonzoOnwardsPParams DijkstraEra
+    -> IntroducedInBabbagePParams DijkstraEra
+    -> IntroducedInConwayPParams (ShelleyLedgerEra DijkstraEra)
+    -> IntroducedInDijkstraPParams (ShelleyLedgerEra DijkstraEra)
+    -> EraBasedProtocolParametersUpdate DijkstraEra
 
 deriving instance Show (EraBasedProtocolParametersUpdate era)
 
@@ -276,6 +285,38 @@ pparamsUpdateToIntroducedInConwayPParams ppupdate =
     , icMinFeeRefScriptCostPerByte = ppupdate ^. Ledger.ppuMinFeeRefScriptCostPerByteL
     }
 
+data IntroducedInDijkstraPParams era
+  = IntroducedInDijkstraPParams
+  { idMaxRefScriptSizePerBlock :: StrictMaybe Word32
+  , idMaxRefScriptSizePerTx :: StrictMaybe Word32
+  , idRefScriptCostStride :: StrictMaybe (Ledger.NonZero Word32)
+  , idRefScriptCostMultiplier :: StrictMaybe Ledger.PositiveInterval
+  }
+  deriving (Eq, Show)
+
+createIntroducedInDijkstraPParams
+  :: (Ledger.ConwayEraPParams ledgerera, Ledger.DijkstraEraPParams ledgerera)
+  => IntroducedInDijkstraPParams ledgerera
+  -> Ledger.PParamsUpdate ledgerera
+createIntroducedInDijkstraPParams IntroducedInDijkstraPParams{..} =
+  Ledger.emptyPParamsUpdate
+    & Ledger.ppuMaxRefScriptSizePerBlockL .~ idMaxRefScriptSizePerBlock
+    & Ledger.ppuMaxRefScriptSizePerTxL .~ idMaxRefScriptSizePerTx
+    & Ledger.ppuRefScriptCostStrideL .~ idRefScriptCostStride
+    & Ledger.ppuRefScriptCostMultiplierL .~ idRefScriptCostMultiplier
+
+pparamsUpdateToIntroducedInDijkstraPParams
+  :: Ledger.DijkstraEraPParams ledgerera
+  => Ledger.PParamsUpdate ledgerera
+  -> IntroducedInDijkstraPParams ledgerera
+pparamsUpdateToIntroducedInDijkstraPParams ppupdate =
+  IntroducedInDijkstraPParams
+    { idMaxRefScriptSizePerBlock = ppupdate ^. Ledger.ppuMaxRefScriptSizePerBlockL
+    , idMaxRefScriptSizePerTx = ppupdate ^. Ledger.ppuMaxRefScriptSizePerTxL
+    , idRefScriptCostStride = ppupdate ^. Ledger.ppuRefScriptCostStrideL
+    , idRefScriptCostMultiplier = ppupdate ^. Ledger.ppuRefScriptCostMultiplierL
+    }
+
 createEraBasedProtocolParamUpdate
   :: ShelleyBasedEra era
   -> EraBasedProtocolParametersUpdate era
@@ -318,6 +359,18 @@ createEraBasedProtocolParamUpdate sbe eraPParamsUpdate =
           Ledger.PParamsUpdate inBab = createIntroducedInBabbagePParams BabbageEraOnwardsConway introInBabbage
           Ledger.PParamsUpdate inCon = createIntroducedInConwayPParams introInConway
        in Ledger.PParamsUpdate $ common <> inAlonzoPParams <> inBab <> inCon
+    DijkstraEraBasedProtocolParametersUpdate
+      c
+      introInAlonzo
+      introInBabbage
+      introInConway
+      introInDijkstra ->
+        let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+            Ledger.PParamsUpdate inAlonzoPParams = createPParamsUpdateIntroducedInAlonzo AlonzoEraOnwardsDijkstra introInAlonzo
+            Ledger.PParamsUpdate inBab = createIntroducedInBabbagePParams BabbageEraOnwardsDijkstra introInBabbage
+            Ledger.PParamsUpdate inCon = createIntroducedInConwayPParams introInConway
+            Ledger.PParamsUpdate inDij = createIntroducedInDijkstraPParams introInDijkstra
+         in Ledger.PParamsUpdate $ common <> inAlonzoPParams <> inBab <> inCon <> inDij
 
 -- | Protocol parameters common to each era. This can only ever be reduced
 -- if parameters are deprecated.
@@ -1011,7 +1064,16 @@ fromLedgerPParamsUpdate sbe ppup =
               introInConway = pparamsUpdateToIntroducedInConwayPParams ppup
            in ConwayEraBasedProtocolParametersUpdate common introInAlonzo introInBabbage introInConway
         ShelleyBasedEraDijkstra ->
-          error "TODO Dijkstra: fromLedgerPParamsUpdate: era not supported"
+          let introInAlonzo = pparamsUpdateToAlonzoOnwardsPParams AlonzoEraOnwardsDijkstra ppup
+              introInBabbage = pparamsUpdateToIntroducedInBabbagePParams BabbageEraOnwardsDijkstra ppup
+              introInConway = pparamsUpdateToIntroducedInConwayPParams ppup
+              introInDijkstra = pparamsUpdateToIntroducedInDijkstraPParams ppup
+           in DijkstraEraBasedProtocolParametersUpdate
+                common
+                introInAlonzo
+                introInBabbage
+                introInConway
+                introInDijkstra
 
 data ProtocolParametersError
   = PParamsErrorMissingMinUTxoValue !AnyCardanoEra
