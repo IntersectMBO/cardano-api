@@ -1,0 +1,6 @@
+description: |
+  Fixed `queryStateForBalancedTx` to skip the DRepState query when transaction contains no DRep unregistration certificates
+kind:
+  - bugfix
+pr: 1297
+project: cardano-api
