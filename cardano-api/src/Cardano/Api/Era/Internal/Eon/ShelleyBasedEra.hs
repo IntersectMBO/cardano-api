@@ -160,6 +160,7 @@ instance TestEquality ShelleyBasedEra where
   testEquality ShelleyBasedEraAlonzo ShelleyBasedEraAlonzo = Just Refl
   testEquality ShelleyBasedEraBabbage ShelleyBasedEraBabbage = Just Refl
   testEquality ShelleyBasedEraConway ShelleyBasedEraConway = Just Refl
+  testEquality ShelleyBasedEraDijkstra ShelleyBasedEraDijkstra = Just Refl
   testEquality _ _ = Nothing
 
 instance Eon ShelleyBasedEra where
@@ -236,8 +237,11 @@ type ShelleyBasedEraConstraints era =
   , L.EraCertState (ShelleyLedgerEra era)
   , L.EraAccounts (ShelleyLedgerEra era)
   , L.EraGov (ShelleyLedgerEra era)
-  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
-  , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  , -- L.ShelleyEraTxCert dropped: gated by AtMostEra "Conway" in the ledger, so
+    -- Dijkstra cannot satisfy it. Callsites that construct Shelley-style certs
+    -- must require ShelleyEraTxCert (ShelleyLedgerEra era) explicitly — that
+    -- naturally excludes Dijkstra at the type level.
+    FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (L.TxCert (ShelleyLedgerEra era))
   , HasTypeProxy era
   , IsCardanoEra era
@@ -261,7 +265,7 @@ shelleyBasedEraConstraints = \case
   ShelleyBasedEraAlonzo -> id
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway -> id
-  ShelleyBasedEraDijkstra -> const $ error "TODO Dijkstra: shelleyBasedEraConstraints: era not supported"
+  ShelleyBasedEraDijkstra -> id
 
 data AnyShelleyBasedEra where
   AnyShelleyBasedEra

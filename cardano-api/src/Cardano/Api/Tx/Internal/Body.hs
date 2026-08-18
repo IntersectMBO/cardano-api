@@ -1329,8 +1329,18 @@ createTransactionBody sbe bc =
     setCollateralInputs <- monoidForEraInEonA era $ \w ->
       pure $ Endo $ A.collateralInputsTxBodyL w .~ collTxIns
 
-    setReqSignerHashes <- monoidForEraInEonA era $ \w ->
-      pure $ Endo $ A.reqSignerHashesTxBodyL w .~ convExtraKeyWitnesses apiExtraKeyWitnesses
+    setReqSignerHashes <-
+      let keyWits = convExtraKeyWitnesses apiExtraKeyWitnesses
+       in monoidForEraInEonA era $ \w -> case w of
+            -- Dijkstra replaced required signer hashes with guards, and a key-hash
+            -- guard makes the ledger demand that key's signature: translate, appending
+            -- so any other guards stay intact. (The 'A.reqSignerHashesTxBodyL' arm
+            -- fails for Dijkstra, like the ledger lens.)
+            AlonzoEraOnwardsDijkstra ->
+              pure . Endo $
+                A.txBodyL . L.guardsTxBodyL
+                  %~ (<> OSet.fromSet (Set.map Shelley.KeyHashObj keyWits))
+            _ -> pure $ Endo $ A.reqSignerHashesTxBodyL w .~ keyWits
 
     setReferenceInputs <- monoidForEraInEonA era $ \w ->
       pure $ Endo $ A.referenceInputsTxBodyL w .~ refTxIns

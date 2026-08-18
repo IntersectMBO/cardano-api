@@ -2101,6 +2101,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
           ShelleyBasedEraAlonzo -> pp ^. Core.ppExtraEntropyL
           ShelleyBasedEraBabbage -> Ledger.NeutralNonce
           ShelleyBasedEraConway -> Ledger.NeutralNonce
+          ShelleyBasedEraDijkstra -> Ledger.NeutralNonce
 
         nextEpochsNonce = candidateNonce ⭒ previousLabNonce ⭒ extraEntropy
 
