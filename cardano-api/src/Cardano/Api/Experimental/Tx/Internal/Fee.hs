@@ -132,7 +132,7 @@ data TxBodyErrorAutoBalance era
   | BalanceIsNegative
       L.Coin
       -- ^ Negative balance
-      (UnsignedTx (LedgerEra ConwayEra))
+      (UnsignedTx era)
       -- ^ The transaction body
   | NotEnoughAdaInUTxO
       L.MaryValue
@@ -442,42 +442,40 @@ estimateBalancedTxBody'
         balanceTxOut =
           obtainCommonConstraints (useEra @era) $
             TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance)
-    case useEra @era of
-      DijkstraEra -> error "TODO Dijkstra: estimateBalancedTxBody: era not supported for fee estimation"
-      ConwayEra -> do
-        when (coinBalance < 0) $
-          Left $
-            TxFeeEstimationBalanceError $
-              BalanceIsNegative coinBalance txbody2
+    obtainCommonConstraints (useEra @era) $ do
+      when (coinBalance < 0) $
+        Left $
+          TxFeeEstimationBalanceError $
+            BalanceIsNegative coinBalance txbody2
 
-        -- Step 6. Check all txouts have the min required UTxO value
-        -- TOOD: Fix me. You need a new error type to accomodate your new types
-        first (TxFeeEstimationBalanceError . uncurry TxBodyErrorMinUTxONotMet)
-          . mapM_ (checkMinUTxOValue pparams)
-          $ txOuts txbodycontent1
+      -- Step 6. Check all txouts have the min required UTxO value
+      -- TOOD: Fix me. You need a new error type to accomodate your new types
+      first (TxFeeEstimationBalanceError . uncurry TxBodyErrorMinUTxONotMet)
+        . mapM_ (checkMinUTxOValue pparams)
+        $ txOuts txbodycontent1
 
-        -- check if the balance is positive or negative
-        -- in one case we can produce change, in the other the inputs are insufficient
-        finalTxOuts <-
-          first TxFeeEstimationBalanceError $
-            checkAndIncludeChange pparams balanceTxOut (txOuts txbodycontent1)
+      -- check if the balance is positive or negative
+      -- in one case we can produce change, in the other the inputs are insufficient
+      finalTxOuts <-
+        first TxFeeEstimationBalanceError $
+          checkAndIncludeChange pparams balanceTxOut (txOuts txbodycontent1)
 
-        -- Step 7.
+      -- Step 7.
 
-        -- Create the txbody with the final fee and change output. This should work
-        -- provided that the fee and change are less than 2^32-1, and so will
-        -- fit within the encoding size we picked above when calculating the fee.
-        -- Yes this could be an over-estimate by a few bytes if the fee or change
-        -- would fit within 2^16-1. That's a possible optimisation.
-        let finalTxBodyContent =
-              txbodycontent1
-                { txFee = fee
-                , txOuts = finalTxOuts
-                , txReturnCollateral = maybeReturnTxCollateral
-                , txTotalCollateral = maybeTotalTxCollateral
-                }
+      -- Create the txbody with the final fee and change output. This should work
+      -- provided that the fee and change are less than 2^32-1, and so will
+      -- fit within the encoding size we picked above when calculating the fee.
+      -- Yes this could be an over-estimate by a few bytes if the fee or change
+      -- would fit within 2^16-1. That's a possible optimisation.
+      let finalTxBodyContent =
+            txbodycontent1
+              { txFee = fee
+              , txOuts = finalTxOuts
+              , txReturnCollateral = maybeReturnTxCollateral
+              , txTotalCollateral = maybeTotalTxCollateral
+              }
 
-        return finalTxBodyContent
+      return finalTxBodyContent
 
 data IsEmpty = Empty | NonEmpty
   deriving (Eq, Show)
@@ -1684,49 +1682,47 @@ makeTransactionBodyAutoBalance
             , txTotalCollateral = maybeTotalTxCollateral
             }
 
-    case useEra @era of
-      DijkstraEra -> error "TODO Dijkstra: makeTransactionBodyAutoBalance: era not supported"
-      ConwayEra -> do
-        let balance :: L.MaryValue = evaluateTransactionBalance pp poolids stakeDelegDeposits utxo txbody2
-            adaBalance = getAda (useEra @era) balance
-        when (adaBalance < 0) $
-          Left $
-            BalanceIsNegative adaBalance txbodyForChange
+    obtainCommonConstraints (useEra @era) $ do
+      let balance :: L.MaryValue = evaluateTransactionBalance pp poolids stakeDelegDeposits utxo txbody2
+          adaBalance = getAda (useEra @era) balance
+      when (adaBalance < 0) $
+        Left $
+          BalanceIsNegative adaBalance txbodyForChange
 
-        let
-          -- The multiasset output of evaluateTransactionBalance will be negative when
-          -- minting a multiasset. Therefore we must make the multiasset balance positive
-          balanceTxOut :: TxOut (LedgerEra era) =
-            obtainCommonConstraints (useEra @era) $
-              TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance)
-        first (uncurry TxBodyErrorMinUTxONotMet)
-          . mapM_ (checkMinUTxOValue pp)
-          $ txOuts txbodycontent1
+      let
+        -- The multiasset output of evaluateTransactionBalance will be negative when
+        -- minting a multiasset. Therefore we must make the multiasset balance positive
+        balanceTxOut :: TxOut (LedgerEra era) =
+          obtainCommonConstraints (useEra @era) $
+            TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance)
+      first (uncurry TxBodyErrorMinUTxONotMet)
+        . mapM_ (checkMinUTxOValue pp)
+        $ txOuts txbodycontent1
 
-        -- check if change meets txout criteria, and include if non-zero
-        finalTxOuts <- checkAndIncludeChange pp balanceTxOut (txOuts txbodycontent1)
+      -- check if change meets txout criteria, and include if non-zero
+      finalTxOuts <- checkAndIncludeChange pp balanceTxOut (txOuts txbodycontent1)
 
-        -- TODO: we could add the extra fee for the CBOR encoding of the change,
-        -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
-        -- The txbody with the final fee and change output. This should work
-        -- provided that the fee and change are less than 2^32-1, and so will
-        -- fit within the encoding size we picked above when calculating the fee.
-        -- Yes this could be an over-estimate by a few bytes if the fee or change
-        -- would fit within 2^16-1. That's a possible optimisation.
-        let finalTxBodyContent =
-              txbodycontent1
-                { txFee = fee
-                , txOuts = finalTxOuts
-                , txReturnCollateral = maybeReturnTxCollateral
-                , txTotalCollateral = maybeTotalTxCollateral
-                }
-        txbody3 <-
-          first TxBodyErrorMakeUnsignedTx $
-            makeUnsignedTx
-              useEra
-              finalTxBodyContent
-        return
-          (txbody3, finalTxBodyContent)
+      -- TODO: we could add the extra fee for the CBOR encoding of the change,
+      -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
+      -- The txbody with the final fee and change output. This should work
+      -- provided that the fee and change are less than 2^32-1, and so will
+      -- fit within the encoding size we picked above when calculating the fee.
+      -- Yes this could be an over-estimate by a few bytes if the fee or change
+      -- would fit within 2^16-1. That's a possible optimisation.
+      let finalTxBodyContent =
+            txbodycontent1
+              { txFee = fee
+              , txOuts = finalTxOuts
+              , txReturnCollateral = maybeReturnTxCollateral
+              , txTotalCollateral = maybeTotalTxCollateral
+              }
+      txbody3 <-
+        first TxBodyErrorMakeUnsignedTx $
+          makeUnsignedTx
+            useEra
+            finalTxBodyContent
+      return
+        (txbody3, finalTxBodyContent)
 
 getAda :: Era era -> L.Value (LedgerEra era) -> L.Coin
 getAda e val = case e of
