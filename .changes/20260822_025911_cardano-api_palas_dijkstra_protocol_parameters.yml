@@ -1,0 +1,6 @@
+description: |
+  Protocol-parameter updates can now be created and inspected for `DijkstraEra`, via the new `DijkstraEraBasedProtocolParametersUpdate`. It adds the four parameters introduced in Dijkstra: the maximum reference-script size per block and per transaction, and the reference-script cost stride and multiplier.
+kind:
+  - feature
+pr: 1309
+project: cardano-api
