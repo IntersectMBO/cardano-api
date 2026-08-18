@@ -1,0 +1,32 @@
+description: |
+  Integration for cardano-node 11.1. Highlights:
+
+  Breaking:
+  - `initialLedgerState`, `foldBlocks`, `foldEpochState`, `mkProtocolInfoCardano`
+    and `genesisConfigToEnv` (all in `Cardano.Api.LedgerState`) take a new
+    `SomeHasFS IO` argument, used by consensus to stream genesis data from disk.
+  - In `Cardano.Api.Consensus`, the `ProtocolInfoArgs` data family is now
+    parameterised by the monad (`ProtocolInfoArgs m blk`) and `protocolInfo`
+    returns its result monadically. The `ProtocolInfoArgsCardano` and
+    `ProtocolInfoArgsShelley` constructors gain a `SomeHasFS m` field.
+  - The first type parameter of `Ledger.LedgerTables` is now the block
+    (e.g. `HardForkBlock (CardanoEras StandardCrypto)`) rather than
+    `LedgerState` of the block. This propagates through exported
+    `Cardano.Api.LedgerState` items including `AnyNewEpochState`,
+    `getLedgerTablesUTxOValues`, `toLedgerStateEvents`,
+    `tickThenReapplyCheckHash` and `tickThenApply`.
+  - Removed orphan `ToJSON` instances (previously made visible by
+    `import Cardano.Api`) for `NonEmptyMap`, `NonEmptySet`,
+    `Ledger.StakeSnapshots` and `Ledger.StakeSnapshot`. These instances are
+    now provided upstream.
+  - Dependency bound bumps:
+    `cardano-crypto-class ^>=2.5`, `small-steps ^>=1.2`, `fs-api ^>=0.4`.
+
+  Compatible:
+  - `shelleyGenesisDefaults` and `conwayGenesisDefaults` populate the new
+    `sgExtraConfig` / `cgExtraConfig` ledger fields with their default values.
+kind:
+  - breaking
+  - compatible
+pr: 1221
+project: cardano-api
