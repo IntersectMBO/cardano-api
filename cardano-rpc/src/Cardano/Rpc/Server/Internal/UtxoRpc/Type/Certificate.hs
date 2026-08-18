@@ -24,8 +24,7 @@ import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.Binary qualified as L (ipv4ToBytes, ipv6ToBytes)
 import Cardano.Ledger.Coin qualified as L (DeltaCoin (..))
 import Cardano.Ledger.Dijkstra.TxCert qualified as L
-  ( DijkstraTxCert (..)
-  , dijkstraToConwayDelegCert
+  ( dijkstraToConwayDelegCert
   )
 import Cardano.Ledger.Hashes qualified as L (ScriptHash (..), VRFVerKeyHash (..))
 

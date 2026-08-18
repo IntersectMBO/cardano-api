@@ -317,24 +317,28 @@ cddlTypeToEra =
     "Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
     "Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
     "Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "Tx DijkstraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraDijkstra
     "Witnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
     "Witnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
     "Witnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
     "Witnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
     "Witnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
     "Witnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "Witnessed Tx DijkstraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraDijkstra
     "Unwitnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
     "Unwitnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
     "Unwitnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
     "Unwitnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
     "Unwitnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
     "Unwitnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "Unwitnessed Tx DijkstraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraDijkstra
     "TxWitness ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
     "TxWitness AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
     "TxWitness MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
     "TxWitness AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
     "TxWitness BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
     "TxWitness ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "TxWitness DijkstraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraDijkstra
     unknownCddlType -> Left $ TextEnvelopeCddlErrUnknownType unknownCddlType
 
 {-# DEPRECATED readFileTextEnvelopeCddlAnyOf "Use readFileTextEnvelopeAnyOf instead." #-}
