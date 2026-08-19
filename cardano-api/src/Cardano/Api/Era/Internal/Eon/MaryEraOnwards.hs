@@ -98,9 +98,7 @@ type MaryEraOnwardsConstraints era =
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody L.TopTx (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.MaryEraTxBody (ShelleyLedgerEra era)
-  , -- L.ShelleyEraTxCert dropped: Dijkstra cannot satisfy AtMostEra "Conway".
-    -- Callsites that need it must add it explicitly.
-    L.Value (ShelleyLedgerEra era) ~ L.MaryValue
+  , L.Value (ShelleyLedgerEra era) ~ L.MaryValue
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era

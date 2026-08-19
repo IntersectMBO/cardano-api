@@ -1334,13 +1334,17 @@ createTransactionBody sbe bc =
        in monoidForEraInEonA era $ \w -> case w of
             -- Dijkstra replaced required signer hashes with guards, and a key-hash
             -- guard makes the ledger demand that key's signature: translate, appending
-            -- so any other guards stay intact. (The 'A.reqSignerHashesTxBodyL' arm
-            -- fails for Dijkstra, like the ledger lens.)
+            -- so any other guards stay intact.
             AlonzoEraOnwardsDijkstra ->
               pure . Endo $
                 A.txBodyL . L.guardsTxBodyL
                   %~ (<> OSet.fromSet (Set.map Shelley.KeyHashObj keyWits))
-            _ -> pure $ Endo $ A.reqSignerHashesTxBodyL w .~ keyWits
+            AlonzoEraOnwardsAlonzo ->
+              pure $ Endo $ A.txBodyL . L.reqSignerHashesTxBodyL .~ keyWits
+            AlonzoEraOnwardsBabbage ->
+              pure $ Endo $ A.txBodyL . L.reqSignerHashesTxBodyL .~ keyWits
+            AlonzoEraOnwardsConway ->
+              pure $ Endo $ A.txBodyL . L.reqSignerHashesTxBodyL .~ keyWits
 
     setReferenceInputs <- monoidForEraInEonA era $ \w ->
       pure $ Endo $ A.referenceInputsTxBodyL w .~ refTxIns

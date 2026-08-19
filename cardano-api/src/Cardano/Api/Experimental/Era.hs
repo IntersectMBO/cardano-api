@@ -134,6 +134,7 @@ instance Bounded (Some Era) where
 
 instance Enum (Some Era) where
   toEnum 0 = Some ConwayEra
+  toEnum 1 = Some DijkstraEra
   toEnum i = error $ "Enum.toEnum: invalid argument " <> show i <> " - does not correspond to any era"
   fromEnum (Some ConwayEra) = 0
   fromEnum (Some DijkstraEra) = 1
