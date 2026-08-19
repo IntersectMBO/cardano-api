@@ -62,45 +62,49 @@ methodsNodeRpc =
     $ NoMoreMethods
 
 -- | gRPC method table for the UTxO RPC @QueryService@.
+-- Method order must match 'ServiceMethods': readData, readEraSummary, readGenesis, readParams,
+-- readState, readTx, readUtxos, searchUtxos.
+-- 'UnsupportedMethod' makes the server respond with the @UNIMPLEMENTED@ gRPC status.
 methodsUtxoRpc
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf UtxoRpc.QueryService)
 methodsUtxoRpc =
-  Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadGenesisSpan . readGenesisMethod)
+  UnsupportedMethod -- readData
+    . UnsupportedMethod -- readEraSummary
+    . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadGenesisSpan . readGenesisMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryParamsSpan . readParamsMethod)
+    . UnsupportedMethod -- readState
+    . UnsupportedMethod -- readTx
     . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadUtxosSpan . readUtxosMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcQuerySearchUtxosSpan . searchUtxosMethod)
     $ NoMoreMethods
 
 -- | gRPC method table for the UTxO RPC @SubmitService@.
+-- Method order must match 'ServiceMethods': evalTx, readMempool, submitTx, waitForTx, watchMempool.
+-- 'UnsupportedMethod' makes the server respond with the @UNIMPLEMENTED@ gRPC status.
 methodsUtxoRpcSubmit
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf UtxoRpc.SubmitService)
 methodsUtxoRpcSubmit =
   Method (mkNonStreaming $ wrapInSpan TraceRpcEvalTxSpan . evalTxMethod)
+    . UnsupportedMethod -- readMempool
     . Method (mkNonStreaming $ wrapInSpan TraceRpcSubmitSpan . submitTxMethod)
+    . UnsupportedMethod -- waitForTx
+    . UnsupportedMethod -- watchMempool
     $ NoMoreMethods
 
 -- | gRPC method table for the UTxO RPC @SyncService@.
 -- Method order must match 'ServiceMethods': dumpHistory, fetchBlock, followTip, readTip.
+-- 'UnsupportedMethod' makes the server respond with the @UNIMPLEMENTED@ gRPC status.
 methodsSyncRpc
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf UtxoRpc.SyncService)
 methodsSyncRpc =
-  Method (mkNonStreaming $ const unimplemented) -- dumpHistory
+  UnsupportedMethod -- dumpHistory
     . Method (mkNonStreaming $ wrapInSpan TraceRpcFetchBlockSpan . fetchBlockMethod)
     . Method (mkServerStreaming $ \req -> wrapInSpan TraceRpcFollowTipSpan . followTipMethod req)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcReadTipSpan . readTipMethod)
     $ NoMoreMethods
- where
-  unimplemented =
-    throwIO
-      GrpcException
-        { grpcError = GrpcUnimplemented
-        , grpcErrorMessage = Just "Not yet implemented"
-        , grpcErrorDetails = Nothing
-        , grpcErrorMetadata = []
-        }
 
 -- | Start the gRPC server, registering all RPC service handlers.
 -- Does nothing when the RPC server is disabled in configuration.

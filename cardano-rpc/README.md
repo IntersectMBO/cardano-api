@@ -7,6 +7,8 @@ It implements [UTxO RPC](https://utxorpc.org/introduction) protobuf communicatio
 
 ## UTxO RPC v1beta spec coverage
 
+Methods marked as not supported are exposed by the server but respond with the `UNIMPLEMENTED` gRPC status.
+
 ### [QueryService](https://utxorpc.org/query/spec/)
 
 | Method | Status |
@@ -18,6 +20,7 @@ It implements [UTxO RPC](https://utxorpc.org/introduction) protobuf communicatio
 | [ReadTx](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
 | [ReadGenesis](https://utxorpc.org/query/spec/#queryservice) | ✅ Supported |
 | [ReadEraSummary](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
+| [ReadState](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
 
 ### [SubmitService](https://utxorpc.org/submit/spec/)
 
