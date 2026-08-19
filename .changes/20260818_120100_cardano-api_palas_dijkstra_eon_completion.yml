@@ -5,7 +5,7 @@ description: |
 
   Simple scripts are still unsupported in Dijkstra.
 
-  The cardano-api lens `reqSignerHashesTxBodyL` is deprecated: use the same-named ledger lens (or `reqSignerHashesTxBodyG` for reads) from `Cardano.Api.Ledger`.
+  Most `LedgerTxBody` wrapper lenses are deprecated: use the same-named ledger lenses from `Cardano.Api.Ledger` (through `txBodyL`). `coinTxOutL` replaces `valueTxOutAdaAssetL`, and `reqSignerHashesTxBodyG` covers era-generic reads. `Cardano.Api.Ledger` now also re-exports the era tx-body classes and these lenses. The validity-interval lenses, `adaAssetL` and `multiAssetL` stay: the ledger has no equivalent for them.
 
   Breaking: the era constraint bundles (`AllegraEraOnwardsConstraints`, `MaryEraOnwardsConstraints`, `BabbageEraOnwardsConstraints`, `ConwayEraOnwardsConstraints`) no longer provide `ShelleyEraTxCert` or `TxCert era ~ ConwayTxCert era`, because Dijkstra does not support those certificates. If your code needs them, add the constraint explicitly.
 kind:

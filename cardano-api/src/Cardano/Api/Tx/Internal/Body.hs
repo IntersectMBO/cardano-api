@@ -1313,21 +1313,24 @@ createTransactionBody sbe bc =
         treasuryDonation = maybe 0 unFeatured $ txTreasuryDonation bc
 
     setUpdateProposal <- monoidForEraInEonA era $ \w ->
-      pure . Endo $ A.updateTxBodyL w .~ convTxUpdateProposal sbe (txUpdateProposal bc)
+      pure . Endo $
+        shelleyToBabbageEraConstraints w $
+          A.txBodyL . L.updateTxBodyL .~ convTxUpdateProposal sbe (txUpdateProposal bc)
 
     setInvalidBefore <- monoidForEraInEonA era $ \w ->
       pure $ Endo $ A.invalidBeforeTxBodyL w .~ convValidityLowerBound (txValidityLowerBound bc)
 
     setMint <- monoidForEraInEonA era $ \w ->
-      pure $ Endo $ A.mintTxBodyL w .~ convMintValue apiMintValue
+      pure $ Endo $ maryEraOnwardsConstraints w $ A.txBodyL . L.mintTxBodyL .~ convMintValue apiMintValue
 
     setScriptIntegrityHash <- monoidForEraInEonA era $ \w ->
       pure $
         Endo $
-          A.scriptIntegrityHashTxBodyL w .~ mScriptIntegrityHash
+          alonzoEraOnwardsConstraints w $
+            A.txBodyL . L.scriptIntegrityHashTxBodyL .~ mScriptIntegrityHash
 
     setCollateralInputs <- monoidForEraInEonA era $ \w ->
-      pure $ Endo $ A.collateralInputsTxBodyL w .~ collTxIns
+      pure $ Endo $ alonzoEraOnwardsConstraints w $ A.txBodyL . L.collateralInputsTxBodyL .~ collTxIns
 
     setReqSignerHashes <-
       let keyWits = convExtraKeyWitnesses apiExtraKeyWitnesses
@@ -1347,29 +1350,47 @@ createTransactionBody sbe bc =
               pure $ Endo $ A.txBodyL . L.reqSignerHashesTxBodyL .~ keyWits
 
     setReferenceInputs <- monoidForEraInEonA era $ \w ->
-      pure $ Endo $ A.referenceInputsTxBodyL w .~ refTxIns
+      pure $ Endo $ babbageEraOnwardsConstraints w $ A.txBodyL . L.referenceInputsTxBodyL .~ refTxIns
 
     setCollateralReturn <- monoidForEraInEonA era $ \w ->
-      pure $ Endo $ A.collateralReturnTxBodyL w .~ returnCollateral
+      pure $
+        Endo $
+          babbageEraOnwardsConstraints w $
+            A.txBodyL . L.collateralReturnTxBodyL .~ returnCollateral
 
     setTotalCollateral <- monoidForEraInEonA era $ \w ->
-      pure $ Endo $ A.totalCollateralTxBodyL w .~ totalCollateral
+      pure $
+        Endo $
+          babbageEraOnwardsConstraints w $
+            A.txBodyL . L.totalCollateralTxBodyL .~ totalCollateral
 
     setProposalProcedures <- monoidForEraInEonA era $ \w ->
-      pure $ Endo $ A.proposalProceduresTxBodyL w .~ proposalProcedures
+      pure $
+        Endo $
+          conwayEraOnwardsConstraints w $
+            A.txBodyL . L.proposalProceduresTxBodyL .~ proposalProcedures
 
     setVotingProcedures <- monoidForEraInEonA era $ \w ->
-      pure $ Endo $ A.votingProceduresTxBodyL w .~ votingProcedures
+      pure $
+        Endo $
+          conwayEraOnwardsConstraints w $
+            A.txBodyL . L.votingProceduresTxBodyL .~ votingProcedures
 
     setCurrentTreasuryValue <- monoidForEraInEonA era $ \w ->
-      pure $ Endo $ A.currentTreasuryValueTxBodyL w .~ currentTreasuryValue
+      pure $
+        Endo $
+          conwayEraOnwardsConstraints w $
+            A.txBodyL . L.currentTreasuryValueTxBodyL .~ currentTreasuryValue
 
     setTreasuryDonation <- monoidForEraInEonA era $ \w ->
-      pure $ Endo $ A.treasuryDonationTxBodyL w .~ treasuryDonation
+      pure $
+        Endo $
+          conwayEraOnwardsConstraints w $
+            A.txBodyL . L.treasuryDonationTxBodyL .~ treasuryDonation
 
     let ledgerTxBody =
           mkCommonTxBody sbe (txIns bc) (txOuts bc) (txFee bc) (txWithdrawals bc) txAuxData
-            & A.certsTxBodyL sbe
+            & shelleyBasedEraConstraints sbe (A.txBodyL . L.certsTxBodyL)
               .~ certs
             & A.invalidHereAfterTxBodyL sbe
               .~ convValidityUpperBound sbe (txValidityUpperBound bc)

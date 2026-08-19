@@ -142,6 +142,22 @@ module Cardano.Api.Ledger.Internal.Reexport
   -- Babbage
   , CoinPerByte (..)
   , referenceScriptTxOutL
+  , ShelleyEraTxBody
+  , updateTxBodyL
+  , AllegraEraTxBody
+  , MaryEraTxBody
+  , mintTxBodyL
+  , BabbageEraTxBody
+  , referenceInputsTxBodyL
+  , collateralReturnTxBodyL
+  , totalCollateralTxBodyL
+  , ConwayEraTxBody
+  , votingProceduresTxBodyL
+  , proposalProceduresTxBodyL
+  , currentTreasuryValueTxBodyL
+  , treasuryDonationTxBodyL
+  , valueTxOutL
+  , coinTxOutL
   -- Alonzo
   , AlonzoEraTxBody (..)
   , AlonzoEraScript (..)
@@ -249,11 +265,27 @@ import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Api
-  ( BabbageEraTxOut (referenceScriptTxOutL)
+  ( AllegraEraTxBody
+  , BabbageEraTxBody
+  , BabbageEraTxOut (referenceScriptTxOutL)
   , Constitution (..)
+  , ConwayEraTxBody
   , GovAction (..)
   , GovPurposeId (..)
+  , MaryEraTxBody
+  , ShelleyEraTxBody
+  , coinTxOutL
+  , collateralReturnTxBodyL
+  , currentTreasuryValueTxBodyL
+  , mintTxBodyL
+  , proposalProceduresTxBodyL
+  , referenceInputsTxBodyL
+  , totalCollateralTxBodyL
+  , treasuryDonationTxBodyL
   , unRedeemers
+  , updateTxBodyL
+  , valueTxOutL
+  , votingProceduresTxBodyL
   )
 import Cardano.Ledger.Api.Tx.Cert
   ( pattern AuthCommitteeHotKeyTxCert
