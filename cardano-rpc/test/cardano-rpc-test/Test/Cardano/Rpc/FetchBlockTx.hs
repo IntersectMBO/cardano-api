@@ -6,7 +6,12 @@
 
 module Test.Cardano.Rpc.FetchBlockTx where
 
-import Cardano.Api (SlotNo (..))
+import Cardano.Api
+  ( AsType (AsDRepKey, AsStakePoolKey)
+  , SlotNo (..)
+  , unDRepKeyHash
+  , unStakePoolKeyHash
+  )
 import Cardano.Api.Address
   ( toShelleyAddr
   , toShelleyStakeAddr
@@ -41,6 +46,7 @@ import Test.Gen.Cardano.Api.Typed
   , genStakeCredential
   , genTx
   , genTxIn
+  , genVerificationKeyHash
   )
 
 import Hedgehog as H
@@ -245,6 +251,9 @@ txToUtxoRpcTxProjections sbe = H.withTests 40 . H.property $ anyEraTxConstraints
       referenceInputsCount
       H.note_ "Proposal count"
       length (protoTx ^. U5c.proposals) === length (toList (body ^. L.proposalProceduresTxBodyL))
+      H.note_ "Vote count"
+      length (protoTx ^. U5c.votes)
+        === M.size (L.unVotingProcedures (body ^. L.votingProceduresTxBodyL))
       alonzoOnwardsChecks
         AlonzoEraOnwardsConway
         ( isJust . L.strictMaybeToMaybe $ body ^. L.collateralReturnTxBodyL
@@ -289,6 +298,9 @@ hprop_tx_to_utxorpc_tx_injected_optional_fields = H.withTests 10 . H.property $ 
   collateralInput <- forAll genTxIn
   returnAddress <- forAll $ genAddressInEra sbe
   stakeAddress <- forAll genStakeAddress
+  votedGovActionTxIn <- forAll genTxIn
+  drepKeyHash <- forAll $ unDRepKeyHash <$> genVerificationKeyHash AsDRepKey
+  poolKeyHash <- forAll $ unStakePoolKeyHash <$> genVerificationKeyHash AsStakePoolKey
   anchorUrl <- H.nothingFail $ L.textToUrl 64 expectedAnchorUrl
   let anchor = L.Anchor anchorUrl (L.hashAnnotated (L.AnchorData expectedAnchorData))
       returnCoin = 3000000
@@ -306,6 +318,22 @@ hprop_tx_to_utxorpc_tx_injected_optional_fields = H.withTests 10 . H.property $ 
           , L.pProcGovAction = L.InfoAction
           , L.pProcAnchor = anchor
           }
+      -- the DRep vote carries the shared anchor, the pool vote carries none,
+      -- so both the anchor-present and anchor-absent paths are exercised
+      L.TxIn votedGovActionTxId _ = toShelleyTxIn votedGovActionTxIn
+      votedGovActionId = L.GovActionId votedGovActionTxId (L.GovActionIx 0)
+      votingProcedures =
+        L.VotingProcedures $
+          M.fromList
+            [
+              ( L.DRepVoter (L.KeyHashObj drepKeyHash)
+              , M.singleton votedGovActionId (L.VotingProcedure L.VoteYes (L.SJust anchor))
+              )
+            ,
+              ( L.StakePoolVoter poolKeyHash
+              , M.singleton votedGovActionId (L.VotingProcedure L.VoteNo L.SNothing)
+              )
+            ]
       modifiedLedgerTx =
         ledgerTx
           & L.auxDataTxL .~ L.SJust auxData
@@ -313,6 +341,7 @@ hprop_tx_to_utxorpc_tx_injected_optional_fields = H.withTests 10 . H.property $ 
           & L.bodyTxL . L.collateralReturnTxBodyL .~ L.SJust returnTxOut
           & L.bodyTxL . L.totalCollateralTxBodyL .~ L.SJust (L.Coin totalCollateralCoin)
           & L.bodyTxL . L.proposalProceduresTxBodyL .~ fromList [proposal]
+          & L.bodyTxL . L.votingProceduresTxBodyL .~ votingProcedures
       protoTx = txToUtxoRpcTx modifiedLedgerTx
 
   H.note_ "The auxiliary data carries the injected metadata and the native script"
@@ -341,6 +370,31 @@ hprop_tx_to_utxorpc_tx_injected_optional_fields = H.withTests 10 . H.property $ 
     === L.hashToBytes (L.extractHash (L.hashAnnotated (L.AnchorData expectedAnchorData)))
   H.assertWith (protoProposal ^. U5c.govAction) $ isJust . (^. U5c.maybe'infoAction)
 
+  H.note_ "The DRep and pool votes route to the expected voter oneof arms"
+  let isDrepVoterVotes = isJust . (^. U5c.maybe'drep)
+      isPoolVoterVotes = isJust . (^. U5c.maybe'spo)
+  [drepVoterVotes] <- H.noteShow $ filter isDrepVoterVotes (protoTx ^. U5c.votes)
+  [poolVoterVotes] <- H.noteShow $ filter isPoolVoterVotes (protoTx ^. U5c.votes)
+
+  H.note_ "The DRep vote carries the injected gov action id, vote and anchor"
+  [drepVotingProcedure] <- H.noteShow $ drepVoterVotes ^. U5c.votes
+  drepVotingProcedure ^. U5c.govActionId . U5c.transactionId
+    === serialiseToRawBytes (fromShelleyTxId votedGovActionTxId)
+  drepVotingProcedure ^. U5c.govActionId . U5c.governanceActionIndex === 0
+  drepVotingProcedure ^. U5c.vote === Proto U5c.VOTE_YES
+  drepAnchor <- H.nothingFail $ drepVotingProcedure ^. U5c.maybe'anchor
+  drepAnchor ^. U5c.url === expectedAnchorUrl
+  drepAnchor ^. U5c.contentHash
+    === L.hashToBytes (L.extractHash (L.hashAnnotated (L.AnchorData expectedAnchorData)))
+
+  H.note_ "The pool vote carries the injected gov action id and vote, and no anchor"
+  [poolVotingProcedure] <- H.noteShow $ poolVoterVotes ^. U5c.votes
+  poolVotingProcedure ^. U5c.govActionId . U5c.transactionId
+    === serialiseToRawBytes (fromShelleyTxId votedGovActionTxId)
+  poolVotingProcedure ^. U5c.govActionId . U5c.governanceActionIndex === 0
+  poolVotingProcedure ^. U5c.vote === Proto U5c.VOTE_NO
+  poolVotingProcedure ^. U5c.maybe'anchor === Nothing
+
 -- | Totality of 'txToUtxoRpcTx' at one era: the proto message roundtrips at
 -- the protobuf wire level, which also forces every field, so a partial
 -- pattern or bottom in the era's branch fails the property.
@@ -366,6 +420,7 @@ txToUtxoRpcTxTotality sbe = H.withTests 20 . H.property $ do
       supportsPlutus = supportsFrom sbe ShelleyBasedEraAlonzo
       supportsReferenceInputs = supportsFrom sbe ShelleyBasedEraBabbage
       supportsProposals = supportsFrom sbe ShelleyBasedEraConway
+      supportsVotes = supportsFrom sbe ShelleyBasedEraConway
   unless supportsMint $
     protoTx ^. U5c.mint === []
   unless supportsPlutus $ do
@@ -377,6 +432,8 @@ txToUtxoRpcTxTotality sbe = H.withTests 20 . H.property $ do
     protoTx ^. U5c.referenceInputs === []
   unless supportsProposals $
     protoTx ^. U5c.proposals === []
+  unless supportsVotes $
+    protoTx ^. U5c.votes === []
 
 -- | One totality test per Shelley-based era, from the 'Bounded' enumeration
 -- of 'AnyShelleyBasedEra'.

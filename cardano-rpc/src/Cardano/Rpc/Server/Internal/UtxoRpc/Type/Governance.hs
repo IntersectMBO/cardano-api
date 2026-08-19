@@ -3,6 +3,7 @@
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance
   ( proposalProcedureToUtxoRpcProposal
+  , voterVotesToUtxoRpcVoterVotes
   )
 where
 
@@ -18,6 +19,7 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate
   ( anchorToUtxoRpcAnchor
   , constitutionToUtxoRpcConstitution
   , credentialToUtxoRpcStakeCredential
+  , keyHashToBytes
   , scriptHashToBytes
   )
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
@@ -45,6 +47,44 @@ proposalProcedureToUtxoRpcProposal proposal =
     & U5c.rewardAccount .~ serialiseToRawBytes (fromShelleyStakeAddr (L.pProcReturnAddr proposal))
     & U5c.govAction .~ govActionToUtxoRpcGovernanceAction (L.pProcGovAction proposal)
     & U5c.anchor .~ anchorToUtxoRpcAnchor (L.pProcAnchor proposal)
+
+-- | Convert a ledger voter together with all votes they cast in a transaction
+-- to the UTxO RPC 'UtxoRpc.VoterVotes' message, dispatching on the voter type
+-- to select the corresponding oneof field.
+voterVotesToUtxoRpcVoterVotes
+  :: L.Voter
+  -> Map L.GovActionId (L.VotingProcedure era)
+  -> Proto UtxoRpc.VoterVotes
+voterVotesToUtxoRpcVoterVotes voter voterVotes =
+  defMessage
+    & setVoter
+    & U5c.votes .~ map (uncurry votingProcedureToUtxoRpcVotingProcedure) (M.toList voterVotes)
+ where
+  setVoter = case voter of
+    L.CommitteeVoter credential ->
+      U5c.constitutionalCommittee .~ credentialToUtxoRpcStakeCredential credential
+    L.DRepVoter credential ->
+      U5c.drep .~ credentialToUtxoRpcStakeCredential credential
+    L.StakePoolVoter poolKeyHash ->
+      U5c.spo .~ keyHashToBytes poolKeyHash
+
+-- | Convert a single ledger vote cast on a governance action to the UTxO RPC
+-- 'UtxoRpc.VotingProcedure' message.
+votingProcedureToUtxoRpcVotingProcedure
+  :: L.GovActionId
+  -> L.VotingProcedure era
+  -> Proto UtxoRpc.VotingProcedure
+votingProcedureToUtxoRpcVotingProcedure govActionId votingProcedure =
+  defMessage
+    & U5c.govActionId .~ govActionIdToUtxoRpcGovernanceActionId govActionId
+    & U5c.vote .~ vote
+    & U5c.maybe'anchor
+      .~ fmap anchorToUtxoRpcAnchor (L.strictMaybeToMaybe (L.vProcAnchor votingProcedure))
+ where
+  vote = case L.vProcVote votingProcedure of
+    L.VoteNo -> Proto U5c.VOTE_NO
+    L.VoteYes -> Proto U5c.VOTE_YES
+    L.Abstain -> Proto U5c.VOTE_ABSTAIN
 
 -- | Convert a ledger governance action to the UTxO RPC 'UtxoRpc.GovernanceAction'
 -- message, dispatching on the action type to select the corresponding oneof field.
