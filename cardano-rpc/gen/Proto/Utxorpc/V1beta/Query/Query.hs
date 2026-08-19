@@ -8,7 +8,10 @@ module Proto.Utxorpc.V1beta.Query.Query (
         _AnyChainBlock'Cardano, AnyChainDatum(),
         AnyChainDatum'ParsedState(..), _AnyChainDatum'Cardano,
         AnyChainParams(), AnyChainParams'Params(..),
-        _AnyChainParams'Cardano, AnyChainTx(), AnyChainTx'Chain(..),
+        _AnyChainParams'Cardano, AnyChainStateData(),
+        AnyChainStateData'Result(..), _AnyChainStateData'Cardano,
+        AnyChainStateQuery(), AnyChainStateQuery'Query(..),
+        _AnyChainStateQuery'Cardano, AnyChainTx(), AnyChainTx'Chain(..),
         _AnyChainTx'Cardano, AnyUtxoData(), AnyUtxoData'ParsedState(..),
         _AnyUtxoData'Cardano, AnyUtxoPattern(),
         AnyUtxoPattern'UtxoPattern(..), _AnyUtxoPattern'Cardano,
@@ -18,9 +21,10 @@ module Proto.Utxorpc.V1beta.Query.Query (
         _ReadEraSummaryResponse'Cardano, ReadGenesisRequest(),
         ReadGenesisResponse(), ReadGenesisResponse'Config(..),
         _ReadGenesisResponse'Cardano, ReadParamsRequest(),
-        ReadParamsResponse(), ReadTxRequest(), ReadTxResponse(),
-        ReadUtxosRequest(), ReadUtxosResponse(), SearchUtxosRequest(),
-        SearchUtxosResponse(), TxoRef(), UtxoPredicate()
+        ReadParamsResponse(), ReadStateRequest(), ReadStateResponse(),
+        ReadTxRequest(), ReadTxResponse(), ReadUtxosRequest(),
+        ReadUtxosResponse(), SearchUtxosRequest(), SearchUtxosResponse(),
+        TxoRef(), UtxoPredicate()
     ) where
 import qualified Data.ProtoLens.Runtime.Control.DeepSeq as Control.DeepSeq
 import qualified Data.ProtoLens.Runtime.Data.ProtoLens.Prism as Data.ProtoLens.Prism
@@ -653,6 +657,320 @@ _AnyChainParams'Cardano
       (\ p__
          -> case p__ of
               (AnyChainParams'Cardano p__val) -> Prelude.Just p__val)
+{- | Fields :
+     
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'result' @:: Lens' AnyChainStateData (Prelude.Maybe AnyChainStateData'Result)@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'cardano' @:: Lens' AnyChainStateData (Prelude.Maybe Proto.Utxorpc.V1beta.Cardano.Cardano.StateData)@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.cardano' @:: Lens' AnyChainStateData Proto.Utxorpc.V1beta.Cardano.Cardano.StateData@ -}
+data AnyChainStateData
+  = AnyChainStateData'_constructor {_AnyChainStateData'result :: !(Prelude.Maybe AnyChainStateData'Result),
+                                    _AnyChainStateData'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show AnyChainStateData where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+data AnyChainStateData'Result
+  = AnyChainStateData'Cardano !Proto.Utxorpc.V1beta.Cardano.Cardano.StateData
+  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord)
+instance Data.ProtoLens.Field.HasField AnyChainStateData "maybe'result" (Prelude.Maybe AnyChainStateData'Result) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _AnyChainStateData'result
+           (\ x__ y__ -> x__ {_AnyChainStateData'result = y__}))
+        Prelude.id
+instance Data.ProtoLens.Field.HasField AnyChainStateData "maybe'cardano" (Prelude.Maybe Proto.Utxorpc.V1beta.Cardano.Cardano.StateData) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _AnyChainStateData'result
+           (\ x__ y__ -> x__ {_AnyChainStateData'result = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (AnyChainStateData'Cardano x__val))
+                     -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap AnyChainStateData'Cardano y__))
+instance Data.ProtoLens.Field.HasField AnyChainStateData "cardano" Proto.Utxorpc.V1beta.Cardano.Cardano.StateData where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _AnyChainStateData'result
+           (\ x__ y__ -> x__ {_AnyChainStateData'result = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (AnyChainStateData'Cardano x__val))
+                        -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap AnyChainStateData'Cardano y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage))
+instance Data.ProtoLens.Message AnyChainStateData where
+  messageName _
+    = Data.Text.pack "utxorpc.v1beta.query.AnyChainStateData"
+  packedMessageDescriptor _
+    = "\n\
+      \\DC1AnyChainStateData\DC2=\n\
+      \\acardano\CAN\SOH \SOH(\v2!.utxorpc.v1beta.cardano.StateDataH\NULR\acardanoB\b\n\
+      \\ACKresult"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        cardano__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "cardano"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor Proto.Utxorpc.V1beta.Cardano.Cardano.StateData)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'cardano")) ::
+              Data.ProtoLens.FieldDescriptor AnyChainStateData
+      in
+        Data.Map.fromList
+          [(Data.ProtoLens.Tag 1, cardano__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _AnyChainStateData'_unknownFields
+        (\ x__ y__ -> x__ {_AnyChainStateData'_unknownFields = y__})
+  defMessage
+    = AnyChainStateData'_constructor
+        {_AnyChainStateData'result = Prelude.Nothing,
+         _AnyChainStateData'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          AnyChainStateData
+          -> Data.ProtoLens.Encoding.Bytes.Parser AnyChainStateData
+        loop x
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t) x)
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        10
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "cardano"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"cardano") y x)
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do loop Data.ProtoLens.defMessage) "AnyChainStateData"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (case
+                  Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'result") _x
+              of
+                Prelude.Nothing -> Data.Monoid.mempty
+                (Prelude.Just (AnyChainStateData'Cardano v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage v))
+             (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                (Lens.Family2.view Data.ProtoLens.unknownFields _x))
+instance Control.DeepSeq.NFData AnyChainStateData where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_AnyChainStateData'_unknownFields x__)
+             (Control.DeepSeq.deepseq (_AnyChainStateData'result x__) ())
+instance Control.DeepSeq.NFData AnyChainStateData'Result where
+  rnf (AnyChainStateData'Cardano x__) = Control.DeepSeq.rnf x__
+_AnyChainStateData'Cardano ::
+  Data.ProtoLens.Prism.Prism' AnyChainStateData'Result Proto.Utxorpc.V1beta.Cardano.Cardano.StateData
+_AnyChainStateData'Cardano
+  = Data.ProtoLens.Prism.prism'
+      AnyChainStateData'Cardano
+      (\ p__
+         -> case p__ of
+              (AnyChainStateData'Cardano p__val) -> Prelude.Just p__val)
+{- | Fields :
+     
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'query' @:: Lens' AnyChainStateQuery (Prelude.Maybe AnyChainStateQuery'Query)@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'cardano' @:: Lens' AnyChainStateQuery (Prelude.Maybe Proto.Utxorpc.V1beta.Cardano.Cardano.StateQuery)@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.cardano' @:: Lens' AnyChainStateQuery Proto.Utxorpc.V1beta.Cardano.Cardano.StateQuery@ -}
+data AnyChainStateQuery
+  = AnyChainStateQuery'_constructor {_AnyChainStateQuery'query :: !(Prelude.Maybe AnyChainStateQuery'Query),
+                                     _AnyChainStateQuery'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show AnyChainStateQuery where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+data AnyChainStateQuery'Query
+  = AnyChainStateQuery'Cardano !Proto.Utxorpc.V1beta.Cardano.Cardano.StateQuery
+  deriving stock (Prelude.Show, Prelude.Eq, Prelude.Ord)
+instance Data.ProtoLens.Field.HasField AnyChainStateQuery "maybe'query" (Prelude.Maybe AnyChainStateQuery'Query) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _AnyChainStateQuery'query
+           (\ x__ y__ -> x__ {_AnyChainStateQuery'query = y__}))
+        Prelude.id
+instance Data.ProtoLens.Field.HasField AnyChainStateQuery "maybe'cardano" (Prelude.Maybe Proto.Utxorpc.V1beta.Cardano.Cardano.StateQuery) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _AnyChainStateQuery'query
+           (\ x__ y__ -> x__ {_AnyChainStateQuery'query = y__}))
+        (Lens.Family2.Unchecked.lens
+           (\ x__
+              -> case x__ of
+                   (Prelude.Just (AnyChainStateQuery'Cardano x__val))
+                     -> Prelude.Just x__val
+                   _otherwise -> Prelude.Nothing)
+           (\ _ y__ -> Prelude.fmap AnyChainStateQuery'Cardano y__))
+instance Data.ProtoLens.Field.HasField AnyChainStateQuery "cardano" Proto.Utxorpc.V1beta.Cardano.Cardano.StateQuery where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _AnyChainStateQuery'query
+           (\ x__ y__ -> x__ {_AnyChainStateQuery'query = y__}))
+        ((Prelude..)
+           (Lens.Family2.Unchecked.lens
+              (\ x__
+                 -> case x__ of
+                      (Prelude.Just (AnyChainStateQuery'Cardano x__val))
+                        -> Prelude.Just x__val
+                      _otherwise -> Prelude.Nothing)
+              (\ _ y__ -> Prelude.fmap AnyChainStateQuery'Cardano y__))
+           (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage))
+instance Data.ProtoLens.Message AnyChainStateQuery where
+  messageName _
+    = Data.Text.pack "utxorpc.v1beta.query.AnyChainStateQuery"
+  packedMessageDescriptor _
+    = "\n\
+      \\DC2AnyChainStateQuery\DC2>\n\
+      \\acardano\CAN\SOH \SOH(\v2\".utxorpc.v1beta.cardano.StateQueryH\NULR\acardanoB\a\n\
+      \\ENQquery"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        cardano__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "cardano"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor Proto.Utxorpc.V1beta.Cardano.Cardano.StateQuery)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'cardano")) ::
+              Data.ProtoLens.FieldDescriptor AnyChainStateQuery
+      in
+        Data.Map.fromList
+          [(Data.ProtoLens.Tag 1, cardano__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _AnyChainStateQuery'_unknownFields
+        (\ x__ y__ -> x__ {_AnyChainStateQuery'_unknownFields = y__})
+  defMessage
+    = AnyChainStateQuery'_constructor
+        {_AnyChainStateQuery'query = Prelude.Nothing,
+         _AnyChainStateQuery'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          AnyChainStateQuery
+          -> Data.ProtoLens.Encoding.Bytes.Parser AnyChainStateQuery
+        loop x
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t) x)
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        10
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "cardano"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"cardano") y x)
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do loop Data.ProtoLens.defMessage) "AnyChainStateQuery"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (case
+                  Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'query") _x
+              of
+                Prelude.Nothing -> Data.Monoid.mempty
+                (Prelude.Just (AnyChainStateQuery'Cardano v))
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage v))
+             (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                (Lens.Family2.view Data.ProtoLens.unknownFields _x))
+instance Control.DeepSeq.NFData AnyChainStateQuery where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_AnyChainStateQuery'_unknownFields x__)
+             (Control.DeepSeq.deepseq (_AnyChainStateQuery'query x__) ())
+instance Control.DeepSeq.NFData AnyChainStateQuery'Query where
+  rnf (AnyChainStateQuery'Cardano x__) = Control.DeepSeq.rnf x__
+_AnyChainStateQuery'Cardano ::
+  Data.ProtoLens.Prism.Prism' AnyChainStateQuery'Query Proto.Utxorpc.V1beta.Cardano.Cardano.StateQuery
+_AnyChainStateQuery'Cardano
+  = Data.ProtoLens.Prism.prism'
+      AnyChainStateQuery'Cardano
+      (\ p__
+         -> case p__ of
+              (AnyChainStateQuery'Cardano p__val) -> Prelude.Just p__val)
 {- | Fields :
      
          * 'Proto.Utxorpc.V1beta.Query.Query_Fields.nativeBytes' @:: Lens' AnyChainTx Data.ByteString.ByteString@
@@ -2910,6 +3228,358 @@ instance Control.DeepSeq.NFData ReadParamsResponse where
                 (Control.DeepSeq.deepseq (_ReadParamsResponse'ledgerTip x__) ()))
 {- | Fields :
      
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.query' @:: Lens' ReadStateRequest AnyChainStateQuery@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'query' @:: Lens' ReadStateRequest (Prelude.Maybe AnyChainStateQuery)@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.fieldMask' @:: Lens' ReadStateRequest Proto.Google.Protobuf.FieldMask.FieldMask@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'fieldMask' @:: Lens' ReadStateRequest (Prelude.Maybe Proto.Google.Protobuf.FieldMask.FieldMask)@ -}
+data ReadStateRequest
+  = ReadStateRequest'_constructor {_ReadStateRequest'query :: !(Prelude.Maybe AnyChainStateQuery),
+                                   _ReadStateRequest'fieldMask :: !(Prelude.Maybe Proto.Google.Protobuf.FieldMask.FieldMask),
+                                   _ReadStateRequest'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show ReadStateRequest where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+instance Data.ProtoLens.Field.HasField ReadStateRequest "query" AnyChainStateQuery where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _ReadStateRequest'query
+           (\ x__ y__ -> x__ {_ReadStateRequest'query = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage)
+instance Data.ProtoLens.Field.HasField ReadStateRequest "maybe'query" (Prelude.Maybe AnyChainStateQuery) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _ReadStateRequest'query
+           (\ x__ y__ -> x__ {_ReadStateRequest'query = y__}))
+        Prelude.id
+instance Data.ProtoLens.Field.HasField ReadStateRequest "fieldMask" Proto.Google.Protobuf.FieldMask.FieldMask where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _ReadStateRequest'fieldMask
+           (\ x__ y__ -> x__ {_ReadStateRequest'fieldMask = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage)
+instance Data.ProtoLens.Field.HasField ReadStateRequest "maybe'fieldMask" (Prelude.Maybe Proto.Google.Protobuf.FieldMask.FieldMask) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _ReadStateRequest'fieldMask
+           (\ x__ y__ -> x__ {_ReadStateRequest'fieldMask = y__}))
+        Prelude.id
+instance Data.ProtoLens.Message ReadStateRequest where
+  messageName _
+    = Data.Text.pack "utxorpc.v1beta.query.ReadStateRequest"
+  packedMessageDescriptor _
+    = "\n\
+      \\DLEReadStateRequest\DC2>\n\
+      \\ENQquery\CAN\SOH \SOH(\v2(.utxorpc.v1beta.query.AnyChainStateQueryR\ENQquery\DC29\n\
+      \\n\
+      \field_mask\CAN\STX \SOH(\v2\SUB.google.protobuf.FieldMaskR\tfieldMask"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        query__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "query"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor AnyChainStateQuery)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'query")) ::
+              Data.ProtoLens.FieldDescriptor ReadStateRequest
+        fieldMask__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "field_mask"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor Proto.Google.Protobuf.FieldMask.FieldMask)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'fieldMask")) ::
+              Data.ProtoLens.FieldDescriptor ReadStateRequest
+      in
+        Data.Map.fromList
+          [(Data.ProtoLens.Tag 1, query__field_descriptor),
+           (Data.ProtoLens.Tag 2, fieldMask__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _ReadStateRequest'_unknownFields
+        (\ x__ y__ -> x__ {_ReadStateRequest'_unknownFields = y__})
+  defMessage
+    = ReadStateRequest'_constructor
+        {_ReadStateRequest'query = Prelude.Nothing,
+         _ReadStateRequest'fieldMask = Prelude.Nothing,
+         _ReadStateRequest'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          ReadStateRequest
+          -> Data.ProtoLens.Encoding.Bytes.Parser ReadStateRequest
+        loop x
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t) x)
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        10
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "query"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"query") y x)
+                        18
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "field_mask"
+                                loop
+                                  (Lens.Family2.set (Data.ProtoLens.Field.field @"fieldMask") y x)
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do loop Data.ProtoLens.defMessage) "ReadStateRequest"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (case
+                  Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'query") _x
+              of
+                Prelude.Nothing -> Data.Monoid.mempty
+                (Prelude.Just _v)
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage _v))
+             ((Data.Monoid.<>)
+                (case
+                     Lens.Family2.view
+                       (Data.ProtoLens.Field.field @"maybe'fieldMask") _x
+                 of
+                   Prelude.Nothing -> Data.Monoid.mempty
+                   (Prelude.Just _v)
+                     -> (Data.Monoid.<>)
+                          (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
+                          ((Prelude..)
+                             (\ bs
+                                -> (Data.Monoid.<>)
+                                     (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                        (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                     (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                             Data.ProtoLens.encodeMessage _v))
+                (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                   (Lens.Family2.view Data.ProtoLens.unknownFields _x)))
+instance Control.DeepSeq.NFData ReadStateRequest where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_ReadStateRequest'_unknownFields x__)
+             (Control.DeepSeq.deepseq
+                (_ReadStateRequest'query x__)
+                (Control.DeepSeq.deepseq (_ReadStateRequest'fieldMask x__) ()))
+{- | Fields :
+     
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.result' @:: Lens' ReadStateResponse AnyChainStateData@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'result' @:: Lens' ReadStateResponse (Prelude.Maybe AnyChainStateData)@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.ledgerTip' @:: Lens' ReadStateResponse ChainPoint@
+         * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'ledgerTip' @:: Lens' ReadStateResponse (Prelude.Maybe ChainPoint)@ -}
+data ReadStateResponse
+  = ReadStateResponse'_constructor {_ReadStateResponse'result :: !(Prelude.Maybe AnyChainStateData),
+                                    _ReadStateResponse'ledgerTip :: !(Prelude.Maybe ChainPoint),
+                                    _ReadStateResponse'_unknownFields :: !Data.ProtoLens.FieldSet}
+  deriving stock (Prelude.Eq, Prelude.Ord)
+instance Prelude.Show ReadStateResponse where
+  showsPrec _ __x __s
+    = Prelude.showChar
+        '{'
+        (Prelude.showString
+           (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
+instance Data.ProtoLens.Field.HasField ReadStateResponse "result" AnyChainStateData where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _ReadStateResponse'result
+           (\ x__ y__ -> x__ {_ReadStateResponse'result = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage)
+instance Data.ProtoLens.Field.HasField ReadStateResponse "maybe'result" (Prelude.Maybe AnyChainStateData) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _ReadStateResponse'result
+           (\ x__ y__ -> x__ {_ReadStateResponse'result = y__}))
+        Prelude.id
+instance Data.ProtoLens.Field.HasField ReadStateResponse "ledgerTip" ChainPoint where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _ReadStateResponse'ledgerTip
+           (\ x__ y__ -> x__ {_ReadStateResponse'ledgerTip = y__}))
+        (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage)
+instance Data.ProtoLens.Field.HasField ReadStateResponse "maybe'ledgerTip" (Prelude.Maybe ChainPoint) where
+  fieldOf _
+    = (Prelude..)
+        (Lens.Family2.Unchecked.lens
+           _ReadStateResponse'ledgerTip
+           (\ x__ y__ -> x__ {_ReadStateResponse'ledgerTip = y__}))
+        Prelude.id
+instance Data.ProtoLens.Message ReadStateResponse where
+  messageName _
+    = Data.Text.pack "utxorpc.v1beta.query.ReadStateResponse"
+  packedMessageDescriptor _
+    = "\n\
+      \\DC1ReadStateResponse\DC2?\n\
+      \\ACKresult\CAN\SOH \SOH(\v2'.utxorpc.v1beta.query.AnyChainStateDataR\ACKresult\DC2?\n\
+      \\n\
+      \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip"
+  packedFileDescriptor _ = packedFileDescriptor
+  fieldsByTag
+    = let
+        result__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "result"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor AnyChainStateData)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'result")) ::
+              Data.ProtoLens.FieldDescriptor ReadStateResponse
+        ledgerTip__field_descriptor
+          = Data.ProtoLens.FieldDescriptor
+              "ledger_tip"
+              (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
+                 Data.ProtoLens.FieldTypeDescriptor ChainPoint)
+              (Data.ProtoLens.OptionalField
+                 (Data.ProtoLens.Field.field @"maybe'ledgerTip")) ::
+              Data.ProtoLens.FieldDescriptor ReadStateResponse
+      in
+        Data.Map.fromList
+          [(Data.ProtoLens.Tag 1, result__field_descriptor),
+           (Data.ProtoLens.Tag 2, ledgerTip__field_descriptor)]
+  unknownFields
+    = Lens.Family2.Unchecked.lens
+        _ReadStateResponse'_unknownFields
+        (\ x__ y__ -> x__ {_ReadStateResponse'_unknownFields = y__})
+  defMessage
+    = ReadStateResponse'_constructor
+        {_ReadStateResponse'result = Prelude.Nothing,
+         _ReadStateResponse'ledgerTip = Prelude.Nothing,
+         _ReadStateResponse'_unknownFields = []}
+  parseMessage
+    = let
+        loop ::
+          ReadStateResponse
+          -> Data.ProtoLens.Encoding.Bytes.Parser ReadStateResponse
+        loop x
+          = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
+               if end then
+                   do (let missing = []
+                       in
+                         if Prelude.null missing then
+                             Prelude.return ()
+                         else
+                             Prelude.fail
+                               ((Prelude.++)
+                                  "Missing required fields: "
+                                  (Prelude.show (missing :: [Prelude.String]))))
+                      Prelude.return
+                        (Lens.Family2.over
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t) x)
+               else
+                   do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                      case tag of
+                        10
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "result"
+                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"result") y x)
+                        18
+                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                           Data.ProtoLens.Encoding.Bytes.isolate
+                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
+                                       "ledger_tip"
+                                loop
+                                  (Lens.Family2.set (Data.ProtoLens.Field.field @"ledgerTip") y x)
+                        wire
+                          -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
+                                        wire
+                                loop
+                                  (Lens.Family2.over
+                                     Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+      in
+        (Data.ProtoLens.Encoding.Bytes.<?>)
+          (do loop Data.ProtoLens.defMessage) "ReadStateResponse"
+  buildMessage
+    = \ _x
+        -> (Data.Monoid.<>)
+             (case
+                  Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'result") _x
+              of
+                Prelude.Nothing -> Data.Monoid.mempty
+                (Prelude.Just _v)
+                  -> (Data.Monoid.<>)
+                       (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                       ((Prelude..)
+                          (\ bs
+                             -> (Data.Monoid.<>)
+                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                          Data.ProtoLens.encodeMessage _v))
+             ((Data.Monoid.<>)
+                (case
+                     Lens.Family2.view
+                       (Data.ProtoLens.Field.field @"maybe'ledgerTip") _x
+                 of
+                   Prelude.Nothing -> Data.Monoid.mempty
+                   (Prelude.Just _v)
+                     -> (Data.Monoid.<>)
+                          (Data.ProtoLens.Encoding.Bytes.putVarInt 18)
+                          ((Prelude..)
+                             (\ bs
+                                -> (Data.Monoid.<>)
+                                     (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                        (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                     (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                             Data.ProtoLens.encodeMessage _v))
+                (Data.ProtoLens.Encoding.Wire.buildFieldSet
+                   (Lens.Family2.view Data.ProtoLens.unknownFields _x)))
+instance Control.DeepSeq.NFData ReadStateResponse where
+  rnf
+    = \ x__
+        -> Control.DeepSeq.deepseq
+             (_ReadStateResponse'_unknownFields x__)
+             (Control.DeepSeq.deepseq
+                (_ReadStateResponse'result x__)
+                (Control.DeepSeq.deepseq (_ReadStateResponse'ledgerTip x__) ()))
+{- | Fields :
+     
          * 'Proto.Utxorpc.V1beta.Query.Query_Fields.hash' @:: Lens' ReadTxRequest Data.ByteString.ByteString@
          * 'Proto.Utxorpc.V1beta.Query.Query_Fields.fieldMask' @:: Lens' ReadTxRequest Proto.Google.Protobuf.FieldMask.FieldMask@
          * 'Proto.Utxorpc.V1beta.Query.Query_Fields.maybe'fieldMask' @:: Lens' ReadTxRequest (Prelude.Maybe Proto.Google.Protobuf.FieldMask.FieldMask)@ -}
@@ -4618,8 +5288,12 @@ data QueryService = QueryService {}
 instance Data.ProtoLens.Service.Types.Service QueryService where
   type ServiceName QueryService = "QueryService"
   type ServicePackage QueryService = "utxorpc.v1beta.query"
-  type ServiceMethods QueryService = '["readGenesis",
+  type ServiceMethods QueryService = '["readData",
+                                       "readEraSummary",
+                                       "readGenesis",
                                        "readParams",
+                                       "readState",
+                                       "readTx",
                                        "readUtxos",
                                        "searchUtxos"]
   packedServiceDescriptor _
@@ -4628,8 +5302,12 @@ instance Data.ProtoLens.Service.Types.Service QueryService where
       \\n\
       \ReadParams\DC2'.utxorpc.v1beta.query.ReadParamsRequest\SUB(.utxorpc.v1beta.query.ReadParamsResponse\DC2\\\n\
       \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponse\DC2b\n\
-      \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponse\DC2b\n\
-      \\vReadGenesis\DC2(.utxorpc.v1beta.query.ReadGenesisRequest\SUB).utxorpc.v1beta.query.ReadGenesisResponse"
+      \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponse\DC2Y\n\
+      \\bReadData\DC2%.utxorpc.v1beta.query.ReadDataRequest\SUB&.utxorpc.v1beta.query.ReadDataResponse\DC2S\n\
+      \\ACKReadTx\DC2#.utxorpc.v1beta.query.ReadTxRequest\SUB$.utxorpc.v1beta.query.ReadTxResponse\DC2b\n\
+      \\vReadGenesis\DC2(.utxorpc.v1beta.query.ReadGenesisRequest\SUB).utxorpc.v1beta.query.ReadGenesisResponse\DC2k\n\
+      \\SOReadEraSummary\DC2+.utxorpc.v1beta.query.ReadEraSummaryRequest\SUB,.utxorpc.v1beta.query.ReadEraSummaryResponse\DC2\\\n\
+      \\tReadState\DC2&.utxorpc.v1beta.query.ReadStateRequest\SUB'.utxorpc.v1beta.query.ReadStateResponse"
 instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readParams" where
   type MethodName QueryService "readParams" = "ReadParams"
   type MethodInput QueryService "readParams" = ReadParamsRequest
@@ -4645,11 +5323,31 @@ instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "searchUtxos" w
   type MethodInput QueryService "searchUtxos" = SearchUtxosRequest
   type MethodOutput QueryService "searchUtxos" = SearchUtxosResponse
   type MethodStreamingType QueryService "searchUtxos" = 'Data.ProtoLens.Service.Types.NonStreaming
+instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readData" where
+  type MethodName QueryService "readData" = "ReadData"
+  type MethodInput QueryService "readData" = ReadDataRequest
+  type MethodOutput QueryService "readData" = ReadDataResponse
+  type MethodStreamingType QueryService "readData" = 'Data.ProtoLens.Service.Types.NonStreaming
+instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readTx" where
+  type MethodName QueryService "readTx" = "ReadTx"
+  type MethodInput QueryService "readTx" = ReadTxRequest
+  type MethodOutput QueryService "readTx" = ReadTxResponse
+  type MethodStreamingType QueryService "readTx" = 'Data.ProtoLens.Service.Types.NonStreaming
 instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readGenesis" where
   type MethodName QueryService "readGenesis" = "ReadGenesis"
   type MethodInput QueryService "readGenesis" = ReadGenesisRequest
   type MethodOutput QueryService "readGenesis" = ReadGenesisResponse
   type MethodStreamingType QueryService "readGenesis" = 'Data.ProtoLens.Service.Types.NonStreaming
+instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readEraSummary" where
+  type MethodName QueryService "readEraSummary" = "ReadEraSummary"
+  type MethodInput QueryService "readEraSummary" = ReadEraSummaryRequest
+  type MethodOutput QueryService "readEraSummary" = ReadEraSummaryResponse
+  type MethodStreamingType QueryService "readEraSummary" = 'Data.ProtoLens.Service.Types.NonStreaming
+instance Data.ProtoLens.Service.Types.HasMethodImpl QueryService "readState" where
+  type MethodName QueryService "readState" = "ReadState"
+  type MethodInput QueryService "readState" = ReadStateRequest
+  type MethodOutput QueryService "readState" = ReadStateResponse
+  type MethodStreamingType QueryService "readState" = 'Data.ProtoLens.Service.Types.NonStreaming
 packedFileDescriptor :: Data.ByteString.ByteString
 packedFileDescriptor
   = "\n\
@@ -4689,6 +5387,20 @@ packedFileDescriptor
     \\ACKparams\"\147\SOH\n\
     \\DC2ReadParamsResponse\DC2<\n\
     \\ACKvalues\CAN\SOH \SOH(\v2$.utxorpc.v1beta.query.AnyChainParamsR\ACKvalues\DC2?\n\
+    \\n\
+    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip\"]\n\
+    \\DC2AnyChainStateQuery\DC2>\n\
+    \\acardano\CAN\SOH \SOH(\v2\".utxorpc.v1beta.cardano.StateQueryH\NULR\acardanoB\a\n\
+    \\ENQquery\"\\\n\
+    \\DC1AnyChainStateData\DC2=\n\
+    \\acardano\CAN\SOH \SOH(\v2!.utxorpc.v1beta.cardano.StateDataH\NULR\acardanoB\b\n\
+    \\ACKresult\"\141\SOH\n\
+    \\DLEReadStateRequest\DC2>\n\
+    \\ENQquery\CAN\SOH \SOH(\v2(.utxorpc.v1beta.query.AnyChainStateQueryR\ENQquery\DC29\n\
+    \\n\
+    \field_mask\CAN\STX \SOH(\v2\SUB.google.protobuf.FieldMaskR\tfieldMask\"\149\SOH\n\
+    \\DC1ReadStateResponse\DC2?\n\
+    \\ACKresult\CAN\SOH \SOH(\v2'.utxorpc.v1beta.query.AnyChainStateDataR\ACKresult\DC2?\n\
     \\n\
     \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip\"e\n\
     \\SOAnyUtxoPattern\DC2C\n\
@@ -4759,16 +5471,20 @@ packedFileDescriptor
     \\SOReadTxResponse\DC20\n\
     \\STXtx\CAN\SOH \SOH(\v2 .utxorpc.v1beta.query.AnyChainTxR\STXtx\DC2?\n\
     \\n\
-    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip2\149\ETX\n\
+    \ledger_tip\CAN\STX \SOH(\v2 .utxorpc.v1beta.query.ChainPointR\tledgerTip2\144\ACK\n\
     \\fQueryService\DC2_\n\
     \\n\
     \ReadParams\DC2'.utxorpc.v1beta.query.ReadParamsRequest\SUB(.utxorpc.v1beta.query.ReadParamsResponse\DC2\\\n\
     \\tReadUtxos\DC2&.utxorpc.v1beta.query.ReadUtxosRequest\SUB'.utxorpc.v1beta.query.ReadUtxosResponse\DC2b\n\
-    \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponse\DC2b\n\
-    \\vReadGenesis\DC2(.utxorpc.v1beta.query.ReadGenesisRequest\SUB).utxorpc.v1beta.query.ReadGenesisResponseB\152\SOH\n\
+    \\vSearchUtxos\DC2(.utxorpc.v1beta.query.SearchUtxosRequest\SUB).utxorpc.v1beta.query.SearchUtxosResponse\DC2Y\n\
+    \\bReadData\DC2%.utxorpc.v1beta.query.ReadDataRequest\SUB&.utxorpc.v1beta.query.ReadDataResponse\DC2S\n\
+    \\ACKReadTx\DC2#.utxorpc.v1beta.query.ReadTxRequest\SUB$.utxorpc.v1beta.query.ReadTxResponse\DC2b\n\
+    \\vReadGenesis\DC2(.utxorpc.v1beta.query.ReadGenesisRequest\SUB).utxorpc.v1beta.query.ReadGenesisResponse\DC2k\n\
+    \\SOReadEraSummary\DC2+.utxorpc.v1beta.query.ReadEraSummaryRequest\SUB,.utxorpc.v1beta.query.ReadEraSummaryResponse\DC2\\\n\
+    \\tReadState\DC2&.utxorpc.v1beta.query.ReadStateRequest\SUB'.utxorpc.v1beta.query.ReadStateResponseB\152\SOH\n\
     \\CANcom.utxorpc.v1beta.queryB\n\
-    \QueryProtoP\SOH\162\STX\ETXUVQ\170\STX\DC4Utxorpc.V1beta.Query\202\STX\DC4Utxorpc\\V1beta\\Query\226\STX Utxorpc\\V1beta\\Query\\GPBMetadata\234\STX\SYNUtxorpc::V1beta::QueryJ\236;\n\
-    \\a\DC2\ENQ\STX\NUL\178\SOH\SOH\n\
+    \QueryProtoP\SOH\162\STX\ETXUVQ\170\STX\DC4Utxorpc.V1beta.Query\202\STX\DC4Utxorpc\\V1beta\\Query\226\STX Utxorpc\\V1beta\\Query\\GPBMetadata\234\STX\SYNUtxorpc::V1beta::QueryJ\179G\n\
+    \\a\DC2\ENQ\STX\NUL\208\SOH\SOH\n\
     \9\n\
     \\SOH\f\DC2\ETX\STX\NUL\DC22// A consistent view of the state of the ledger\n\
     \\n\
@@ -5019,483 +5735,601 @@ packedFileDescriptor
     \\ENQ\EOT\t\STX\SOH\SOH\DC2\ETXG\r\ETB\n\
     \\f\n\
     \\ENQ\EOT\t\STX\SOH\ETX\DC2\ETXG\SUB\ESC\n\
-    \S\n\
+    \I\n\
     \\STX\EOT\n\
-    \\DC2\EOTK\NULO\SOH\SUBG An evenlope that holds an UTxO patterns from any of compatible chains\n\
+    \\DC2\EOTK\NULO\SOH\SUB= An envelope that wraps a chain-specific ledger-state query.\n\
     \\n\
     \\n\
     \\n\
     \\ETX\EOT\n\
-    \\SOH\DC2\ETXK\b\SYN\n\
+    \\SOH\DC2\ETXK\b\SUB\n\
     \\f\n\
     \\EOT\EOT\n\
     \\b\NUL\DC2\EOTL\STXN\ETX\n\
     \\f\n\
     \\ENQ\EOT\n\
-    \\b\NUL\SOH\DC2\ETXL\b\DC4\n\
-    \\v\n\
-    \\EOT\EOT\n\
-    \\STX\NUL\DC2\ETXM\EOT7\n\
-    \\f\n\
-    \\ENQ\EOT\n\
-    \\STX\NUL\ACK\DC2\ETXM\EOT*\n\
-    \\f\n\
-    \\ENQ\EOT\n\
-    \\STX\NUL\SOH\DC2\ETXM+2\n\
-    \\f\n\
-    \\ENQ\EOT\n\
-    \\STX\NUL\ETX\DC2\ETXM56\n\
-    \^\n\
-    \\STX\EOT\v\DC2\EOTR\NULW\SOH\SUBR Represents a simple utxo predicate that can composed to create more complex ones\n\
-    \\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\v\SOH\DC2\ETXR\b\NAK\n\
-    \8\n\
-    \\EOT\EOT\v\STX\NUL\DC2\ETXS\STX$\"+ Predicate is true if tx exhibits pattern.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\NUL\EOT\DC2\ETXS\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\NUL\ACK\DC2\ETXS\v\EM\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\NUL\SOH\DC2\ETXS\SUB\US\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\NUL\ETX\DC2\ETXS\"#\n\
-    \?\n\
-    \\EOT\EOT\v\STX\SOH\DC2\ETXT\STX!\"2 Predicate is true if tx doesn't exhibit pattern.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\SOH\EOT\DC2\ETXT\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\SOH\ACK\DC2\ETXT\v\CAN\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\SOH\SOH\DC2\ETXT\EM\FS\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\SOH\ETX\DC2\ETXT\US \n\
-    \F\n\
-    \\EOT\EOT\v\STX\STX\DC2\ETXU\STX$\"9 Predicate is true if utxo exhibits all of the patterns.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\STX\EOT\DC2\ETXU\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\STX\ACK\DC2\ETXU\v\CAN\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\STX\SOH\DC2\ETXU\EM\US\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\STX\ETX\DC2\ETXU\"#\n\
-    \F\n\
-    \\EOT\EOT\v\STX\ETX\DC2\ETXV\STX$\"9 Predicate is true if utxo exhibits any of the patterns.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\ETX\EOT\DC2\ETXV\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\ETX\ACK\DC2\ETXV\v\CAN\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\ETX\SOH\DC2\ETXV\EM\US\n\
-    \\f\n\
-    \\ENQ\EOT\v\STX\ETX\ETX\DC2\ETXV\"#\n\
-    \J\n\
-    \\STX\EOT\f\DC2\EOTZ\NULa\SOH\SUB> An evenlope that holds an UTxO from any of compatible chains\n\
-    \\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\f\SOH\DC2\ETXZ\b\DC3\n\
-    \5\n\
-    \\EOT\EOT\f\STX\NUL\DC2\ETX[\STX\EM\"( Original bytes as defined by the chain\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\NUL\ENQ\DC2\ETX[\STX\a\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\NUL\SOH\DC2\ETX[\b\DC4\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\NUL\ETX\DC2\ETX[\ETB\CAN\n\
-    \0\n\
-    \\EOT\EOT\f\STX\SOH\DC2\ETX\\\STX\NAK\"# Hash of the previous transaction.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\SOH\ACK\DC2\ETX\\\STX\b\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\SOH\SOH\DC2\ETX\\\t\DLE\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\SOH\ETX\DC2\ETX\\\DC3\DC4\n\
-    \\f\n\
-    \\EOT\EOT\f\b\NUL\DC2\EOT]\STX_\ETX\n\
-    \\f\n\
-    \\ENQ\EOT\f\b\NUL\SOH\DC2\ETX]\b\DC4\n\
-    \\GS\n\
-    \\EOT\EOT\f\STX\STX\DC2\ETX^\EOT0\"\DLE A cardano UTxO\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\STX\ACK\DC2\ETX^\EOT#\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\STX\SOH\DC2\ETX^$+\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\STX\ETX\DC2\ETX^./\n\
-    \R\n\
-    \\EOT\EOT\f\STX\ETX\DC2\ETX`\STX\ESC\"E The chain point that represents the block this UTxO was created in.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\ETX\ACK\DC2\ETX`\STX\f\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\ETX\SOH\DC2\ETX`\r\SYN\n\
-    \\f\n\
-    \\ENQ\EOT\f\STX\ETX\ETX\DC2\ETX`\EM\SUB\n\
-    \+\n\
-    \\STX\EOT\r\DC2\EOTd\NULg\SOH\SUB\US Request to get specific UTxOs\n\
-    \\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\r\SOH\DC2\ETXd\b\CAN\n\
-    \\"\n\
-    \\EOT\EOT\r\STX\NUL\DC2\ETXe\STX\ESC\"\NAK List of keys UTxOs.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\NUL\EOT\DC2\ETXe\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\NUL\ACK\DC2\ETXe\v\DC1\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\NUL\SOH\DC2\ETXe\DC2\SYN\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\NUL\ETX\DC2\ETXe\EM\SUB\n\
-    \7\n\
-    \\EOT\EOT\r\STX\SOH\DC2\ETXf\STX+\"* Field mask to selectively return fields.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SOH\ACK\DC2\ETXf\STX\ESC\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SOH\SOH\DC2\ETXf\FS&\n\
-    \\f\n\
-    \\ENQ\EOT\r\STX\SOH\ETX\DC2\ETXf)*\n\
-    \T\n\
-    \\STX\EOT\SO\DC2\EOTj\NULm\SOH\SUBH Response containing the UTxOs associated with the requested addresses.\n\
-    \\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\SO\SOH\DC2\ETXj\b\EM\n\
-    \\GS\n\
-    \\EOT\EOT\SO\STX\NUL\DC2\ETXk\STX!\"\DLE List of UTxOs.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\SO\STX\NUL\EOT\DC2\ETXk\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\SO\STX\NUL\ACK\DC2\ETXk\v\SYN\n\
-    \\f\n\
-    \\ENQ\EOT\SO\STX\NUL\SOH\DC2\ETXk\ETB\FS\n\
-    \\f\n\
-    \\ENQ\EOT\SO\STX\NUL\ETX\DC2\ETXk\US \n\
-    \J\n\
-    \\EOT\EOT\SO\STX\SOH\DC2\ETXl\STX\FS\"= The chain point that represent the ledger current position.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\SO\STX\SOH\ACK\DC2\ETXl\STX\f\n\
-    \\f\n\
-    \\ENQ\EOT\SO\STX\SOH\SOH\DC2\ETXl\r\ETB\n\
-    \\f\n\
-    \\ENQ\EOT\SO\STX\SOH\ETX\DC2\ETXl\SUB\ESC\n\
-    \<\n\
-    \\STX\EOT\SI\DC2\EOTp\NULu\SOH\SUB0 Request to search for UTxO based on a pattern.\n\
-    \\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\SI\SOH\DC2\ETXp\b\SUB\n\
-    \)\n\
-    \\EOT\EOT\SI\STX\NUL\DC2\ETXq\STX'\"\FS Pattern to match UTxOs by.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\NUL\EOT\DC2\ETXq\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\NUL\ACK\DC2\ETXq\v\CAN\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\NUL\SOH\DC2\ETXq\EM\"\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\NUL\ETX\DC2\ETXq%&\n\
-    \7\n\
-    \\EOT\EOT\SI\STX\SOH\DC2\ETXr\STX+\"* Field mask to selectively return fields.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\SOH\ACK\DC2\ETXr\STX\ESC\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\SOH\SOH\DC2\ETXr\FS&\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\SOH\ETX\DC2\ETXr)*\n\
-    \5\n\
-    \\EOT\EOT\SI\STX\STX\DC2\ETXs\STX\US\"( The maximum number of items to return.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\STX\EOT\DC2\ETXs\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\STX\ENQ\DC2\ETXs\v\DLE\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\STX\SOH\DC2\ETXs\DC1\SUB\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\STX\ETX\DC2\ETXs\GS\RS\n\
-    \R\n\
-    \\EOT\EOT\SI\STX\ETX\DC2\ETXt\STX\"\"E The next_page_token value returned from a previous request, if any.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\ETX\EOT\DC2\ETXt\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\ETX\ENQ\DC2\ETXt\v\DC1\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\ETX\SOH\DC2\ETXt\DC2\GS\n\
-    \\f\n\
-    \\ENQ\EOT\SI\STX\ETX\ETX\DC2\ETXt !\n\
-    \O\n\
-    \\STX\EOT\DLE\DC2\EOTx\NUL|\SOH\SUBC Response containing the UTxOs that match the requested addresses.\n\
-    \\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\DLE\SOH\DC2\ETXx\b\ESC\n\
-    \\GS\n\
-    \\EOT\EOT\DLE\STX\NUL\DC2\ETXy\STX!\"\DLE List of UTxOs.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\DLE\STX\NUL\EOT\DC2\ETXy\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\DLE\STX\NUL\ACK\DC2\ETXy\v\SYN\n\
-    \\f\n\
-    \\ENQ\EOT\DLE\STX\NUL\SOH\DC2\ETXy\ETB\FS\n\
-    \\f\n\
-    \\ENQ\EOT\DLE\STX\NUL\ETX\DC2\ETXy\US \n\
-    \J\n\
-    \\EOT\EOT\DLE\STX\SOH\DC2\ETXz\STX\FS\"= The chain point that represent the ledger current position.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\DLE\STX\SOH\ACK\DC2\ETXz\STX\f\n\
-    \\f\n\
-    \\ENQ\EOT\DLE\STX\SOH\SOH\DC2\ETXz\r\ETB\n\
-    \\f\n\
-    \\ENQ\EOT\DLE\STX\SOH\ETX\DC2\ETXz\SUB\ESC\n\
-    \_\n\
-    \\EOT\EOT\DLE\STX\STX\DC2\ETX{\STX!\"R Token to retrieve the next page of results, absent if there are no more results.\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\DLE\STX\STX\EOT\DC2\ETX{\STX\n\
-    \\n\
-    \\f\n\
-    \\ENQ\EOT\DLE\STX\STX\ENQ\DC2\ETX{\v\DC1\n\
-    \\f\n\
-    \\ENQ\EOT\DLE\STX\STX\SOH\DC2\ETX{\DC2\FS\n\
-    \\f\n\
-    \\ENQ\EOT\DLE\STX\STX\ETX\DC2\ETX{\US \n\
-    \:\n\
-    \\STX\EOT\DC1\DC2\ENQ\DEL\NUL\130\SOH\SOH\SUB- Request to get data (as in plural of datum)\n\
-    \\n\
-    \\n\
-    \\n\
-    \\ETX\EOT\DC1\SOH\DC2\ETX\DEL\b\ETB\n\
-    \\f\n\
-    \\EOT\EOT\DC1\STX\NUL\DC2\EOT\128\SOH\STX\SUB\n\
-    \\r\n\
-    \\ENQ\EOT\DC1\STX\NUL\EOT\DC2\EOT\128\SOH\STX\n\
-    \\n\
-    \\r\n\
-    \\ENQ\EOT\DC1\STX\NUL\ENQ\DC2\EOT\128\SOH\v\DLE\n\
-    \\r\n\
-    \\ENQ\EOT\DC1\STX\NUL\SOH\DC2\EOT\128\SOH\DC1\NAK\n\
-    \\r\n\
-    \\ENQ\EOT\DC1\STX\NUL\ETX\DC2\EOT\128\SOH\CAN\EM\n\
-    \H\n\
-    \\EOT\EOT\DC1\STX\SOH\DC2\EOT\129\SOH\STX+\": Field mask to selectively return fields in the response.\n\
-    \\n\
-    \\r\n\
-    \\ENQ\EOT\DC1\STX\SOH\ACK\DC2\EOT\129\SOH\STX\ESC\n\
-    \\r\n\
-    \\ENQ\EOT\DC1\STX\SOH\SOH\DC2\EOT\129\SOH\FS&\n\
-    \\r\n\
-    \\ENQ\EOT\DC1\STX\SOH\ETX\DC2\EOT\129\SOH)*\n\
-    \O\n\
-    \\STX\EOT\DC2\DC2\ACK\133\SOH\NUL\139\SOH\SOH\SUBA An evenlope that holds a datum for any of the compatible chains\n\
-    \\n\
-    \\v\n\
-    \\ETX\EOT\DC2\SOH\DC2\EOT\133\SOH\b\NAK\n\
-    \6\n\
-    \\EOT\EOT\DC2\STX\NUL\DC2\EOT\134\SOH\STX\EM\"( Original bytes as defined by the chain\n\
-    \\n\
-    \\r\n\
-    \\ENQ\EOT\DC2\STX\NUL\ENQ\DC2\EOT\134\SOH\STX\a\n\
-    \\r\n\
-    \\ENQ\EOT\DC2\STX\NUL\SOH\DC2\EOT\134\SOH\b\DC4\n\
-    \\r\n\
-    \\ENQ\EOT\DC2\STX\NUL\ETX\DC2\EOT\134\SOH\ETB\CAN\n\
-    \\f\n\
-    \\EOT\EOT\DC2\STX\SOH\DC2\EOT\135\SOH\STX\DLE\n\
-    \\r\n\
-    \\ENQ\EOT\DC2\STX\SOH\ENQ\DC2\EOT\135\SOH\STX\a\n\
-    \\r\n\
-    \\ENQ\EOT\DC2\STX\SOH\SOH\DC2\EOT\135\SOH\b\v\n\
-    \\r\n\
-    \\ENQ\EOT\DC2\STX\SOH\ETX\DC2\EOT\135\SOH\SO\SI\n\
-    \\SO\n\
-    \\EOT\EOT\DC2\b\NUL\DC2\ACK\136\SOH\STX\138\SOH\ETX\n\
-    \\r\n\
-    \\ENQ\EOT\DC2\b\NUL\SOH\DC2\EOT\136\SOH\b\DC4\n\
-    \\RS\n\
-    \\EOT\EOT\DC2\STX\STX\DC2\EOT\137\SOH\EOT2\"\DLE A cardano UTxO\n\
-    \\n\
-    \\r\n\
-    \\ENQ\EOT\DC2\STX\STX\ACK\DC2\EOT\137\SOH\EOT%\n\
-    \\r\n\
-    \\ENQ\EOT\DC2\STX\STX\SOH\DC2\EOT\137\SOH&-\n\
-    \\r\n\
-    \\ENQ\EOT\DC2\STX\STX\ETX\DC2\EOT\137\SOH01\n\
-    \@\n\
-    \\STX\EOT\DC3\DC2\ACK\142\SOH\NUL\145\SOH\SOH\SUB2 Response containing data (as in plural of datum)\n\
-    \\n\
-    \\v\n\
-    \\ETX\EOT\DC3\SOH\DC2\EOT\142\SOH\b\CAN\n\
-    \(\n\
-    \\EOT\EOT\DC3\STX\NUL\DC2\EOT\143\SOH\STX$\"\SUB The value of each datum.\n\
-    \\n\
-    \\r\n\
-    \\ENQ\EOT\DC3\STX\NUL\EOT\DC2\EOT\143\SOH\STX\n\
-    \\n\
-    \\r\n\
-    \\ENQ\EOT\DC3\STX\NUL\ACK\DC2\EOT\143\SOH\v\CAN\n\
-    \\r\n\
-    \\ENQ\EOT\DC3\STX\NUL\SOH\DC2\EOT\143\SOH\EM\US\n\
-    \\r\n\
-    \\ENQ\EOT\DC3\STX\NUL\ETX\DC2\EOT\143\SOH\"#\n\
-    \K\n\
-    \\EOT\EOT\DC3\STX\SOH\DC2\EOT\144\SOH\STX\FS\"= The chain point that represent the ledger current position.\n\
-    \\n\
-    \\r\n\
-    \\ENQ\EOT\DC3\STX\SOH\ACK\DC2\EOT\144\SOH\STX\f\n\
-    \\r\n\
-    \\ENQ\EOT\DC3\STX\SOH\SOH\DC2\EOT\144\SOH\r\ETB\n\
-    \\r\n\
-    \\ENQ\EOT\DC3\STX\SOH\ETX\DC2\EOT\144\SOH\SUB\ESC\n\
-    \4\n\
-    \\STX\EOT\DC4\DC2\ACK\148\SOH\NUL\151\SOH\SOH\SUB& Request to get a transaction by hash\n\
-    \\n\
-    \\v\n\
-    \\ETX\EOT\DC4\SOH\DC2\EOT\148\SOH\b\NAK\n\
+    \\b\NUL\SOH\DC2\ETXL\b\r\n\
     \,\n\
-    \\EOT\EOT\DC4\STX\NUL\DC2\EOT\149\SOH\STX\DC1\"\RS The hash of the transaction.\n\
+    \\EOT\EOT\n\
+    \\STX\NUL\DC2\ETXM\EOT2\"\US A Cardano ledger-state query.\n\
     \\n\
-    \\r\n\
-    \\ENQ\EOT\DC4\STX\NUL\ENQ\DC2\EOT\149\SOH\STX\a\n\
-    \\r\n\
-    \\ENQ\EOT\DC4\STX\NUL\SOH\DC2\EOT\149\SOH\b\f\n\
-    \\r\n\
-    \\ENQ\EOT\DC4\STX\NUL\ETX\DC2\EOT\149\SOH\SI\DLE\n\
-    \H\n\
-    \\EOT\EOT\DC4\STX\SOH\DC2\EOT\150\SOH\STX+\": Field mask to selectively return fields in the response.\n\
+    \\f\n\
+    \\ENQ\EOT\n\
+    \\STX\NUL\ACK\DC2\ETXM\EOT%\n\
+    \\f\n\
+    \\ENQ\EOT\n\
+    \\STX\NUL\SOH\DC2\ETXM&-\n\
+    \\f\n\
+    \\ENQ\EOT\n\
+    \\STX\NUL\ETX\DC2\ETXM01\n\
+    \P\n\
+    \\STX\EOT\v\DC2\EOTR\NULV\SOH\SUBD An envelope that wraps a chain-specific ledger-state query result.\n\
     \\n\
-    \\r\n\
-    \\ENQ\EOT\DC4\STX\SOH\ACK\DC2\EOT\150\SOH\STX\ESC\n\
-    \\r\n\
-    \\ENQ\EOT\DC4\STX\SOH\SOH\DC2\EOT\150\SOH\FS&\n\
-    \\r\n\
-    \\ENQ\EOT\DC4\STX\SOH\ETX\DC2\EOT\150\SOH)*\n\
-    \G\n\
-    \\STX\EOT\NAK\DC2\ACK\154\SOH\NUL\160\SOH\SOH\SUB9 Represents a transaction from any supported blockchain.\n\
     \\n\
-    \\v\n\
-    \\ETX\EOT\NAK\SOH\DC2\EOT\154\SOH\b\DC2\n\
-    \6\n\
-    \\EOT\EOT\NAK\STX\NUL\DC2\EOT\155\SOH\STX\EM\"( Original bytes as defined by the chain\n\
     \\n\
-    \\r\n\
-    \\ENQ\EOT\NAK\STX\NUL\ENQ\DC2\EOT\155\SOH\STX\a\n\
-    \\r\n\
-    \\ENQ\EOT\NAK\STX\NUL\SOH\DC2\EOT\155\SOH\b\DC4\n\
-    \\r\n\
-    \\ENQ\EOT\NAK\STX\NUL\ETX\DC2\EOT\155\SOH\ETB\CAN\n\
-    \\SO\n\
-    \\EOT\EOT\NAK\b\NUL\DC2\ACK\156\SOH\STX\158\SOH\ETX\n\
-    \\r\n\
-    \\ENQ\EOT\NAK\b\NUL\SOH\DC2\EOT\156\SOH\b\r\n\
-    \&\n\
-    \\EOT\EOT\NAK\STX\SOH\DC2\EOT\157\SOH\EOT*\"\CAN A Cardano transaction.\n\
-    \\n\
-    \\r\n\
-    \\ENQ\EOT\NAK\STX\SOH\ACK\DC2\EOT\157\SOH\EOT\GS\n\
-    \\r\n\
-    \\ENQ\EOT\NAK\STX\SOH\SOH\DC2\EOT\157\SOH\RS%\n\
-    \\r\n\
-    \\ENQ\EOT\NAK\STX\SOH\ETX\DC2\EOT\157\SOH()\n\
-    \V\n\
-    \\EOT\EOT\NAK\STX\STX\DC2\EOT\159\SOH\STX\ESC\"H The chain point that represents the block this transaction belongs to.\n\
-    \\n\
-    \\r\n\
-    \\ENQ\EOT\NAK\STX\STX\ACK\DC2\EOT\159\SOH\STX\f\n\
-    \\r\n\
-    \\ENQ\EOT\NAK\STX\STX\SOH\DC2\EOT\159\SOH\r\SYN\n\
-    \\r\n\
-    \\ENQ\EOT\NAK\STX\STX\ETX\DC2\EOT\159\SOH\EM\SUB\n\
-    \W\n\
-    \\STX\EOT\SYN\DC2\ACK\163\SOH\NUL\166\SOH\SOH\SUBI Response containing the transaction associated with the requested hash.\n\
-    \\n\
-    \\v\n\
-    \\ETX\EOT\SYN\SOH\DC2\EOT\163\SOH\b\SYN\n\
-    \ \n\
-    \\EOT\EOT\SYN\STX\NUL\DC2\EOT\164\SOH\STX\DC4\"\DC2 The transaction.\n\
-    \\n\
-    \\r\n\
-    \\ENQ\EOT\SYN\STX\NUL\ACK\DC2\EOT\164\SOH\STX\f\n\
-    \\r\n\
-    \\ENQ\EOT\SYN\STX\NUL\SOH\DC2\EOT\164\SOH\r\SI\n\
-    \\r\n\
-    \\ENQ\EOT\SYN\STX\NUL\ETX\DC2\EOT\164\SOH\DC2\DC3\n\
-    \K\n\
-    \\EOT\EOT\SYN\STX\SOH\DC2\EOT\165\SOH\STX\FS\"= The chain point that represent the ledger current position.\n\
-    \\n\
-    \\r\n\
-    \\ENQ\EOT\SYN\STX\SOH\ACK\DC2\EOT\165\SOH\STX\f\n\
-    \\r\n\
-    \\ENQ\EOT\SYN\STX\SOH\SOH\DC2\EOT\165\SOH\r\ETB\n\
-    \\r\n\
-    \\ENQ\EOT\SYN\STX\SOH\ETX\DC2\EOT\165\SOH\SUB\ESC\n\
-    \G\n\
-    \\STX\ACK\NUL\DC2\ACK\169\SOH\NUL\178\SOH\SOH\SUB9 Service definition for querying the state of the chain.\n\
-    \\n\
-    \\v\n\
-    \\ETX\ACK\NUL\SOH\DC2\EOT\169\SOH\b\DC4\n\
-    \(\n\
-    \\EOT\ACK\NUL\STX\NUL\DC2\EOT\170\SOH\STXA\"\SUB Get overall chain state.\n\
-    \\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\NUL\SOH\DC2\EOT\170\SOH\ACK\DLE\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\NUL\STX\DC2\EOT\170\SOH\DC1\"\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\NUL\ETX\DC2\EOT\170\SOH-?\n\
-    \1\n\
-    \\EOT\ACK\NUL\STX\SOH\DC2\EOT\171\SOH\STX>\"# Read specific UTxOs by reference.\n\
-    \\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\SOH\SOH\DC2\EOT\171\SOH\ACK\SI\n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\SOH\STX\DC2\EOT\171\SOH\DLE \n\
-    \\r\n\
-    \\ENQ\ACK\NUL\STX\SOH\ETX\DC2\EOT\171\SOH+<\n\
+    \\ETX\EOT\v\SOH\DC2\ETXR\b\EM\n\
+    \\f\n\
+    \\EOT\EOT\v\b\NUL\DC2\EOTS\STXU\ETX\n\
+    \\f\n\
+    \\ENQ\EOT\v\b\NUL\SOH\DC2\ETXS\b\SO\n\
     \3\n\
-    \\EOT\ACK\NUL\STX\STX\DC2\EOT\172\SOH\STXD\"% Search for UTxO based on a pattern.\n\
+    \\EOT\EOT\v\STX\NUL\DC2\ETXT\EOT1\"& A Cardano ledger-state query result.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\NUL\ACK\DC2\ETXT\EOT$\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\NUL\SOH\DC2\ETXT%,\n\
+    \\f\n\
+    \\ENQ\EOT\v\STX\NUL\ETX\DC2\ETXT/0\n\
+    \e\n\
+    \\STX\EOT\f\DC2\EOTY\NUL\\\SOH\SUBY Request to run a chain-specific ledger-state query against the current ledger snapshot.\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\f\SOH\DC2\ETXY\b\CAN\n\
+    \4\n\
+    \\EOT\EOT\f\STX\NUL\DC2\ETXZ\STX\US\"' The chain-specific query to evaluate.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\f\STX\NUL\ACK\DC2\ETXZ\STX\DC4\n\
+    \\f\n\
+    \\ENQ\EOT\f\STX\NUL\SOH\DC2\ETXZ\NAK\SUB\n\
+    \\f\n\
+    \\ENQ\EOT\f\STX\NUL\ETX\DC2\ETXZ\GS\RS\n\
+    \7\n\
+    \\EOT\EOT\f\STX\SOH\DC2\ETX[\STX+\"* Field mask to selectively return fields.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\f\STX\SOH\ACK\DC2\ETX[\STX\ESC\n\
+    \\f\n\
+    \\ENQ\EOT\f\STX\SOH\SOH\DC2\ETX[\FS&\n\
+    \\f\n\
+    \\ENQ\EOT\f\STX\SOH\ETX\DC2\ETX[)*\n\
+    \>\n\
+    \\STX\EOT\r\DC2\EOT_\NULb\SOH\SUB2 Response carrying the ledger-state query result.\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\r\SOH\DC2\ETX_\b\EM\n\
+    \ \n\
+    \\EOT\EOT\r\STX\NUL\DC2\ETX`\STX\US\"\DC3 The query result.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\r\STX\NUL\ACK\DC2\ETX`\STX\DC3\n\
+    \\f\n\
+    \\ENQ\EOT\r\STX\NUL\SOH\DC2\ETX`\DC4\SUB\n\
+    \\f\n\
+    \\ENQ\EOT\r\STX\NUL\ETX\DC2\ETX`\GS\RS\n\
+    \U\n\
+    \\EOT\EOT\r\STX\SOH\DC2\ETXa\STX\FS\"H Chain point representing the snapshot the query was evaluated against.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\r\STX\SOH\ACK\DC2\ETXa\STX\f\n\
+    \\f\n\
+    \\ENQ\EOT\r\STX\SOH\SOH\DC2\ETXa\r\ETB\n\
+    \\f\n\
+    \\ENQ\EOT\r\STX\SOH\ETX\DC2\ETXa\SUB\ESC\n\
+    \S\n\
+    \\STX\EOT\SO\DC2\EOTe\NULi\SOH\SUBG An evenlope that holds an UTxO patterns from any of compatible chains\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\SO\SOH\DC2\ETXe\b\SYN\n\
+    \\f\n\
+    \\EOT\EOT\SO\b\NUL\DC2\EOTf\STXh\ETX\n\
+    \\f\n\
+    \\ENQ\EOT\SO\b\NUL\SOH\DC2\ETXf\b\DC4\n\
+    \\v\n\
+    \\EOT\EOT\SO\STX\NUL\DC2\ETXg\EOT7\n\
+    \\f\n\
+    \\ENQ\EOT\SO\STX\NUL\ACK\DC2\ETXg\EOT*\n\
+    \\f\n\
+    \\ENQ\EOT\SO\STX\NUL\SOH\DC2\ETXg+2\n\
+    \\f\n\
+    \\ENQ\EOT\SO\STX\NUL\ETX\DC2\ETXg56\n\
+    \^\n\
+    \\STX\EOT\SI\DC2\EOTl\NULq\SOH\SUBR Represents a simple utxo predicate that can composed to create more complex ones\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\SI\SOH\DC2\ETXl\b\NAK\n\
+    \8\n\
+    \\EOT\EOT\SI\STX\NUL\DC2\ETXm\STX$\"+ Predicate is true if tx exhibits pattern.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\NUL\EOT\DC2\ETXm\STX\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\NUL\ACK\DC2\ETXm\v\EM\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\NUL\SOH\DC2\ETXm\SUB\US\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\NUL\ETX\DC2\ETXm\"#\n\
+    \?\n\
+    \\EOT\EOT\SI\STX\SOH\DC2\ETXn\STX!\"2 Predicate is true if tx doesn't exhibit pattern.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\SOH\EOT\DC2\ETXn\STX\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\SOH\ACK\DC2\ETXn\v\CAN\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\SOH\SOH\DC2\ETXn\EM\FS\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\SOH\ETX\DC2\ETXn\US \n\
+    \F\n\
+    \\EOT\EOT\SI\STX\STX\DC2\ETXo\STX$\"9 Predicate is true if utxo exhibits all of the patterns.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\STX\EOT\DC2\ETXo\STX\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\STX\ACK\DC2\ETXo\v\CAN\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\STX\SOH\DC2\ETXo\EM\US\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\STX\ETX\DC2\ETXo\"#\n\
+    \F\n\
+    \\EOT\EOT\SI\STX\ETX\DC2\ETXp\STX$\"9 Predicate is true if utxo exhibits any of the patterns.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\ETX\EOT\DC2\ETXp\STX\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\ETX\ACK\DC2\ETXp\v\CAN\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\ETX\SOH\DC2\ETXp\EM\US\n\
+    \\f\n\
+    \\ENQ\EOT\SI\STX\ETX\ETX\DC2\ETXp\"#\n\
+    \J\n\
+    \\STX\EOT\DLE\DC2\EOTt\NUL{\SOH\SUB> An evenlope that holds an UTxO from any of compatible chains\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\DLE\SOH\DC2\ETXt\b\DC3\n\
+    \5\n\
+    \\EOT\EOT\DLE\STX\NUL\DC2\ETXu\STX\EM\"( Original bytes as defined by the chain\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\NUL\ENQ\DC2\ETXu\STX\a\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\NUL\SOH\DC2\ETXu\b\DC4\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\NUL\ETX\DC2\ETXu\ETB\CAN\n\
+    \0\n\
+    \\EOT\EOT\DLE\STX\SOH\DC2\ETXv\STX\NAK\"# Hash of the previous transaction.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\SOH\ACK\DC2\ETXv\STX\b\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\SOH\SOH\DC2\ETXv\t\DLE\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\SOH\ETX\DC2\ETXv\DC3\DC4\n\
+    \\f\n\
+    \\EOT\EOT\DLE\b\NUL\DC2\EOTw\STXy\ETX\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\b\NUL\SOH\DC2\ETXw\b\DC4\n\
+    \\GS\n\
+    \\EOT\EOT\DLE\STX\STX\DC2\ETXx\EOT0\"\DLE A cardano UTxO\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\STX\ACK\DC2\ETXx\EOT#\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\STX\SOH\DC2\ETXx$+\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\STX\ETX\DC2\ETXx./\n\
+    \R\n\
+    \\EOT\EOT\DLE\STX\ETX\DC2\ETXz\STX\ESC\"E The chain point that represents the block this UTxO was created in.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\ETX\ACK\DC2\ETXz\STX\f\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\ETX\SOH\DC2\ETXz\r\SYN\n\
+    \\f\n\
+    \\ENQ\EOT\DLE\STX\ETX\ETX\DC2\ETXz\EM\SUB\n\
+    \,\n\
+    \\STX\EOT\DC1\DC2\ENQ~\NUL\129\SOH\SOH\SUB\US Request to get specific UTxOs\n\
+    \\n\
+    \\n\
+    \\n\
+    \\ETX\EOT\DC1\SOH\DC2\ETX~\b\CAN\n\
+    \\"\n\
+    \\EOT\EOT\DC1\STX\NUL\DC2\ETX\DEL\STX\ESC\"\NAK List of keys UTxOs.\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\DC1\STX\NUL\EOT\DC2\ETX\DEL\STX\n\
+    \\n\
+    \\f\n\
+    \\ENQ\EOT\DC1\STX\NUL\ACK\DC2\ETX\DEL\v\DC1\n\
+    \\f\n\
+    \\ENQ\EOT\DC1\STX\NUL\SOH\DC2\ETX\DEL\DC2\SYN\n\
+    \\f\n\
+    \\ENQ\EOT\DC1\STX\NUL\ETX\DC2\ETX\DEL\EM\SUB\n\
+    \8\n\
+    \\EOT\EOT\DC1\STX\SOH\DC2\EOT\128\SOH\STX+\"* Field mask to selectively return fields.\n\
     \\n\
     \\r\n\
-    \\ENQ\ACK\NUL\STX\STX\SOH\DC2\EOT\172\SOH\ACK\DC1\n\
+    \\ENQ\EOT\DC1\STX\SOH\ACK\DC2\EOT\128\SOH\STX\ESC\n\
     \\r\n\
-    \\ENQ\ACK\NUL\STX\STX\STX\DC2\EOT\172\SOH\DC2$\n\
+    \\ENQ\EOT\DC1\STX\SOH\SOH\DC2\EOT\128\SOH\FS&\n\
     \\r\n\
-    \\ENQ\ACK\NUL\STX\STX\ETX\DC2\EOT\172\SOH/B\n\
+    \\ENQ\EOT\DC1\STX\SOH\ETX\DC2\EOT\128\SOH)*\n\
+    \V\n\
+    \\STX\EOT\DC2\DC2\ACK\132\SOH\NUL\135\SOH\SOH\SUBH Response containing the UTxOs associated with the requested addresses.\n\
+    \\n\
+    \\v\n\
+    \\ETX\EOT\DC2\SOH\DC2\EOT\132\SOH\b\EM\n\
+    \\RS\n\
+    \\EOT\EOT\DC2\STX\NUL\DC2\EOT\133\SOH\STX!\"\DLE List of UTxOs.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\NUL\EOT\DC2\EOT\133\SOH\STX\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\NUL\ACK\DC2\EOT\133\SOH\v\SYN\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\NUL\SOH\DC2\EOT\133\SOH\ETB\FS\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\NUL\ETX\DC2\EOT\133\SOH\US \n\
+    \K\n\
+    \\EOT\EOT\DC2\STX\SOH\DC2\EOT\134\SOH\STX\FS\"= The chain point that represent the ledger current position.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\SOH\ACK\DC2\EOT\134\SOH\STX\f\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\SOH\SOH\DC2\EOT\134\SOH\r\ETB\n\
+    \\r\n\
+    \\ENQ\EOT\DC2\STX\SOH\ETX\DC2\EOT\134\SOH\SUB\ESC\n\
+    \>\n\
+    \\STX\EOT\DC3\DC2\ACK\138\SOH\NUL\143\SOH\SOH\SUB0 Request to search for UTxO based on a pattern.\n\
+    \\n\
+    \\v\n\
+    \\ETX\EOT\DC3\SOH\DC2\EOT\138\SOH\b\SUB\n\
+    \*\n\
+    \\EOT\EOT\DC3\STX\NUL\DC2\EOT\139\SOH\STX'\"\FS Pattern to match UTxOs by.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\NUL\EOT\DC2\EOT\139\SOH\STX\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\NUL\ACK\DC2\EOT\139\SOH\v\CAN\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\NUL\SOH\DC2\EOT\139\SOH\EM\"\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\NUL\ETX\DC2\EOT\139\SOH%&\n\
+    \8\n\
+    \\EOT\EOT\DC3\STX\SOH\DC2\EOT\140\SOH\STX+\"* Field mask to selectively return fields.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\SOH\ACK\DC2\EOT\140\SOH\STX\ESC\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\SOH\SOH\DC2\EOT\140\SOH\FS&\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\SOH\ETX\DC2\EOT\140\SOH)*\n\
+    \6\n\
+    \\EOT\EOT\DC3\STX\STX\DC2\EOT\141\SOH\STX\US\"( The maximum number of items to return.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\STX\EOT\DC2\EOT\141\SOH\STX\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\STX\ENQ\DC2\EOT\141\SOH\v\DLE\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\STX\SOH\DC2\EOT\141\SOH\DC1\SUB\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\STX\ETX\DC2\EOT\141\SOH\GS\RS\n\
+    \S\n\
+    \\EOT\EOT\DC3\STX\ETX\DC2\EOT\142\SOH\STX\"\"E The next_page_token value returned from a previous request, if any.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\ETX\EOT\DC2\EOT\142\SOH\STX\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\ETX\ENQ\DC2\EOT\142\SOH\v\DC1\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\ETX\SOH\DC2\EOT\142\SOH\DC2\GS\n\
+    \\r\n\
+    \\ENQ\EOT\DC3\STX\ETX\ETX\DC2\EOT\142\SOH !\n\
+    \Q\n\
+    \\STX\EOT\DC4\DC2\ACK\146\SOH\NUL\150\SOH\SOH\SUBC Response containing the UTxOs that match the requested addresses.\n\
+    \\n\
+    \\v\n\
+    \\ETX\EOT\DC4\SOH\DC2\EOT\146\SOH\b\ESC\n\
+    \\RS\n\
+    \\EOT\EOT\DC4\STX\NUL\DC2\EOT\147\SOH\STX!\"\DLE List of UTxOs.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\NUL\EOT\DC2\EOT\147\SOH\STX\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\NUL\ACK\DC2\EOT\147\SOH\v\SYN\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\NUL\SOH\DC2\EOT\147\SOH\ETB\FS\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\NUL\ETX\DC2\EOT\147\SOH\US \n\
+    \K\n\
+    \\EOT\EOT\DC4\STX\SOH\DC2\EOT\148\SOH\STX\FS\"= The chain point that represent the ledger current position.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\SOH\ACK\DC2\EOT\148\SOH\STX\f\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\SOH\SOH\DC2\EOT\148\SOH\r\ETB\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\SOH\ETX\DC2\EOT\148\SOH\SUB\ESC\n\
+    \`\n\
+    \\EOT\EOT\DC4\STX\STX\DC2\EOT\149\SOH\STX!\"R Token to retrieve the next page of results, absent if there are no more results.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\STX\EOT\DC2\EOT\149\SOH\STX\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\STX\ENQ\DC2\EOT\149\SOH\v\DC1\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\STX\SOH\DC2\EOT\149\SOH\DC2\FS\n\
+    \\r\n\
+    \\ENQ\EOT\DC4\STX\STX\ETX\DC2\EOT\149\SOH\US \n\
+    \;\n\
+    \\STX\EOT\NAK\DC2\ACK\153\SOH\NUL\156\SOH\SOH\SUB- Request to get data (as in plural of datum)\n\
+    \\n\
+    \\v\n\
+    \\ETX\EOT\NAK\SOH\DC2\EOT\153\SOH\b\ETB\n\
+    \\f\n\
+    \\EOT\EOT\NAK\STX\NUL\DC2\EOT\154\SOH\STX\SUB\n\
+    \\r\n\
+    \\ENQ\EOT\NAK\STX\NUL\EOT\DC2\EOT\154\SOH\STX\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\NAK\STX\NUL\ENQ\DC2\EOT\154\SOH\v\DLE\n\
+    \\r\n\
+    \\ENQ\EOT\NAK\STX\NUL\SOH\DC2\EOT\154\SOH\DC1\NAK\n\
+    \\r\n\
+    \\ENQ\EOT\NAK\STX\NUL\ETX\DC2\EOT\154\SOH\CAN\EM\n\
+    \H\n\
+    \\EOT\EOT\NAK\STX\SOH\DC2\EOT\155\SOH\STX+\": Field mask to selectively return fields in the response.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\NAK\STX\SOH\ACK\DC2\EOT\155\SOH\STX\ESC\n\
+    \\r\n\
+    \\ENQ\EOT\NAK\STX\SOH\SOH\DC2\EOT\155\SOH\FS&\n\
+    \\r\n\
+    \\ENQ\EOT\NAK\STX\SOH\ETX\DC2\EOT\155\SOH)*\n\
+    \O\n\
+    \\STX\EOT\SYN\DC2\ACK\159\SOH\NUL\165\SOH\SOH\SUBA An evenlope that holds a datum for any of the compatible chains\n\
+    \\n\
+    \\v\n\
+    \\ETX\EOT\SYN\SOH\DC2\EOT\159\SOH\b\NAK\n\
+    \6\n\
+    \\EOT\EOT\SYN\STX\NUL\DC2\EOT\160\SOH\STX\EM\"( Original bytes as defined by the chain\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\NUL\ENQ\DC2\EOT\160\SOH\STX\a\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\NUL\SOH\DC2\EOT\160\SOH\b\DC4\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\NUL\ETX\DC2\EOT\160\SOH\ETB\CAN\n\
+    \\f\n\
+    \\EOT\EOT\SYN\STX\SOH\DC2\EOT\161\SOH\STX\DLE\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SOH\ENQ\DC2\EOT\161\SOH\STX\a\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SOH\SOH\DC2\EOT\161\SOH\b\v\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\SOH\ETX\DC2\EOT\161\SOH\SO\SI\n\
+    \\SO\n\
+    \\EOT\EOT\SYN\b\NUL\DC2\ACK\162\SOH\STX\164\SOH\ETX\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\b\NUL\SOH\DC2\EOT\162\SOH\b\DC4\n\
+    \\RS\n\
+    \\EOT\EOT\SYN\STX\STX\DC2\EOT\163\SOH\EOT2\"\DLE A cardano UTxO\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\STX\ACK\DC2\EOT\163\SOH\EOT%\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\STX\SOH\DC2\EOT\163\SOH&-\n\
+    \\r\n\
+    \\ENQ\EOT\SYN\STX\STX\ETX\DC2\EOT\163\SOH01\n\
+    \@\n\
+    \\STX\EOT\ETB\DC2\ACK\168\SOH\NUL\171\SOH\SOH\SUB2 Response containing data (as in plural of datum)\n\
+    \\n\
+    \\v\n\
+    \\ETX\EOT\ETB\SOH\DC2\EOT\168\SOH\b\CAN\n\
+    \(\n\
+    \\EOT\EOT\ETB\STX\NUL\DC2\EOT\169\SOH\STX$\"\SUB The value of each datum.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\ETB\STX\NUL\EOT\DC2\EOT\169\SOH\STX\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\ETB\STX\NUL\ACK\DC2\EOT\169\SOH\v\CAN\n\
+    \\r\n\
+    \\ENQ\EOT\ETB\STX\NUL\SOH\DC2\EOT\169\SOH\EM\US\n\
+    \\r\n\
+    \\ENQ\EOT\ETB\STX\NUL\ETX\DC2\EOT\169\SOH\"#\n\
+    \K\n\
+    \\EOT\EOT\ETB\STX\SOH\DC2\EOT\170\SOH\STX\FS\"= The chain point that represent the ledger current position.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\ETB\STX\SOH\ACK\DC2\EOT\170\SOH\STX\f\n\
+    \\r\n\
+    \\ENQ\EOT\ETB\STX\SOH\SOH\DC2\EOT\170\SOH\r\ETB\n\
+    \\r\n\
+    \\ENQ\EOT\ETB\STX\SOH\ETX\DC2\EOT\170\SOH\SUB\ESC\n\
+    \4\n\
+    \\STX\EOT\CAN\DC2\ACK\174\SOH\NUL\177\SOH\SOH\SUB& Request to get a transaction by hash\n\
+    \\n\
+    \\v\n\
+    \\ETX\EOT\CAN\SOH\DC2\EOT\174\SOH\b\NAK\n\
+    \,\n\
+    \\EOT\EOT\CAN\STX\NUL\DC2\EOT\175\SOH\STX\DC1\"\RS The hash of the transaction.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\CAN\STX\NUL\ENQ\DC2\EOT\175\SOH\STX\a\n\
+    \\r\n\
+    \\ENQ\EOT\CAN\STX\NUL\SOH\DC2\EOT\175\SOH\b\f\n\
+    \\r\n\
+    \\ENQ\EOT\CAN\STX\NUL\ETX\DC2\EOT\175\SOH\SI\DLE\n\
+    \H\n\
+    \\EOT\EOT\CAN\STX\SOH\DC2\EOT\176\SOH\STX+\": Field mask to selectively return fields in the response.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\CAN\STX\SOH\ACK\DC2\EOT\176\SOH\STX\ESC\n\
+    \\r\n\
+    \\ENQ\EOT\CAN\STX\SOH\SOH\DC2\EOT\176\SOH\FS&\n\
+    \\r\n\
+    \\ENQ\EOT\CAN\STX\SOH\ETX\DC2\EOT\176\SOH)*\n\
+    \G\n\
+    \\STX\EOT\EM\DC2\ACK\180\SOH\NUL\186\SOH\SOH\SUB9 Represents a transaction from any supported blockchain.\n\
+    \\n\
+    \\v\n\
+    \\ETX\EOT\EM\SOH\DC2\EOT\180\SOH\b\DC2\n\
+    \6\n\
+    \\EOT\EOT\EM\STX\NUL\DC2\EOT\181\SOH\STX\EM\"( Original bytes as defined by the chain\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\EM\STX\NUL\ENQ\DC2\EOT\181\SOH\STX\a\n\
+    \\r\n\
+    \\ENQ\EOT\EM\STX\NUL\SOH\DC2\EOT\181\SOH\b\DC4\n\
+    \\r\n\
+    \\ENQ\EOT\EM\STX\NUL\ETX\DC2\EOT\181\SOH\ETB\CAN\n\
+    \\SO\n\
+    \\EOT\EOT\EM\b\NUL\DC2\ACK\182\SOH\STX\184\SOH\ETX\n\
+    \\r\n\
+    \\ENQ\EOT\EM\b\NUL\SOH\DC2\EOT\182\SOH\b\r\n\
+    \&\n\
+    \\EOT\EOT\EM\STX\SOH\DC2\EOT\183\SOH\EOT*\"\CAN A Cardano transaction.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\EM\STX\SOH\ACK\DC2\EOT\183\SOH\EOT\GS\n\
+    \\r\n\
+    \\ENQ\EOT\EM\STX\SOH\SOH\DC2\EOT\183\SOH\RS%\n\
+    \\r\n\
+    \\ENQ\EOT\EM\STX\SOH\ETX\DC2\EOT\183\SOH()\n\
+    \V\n\
+    \\EOT\EOT\EM\STX\STX\DC2\EOT\185\SOH\STX\ESC\"H The chain point that represents the block this transaction belongs to.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\EM\STX\STX\ACK\DC2\EOT\185\SOH\STX\f\n\
+    \\r\n\
+    \\ENQ\EOT\EM\STX\STX\SOH\DC2\EOT\185\SOH\r\SYN\n\
+    \\r\n\
+    \\ENQ\EOT\EM\STX\STX\ETX\DC2\EOT\185\SOH\EM\SUB\n\
+    \W\n\
+    \\STX\EOT\SUB\DC2\ACK\189\SOH\NUL\192\SOH\SOH\SUBI Response containing the transaction associated with the requested hash.\n\
+    \\n\
+    \\v\n\
+    \\ETX\EOT\SUB\SOH\DC2\EOT\189\SOH\b\SYN\n\
+    \ \n\
+    \\EOT\EOT\SUB\STX\NUL\DC2\EOT\190\SOH\STX\DC4\"\DC2 The transaction.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SUB\STX\NUL\ACK\DC2\EOT\190\SOH\STX\f\n\
+    \\r\n\
+    \\ENQ\EOT\SUB\STX\NUL\SOH\DC2\EOT\190\SOH\r\SI\n\
+    \\r\n\
+    \\ENQ\EOT\SUB\STX\NUL\ETX\DC2\EOT\190\SOH\DC2\DC3\n\
+    \K\n\
+    \\EOT\EOT\SUB\STX\SOH\DC2\EOT\191\SOH\STX\FS\"= The chain point that represent the ledger current position.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\EOT\SUB\STX\SOH\ACK\DC2\EOT\191\SOH\STX\f\n\
+    \\r\n\
+    \\ENQ\EOT\SUB\STX\SOH\SOH\DC2\EOT\191\SOH\r\ETB\n\
+    \\r\n\
+    \\ENQ\EOT\SUB\STX\SOH\ETX\DC2\EOT\191\SOH\SUB\ESC\n\
+    \G\n\
+    \\STX\ACK\NUL\DC2\ACK\195\SOH\NUL\208\SOH\SOH\SUB9 Service definition for querying the state of the chain.\n\
+    \\n\
+    \\v\n\
+    \\ETX\ACK\NUL\SOH\DC2\EOT\195\SOH\b\DC4\n\
+    \(\n\
+    \\EOT\ACK\NUL\STX\NUL\DC2\EOT\196\SOH\STXA\"\SUB Get overall chain state.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\NUL\SOH\DC2\EOT\196\SOH\ACK\DLE\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\NUL\STX\DC2\EOT\196\SOH\DC1\"\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\NUL\ETX\DC2\EOT\196\SOH-?\n\
+    \1\n\
+    \\EOT\ACK\NUL\STX\SOH\DC2\EOT\197\SOH\STX>\"# Read specific UTxOs by reference.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\SOH\SOH\DC2\EOT\197\SOH\ACK\SI\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\SOH\STX\DC2\EOT\197\SOH\DLE \n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\SOH\ETX\DC2\EOT\197\SOH+<\n\
+    \3\n\
+    \\EOT\ACK\NUL\STX\STX\DC2\EOT\198\SOH\STXD\"% Search for UTxO based on a pattern.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\STX\SOH\DC2\EOT\198\SOH\ACK\DC1\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\STX\STX\DC2\EOT\198\SOH\DC2$\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\STX\ETX\DC2\EOT\198\SOH/B\n\
+    \+\n\
+    \\EOT\ACK\NUL\STX\ETX\DC2\EOT\199\SOH\STX;\"\GS Read specific datum by hash\n\
+    \\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\ETX\SOH\DC2\EOT\199\SOH\ACK\SO\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\ETX\STX\DC2\EOT\199\SOH\SI\RS\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\ETX\ETX\DC2\EOT\199\SOH)9\n\
+    \3\n\
+    \\EOT\ACK\NUL\STX\EOT\DC2\EOT\200\SOH\STX5\"% Get Txs by chain-specific criteria.\n\
+    \\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\EOT\SOH\DC2\EOT\200\SOH\ACK\f\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\EOT\STX\DC2\EOT\200\SOH\r\SUB\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\EOT\ETX\DC2\EOT\200\SOH%3\n\
     \-\n\
-    \\EOT\ACK\NUL\STX\ETX\DC2\EOT\173\SOH\STXD\"\US Get the chain genesis config.\n\
+    \\EOT\ACK\NUL\STX\ENQ\DC2\EOT\201\SOH\STXD\"\US Get the genesis configuration\n\
     \\n\
     \\r\n\
-    \\ENQ\ACK\NUL\STX\ETX\SOH\DC2\EOT\173\SOH\ACK\DC1\n\
+    \\ENQ\ACK\NUL\STX\ENQ\SOH\DC2\EOT\201\SOH\ACK\DC1\n\
     \\r\n\
-    \\ENQ\ACK\NUL\STX\ETX\STX\DC2\EOT\173\SOH\DC2$\n\
+    \\ENQ\ACK\NUL\STX\ENQ\STX\DC2\EOT\201\SOH\DC2$\n\
     \\r\n\
-    \\ENQ\ACK\NUL\STX\ETX\ETX\DC2\EOT\173\SOH/Bb\ACKproto3"
+    \\ENQ\ACK\NUL\STX\ENQ\ETX\DC2\EOT\201\SOH/B\n\
+    \)\n\
+    \\EOT\ACK\NUL\STX\ACK\DC2\EOT\202\SOH\STXM\"\ESC Get the chain era summary\n\
+    \\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\ACK\SOH\DC2\EOT\202\SOH\ACK\DC4\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\ACK\STX\DC2\EOT\202\SOH\NAK*\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\ACK\ETX\DC2\EOT\202\SOH5K\n\
+    \W\n\
+    \\EOT\ACK\NUL\STX\a\DC2\EOT\203\SOH\STX>\"I Run a chain-specific ledger-state query (e.g. stake pool distribution).\n\
+    \\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\a\SOH\DC2\EOT\203\SOH\ACK\SI\n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\a\STX\DC2\EOT\203\SOH\DLE \n\
+    \\r\n\
+    \\ENQ\ACK\NUL\STX\a\ETX\DC2\EOT\203\SOH+<b\ACKproto3"
