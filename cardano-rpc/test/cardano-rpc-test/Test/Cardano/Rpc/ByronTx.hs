@@ -98,6 +98,7 @@ hprop_byron_tx_to_utxorpc_tx = H.property $ do
     protoOutput ^. U5c.address === serialiseToRawBytes (ByronAddress address)
     coin <- utxoRpcBigIntToInteger $ protoOutput ^. U5c.coin
     coin === lovelaceToInteger value
+    protoOutput ^. U5c.originalCbor === mempty
 
   H.note_ "Witness arm routing: VKWitness -> bootstrap, RedeemWitness -> vkey"
   let protoWitnessSet :: Proto U5c.WitnessSet
