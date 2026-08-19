@@ -185,6 +185,18 @@ maybe'predicate ::
    Data.ProtoLens.Field.HasField s "maybe'predicate" a) =>
   Lens.Family2.LensLike' f s a
 maybe'predicate = Data.ProtoLens.Field.field @"maybe'predicate"
+maybe'query ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'query" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'query = Data.ProtoLens.Field.field @"maybe'query"
+maybe'result ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'result" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'result = Data.ProtoLens.Field.field @"maybe'result"
 maybe'startToken ::
   forall f s a.
   (Prelude.Functor f,
@@ -244,6 +256,16 @@ predicate ::
    Data.ProtoLens.Field.HasField s "predicate" a) =>
   Lens.Family2.LensLike' f s a
 predicate = Data.ProtoLens.Field.field @"predicate"
+query ::
+  forall f s a.
+  (Prelude.Functor f, Data.ProtoLens.Field.HasField s "query" a) =>
+  Lens.Family2.LensLike' f s a
+query = Data.ProtoLens.Field.field @"query"
+result ::
+  forall f s a.
+  (Prelude.Functor f, Data.ProtoLens.Field.HasField s "result" a) =>
+  Lens.Family2.LensLike' f s a
+result = Data.ProtoLens.Field.field @"result"
 slot ::
   forall f s a.
   (Prelude.Functor f, Data.ProtoLens.Field.HasField s "slot" a) =>

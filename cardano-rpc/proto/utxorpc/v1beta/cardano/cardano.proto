@@ -37,6 +37,7 @@ message TxOutput {
   repeated Multiasset assets = 3; // Additional native (non-ADA) assets in the output.
   optional Datum datum = 4; // Plutus data associated with the output.
   optional Script script = 5; // Script associated with the output.
+  optional bytes original_cbor = 6; // Original cbor-encoded output as seen on-chain.
 }
 
 message Datum {
@@ -108,6 +109,7 @@ message Tx {
   AuxData auxiliary = 12; // Auxiliary data not directly tied to the validation process
   bytes hash = 13; // Hash of the transaction that serves as main identifier
   repeated GovernanceActionProposal proposals = 14; // List of governance actions proposed
+  repeated VoterVotes votes = 15; // List of voters and their corresponding votes cast in this transaction
 }
 
 // Define a governance action proposal
@@ -134,6 +136,33 @@ message GovernanceAction {
 message GovernanceActionId {
   bytes transaction_id = 1;
   uint32 governance_action_index = 2;
+}
+
+// Valid vote choices for a governance action (CIP-1694).
+// On-chain CBOR mapping: No=0, Yes=1, Abstain=2.
+enum Vote {
+  VOTE_UNSPECIFIED = 0;
+  VOTE_NO = 1;
+  VOTE_YES = 2;
+  VOTE_ABSTAIN = 3;
+}
+
+// A single cast vote on a governance action.
+message VotingProcedure {
+  GovernanceActionId gov_action_id = 1; // ID of the governance action being voted on.
+  Vote vote = 2;                        // The vote cast.
+  optional Anchor anchor = 3;           // Optional anchor for voter rationale.
+}
+
+// Groups a voter with all votes they cast in the transaction.
+// SPOs can only identify via pool key hash; DReps and CC members may use key or script hash.
+message VoterVotes {
+  oneof voter {
+    StakeCredential constitutional_committee = 1; // Constitutional Committee member.
+    StakeCredential drep = 2;                     // Delegated Representative.
+    bytes spo = 3;                                // Stake Pool Operator (pool key hash).
+  }
+  repeated VotingProcedure votes = 4; // Votes cast by this voter.
 }
 
 message ParameterChangeAction {
@@ -511,6 +540,46 @@ message UpdateDRepCert {
   Anchor anchor = 2;
 }
 
+// LEDGER-STATE QUERIES
+// ====================
+//
+// Cardano-specific queries that mirror the Ouroboros node-to-client
+// LocalStateQuery mini-protocol. The oneof envelope lets new queries be
+// added later without changing the chain-agnostic QueryService surface.
+
+// Envelope of a Cardano ledger-state query.
+message StateQuery {
+  oneof query {
+    GetStakePoolDistribution stake_pool_distribution = 1; // Active stake distribution across pools.
+  }
+}
+
+// Envelope of a Cardano ledger-state query result.
+message StateData {
+  oneof result {
+    StakePoolDistribution stake_pool_distribution = 1; // Result of a stake pool distribution query.
+  }
+}
+
+// Stake pool distribution query. Mirrors Ouroboros GetPoolDistr / GetFilteredPoolDistr.
+message GetStakePoolDistribution {
+  // If non-empty, restrict the result to the listed pool key hashes.
+  // If empty, return the distribution for every pool.
+  repeated bytes pool_keyhashes = 1;
+}
+
+// Per-pool stake share. Mirrors Ouroboros IndividualPoolStake.
+message PoolStakeShare {
+  bytes pool_keyhash = 1; // Pool key hash (pool id).
+  RationalNumber stake_fraction = 2; // Fraction of total active stake delegated to this pool.
+  bytes vrf_keyhash = 3; // Pool's VRF key hash, as reported by the node.
+}
+
+// Result of a stake pool distribution query.
+message StakePoolDistribution {
+  repeated PoolStakeShare pools = 1; // One entry per pool present in the snapshot.
+}
+
 // PATTERN MATCHING
 // ================
 
@@ -669,7 +738,7 @@ message EraSummaries {
 message EvalReport {
   string msg = 1; // Human-readable message.
   optional RedeemerPurpose purpose = 2; // Purpose of the redeemer that produced this entry.
-  optional uint32 index = 3; // Index of the redeemer within its purpose.
+  optional uint32 index = 3; // 0-based index of the redeemer within its purpose.
 }
 
 // Result of evaluating a transaction against the current ledger state.
