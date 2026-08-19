@@ -135,6 +135,7 @@ hprop_byron_tx_to_utxorpc_tx = H.property $ do
   protoTx ^. U5c.mint === []
   protoTx ^. U5c.referenceInputs === []
   protoTx ^. U5c.proposals === []
+  protoTx ^. U5c.votes === []
   protoTx ^. U5c.maybe'validity === Nothing
   protoTx ^. U5c.maybe'collateral === Nothing
   protoTx ^. U5c.maybe'auxiliary === Nothing

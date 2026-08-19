@@ -31,7 +31,10 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate (txCertToUtxoRpcCertificate)
-import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance (proposalProcedureToUtxoRpcProposal)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance
+  ( proposalProcedureToUtxoRpcProposal
+  , voterVotesToUtxoRpcVoterVotes
+  )
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData (scriptDataToUtxoRpcPlutusData)
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Script (ledgerScriptToUtxoRpcScript)
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval (mkProtoRedeemer)
@@ -58,8 +61,8 @@ import Network.GRPC.Spec
 
 -- | Convert a ledger transaction to the UTxO RPC 'UtxoRpc.Tx' message.
 -- Populates hash, fee, successful, inputs, outputs, reference inputs, validity,
--- mint, withdrawals, collateral, certificates, witnesses, auxiliary data and
--- governance proposals, with spending, withdrawal and certificate redeemers
+-- mint, withdrawals, collateral, certificates, witnesses, auxiliary data,
+-- governance proposals and votes, with spending, withdrawal and certificate redeemers
 -- wired to their respective entries. Era-gated fields are read through the
 -- any-era getters, whose 'Nothing' maps to the proto default; the
 -- 'ShelleyBasedEra' witness is recovered from 'IsShelleyBasedEra' and brings
@@ -218,6 +221,11 @@ txToUtxoRpcTx ledgerTx = anyEraTxConstraints sbe $ do
         conwayOnwardsProposals =
           maybe [] (map proposalProcedureToUtxoRpcProposal . toList) $
             body ^. L.proposalProceduresTxBodyG
+      -- governance votes exist from Conway onwards
+      votes :: [Proto UtxoRpc.VoterVotes]
+      votes =
+        maybe [] (map (uncurry voterVotesToUtxoRpcVoterVotes) . M.toList . L.unVotingProcedures) $
+          body ^. L.votingProceduresTxBodyG
   defMessage
     & U5c.hash .~ serialiseToRawBytes (fromShelleyTxId (L.txIdTx ledgerTx))
     & U5c.inputs .~ inputs
@@ -233,6 +241,7 @@ txToUtxoRpcTx ledgerTx = anyEraTxConstraints sbe $ do
     & U5c.successful .~ isValid
     & U5c.maybe'auxiliary .~ auxiliary
     & U5c.proposals .~ proposals
+    & U5c.votes .~ votes
  where
   sbe = shelleyBasedEra @era
 
