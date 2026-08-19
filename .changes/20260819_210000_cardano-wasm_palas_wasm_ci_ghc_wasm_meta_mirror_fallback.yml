@@ -1,0 +1,6 @@
+description: |
+  Made the WASM CI job resilient to gitlab.haskell.org outages by pre-fetching the ghc-wasm-meta flake input with a fallback to a byte-identical, narHash-verified mirror on archive.org
+kind:
+  - maintenance
+pr: 1304
+project: cardano-wasm

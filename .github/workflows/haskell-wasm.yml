@@ -60,6 +60,29 @@ jobs:
         extra_nix_config: |
           accept-flake-config = true
 
+    # ghc-wasm-meta is the only flake input hosted on gitlab.haskell.org, whose
+    # availability is flaky, and an outage breaks every nix invocation below.
+    # Pre-fetch that input, falling back to a byte-identical mirror on
+    # archive.org. The narHash taken from flake.lock guarantees that whichever
+    # source responds yields exactly the locked content, and the nix
+    # invocations below then resolve the input locally without re-downloading.
+    - name: Fetch ghc-wasm-meta flake input (with archive.org mirror fallback)
+      run: |
+        rev=$(jq -r '.nodes["ghc-wasm-meta"].locked.rev' flake.lock)
+        narHash=$(jq -r '.nodes["ghc-wasm-meta"].locked.narHash' flake.lock)
+        hashQuery=${narHash//=/%3D}
+        if nix flake prefetch --option connect-timeout 60 --option download-attempts 2 \
+            "gitlab:haskell-wasm/ghc-wasm-meta/${rev}?host=gitlab.haskell.org&narHash=${hashQuery}"; then
+          echo "Fetched ghc-wasm-meta@${rev} from gitlab.haskell.org"
+        else
+          echo "::warning::gitlab.haskell.org is unavailable, falling back to the archive.org mirror of ghc-wasm-meta@${rev}"
+          nix flake prefetch \
+            "tarball+https://archive.org/download/ghc-wasm-meta-${rev}/ghc-wasm-meta-${rev}-${rev}.tar.gz?narHash=${hashQuery}" || {
+            echo "::error::The archive.org mirror does not serve ghc-wasm-meta@${rev}. If the flake input was re-pinned, upload the new GitLab archive tarball to an archive.org item named ghc-wasm-meta-${rev} (keeping GitLab's file name), or wait for gitlab.haskell.org to recover."
+            exit 1
+          }
+        fi
+
     - uses: rrbutani/use-nix-shell-action@v1
       with:
         devShell: .#wasm
