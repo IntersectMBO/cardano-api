@@ -1,0 +1,5 @@
+description: Rewrote the README with onboarding sections (overview, project structure, requirements, quick start, consumer setup and a verified usage example)
+kind:
+- documentation
+pr: 1300
+project: cardano-api
