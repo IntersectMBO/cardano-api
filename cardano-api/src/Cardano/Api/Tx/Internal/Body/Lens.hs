@@ -4,7 +4,8 @@
 
 {- HLINT ignore "Eta reduce" -}
 
--- TODO: Deprecate all the lenses that use eons. Explore parameterizing them on `Era era` instead.
+-- TODO: Deprecate the remaining eon lenses (the validity-interval compatibility
+-- lenses, adaAssetL and multiAssetL) once the ledger provides equivalents.
 
 module Cardano.Api.Tx.Internal.Body.Lens
   ( -- * Types
@@ -151,17 +152,33 @@ invalidHereAfterStrictL = lens g s
   s :: L.ValidityInterval -> StrictMaybe SlotNo -> L.ValidityInterval
   s (L.ValidityInterval a _) b = L.ValidityInterval a b
 
+{-# DEPRECATED
+  updateTxBodyL
+  "Use updateTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 updateTxBodyL
   :: ShelleyToBabbageEra era -> Lens' (LedgerTxBody era) (StrictMaybe (L.Update (ShelleyLedgerEra era)))
 updateTxBodyL w = shelleyToBabbageEraConstraints w $ txBodyL . L.updateTxBodyL
 
+{-# DEPRECATED
+  mintTxBodyL
+  "Use mintTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 mintTxBodyL :: MaryEraOnwards era -> Lens' (LedgerTxBody era) L.MultiAsset
 mintTxBodyL w = maryEraOnwardsConstraints w $ txBodyL . L.mintTxBodyL
 
+{-# DEPRECATED
+  scriptIntegrityHashTxBodyL
+  "Use scriptIntegrityHashTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 scriptIntegrityHashTxBodyL
   :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (StrictMaybe L.ScriptIntegrityHash)
 scriptIntegrityHashTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.scriptIntegrityHashTxBodyL
 
+{-# DEPRECATED
+  collateralInputsTxBodyL
+  "Use collateralInputsTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 collateralInputsTxBodyL
   :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set L.TxIn)
 collateralInputsTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.collateralInputsTxBodyL
@@ -179,33 +196,65 @@ reqSignerHashesTxBodyL w@AlonzoEraOnwardsConway = alonzoEraOnwardsConstraints w 
 -- lens to @AtMostEra "Conway"@ and stubs the instance with 'L.notSupportedInThisEraL'.
 reqSignerHashesTxBodyL AlonzoEraOnwardsDijkstra = L.notSupportedInThisEraL
 
+{-# DEPRECATED
+  referenceInputsTxBodyL
+  "Use referenceInputsTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 referenceInputsTxBodyL
   :: BabbageEraOnwards era -> Lens' (LedgerTxBody era) (Set L.TxIn)
 referenceInputsTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.referenceInputsTxBodyL
 
+{-# DEPRECATED
+  collateralReturnTxBodyL
+  "Use collateralReturnTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 collateralReturnTxBodyL
   :: BabbageEraOnwards era -> Lens' (LedgerTxBody era) (StrictMaybe (L.TxOut (ShelleyLedgerEra era)))
 collateralReturnTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.collateralReturnTxBodyL
 
+{-# DEPRECATED
+  totalCollateralTxBodyL
+  "Use totalCollateralTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 totalCollateralTxBodyL :: BabbageEraOnwards era -> Lens' (LedgerTxBody era) (StrictMaybe L.Coin)
 totalCollateralTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.totalCollateralTxBodyL
 
+{-# DEPRECATED
+  certsTxBodyL
+  "Use certsTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 certsTxBodyL
   :: ShelleyBasedEra era -> Lens' (LedgerTxBody era) (L.StrictSeq (L.TxCert (ShelleyLedgerEra era)))
 certsTxBodyL w = shelleyBasedEraConstraints w $ txBodyL . L.certsTxBodyL
 
+{-# DEPRECATED
+  votingProceduresTxBodyL
+  "Use votingProceduresTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 votingProceduresTxBodyL
   :: ConwayEraOnwards era -> Lens' (LedgerTxBody era) (L.VotingProcedures (ShelleyLedgerEra era))
 votingProceduresTxBodyL w = obtainCommonConstraints (convert w) $ txBodyL . L.votingProceduresTxBodyL
 
+{-# DEPRECATED
+  proposalProceduresTxBodyL
+  "Use proposalProceduresTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 proposalProceduresTxBodyL
   :: ConwayEraOnwards era
   -> Lens' (LedgerTxBody era) (L.OSet (L.ProposalProcedure (ShelleyLedgerEra era)))
 proposalProceduresTxBodyL w = obtainCommonConstraints (convert w) $ txBodyL . L.proposalProceduresTxBodyL
 
+{-# DEPRECATED
+  currentTreasuryValueTxBodyL
+  "Use currentTreasuryValueTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 currentTreasuryValueTxBodyL :: ConwayEraOnwards era -> Lens' (LedgerTxBody era) (StrictMaybe L.Coin)
 currentTreasuryValueTxBodyL w = obtainCommonConstraints (convert w) $ txBodyL . L.currentTreasuryValueTxBodyL
 
+{-# DEPRECATED
+  treasuryDonationTxBodyL
+  "Use treasuryDonationTxBodyL from Cardano.Api.Ledger (via txBodyL) instead."
+  #-}
 treasuryDonationTxBodyL :: ConwayEraOnwards era -> Lens' (LedgerTxBody era) L.Coin
 treasuryDonationTxBodyL w = obtainCommonConstraints (convert w) $ txBodyL . L.treasuryDonationTxBodyL
 
@@ -245,9 +294,17 @@ multiAssetL w =
       (\(L.MaryValue _ ma) -> ma)
       (\(L.MaryValue c _) ma -> L.MaryValue c ma)
 
+{-# DEPRECATED
+  valueTxOutL
+  "Use valueTxOutL from Cardano.Api.Ledger instead."
+  #-}
 valueTxOutL
   :: ShelleyBasedEra era -> Lens' (L.TxOut (ShelleyLedgerEra era)) (L.Value (ShelleyLedgerEra era))
 valueTxOutL sbe = shelleyBasedEraConstraints sbe L.valueTxOutL
 
+{-# DEPRECATED
+  valueTxOutAdaAssetL
+  "Use coinTxOutL from Cardano.Api.Ledger instead."
+  #-}
 valueTxOutAdaAssetL :: ShelleyBasedEra era -> Lens' (L.TxOut (ShelleyLedgerEra era)) L.Coin
 valueTxOutAdaAssetL sbe = valueTxOutL sbe . adaAssetL sbe

@@ -868,7 +868,7 @@ fromShelleyTxOut
   -> L.TxOut (ShelleyLedgerEra era)
   -> TxOut ctx era
 fromShelleyTxOut sbe ledgerTxOut = shelleyBasedEraConstraints sbe $ do
-  let txOutValue = TxOutValueShelleyBased sbe $ ledgerTxOut ^. A.valueTxOutL sbe
+  let txOutValue = TxOutValueShelleyBased sbe $ ledgerTxOut ^. L.valueTxOutL
   let addressInEra = fromShelleyAddr sbe $ ledgerTxOut ^. L.addrTxOutL
 
   case sbe of
