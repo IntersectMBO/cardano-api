@@ -166,6 +166,10 @@ collateralInputsTxBodyL
   :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set L.TxIn)
 collateralInputsTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.collateralInputsTxBodyL
 
+{-# DEPRECATED
+  reqSignerHashesTxBodyL
+  "Use reqSignerHashesTxBodyL from Cardano.Api.Ledger (via txBodyL) instead, or reqSignerHashesTxBodyG for reads. The required-signer-hashes field does not exist in the Dijkstra era, where this lens errors."
+  #-}
 reqSignerHashesTxBodyL
   :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set (L.KeyHash L.Guard))
 reqSignerHashesTxBodyL w@AlonzoEraOnwardsAlonzo = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL

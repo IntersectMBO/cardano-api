@@ -97,10 +97,7 @@ type AllegraEraOnwardsConstraints era =
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody L.TopTx (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.AllegraEraTxBody (ShelleyLedgerEra era)
-  , -- L.ShelleyEraTxCert dropped: gated by AtMostEra "Conway" in the ledger, so
-    -- Dijkstra cannot satisfy it. Callsites needing Shelley-style certs must
-    -- require ShelleyEraTxCert (ShelleyLedgerEra era) explicitly.
-    L.EraTxCert (ShelleyLedgerEra era)
+  , L.EraTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era

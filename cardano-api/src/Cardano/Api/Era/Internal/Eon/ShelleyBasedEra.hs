@@ -237,11 +237,7 @@ type ShelleyBasedEraConstraints era =
   , L.EraCertState (ShelleyLedgerEra era)
   , L.EraAccounts (ShelleyLedgerEra era)
   , L.EraGov (ShelleyLedgerEra era)
-  , -- L.ShelleyEraTxCert dropped: gated by AtMostEra "Conway" in the ledger, so
-    -- Dijkstra cannot satisfy it. Callsites that construct Shelley-style certs
-    -- must require ShelleyEraTxCert (ShelleyLedgerEra era) explicitly — that
-    -- naturally excludes Dijkstra at the type level.
-    FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (L.TxCert (ShelleyLedgerEra era))
   , HasTypeProxy era
   , IsCardanoEra era
