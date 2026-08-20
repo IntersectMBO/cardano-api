@@ -132,6 +132,7 @@ library
     bytestring,
     bytestring-trie,
     cardano-addresses ^>=4.0.0,
+    cardano-base ^>=0.1,
     cardano-binary >=1.9.1,
     cardano-crypto,
     cardano-crypto-class ^>=2.6,

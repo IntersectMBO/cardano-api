@@ -141,8 +141,8 @@ txToUtxoRpcTx ledgerTx = anyEraTxConstraints sbe $ do
           defMessage
             & U5c.vkey .~ DSIGN.rawEncodeFixedSized bootstrapKey
             & U5c.signature .~ DSIGN.rawEncodeFixedSized bootstrapSignature
-            & U5c.chainCode .~ L.unChainCode (L.bwChainCode bootstrapWitness)
-            & U5c.attributes .~ L.bwAttributes bootstrapWitness
+            & U5c.chainCode .~ SBS.fromShort (byteArrayToShortByteString (L.unChainCode (L.bwChainCode bootstrapWitness)))
+            & U5c.attributes .~ SBS.fromShort (byteArrayToShortByteString (L.bwAttributes bootstrapWitness))
       scriptWitnesses :: [Proto UtxoRpc.Script]
       scriptWitnesses =
         M.elems (wits ^. L.scriptTxWitsL) <&> ledgerScriptToUtxoRpcScript sbe
