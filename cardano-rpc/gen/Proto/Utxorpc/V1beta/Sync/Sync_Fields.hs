@@ -84,12 +84,6 @@ maybe'apply ::
    Data.ProtoLens.Field.HasField s "maybe'apply" a) =>
   Lens.Family2.LensLike' f s a
 maybe'apply = Data.ProtoLens.Field.field @"maybe'apply"
-maybe'block ::
-  forall f s a.
-  (Prelude.Functor f,
-   Data.ProtoLens.Field.HasField s "maybe'block" a) =>
-  Lens.Family2.LensLike' f s a
-maybe'block = Data.ProtoLens.Field.field @"maybe'block"
 maybe'cardano ::
   forall f s a.
   (Prelude.Functor f,
@@ -114,12 +108,6 @@ maybe'nextToken ::
    Data.ProtoLens.Field.HasField s "maybe'nextToken" a) =>
   Lens.Family2.LensLike' f s a
 maybe'nextToken = Data.ProtoLens.Field.field @"maybe'nextToken"
-maybe'ref ::
-  forall f s a.
-  (Prelude.Functor f,
-   Data.ProtoLens.Field.HasField s "maybe'ref" a) =>
-  Lens.Family2.LensLike' f s a
-maybe'ref = Data.ProtoLens.Field.field @"maybe'ref"
 maybe'reset ::
   forall f s a.
   (Prelude.Functor f,
@@ -205,3 +193,8 @@ vec'intersect ::
    Data.ProtoLens.Field.HasField s "vec'intersect" a) =>
   Lens.Family2.LensLike' f s a
 vec'intersect = Data.ProtoLens.Field.field @"vec'intersect"
+vec'ref ::
+  forall f s a.
+  (Prelude.Functor f, Data.ProtoLens.Field.HasField s "vec'ref" a) =>
+  Lens.Family2.LensLike' f s a
+vec'ref = Data.ProtoLens.Field.field @"vec'ref"
