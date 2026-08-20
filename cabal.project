@@ -164,8 +164,8 @@ if impl(ghc >=9.14)
 
 -- TEMPORARY: switching to crypton >= 1.1 (which depends on `ram` instead of
 -- `memory`) needs cardano-crypto-class-2.6.0.0 (the first version depending
--- on crypton ^>=1.1 and `ram`), but the released ouroboros-consensus-3.0.1.0
--- pins `cardano-crypto-class ^>=2.3`, which excludes it. The blocks below
+-- on crypton ^>=1.1 and `ram`), but the released ouroboros-consensus-4.1.0.0
+-- pins `cardano-crypto-class ^>=2.5`, which excludes it. The blocks below
 -- replicate the (draft, do-not-merge) upstream fix in
 -- https://github.com/IntersectMBO/ouroboros-consensus/pull/2213, which widens
 -- ouroboros-consensus's bound to also allow cardano-crypto-class-2.6.0.0 and
@@ -184,7 +184,7 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 4da82e0afed5dabbe930d5f5cad5de687428e07b
+  tag: 206dffef96e76e42e15a1fb9fd6796394aef3409
 
 -- TEMPORARY: pulls in cardano-base PR #694 (erikd/contra-tracer, not yet
 -- merged) https://github.com/IntersectMBO/cardano-base/pull/694, which widens
