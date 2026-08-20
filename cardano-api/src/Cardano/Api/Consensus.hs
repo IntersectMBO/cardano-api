@@ -53,6 +53,7 @@ module Cardano.Api.Consensus
     -- * Reexports from @ouroboros-consensus@
   , BlockComponent (..)
   , ByronBlock
+  , ByronPartialLedgerConfig (..)
   , CardanoBlock
   , ChainDB.ChainDB
   , ChainDB.ChainType (..)
@@ -66,6 +67,7 @@ module Cardano.Api.Consensus
   , ChainDepState
   , GenTx (..)
   , EraMismatch (..)
+  , HardForkLedgerConfig (..)
   , HasHardForkHistory (..)
   , HasHeader
   , Header
@@ -73,16 +75,20 @@ module Cardano.Api.Consensus
   , NodeKernel (..)
   , OneEraHash (..)
   , PastHorizonException
+  , PerEraLedgerConfig (..)
   , PraosProtocolSupportsNode
   , PraosProtocolSupportsNodeCrypto
   , RealPoint (..)
   , ResourceRegistry
   , SecurityParam (..)
   , ShelleyGenesisStaking (..)
+  , ShelleyPartialLedgerConfig (..)
   , StandardCrypto
   , TopLevelConfig
+  , WrapPartialLedgerConfig (..)
   , ledgerState
   , shelleyLedgerGenesis
+  , shelleyLedgerTranslationContext
   , blockHash
   , blockNo
   , blockSlot

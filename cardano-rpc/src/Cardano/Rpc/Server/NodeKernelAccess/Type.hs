@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
@@ -7,12 +8,20 @@ module Cardano.Rpc.Server.NodeKernelAccess.Type
   )
 where
 
-import Cardano.Api (EraHistory, GenesisHashShelley, SystemStart)
+import Cardano.Api
+  ( EraHistory
+  , FileDirection (In)
+  , GenesisHashShelley
+  , ShelleyGenesisFile
+  , SystemStart
+  )
 import Cardano.Api.Consensus qualified as Consensus
+import Cardano.Rpc.Server.Internal.TimedCache (TimedCache)
 
 import Cardano.Chain.Genesis qualified as Byron (Config)
-import Cardano.Ledger.Api.Era qualified as L (LatestKnownEra)
-import Cardano.Ledger.Api.Transition qualified as L (TransitionConfig)
+import Cardano.Ledger.Alonzo.Genesis qualified as L (AlonzoGenesis)
+import Cardano.Ledger.Conway.Genesis qualified as L (ConwayGenesis)
+import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis)
 
 import Control.Monad.IO.Class (MonadIO)
 
@@ -35,20 +44,27 @@ data NodeKernelAccess = NodeKernelAccess
   -- than /k/ blocks.
   , genesisConfig :: GenesisBundle
   -- ^ The network's genesis configuration.
-  -- Genesis data never changes after startup, so it is read once and stored
-  -- as a pure value.
+  -- Genesis data never changes after startup. Most of it is shared with the
+  -- running node. The Shelley genesis is read from its file when a caller
+  -- asks for it, and dropped again afterwards.
   }
 
 -- | The per-era genesis configuration of the network the node is running on.
 --
--- Gathered once, when the node kernel hook fires. The Byron genesis and the
--- Shelley-onwards transition config are both read straight off
--- 'Consensus.CardanoProtocolParams', part of cardano-node's boot-time
--- 'Consensus.ProtocolInfoArgs'. No hard-fork navigation is needed.
+-- Gathered once, when the node kernel hook fires, by walking the per-era ledger
+-- configs of the node kernel's 'Consensus.TopLevelConfig'. The Byron, Alonzo and
+-- Conway genesis values are the ones the running node holds, shared with it
+-- rather than copied. Nothing is kept from cardano-node's boot-time
+-- 'Consensus.ProtocolInfoArgs', whose Shelley genesis reaches gigabytes on
+-- networks with large initial fund sets.
 --
--- The Shelley genesis hash is the exception: 'Consensus.ProtocolInfoArgs'
--- does not carry it, so it is threaded in separately from cardano-node's own
--- boot-time genesis parsing (see
+-- The Shelley genesis is not kept here at all. All the node has is a compacted
+-- copy with the initial funds erased, which is no use to a caller, so
+-- 'shelleyGenesis' holds the file and a cache instead and the genesis is read
+-- from disk when someone asks for it.
+--
+-- The Shelley genesis hash and file path come from cardano-node's own boot-time
+-- genesis parsing, because the ledger config carries neither (see
 -- 'Cardano.Rpc.Server.NodeKernelAccess.mkNodeKernelAccess').
 data GenesisBundle = GenesisBundle
   { byronConfig :: !Byron.Config
@@ -56,10 +72,17 @@ data GenesisBundle = GenesisBundle
   -- the hash the Byron ledger computed when it parsed the file.
   , shelleyGenesisHash :: !GenesisHashShelley
   -- ^ Blake2b-256 hash of the raw Shelley genesis file bytes.
-  , transitionConfig :: !(L.TransitionConfig L.LatestKnownEra)
-  -- ^ The Shelley-onwards genesis configuration, in the same representation
-  -- 'Cardano.Api.LedgerState.GenesisConfig' uses.
-  -- It retains the full parsed Shelley genesis, including @sgInitialFunds@
-  -- and @sgStaking@; consensus keeps only a compacted copy with those fields
-  -- erased.
+  , shelleyGenesis :: !(ShelleyGenesisFile In, TimedCache L.ShelleyGenesis)
+  -- ^ The Shelley genesis file the node booted from, and a cache of that file
+  -- parsed in full, with the initial funds resolved. The two belong together:
+  -- the path is what the cache loads from. The cache starts empty, is filled by
+  -- the first request that needs the genesis, and empties itself once five
+  -- minutes have passed without another one. A node whose genesis nobody asks
+  -- about therefore keeps none of it in memory (issue #1314).
+  , alonzoGenesis :: !L.AlonzoGenesis
+  -- ^ The Alonzo genesis, which the ledger keeps as the Alonzo translation
+  -- context.
+  , conwayGenesis :: !L.ConwayGenesis
+  -- ^ The Conway genesis, which the ledger keeps as the Conway translation
+  -- context.
   }
