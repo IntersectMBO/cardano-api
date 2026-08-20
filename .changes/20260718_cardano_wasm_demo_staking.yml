@@ -1,0 +1,9 @@
+project: cardano-wasm
+
+pr: 1290
+
+kind:
+  - feature
+
+description: |
+  Demo: staking certificates (register/delegate/unregister), paginated pool picker, stake witnesses.

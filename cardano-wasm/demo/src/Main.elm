@@ -7,7 +7,8 @@ module Main exposing (main)
   - Update — the controller (one branch per Msg)
   - View — the whole UI
   - Wasm — the cardano-wasm boundary (port commands + decoders)
-  - Net / Format — static tables and pure utilities
+  - Blockfrost — the chain-data boundary (HTTP)
+  - Net / Format / Hex / Bech32 — static tables and pure utilities
   - Ports — the raw port declarations (JS side: web/ports.js)
 
 -}

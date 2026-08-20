@@ -33,7 +33,7 @@ type alias Utxo =
     { txId : String
     , txIx : Int
     , lovelace : Int
-    , selected : Bool -- ticked as an input in the payment builder
+    , selected : Bool
     , hasAssets : Bool -- carries native tokens; unusable as input in this ADA-only demo
     }
 
@@ -83,20 +83,47 @@ type alias Output =
     }
 
 
-{-| Which family of networks an address belongs to. Addresses only encode
-mainnet-vs-testnet, so preprod and preview cannot be told apart.
--}
-type NetKind
-    = MainKind
-    | TestKind
+type CertAction
+    = Register
+    | RegisterAndDelegate PoolRef
+    | DelegateOnly PoolRef
+    | Unregister
 
 
-{-| Result of cardano-wasm's inspectAddress for one address.
+{-| What a certificate remembers about its pool, captured at pick time: the
+bech32 id and ticker for display, and Blockfrost's authoritative hex, which is
+what goes into the certificate. Pinning these here means a certificate never
+depends on which picker page happens to be loaded later.
 -}
-type AddrCheck
-    = CheckInvalid
-    | CheckValid NetKind
-    | CheckFailed -- the checker itself errored; not a verdict about the address
+type alias PoolRef =
+    { bech32 : String
+    , hex : String
+    , ticker : Maybe String
+    }
+
+
+type alias Certificate =
+    { wallet : WalletId
+    , action : CertAction
+    }
+
+
+type alias Pool =
+    { idBech32 : String
+    , idHex : String
+    , ticker : Maybe String -- pools without registered metadata have none
+    , liveStake : Int
+    , saturation : Float
+    }
+
+
+{-| One fetched page of the pool list. `hasMore` is computed at the fetch
+boundary: a full Blockfrost page means a next one probably exists.
+-}
+type alias PoolPage =
+    { pools : List Pool
+    , hasMore : Bool
+    }
 
 
 type Era
@@ -122,6 +149,22 @@ type alias SignedPayload =
     { cbor : String, txId : String }
 
 
+{-| Which family of networks an address belongs to. Addresses only encode
+mainnet-vs-testnet, so preprod and preview cannot be told apart.
+-}
+type NetKind
+    = MainKind
+    | TestKind
+
+
+{-| Result of cardano-wasm's inspectAddress for one address.
+-}
+type AddrCheck
+    = CheckInvalid
+    | CheckValid NetKind
+    | CheckFailed -- the checker itself errored; not a verdict about the address
+
+
 type TxState
     = Draft
     | Signing
@@ -135,17 +178,28 @@ type SubmitState
     | SubmitFailed String
 
 
+type DelegKind
+    = RegThenDeleg
+    | DelegOnly
+
+
+type PoolPurpose
+    = ForNewCert WalletId DelegKind
+    | ForEditCert Int
+
+
 type Modal
     = NoModal
+    | PoolPicker PoolPurpose String
     | ForgetDialog WalletId
-
-
-type alias BookForm =
-    { open : Bool, alias : String, address : String }
 
 
 type alias RestoreForm =
     { open : Bool, paymentSkey : String, stakeSkey : String }
+
+
+type alias BookForm =
+    { open : Bool, alias : String, address : String }
 
 
 type LogLevel
@@ -187,18 +241,21 @@ type alias Model =
     , nextWid : Int
     , book : List BookEntry
     , outputs : List Output
+    , certs : List Certificate
     , era : Era
     , fee : FeeState
     , feeText : String
     , tx : TxState
     , submit : SubmitState
+    , pools : Loadable PoolPage -- the page of pools currently shown in the picker
+    , poolPage : Int -- its 1-based page number (one server page per view)
     , modal : Modal
-    , bfKeys : BfKeys
     , restore : RestoreForm
     , bookForm : BookForm
     , console : List LogLine
     , toast : Maybe String
     , toastSeq : Int
+    , bfKeys : BfKeys
     , addrChecks : Dict String AddrCheck -- inspectAddress results, keyed by address
     , protocol : Protocol
     }
@@ -210,6 +267,7 @@ type alias BfKeys =
 
 type Msg
     = SelectNetwork Network
+    | UpdateBfKey String
     | ClickNewWallet
     | GotGeneratedWallet (Result String GenPayload)
     | ClickRestoreToggle
@@ -224,7 +282,6 @@ type Msg
     | RequestForget WalletId
     | ConfirmForget WalletId
     | CancelForget
-    | UpdateBfKey String
     | ClickLoadUtxos WalletId
     | ClickLoadAll
     | GotUtxos WalletId Network (Result String UtxoPage)
@@ -239,16 +296,26 @@ type Msg
     | UpdateOutputAmount Int String
     | ToggleOutputChange Int
     | DeleteOutput Int
+    | SetWalletCert WalletId String
+    | DeleteCertificate Int
+    | ChangeCertPool Int
     | ClearInputs
     | ClearOutputs
+    | ClearCerts
     | ClearTx
-    | GotAddressInspected (Result String ( String, AddrCheck ))
+    | UpdatePoolSearch String
+    | PickPool PoolRef
+    | ClosePoolModal
+    | ClickLoadPools
+    | ClickPoolPage Int
+    | GotPools Network Int (Result String PoolPage)
     | SelectEra Era
     | ClickEstimateFee
     | GotFeeEstimated (Result String Int)
     | UpdateFeeText String
     | ClickSign
     | GotTxSigned (Result String SignedPayload)
+    | GotAddressInspected (Result String ( String, AddrCheck ))
     | ClickDownloadCli
     | ClickSubmit
     | GotSubmitted String (Result String String)

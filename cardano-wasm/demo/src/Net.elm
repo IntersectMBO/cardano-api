@@ -12,6 +12,7 @@ module Net exposing
     )
 
 {-| Static tables: the three networks and the two eras. Pure data — no logic
+lives here.
 -}
 
 import Types exposing (..)
