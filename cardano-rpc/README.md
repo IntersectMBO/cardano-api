@@ -7,7 +7,9 @@ It implements [UTxO RPC](https://utxorpc.org/introduction) protobuf communicatio
 
 ## UTxO RPC v1beta spec coverage
 
-Methods marked as not supported are exposed by the server but respond with the `UNIMPLEMENTED` gRPC status.
+Methods marked ⬜ or ❌ are exposed by the server but respond with the `UNIMPLEMENTED` gRPC status.
+Methods marked ❌ cannot be served by `cardano-node` at all: they need a whole-chain index (transaction by hash, datum by hash) that the node does not maintain, and supporting them would mean building an external chain indexer into the node.
+Use a dedicated chain indexing service for those.
 
 ### [QueryService](https://utxorpc.org/query/spec/)
 
@@ -16,8 +18,8 @@ Methods marked as not supported are exposed by the server but respond with the `
 | [ReadParams](https://utxorpc.org/query/spec/#readparamsrequest) | ✅ Supported |
 | [ReadUtxos](https://utxorpc.org/query/spec/#readutxosrequest) | ✅ Supported |
 | [SearchUtxos](https://utxorpc.org/query/spec/#searchutxosrequest) | ✅ Supported |
-| [ReadData](https://utxorpc.org/query/spec/#readdatarequest) | ⬜ Not supported |
-| [ReadTx](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
+| [ReadData](https://utxorpc.org/query/spec/#readdatarequest) | ❌ Not supported, needs a chain indexer |
+| [ReadTx](https://utxorpc.org/query/spec/#queryservice) | ❌ Not supported, needs a chain indexer |
 | [ReadGenesis](https://utxorpc.org/query/spec/#queryservice) | ✅ Supported |
 | [ReadEraSummary](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
 | [ReadState](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
