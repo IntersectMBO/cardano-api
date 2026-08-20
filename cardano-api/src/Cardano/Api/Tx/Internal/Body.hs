@@ -1274,7 +1274,7 @@ createTransactionBody sbe bc =
                     | (_, AnyScriptWitness scriptwitness) <-
                         collectTxBodyScriptWitnesses sbe bc
                     ]
-            return (TxBodyNoScriptData, SNothing, scripts)
+            return (TxBodyNoScriptData, SNothing :: StrictMaybe L.ScriptIntegrityHash, scripts)
         )
         ( \aeon -> alonzoEraOnwardsConstraints aeon $ do
             TxScriptWitnessRequirements languages scripts dats redeemers <-
