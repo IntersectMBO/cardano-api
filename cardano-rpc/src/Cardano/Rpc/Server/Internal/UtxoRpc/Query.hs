@@ -28,13 +28,13 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Orphans ()
+import Cardano.Rpc.Server.Internal.TimedCache (readThroughCache)
 import Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type
 import Cardano.Rpc.Server.NodeKernelAccess
 
 import Cardano.Crypto.Hash.Class qualified as Crypto (hashToBytes)
-import Cardano.Ledger.Api.Transition qualified as L (tcShelleyGenesisL)
-import Cardano.Ledger.Shelley.Genesis qualified as L (sgNetworkMagic)
+import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis, sgNetworkMagic)
 
 import RIO hiding (toList)
 
@@ -42,9 +42,13 @@ import Control.Error.Util (hush)
 import Data.Default
 import Data.List (sortBy)
 import Data.ProtoLens (defMessage)
+import Data.Text qualified as Text (pack)
 import Data.Time.Clock (UTCTime)
 import GHC.IsList
 import Network.GRPC.Spec
+import System.FS.API (MountPoint (..), SomeHasFS (..))
+import System.FS.IO (ioHasFS)
+import System.FilePath (takeDirectory)
 
 -- | Handle the @ReadParams@ RPC method.
 -- Queries the node for current protocol parameters and returns them
@@ -170,20 +174,84 @@ searchUtxosMethod req = do
 -- Returns the chain's identity - the Shelley genesis hash and the CAIP-2 chain
 -- identifier - together with the @cardano@ config, the Byron, Shelley, Alonzo
 -- and Conway genesis parameters mapped by 'genesisBundleToProto'.
+--
+-- The whole Shelley genesis comes from the bundle's cache, so the file is only
+-- read on a cache miss. The @FAILED_PRECONDITION@ that
+-- 'readShelleyGenesisWithInitialFunds' raises for a genesis file that has
+-- changed since the node started is therefore raised on cache misses only: a
+-- file edited while the cache is warm goes unnoticed until the cache next
+-- empties, which is at most five idle minutes later.
 readGenesisMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadGenesisRequest
   -> m (Proto UtxoRpc.ReadGenesisResponse)
 readGenesisMethod _req = do
   -- TODO: field masks are ignored for now (same as readParamsMethod)
-  NodeKernelAccess{genesisConfig = genesisBundle@GenesisBundle{shelleyGenesisHash, transitionConfig}} <-
+  NodeKernelAccess
+    { genesisConfig =
+      genesisBundle@GenesisBundle
+        { shelleyGenesisHash
+        , shelleyGenesis = (shelleyGenesisFile, shelleyGenesisCache)
+        }
+    } <-
     grabNodeKernelAccess
-  let networkMagic = L.sgNetworkMagic $ transitionConfig ^. L.tcShelleyGenesisL
+  shelleyGenesis <-
+    readThroughCache shelleyGenesisCache $
+      readShelleyGenesisWithInitialFunds shelleyGenesisFile shelleyGenesisHash
   pure $
     defMessage
       & U5c.genesis .~ Crypto.hashToBytes (unGenesisHashShelley shelleyGenesisHash)
-      & U5c.caip2 .~ networkMagicToCaip2 networkMagic
-      & U5c.cardano .~ genesisBundleToProto genesisBundle
+      & U5c.caip2 .~ networkMagicToCaip2 (L.sgNetworkMagic shelleyGenesis)
+      & U5c.cardano .~ genesisBundleToProto genesisBundle shelleyGenesis
+
+-- | Re-read the Shelley genesis file to recover the network's initial funds.
+--
+-- The genesis consensus keeps in memory is compacted, with the initial funds
+-- erased, so the file is the only place they can come from.
+readShelleyGenesisWithInitialFunds
+  :: forall e m
+   . MonadRpc e m
+  => ShelleyGenesisFile In
+  -- ^ Path to the Shelley genesis file, as the node was configured with it
+  -> GenesisHashShelley
+  -- ^ Blake2b-256 hash the node computed over that file at startup
+  -> m L.ShelleyGenesis
+readShelleyGenesisWithInitialFunds shelleyGenesisFile@(File path) bootGenesisHash = do
+  -- 'readShelleyGenesis' is the node's own boot-time path: it reads the bytes,
+  -- hashes them and checks them against the hash we pass in, then decodes.
+  -- Running it at IO because its 'MonadIOTransError' needs a 'MonadCatch' that
+  -- 'MonadRpc' does not provide.
+  ShelleyConfig bootGenesis _ <-
+    either rejectGenesisFile pure
+      =<< liftIO (runExceptT (readShelleyGenesis shelleyGenesisFile (Just bootGenesisHash)))
+  -- An injection file is named relative to the genesis file's own directory,
+  -- which is where consensus mounts it when it injects the funds itself.
+  let genesisDirectory = SomeHasFS . ioHasFS . MountPoint $ takeDirectory path
+  either (rejectInitialFunds . displayException) pure
+    =<< tryAny (liftIO $ resolveShelleyInitialFunds genesisDirectory bootGenesis)
+ where
+  -- Both helpers carry explicit signatures because their result type is
+  -- polymorphic, which MonoLocalBinds would otherwise refuse to generalise on
+  -- GHC 9.6 and 9.10.
+  rejectGenesisFile :: ShelleyGenesisError -> m a
+  rejectGenesisFile = \case
+    -- Deliberately not 'renderShelleyGenesisError' for this one: its wording
+    -- blames the hash given in the node's configuration file, whereas the hash
+    -- we compare against is the one the node itself computed at startup.
+    ShelleyGenesisHashMismatch{} ->
+      throwGrpcErrorWithMessage GrpcFailedPrecondition $
+        "The Shelley genesis file "
+          <> tshow path
+          <> " has changed since the node started, so it no longer describes the genesis the node is running on."
+    err -> throwGrpcErrorWithMessage GrpcInternal $ renderShelleyGenesisError err
+
+  rejectInitialFunds :: String -> m a
+  rejectInitialFunds reason =
+    throwGrpcErrorWithMessage GrpcInternal $
+      "Cannot resolve the initial funds of the Shelley genesis file "
+        <> tshow path
+        <> ": "
+        <> Text.pack reason
 
 -- | The CAIP-2 chain identifier for a Cardano network, keyed on the Shelley
 -- network magic.

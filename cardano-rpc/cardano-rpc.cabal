@@ -58,6 +58,7 @@ library
     Cardano.Rpc.Server.Internal.Error
     Cardano.Rpc.Server.Internal.Monad
     Cardano.Rpc.Server.Internal.Node
+    Cardano.Rpc.Server.Internal.TimedCache
     Cardano.Rpc.Server.Internal.Tracing
     Cardano.Rpc.Server.Internal.UtxoRpc.Eval
     Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
@@ -115,6 +116,7 @@ library
     errors,
     filepath,
     formatting,
+    fs-api ^>=0.4,
     generic-data,
     grapesy,
     grpc-spec,
@@ -125,6 +127,7 @@ library
     proto-lens-protobuf-types,
     random,
     rio,
+    strict-sop-core,
     text,
     time,
 
