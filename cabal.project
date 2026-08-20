@@ -220,7 +220,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: 6def84b5ae0033053feda72f32b1dac41c812e0e
+  tag: 407b27ad62459cccf346145f97f63a259ae7ec75
   subdir: eras/byron/crypto
 
 -- TEMPORARY: cardano-addresses-4.0.2 (the latest released on CHaP) still pins
