@@ -73,6 +73,8 @@ module Cardano.Api.Ledger.Internal.Reexport
   , castSafeHash
   , getScriptsNeeded
   , mkBasicTxOut
+  , coinTxOutL
+  , valueTxOutL
   , toDeltaCoin
   , toEraCBOR
   , toSLanguage
@@ -119,6 +121,11 @@ module Cardano.Api.Ledger.Internal.Reexport
   , drepAnchorL
   , drepDepositL
   , csCommitteeCredsL
+  , ConwayEraTxBody
+  , votingProceduresTxBodyL
+  , proposalProceduresTxBodyL
+  , currentTreasuryValueTxBodyL
+  , treasuryDonationTxBodyL
   -- Byron
   , Annotated (..)
   , byronProtVer
@@ -136,28 +143,22 @@ module Cardano.Api.Ledger.Internal.Reexport
   , casReservesL
   , NewEpochState (..)
   , ShelleyGenesisStaking (..)
+  , ShelleyEraTxBody
+  , updateTxBodyL
   -- Allegra
   , AllegraEraScript (..)
   , Timelock (..)
+  , AllegraEraTxBody
+  -- Mary
+  , MaryEraTxBody
+  , mintTxBodyL
   -- Babbage
   , CoinPerByte (..)
   , referenceScriptTxOutL
-  , ShelleyEraTxBody
-  , updateTxBodyL
-  , AllegraEraTxBody
-  , MaryEraTxBody
-  , mintTxBodyL
   , BabbageEraTxBody
   , referenceInputsTxBodyL
   , collateralReturnTxBodyL
   , totalCollateralTxBodyL
-  , ConwayEraTxBody
-  , votingProceduresTxBodyL
-  , proposalProceduresTxBodyL
-  , currentTreasuryValueTxBodyL
-  , treasuryDonationTxBodyL
-  , valueTxOutL
-  , coinTxOutL
   -- Alonzo
   , AlonzoEraTxBody (..)
   , AlonzoEraScript (..)
