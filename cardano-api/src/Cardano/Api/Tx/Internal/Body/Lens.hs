@@ -185,16 +185,13 @@ collateralInputsTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.collater
 
 {-# DEPRECATED
   reqSignerHashesTxBodyL
-  "Use reqSignerHashesTxBodyL from Cardano.Api.Ledger (via txBodyL) instead, or reqSignerHashesTxBodyG for reads. The required-signer-hashes field does not exist in the Dijkstra era, where this lens errors."
+  "Use reqSignerHashesTxBodyL from Cardano.Api.Ledger (via txBodyL) instead, or reqSignerHashesTxBodyG for reads. The required-signer-hashes field does not exist in the Dijkstra era, which this lens excludes at the type level."
   #-}
 reqSignerHashesTxBodyL
-  :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set (L.KeyHash L.Guard))
-reqSignerHashesTxBodyL w@AlonzoEraOnwardsAlonzo = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
-reqSignerHashesTxBodyL w@AlonzoEraOnwardsBabbage = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
-reqSignerHashesTxBodyL w@AlonzoEraOnwardsConway = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
--- Dijkstra replaced required signer hashes with guards; the ledger gates its
--- lens to @AtMostEra "Conway"@ and stubs the instance with 'L.notSupportedInThisEraL'.
-reqSignerHashesTxBodyL AlonzoEraOnwardsDijkstra = L.notSupportedInThisEraL
+  :: L.AtMostEra "Conway" (ShelleyLedgerEra era)
+  => AlonzoEraOnwards era
+  -> Lens' (LedgerTxBody era) (Set (L.KeyHash L.Guard))
+reqSignerHashesTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
 
 {-# DEPRECATED
   referenceInputsTxBodyL
