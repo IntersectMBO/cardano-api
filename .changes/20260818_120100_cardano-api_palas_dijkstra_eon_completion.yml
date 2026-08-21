@@ -1,0 +1,15 @@
+description: |
+  `DijkstraEra` now works everywhere the API dispatches on eras: the era helpers and instances that used to error out or not exist for Dijkstra are implemented.
+
+  Extra key witnesses keep working in Dijkstra: the era replaces required signer hashes with guards, so `TxExtraKeyWitnesses` becomes key-hash guards. The effect is the same — those keys must sign.
+
+  Simple scripts are still unsupported in Dijkstra.
+
+  Most `LedgerTxBody` wrapper lenses are deprecated: use the same-named ledger lenses from `Cardano.Api.Ledger` (through `txBodyL`). `coinTxOutL` replaces `valueTxOutAdaAssetL`, and `reqSignerHashesTxBodyG` covers era-generic reads. `Cardano.Api.Ledger` now also re-exports the era tx-body classes and these lenses. The validity-interval lenses, `adaAssetL` and `multiAssetL` stay: the ledger has no equivalent for them. `reqSignerHashesTxBodyL` now also carries the ledger's `AtMostEra "Conway"` constraint, so using it in Dijkstra is a compile error.
+
+  Breaking: the era constraint bundles (`AllegraEraOnwardsConstraints`, `MaryEraOnwardsConstraints`, `BabbageEraOnwardsConstraints`, `ConwayEraOnwardsConstraints`) no longer provide `ShelleyEraTxCert` or `TxCert era ~ ConwayTxCert era`, because Dijkstra does not support those certificates. If your code needs them, add the constraint explicitly.
+kind:
+  - feature
+  - breaking
+pr: 1298
+project: cardano-api

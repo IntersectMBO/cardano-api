@@ -160,6 +160,7 @@ instance TestEquality ShelleyBasedEra where
   testEquality ShelleyBasedEraAlonzo ShelleyBasedEraAlonzo = Just Refl
   testEquality ShelleyBasedEraBabbage ShelleyBasedEraBabbage = Just Refl
   testEquality ShelleyBasedEraConway ShelleyBasedEraConway = Just Refl
+  testEquality ShelleyBasedEraDijkstra ShelleyBasedEraDijkstra = Just Refl
   testEquality _ _ = Nothing
 
 instance Eon ShelleyBasedEra where
@@ -236,7 +237,6 @@ type ShelleyBasedEraConstraints era =
   , L.EraCertState (ShelleyLedgerEra era)
   , L.EraAccounts (ShelleyLedgerEra era)
   , L.EraGov (ShelleyLedgerEra era)
-  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (L.TxCert (ShelleyLedgerEra era))
   , HasTypeProxy era
@@ -261,7 +261,7 @@ shelleyBasedEraConstraints = \case
   ShelleyBasedEraAlonzo -> id
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway -> id
-  ShelleyBasedEraDijkstra -> const $ error "TODO Dijkstra: shelleyBasedEraConstraints: era not supported"
+  ShelleyBasedEraDijkstra -> id
 
 data AnyShelleyBasedEra where
   AnyShelleyBasedEra

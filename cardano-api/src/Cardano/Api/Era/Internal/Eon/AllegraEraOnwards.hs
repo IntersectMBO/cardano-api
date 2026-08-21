@@ -97,7 +97,7 @@ type AllegraEraOnwardsConstraints era =
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody L.TopTx (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.AllegraEraTxBody (ShelleyLedgerEra era)
-  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
+  , L.EraTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
@@ -119,7 +119,7 @@ allegraEraOnwardsConstraints = \case
   AllegraEraOnwardsAlonzo -> id
   AllegraEraOnwardsBabbage -> id
   AllegraEraOnwardsConway -> id
-  _ -> const $ error "TODO Dijkstra: allegraEraOnwardsConstraints: era not supported"
+  AllegraEraOnwardsDijkstra -> id
 
 class IsShelleyBasedEra era => IsAllegraBasedEra era where
   allegraBasedEra :: AllegraEraOnwards era
@@ -138,3 +138,6 @@ instance IsAllegraBasedEra BabbageEra where
 
 instance IsAllegraBasedEra ConwayEra where
   allegraBasedEra = AllegraEraOnwardsConway
+
+instance IsAllegraBasedEra DijkstraEra where
+  allegraBasedEra = AllegraEraOnwardsDijkstra

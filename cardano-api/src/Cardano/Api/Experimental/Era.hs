@@ -134,6 +134,7 @@ instance Bounded (Some Era) where
 
 instance Enum (Some Era) where
   toEnum 0 = Some ConwayEra
+  toEnum 1 = Some DijkstraEra
   toEnum i = error $ "Enum.toEnum: invalid argument " <> show i <> " - does not correspond to any era"
   fromEnum (Some ConwayEra) = 0
   fromEnum (Some DijkstraEra) = 1
@@ -159,8 +160,14 @@ instance FromJSON (Some Era) where
 -- | A temporary compatibility instance for easier conversion between the experimental and old APIs.
 instance Eon Era where
   inEonForEra v f = \case
+    Api.ByronEra -> v
+    Api.ShelleyEra -> v
+    Api.AllegraEra -> v
+    Api.MaryEra -> v
+    Api.AlonzoEra -> v
+    Api.BabbageEra -> v
     Api.ConwayEra -> f ConwayEra
-    _ -> v
+    Api.DijkstraEra -> f DijkstraEra
 
 -- | A temporary compatibility instance for easier conversion between the experimental and old APIs.
 instance Api.ToCardanoEra Era where

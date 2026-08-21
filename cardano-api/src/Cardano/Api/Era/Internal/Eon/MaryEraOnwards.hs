@@ -98,7 +98,6 @@ type MaryEraOnwardsConstraints era =
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody L.TopTx (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.MaryEraTxBody (ShelleyLedgerEra era)
-  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.Value (ShelleyLedgerEra era) ~ L.MaryValue
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
@@ -120,7 +119,7 @@ maryEraOnwardsConstraints = \case
   MaryEraOnwardsAlonzo -> id
   MaryEraOnwardsBabbage -> id
   MaryEraOnwardsConway -> id
-  MaryEraOnwardsDijkstra -> const $ error "TODO Dijkstra: maryEraOnwardsConstraints: era not supported"
+  MaryEraOnwardsDijkstra -> id
 
 class IsAllegraBasedEra era => IsMaryBasedEra era where
   maryBasedEra :: MaryEraOnwards era
@@ -136,3 +135,6 @@ instance IsMaryBasedEra BabbageEra where
 
 instance IsMaryBasedEra ConwayEra where
   maryBasedEra = MaryEraOnwardsConway
+
+instance IsMaryBasedEra DijkstraEra where
+  maryBasedEra = MaryEraOnwardsDijkstra
