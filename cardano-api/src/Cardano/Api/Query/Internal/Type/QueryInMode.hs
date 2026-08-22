@@ -587,7 +587,10 @@ toConsensusQueryShelleyBased sbe = \case
     Some (consensusQueryInEraInMode era Consensus.GetEpochNo)
   QueryConstitution ->
     caseShelleyToBabbageOrConwayEraOnwards
-      (const $ error "toConsensusQueryShelleyBased: QueryConstitution is only available in the Conway era")
+      ( const $
+          error
+            "toConsensusQueryShelleyBased: QueryConstitution is only available from the Conway era onwards"
+      )
       ( \w ->
           obtainCommonConstraints (convert w) $ Some (consensusQueryInEraInMode era Consensus.GetConstitution)
       )
@@ -660,7 +663,9 @@ toConsensusQueryShelleyBased sbe = \case
     Some (consensusQueryInEraInMode era Consensus.GetGovState)
   QueryRatifyState ->
     caseShelleyToBabbageOrConwayEraOnwards
-      (const $ error "toConsensusQueryShelleyBased: QueryRatifyState is only available in the Conway era")
+      ( const $
+          error "toConsensusQueryShelleyBased: QueryRatifyState is only available from the Conway era onwards"
+      )
       ( \w ->
           obtainCommonConstraints (convert w) $ Some (consensusQueryInEraInMode era Consensus.GetRatifyState)
       )
@@ -668,7 +673,8 @@ toConsensusQueryShelleyBased sbe = \case
   QueryFuturePParams ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
-          error "toConsensusQueryShelleyBased: QueryFuturePParams is only available in the Conway era onwards"
+          error
+            "toConsensusQueryShelleyBased: QueryFuturePParams is only available from the Conway era onwards"
       )
       ( \w ->
           obtainCommonConstraints (convert w) $
@@ -677,7 +683,9 @@ toConsensusQueryShelleyBased sbe = \case
       sbe
   QueryDRepState creds ->
     caseShelleyToBabbageOrConwayEraOnwards
-      (const $ error "toConsensusQueryShelleyBased: QueryDRepState is only available in the Conway era")
+      ( const $
+          error "toConsensusQueryShelleyBased: QueryDRepState is only available from the Conway era onwards"
+      )
       ( \w ->
           obtainCommonConstraints (convert w) $
             Some (consensusQueryInEraInMode era (Consensus.GetDRepState creds))
@@ -686,7 +694,8 @@ toConsensusQueryShelleyBased sbe = \case
   QueryDRepStakeDistr dreps ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
-          error "toConsensusQueryShelleyBased: QueryDRepStakeDistr is only available in the Conway era"
+          error
+            "toConsensusQueryShelleyBased: QueryDRepStakeDistr is only available from the Conway era onwards"
       )
       ( \w ->
           obtainCommonConstraints (convert w) $
@@ -696,7 +705,8 @@ toConsensusQueryShelleyBased sbe = \case
   QuerySPOStakeDistr spos ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
-          error "toConsensusQueryShelleyBased: QuerySPOStakeDistr is only available in the Conway era"
+          error
+            "toConsensusQueryShelleyBased: QuerySPOStakeDistr is only available from the Conway era onwards"
       )
       ( \w ->
           obtainCommonConstraints (convert w) $
@@ -706,7 +716,8 @@ toConsensusQueryShelleyBased sbe = \case
   QueryCommitteeMembersState coldCreds hotCreds statuses ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
-          error "toConsensusQueryShelleyBased: QueryCommitteeMembersState is only available in the Conway era"
+          error
+            "toConsensusQueryShelleyBased: QueryCommitteeMembersState is only available from the Conway era onwards"
       )
       ( \w ->
           obtainCommonConstraints (convert w) $
@@ -717,7 +728,8 @@ toConsensusQueryShelleyBased sbe = \case
   QueryStakeVoteDelegatees creds ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
-          error "toConsensusQueryShelleyBased: QueryStakeVoteDelegatees is only available in the Conway era"
+          error
+            "toConsensusQueryShelleyBased: QueryStakeVoteDelegatees is only available from the Conway era onwards"
       )
       ( \w ->
           obtainCommonConstraints (convert w) $
@@ -734,7 +746,7 @@ toConsensusQueryShelleyBased sbe = \case
   QueryProposals govActs ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
-          error "toConsensusQueryShelleyBased: QueryProposals is only available in the Conway era"
+          error "toConsensusQueryShelleyBased: QueryProposals is only available from the Conway era onwards"
       )
       ( \w ->
           obtainCommonConstraints (convert w) $
@@ -748,7 +760,8 @@ toConsensusQueryShelleyBased sbe = \case
   QueryStakePoolDefaultVote govActs ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
-          error "toConsensusQueryShelleyBased: QueryStakePoolDefaultVote is only available in the Conway era"
+          error
+            "toConsensusQueryShelleyBased: QueryStakePoolDefaultVote is only available from the Conway era onwards"
       )
       ( \w ->
           obtainCommonConstraints (convert w) $
@@ -759,7 +772,8 @@ toConsensusQueryShelleyBased sbe = \case
   GetDRepDelegations dreps ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
-          error "toConsensusQueryShelleyBased: GetDRepDelegations is only available in the Conway era"
+          error
+            "toConsensusQueryShelleyBased: GetDRepDelegations is only available from the Conway era onwards"
       )
       ( \w ->
           obtainCommonConstraints (convert w) $
