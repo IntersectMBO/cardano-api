@@ -1,0 +1,6 @@
+description: |
+  All Conway-onwards ledger queries can now be run in the Dijkstra era: constitution, governance state, DRep and SPO state and stake distributions, committee state, vote delegatees, proposals, ratification state and future protocol parameters, default votes, and DRep delegations. Previously they errored for Dijkstra.
+kind:
+  - feature
+pr: 1310
+project: cardano-api
