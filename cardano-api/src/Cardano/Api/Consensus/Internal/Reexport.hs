@@ -1,6 +1,7 @@
 module Cardano.Api.Consensus.Internal.Reexport
   ( BlockComponent (..)
   , ByronBlock
+  , ByronPartialLedgerConfig (..)
   , CardanoBlock
   , ChainUpdate (..)
   , ConfigSupportsNode
@@ -12,18 +13,23 @@ module Cardano.Api.Consensus.Internal.Reexport
   , EraMismatch (..)
   , NodeKernel (..)
   , OneEraHash (..)
+  , HardForkLedgerConfig (..)
   , HasHardForkHistory (..)
   , PastHorizonException
+  , PerEraLedgerConfig (..)
   , PraosProtocolSupportsNode
   , PraosProtocolSupportsNodeCrypto
   , RealPoint (..)
   , ResourceRegistry
   , SecurityParam (..)
   , ShelleyGenesisStaking (..)
+  , ShelleyPartialLedgerConfig (..)
   , StandardCrypto
   , TopLevelConfig
+  , WrapPartialLedgerConfig (..)
   , ledgerState
   , shelleyLedgerGenesis
+  , shelleyLedgerTranslationContext
   , blockHash
   , blockNo
   , blockSlot
@@ -52,6 +58,7 @@ import Ouroboros.Consensus.Block
   , blockNo
   , blockSlot
   )
+import Ouroboros.Consensus.Byron.ByronHFC (ByronPartialLedgerConfig (..))
 import Ouroboros.Consensus.Byron.Ledger (ByronBlock (byronBlockRaw), GenTx (..), byronIdTx)
 import Ouroboros.Consensus.Cardano.Block (CardanoBlock, EraMismatch (..))
 import Ouroboros.Consensus.Config
@@ -63,7 +70,12 @@ import Ouroboros.Consensus.Config
 import Ouroboros.Consensus.Config.SecurityParam (SecurityParam (..))
 import Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode)
 import Ouroboros.Consensus.HardFork.Abstract (HasHardForkHistory (..))
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraHash (..))
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras
+  ( OneEraHash (..)
+  , PerEraLedgerConfig (..)
+  )
+import Ouroboros.Consensus.HardFork.Combinator.Basics (HardForkLedgerConfig (..))
+import Ouroboros.Consensus.HardFork.Combinator.PartialConfig (WrapPartialLedgerConfig (..))
 import Ouroboros.Consensus.HardFork.History.EpochInfo (interpreterToEpochInfo)
 import Ouroboros.Consensus.HardFork.History.Qry
   ( PastHorizonException
@@ -79,7 +91,11 @@ import Ouroboros.Consensus.Protocol.Praos.Common
   , PraosProtocolSupportsNodeCrypto
   , getOpCertCounters
   )
-import Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
+import Ouroboros.Consensus.Shelley.Ledger.Ledger
+  ( ShelleyPartialLedgerConfig (..)
+  , shelleyLedgerGenesis
+  , shelleyLedgerTranslationContext
+  )
 import Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 import Ouroboros.Consensus.Storage.Common (BlockComponent (..))
 import Ouroboros.Consensus.Util.Condense (condense)

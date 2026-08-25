@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -20,6 +21,7 @@ where
 import Cardano.Api
 import Cardano.Api.Consensus qualified as Consensus
 import Cardano.Rpc.Server.Internal.Monad (MonadRpc, grab)
+import Cardano.Rpc.Server.Internal.TimedCache (newTimedCache)
 import Cardano.Rpc.Server.Internal.Tracing
 import Cardano.Rpc.Server.NodeKernelAccess.Type
 
@@ -29,27 +31,31 @@ import Control.Tracer (Tracer, traceWith)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.IORef
+import Data.SOP.Strict (NP (..))
 import Data.Text (pack)
-import Network.GRPC.Spec
+import Data.Time.Clock (DiffTime)
+-- Imported narrowly: grpc-spec exports an unrelated ':*' which would otherwise
+-- make the 'NP' pattern match in 'readGenesisBundle' ambiguous.
+import Network.GRPC.Spec (GrpcError (..), GrpcException (..))
 
 -- | Construct 'NodeKernelAccess' from a consensus 'Consensus.NodeKernel'.
 -- Returns 'Nothing' and traces the block type for non-Cardano block types.
 mkNodeKernelAccess
-  :: Monad m
+  :: MonadIO m
   => Tracer m TraceRpc
   -- ^ Tracer for RPC events
   -> GenesisHashShelley
   -- ^ Boot-time Shelley genesis hash
-  -> Consensus.ProtocolInfoArgs n blk
-  -- ^ Protocol info arguments (carrying the parsed genesis and transition
-  -- config)
+  -> ShelleyGenesisFile In
+  -- ^ Path to the Shelley genesis file the node was configured with
   -> Consensus.BlockType blk
   -- ^ Block type witness
   -> Consensus.NodeKernel IO addrNTN addrNTC blk
   -- ^ Consensus node kernel
   -> m (Maybe NodeKernelAccess)
-mkNodeKernelAccess tracer shelleyGenesisHash protocolInfoArgs blockType kernel = case blockType of
-  Consensus.CardanoBlockType ->
+mkNodeKernelAccess tracer shelleyGenesisHash shelleyGenesisFile blockType kernel = case blockType of
+  Consensus.CardanoBlockType -> do
+    genesisConfig <- readGenesisBundle shelleyGenesisHash shelleyGenesisFile topLevelConfig
     pure $ Just NodeKernelAccess{chainDb, systemStart, readEraHistory, securityParam, genesisConfig}
    where
     chainDb = Consensus.getChainDB kernel
@@ -57,7 +63,6 @@ mkNodeKernelAccess tracer shelleyGenesisHash protocolInfoArgs blockType kernel =
     ledgerConfig = Consensus.configLedger topLevelConfig
     systemStart = Consensus.nodeSystemStart topLevelConfig
     securityParam = Consensus.configSecurityParam topLevelConfig
-    genesisConfig = readGenesisBundle shelleyGenesisHash protocolInfoArgs
     -- Read the current ledger state (cheap STM TVar read) and recompute
     -- the era summary on every call - O(number_of_eras).
     -- This is the same approach consensus uses for GetInterpreter queries
@@ -73,18 +78,57 @@ mkNodeKernelAccess tracer shelleyGenesisHash protocolInfoArgs blockType kernel =
     traceWith tracer . inject . TraceRpcUnsupportedBlockType . pack $ show blockType
     pure Nothing
 
--- | Gather the network's genesis configuration from the node's boot-time
--- 'Consensus.ProtocolInfoArgs'.
+-- | How long the resolved Shelley genesis is kept after the request that last
+-- needed it: five minutes.
+--
+-- Long enough that a client walking through several genesis queries pays the
+-- re-read once, short enough that an idle node is back to retaining nothing
+-- soon after being left alone.
+shelleyGenesisExpiryTimeout :: DiffTime
+shelleyGenesisExpiryTimeout = 5 * 60
+
+-- | Gather the network's genesis configuration out of the node kernel's ledger
+-- config, so that the RPC server shares the node's own genesis values instead of
+-- holding a second copy alive for the lifetime of the process.
+--
+-- The per-era ledger configs are matched positionally and exhaustively, so a new
+-- Cardano era is a compile error here rather than a silently misread genesis.
+-- The Shelley slot is matched but not read. The node only has a compacted copy
+-- with the initial funds erased, so the file is the only useful source and the
+-- cache reads it when a caller asks.
+--
+-- The only thing allocated here is that empty cache. Nothing is read from disk
+-- and no thread is started.
 readGenesisBundle
-  :: GenesisHashShelley
-  -> Consensus.ProtocolInfoArgs n (Consensus.CardanoBlock Consensus.StandardCrypto)
-  -> GenesisBundle
-readGenesisBundle shelleyGenesisHash (Consensus.ProtocolInfoArgsCardano _ cardanoProtocolParams) =
-  GenesisBundle
-    { byronConfig = Consensus.byronGenesis $ Consensus.byronProtocolParams cardanoProtocolParams
-    , shelleyGenesisHash
-    , transitionConfig = Consensus.cardanoLedgerTransitionConfig cardanoProtocolParams
-    }
+  :: MonadIO m
+  => GenesisHashShelley
+  -> ShelleyGenesisFile In
+  -> Consensus.TopLevelConfig (Consensus.CardanoBlock Consensus.StandardCrypto)
+  -> m GenesisBundle
+readGenesisBundle shelleyGenesisHash shelleyGenesisFile topLevelConfig =
+  case Consensus.getPerEraLedgerConfig perEraLedgerConfig of
+    Consensus.WrapPartialLedgerConfig byron
+      :* _shelley
+      :* _allegra
+      :* _mary
+      :* Consensus.WrapPartialLedgerConfig alonzo
+      :* _babbage
+      :* Consensus.WrapPartialLedgerConfig conway
+      :* _dijkstra
+      :* Nil -> do
+        shelleyGenesisCache <- newTimedCache shelleyGenesisExpiryTimeout
+        pure
+          GenesisBundle
+            { byronConfig = Consensus.byronLedgerConfig byron
+            , shelleyGenesisHash
+            , shelleyGenesis = (shelleyGenesisFile, shelleyGenesisCache)
+            , alonzoGenesis =
+                Consensus.shelleyLedgerTranslationContext $ Consensus.shelleyLedgerConfig alonzo
+            , conwayGenesis =
+                Consensus.shelleyLedgerTranslationContext $ Consensus.shelleyLedgerConfig conway
+            }
+ where
+  perEraLedgerConfig = Consensus.hardForkLedgerConfigPerEra $ Consensus.configLedger topLevelConfig
 
 -- | Grab the current 'NodeKernelAccess' from the environment, or throw
 -- gRPC UNAVAILABLE if the node kernel has not yet initialised.

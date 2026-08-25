@@ -76,7 +76,6 @@ import Cardano.Crypto qualified as Byron
 import Cardano.Ledger.Address qualified as L
 import Cardano.Ledger.Alonzo.Genesis qualified as L
 import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Api.Transition qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.Conway.PParams qualified as L
 import Cardano.Ledger.Hashes qualified as L
@@ -98,27 +97,19 @@ import Network.GRPC.Spec
 
 -- | Convert the network's genesis bundle to the UTxO RPC 'U5c.Genesis'
 -- message, populating the Byron, Shelley, Alonzo and Conway fields.
-genesisBundleToProto :: GenesisBundle -> Proto U5c.Genesis
-genesisBundleToProto GenesisBundle{byronConfig, transitionConfig} =
-  byronGenesisToProto byronGenesis
+--
+-- The Shelley genesis is passed in separately rather than taken from the bundle,
+-- because the copy the bundle holds is the one consensus compacted: its initial
+-- funds have to be recovered from the genesis file first, which is a read and so
+-- cannot happen in this pure mapping (see
+-- 'Cardano.Rpc.Server.Internal.UtxoRpc.Query.readGenesisMethod').
+genesisBundleToProto :: GenesisBundle -> L.ShelleyGenesis -> Proto U5c.Genesis
+genesisBundleToProto GenesisBundle{byronConfig, alonzoGenesis, conwayGenesis} shelleyGenesis =
+  byronGenesisToProto (Byron.configGenesisData byronConfig)
     . shelleyGenesisToProto shelleyGenesis
     . alonzoGenesisToProto alonzoGenesis
     . conwayGenesisToProto conwayGenesis
     $ defMessage
- where
-  byronGenesis = Byron.configGenesisData byronConfig
-  shelleyGenesis = transitionConfig ^. L.tcShelleyGenesisL
-  -- LatestKnownEra is Dijkstra; its previous era is Conway, whose translation
-  -- context is the Conway genesis.
-  conwayGenesis = transitionConfig ^. L.tcPreviousEraConfigL . L.tcTranslationContextL
-  -- Dijkstra -> Conway -> Babbage -> Alonzo config, whose translation context
-  -- is the Alonzo genesis.
-  alonzoGenesis =
-    transitionConfig
-      ^. L.tcPreviousEraConfigL
-        . L.tcPreviousEraConfigL
-        . L.tcPreviousEraConfigL
-        . L.tcTranslationContextL
 
 --------------------------------------------------------------------------------
 -- Byron

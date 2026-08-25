@@ -77,6 +77,7 @@ module Cardano.Api.LedgerState
   , GenesisConfig (..)
   , readCardanoGenesisConfig
   , mkProtocolInfoCardano
+  , resolveShelleyInitialFunds
 
     -- *** Byron Genesis Config
   , readByronGenesisConfig
@@ -174,6 +175,7 @@ import Cardano.Ledger.Keys qualified as SL
 import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
 import Cardano.Ledger.Shelley.Core qualified as Core
 import Cardano.Ledger.Shelley.Genesis qualified as Ledger
+import Cardano.Ledger.Shelley.Transition qualified as Ledger
 import Cardano.Ledger.Slot qualified as Ledger
 import Cardano.Ledger.State qualified as SL
 import Cardano.Protocol.Crypto qualified as Crypto
@@ -221,8 +223,10 @@ import Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 import Control.Concurrent
 import Control.DeepSeq
 import Control.Error.Util (note)
-import Control.Exception.Safe
+import Control.Exception.Safe hiding (MonadThrow)
 import Control.Monad
+import Control.Monad.Class.MonadST (MonadST)
+import Control.Monad.Class.MonadThrow (MonadThrow)
 import Control.Monad.State.Strict
 import Control.Tracer qualified as Tracer
 import Data.Aeson as Aeson
@@ -272,7 +276,7 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Network.Mux qualified as Mux
 import Network.TypedProtocol.Core (Nat (..))
-import System.FS.API (SomeHasFS)
+import System.FS.API (SomeHasFS (..))
 import System.FilePath
 
 data InitialLedgerStateError
@@ -1520,6 +1524,53 @@ readCardanoGenesisConfig enc = do
   let dijkstraGenesis = exampleDijkstraGenesis -- TODO Dijkstra: add plumbing to read genesis
   let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
+
+-- | Resolve a Shelley genesis' 'Ledger.sgInitialFunds' against its
+-- 'Ledger.sgExtraConfig', mirroring the resolution ledger's own
+-- @registerInitialFunds@ performs when building the initial ledger state
+-- from genesis.
+--
+-- A 'Ledger.ShelleyGenesis' carries two sources of initial funds: the legacy
+-- 'Ledger.sgInitialFunds' field, and 'Ledger.sgExtraConfig', which is where
+-- @cardano-cli create-testnet-data@ puts the funded addresses, embedded or in
+-- an external hash-verified file. The ledger reconciles the two only while
+-- building the initial ledger state and never writes the result back into the
+-- 'Ledger.ShelleyGenesis' value, so a parsed genesis read outside that path
+-- must repeat the resolution. Once the ledger drops the legacy field, the
+-- two-source reconciliation here can go, but turning 'Ledger.secInitialFunds'
+-- into actual funds (including reading and hash-checking an injection file)
+-- is still needed.
+--
+-- Throws 'Ledger.InjectionConflictingSources' if the genesis specifies initial
+-- funds through both the legacy field and the extra config, and
+-- 'Ledger.InjectionHashMismatch' if an 'Ledger.InjectionFromFile' source does
+-- not hash to the value the genesis declares for it.
+resolveShelleyInitialFunds
+  :: (MonadST m, MonadThrow m)
+  => SomeHasFS m
+  -- ^ Filesystem capability used to stream an 'Ledger.InjectionFromFile'
+  -- source, mounted at the Shelley genesis file's directory.
+  -> Ledger.ShelleyGenesis
+  -- ^ The Shelley genesis whose initial funds to resolve.
+  -> m Ledger.ShelleyGenesis
+resolveShelleyInitialFunds (SomeHasFS hasFS) genesis = do
+  initialFundsSource <-
+    Ledger.resolveInjectionSource
+      "initialFunds"
+      (Ledger.sgExtraConfig genesis)
+      Ledger.secInitialFunds
+      (Ledger.sgInitialFunds genesis)
+  resolvedInitialFunds <-
+    fromList <$> Ledger.foldInjectionData hasFS initialFundsSource (flip (:)) []
+  pure $
+    genesis
+      & Ledger.sgInitialFundsL .~ resolvedInitialFunds
+      -- The source has now been folded into 'sgInitialFunds'; null it out
+      -- so that re-resolving this (already-resolved) genesis later does
+      -- not trip 'Ledger.InjectionConflictingSources'.
+      & Ledger.sgExtraConfigL .~ (clearInitialFundsSource <$> Ledger.sgExtraConfig genesis)
+ where
+  clearInitialFundsSource extraConfig = extraConfig{Ledger.secInitialFunds = Ledger.NoInjection}
 
 exampleDijkstraGenesis :: Ledger.DijkstraGenesis
 exampleDijkstraGenesis =
