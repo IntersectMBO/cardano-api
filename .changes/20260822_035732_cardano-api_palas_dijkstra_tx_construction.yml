@@ -1,9 +1,0 @@
-description: |
-  Dijkstra transactions can now be built, fee-estimated and auto-balanced with the experimental API (`makeUnsignedTx`, `estimateBalancedTxBody`, `makeTransactionBodyAutoBalance`). Extra key witnesses become key-hash guards, the era's replacement for required signer hashes — the same keys must sign.
-
-  Breaking: `BalanceIsNegative` now carries the era's `UnsignedTx` instead of a Conway-specific one; code matching on it needs the more general type.
-kind:
-  - feature
-  - breaking
-pr: 1312
-project: cardano-api
