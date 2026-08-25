@@ -1,5 +1,51 @@
 # Changelog for cardano-api
 
+## 11.6.0.0 -- 2026-08-25
+
+- The Dijkstra era can now be selected and enumerated like the other eras: `maxBound` and `[minBound .. maxBound]` for `AnyCardanoEra`, `AnyShelleyBasedEra` and the experimental `Some Era` include it, and the era-name parsers (`anyCardanoEraFromStringLike` and the JSON instances) accept "Dijkstra".
+  
+  Also fixed an `Enum` roundtrip crash: `fromEnum` already mapped Dijkstra to 7 for `AnyCardanoEra` and `AnyShelleyBasedEra`, but `toEnum 7` errored.
+  (feature, bugfix)
+  [PR 1317](https://github.com/intersectmbo/cardano-api/pull/1317)
+
+- Dijkstra transactions can now be serialised and witnessed: the `Tx DijkstraEra` text-envelope types work (witnessed and unwitnessed), Plutus V1-V3 scripts are supported in the era (the ledger's maximum for Dijkstra is V3 for now), and `createCompatibleTx` handles Dijkstra. By the era's design, transactions cannot be marked script-invalid in Dijkstra.
+  (feature)
+  [PR 1313](https://github.com/intersectmbo/cardano-api/pull/1313)
+
+- Dijkstra transactions can now be built, fee-estimated and auto-balanced with the experimental API (`makeUnsignedTx`, `estimateBalancedTxBody`, `makeTransactionBodyAutoBalance`). Extra key witnesses become key-hash guards, the era's replacement for required signer hashes — the same keys must sign.
+  
+  Breaking: `BalanceIsNegative` now carries the era's `UnsignedTx` instead of a Conway-specific one; code matching on it needs the more general type.
+  (feature, breaking)
+  [PR 1312](https://github.com/intersectmbo/cardano-api/pull/1312)
+
+- All Conway-onwards ledger queries can now be run in the Dijkstra era: constitution, governance state, DRep and SPO state and stake distributions, committee state, vote delegatees, proposals, ratification state and future protocol parameters, default votes, and DRep delegations. Previously they errored for Dijkstra.
+  (feature)
+  [PR 1310](https://github.com/intersectmbo/cardano-api/pull/1310)
+
+- Protocol-parameter updates can now be created and inspected for `DijkstraEra`, via the new `DijkstraEraBasedProtocolParametersUpdate`. It adds the four parameters introduced in Dijkstra: the maximum reference-script size per block and per transaction, and the reference-script cost stride and multiplier.
+  (feature)
+  [PR 1309](https://github.com/intersectmbo/cardano-api/pull/1309)
+
+- Export resolveShelleyInitialFunds from Cardano.Api.LedgerState. It takes a ShelleyGenesis and resolves its initial funds against its sgExtraConfig the way ledger's own genesis state construction does, including streaming InjectionFromFile sources with content-hash verification.
+  (compatible)
+  [PR 1305](https://github.com/intersectmbo/cardano-api/pull/1305)
+
+- `DijkstraEra` now works everywhere the API dispatches on eras: the era helpers and instances that used to error out or not exist for Dijkstra are implemented.
+  
+  Extra key witnesses keep working in Dijkstra: the era replaces required signer hashes with guards, so `TxExtraKeyWitnesses` becomes key-hash guards. The effect is the same — those keys must sign.
+  
+  Simple scripts are still unsupported in Dijkstra.
+  
+  Most `LedgerTxBody` wrapper lenses are deprecated: use the same-named ledger lenses from `Cardano.Api.Ledger` (through `txBodyL`). `coinTxOutL` replaces `valueTxOutAdaAssetL`, and `reqSignerHashesTxBodyG` covers era-generic reads. `Cardano.Api.Ledger` now also re-exports the era tx-body classes and these lenses. The validity-interval lenses, `adaAssetL` and `multiAssetL` stay: the ledger has no equivalent for them. `reqSignerHashesTxBodyL` now also carries the ledger's `AtMostEra "Conway"` constraint, so using it in Dijkstra is a compile error.
+  
+  Breaking: the era constraint bundles (`AllegraEraOnwardsConstraints`, `MaryEraOnwardsConstraints`, `BabbageEraOnwardsConstraints`, `ConwayEraOnwardsConstraints`) no longer provide `ShelleyEraTxCert` or `TxCert era ~ ConwayTxCert era`, because Dijkstra does not support those certificates. If your code needs them, add the constraint explicitly.
+  (feature, breaking)
+  [PR 1298](https://github.com/intersectmbo/cardano-api/pull/1298)
+
+- Fixed `queryStateForBalancedTx` to skip the DRepState query when transaction contains no DRep unregistration certificates
+  (bugfix)
+  [PR 1297](https://github.com/intersectmbo/cardano-api/pull/1297)
+
 ## 11.5.0.0 -- 2026-08-17
 
 - On POSIX, the `WithOwnerPermissions` family of functions (`writeFileTextEnvelopeWithOwnerPermissions`, `writeByteStringFileWithOwnerPermissions`, `writeLazyByteStringFileWithOwnerPermissions`, `writeTextFileWithOwnerPermissions`) and `writeSecrets` now write atomically: the contents go to a temporary file, are synced to disk, and the temporary file is renamed over the target, as was already the case on Windows.

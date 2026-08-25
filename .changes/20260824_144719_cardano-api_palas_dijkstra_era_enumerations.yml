@@ -1,9 +1,0 @@
-description: |
-  The Dijkstra era can now be selected and enumerated like the other eras: `maxBound` and `[minBound .. maxBound]` for `AnyCardanoEra`, `AnyShelleyBasedEra` and the experimental `Some Era` include it, and the era-name parsers (`anyCardanoEraFromStringLike` and the JSON instances) accept "Dijkstra".
-
-  Also fixed an `Enum` roundtrip crash: `fromEnum` already mapped Dijkstra to 7 for `AnyCardanoEra` and `AnyShelleyBasedEra`, but `toEnum 7` errored.
-kind:
-  - feature
-  - bugfix
-pr: 1317
-project: cardano-api
