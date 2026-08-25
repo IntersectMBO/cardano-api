@@ -1,5 +1,0 @@
-description: Release cardano-rpc 11.1.0.0
-kind:
-- release
-pr: 1294
-project: cardano-rpc
