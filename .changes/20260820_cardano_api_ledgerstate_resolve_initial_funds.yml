@@ -1,9 +1,0 @@
-project: cardano-api
-
-pr: 1305
-
-kind:
-  - compatible
-
-description: |
-  Export resolveShelleyInitialFunds from Cardano.Api.LedgerState. It takes a ShelleyGenesis and resolves its initial funds against its sgExtraConfig the way ledger's own genesis state construction does, including streaming InjectionFromFile sources with content-hash verification.

@@ -1,6 +1,0 @@
-description: |
-  Dijkstra transactions can now be serialised and witnessed: the `Tx DijkstraEra` text-envelope types work (witnessed and unwitnessed), Plutus V1-V3 scripts are supported in the era (the ledger's maximum for Dijkstra is V3 for now), and `createCompatibleTx` handles Dijkstra. By the era's design, transactions cannot be marked script-invalid in Dijkstra.
-kind:
-  - feature
-pr: 1313
-project: cardano-api
