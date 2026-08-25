@@ -1,5 +1,11 @@
 # Changelog for cardano-rpc
 
+## 11.2.0.0 -- 2026-08-25
+
+- Fixed the UTxO RPC `ReadGenesis` response reporting no initial funds for networks created with `cardano-cli create-testnet-data`, and stopped the node retaining the parsed genesis in memory for its whole lifetime. The Shelley genesis is now read from disk when `ReadGenesis` is served, verified against the genesis hash computed at node startup, and kept for five minutes after the last request; a genesis file that changed since startup fails the request with `FAILED_PRECONDITION`. Breaking change: `mkNodeKernelAccess` no longer takes `ProtocolInfoArgs` and takes the Shelley genesis file path instead.
+  (bugfix, breaking)
+  [PR 1305](https://github.com/intersectmbo/cardano-api/pull/1305)
+
 ## 11.1.0.0 -- 2026-08-17
 
 - Add the `QueryService.ReadGenesis` UTxO RPC method, returning the full per-era genesis configuration.
