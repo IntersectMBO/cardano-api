@@ -1173,7 +1173,7 @@ instance FromJSON NodeConfig where
         <*> parseAlonzoHardForkEpoch o
         <*> parseBabbageHardForkEpoch o
         <*> parseConwayHardForkEpoch o
-        <*> pure Consensus.CardanoTriggerHardForkAtDefaultVersion -- TODO Dijkstra
+        <*> parseDijkstraHardForkEpoch o
     parseShelleyHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseShelleyHardForkEpoch o =
       asum
@@ -1212,6 +1212,13 @@ instance FromJSON NodeConfig where
     parseConwayHardForkEpoch o =
       asum
         [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestConwayHardForkAtEpoch"
+        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
+        ]
+
+    parseDijkstraHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
+    parseDijkstraHardForkEpoch o =
+      asum
+        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestDijkstraHardForkAtEpoch"
         , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
         ]
 
