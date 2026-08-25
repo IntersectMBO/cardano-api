@@ -1,6 +1,0 @@
-description: |
-  cardano-rpc now gets `DijkstraTxCert` through `cardano-api`'s reexport instead of importing it directly from the ledger; no user-facing changes.
-kind:
-  - refactoring
-pr: 1313
-project: cardano-rpc
