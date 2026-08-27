@@ -46,6 +46,8 @@ import Cardano.Api.Plutus.Internal.Script
 
 import Cardano.Ledger.Keys qualified as Ledger
 
+import Control.Applicative
+
 type family Delegatee era where
   Delegatee DijkstraEra = Ledger.Delegatee
   Delegatee ConwayEra = Ledger.Delegatee
@@ -201,9 +203,25 @@ getTxCertWitness
   :: ShelleyBasedEra era
   -> Ledger.TxCert (ShelleyLedgerEra era)
   -> Maybe StakeCredential
-getTxCertWitness sbe ledgerCert = shelleyBasedEraConstraints sbe $
-  case Ledger.getVKeyWitnessTxCert ledgerCert of
-    Just keyHash -> Just $ StakeCredentialByKey $ Api.StakeKeyHash $ Ledger.coerceKeyRole keyHash
-    Nothing ->
-      StakeCredentialByScript . fromShelleyScriptHash
-        <$> Ledger.getScriptWitnessTxCert ledgerCert
+getTxCertWitness sbe ledgerCert = mStakeCredByKey <|> mStakeCredByScript <|> witnessOptionalUpToConway
+ where
+  mStakeCredByKey =
+    shelleyBasedEraConstraints sbe $
+      StakeCredentialByKey . Api.StakeKeyHash . Ledger.coerceKeyRole
+        <$> Ledger.getVKeyWitnessTxCert ledgerCert
+  mStakeCredByScript =
+    shelleyBasedEraConstraints sbe $
+      StakeCredentialByScript . fromShelleyScriptHash <$> Ledger.getScriptWitnessTxCert ledgerCert
+  witnessOptionalUpToConway =
+    case sbe of
+      ShelleyBasedEraShelley -> Nothing
+      ShelleyBasedEraAllegra -> Nothing
+      ShelleyBasedEraMary -> Nothing
+      ShelleyBasedEraAlonzo -> Nothing
+      ShelleyBasedEraBabbage -> Nothing
+      ShelleyBasedEraConway -> Nothing
+      ShelleyBasedEraDijkstra ->
+        error
+          "getTxCertWitness: certificate has no witness in the Dijkstra era. \
+          \From Dijkstra onwards every certificate requires a witness. \
+          \This indicates a bug in the ledger's EraTxCert instance for this certificate type."

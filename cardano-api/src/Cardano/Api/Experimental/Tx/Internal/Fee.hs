@@ -1149,18 +1149,14 @@ substituteExecutionUnits
             :: [ ( Exp.Certificate (LedgerEra era)
                  , Either
                      (TxBodyErrorAutoBalance (LedgerEra era))
-                     ( Maybe
-                         ( StakeCredential
-                         , AnyWitness (LedgerEra era)
-                         )
-                     )
+                     (Maybe (AnyWitness (LedgerEra era)))
                  )
                ]
           mappedScriptWitnesses =
             [ case mWit of
                 Nothing -> (cert, Right Nothing)
-                Just (stakeCred, wit) ->
-                  (cert, Just . (stakeCred,) <$> substituteExecUnits ix wit)
+                Just wit ->
+                  (cert, Just <$> substituteExecUnits ix wit)
             | (ix, cert, mWit) <- indexTxCertificates txCerts
             ]
       TxCertificates . fromList <$> traverseScriptWitnesses mappedScriptWitnesses
@@ -1272,14 +1268,16 @@ collectTxBodyScriptWitnesses
         [ (ix, wit)
         | (ix, _, _, Just wit@AnyScriptWitnessPlutus{}) <- fmap toAnyScriptWitness <$> indexTxWithdrawals txw
         ]
-    -- TODO: If this works you need to change the rest!
+    -- Unlike the other categories, this intentionally collects simple script
+    -- witnesses as well as Plutus ones, so that a script-witnessed certificate
+    -- is never reported as unwitnessed.
     scriptWitnessesCertificates
       :: TxCertificates (LedgerEra era)
       -> [(ScriptWitnessIndex, Exp.AnyScriptWitness (LedgerEra era))]
     scriptWitnessesCertificates txc =
       List.nub
         [ (ix, wit)
-        | (ix, _, Just (_, anyWit)) <- indexTxCertificates txc
+        | (ix, _, Just anyWit) <- indexTxCertificates txc
         , Just wit <- [toAnyScriptWitness anyWit]
         ]
 
@@ -1366,7 +1364,7 @@ indexTxCertificates
   :: TxCertificates (LedgerEra era)
   -> [ ( ScriptWitnessIndex
        , Exp.Certificate (LedgerEra era)
-       , Maybe (StakeCredential, AnyWitness (LedgerEra era))
+       , Maybe (AnyWitness (LedgerEra era))
        )
      ]
 indexTxCertificates (TxCertificates certsWits) =
@@ -1782,7 +1780,7 @@ estimateTransactionKeyWitnessCount
         + case txCertificates of
           TxCertificates credWits ->
             length
-              [() | (_, Just (_, AnyKeyWitnessPlaceholder)) <- toList credWits]
+              [() | (_, Just AnyKeyWitnessPlaceholder) <- toList credWits]
         + case txProposalProcedures of
           Just (TxProposalProcedures m) ->
             OMap.size m
