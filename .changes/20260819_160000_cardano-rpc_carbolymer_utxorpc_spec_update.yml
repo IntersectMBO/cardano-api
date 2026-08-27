@@ -1,0 +1,10 @@
+project: cardano-rpc
+
+pr: 1303
+
+kind:
+  - feature
+  - breaking
+
+description: |
+  Update the vendored UTxO RPC v1beta proto definitions to the latest upstream utxorpc/spec (v0.19.2 plus the unreleased EvalReport optional-field flags from [utxorpc/spec#203](https://github.com/utxorpc/spec/pull/203), a wire-compatible change), including resetting FetchBlock to the upstream repeated request/response shape (the single-item variant moved to the upcoming utxorpc v1). Expose all v1beta service methods: the unimplemented ones (ReadData, ReadTx, ReadEraSummary, ReadState, ReadMempool, WaitForTx, WatchMempool, DumpHistory) respond with the UNIMPLEMENTED gRPC status. Populate the new `Tx.votes` field (governance votes, Conway onwards) and the new `TxOutput.original_cbor` field (canonical re-encoding of the output; the ledger does not retain the original on-chain TxOut bytes).
