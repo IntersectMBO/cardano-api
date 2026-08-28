@@ -46,6 +46,7 @@ import Cardano.Rpc.Server.NodeKernelAccess
 import RIO
 
 import Control.Tracer
+import Data.Text qualified as Text
 import Network.GRPC.Common
 import Network.GRPC.Server
 import Network.GRPC.Server.Protobuf
@@ -121,12 +122,20 @@ runRpcServer
 runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExceptions $ do
   let RpcConfig
         { isEnabled = Identity isEnabled
-        , rpcSocketPath = Identity (File rpcSocketPathFp)
+        , rpcEndpoint = Identity rpcEndpoint
         , nodeSocketPath = Identity nodeSocketPath
         } = rpcConfig
+      insecureConfig :: InsecureConfig
+      insecureConfig = case rpcEndpoint of
+        RpcEndpointUnixSocket (File socketPath) -> InsecureUnix socketPath
+        RpcEndpointTcp host port ->
+          InsecureConfig
+            { insecureHost = Just $ Text.unpack host
+            , insecurePort = port
+            }
       config =
         ServerConfig
-          { serverInsecure = Just $ InsecureUnix rpcSocketPathFp
+          { serverInsecure = Just insecureConfig
           , serverSecure = Nothing
           }
       rpcEnv =
@@ -137,7 +146,8 @@ runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExce
           , rpcNodeKernelAccess = nodeKernelAccessRef
           }
 
-  when isEnabled $
+  when isEnabled $ do
+    traceWith tracer $ TraceRpcServerListening rpcEndpoint
     runRIO rpcEnv $
       withRunInIO $ \runInIO ->
         runServerWithHandlers serverParams config . fmap (hoistSomeRpcHandler runInIO) $

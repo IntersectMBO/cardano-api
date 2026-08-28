@@ -4,7 +4,7 @@
 -- | Provides datatypes used in tracing
 module Cardano.Rpc.Server.Internal.Tracing where
 
-import Cardano.Api (SlotNo)
+import Cardano.Api (File (..), SlotNo)
 import Cardano.Api.Consensus (TxValidationErrorInCardanoMode)
 import Cardano.Api.Era (Inject (..))
 import Cardano.Api.Error
@@ -12,6 +12,7 @@ import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Cbor (DecoderError)
 import Cardano.Api.Serialise.Raw (SerialiseAsRawBytesError)
 import Cardano.Api.Serialise.SerialiseUsing
+import Cardano.Rpc.Server.Config (RpcEndpoint (..))
 
 import Control.Exception
 import Data.Word (Word64)
@@ -24,6 +25,8 @@ data TraceRpc
   | TraceRpcNodeKernelAccess TraceRpcNodeKernelAccess
   | TraceRpcError SomeException
   | TraceRpcFatalError SomeException
+  | -- | Emitted just before the server starts listening on the endpoint.
+    TraceRpcServerListening !RpcEndpoint
 
 -- | Traces used in Query service
 data TraceRpcQuery
@@ -45,6 +48,10 @@ instance Pretty TraceRpc where
     TraceRpcNodeKernelAccess t -> pretty t
     TraceRpcError e -> "Exception when processing RPC request:\n" <> prettyException e
     TraceRpcFatalError e -> "RPC server fatal error: " <> prettyException e
+    TraceRpcServerListening (RpcEndpointUnixSocket (File socketPath)) ->
+      "RPC server starting, listening on unix socket " <> pretty socketPath
+    TraceRpcServerListening (RpcEndpointTcp host port) ->
+      "RPC server starting, listening on " <> pretty host <> ":" <> pshow port
 
 -- | Span type
 data TraceSpanEvent
