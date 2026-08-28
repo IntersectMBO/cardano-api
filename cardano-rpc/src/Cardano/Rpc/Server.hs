@@ -46,7 +46,6 @@ import Cardano.Rpc.Server.NodeKernelAccess
 import RIO
 
 import Control.Tracer
-import Data.Text qualified as Text
 import Network.GRPC.Common
 import Network.GRPC.Server
 import Network.GRPC.Server.Protobuf
@@ -125,19 +124,37 @@ runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExce
         , rpcEndpoint = Identity rpcEndpoint
         , nodeSocketPath = Identity nodeSocketPath
         } = rpcConfig
-      insecureConfig :: InsecureConfig
-      insecureConfig = case rpcEndpoint of
-        RpcEndpointUnixSocket (File socketPath) -> InsecureUnix socketPath
-        RpcEndpointTcp host port ->
-          InsecureConfig
-            { insecureHost = Just $ Text.unpack host
-            , insecurePort = port
+      config :: ServerConfig
+      config = case rpcEndpoint of
+        RpcEndpointUnixSocket (File socketPath) ->
+          ServerConfig
+            { serverInsecure = Just $ InsecureUnix socketPath
+            , serverSecure = Nothing
             }
-      config =
-        ServerConfig
-          { serverInsecure = Just insecureConfig
-          , serverSecure = Nothing
-          }
+        RpcEndpointHttp host port ->
+          ServerConfig
+            { serverInsecure =
+                Just
+                  InsecureConfig
+                    { insecureHost = Just $ show host
+                    , insecurePort = port
+                    }
+            , serverSecure = Nothing
+            }
+        RpcEndpointHttps host port (RpcTlsFiles certificateFile privateKeyFile chainCertificateFiles) ->
+          ServerConfig
+            { serverInsecure = Nothing
+            , serverSecure =
+                Just
+                  SecureConfig
+                    { secureHost = show host
+                    , securePort = port
+                    , securePubCert = unFile certificateFile
+                    , secureChainCerts = unFile <$> chainCertificateFiles
+                    , securePrivKey = unFile privateKeyFile
+                    , secureSslKeyLog = def
+                    }
+            }
       rpcEnv =
         RpcEnv
           { config = rpcConfig
