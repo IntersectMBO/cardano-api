@@ -1,0 +1,7 @@
+project: cardano-rpc
+pr: 0
+kind:
+  - feature
+  - breaking
+description: |
+  The cardano-rpc gRPC server can now listen on a plain TCP endpoint (HTTP/2 without TLS) instead of a unix domain socket, configured via the node configuration keys `RpcListenAddress`/`RpcListenPort` or the `--grpc-listen-address`/`--grpc-listen-port` CLI flags; the listen address defaults to `127.0.0.1`, and configuring both a socket path and a listen port is rejected at configuration parsing time. As part of this, `RpcConfigF`'s `rpcSocketPath` field was replaced by `rpcEndpoint`, a new `RpcEndpoint` sum type with `RpcEndpointUnixSocket` and `RpcEndpointTcp` constructors, and `TraceRpc` gained a new `TraceRpcServerListening` constructor.

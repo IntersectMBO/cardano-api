@@ -123,6 +123,7 @@ library
     memory,
     mempack,
     microlens,
+    network,
     proto-lens >=0.7.1.7,
     proto-lens-protobuf-types,
     random,
