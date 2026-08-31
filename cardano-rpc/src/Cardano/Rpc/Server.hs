@@ -167,7 +167,7 @@ runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExce
     traceWith tracer $ TraceRpcServerListening rpcEndpoint
     runRIO rpcEnv $
       withRunInIO $ \runInIO ->
-        runServerWithHandlers serverParams config . fmap (hoistSomeRpcHandler runInIO) $
+        runServer http2Settings config <=< mkGrpcServer serverParams . fmap (hoistSomeRpcHandler runInIO) $
           mconcat
             [ fromMethods methodsNodeRpc
             , fromMethods methodsUtxoRpc
@@ -177,6 +177,13 @@ runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExce
  where
   serverParams :: ServerParams
   serverParams = def{serverTopLevel = topLevelHandler}
+
+  -- Halve grapesy's default of 128: bounds per-connection RPC parallelism.
+  -- Remaining fields keep grapesy defaults, including the HTTP/2 flood-protection
+  -- rate limits and the 256 KiB / 2 MiB flow-control windows that cap buffered
+  -- inbound request data per stream / connection.
+  http2Settings :: HTTP2Settings
+  http2Settings = def{http2MaxConcurrentStreams = 64}
 
   -- Top level hook for request handlers, handle exceptions
   topLevelHandler :: RequestHandler () -> RequestHandler ()
