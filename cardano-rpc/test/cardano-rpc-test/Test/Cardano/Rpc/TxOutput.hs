@@ -12,6 +12,8 @@ import Cardano.Api.Tx
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type
 
+import Cardano.Ledger.Binary (decodeFull')
+
 import RIO
 
 import Test.Gen.Cardano.Api.Typed
@@ -44,6 +46,11 @@ hprop_tx_output_wire_format = H.property $ do
 
   H.note_ "Address field carries raw ledger address bytes"
   protoTxOutput ^. U5c.address === serialiseToRawBytes addressInEra
+
+  H.note_ "Original CBOR field roundtrips to the ledger-serialised TxOut"
+  decodedTxOut <-
+    H.leftFail $ decodeFull' (eraProtVerHigh era) (protoTxOutput ^. U5c.originalCbor)
+  decodedTxOut === obtainCommonConstraints era (toShelleyTxOut (convert era) txOut)
 
   case datum of
     TxOutDatumNone -> pure ()

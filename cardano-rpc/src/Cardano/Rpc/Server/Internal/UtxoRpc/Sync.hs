@@ -45,27 +45,32 @@ import Network.GRPC.Spec
   )
 
 -- | Handle the @FetchBlock@ SyncService RPC method.
--- Fetches a block from ChainDB by slot and header hash.
+-- Fetches blocks from ChainDB by slot and header hash.
 -- Byron-era transactions carry no fee: Byron fees are implicit (inputs minus
 -- outputs) and computing them needs UTxO lookups this handler does not do.
--- Returns @NOT_FOUND@ if the requested block is missing.
--- Returns @INVALID_ARGUMENT@ if the block reference has an invalid hash.
+-- Returns @NOT_FOUND@ if any requested block is missing.
+-- Returns @INVALID_ARGUMENT@ if a block reference has an invalid hash.
 fetchBlockMethod
   :: MonadRpc e m
   => Proto U5c.FetchBlockRequest
-  -- ^ Request containing a block reference (slot + hash)
+  -- ^ Request containing block references (slot + hash)
   -> m (Proto U5c.FetchBlockResponse)
-  -- ^ Response containing the fetched block with raw CBOR and cardano header
+  -- ^ Response containing the fetched blocks with raw CBOR and cardano header
 fetchBlockMethod request = do
   nodeKernelAccess@NodeKernelAccess{systemStart, readEraHistory} <- grabNodeKernelAccess
-  (slot, headerHash) <- blockRefToPoint (request ^. U5c.ref)
-  let throwNotFound =
-        throwGrpcErrorWithMessage GrpcNotFound $
-          "block not found at slot " <> tshow (unSlotNo slot)
-  (rawBytes, blockInMode) <-
-    fetchBlock nodeKernelAccess slot headerHash >>= maybe throwNotFound pure
-  timestamp <- slotTimestampOrThrow systemStart readEraHistory slot
-  pure $ defMessage & U5c.block .~ mkAnyChainBlock rawBytes blockInMode timestamp
+  blocks <- forM (request ^. U5c.ref) $ \blockRef -> do
+    (slot, headerHash) <- blockRefToPoint blockRef
+    let throwNotFound =
+          throwGrpcErrorWithMessage GrpcNotFound $
+            "block not found at slot "
+              <> tshow (unSlotNo slot)
+              <> ", header hash "
+              <> serialiseToRawBytesHexText headerHash
+    (rawBytes, blockInMode) <-
+      fetchBlock nodeKernelAccess slot headerHash >>= maybe throwNotFound pure
+    timestamp <- slotTimestampOrThrow systemStart readEraHistory slot
+    pure $ mkAnyChainBlock rawBytes blockInMode timestamp
+  pure $ defMessage & U5c.block .~ blocks
 
 -- | Handle the @ReadTip@ SyncService RPC method.
 -- Reads the current chain tip from ChainDB and returns it as slot, block

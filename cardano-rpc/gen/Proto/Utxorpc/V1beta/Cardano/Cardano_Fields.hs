@@ -286,6 +286,13 @@ constitution ::
    Data.ProtoLens.Field.HasField s "constitution" a) =>
   Lens.Family2.LensLike' f s a
 constitution = Data.ProtoLens.Field.field @"constitution"
+constitutionalCommittee ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "constitutionalCommittee" a) =>
+  Lens.Family2.LensLike' f s a
+constitutionalCommittee
+  = Data.ProtoLens.Field.field @"constitutionalCommittee"
 constr ::
   forall f s a.
   (Prelude.Functor f, Data.ProtoLens.Field.HasField s "constr" a) =>
@@ -999,6 +1006,13 @@ maybe'constitution ::
   Lens.Family2.LensLike' f s a
 maybe'constitution
   = Data.ProtoLens.Field.field @"maybe'constitution"
+maybe'constitutionalCommittee ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'constitutionalCommittee" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'constitutionalCommittee
+  = Data.ProtoLens.Field.field @"maybe'constitutionalCommittee"
 maybe'constr ::
   forall f s a.
   (Prelude.Functor f,
@@ -1586,6 +1600,12 @@ maybe'quantity ::
    Data.ProtoLens.Field.HasField s "maybe'quantity" a) =>
   Lens.Family2.LensLike' f s a
 maybe'quantity = Data.ProtoLens.Field.field @"maybe'quantity"
+maybe'query ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'query" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'query = Data.ProtoLens.Field.field @"maybe'query"
 maybe'redeemer ::
   forall f s a.
   (Prelude.Functor f,
@@ -1611,6 +1631,12 @@ maybe'resignCommitteeColdCert ::
   Lens.Family2.LensLike' f s a
 maybe'resignCommitteeColdCert
   = Data.ProtoLens.Field.field @"maybe'resignCommitteeColdCert"
+maybe'result ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'result" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'result = Data.ProtoLens.Field.field @"maybe'result"
 maybe'script ::
   forall f s a.
   (Prelude.Functor f,
@@ -1655,6 +1681,12 @@ maybe'softforkRule ::
   Lens.Family2.LensLike' f s a
 maybe'softforkRule
   = Data.ProtoLens.Field.field @"maybe'softforkRule"
+maybe'spo ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'spo" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'spo = Data.ProtoLens.Field.field @"maybe'spo"
 maybe'stakeCredential ::
   forall f s a.
   (Prelude.Functor f,
@@ -1676,6 +1708,13 @@ maybe'stakeDeregistration ::
   Lens.Family2.LensLike' f s a
 maybe'stakeDeregistration
   = Data.ProtoLens.Field.field @"maybe'stakeDeregistration"
+maybe'stakeFraction ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'stakeFraction" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'stakeFraction
+  = Data.ProtoLens.Field.field @"maybe'stakeFraction"
 maybe'stakeKeyDeposit ::
   forall f s a.
   (Prelude.Functor f,
@@ -1683,6 +1722,13 @@ maybe'stakeKeyDeposit ::
   Lens.Family2.LensLike' f s a
 maybe'stakeKeyDeposit
   = Data.ProtoLens.Field.field @"maybe'stakeKeyDeposit"
+maybe'stakePoolDistribution ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'stakePoolDistribution" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'stakePoolDistribution
+  = Data.ProtoLens.Field.field @"maybe'stakePoolDistribution"
 maybe'stakeRegDelegCert ::
   forall f s a.
   (Prelude.Functor f,
@@ -1829,6 +1875,12 @@ maybe'voteRegDelegCert ::
   Lens.Family2.LensLike' f s a
 maybe'voteRegDelegCert
   = Data.ProtoLens.Field.field @"maybe'voteRegDelegCert"
+maybe'voter ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "maybe'voter" a) =>
+  Lens.Family2.LensLike' f s a
+maybe'voter = Data.ProtoLens.Field.field @"maybe'voter"
 maybe'witnesses ::
   forall f s a.
   (Prelude.Functor f,
@@ -2140,6 +2192,12 @@ poolKeyhash ::
    Data.ProtoLens.Field.HasField s "poolKeyhash" a) =>
   Lens.Family2.LensLike' f s a
 poolKeyhash = Data.ProtoLens.Field.field @"poolKeyhash"
+poolKeyhashes ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "poolKeyhashes" a) =>
+  Lens.Family2.LensLike' f s a
+poolKeyhashes = Data.ProtoLens.Field.field @"poolKeyhashes"
 poolMetadata ::
   forall f s a.
   (Prelude.Functor f,
@@ -2178,6 +2236,11 @@ poolVotingThresholds ::
   Lens.Family2.LensLike' f s a
 poolVotingThresholds
   = Data.ProtoLens.Field.field @"poolVotingThresholds"
+pools ::
+  forall f s a.
+  (Prelude.Functor f, Data.ProtoLens.Field.HasField s "pools" a) =>
+  Lens.Family2.LensLike' f s a
+pools = Data.ProtoLens.Field.field @"pools"
 port ::
   forall f s a.
   (Prelude.Functor f, Data.ProtoLens.Field.HasField s "port" a) =>
@@ -2419,6 +2482,11 @@ softforkRule ::
    Data.ProtoLens.Field.HasField s "softforkRule" a) =>
   Lens.Family2.LensLike' f s a
 softforkRule = Data.ProtoLens.Field.field @"softforkRule"
+spo ::
+  forall f s a.
+  (Prelude.Functor f, Data.ProtoLens.Field.HasField s "spo" a) =>
+  Lens.Family2.LensLike' f s a
+spo = Data.ProtoLens.Field.field @"spo"
 stakeCredential ::
   forall f s a.
   (Prelude.Functor f,
@@ -2438,12 +2506,25 @@ stakeDeregistration ::
   Lens.Family2.LensLike' f s a
 stakeDeregistration
   = Data.ProtoLens.Field.field @"stakeDeregistration"
+stakeFraction ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "stakeFraction" a) =>
+  Lens.Family2.LensLike' f s a
+stakeFraction = Data.ProtoLens.Field.field @"stakeFraction"
 stakeKeyDeposit ::
   forall f s a.
   (Prelude.Functor f,
    Data.ProtoLens.Field.HasField s "stakeKeyDeposit" a) =>
   Lens.Family2.LensLike' f s a
 stakeKeyDeposit = Data.ProtoLens.Field.field @"stakeKeyDeposit"
+stakePoolDistribution ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "stakePoolDistribution" a) =>
+  Lens.Family2.LensLike' f s a
+stakePoolDistribution
+  = Data.ProtoLens.Field.field @"stakePoolDistribution"
 stakeRegDelegCert ::
   forall f s a.
   (Prelude.Functor f,
@@ -2780,12 +2861,24 @@ vec'plutusDatums ::
    Data.ProtoLens.Field.HasField s "vec'plutusDatums" a) =>
   Lens.Family2.LensLike' f s a
 vec'plutusDatums = Data.ProtoLens.Field.field @"vec'plutusDatums"
+vec'poolKeyhashes ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "vec'poolKeyhashes" a) =>
+  Lens.Family2.LensLike' f s a
+vec'poolKeyhashes = Data.ProtoLens.Field.field @"vec'poolKeyhashes"
 vec'poolOwners ::
   forall f s a.
   (Prelude.Functor f,
    Data.ProtoLens.Field.HasField s "vec'poolOwners" a) =>
   Lens.Family2.LensLike' f s a
 vec'poolOwners = Data.ProtoLens.Field.field @"vec'poolOwners"
+vec'pools ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "vec'pools" a) =>
+  Lens.Family2.LensLike' f s a
+vec'pools = Data.ProtoLens.Field.field @"vec'pools"
 vec'proposals ::
   forall f s a.
   (Prelude.Functor f,
@@ -2870,6 +2963,12 @@ vec'vkeywitness ::
    Data.ProtoLens.Field.HasField s "vec'vkeywitness" a) =>
   Lens.Family2.LensLike' f s a
 vec'vkeywitness = Data.ProtoLens.Field.field @"vec'vkeywitness"
+vec'votes ::
+  forall f s a.
+  (Prelude.Functor f,
+   Data.ProtoLens.Field.HasField s "vec'votes" a) =>
+  Lens.Family2.LensLike' f s a
+vec'votes = Data.ProtoLens.Field.field @"vec'votes"
 vec'withdrawals ::
   forall f s a.
   (Prelude.Functor f,
@@ -2887,6 +2986,11 @@ vkeywitness ::
    Data.ProtoLens.Field.HasField s "vkeywitness" a) =>
   Lens.Family2.LensLike' f s a
 vkeywitness = Data.ProtoLens.Field.field @"vkeywitness"
+vote ::
+  forall f s a.
+  (Prelude.Functor f, Data.ProtoLens.Field.HasField s "vote" a) =>
+  Lens.Family2.LensLike' f s a
+vote = Data.ProtoLens.Field.field @"vote"
 voteDelegCert ::
   forall f s a.
   (Prelude.Functor f,
@@ -2899,6 +3003,11 @@ voteRegDelegCert ::
    Data.ProtoLens.Field.HasField s "voteRegDelegCert" a) =>
   Lens.Family2.LensLike' f s a
 voteRegDelegCert = Data.ProtoLens.Field.field @"voteRegDelegCert"
+votes ::
+  forall f s a.
+  (Prelude.Functor f, Data.ProtoLens.Field.HasField s "votes" a) =>
+  Lens.Family2.LensLike' f s a
+votes = Data.ProtoLens.Field.field @"votes"
 vrf ::
   forall f s a.
   (Prelude.Functor f, Data.ProtoLens.Field.HasField s "vrf" a) =>
