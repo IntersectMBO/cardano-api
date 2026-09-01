@@ -1,0 +1,8 @@
+description: |
+  Compatibility updates for grapesy and cardano-ledger: replace `memory` with `ram`,
+  update `exceptionToClient` to the new `ExactException` handler signature, and adapt
+  `PoolCert`/`StakePoolParams` usages to their new era type parameter.
+kind:
+- release
+pr: 1328
+project: cardano-rpc
