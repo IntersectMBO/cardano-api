@@ -14,6 +14,7 @@ import Cardano.Slotting.Time (RelativeTime (..))
 import Ouroboros.Consensus.BlockchainTime.WallClock.Types (slotLengthFromSec)
 import Ouroboros.Consensus.Cardano.Block (CardanoEras)
 import Ouroboros.Consensus.HardFork.History qualified as History
+import Ouroboros.Consensus.Peras.Types (PerasRoundNo (PerasRoundNo))
 
 import RIO
 
@@ -30,14 +31,15 @@ dummyEraParams =
   History.defaultEraParams
     (Consensus.SecurityParam (knownNonZeroBounded @2160))
     (slotLengthFromSec 1)
+    History.NoPerasEnabled
 
-mkBound :: SlotNo -> EpochNo -> RelativeTime -> History.Bound
-mkBound slot epoch time =
+mkBound :: SlotNo -> EpochNo -> RelativeTime -> PerasRoundNo -> History.Bound
+mkBound slot epoch time nextPerasRoundNo =
   History.Bound
     { History.boundTime = time
     , History.boundSlot = slot
     , History.boundEpoch = epoch
-    , History.boundPerasRound = History.NoPerasEnabled
+    , History.boundNextPerasRound = nextPerasRoundNo
     }
 
 mkEraSummary :: History.Bound -> History.EraEnd -> History.EraSummary
@@ -57,12 +59,12 @@ hprop_era_summary_multi_era :: Property
 hprop_era_summary_multi_era = H.propertyOnce $ do
   let systemStart = SystemStart (posixSecondsToUTCTime 0)
 
-      byronStart = mkBound (SlotNo 0) (EpochNo 0) (RelativeTime 0)
+      byronStart = mkBound (SlotNo 0) (EpochNo 0) (RelativeTime 0) (PerasRoundNo 0)
       -- 172800.6789s proves the ms conversion is exact fixed-point via the
       -- shared 'utcTimeToMs' (nearest-ms rounding): .6789s -> 679ms. A
       -- Double-based path, or a floor instead of a round, would give 678.
-      transition = mkBound (SlotNo 21600) (EpochNo 1) (RelativeTime 172800.6789)
-      shelleyEnd = mkBound (SlotNo 43200) (EpochNo 2) (RelativeTime 259200)
+      transition = mkBound (SlotNo 21600) (EpochNo 1) (RelativeTime 172800.6789) (PerasRoundNo 1)
+      shelleyEnd = mkBound (SlotNo 43200) (EpochNo 2) (RelativeTime 259200) (PerasRoundNo 2)
 
       byronSummary = mkEraSummary byronStart (History.EraEnd transition)
       shelleySummary = mkEraSummary transition (History.EraEnd shelleyEnd)
@@ -99,7 +101,7 @@ hprop_era_summary_multi_era = H.propertyOnce $ do
 hprop_era_summary_single_era_no_end :: Property
 hprop_era_summary_single_era_no_end = H.propertyOnce $ do
   let systemStart = SystemStart (posixSecondsToUTCTime 0)
-      byronStart = mkBound (SlotNo 0) (EpochNo 0) (RelativeTime 0)
+      byronStart = mkBound (SlotNo 0) (EpochNo 0) (RelativeTime 0) (PerasRoundNo 0)
       byronSummary = mkEraSummary byronStart History.EraUnbounded
 
       summary :: History.Summary (CardanoEras Consensus.StandardCrypto)

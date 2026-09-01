@@ -1,15 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -205,7 +200,7 @@ data IntroducedInDijkstraPParams era
   deriving (Eq, Show)
 
 createIntroducedInDijkstraPParams
-  :: (Ledger.ConwayEraPParams ledgerera, Ledger.DijkstraEraPParams ledgerera)
+  :: (Ledger.DijkstraEraPParams ledgerera)
   => IntroducedInDijkstraPParams ledgerera
   -> Ledger.PParamsUpdate ledgerera
 createIntroducedInDijkstraPParams IntroducedInDijkstraPParams{..} =

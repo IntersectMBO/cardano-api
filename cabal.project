@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-08-02T17:21:34Z
-  , cardano-haskell-packages 2026-09-24T00:08:56Z
+  , hackage.haskell.org 2026-09-02T14:05:07Z
+  , cardano-haskell-packages 2026-10-02T13:31:03Z
 
 packages:
     cardano-api
@@ -50,16 +50,7 @@ semaphore: True
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
-  , any.crypton-x509-system < 1.6.8
-
--- cardano-crypto-class (in cardano-api and in the cardano-keys dependency)
--- requires crypton < 1.1. The GHC 9.14 solver otherwise greedily picks
--- crypton 1.1.4 and then cannot resolve cardano-crypto-class; older
--- compilers settle on 1.0.x by themselves.
-if impl(ghc >= 9.14)
-  constraints:
-    , crypton < 1.1
-
+  , any.crypton-x509-system (< 1.6.8 || >= 1.7)
 
 -- WASM compilation specific
 
@@ -140,6 +131,8 @@ allow-newer:
   , microstache:aeson
   , monad-control:transformers
   , http-api-data:text-iso8601
+  -- cardano-addresses-4.0.x bounds crypton < 1.1 but we have 1.1.4
+  , cardano-addresses:crypton
 
 -- cabal-allow-newer begin
 if impl(ghc >=9.14)
