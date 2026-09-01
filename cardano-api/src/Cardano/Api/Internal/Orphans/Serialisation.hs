@@ -201,8 +201,6 @@ deriving anyclass instance ToJSON L.Voting.Error
 
 deriving anyclass instance ToJSON L.VotingPeriod
 
-deriving anyclass instance ToJSON L.Withdrawals
-
 deriving anyclass instance
   ( ToJSON (L.PredicateFailure (L.EraRule "UTXOW" ledgerera))
   , ToJSON (L.PredicateFailure (L.EraRule "DELEGS" ledgerera))
