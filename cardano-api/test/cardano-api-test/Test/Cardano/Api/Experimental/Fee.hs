@@ -11,14 +11,15 @@ where
 
 import Cardano.Api qualified as Api
 import Cardano.Api.Compatible.Tx
-  ( CompatibleTxBodyContent (..)
+  ( AnyVote (..)
+  , CompatibleTxBodyContent (..)
   , CompatibleTxError (..)
   , createCompatibleTx
   , defaultCompatibleTxBodyContent
   )
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.AnyScriptWitness
-  ( AnyPlutusScriptWitness (AnyPlutusSpendingScriptWitness)
+  ( AnyPlutusScriptWitness (AnyPlutusSpendingScriptWitness, AnyPlutusVotingScriptWitness)
   , PlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV3)
   )
 import Cardano.Api.Experimental.Era (convert)
@@ -40,6 +41,7 @@ import Cardano.Slotting.Time qualified as Slotting
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (isJust)
+import Data.Maybe.Strict (StrictMaybe (SNothing))
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
 import Data.Time.Clock.POSIX qualified as Time
@@ -50,6 +52,7 @@ import Test.Gen.Cardano.Api.Typed
   , genPlutusScriptInEra
   , genStakeCredential
   , genTxIn
+  , genVerificationKeyHash
   )
 
 import Test.Cardano.Api.Experimental (exampleProtocolParams, exampleProtocolParamsEra)
@@ -93,6 +96,9 @@ tests =
         , testProperty
             "an inline plutus spending script witness lands in the tx witness set"
             prop_createCompatibleTx_inline_plutus_script_in_witness_set
+        , testProperty
+            "an inline plutus vote script witness lands in the tx witness set"
+            prop_createCompatibleTx_inline_plutus_vote_script_in_witness_set
         , testProperty
             "plutus witnesses without protocol parameters are rejected"
             prop_createCompatibleTx_missing_pparams_with_plutus_witness
@@ -992,6 +998,62 @@ prop_createCompatibleTx_inline_plutus_script_in_witness_set = H.property $ do
   H.assertWith scriptWits (not . null)
   H.assertWith scriptWits (Map.member expectedHash)
 
+-- | A plutus-witnessed vote's script must land in the resulting ledger
+-- transaction's witness set, just like a plutus-witnessed certificate or
+-- spending input does. Regression test: 'createCompatibleTx' used to
+-- discard 'AnyVote''s witness map entirely, so a script-witnessed vote's
+-- script never made it into the tx.
+prop_createCompatibleTx_inline_plutus_vote_script_in_witness_set :: Property
+prop_createCompatibleTx_inline_plutus_vote_script_in_witness_set = H.property $ do
+  scriptInEra <- H.forAll genPlutusScriptInEra
+  voterKeyHash <- H.forAll $ Api.unDRepKeyHash <$> genVerificationKeyHash Api.AsDRepKey
+  L.TxIn govActionTxId _ <- Api.toShelleyTxIn <$> H.forAll genTxIn
+  let sbe = convert Exp.ConwayEra
+
+      voter = L.DRepVoter (L.KeyHashObj voterKeyHash)
+      govActionId = L.GovActionId govActionTxId (L.GovActionIx 0)
+      votingProcedure = L.VotingProcedure L.VoteYes SNothing
+      votingProcedures = L.VotingProcedures (Map.singleton voter (Map.singleton govActionId votingProcedure))
+
+      redeemer = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor 0 []
+
+      witness =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusVotingScriptWitness $
+            Exp.PlutusScriptWitness
+              Plutus.SPlutusV3
+              (Exp.PScript scriptInEra)
+              Exp.NoScriptDatum
+              redeemer
+              (Api.ExecutionUnits 0 0)
+
+  txVotingProcedures <-
+    H.leftFail $ Exp.mkTxVotingProcedures [(votingProcedures, witness)]
+
+  Api.ShelleyTx _ ledgerTx <-
+    H.evalEither $
+      createCompatibleTx sbe $
+        (defaultCompatibleTxBodyContent sbe)
+          { compatibleTxVotingProcedures = VotingProcedures Api.ConwayEraOnwardsConway txVotingProcedures
+          , compatibleTxProtocolParams = Just exampleProtocolParams
+          }
+
+  let scriptWits = ledgerTx ^. L.witsTxL . L.scriptTxWitsL
+      expectedHash = L.hashScript $ plutusScriptInEraToScript scriptInEra
+      redeemers = ledgerTx ^. L.witsTxL . Alonzo.rdmrsTxWitsL
+      expectedRedeemers =
+        L.Redeemers $
+          Map.singleton
+            (L.ConwayVoting (L.AsIx 0))
+            (Api.toAlonzoData redeemer, Api.toAlonzoExUnits (Api.ExecutionUnits 0 0))
+
+  H.assertWith scriptWits (not . null)
+  H.assertWith scriptWits (Map.member expectedHash)
+  redeemers H.=== expectedRedeemers
+  H.assertWith
+    (ledgerTx ^. L.bodyTxL . UnexportedLedger.scriptIntegrityHashTxBodyL)
+    (isJust . L.strictMaybeToMaybe)
+
 -- | 'createCompatibleTx' must reject plutus script witnesses when no
 -- protocol parameters were supplied, since those are required to compute
 -- the script integrity hash.
@@ -1019,7 +1081,6 @@ prop_createCompatibleTx_missing_pparams_with_plutus_witness = H.property $ do
       , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
       } of
     Left CompatibleTxMissingScriptIntegrityPParams -> H.success
-    Left err -> H.annotateShow err >> H.failure
     Right _ ->
       H.annotate "Expected CompatibleTxMissingScriptIntegrityPParams but tx was built successfully"
         >> H.failure

@@ -135,10 +135,7 @@ defaultCompatibleTxBodyContent sbe =
 
 -- | Errors that can occur while assembling a 'Tx' with 'createCompatibleTx'.
 data CompatibleTxError
-  = -- | The supplied protocol parameters could not be converted to the
-    -- ledger representation needed to compute the script integrity hash.
-    CompatibleTxProtocolParametersConversionError ProtocolParametersConversionError
-  | -- | Plutus script witnesses are present (non-empty redeemers, datums
+  = -- | Plutus script witnesses are present (non-empty redeemers, datums
     -- or plutus languages), but 'compatibleTxProtocolParams' is
     -- 'Nothing', so the ledger's required script integrity hash cannot
     -- be computed.
@@ -148,7 +145,6 @@ data CompatibleTxError
 instance Error CompatibleTxError where
   prettyError err =
     case err of
-      CompatibleTxProtocolParametersConversionError e -> prettyError e
       CompatibleTxMissingScriptIntegrityPParams ->
         "Plutus script witnesses are present but no protocol parameters were supplied "
           <> "to compute the script integrity hash."
@@ -161,59 +157,6 @@ createCompatibleTx
   -> Either CompatibleTxError (Tx era)
 createCompatibleTx sbe bodyContent =
   shelleyBasedEraConstraints sbe $ do
-    (updateTxBody, proposalWitnesses) <-
-      case anyProtocolUpdate of
-        ProtocolUpdate shelleyToBabbageEra updateProposal -> do
-          let ledgerPParamsUpdate = toLedgerUpdate sbe updateProposal
-              updateTxBody :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era)) =
-                shelleyToBabbageEraConstraints shelleyToBabbageEra $
-                  Endo $ \txb ->
-                    txb & L.updateTxBodyL .~ SJust ledgerPParamsUpdate
-
-          pure (updateTxBody, [])
-        NoPParamsUpdate _ ->
-          pure (mempty, [])
-        ProposalProcedures conwayOnwards proposalProcedures -> do
-          let Exp.TxProposalProcedures propMap = proposalProcedures
-              proposals :: OSet (L.ProposalProcedure (ShelleyLedgerEra era)) = fromList $ fst <$> shelleyBasedEraConstraints sbe (toList propMap)
-
-              -- Order must stay OMap insertion order; the shared
-              -- Witnessable-based indexing (via 'extractWitnessableProposals') preserves it.
-              proposalWitnesses
-                :: [(Witnessable ProposalItem (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
-              proposalWitnesses =
-                Exp.obtainCommonConstraints (convert conwayOnwards) $
-                  Exp.extractWitnessableProposals $
-                    Just proposalProcedures
-              referenceInputs =
-                [ toShelleyTxIn txIn
-                | (_, wit) <- proposalWitnesses
-                , txIn <- maybeToList $ getAnyWitnessReferenceInput wit
-                ]
-              -- append proposal reference inputs & set proposal procedures
-              updateTxBody :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era)) =
-                obtainCommonConstraints (convert conwayOnwards) $
-                  Endo $
-                    (L.referenceInputsTxBodyL %~ (<> fromList referenceInputs))
-                      . (L.proposalProceduresTxBodyL .~ proposals)
-
-          pure (updateTxBody, proposalWitnesses)
-
-    let
-      -- Flat witnesses from all three script-witnessable categories
-      -- (certificates, proposals, inputs), for 'setScriptIntegrityHash'
-      -- and 'setScriptWitnesses' to collect datums, scripts and plutus
-      -- languages from. Only the redeemer pointer map (built inside
-      -- 'convScriptData'') needs per-category indexing.
-      allWitnesses :: [AnyWitness (ShelleyLedgerEra era)]
-      allWitnesses = witnessedCertWitnesses <> map snd proposalWitnesses <> map snd ins
-
-      sData :: Maybe (L.TxDats (ShelleyLedgerEra era), L.Redeemers (ShelleyLedgerEra era))
-      sData = convScriptData' sbe ins txCertificates' proposalWitnesses allWitnesses extraDatums
-
-      txAuxData :: Maybe (L.TxAuxData (ShelleyLedgerEra era))
-      txAuxData = toAuxiliaryData sbe (compatibleTxMetadata bodyContent) TxAuxScriptsNone
-
     integrityHashUpdate <- setScriptIntegrityHash sData allWitnesses
 
     let txbody =
@@ -255,13 +198,72 @@ createCompatibleTx sbe bodyContent =
   anyVote = compatibleTxVotingProcedures bodyContent
   txCertificates' = compatibleTxCertificates bodyContent
 
+  -- Order must stay OMap insertion order; the shared Witnessable-based
+  -- indexing (via 'extractWitnessableProposals') preserves it.
+  proposalWitnesses
+    :: [(Witnessable ProposalItem (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
+  proposalWitnesses =
+    case anyProtocolUpdate of
+      ProtocolUpdate{} -> []
+      NoPParamsUpdate{} -> []
+      ProposalProcedures conwayOnwards proposalProcedures ->
+        Exp.obtainCommonConstraints (convert conwayOnwards) $
+          Exp.extractWitnessableProposals $
+            Just proposalProcedures
+
+  updateTxBody :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era))
+  updateTxBody =
+    case anyProtocolUpdate of
+      ProtocolUpdate shelleyToBabbageEra updateProposal ->
+        let ledgerPParamsUpdate = toLedgerUpdate sbe updateProposal
+         in shelleyToBabbageEraConstraints shelleyToBabbageEra $
+              Endo $ \txb ->
+                txb & L.updateTxBodyL .~ SJust ledgerPParamsUpdate
+      NoPParamsUpdate _ -> mempty
+      ProposalProcedures conwayOnwards proposalProcedures ->
+        shelleyBasedEraConstraints sbe $
+          let Exp.TxProposalProcedures propMap = proposalProcedures
+              proposals :: OSet (L.ProposalProcedure (ShelleyLedgerEra era))
+              proposals = fromList $ fst <$> toList propMap
+              -- append proposal reference inputs & set proposal procedures
+              referenceInputs =
+                [ toShelleyTxIn txIn
+                | (_, wit) <- proposalWitnesses
+                , txIn <- maybeToList $ getAnyWitnessReferenceInput wit
+                ]
+           in obtainCommonConstraints (convert conwayOnwards) $
+                Endo $
+                  (L.referenceInputsTxBodyL %~ (<> fromList referenceInputs))
+                    . (L.proposalProceduresTxBodyL .~ proposals)
+
+  -- Flat witnesses from all four script-witnessable categories
+  -- (certificates, proposals, votes, inputs), for
+  -- 'setScriptIntegrityHash' and 'setScriptWitnesses' to collect
+  -- datums, scripts and plutus languages from. Only the redeemer
+  -- pointer map (built inside 'convScriptData'') needs per-category
+  -- indexing.
+  allWitnesses :: [AnyWitness (ShelleyLedgerEra era)]
+  allWitnesses =
+    witnessedCertWitnesses
+      <> map snd proposalWitnesses
+      <> map snd voteWitnesses
+      <> map snd ins
+
+  sData :: Maybe (L.TxDats (ShelleyLedgerEra era), L.Redeemers (ShelleyLedgerEra era))
+  sData = convScriptData' sbe ins txCertificates' proposalWitnesses voteWitnesses allWitnesses extraDatums
+
+  txAuxData :: Maybe (L.TxAuxData (ShelleyLedgerEra era))
+  txAuxData = toAuxiliaryData sbe (compatibleTxMetadata bodyContent) TxAuxScriptsNone
+
   -- The final set of ledger inputs, in ascending 'Ord' order ('Data.Set').
   -- This is the order the ledger serialises tx inputs in, and the order
   -- it resolves 'Spending' redeemer pointers against.
   --
-  -- Spending redeemer pointers (built by 'dedupInputsByTxIn' inside
-  -- 'convScriptData'', via 'WitTxIn''s 'compareWitnesses') MUST use this
-  -- same order, never the order 'ins' was supplied in.
+  -- Spending redeemer pointers are indexed against this same order:
+  -- 'witnessableTxIns' nubs duplicate (TxIn, witness) pairs, and the
+  -- shared Witnessable indexing machinery sorts 'WitTxIn' entries by
+  -- 'TxIn' ('compareWitnesses') to match this 'Set' order. Never index
+  -- against the order 'ins' was supplied in.
   ledgerTxIns :: Set L.TxIn
   ledgerTxIns = fromList $ map (toShelleyTxIn . fst) ins
 
@@ -275,6 +277,18 @@ createCompatibleTx sbe bodyContent =
    where
     Exp.TxCertificates certsWits = txCertificates'
 
+  -- The witness of every vote in 'anyVote', witnessed or not (unwitnessed
+  -- votes get 'AnyKeyWitnessPlaceholder'). Mirrors 'proposalWitnesses'.
+  voteWitnesses
+    :: [(Witnessable VoterItem (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
+  voteWitnesses =
+    case anyVote of
+      NoVotes -> []
+      VotingProcedures conwayOnwards votingProcedures ->
+        Exp.obtainCommonConstraints (convert conwayOnwards) $
+          Exp.extractWitnessableVotes $
+            Just votingProcedures
+
   setCerts :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era))
   setCerts =
     shelleyBasedEraConstraints sbe $
@@ -283,19 +297,15 @@ createCompatibleTx sbe bodyContent =
 
   -- Uses '%~ (<>)', not '.~', so it does not clobber reference inputs
   -- already appended by 'updateTxBody' (the 'ProposalProcedures' case
-  -- above). Reference inputs collected here come from both witnessed
-  -- certificates and witnessed spending inputs.
+  -- above). Reference inputs collected here come from witnessed
+  -- certificates, witnessed votes and witnessed spending inputs.
   setRefInputs :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era))
   setRefInputs = do
     let refInputs =
           [ toShelleyTxIn refInput
-          | wit <- witnessedCertWitnesses
+          | wit <- witnessedCertWitnesses <> map snd voteWitnesses <> map snd ins
           , refInput <- maybeToList $ getAnyWitnessReferenceInput wit
           ]
-            ++ [ toShelleyTxIn refInput
-               | (_, wit) <- ins
-               , refInput <- maybeToList $ getAnyWitnessReferenceInput wit
-               ]
 
     monoidForEraInEon era $ \beo ->
       babbageEraOnwardsConstraints beo $
@@ -328,11 +338,11 @@ createCompatibleTx sbe bodyContent =
   setMetadataHash
     :: Maybe (L.TxAuxData (ShelleyLedgerEra era))
     -> Endo (L.TxBody L.TopTx (ShelleyLedgerEra era))
-  setMetadataHash txAuxData =
+  setMetadataHash auxData =
     shelleyBasedEraConstraints sbe $
       Endo $
         L.auxDataHashTxBodyL
-          .~ maybe SNothing (SJust . L.hashTxAuxData) txAuxData
+          .~ maybe SNothing (SJust . L.hashTxAuxData) auxData
 
   -- The hash is only computed when there is something for it to cover.
   -- It is an error to have something to cover without protocol
@@ -346,14 +356,14 @@ createCompatibleTx sbe bodyContent =
     :: Maybe (L.TxDats (ShelleyLedgerEra era), L.Redeemers (ShelleyLedgerEra era))
     -> [AnyWitness (ShelleyLedgerEra era)]
     -> Either CompatibleTxError (Endo (L.TxBody L.TopTx (ShelleyLedgerEra era)))
-  setScriptIntegrityHash scriptData allWitnesses =
+  setScriptIntegrityHash scriptData witnesses =
     monoidForEraInEonA era $ \aeo ->
       alonzoEraOnwardsConstraints aeo $ do
         let
           (datums, redeemers) = fromMaybe mempty scriptData
 
           languages :: Set L.Language
-          languages = fromList $ mapMaybe getAnyWitnessPlutusLanguage allWitnesses
+          languages = fromList $ mapMaybe getAnyWitnessPlutusLanguage witnesses
 
           shouldCalculateHash =
             not $
@@ -392,43 +402,43 @@ createCompatibleTx sbe bodyContent =
     -> [AnyWitness (ShelleyLedgerEra era)]
     -> L.TxWits (ShelleyLedgerEra era)
     -> L.TxWits (ShelleyLedgerEra era)
-  setScriptWitnesses sData scriptWitnesses =
-    appEndos
-      [ monoidForEraInEon
-          era
-          ( \aeo ->
-              alonzoEraOnwardsConstraints aeo $
-                obtainAlonzoScriptPurposeConstraints aeo $
-                  Endo $ do
-                    let (datums, redeemers) =
-                          fromMaybe mempty sData
-                            :: (L.TxDats (ShelleyLedgerEra era), L.Redeemers (ShelleyLedgerEra era))
-                    -- 'getAnyWitnessScript' covers both plutus and simple
-                    -- scripts. The simple ones overlap harmlessly (same
-                    -- hash, same script) with the allegra-onwards branch
-                    -- below, which is still needed for pre-Alonzo eras
-                    -- that this branch does not run in.
-                    let plutusAndSimpleScripts =
-                          mapMaybe getAnyWitnessScript scriptWitnesses
-                    (L.datsTxWitsL .~ datums)
-                      . (L.rdmrsTxWitsL %~ (<> redeemers))
-                      . ( L.scriptTxWitsL
-                            %~ (<> Map.fromList [(L.hashScript sw, sw) | sw <- plutusAndSimpleScripts])
-                        )
-          )
-      , monoidForEraInEon
-          era
-          ( \aeo -> allegraEraOnwardsConstraints aeo $ Endo $ do
-              let ledgerScripts = convSimpleScripts sbe scriptWitnesses
-              L.scriptTxWitsL
+  setScriptWitnesses scriptData scriptWitnesses = plutusAdditions . simpleScriptAdditions
+   where
+    plutusAdditions :: L.TxWits (ShelleyLedgerEra era) -> L.TxWits (ShelleyLedgerEra era)
+    plutusAdditions =
+      forEraInEon era id $ \aeo ->
+        alonzoEraOnwardsConstraints aeo $
+          obtainAlonzoScriptPurposeConstraints aeo $
+            let
+              (datums, redeemers) =
+                fromMaybe mempty scriptData
+                  :: (L.TxDats (ShelleyLedgerEra era), L.Redeemers (ShelleyLedgerEra era))
+              -- 'getAnyWitnessScript' covers both plutus and simple
+              -- scripts. The simple ones overlap harmlessly (same
+              -- hash, same script) with the allegra-onwards branch
+              -- below, which is still needed for pre-Alonzo eras
+              -- that this branch does not run in.
+              plutusAndSimpleScripts =
+                mapMaybe getAnyWitnessScript scriptWitnesses
+             in
+              (L.datsTxWitsL .~ datums)
+                . (L.rdmrsTxWitsL %~ (<> redeemers))
+                . ( L.scriptTxWitsL
+                      %~ (<> Map.fromList [(L.hashScript sw, sw) | sw <- plutusAndSimpleScripts])
+                  )
+
+    simpleScriptAdditions :: L.TxWits (ShelleyLedgerEra era) -> L.TxWits (ShelleyLedgerEra era)
+    simpleScriptAdditions =
+      forEraInEon era id $ \aeo ->
+        allegraEraOnwardsConstraints aeo $
+          let ledgerScripts = convSimpleScripts sbe scriptWitnesses
+           in L.scriptTxWitsL
                 %~ ( <>
                        Map.fromList
                          [ (L.hashScript sw, sw)
                          | sw <- ledgerScripts
                          ]
                    )
-          )
-      ]
 
 convSimpleScripts
   :: ShelleyLedgerEra era ~ ledgerera
@@ -452,28 +462,30 @@ convScriptData'
   -> [(TxIn, Exp.AnyWitness (ShelleyLedgerEra era))]
   -> Exp.TxCertificates (ShelleyLedgerEra era)
   -> [(Witnessable ProposalItem (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
+  -> [(Witnessable VoterItem (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
   -> [AnyWitness (ShelleyLedgerEra era)]
   -> Map L.DataHash (L.Data (ShelleyLedgerEra era))
   -> Maybe (L.TxDats (ShelleyLedgerEra era), L.Redeemers (ShelleyLedgerEra era))
-convScriptData' sbe ins txCertificates' proposalWits allWitnesses extraDatums =
+convScriptData' sbe ins txCertificates' proposalWits voteWits allWitnesses extraDatums =
   forEraInEon
     (convert sbe)
     Nothing
     ( \w ->
         alonzoEraOnwardsConstraints w $ do
           let
-            -- Three disjoint per-category redeemer maps merged into one.
-            -- Ledger 'L.PlutusPurpose' tags (Spending/Certifying/Proposing)
+            -- Four disjoint per-category redeemer maps merged into one.
+            -- Ledger 'L.PlutusPurpose' tags (Spending/Certifying/Voting/Proposing)
             -- never collide across categories, so '<>' below cannot drop
             -- or overwrite an entry.
             --
-            -- All three share the Witnessable-based indexing that
+            -- All four share the Witnessable-based indexing that
             -- 'Cardano.Api.Experimental.Tx.Internal.BodyContent.New.makeUnsignedTx'
             -- uses, via 'getAnyWitnessRedeemerPointerMap'.
             certRedeemers = getAnyWitnessRedeemerPointerMap $ witnessableCerts txCertificates'
             inputRedeemers = getAnyWitnessRedeemerPointerMap $ witnessableTxIns ins
             proposalRedeemers = getAnyWitnessRedeemerPointerMap proposalWits
-            redeemers = certRedeemers <> inputRedeemers <> proposalRedeemers
+            voteRedeemers = getAnyWitnessRedeemerPointerMap voteWits
+            redeemers = certRedeemers <> inputRedeemers <> voteRedeemers <> proposalRedeemers
 
             datums = mconcat [getAnyWitnessScriptData wit | wit <- allWitnesses]
             supplementalDatums = Alonzo.TxDats extraDatums

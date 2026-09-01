@@ -5,4 +5,4 @@ kind:
   - breaking
   - bugfix
 description: |
-  Add plutus spending script support to createCompatibleTx. Breaking: it now takes all transaction content as a single CompatibleTxBodyContent record and fails with the new CompatibleTxError. Export mkSpendingScriptDatum. Fix certificate and proposal script witnesses missing from the witness set, and proposal reference inputs being overwritten. Remove the redundant StakeCredential field from WitTxCert.
+  Add plutus spending script support to createCompatibleTx. Breaking: it now takes all transaction content as a single CompatibleTxBodyContent record and fails with the new CompatibleTxError. Export mkSpendingScriptDatum. Fix certificate, proposal and vote script witnesses missing from the witness set, and proposal reference inputs being overwritten. Remove the redundant StakeCredential field from WitTxCert.
