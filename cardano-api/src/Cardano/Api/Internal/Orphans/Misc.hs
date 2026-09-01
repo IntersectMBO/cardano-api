@@ -316,6 +316,23 @@ instance Semigroup (Ledger.DijkstraPParams StrictMaybe era) where
       , Ledger.dppRefScriptCostStride = lastMappendWithTHKD Ledger.dppRefScriptCostStride p1 p2
       , Ledger.dppRefScriptCostMultiplier =
           lastMappendWithTHKD Ledger.dppRefScriptCostMultiplier p1 p2
+      , Ledger.dppMaxPledgeLeverage =
+          lastMappendWithTHKD Ledger.dppMaxPledgeLeverage p1 p2
+      , Ledger.dppMinPoolMargin =
+          lastMappendWithTHKD Ledger.dppMinPoolMargin p1 p2
+      , Ledger.dppLeiosAnnouncementPeriodLength =
+          lastMappendWithTHKD Ledger.dppLeiosAnnouncementPeriodLength p1 p2
+      , Ledger.dppLeiosVotePeriodLength = lastMappendWithTHKD Ledger.dppLeiosVotePeriodLength p1 p2
+      , Ledger.dppLeiosDiffusionPeriodLength =
+          lastMappendWithTHKD Ledger.dppLeiosDiffusionPeriodLength p1 p2
+      , Ledger.dppLeiosCommitteeSize = lastMappendWithTHKD Ledger.dppLeiosCommitteeSize p1 p2
+      , Ledger.dppLeiosQuorumStakeThreshold = lastMappendWithTHKD Ledger.dppLeiosQuorumStakeThreshold p1 p2
+      , Ledger.dppMaxEndorserBlockReferencesSize =
+          lastMappendWithTHKD Ledger.dppMaxEndorserBlockReferencesSize p1 p2
+      , Ledger.dppMaxEndorserBlockTxsSize = lastMappendWithTHKD Ledger.dppMaxEndorserBlockTxsSize p1 p2
+      , Ledger.dppMaxEndorserBlockExUnits = lastMappendWithTHKD Ledger.dppMaxEndorserBlockExUnits p1 p2
+      , Ledger.dppMaxRefScriptSizePerEndorserBlock =
+          lastMappendWithTHKD Ledger.dppMaxRefScriptSizePerEndorserBlock p1 p2
       }
 
 lastMappendWithTHKD :: (a -> Ledger.THKD g StrictMaybe b) -> a -> a -> Ledger.THKD g StrictMaybe b

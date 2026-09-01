@@ -154,10 +154,12 @@ import Cardano.Crypto.ProtocolMagic qualified
 import Cardano.Crypto.VRF qualified as Crypto
 import Cardano.Crypto.VRF.Class qualified as VRF
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import Cardano.Ledger.Api (Language (PlutusV4))
 import Cardano.Ledger.Api.Era qualified as Ledger
 import Cardano.Ledger.Api.Transition qualified as Ledger
 import Cardano.Ledger.BaseTypes
   ( Globals (..)
+  , Milliseconds32 (Milliseconds32)
   , Nonce
   , ProtVer (..)
   , boundRational
@@ -172,6 +174,7 @@ import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
 import Cardano.Ledger.Dijkstra.Tx qualified as Ledger
 import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Keys qualified as SL
+import Cardano.Ledger.Plutus (OrdExUnits (..))
 import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
 import Cardano.Ledger.Shelley.Core qualified as Core
 import Cardano.Ledger.Shelley.Genesis qualified as Ledger
@@ -206,6 +209,7 @@ import Ouroboros.Consensus.Ledger.Extended qualified as Ledger
 import Ouroboros.Consensus.Ledger.Tables.Utils qualified as Ledger
 import Ouroboros.Consensus.Node.ProtocolInfo qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
+import Ouroboros.Consensus.Protocol.Leios qualified as Leios
 import Ouroboros.Consensus.Protocol.Praos qualified as Praos
 import Ouroboros.Consensus.Protocol.Praos.AgentClient
 import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
@@ -278,6 +282,8 @@ import Network.Mux qualified as Mux
 import Network.TypedProtocol.Core (Nat (..))
 import System.FS.API (SomeHasFS (..))
 import System.FilePath
+
+import Test.Cardano.Ledger.Plutus (testingCostModel)
 
 data InitialLedgerStateError
   = -- | Failed to read or parse the network config file.
@@ -1398,7 +1404,7 @@ pattern DijkstraLedgerState
   :: Current
        (Flip Consensus.LedgerState mk)
        ( Shelley.ShelleyBlock
-           (Praos.Praos Ledger.StandardCrypto)
+           (Leios.Leios Ledger.StandardCrypto)
            Consensus.DijkstraEra
        )
   -> NS (Current (Flip Consensus.LedgerState mk)) (Consensus.CardanoEras Consensus.StandardCrypto)
@@ -1588,6 +1594,18 @@ exampleDijkstraGenesis =
           , Ledger.udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
           , Ledger.udppRefScriptCostStride = knownNonZeroBounded @25600 -- 25 KiB
           , Ledger.udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          , Ledger.udppMaxPledgeLeverage = Core.MaxPledgeLeverage ShelleyAPI.SNothing
+          , Ledger.udppMinPoolMargin = fromJust $ boundRational 0.015
+          , Ledger.udppPlutusV4CostModel = testingCostModel PlutusV4
+          , Ledger.udppLeiosAnnouncementPeriodLength = Milliseconds32 1000 -- L_hdr
+          , Ledger.udppLeiosVotePeriodLength = Milliseconds32 4000 -- L_vote
+          , Ledger.udppLeiosDiffusionPeriodLength = Milliseconds32 7000 -- L_diff
+          , Ledger.udppLeiosCommitteeSize = 900 -- N_c
+          , Ledger.udppLeiosQuorumStakeThreshold = fromJust $ boundRational 0.75 -- tau
+          , Ledger.udppMaxEndorserBlockReferencesSize = 512 * 1024 -- 512 KiB
+          , Ledger.udppMaxEndorserBlockTxsSize = 12 * 1024 * 1024 -- 12 MiB
+          , Ledger.udppMaxEndorserBlockExUnits = OrdExUnits $ Ledger.ExUnits 7000000000 2000000000000
+          , Ledger.udppMaxRefScriptSizePerEndorserBlock = 12 * 1024 * 1024 -- 12 MiB
           }
     }
 

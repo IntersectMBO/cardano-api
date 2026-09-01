@@ -37,6 +37,27 @@
 
     cardano-dev.url = "github:input-output-hk/cardano-dev";
 
+    cardano-ledger-src = {
+      url = "github:IntersectMBO/cardano-ledger/620d2e31ad263bcfab4ad1516a9549c7b53c3ef6";
+      flake = false;
+    };
+    ouroboros-consensus-src = {
+      url = "github:IntersectMBO/ouroboros-consensus/4ee752860daff98f218ace65f828b1244a831055";
+      flake = false;
+    };
+    grapesy-src = {
+      url = "github:well-typed/grapesy/bd6af64f69ff89e3a8fc02e2c81262e648f4715d";
+      flake = false;
+    };
+    cardano-addresses-src = {
+      url = "github:IntersectMBO/cardano-addresses/f59608374d955b653624822429685114f41e2db2";
+      flake = false;
+    };
+    cardano-crypto-src = {
+      url = "github:input-output-hk/cardano-crypto/ac2e12a471b735ad80949bcbf0f6f634e5dbef77";
+      flake = false;
+    };
+
     # wasm specific inputs
     wasm-nixpkgs.follows = "ghc-wasm-meta/nixpkgs";
     ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
