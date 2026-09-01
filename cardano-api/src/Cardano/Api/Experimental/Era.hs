@@ -292,7 +292,7 @@ obtainCommonConstraints
   -> a
 obtainCommonConstraints = \case
   ConwayEra -> id
-  DijkstraEra -> id
+  DijkstraEra -> \_ -> error "TODO DijkstraEra"
 
 obtainConwayConstraints :: Era ConwayEra -> (EraConwayConstraints => a) -> a
 obtainConwayConstraints ConwayEra a = a

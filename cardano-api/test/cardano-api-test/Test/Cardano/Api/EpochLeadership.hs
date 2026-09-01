@@ -12,6 +12,7 @@ where
 
 import Cardano.Api
 import Cardano.Api.Ledger (KeyHash (..), toCompactPartial)
+import Data.Maybe.Strict (StrictMaybe (..))
 
 import Cardano.Binary (serialize)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
@@ -93,6 +94,7 @@ test_currentEpochEligibleLeadershipSlots =
                         { L.individualPoolStake = 1 % 3
                         , L.individualTotalPoolStake = toCompactPartial 0
                         , L.individualPoolStakeVrf = hash1
+                        , L.individualPoolStakeBls = SNothing
                         }
                     )
                   ,
@@ -101,6 +103,7 @@ test_currentEpochEligibleLeadershipSlots =
                         { L.individualPoolStake = 1 % 3
                         , L.individualTotalPoolStake = toCompactPartial 0
                         , L.individualPoolStakeVrf = hash2
+                        , L.individualPoolStakeBls = SNothing
                         }
                     )
                   ,
@@ -109,6 +112,7 @@ test_currentEpochEligibleLeadershipSlots =
                         { L.individualPoolStake = 1 % 3
                         , L.individualTotalPoolStake = toCompactPartial 0
                         , L.individualPoolStakeVrf = hash3
+                        , L.individualPoolStakeBls = SNothing
                         }
                     )
                   ]

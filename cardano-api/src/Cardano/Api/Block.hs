@@ -136,12 +136,8 @@ instance Show (Block era) where
       ( showString "ShelleyBlock ShelleyBasedEraConway "
           . showsPrec 11 block
       )
-  showsPrec p (ShelleyBlock ShelleyBasedEraDijkstra block) =
-    showParen
-      (p >= 11)
-      ( showString "ShelleyBlock ShelleyBasedEraDijkstra "
-          . showsPrec 11 block
-      )
+  showsPrec _p (ShelleyBlock ShelleyBasedEraDijkstra _block) =
+    error "TODO DijkstraEra"
 
 getBlockTxs :: forall era. Block era -> [Tx era]
 getBlockTxs = \case
@@ -191,7 +187,7 @@ fromConsensusBlock = \case
   Consensus.BlockAlonzo b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraAlonzo b'
   Consensus.BlockBabbage b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraBabbage b'
   Consensus.BlockConway b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraConway b'
-  Consensus.BlockDijkstra b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraDijkstra b'
+  Consensus.BlockDijkstra _b' -> error "TODO Dijkstra"
 
 toConsensusBlock
   :: ()
@@ -206,7 +202,7 @@ toConsensusBlock = \case
   BlockInMode _ (ShelleyBlock ShelleyBasedEraAlonzo b') -> Consensus.BlockAlonzo b'
   BlockInMode _ (ShelleyBlock ShelleyBasedEraBabbage b') -> Consensus.BlockBabbage b'
   BlockInMode _ (ShelleyBlock ShelleyBasedEraConway b') -> Consensus.BlockConway b'
-  BlockInMode _ (ShelleyBlock ShelleyBasedEraDijkstra b') -> Consensus.BlockDijkstra b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraDijkstra _b') -> error "TODO Dijkstra"
 
 -- ----------------------------------------------------------------------------
 -- Block headers
