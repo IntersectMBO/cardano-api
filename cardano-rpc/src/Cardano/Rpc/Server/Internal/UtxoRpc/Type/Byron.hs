@@ -15,7 +15,7 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Orphans ()
 
-import Cardano.Binary.FixedSizeCodec (rawEncodeFixedSized)
+import Cardano.Binary.FixedSizeCodec qualified as DSIGN
 import Cardano.Chain.Block qualified as Byron (ABlockOrBoundary (..), blockTxPayload)
 import Cardano.Chain.Common (lovelaceToInteger)
 import Cardano.Chain.UTxO
@@ -99,7 +99,7 @@ byronTxToUtxoRpcTx txAux = do
       bootstrapWitnesses :: [Proto UtxoRpc.BootstrapWitness]
       bootstrapWitnesses =
         [ defMessage
-            & U5c.vkey .~ rawEncodeFixedSized vkey
+            & U5c.vkey .~ DSIGN.rawEncodeFixedSized vkey
             & U5c.signature .~ WC.unXSignature xSignature
             & U5c.chainCode .~ SBS.fromShort (byteArrayToShortByteString (L.unChainCode chainCode))
         | VKWitness verificationKey (Byron.Signature xSignature) <- witnesses

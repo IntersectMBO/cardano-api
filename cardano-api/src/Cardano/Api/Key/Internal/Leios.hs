@@ -191,6 +191,17 @@ blsPossessionProof hexBs =
     Left e -> error $ "blsPossessionProof: " ++ show e
     Right p -> p
 
+-- | Signing context including the Domain Separation Tag (DST) for the proofs-of-possession of
+-- BLS keys using the minimal-signature-size BLS12-381 variant.
+--
+-- A Domain Separation Tag is a unique tag (like a magic number) that we add to ensure that
+-- the signature is used only in the context that it was intended for.
+-- This is because BLS keys and signatures can be used for multiple purposes, and
+-- we don't want a proof of possession for one purpose to be interpreted as something different
+-- in a different context.
+minSigPoPContext :: Crypto.BLS12381SignContext
+minSigPoPContext = Crypto.minSigPoPDST
+
 -- | Create a proof of possession for a BLS signing key.
 --
 -- This proof demonstrates that the holder of a BLS verification key knows the corresponding
@@ -199,7 +210,7 @@ blsPossessionProof hexBs =
 -- honest participants' keys during aggregation (a rogue key attack).
 createBlsPossessionProof :: SigningKey BlsKey -> BlsPossessionProof
 createBlsPossessionProof (BlsSigningKey sk) =
-  BlsPossessionProof (Crypto.createPossessionProofDSIGN Crypto.minSigPoPDST sk)
+  BlsPossessionProof (Crypto.createPossessionProofDSIGN minSigPoPContext sk)
 
 instance HasTypeProxy BlsPossessionProof where
   data AsType BlsPossessionProof = AsBlsPossessionProof

@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2026-08-02T17:21:34Z
-  , cardano-haskell-packages 2026-08-11T14:53:43Z
+  , hackage.haskell.org 2026-09-01T20:29:07Z
+  , cardano-haskell-packages 2026-08-31T18:21:54Z
 
 packages:
     cardano-api
@@ -46,11 +46,6 @@ write-ghc-environment-files: always
 -- enable parallel builds
 jobs: $ncpus
 semaphore: True
-
-
-constraints:
-  -- haskell.nix patch does not work for 1.6.8
-  , any.crypton-x509-system < 1.6.8
 
 
 -- WASM compilation specific
@@ -166,3 +161,97 @@ if impl(ghc >=9.14)
     , time-locale-compat:time
     , with-utf8:base
 -- cabal-allow-newer end
+
+-- TEMPORARY: switching to crypton >= 1.1 (which depends on `ram` instead of
+-- `memory`) needs cardano-crypto-class-2.6.0.0 (the first version depending
+-- on crypton ^>=1.1 and `ram`), but the released ouroboros-consensus-4.1.0.0
+-- pins `cardano-crypto-class ^>=2.5`, which excludes it. The blocks below
+-- replicate the (draft, do-not-merge) upstream fix in
+-- https://github.com/IntersectMBO/ouroboros-consensus/pull/2213, which widens
+-- ouroboros-consensus's bound to also allow cardano-crypto-class-2.6.0.0 and
+-- pulls in the handful of other packages that need to move in lockstep with
+-- it. Remove all of this once these land upstream and a release picks them up.
+allow-newer:
+  cardano-ledger-mary:cardano-crypto-class,
+  cardano-ledger-shelley:cardano-crypto-class,
+  cardano-ledger-binary:cardano-crypto-class,
+  cardano-ledger-core:cardano-crypto-class,
+  cardano-protocol:cardano-crypto-class,
+  cardano-protocol-tpraos:cardano-crypto-class,
+  kes-agent:cardano-crypto-class,
+  kes-agent-crypto:cardano-crypto-class,
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 206dffef96e76e42e15a1fb9fd6796394aef3409
+
+-- TEMPORARY: pulls in cardano-base PR #694 (erikd/contra-tracer, not yet
+-- merged) https://github.com/IntersectMBO/cardano-base/pull/694, which widens
+-- cardano-crypto-class:testlib's contra-tracer bound so it builds against the
+-- same contra-tracer version as everything else here. Needed by the
+-- ouroboros-consensus pin above. Remove once this PR (or an equivalent fix)
+-- is released.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base
+  tag: ad3afec8113872652ec8edf19ae1280552ce2a20
+  subdir: cardano-crypto-class
+
+-- TEMPORARY: pulls in kes-agent PR #105 (erikd/contra-tracer, not yet merged)
+-- https://github.com/input-output-hk/kes-agent/pull/105, which widens the
+-- same contra-tracer bound for kes-agent/kes-agent-crypto, on top of the
+-- FixedSizeCodec migration cardano-crypto-class-2.6.0.0 needs. Needed by the
+-- ouroboros-consensus pin above. Remove once this PR (or an equivalent fix)
+-- is released.
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/kes-agent
+  tag: 0e9a16c61ecc6b5cc747ae0ebdb718a02eae8ddc
+  subdir:
+    kes-agent
+    kes-agent-crypto
+
+-- TEMPORARY: pulls in cardano-ledger PR #5999 (erikd/ram, not yet merged)
+-- https://github.com/IntersectMBO/cardano-ledger/pull/5999, which switches
+-- cardano-crypto-wrapper from `memory` to `ram` so it builds against crypton
+-- >=1.1. Needed by the ouroboros-consensus pin above. Remove once this PR (or
+-- an equivalent fix) is released.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: 407b27ad62459cccf346145f97f63a259ae7ec75
+  subdir: eras/byron/crypto
+
+-- TEMPORARY: cardano-addresses-4.0.2 (the latest released on CHaP) still pins
+-- `crypton >=0.32 && <1.1` and depends on the standalone `cardano-crypto`
+-- package (capped at <1.4.0, i.e. before its own `memory`->`ram` switch).
+-- master (unreleased, 4.0.7) has already moved to `crypton >=1.1 && <1.2` /
+-- `ram` and dropped the `cardano-crypto` dependency entirely. Remove once a
+-- release picks this up.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-addresses
+  tag: 63c2497f965e96610c6e3df1127dbd0b9481228f
+
+-- TEMPORARY: grapesy-1.1.1 (the latest released on Hackage) pins
+-- `tls >=1.7 && <2.2`, which excludes tls-2.4.3 (needed for crypton >=1.1,
+-- since older tls versions pull in crypton-x509-validation <1.7, which caps
+-- crypton <1.1). well-typed/grapesy's master widens that to
+-- `tls >=1.7 && <2.5`, still version 1.1.1 (unreleased bump). Remove once a
+-- release picks this up.
+source-repository-package
+  type: git
+  location: https://github.com/well-typed/grapesy
+  tag: bd6af64f69ff89e3a8fc02e2c81262e648f4715d
+  subdir:
+    grapesy
+    grpc-spec
+
+-- TEMPORARY: this pin (working around a haskell.nix patch that doesn't apply
+-- to crypton-x509-system-1.6.8) forces an old crypton-x509-system, which
+-- conflicts with the crypton >=1.1 migration above (that needs
+-- crypton-x509-system-1.9.0). Dropped for now; revisit once the crypton
+-- migration lands and re-check whether the haskell.nix issue still applies.
+-- constraints:
+--   , any.crypton-x509-system < 1.6.8
