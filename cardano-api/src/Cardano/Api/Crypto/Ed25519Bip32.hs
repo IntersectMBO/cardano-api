@@ -26,7 +26,7 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import Cardano.Crypto.Wallet qualified as CC
 
 import Control.DeepSeq (NFData)
-import Data.ByteArray as BA (ByteArrayAccess, ScrubbedBytes, convert)
+import Data.ByteArray as BA (ByteArrayAccess, convert, length, withByteArray)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import GHC.Generics (Generic)
@@ -59,12 +59,12 @@ instance DSIGNAlgorithm Ed25519Bip32DSIGN where
     deriving NoThunks via InspectHeap CC.XPub
 
   newtype SignKeyDSIGN Ed25519Bip32DSIGN = SignKeyEd25519Bip32DSIGN CC.XPrv
-    deriving (Generic, ByteArrayAccess)
+    deriving Generic
     deriving newtype NFData
     deriving NoThunks via InspectHeap CC.XPrv
 
   newtype SigDSIGN Ed25519Bip32DSIGN = SigEd25519Bip32DSIGN CC.XSignature
-    deriving (Show, Eq, Generic, ByteArrayAccess)
+    deriving (Show, Eq, Generic)
     deriving NoThunks via InspectHeap CC.XSignature
 
   --
@@ -84,7 +84,7 @@ instance DSIGNAlgorithm Ed25519Bip32DSIGN where
 
   signDSIGN () a (SignKeyEd25519Bip32DSIGN sk) =
     SigEd25519Bip32DSIGN $
-      CC.sign (mempty :: ScrubbedBytes) sk (getSignableRepresentation a)
+      CC.sign (mempty :: ByteString) sk (getSignableRepresentation a)
 
   verifyDSIGN () (VerKeyEd25519Bip32DSIGN vk) a (SigEd25519Bip32DSIGN sig) =
     if CC.verify vk (getSignableRepresentation a) sig
@@ -99,8 +99,16 @@ instance DSIGNAlgorithm Ed25519Bip32DSIGN where
     SignKeyEd25519Bip32DSIGN $
       CC.generateNew
         (getSeedBytes seed)
-        (mempty :: ScrubbedBytes)
-        (mempty :: ScrubbedBytes)
+        (mempty :: ByteString)
+        (mempty :: ByteString)
+
+instance ByteArrayAccess (SignKeyDSIGN Ed25519Bip32DSIGN) where
+  length (SignKeyEd25519Bip32DSIGN sk) = BA.length (CC.unXPrv sk)
+  withByteArray (SignKeyEd25519Bip32DSIGN sk) = BA.withByteArray (CC.unXPrv sk)
+
+instance ByteArrayAccess (SigDSIGN Ed25519Bip32DSIGN) where
+  length (SigEd25519Bip32DSIGN sig) = BA.length (CC.unXSignature sig)
+  withByteArray (SigEd25519Bip32DSIGN sig) = BA.withByteArray (CC.unXSignature sig)
 
 instance FixedSizeCodec (VerKeyDSIGN Ed25519Bip32DSIGN) where
   type FixedSize (VerKeyDSIGN Ed25519Bip32DSIGN) = 64
