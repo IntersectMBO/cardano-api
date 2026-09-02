@@ -57,6 +57,15 @@ fetchBlockMethod
   -> m (Proto U5c.FetchBlockResponse)
   -- ^ Response containing the fetched blocks with raw CBOR and cardano header
 fetchBlockMethod request = do
+  let refCount = length $ request ^. U5c.ref
+  when (refCount > maxFetchBlockRefs) $
+    throwGrpcErrorWithMessage GrpcInvalidArgument $
+      "too many block references: "
+        <> tshow refCount
+        <> ", maximum "
+        <> tshow maxFetchBlockRefs
+        <> "; batch your requests"
+
   nodeKernelAccess@NodeKernelAccess{systemStart, readEraHistory} <- grabNodeKernelAccess
   blocks <- forM (request ^. U5c.ref) $ \blockRef -> do
     (slot, headerHash) <- blockRefToPoint blockRef
@@ -71,6 +80,10 @@ fetchBlockMethod request = do
     timestamp <- slotTimestampOrThrow systemStart readEraHistory slot
     pure $ mkAnyChainBlock rawBytes blockInMode timestamp
   pure $ defMessage & U5c.block .~ blocks
+
+-- | Each ref is a ChainDB read and a full block in the non-streaming response.
+maxFetchBlockRefs :: Int
+maxFetchBlockRefs = 500
 
 -- | Handle the @ReadTip@ SyncService RPC method.
 -- Reads the current chain tip from ChainDB and returns it as slot, block

@@ -30,6 +30,7 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as UtxoRpc
 import Cardano.Rpc.Proto.Api.UtxoRpc.Sync qualified as UtxoRpc
 import Cardano.Rpc.Server.Config
 import Cardano.Rpc.Server.Internal.Env
+import Cardano.Rpc.Server.Internal.Error (renderRpcExceptionForClient)
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Node
 import Cardano.Rpc.Server.Internal.Orphans ()
@@ -176,7 +177,19 @@ runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExce
             ]
  where
   serverParams :: ServerParams
-  serverParams = def{serverTopLevel = topLevelHandler}
+  serverParams =
+    def
+      { serverTopLevel = topLevelHandler
+      , serverExceptionToClient = exceptionToClient
+      }
+
+  -- Clients must never see internal error detail or call stacks; full detail is
+  -- still traced server-side by 'topLevelHandler'.
+  exceptionToClient :: SomeException -> IO (Maybe Text)
+  exceptionToClient e =
+    pure . Just $ maybe genericErrorMessage renderRpcExceptionForClient $ fromException e
+   where
+    genericErrorMessage = "Internal error while processing the request."
 
   -- Halve grapesy's default of 128: bounds per-connection RPC parallelism.
   -- Remaining fields keep grapesy defaults, including the HTTP/2 flood-protection

@@ -25,6 +25,7 @@ import Cardano.Ledger.Api qualified as L
 
 import RIO hiding (toList)
 
+import Data.ByteString qualified as BS
 import Data.Default
 import Data.Map.Strict qualified as Map
 import Data.ProtoLens (defMessage)
@@ -48,11 +49,33 @@ evalTxMethod request = do
   AnyCardanoEra (era :: CardanoEra era) <- liftIO . throwExceptT $ determineEra nodeConnInfo
   (eon :: Era era) <- forEraInEon @Era era (error "Minimum Conway era required") pure
 
+  let rawTx = request ^. U5c.tx . U5c.raw
+
+  -- A tx's inputs live inside its raw bytes, so this also bounds the input set the
+  -- query batch below resolves. The exact protocol limit is enforced further down,
+  -- once protocol parameters are available.
+  when (BS.length rawTx > maxEvalTxSizeBytes) $
+    throwGrpcErrorWithMessage GrpcInvalidArgument $
+      "transaction size "
+        <> tshow (BS.length rawTx)
+        <> " exceeds the evaluation limit "
+        <> tshow maxEvalTxSizeBytes
+
   (Exp.SignedTx ledgerTx :: Exp.SignedTx era) <-
     putTraceThrowEither
       . first TraceRpcEvalTxDecodingError
       . obtainCommonConstraints eon (deserialiseFromRawBytes asType)
-      $ request ^. U5c.tx . U5c.raw
+      $ rawTx
+
+  -- Each redeemer gets the full per-tx execution budget during evaluation, so an
+  -- unbounded redeemer count lets an unauthenticated caller multiply evaluation cost.
+  let redeemerCount =
+        obtainCommonConstraints eon $
+          Map.size . L.unRedeemers $
+            ledgerTx ^. L.witsTxL . L.rdmrsTxWitsL
+  when (redeemerCount > maxEvalRedeemers) $
+    throwGrpcErrorWithMessage GrpcInvalidArgument $
+      "too many redeemers: " <> tshow redeemerCount <> ", maximum " <> tshow maxEvalRedeemers
 
   let allInputs =
         obtainCommonConstraints eon $
@@ -77,6 +100,16 @@ evalTxMethod request = do
         registeredPools <- throwEither =<< throwEither =<< queryStakePoolParameters (convert eon) apiPoolIds
         pure
           (protocolParams, utxo, systemStart, eraHistory, stakeDelegDeposits, registeredPools)
+
+  -- A tx that only needs to decode, not be valid, could otherwise be submitted for
+  -- evaluation regardless of size; bound it to what could plausibly be submitted.
+  let maxTxSize = fromIntegral $ protocolParams ^. L.ppMaxTxSizeL
+  when (BS.length rawTx > maxTxSize) $
+    throwGrpcErrorWithMessage GrpcInvalidArgument $
+      "transaction size "
+        <> tshow (BS.length rawTx)
+        <> " exceeds the protocol maximum "
+        <> tshow maxTxSize
 
   obtainCommonConstraints eon $ do
     let ledgerUtxo = toLedgerUTxO (convert eon) utxo
@@ -118,6 +151,17 @@ evalTxMethod request = do
   putTraceThrowEither value = withFrozenCallStack $ do
     either putTrace (const $ pure ()) value
     throwEither value
+
+-- | Coarse pre-decode bound (~4x the current mainnet maxTxSize): caps decode and
+-- UTxO-query work for oversized requests. The exact protocol limit is enforced
+-- after protocol parameters are fetched.
+maxEvalTxSizeBytes :: Int
+maxEvalTxSizeBytes = 65536
+
+-- | Bounds attacker-controlled script evaluations per request: each redeemer may
+-- consume the full per-tx execution budget.
+maxEvalRedeemers :: Int
+maxEvalRedeemers = 100
 
 -- | Extract the credentials and pool IDs needed for balance check queries from
 -- the transaction body certificates.
