@@ -94,6 +94,15 @@ readUtxosMethod
 readUtxosMethod req
   | null $ req ^. U5c.keys = pure defMessage
   | otherwise = do
+      let keyCount = length $ req ^. U5c.keys
+      when (keyCount > maxReadUtxosKeys) $
+        throwGrpcErrorWithMessage GrpcInvalidArgument $
+          "too many keys: "
+            <> tshow keyCount
+            <> ", maximum "
+            <> tshow maxReadUtxosKeys
+            <> "; batch your requests"
+
       utxoFilter <- QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. U5c.keys)
 
       nodeConnInfo <- grab
@@ -120,6 +129,11 @@ readUtxosMethod req
   txoRefToTxIn r = do
     txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. U5c.hash
     pure $ TxIn txId' (TxIx . fromIntegral $ r ^. U5c.index)
+
+-- | Bounds per-request UTxO lookups the node performs; SearchUtxos pagination
+-- caps at 10_000 per page.
+maxReadUtxosKeys :: Int
+maxReadUtxosKeys = 20_000
 
 -- | Handle the @SearchUtxos@ RPC method.
 -- Filters the UTxO set by a predicate and returns a paginated result.
