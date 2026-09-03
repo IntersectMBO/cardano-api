@@ -201,14 +201,11 @@ readGenesisMethod
   -> m (Proto UtxoRpc.ReadGenesisResponse)
 readGenesisMethod _req = do
   -- TODO: field masks are ignored for now (same as readParamsMethod)
-  NodeKernelAccess
-    { genesisConfig =
-      genesisBundle@GenesisBundle
+  nodeKernelAccess <- grabNodeKernelAccess
+  let genesisBundle@GenesisBundle
         { shelleyGenesisHash
         , shelleyGenesis = (shelleyGenesisFile, shelleyGenesisCache)
-        }
-    } <-
-    grabNodeKernelAccess
+        } = genesisConfig nodeKernelAccess
   shelleyGenesis <-
     readThroughCache shelleyGenesisCache $
       readShelleyGenesisWithInitialFunds shelleyGenesisFile shelleyGenesisHash
