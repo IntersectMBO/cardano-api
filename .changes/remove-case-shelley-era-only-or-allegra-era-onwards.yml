@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1326
+kind:
+  - breaking
+  - refactoring
+description: |
+  Removed the era case combinators `caseByronOrShelleyBasedEra` and `caseShelleyToBabbageOrConwayEraOnwards`, along with the internal `caseShelleyEraOnlyOrAllegraEraOnwards`, and the now-empty `Cardano.Api.Era.Internal.Case` module. Use `inEonForEra` / `inEonForShelleyBasedEra` with the appropriate eon, or match on the era constructors where both branches need era constraints.
