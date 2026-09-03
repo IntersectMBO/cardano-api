@@ -217,7 +217,6 @@ library
     Cardano.Api.Consensus.Internal.Mode
     Cardano.Api.Consensus.Internal.Protocol
     Cardano.Api.Consensus.Internal.Reexport
-    Cardano.Api.Era.Internal.Case
     Cardano.Api.Era.Internal.Core
     Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
     Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
