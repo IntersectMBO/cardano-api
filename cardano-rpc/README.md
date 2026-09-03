@@ -21,7 +21,7 @@ Use a dedicated chain indexing service for those.
 | [ReadData](https://utxorpc.org/query/spec/#readdatarequest) | ❌ Not supported, needs a chain indexer |
 | [ReadTx](https://utxorpc.org/query/spec/#queryservice) | ❌ Not supported, needs a chain indexer |
 | [ReadGenesis](https://utxorpc.org/query/spec/#queryservice) | ✅ Supported |
-| [ReadEraSummary](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
+| [ReadEraSummary](https://utxorpc.org/query/spec/#queryservice) | ✅ Supported |
 | [ReadState](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
 
 ### [SubmitService](https://utxorpc.org/submit/spec/)
