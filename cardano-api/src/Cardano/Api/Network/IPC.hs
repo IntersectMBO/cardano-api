@@ -107,7 +107,7 @@ module Cardano.Api.Network.IPC
     -- @
     -- Api.AnyShelleyBasedEra sbe :: Api.AnyShelleyBasedEra <- case eEra of
     --   Right (Api.AnyCardanoEra era) ->
-    --     Api.caseByronOrShelleyBasedEra
+    --     Api.inEonForEra
     --       (error "Error, we are in Byron era")
     --       (return . Api.AnyShelleyBasedEra)
     --       era
