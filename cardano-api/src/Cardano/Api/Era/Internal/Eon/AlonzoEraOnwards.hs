@@ -128,7 +128,7 @@ alonzoEraOnwardsConstraints = \case
   AlonzoEraOnwardsAlonzo -> id
   AlonzoEraOnwardsBabbage -> id
   AlonzoEraOnwardsConway -> id
-  AlonzoEraOnwardsDijkstra -> id
+  AlonzoEraOnwardsDijkstra -> \_ -> error "TODO Dijkstra: alonzoEraOnwardsConstraints: era not supported"
 
 class IsMaryBasedEra era => IsAlonzoBasedEra era where
   alonzoBasedEra :: AlonzoEraOnwards era

@@ -104,6 +104,7 @@ toShelleyPoolParams
     Ledger.StakePoolParams
       { Ledger.sppId = poolkh
       , Ledger.sppVrf = Ledger.toVRFVerKeyHash vrfkh
+      , Ledger.sppBlsKey = Ledger.SNothing
       , Ledger.sppPledge = stakePoolPledge
       , Ledger.sppCost = stakePoolCost
       , Ledger.sppMargin =

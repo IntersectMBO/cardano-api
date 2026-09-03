@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -62,6 +63,7 @@ import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus qualified as L
 import Cardano.Ledger.Plutus.CostModels (mkCostModelsLenient)
+import Cardano.Ledger.Plutus.ExUnits (OrdExUnits (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Genesis
   ( NominalDiffTimeMicro
@@ -93,6 +95,8 @@ import Data.Typeable
 import GHC.Exts (IsList (..))
 import GHC.Stack (HasCallStack)
 import Lens.Micro
+
+import Test.Cardano.Ledger.Plutus (testingCostModel)
 
 import Barbies (bmap)
 import UntypedPlutusCore.Evaluation.Machine.Cek.CekMachineCosts
@@ -179,7 +183,7 @@ shelleyGenesisDefaults =
           -- pot = tx_fees + ρ * remaining_reserves
           & ppRhoL .~ unsafeBR (1 % 10) -- How much of reserves goes into pot
           & ppTauL .~ unsafeBR (1 % 10) -- τ * remaining_reserves is sent to treasury every epoch
-          & ppKeyDepositL .~ L.Coin 400000 -- require a non-zero deposit when registering keys
+          & ppKeyDepositL .~ L.Coin 400_000 -- require a non-zero deposit when registering keys
     , -- genesis keys and initial funds
       sgGenDelegs = M.empty
     , sgStaking = emptyGenesisStaking
@@ -203,6 +207,19 @@ dijkstraGenesisDefaults =
           , udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
           , udppRefScriptCostStride = knownNonZeroBounded @25600 -- 25 KiB
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          , udppMaxPledgeLeverage = MaxPledgeLeverage SNothing
+          , udppMinPoolMargin = fromJust $ boundRational 0.015
+          , udppPlutusV4CostModel = testingCostModel PlutusV4
+          , -- Feasible values from CIP-164 Table 7
+            udppLeiosAnnouncementPeriodLength = Milliseconds32 1_000 -- L_hdr
+          , udppLeiosVotePeriodLength = Milliseconds32 4_000 -- L_vote
+          , udppLeiosDiffusionPeriodLength = Milliseconds32 7_000 -- L_diff
+          , udppLeiosCommitteeSize = 900 -- N_c
+          , udppLeiosQuorumStakeThreshold = fromJust $ boundRational 0.75 -- tau
+          , udppMaxEndorserBlockReferencesSize = 512 * 1024 -- 512 KiB
+          , udppMaxEndorserBlockTxsSize = 12 * 1024 * 1024 -- 12 MiB
+          , udppMaxEndorserBlockExUnits = OrdExUnits $ ExUnits 7_000_000_000 2_000_000_000_000
+          , udppMaxRefScriptSizePerEndorserBlock = 12 * 1024 * 1024 -- 12 MiB
           }
     }
 
@@ -224,9 +241,9 @@ conwayGenesisDefaults =
     UpgradeConwayPParams
       { ucppPoolVotingThresholds = defaultPoolVotingThresholds
       , ucppGovActionLifetime = EpochInterval 1
-      , ucppGovActionDeposit = Coin 1000000
+      , ucppGovActionDeposit = Coin 1_000_000
       , ucppDRepVotingThresholds = defaultDRepVotingThresholds
-      , ucppDRepDeposit = Coin 1000000
+      , ucppDRepDeposit = Coin 1_000_000
       , ucppDRepActivity = EpochInterval 100
       , ucppCommitteeMinSize = 0
       , ucppCommitteeMaxTermLength = EpochInterval 200
@@ -348,24 +365,24 @@ alonzoGenesisDefaults =
   AlonzoGenesis
     { agPrices =
         Prices
-          { prSteps = 721 %! 10000000
-          , prMem = 577 %! 10000
+          { prSteps = 721 %! 10_000_000
+          , prMem = 577 %! 10_000
           }
     , agMaxValSize = 5000
     , agMaxTxExUnits =
         ExUnits
-          { exUnitsMem = 140000000
-          , exUnitsSteps = 10000000000
+          { exUnitsMem = 140_000_000
+          , exUnitsSteps = 10_000_000_000
           }
     , agMaxCollateralInputs = 3
     , agMaxBlockExUnits =
         ExUnits
-          { exUnitsMem = 62000000
-          , exUnitsSteps = 20000000000
+          { exUnitsMem = 62_000_000
+          , exUnitsSteps = 20_000_000_000
           }
     , agPlutusV1CostModel = either (error . show) id (L.mkCostModel PlutusV1 defaultV1CostModelValues)
     , agCollateralPercentage = 150
-    , agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
+    , agCoinsPerUTxOWord = CoinPerWord $ Coin 34_482
     , agExtraConfig = SJust . AlonzoExtraConfig . Just $ errorFail apiCostModels
     }
  where
@@ -376,7 +393,7 @@ alonzoGenesisDefaults =
         , (fromIntegral $ fromEnum PlutusV2, defaultV2CostModel)
         ]
   defaultV2CostModel =
-    [ 205665
+    [ 205_665
     , 812
     , 1
     , 1
@@ -385,171 +402,171 @@ alonzoGenesisDefaults =
     , 0
     , 1
     , 1000
-    , 24177
+    , 24_177
     , 4
     , 1
     , 1000
     , 32
-    , 117366
-    , 10475
+    , 117_366
+    , 10_475
     , 4
-    , 23000
+    , 23_000
     , 100
-    , 23000
+    , 23_000
     , 100
-    , 23000
+    , 23_000
     , 100
-    , 23000
+    , 23_000
     , 100
-    , 23000
+    , 23_000
     , 100
-    , 23000
+    , 23_000
     , 100
     , 100
     , 100
-    , 23000
+    , 23_000
     , 100
-    , 19537
+    , 19_537
     , 32
-    , 175354
+    , 175_354
     , 32
-    , 46417
+    , 46_417
     , 4
-    , 221973
+    , 221_973
     , 511
     , 0
     , 1
-    , 89141
+    , 89_141
     , 32
-    , 497525
-    , 14068
+    , 497_525
+    , 14_068
     , 4
     , 2
-    , 196500
-    , 453240
+    , 196_500
+    , 453_240
     , 220
     , 0
     , 1
     , 1
     , 1000
-    , 28662
+    , 28_662
     , 4
     , 2
-    , 245000
-    , 216773
+    , 245_000
+    , 216_773
     , 62
     , 1
-    , 1060367
-    , 12586
+    , 1_060_367
+    , 12_586
     , 1
-    , 208512
+    , 208_512
     , 421
     , 1
-    , 187000
+    , 187_000
     , 1000
-    , 52998
+    , 52_998
     , 1
-    , 80436
+    , 80_436
     , 32
-    , 43249
+    , 43_249
     , 32
     , 1000
     , 32
-    , 80556
+    , 80_556
     , 1
-    , 57667
+    , 57_667
     , 4
     , 1000
     , 10
-    , 197145
+    , 197_145
     , 156
     , 1
-    , 197145
+    , 197_145
     , 156
     , 1
-    , 204924
+    , 204_924
     , 473
     , 1
-    , 208896
+    , 208_896
     , 511
     , 1
-    , 52467
+    , 52_467
     , 32
-    , 64832
+    , 64_832
     , 32
-    , 65493
+    , 65_493
     , 32
-    , 22558
+    , 22_558
     , 32
-    , 16563
+    , 16_563
     , 32
-    , 76511
+    , 76_511
     , 32
-    , 196500
-    , 453240
+    , 196_500
+    , 453_240
     , 220
     , 0
     , 1
     , 1
-    , 69522
-    , 11687
+    , 69_522
+    , 11_687
     , 0
     , 1
-    , 60091
+    , 60_091
     , 32
-    , 196500
-    , 453240
+    , 196_500
+    , 453_240
     , 220
     , 0
     , 1
     , 1
-    , 196500
-    , 453240
+    , 196_500
+    , 453_240
     , 220
     , 0
     , 1
     , 1
-    , 1159724
-    , 392670
+    , 1_159_724
+    , 392_670
     , 0
     , 2
-    , 806990
-    , 30482
+    , 806_990
+    , 30_482
     , 4
-    , 1927926
-    , 82523
+    , 1_927_926
+    , 82_523
     , 4
-    , 265318
+    , 265_318
     , 0
     , 4
     , 0
-    , 85931
+    , 85_931
     , 32
-    , 205665
+    , 205_665
     , 812
     , 1
     , 1
-    , 41182
+    , 41_182
     , 32
-    , 212342
+    , 212_342
     , 32
-    , 31220
+    , 31_220
     , 32
-    , 32696
+    , 32_696
     , 32
-    , 43357
+    , 43_357
     , 32
-    , 32247
+    , 32_247
     , 32
-    , 38314
+    , 38_314
     , 32
-    , 35892428
+    , 35_892_428
     , 10
-    , 9462713
+    , 9_462_713
     , 1021
     , 10
-    , 38887044
-    , 32947
+    , 38_887_044
+    , 32_947
     , 10
     ]
 
@@ -559,7 +576,7 @@ defaultV1CostModel =
 
 defaultV1CostModelValues :: [Int64]
 defaultV1CostModelValues =
-  [ 205665
+  [ 205_665
   , 812
   , 1
   , 1
@@ -568,162 +585,162 @@ defaultV1CostModelValues =
   , 0
   , 1
   , 1000
-  , 24177
+  , 24_177
   , 4
   , 1
   , 1000
   , 32
-  , 117366
-  , 10475
+  , 117_366
+  , 10_475
   , 4
-  , 23000
+  , 23_000
   , 100
-  , 23000
+  , 23_000
   , 100
-  , 23000
+  , 23_000
   , 100
-  , 23000
+  , 23_000
   , 100
-  , 23000
+  , 23_000
   , 100
-  , 23000
+  , 23_000
   , 100
   , 100
   , 100
-  , 23000
+  , 23_000
   , 100
-  , 19537
+  , 19_537
   , 32
-  , 175354
+  , 175_354
   , 32
-  , 46417
+  , 46_417
   , 4
-  , 221973
+  , 221_973
   , 511
   , 0
   , 1
-  , 89141
+  , 89_141
   , 32
-  , 497525
-  , 14068
+  , 497_525
+  , 14_068
   , 4
   , 2
-  , 196500
-  , 453240
+  , 196_500
+  , 453_240
   , 220
   , 0
   , 1
   , 1
   , 1000
-  , 28662
+  , 28_662
   , 4
   , 2
-  , 245000
-  , 216773
+  , 245_000
+  , 216_773
   , 62
   , 1
-  , 1060367
-  , 12586
+  , 1_060_367
+  , 12_586
   , 1
-  , 208512
+  , 208_512
   , 421
   , 1
-  , 187000
+  , 187_000
   , 1000
-  , 52998
+  , 52_998
   , 1
-  , 80436
+  , 80_436
   , 32
-  , 43249
+  , 43_249
   , 32
   , 1000
   , 32
-  , 80556
+  , 80_556
   , 1
-  , 57667
+  , 57_667
   , 4
   , 1000
   , 10
-  , 197145
+  , 197_145
   , 156
   , 1
-  , 197145
+  , 197_145
   , 156
   , 1
-  , 204924
+  , 204_924
   , 473
   , 1
-  , 208896
+  , 208_896
   , 511
   , 1
-  , 52467
+  , 52_467
   , 32
-  , 64832
+  , 64_832
   , 32
-  , 65493
+  , 65_493
   , 32
-  , 22558
+  , 22_558
   , 32
-  , 16563
+  , 16_563
   , 32
-  , 76511
+  , 76_511
   , 32
-  , 196500
-  , 453240
+  , 196_500
+  , 453_240
   , 220
   , 0
   , 1
   , 1
-  , 69522
-  , 11687
+  , 69_522
+  , 11_687
   , 0
   , 1
-  , 60091
+  , 60_091
   , 32
-  , 196500
-  , 453240
+  , 196_500
+  , 453_240
   , 220
   , 0
   , 1
   , 1
-  , 196500
-  , 453240
+  , 196_500
+  , 453_240
   , 220
   , 0
   , 1
   , 1
-  , 806990
-  , 30482
+  , 806_990
+  , 30_482
   , 4
-  , 1927926
-  , 82523
+  , 1_927_926
+  , 82_523
   , 4
-  , 265318
+  , 265_318
   , 0
   , 4
   , 0
-  , 85931
+  , 85_931
   , 32
-  , 205665
+  , 205_665
   , 812
   , 1
   , 1
-  , 41182
+  , 41_182
   , 32
-  , 212342
+  , 212_342
   , 32
-  , 31220
+  , 31_220
   , 32
-  , 32696
+  , 32_696
   , 32
-  , 43357
+  , 43_357
   , 32
-  , 32247
+  , 32_247
   , 32
-  , 38314
+  , 38_314
   , 32
-  , 57996947
-  , 18975
+  , 57_996_947
+  , 18_975
   , 10
   ]
 
