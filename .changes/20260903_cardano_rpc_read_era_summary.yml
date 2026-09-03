@@ -1,0 +1,7 @@
+project: cardano-rpc
+pr: 1325
+kind:
+  - feature
+  - breaking
+description: |
+  The gRPC query service now implements the `ReadEraSummary` method, which previously answered with `UNIMPLEMENTED`. It returns one summary per era of the chain's history, each carrying the era name and its start and end boundaries as absolute Unix-epoch milliseconds, absolute slot number and epoch number. The current era's end boundary is left unset because the era has no well-defined ending yet, and per-era protocol parameters are left unset; use `ReadParams` to obtain the current protocol parameters. Additionally, the `NodeKernelAccess` record's fields are no longer exported from `Cardano.Rpc.Server.NodeKernelAccess`; the node kernel state is now accessed through the module's functions instead, such as `nodeKernelSystemStart`, `securityParam`, `genesisConfig`, `readEraHistory` and `readChainTipHeader`.

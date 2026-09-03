@@ -12,6 +12,7 @@ module Cardano.Rpc.Server.NodeKernelAccess
   , securityParam
   , genesisConfig
   , readEraHistory
+  , readHardForkSummary
   , readChainTipHeader
   , GenesisBundle (..)
   , mkNodeKernelAccess
@@ -30,6 +31,9 @@ import Cardano.Rpc.Server.Internal.TimedCache (newTimedCache)
 import Cardano.Rpc.Server.Internal.Tracing
 import Cardano.Rpc.Server.NodeKernelAccess.Type (GenesisBundle (..))
 import Cardano.Rpc.Server.NodeKernelAccess.Type qualified as Type
+
+import Ouroboros.Consensus.Cardano.Block (CardanoEras)
+import Ouroboros.Consensus.HardFork.History qualified as History
 
 import RIO (MonadUnliftIO, atomically, bracket, throwIO, withRunInIO)
 
@@ -68,6 +72,7 @@ mkNodeKernelAccess tracer shelleyGenesisHash shelleyGenesisFile blockType kernel
           { Type.chainDb = chainDb
           , Type.systemStart = Consensus.nodeSystemStart topLevelConfig
           , Type.readEraHistory = readEraHistory'
+          , Type.readHardForkSummary = readHardForkSummary'
           , Type.securityParam = Consensus.configSecurityParam topLevelConfig
           , Type.genesisConfig = genesisBundle
           }
@@ -76,19 +81,23 @@ mkNodeKernelAccess tracer shelleyGenesisHash shelleyGenesisFile blockType kernel
     topLevelConfig = Consensus.getTopLevelConfig kernel
     ledgerConfig = Consensus.configLedger topLevelConfig
     -- Primed because 'Cardano.Rpc.Server.NodeKernelAccess' also exports an
-    -- accessor of the same name; this is the local action that feeds the
-    -- corresponding record field above.
+    -- accessor of the same name; these are the local actions that feed the
+    -- corresponding record fields above.
     --
     -- Read the current ledger state (cheap STM TVar read) and recompute
     -- the era summary on every call - O(number_of_eras).
     -- This is the same approach consensus uses for GetInterpreter queries
     -- (interpretQueryHardFork); neither path caches the summary.
     -- RunWithCachedSummary exists but is private to the blockchain time thread.
-    readEraHistory' :: MonadIO n => n EraHistory
-    readEraHistory' = liftIO $ do
+    readHardForkSummary'
+      :: MonadIO n
+      => n (History.Summary (CardanoEras Consensus.StandardCrypto))
+    readHardForkSummary' = liftIO $ do
       extLedger <- atomically $ Consensus.getCurrentLedger chainDb
-      pure . EraHistory . Consensus.mkInterpreter $
-        Consensus.hardForkSummary ledgerConfig (Consensus.ledgerState extLedger)
+      pure $ Consensus.hardForkSummary ledgerConfig (Consensus.ledgerState extLedger)
+
+    readEraHistory' :: MonadIO n => n EraHistory
+    readEraHistory' = EraHistory . Consensus.mkInterpreter <$> readHardForkSummary'
   _ -> do
     -- unsupported block type
     traceWith tracer . inject . TraceRpcUnsupportedBlockType . pack $ show blockType
@@ -185,6 +194,16 @@ genesisConfig Type.NodeKernelAccess{Type.genesisConfig = value} = value
 -- any block fetched from ChainDB.
 readEraHistory :: MonadIO m => Type.NodeKernelAccess -> m EraHistory
 readEraHistory Type.NodeKernelAccess{Type.readEraHistory = action} = action
+
+-- | Read the raw hard-fork era summary 'readEraHistory' wraps into an opaque
+-- 'EraHistory' interpreter. Exposed separately because the @ReadEraSummary@
+-- RPC method needs the era boundaries themselves, not an interpreter that
+-- only answers slot/time conversion queries.
+readHardForkSummary
+  :: MonadIO m
+  => Type.NodeKernelAccess
+  -> m (History.Summary (CardanoEras Consensus.StandardCrypto))
+readHardForkSummary Type.NodeKernelAccess{Type.readHardForkSummary = action} = action
 
 -- | Read the current chain tip header from ChainDB, or 'Nothing' at origin.
 readChainTipHeader
