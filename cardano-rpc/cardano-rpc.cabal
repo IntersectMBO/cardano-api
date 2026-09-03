@@ -81,10 +81,10 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
     Cardano.Rpc.Server.NodeKernelAccess
-    Cardano.Rpc.Server.NodeKernelAccess.Type
 
   other-modules:
     Cardano.Rpc.Server.Internal.Orphans
+    Cardano.Rpc.Server.NodeKernelAccess.Internal.Type
     Paths_cardano_rpc
 
   autogen-modules:
@@ -125,6 +125,8 @@ library
     mempack,
     microlens,
     network,
+    ouroboros-consensus,
+    ouroboros-consensus:cardano,
     proto-lens >=0.7.1.7,
     proto-lens-protobuf-types,
     random,

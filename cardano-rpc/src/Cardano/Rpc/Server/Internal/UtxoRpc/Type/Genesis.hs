@@ -35,7 +35,7 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate
   , keyHashToBytes
   , scriptHashToBytes
   )
-import Cardano.Rpc.Server.NodeKernelAccess.Type (GenesisBundle (..))
+import Cardano.Rpc.Server.NodeKernelAccess.Internal.Type (GenesisBundle (..))
 
 import Cardano.Chain.Common qualified as Byron
   ( KeyHash
