@@ -2,6 +2,7 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -849,58 +850,76 @@ genCertificate sbe =
 
 genStakeAddressRegistrationCertificate
   :: ShelleyBasedEra era -> Gen (Exp.Certificate (ShelleyLedgerEra era))
-genStakeAddressRegistrationCertificate =
-  caseShelleyToBabbageOrConwayEraOnwards
-    ( \w ->
-        shelleyToBabbageEraConstraints w $
-          Exp.Certificate . L.mkRegTxCert . toShelleyStakeCredential <$> genStakeCredential
-    )
-    ( \w ->
-        conwayEraOnwardsConstraints w $
-          Exp.Certificate
-            <$> ( L.mkRegDepositTxCert . toShelleyStakeCredential
-                    <$> genStakeCredential
-                    <*> genLovelace
-                )
-    )
+genStakeAddressRegistrationCertificate = \case
+  ShelleyBasedEraShelley -> preConway
+  ShelleyBasedEraAllegra -> preConway
+  ShelleyBasedEraMary -> preConway
+  ShelleyBasedEraAlonzo -> preConway
+  ShelleyBasedEraBabbage -> preConway
+  ShelleyBasedEraConway -> postConway
+  ShelleyBasedEraDijkstra -> postConway
+ where
+  preConway :: L.ShelleyEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  preConway =
+    Exp.Certificate . L.mkRegTxCert . toShelleyStakeCredential <$> genStakeCredential
+
+  postConway :: L.ConwayEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  postConway =
+    Exp.Certificate
+      <$> ( L.mkRegDepositTxCert . toShelleyStakeCredential
+              <$> genStakeCredential
+              <*> genLovelace
+          )
 
 genStakeAddressUnregistrationCertificate
   :: ShelleyBasedEra era -> Gen (Exp.Certificate (ShelleyLedgerEra era))
-genStakeAddressUnregistrationCertificate =
-  caseShelleyToBabbageOrConwayEraOnwards
-    ( \w ->
-        shelleyToBabbageEraConstraints w $
-          Exp.Certificate . L.mkUnRegTxCert . toShelleyStakeCredential <$> genStakeCredential
-    )
-    ( \w ->
-        conwayEraOnwardsConstraints w $
-          Exp.Certificate
-            <$> ( L.mkUnRegDepositTxCert . toShelleyStakeCredential
-                    <$> genStakeCredential
-                    <*> genLovelace
-                )
-    )
+genStakeAddressUnregistrationCertificate = \case
+  ShelleyBasedEraShelley -> preConway
+  ShelleyBasedEraAllegra -> preConway
+  ShelleyBasedEraMary -> preConway
+  ShelleyBasedEraAlonzo -> preConway
+  ShelleyBasedEraBabbage -> preConway
+  ShelleyBasedEraConway -> postConway
+  ShelleyBasedEraDijkstra -> postConway
+ where
+  preConway :: L.ShelleyEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  preConway =
+    Exp.Certificate . L.mkUnRegTxCert . toShelleyStakeCredential <$> genStakeCredential
+
+  postConway :: L.ConwayEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  postConway =
+    Exp.Certificate
+      <$> ( L.mkUnRegDepositTxCert . toShelleyStakeCredential
+              <$> genStakeCredential
+              <*> genLovelace
+          )
 
 genStakeAddressDelegationCertificate
   :: ShelleyBasedEra era -> Gen (Exp.Certificate (ShelleyLedgerEra era))
-genStakeAddressDelegationCertificate =
-  caseShelleyToBabbageOrConwayEraOnwards
-    ( \w ->
-        shelleyToBabbageEraConstraints w $
-          Exp.Certificate
-            <$> ( L.mkDelegStakeTxCert . toShelleyStakeCredential
-                    <$> genStakeCredential
-                    <*> (unStakePoolKeyHash <$> genVerificationKeyHash AsStakePoolKey)
-                )
-    )
-    ( \w ->
-        conwayEraOnwardsConstraints w $
-          Exp.Certificate
-            <$> ( L.mkDelegTxCert . toShelleyStakeCredential
-                    <$> genStakeCredential
-                    <*> Q.arbitrary
-                )
-    )
+genStakeAddressDelegationCertificate = \case
+  ShelleyBasedEraShelley -> preConway
+  ShelleyBasedEraAllegra -> preConway
+  ShelleyBasedEraMary -> preConway
+  ShelleyBasedEraAlonzo -> preConway
+  ShelleyBasedEraBabbage -> preConway
+  ShelleyBasedEraConway -> postConway
+  ShelleyBasedEraDijkstra -> postConway
+ where
+  preConway :: L.ShelleyEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  preConway =
+    Exp.Certificate
+      <$> ( L.mkDelegStakeTxCert . toShelleyStakeCredential
+              <$> genStakeCredential
+              <*> (unStakePoolKeyHash <$> genVerificationKeyHash AsStakePoolKey)
+          )
+
+  postConway :: L.ConwayEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  postConway =
+    Exp.Certificate
+      <$> ( L.mkDelegTxCert . toShelleyStakeCredential
+              <$> genStakeCredential
+              <*> Q.arbitrary
+          )
 
 genStakePoolRegistrationCertificate
   :: ShelleyBasedEra era -> Gen (Exp.Certificate (ShelleyLedgerEra era))
