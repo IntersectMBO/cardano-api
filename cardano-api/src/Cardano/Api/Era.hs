@@ -61,9 +61,6 @@ module Cardano.Api.Era
 
     -- * Era case handling
 
-    -- ** Case on CardanoEra
-  , caseByronOrShelleyBasedEra
-
     -- ** Case on ShelleyBasedEra
   , caseShelleyToBabbageOrConwayEraOnwards
   )
