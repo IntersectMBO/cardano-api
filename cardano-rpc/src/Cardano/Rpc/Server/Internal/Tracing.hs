@@ -12,6 +12,7 @@ import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Cbor (DecoderError)
 import Cardano.Api.Serialise.Raw (SerialiseAsRawBytesError)
 import Cardano.Api.Serialise.SerialiseUsing
+import Cardano.Rpc.Server.Config (RpcEndpoint)
 
 import Control.Exception
 import Data.Word (Word64)
@@ -24,6 +25,7 @@ data TraceRpc
   | TraceRpcNodeKernelAccess TraceRpcNodeKernelAccess
   | TraceRpcError SomeException
   | TraceRpcFatalError SomeException
+  | TraceRpcServerListening !RpcEndpoint
 
 -- | Traces used in Query service
 data TraceRpcQuery
@@ -45,6 +47,7 @@ instance Pretty TraceRpc where
     TraceRpcNodeKernelAccess t -> pretty t
     TraceRpcError e -> "Exception when processing RPC request:\n" <> prettyException e
     TraceRpcFatalError e -> "RPC server fatal error: " <> prettyException e
+    TraceRpcServerListening endpoint -> "RPC server starting on " <> pretty endpoint
 
 -- | Span type
 data TraceSpanEvent

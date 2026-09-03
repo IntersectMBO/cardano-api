@@ -80,3 +80,18 @@ To build the package use the following command:
 cabal build cardano-rpc
 ```
 
+## Security
+
+The RPC server has no authentication or authorisation: every method is open to anyone who can reach the listener, including transaction submission and script evaluation.
+Everything served is public chain data, so the concern is resource consumption and node exposure rather than confidentiality.
+
+Defaults are conservative: the server is off unless `--grpc-enable` is given, it listens on a unix socket by default, and `--grpc-listen-port` binds `127.0.0.1` unless another address is given.
+The node warns at startup when RPC is enabled on a block-producing node.
+
+TLS encrypts the connection and lets clients verify the node; it does not restrict who may call, since there is no client-certificate support.
+A TLS listener on a public address is as open as a cleartext one.
+
+For deployment, keep the listener on loopback or a trusted network segment.
+Anywhere else, front it with a reverse proxy that terminates TLS and handles authentication and rate limiting, the pattern recommended in ADR-018.
+
+The server writes TLS key-log material if `SSLKEYLOGFILE` is set in its environment.

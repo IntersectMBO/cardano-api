@@ -30,6 +30,7 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as UtxoRpc
 import Cardano.Rpc.Proto.Api.UtxoRpc.Sync qualified as UtxoRpc
 import Cardano.Rpc.Server.Config
 import Cardano.Rpc.Server.Internal.Env
+import Cardano.Rpc.Server.Internal.Error (renderRpcExceptionForClient)
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Node
 import Cardano.Rpc.Server.Internal.Orphans ()
@@ -121,14 +122,40 @@ runRpcServer
 runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExceptions $ do
   let RpcConfig
         { isEnabled = Identity isEnabled
-        , rpcSocketPath = Identity (File rpcSocketPathFp)
+        , rpcEndpoint = Identity rpcEndpoint
         , nodeSocketPath = Identity nodeSocketPath
         } = rpcConfig
-      config =
-        ServerConfig
-          { serverInsecure = Just $ InsecureUnix rpcSocketPathFp
-          , serverSecure = Nothing
-          }
+      config :: ServerConfig
+      config = case rpcEndpoint of
+        RpcEndpointUnixSocket (File socketPath) ->
+          ServerConfig
+            { serverInsecure = Just $ InsecureUnix socketPath
+            , serverSecure = Nothing
+            }
+        RpcEndpointHttp host port ->
+          ServerConfig
+            { serverInsecure =
+                Just
+                  InsecureConfig
+                    { insecureHost = Just $ show host
+                    , insecurePort = port
+                    }
+            , serverSecure = Nothing
+            }
+        RpcEndpointHttps host port (RpcTlsFiles certificateFile privateKeyFile chainCertificateFiles) ->
+          ServerConfig
+            { serverInsecure = Nothing
+            , serverSecure =
+                Just
+                  SecureConfig
+                    { secureHost = show host
+                    , securePort = port
+                    , securePubCert = unFile certificateFile
+                    , secureChainCerts = unFile <$> chainCertificateFiles
+                    , securePrivKey = unFile privateKeyFile
+                    , secureSslKeyLog = def
+                    }
+            }
       rpcEnv =
         RpcEnv
           { config = rpcConfig
@@ -137,10 +164,11 @@ runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExce
           , rpcNodeKernelAccess = nodeKernelAccessRef
           }
 
-  when isEnabled $
+  when isEnabled $ do
+    traceWith tracer $ TraceRpcServerListening rpcEndpoint
     runRIO rpcEnv $
       withRunInIO $ \runInIO ->
-        runServerWithHandlers serverParams config . fmap (hoistSomeRpcHandler runInIO) $
+        runServer http2Settings config <=< mkGrpcServer serverParams . fmap (hoistSomeRpcHandler runInIO) $
           mconcat
             [ fromMethods methodsNodeRpc
             , fromMethods methodsUtxoRpc
@@ -149,7 +177,26 @@ runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExce
             ]
  where
   serverParams :: ServerParams
-  serverParams = def{serverTopLevel = topLevelHandler}
+  serverParams =
+    def
+      { serverTopLevel = topLevelHandler
+      , serverExceptionToClient = exceptionToClient
+      }
+
+  -- Clients must never see internal error detail or call stacks; full detail is
+  -- still traced server-side by 'topLevelHandler'.
+  exceptionToClient :: SomeException -> IO (Maybe Text)
+  exceptionToClient e =
+    pure . Just $ maybe genericErrorMessage renderRpcExceptionForClient $ fromException e
+   where
+    genericErrorMessage = "Internal error while processing the request."
+
+  -- Halve grapesy's default of 128: bounds per-connection RPC parallelism.
+  -- Remaining fields keep grapesy defaults, including the HTTP/2 flood-protection
+  -- rate limits and the 256 KiB / 2 MiB flow-control windows that cap buffered
+  -- inbound request data per stream / connection.
+  http2Settings :: HTTP2Settings
+  http2Settings = def{http2MaxConcurrentStreams = 64}
 
   -- Top level hook for request handlers, handle exceptions
   topLevelHandler :: RequestHandler () -> RequestHandler ()

@@ -14,6 +14,7 @@ module Cardano.Rpc.Server.Internal.Error
   , throwExceptT
   , throwGrpcErrorWithMessage
   , RpcException (..)
+  , renderRpcExceptionForClient
   )
 where
 
@@ -41,6 +42,11 @@ instance Exception RpcException where
       [ show (prettyError e)
       , prettyCallStack callStack
       ]
+
+-- | Render an 'RpcException' for an RPC client, without the call stack.
+-- The call stack is internal detail (module names, source lines) and must stay server-side only.
+renderRpcExceptionForClient :: RpcException -> Text
+renderRpcExceptionForClient (RpcException e) = tshow (prettyError e)
 
 -- | Throw a 'GrpcException' with the given error code and message.
 -- grapesy converts this to proper gRPC trailers before it reaches 'serverTopLevel'.
