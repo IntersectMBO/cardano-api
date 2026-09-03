@@ -1656,8 +1656,8 @@ fromLedgerTxValidityLowerBound
   -> A.LedgerTxBody era
   -> TxValidityLowerBound era
 fromLedgerTxValidityLowerBound sbe body =
-  caseShelleyEraOnlyOrAllegraEraOnwards
-    (const TxValidityNoLowerBound)
+  inEonForShelleyBasedEra
+    TxValidityNoLowerBound
     ( \w ->
         let mInvalidBefore = body ^. A.invalidBeforeTxBodyL w
          in case mInvalidBefore of
@@ -1719,8 +1719,8 @@ fromLedgerTxAuxiliaryData sbe (Just auxData) =
   metadata = if null ms then TxMetadataNone else TxMetadataInEra sbe $ TxMetadata ms
 
   auxdata =
-    caseShelleyEraOnlyOrAllegraEraOnwards
-      (const TxAuxScriptsNone)
+    inEonForShelleyBasedEra
+      TxAuxScriptsNone
       ( \w ->
           case ss of
             [] -> TxAuxScriptsNone

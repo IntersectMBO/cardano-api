@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 
 {- HLINT ignore "Eta reduce" -}
@@ -45,7 +47,6 @@ module Cardano.Api.Tx.Internal.Body.Lens
   )
 where
 
-import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
@@ -109,10 +110,20 @@ invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ txBodyL . L.vldtTxBody
 -- 'invalidHereAfterTxBodyL' lens over both with a 'Maybe SlotNo' type representation.  Withing the
 -- Shelley era, setting Nothing will set the ttl to 'maxBound' in the underlying ledger type.
 invalidHereAfterTxBodyL :: ShelleyBasedEra era -> Lens' (LedgerTxBody era) (Maybe SlotNo)
-invalidHereAfterTxBodyL =
-  caseShelleyEraOnlyOrAllegraEraOnwards
-    ttlAsInvalidHereAfterTxBodyL
-    (const $ txBodyL . L.vldtTxBodyL . L.invalidHereAfterL . strictMaybeL)
+invalidHereAfterTxBodyL = \case
+  ShelleyBasedEraShelley -> ttlAsInvalidHereAfterTxBodyL ShelleyEraOnlyShelley
+  ShelleyBasedEraAllegra -> vldtAsInvalidHereAfterTxBodyL
+  ShelleyBasedEraMary -> vldtAsInvalidHereAfterTxBodyL
+  ShelleyBasedEraAlonzo -> vldtAsInvalidHereAfterTxBodyL
+  ShelleyBasedEraBabbage -> vldtAsInvalidHereAfterTxBodyL
+  ShelleyBasedEraConway -> vldtAsInvalidHereAfterTxBodyL
+  ShelleyBasedEraDijkstra -> vldtAsInvalidHereAfterTxBodyL
+ where
+  vldtAsInvalidHereAfterTxBodyL
+    :: L.AllegraEraTxBody (ShelleyLedgerEra era')
+    => Lens' (LedgerTxBody era') (Maybe SlotNo)
+  vldtAsInvalidHereAfterTxBodyL =
+    txBodyL . L.vldtTxBodyL . L.invalidHereAfterL . strictMaybeL
 
 -- | Compatibility lens over 'ttlTxBodyL' which represents 'maxBound' as Nothing and all other values as 'Just'.
 ttlAsInvalidHereAfterTxBodyL :: ShelleyEraOnly era -> Lens' (LedgerTxBody era) (Maybe SlotNo)

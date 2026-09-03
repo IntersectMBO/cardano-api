@@ -7,16 +7,13 @@ module Cardano.Api.Era.Internal.Case
   ( -- Case on CardanoEra
     caseByronOrShelleyBasedEra
   -- Case on ShelleyBasedEra
-  , caseShelleyEraOnlyOrAllegraEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
   )
 where
 
 import Cardano.Api.Era.Internal.Core
-import Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
-import Cardano.Api.Era.Internal.Eon.ShelleyEraOnly
 import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
 
 -- | @caseByronOrShelleyBasedEra f g era@ returns @f@ in Byron and applies @g@ to Shelley-based eras.
@@ -37,23 +34,6 @@ caseByronOrShelleyBasedEra l r = \case
   BabbageEra -> r ShelleyBasedEraBabbage
   ConwayEra -> r ShelleyBasedEraConway
   DijkstraEra -> r ShelleyBasedEraDijkstra
-
--- | @caseShelleyEraOnlyOrAllegraEraOnwards f g era@ applies @f@ to shelley;
--- and applies @g@ to allegra and later eras.
-caseShelleyEraOnlyOrAllegraEraOnwards
-  :: ()
-  => (ShelleyEraOnlyConstraints era => ShelleyEraOnly era -> a)
-  -> (AllegraEraOnwardsConstraints era => AllegraEraOnwards era -> a)
-  -> ShelleyBasedEra era
-  -> a
-caseShelleyEraOnlyOrAllegraEraOnwards l r = \case
-  ShelleyBasedEraShelley -> l ShelleyEraOnlyShelley
-  ShelleyBasedEraAllegra -> r AllegraEraOnwardsAllegra
-  ShelleyBasedEraMary -> r AllegraEraOnwardsMary
-  ShelleyBasedEraAlonzo -> r AllegraEraOnwardsAlonzo
-  ShelleyBasedEraBabbage -> r AllegraEraOnwardsBabbage
-  ShelleyBasedEraConway -> r AllegraEraOnwardsConway
-  ShelleyBasedEraDijkstra -> r AllegraEraOnwardsDijkstra
 
 -- | @caseShelleyToBabbageOrConwayEraOnwards f g era@ applies @f@ to eras before conway;
 -- and applies @g@ to conway and later eras.
