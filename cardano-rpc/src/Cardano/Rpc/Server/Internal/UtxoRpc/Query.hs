@@ -16,6 +16,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   , readUtxosMethod
   , searchUtxosMethod
   , readGenesisMethod
+  , readEraSummaryMethod
   , paginateByTxIn
   )
 where
@@ -263,6 +264,21 @@ readShelleyGenesisWithInitialFunds shelleyGenesisFile@(File path) bootGenesisHas
         <> tshow path
         <> ": "
         <> Text.pack reason
+
+-- | Handle the @ReadEraSummary@ RPC method.
+-- Returns the node's hard-fork era summary: one entry per era the node's
+-- ledger state has seen so far, with name and start/end boundaries. See
+-- 'eraSummariesToProto' for exactly which fields are populated.
+readEraSummaryMethod
+  :: MonadRpc e m
+  => Proto UtxoRpc.ReadEraSummaryRequest
+  -> m (Proto UtxoRpc.ReadEraSummaryResponse)
+readEraSummaryMethod _req = do
+  -- TODO: field masks are ignored for now (same as readParamsMethod)
+  nodeKernelAccess <- grabNodeKernelAccess
+  summary <- readHardForkSummary nodeKernelAccess
+  pure $
+    defMessage & U5c.cardano .~ eraSummariesToProto (nodeKernelSystemStart nodeKernelAccess) summary
 
 -- | The CAIP-2 chain identifier for a Cardano network, keyed on the Shelley
 -- network magic.
