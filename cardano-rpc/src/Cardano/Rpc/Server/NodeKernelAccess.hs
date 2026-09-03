@@ -12,6 +12,7 @@ module Cardano.Rpc.Server.NodeKernelAccess
   , securityParam
   , genesisConfig
   , readEraHistory
+  , readHardForkSummary
   , readChainTipHeader
   , GenesisBundle (..)
   , mkNodeKernelAccess
