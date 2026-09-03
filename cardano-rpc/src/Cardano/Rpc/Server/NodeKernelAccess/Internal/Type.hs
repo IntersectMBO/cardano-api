@@ -2,15 +2,14 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
-module Cardano.Rpc.Server.NodeKernelAccess.Type
+module Cardano.Rpc.Server.NodeKernelAccess.Internal.Type
   ( NodeKernelAccess (..)
   , GenesisBundle (..)
   )
 where
 
 import Cardano.Api
-  ( EraHistory
-  , FileDirection (In)
+  ( FileDirection (In)
   , GenesisHashShelley
   , ShelleyGenesisFile
   , SystemStart
@@ -22,6 +21,8 @@ import Cardano.Chain.Genesis qualified as Byron (Config)
 import Cardano.Ledger.Alonzo.Genesis qualified as L (AlonzoGenesis)
 import Cardano.Ledger.Conway.Genesis qualified as L (ConwayGenesis)
 import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis)
+import Ouroboros.Consensus.Cardano.Block (CardanoEras)
+import Ouroboros.Consensus.HardFork.History qualified as History
 
 import Control.Monad.IO.Class (MonadIO)
 
@@ -32,12 +33,15 @@ data NodeKernelAccess = NodeKernelAccess
   -- ^ Handle to the consensus chain database
   , systemStart :: SystemStart
   -- ^ Network system start time, extracted from genesis config.
-  -- Used together with 'readEraHistory' to convert slots to wall-clock time.
-  , readEraHistory :: forall m. MonadIO m => m EraHistory
-  -- ^ Read current era history from the ledger state.
+  -- Used together with the era history to convert slots to wall-clock time.
+  , readHardForkSummary
+      :: forall m
+       . MonadIO m
+      => m (History.Summary (CardanoEras Consensus.StandardCrypto))
+  -- ^ Read the hard-fork era summary from the current ledger state.
   -- This is a separate read from 'chainDb', but the inconsistency is
   -- always safe: the ledger state is at or ahead of any block in ChainDB,
-  -- and era summaries only grow, so the returned history always covers the
+  -- and era summaries only grow, so the summary always covers the
   -- slot of any block fetched from ChainDB.
   , securityParam :: Consensus.SecurityParam
   -- ^ The protocol security parameter /k/: consensus never rolls back more

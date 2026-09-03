@@ -24,7 +24,7 @@ where
 import Cardano.Api
 import Cardano.Rpc.Server.Internal.Env
 import Cardano.Rpc.Server.Internal.Tracing
-import Cardano.Rpc.Server.NodeKernelAccess.Type (NodeKernelAccess)
+import Cardano.Rpc.Server.NodeKernelAccess.Internal.Type (NodeKernelAccess)
 
 import RIO
 
