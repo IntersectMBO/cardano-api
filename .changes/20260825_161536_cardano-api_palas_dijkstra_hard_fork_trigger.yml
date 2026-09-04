@@ -1,6 +1,0 @@
-description: |
-  `foldBlocks` and the rest of the ledger-state machinery now honour `TestDijkstraHardForkAtEpoch` in the node configuration file, so they can follow a chain into the Dijkstra era.
-kind:
-  - bugfix
-pr: 1321
-project: cardano-api
