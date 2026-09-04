@@ -1,5 +1,15 @@
 # Changelog for cardano-rpc
 
+## 11.3.0.0 -- 2026-09-04
+
+- The cardano-rpc gRPC server can now listen on HTTP/2 (h2c) or HTTP/2 over TLS on a configured IP address and port instead of only a unix domain socket, configured via new cardano-node options such as `--grpc-listen-port` and `--grpc-tls-certificate`. `RpcConfigF`'s `rpcSocketPath` field was replaced by the new `RpcEndpoint` sum type. Error responses no longer include internal diagnostic detail such as call stacks. Script evaluation requests are rejected when the transaction exceeds the protocol maximum size or carries more than 100 redeemers. UTxO reads are limited to 20000 keys and block fetches to 500 references per request.
+  (feature, breaking)
+  [PR 1322](https://github.com/intersectmbo/cardano-api/pull/1322)
+
+- Update the vendored UTxO RPC v1beta proto definitions to the latest upstream utxorpc/spec (v0.19.2 plus the unreleased EvalReport optional-field flags from [utxorpc/spec#203](https://github.com/utxorpc/spec/pull/203), a wire-compatible change), including resetting FetchBlock to the upstream repeated request/response shape (the single-item variant moved to the upcoming utxorpc v1). Expose all v1beta service methods: the unimplemented ones (ReadData, ReadTx, ReadEraSummary, ReadState, ReadMempool, WaitForTx, WatchMempool, DumpHistory) respond with the UNIMPLEMENTED gRPC status. Populate the new `Tx.votes` field (governance votes, Conway onwards) and the new `TxOutput.original_cbor` field (canonical re-encoding of the output; the ledger does not retain the original on-chain TxOut bytes).
+  (feature, breaking)
+  [PR 1303](https://github.com/intersectmbo/cardano-api/pull/1303)
+
 ## 11.2.0.0 -- 2026-08-25
 
 - Fixed the UTxO RPC `ReadGenesis` response reporting no initial funds for networks created with `cardano-cli create-testnet-data`, and stopped the node retaining the parsed genesis in memory for its whole lifetime. The Shelley genesis is now read from disk when `ReadGenesis` is served, verified against the genesis hash computed at node startup, and kept for five minutes after the last request; a genesis file that changed since startup fails the request with `FAILED_PRECONDITION`. Breaking change: `mkNodeKernelAccess` no longer takes `ProtocolInfoArgs` and takes the Shelley genesis file path instead.
