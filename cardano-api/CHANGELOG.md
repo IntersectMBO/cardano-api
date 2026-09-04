@@ -1,5 +1,27 @@
 # Changelog for cardano-api
 
+## 11.7.0.0 -- 2026-09-04
+
+- Bumped ouroboros-consensus to address issue that affected queries `kes-period-info` and `tip`.
+  (bugfix)
+  [PR 1327](https://github.com/intersectmbo/cardano-api/pull/1327)
+
+- `foldBlocks` and the rest of the ledger-state machinery now honour `TestDijkstraHardForkAtEpoch` in the node configuration file, so they can follow a chain into the Dijkstra era.
+  (bugfix)
+  [PR 1321](https://github.com/intersectmbo/cardano-api/pull/1321)
+
+- Fix plutus redeemer pointer indexing: proposal pointers now follow the transaction's insertion order and certificate pointers count unwitnessed certificates, in both the experimental and the deprecated transaction builders. Remove the unused StakeCredential field from the WitTxCert constructor. Add property tests checking every redeemer pointer against the ledger's own resolution.
+  (bugfix, breaking, test)
+  [PR 1288](https://github.com/intersectmbo/cardano-api/pull/1288)
+
+- Re-export additional ledger accessors from `Cardano.Api.Ledger` so downstream code can read a transaction and its outputs through the ledger lenses without depending on `cardano-ledger` directly: `auxDataTxL` (via `EraTx`), `metadataTxAuxDataL` (via `EraTxAuxData`), `addrTxOutL` / `valueTxOutL` (via `EraTxOut`), `datumTxOutF` (via `AlonzoEraTxOut`), plus `Datum (..)`, `hashBinaryData`, and `hashScript`.
+  (compatible)
+  [PR 1262](https://github.com/intersectmbo/cardano-api/pull/1262)
+
+- FromJSON (TxOut) no longer crashes when parsing a TxOut whose inline datum was encoded with non-canonical CBOR bytes (e.g. definite-length arrays instead of the indefinite-length form Plutus normally emits).
+  (bugfix)
+  [PR 1238](https://github.com/intersectmbo/cardano-api/pull/1238)
+
 ## 11.6.0.0 -- 2026-08-25
 
 - The Dijkstra era can now be selected and enumerated like the other eras: `maxBound` and `[minBound .. maxBound]` for `AnyCardanoEra`, `AnyShelleyBasedEra` and the experimental `Some Era` include it, and the era-name parsers (`anyCardanoEraFromStringLike` and the JSON instances) accept "Dijkstra".
