@@ -1,7 +1,0 @@
-project: cardano-rpc
-pr: 1322
-kind:
-  - feature
-  - breaking
-description: |
-  The cardano-rpc gRPC server can now listen on HTTP/2 (h2c) or HTTP/2 over TLS on a configured IP address and port instead of only a unix domain socket, configured via new cardano-node options such as `--grpc-listen-port` and `--grpc-tls-certificate`. `RpcConfigF`'s `rpcSocketPath` field was replaced by the new `RpcEndpoint` sum type. Error responses no longer include internal diagnostic detail such as call stacks. Script evaluation requests are rejected when the transaction exceeds the protocol maximum size or carries more than 100 redeemers. UTxO reads are limited to 20000 keys and block fetches to 500 references per request.
