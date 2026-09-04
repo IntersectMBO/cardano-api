@@ -58,18 +58,9 @@ module Cardano.Api.Era
     , AsConwayEra
     , AsDijkstraEra
     )
-
-    -- * Era case handling
-
-    -- ** Case on CardanoEra
-  , caseByronOrShelleyBasedEra
-
-    -- ** Case on ShelleyBasedEra
-  , caseShelleyToBabbageOrConwayEraOnwards
   )
 where
 
-import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards

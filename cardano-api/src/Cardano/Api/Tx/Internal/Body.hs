@@ -238,7 +238,6 @@ where
 
 import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
-import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
@@ -1656,8 +1655,8 @@ fromLedgerTxValidityLowerBound
   -> A.LedgerTxBody era
   -> TxValidityLowerBound era
 fromLedgerTxValidityLowerBound sbe body =
-  caseShelleyEraOnlyOrAllegraEraOnwards
-    (const TxValidityNoLowerBound)
+  inEonForShelleyBasedEra
+    TxValidityNoLowerBound
     ( \w ->
         let mInvalidBefore = body ^. A.invalidBeforeTxBodyL w
          in case mInvalidBefore of
@@ -1719,8 +1718,8 @@ fromLedgerTxAuxiliaryData sbe (Just auxData) =
   metadata = if null ms then TxMetadataNone else TxMetadataInEra sbe $ TxMetadata ms
 
   auxdata =
-    caseShelleyEraOnlyOrAllegraEraOnwards
-      (const TxAuxScriptsNone)
+    inEonForShelleyBasedEra
+      TxAuxScriptsNone
       ( \w ->
           case ss of
             [] -> TxAuxScriptsNone
@@ -1780,13 +1779,14 @@ maybeFromLedgerTxUpdateProposal
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxUpdateProposal era
 maybeFromLedgerTxUpdateProposal sbe body =
-  caseShelleyToBabbageOrConwayEraOnwards
+  inEonForShelleyBasedEra
+    TxUpdateProposalNone
     ( \w ->
-        case body ^. L.updateTxBodyL of
-          SNothing -> TxUpdateProposalNone
-          SJust p -> TxUpdateProposal w (fromLedgerUpdate sbe p)
+        shelleyToBabbageEraConstraints w $
+          case body ^. L.updateTxBodyL of
+            SNothing -> TxUpdateProposalNone
+            SJust p -> TxUpdateProposal w (fromLedgerUpdate sbe p)
     )
-    (const TxUpdateProposalNone)
     sbe
 
 fromLedgerTxMintValue
@@ -2384,10 +2384,8 @@ collectTxBodyScriptWitnessRequirements
             extractWitnessableMints aEon txMintValue
 
       txVotingWits <-
-        caseShelleyToBabbageOrConwayEraOnwards
-          ( \w ->
-              shelleyToBabbageEraConstraints w $ Right $ TxScriptWitnessRequirements mempty mempty mempty mempty
-          )
+        inEonForShelleyBasedEra
+          (Right $ TxScriptWitnessRequirements mempty mempty mempty mempty)
           ( \eon ->
               first TxBodyPlutusScriptDecodeError $
                 legacyWitnessToScriptRequirements aEon $
@@ -2395,8 +2393,8 @@ collectTxBodyScriptWitnessRequirements
           )
           sbe
       txProposalWits <-
-        caseShelleyToBabbageOrConwayEraOnwards
-          (const $ Right $ TxScriptWitnessRequirements mempty mempty mempty mempty)
+        inEonForShelleyBasedEra
+          (Right $ TxScriptWitnessRequirements mempty mempty mempty mempty)
           ( \eon ->
               first TxBodyPlutusScriptDecodeError $
                 legacyWitnessToScriptRequirements aEon $

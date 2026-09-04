@@ -110,9 +110,9 @@ import Cardano.Api.Byron.Internal.Proposal as Byron
 import Cardano.Api.Certificate.Internal
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Consensus.Internal.Mode qualified as Api
-import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core (forEraInEon, forEraMaybeEon, toCardanoEra)
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards (ConwayEraOnwards)
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error as Api
 import Cardano.Api.Genesis.Internal
@@ -2119,7 +2119,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         stabilityWindowSlots :: SlotNo
         stabilityWindowSlots = fromIntegral @Word64 $ floor $ fromRational @Double stabilityWindowR
         stableStakeDistribSlot = currentEpochLastSlot - stabilityWindowSlots
-        stabilityWindowConst = caseShelleyToBabbageOrConwayEraOnwards (const 3) (const 4) sbe
+        stabilityWindowConst = inEonForShelleyBasedEra @ConwayEraOnwards 3 (const 4) sbe
 
     case cTip of
       ChainTipAtGenesis -> Left LeaderErrGenesisSlot
