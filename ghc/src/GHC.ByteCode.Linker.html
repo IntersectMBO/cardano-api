@@ -1,0 +1,842 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances     #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MagicHash             #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings     #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE DataKinds             #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards       #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# OPTIONS_GHC -optc-DNON_POSIX_SOURCE #-}</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--  (c) The University of Glasgow 2002-2006</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="annot"><span class="hs-comment">-- | Bytecode assembler and linker</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.ByteCode.Linker.html"><span class="hs-identifier">GHC.ByteCode.Linker</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.ByteCode.Linker.html#linkBCO"><span class="hs-identifier">linkBCO</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Linker.html#lookupStaticPtr"><span class="hs-identifier">lookupStaticPtr</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Linker.html#lookupIE"><span class="hs-identifier">lookupIE</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Linker.html#linkFail"><span class="hs-identifier">linkFail</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.html"><span class="hs-identifier">GHC.Runtime.Interpreter</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html"><span class="hs-identifier">GHC.ByteCode.Types</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html"><span class="hs-identifier">GHCi.RemoteTypes</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html"><span class="hs-identifier">GHCi.ResolvedBCO</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Builtin.PrimOps.html"><span class="hs-identifier">GHC.Builtin.PrimOps</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Builtin.PrimOps.Ids.html"><span class="hs-identifier">GHC.Builtin.PrimOps.Ids</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Env.html"><span class="hs-identifier">GHC.Unit.Module.Env</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html"><span class="hs-identifier">GHC.Unit.Types</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html"><span class="hs-identifier">GHC.Data.FastString</span></a></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.Maybe.html"><span class="hs-identifier">GHC.Data.Maybe</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Data.SizedSeq.html"><span class="hs-identifier">GHC.Data.SizedSeq</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html"><span class="hs-identifier">GHC.Linker.Types</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Panic.html"><span class="hs-identifier">GHC.Utils.Panic</span></a></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.html"><span class="hs-identifier">GHC.Types.Name</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.Env.html"><span class="hs-identifier">GHC.Types.Name.Env</span></a></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="GHC.Types.Id.html"><span class="hs-identifier">GHC.Types.Id</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Id</span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DFM.html"><span class="hs-identifier">GHC.Types.Unique.DFM</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- Standard libraries</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../array-0.5.8.0-inplace/src/Data.Array.Unboxed.html"><span class="hs-identifier">Data.Array.Unboxed</span></a></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Foreign.Ptr.html"><span class="hs-identifier">Foreign.Ptr</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">{-
+  Linking interpretables into something we can run
+-}</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><a href="GHC.ByteCode.Linker.html#linkBCO"><span class="hs-identifier hs-type">linkBCO</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#Interp"><span class="hs-identifier hs-type">Interp</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#PkgsLoaded"><span class="hs-identifier hs-type">PkgsLoaded</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#LinkerEnv"><span class="hs-identifier hs-type">LinkerEnv</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#LinkedBreaks"><span class="hs-identifier hs-type">LinkedBreaks</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Name.Env.html#NameEnv"><span class="hs-identifier hs-type">NameEnv</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#UnlinkedBCO"><span class="hs-identifier hs-type">UnlinkedBCO</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#ResolvedBCO"><span class="hs-identifier hs-type">ResolvedBCO</span></a></span><span>
+</span><span id="line-65"></span><span id="linkBCO"><span class="annot"><span class="annottext">linkBCO :: Interp
+-&gt; PkgsLoaded
+-&gt; LinkerEnv
+-&gt; LinkedBreaks
+-&gt; NameEnv BreakTickIndex
+-&gt; UnlinkedBCO
+-&gt; IO ResolvedBCO
+</span><a href="GHC.ByteCode.Linker.html#linkBCO"><span class="hs-identifier hs-var hs-var">linkBCO</span></a></span></span><span> </span><span id="local-6989586621683196928"><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683196928"><span class="hs-identifier hs-var">interp</span></a></span></span><span> </span><span id="local-6989586621683196929"><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683196929"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span></span><span> </span><span id="local-6989586621683196930"><span class="annot"><span class="annottext">LinkerEnv
+</span><a href="#local-6989586621683196930"><span class="hs-identifier hs-var">le</span></a></span></span><span> </span><span id="local-6989586621683196931"><span class="annot"><span class="annottext">LinkedBreaks
+</span><a href="#local-6989586621683196931"><span class="hs-identifier hs-var">lb</span></a></span></span><span> </span><span id="local-6989586621683196932"><span class="annot"><span class="annottext">NameEnv BreakTickIndex
+</span><a href="#local-6989586621683196932"><span class="hs-identifier hs-var">bco_ix</span></a></span></span><span>
+</span><span id="line-66"></span><span>           </span><span class="hs-special">(</span><span class="annot"><a href="GHC.ByteCode.Types.html#UnlinkedBCO"><span class="hs-identifier hs-type">UnlinkedBCO</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621683196934"><span class="annot"><span class="annottext">BreakTickIndex
+</span><a href="#local-6989586621683196934"><span class="hs-identifier hs-var">arity</span></a></span></span><span> </span><span id="local-6989586621683196935"><span class="annot"><span class="annottext">BCOByteArray Word16
+</span><a href="#local-6989586621683196935"><span class="hs-identifier hs-var">insns</span></a></span></span><span> </span><span id="local-6989586621683196936"><span class="annot"><span class="annottext">BCOByteArray Word
+</span><a href="#local-6989586621683196936"><span class="hs-identifier hs-var">bitmap</span></a></span></span><span> </span><span id="local-6989586621683196937"><span class="annot"><span class="annottext">FlatBag BCONPtr
+</span><a href="#local-6989586621683196937"><span class="hs-identifier hs-var">lits0</span></a></span></span><span> </span><span id="local-6989586621683196938"><span class="annot"><span class="annottext">FlatBag BCOPtr
+</span><a href="#local-6989586621683196938"><span class="hs-identifier hs-var">ptrs0</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-comment">-- fromIntegral Word -&gt; Word64 should be a no op if Word is Word64</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-comment">-- otherwise it will result in a cast to longlong on 32bit systems.</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621683196939"><span class="annot"><a href="#local-6989586621683196939"><span class="hs-identifier hs-var">lits</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier">Word</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(BCONPtr -&gt; IO Word) -&gt; [BCONPtr] -&gt; IO [Word]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Word -&gt; Word) -&gt; IO Word -&gt; IO Word
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Word -&gt; IO Word) -&gt; (BCONPtr -&gt; IO Word) -&gt; BCONPtr -&gt; IO Word
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+-&gt; PkgsLoaded -&gt; LinkerEnv -&gt; LinkedBreaks -&gt; BCONPtr -&gt; IO Word
+</span><a href="GHC.ByteCode.Linker.html#lookupLiteral"><span class="hs-identifier hs-var">lookupLiteral</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683196928"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683196929"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span><span> </span><span class="annot"><span class="annottext">LinkerEnv
+</span><a href="#local-6989586621683196930"><span class="hs-identifier hs-var">le</span></a></span><span> </span><span class="annot"><span class="annottext">LinkedBreaks
+</span><a href="#local-6989586621683196931"><span class="hs-identifier hs-var">lb</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FlatBag BCONPtr -&gt; [BCONPtr]
+forall a. FlatBag a -&gt; [a]
+</span><a href="GHC.Data.FlatBag.html#elemsFlatBag"><span class="hs-identifier hs-var">elemsFlatBag</span></a></span><span> </span><span class="annot"><span class="annottext">FlatBag BCONPtr
+</span><a href="#local-6989586621683196937"><span class="hs-identifier hs-var">lits0</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621683196944"><span class="annot"><a href="#local-6989586621683196944"><span class="hs-identifier hs-var">ptrs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Traversable.html#mapM"><span class="hs-identifier hs-type">mapM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.ByteCode.Linker.html#resolvePtr"><span class="hs-identifier hs-type">resolvePtr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196928"><span class="hs-identifier hs-type">interp</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196929"><span class="hs-identifier hs-type">pkgs_loaded</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196930"><span class="hs-identifier hs-type">le</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196931"><span class="hs-identifier hs-type">lb</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196932"><span class="hs-identifier hs-type">bco_ix</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Data.FlatBag.html#elemsFlatBag"><span class="hs-identifier hs-type">elemsFlatBag</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196938"><span class="hs-identifier hs-type">ptrs0</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683196946"><span class="annot"><a href="#local-6989586621683196946"><span class="hs-identifier hs-var hs-var">lits'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BreakTickIndex, BreakTickIndex)
+-&gt; [Word] -&gt; UArray BreakTickIndex Word
+forall (a :: * -&gt; * -&gt; *) e i.
+(IArray a e, Ix i) =&gt;
+(i, i) -&gt; [e] -&gt; a i e
+</span><a href="../../array-0.5.8.0-inplace/src/Data.Array.Base.html#listArray"><span class="hs-identifier hs-var">listArray</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word -&gt; BreakTickIndex
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FlatBag BCONPtr -&gt; Word
+forall a. FlatBag a -&gt; Word
+</span><a href="GHC.Data.FlatBag.html#sizeFlatBag"><span class="hs-identifier hs-var">sizeFlatBag</span></a></span><span> </span><span class="annot"><span class="annottext">FlatBag BCONPtr
+</span><a href="#local-6989586621683196937"><span class="hs-identifier hs-var">lits0</span></a></span><span class="hs-special">)</span><span class="annot"><span class="annottext">BreakTickIndex -&gt; BreakTickIndex -&gt; BreakTickIndex
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Word]
+</span><a href="#local-6989586621683196939"><span class="hs-identifier hs-var">lits</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#ResolvedBCO"><span class="hs-identifier hs-type">ResolvedBCO</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#resolvedBCOIsLE"><span class="hs-identifier hs-var">resolvedBCOIsLE</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#isLittleEndian"><span class="hs-identifier hs-type">isLittleEndian</span></a></span><span>
+</span><span id="line-73"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#resolvedBCOArity"><span class="hs-identifier hs-var">resolvedBCOArity</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621683196934"><span class="hs-identifier hs-type">arity</span></a></span><span>
+</span><span id="line-74"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#resolvedBCOInstrs"><span class="hs-identifier hs-var">resolvedBCOInstrs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621683196935"><span class="hs-identifier hs-type">insns</span></a></span><span>
+</span><span id="line-75"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#resolvedBCOBitmap"><span class="hs-identifier hs-var">resolvedBCOBitmap</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621683196936"><span class="hs-identifier hs-type">bitmap</span></a></span><span>
+</span><span id="line-76"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#resolvedBCOLits"><span class="hs-identifier hs-var">resolvedBCOLits</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#mkBCOByteArray"><span class="hs-identifier hs-type">mkBCOByteArray</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196946"><span class="hs-identifier hs-type">lits'</span></a></span><span>
+</span><span id="line-77"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#resolvedBCOPtrs"><span class="hs-identifier hs-var">resolvedBCOPtrs</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Data.SizedSeq.html#addListToSS"><span class="hs-identifier hs-type">addListToSS</span></a></span><span> </span><span class="annot"><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Data.SizedSeq.html#emptySS"><span class="hs-identifier hs-type">emptySS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196944"><span class="hs-identifier hs-type">ptrs</span></a></span><span>
+</span><span id="line-78"></span><span>                       </span><span class="hs-special">}</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="annot"><a href="GHC.ByteCode.Linker.html#lookupLiteral"><span class="hs-identifier hs-type">lookupLiteral</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#Interp"><span class="hs-identifier hs-type">Interp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#PkgsLoaded"><span class="hs-identifier hs-type">PkgsLoaded</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#LinkerEnv"><span class="hs-identifier hs-type">LinkerEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#LinkedBreaks"><span class="hs-identifier hs-type">LinkedBreaks</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtr"><span class="hs-identifier hs-type">BCONPtr</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span>
+</span><span id="line-81"></span><span id="lookupLiteral"><span class="annot"><span class="annottext">lookupLiteral :: Interp
+-&gt; PkgsLoaded -&gt; LinkerEnv -&gt; LinkedBreaks -&gt; BCONPtr -&gt; IO Word
+</span><a href="GHC.ByteCode.Linker.html#lookupLiteral"><span class="hs-identifier hs-var hs-var">lookupLiteral</span></a></span></span><span> </span><span id="local-6989586621683196960"><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683196960"><span class="hs-identifier hs-var">interp</span></a></span></span><span> </span><span id="local-6989586621683196961"><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683196961"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span></span><span> </span><span id="local-6989586621683196962"><span class="annot"><span class="annottext">LinkerEnv
+</span><a href="#local-6989586621683196962"><span class="hs-identifier hs-var">le</span></a></span></span><span> </span><span id="local-6989586621683196963"><span class="annot"><span class="annottext">LinkedBreaks
+</span><a href="#local-6989586621683196963"><span class="hs-identifier hs-var">lb</span></a></span></span><span> </span><span id="local-6989586621683196964"><span class="annot"><span class="annottext">BCONPtr
+</span><a href="#local-6989586621683196964"><span class="hs-identifier hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">BCONPtr
+</span><a href="#local-6989586621683196964"><span class="hs-identifier hs-var">ptr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrWord"><span class="hs-identifier hs-type">BCONPtrWord</span></a></span><span> </span><span id="local-6989586621683196966"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621683196966"><span class="hs-identifier hs-var">lit</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word -&gt; IO Word
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621683196966"><span class="hs-identifier hs-var">lit</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrLbl"><span class="hs-identifier hs-type">BCONPtrLbl</span></a></span><span>  </span><span id="local-6989586621683196968"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621683196968"><span class="hs-identifier hs-var">sym</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span id="local-6989586621683196970"><span class="annot"><a href="#local-6989586621683196970"><span class="hs-identifier hs-var">a#</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Interp -&gt; FastString -&gt; IO (Ptr ())
+</span><a href="GHC.ByteCode.Linker.html#lookupStaticPtr"><span class="hs-identifier hs-var">lookupStaticPtr</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683196960"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621683196968"><span class="hs-identifier hs-var">sym</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#W%23"><span class="hs-identifier hs-type">W#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#int2Word%23"><span class="hs-identifier hs-type">int2Word#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#addr2Int%23"><span class="hs-identifier hs-type">addr2Int#</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196970"><span class="hs-identifier hs-type">a#</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrItbl"><span class="hs-identifier hs-type">BCONPtrItbl</span></a></span><span> </span><span id="local-6989586621683196972"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683196972"><span class="hs-identifier hs-var">nm</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span id="local-6989586621683196973"><span class="annot"><a href="#local-6989586621683196973"><span class="hs-identifier hs-var">a#</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Interp -&gt; PkgsLoaded -&gt; ItblEnv -&gt; Name -&gt; IO (Ptr ())
+</span><a href="GHC.ByteCode.Linker.html#lookupIE"><span class="hs-identifier hs-var">lookupIE</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683196960"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683196961"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LinkerEnv -&gt; ItblEnv
+</span><a href="GHC.Linker.Types.html#itbl_env"><span class="hs-identifier hs-var">itbl_env</span></a></span><span> </span><span class="annot"><span class="annottext">LinkerEnv
+</span><a href="#local-6989586621683196962"><span class="hs-identifier hs-var">le</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683196972"><span class="hs-identifier hs-var">nm</span></a></span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#W%23"><span class="hs-identifier hs-type">W#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#int2Word%23"><span class="hs-identifier hs-type">int2Word#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#addr2Int%23"><span class="hs-identifier hs-type">addr2Int#</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196973"><span class="hs-identifier hs-type">a#</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrAddr"><span class="hs-identifier hs-type">BCONPtrAddr</span></a></span><span> </span><span id="local-6989586621683196976"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683196976"><span class="hs-identifier hs-var">nm</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span id="local-6989586621683196977"><span class="annot"><a href="#local-6989586621683196977"><span class="hs-identifier hs-var">a#</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Interp -&gt; PkgsLoaded -&gt; AddrEnv -&gt; Name -&gt; IO (Ptr ())
+</span><a href="GHC.ByteCode.Linker.html#lookupAddr"><span class="hs-identifier hs-var">lookupAddr</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683196960"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683196961"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LinkerEnv -&gt; AddrEnv
+</span><a href="GHC.Linker.Types.html#addr_env"><span class="hs-identifier hs-var">addr_env</span></a></span><span> </span><span class="annot"><span class="annottext">LinkerEnv
+</span><a href="#local-6989586621683196962"><span class="hs-identifier hs-var">le</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683196976"><span class="hs-identifier hs-var">nm</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#W%23"><span class="hs-identifier hs-type">W#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#int2Word%23"><span class="hs-identifier hs-type">int2Word#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Prim.html#addr2Int%23"><span class="hs-identifier hs-type">addr2Int#</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196977"><span class="hs-identifier hs-type">a#</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrStr"><span class="hs-identifier hs-type">BCONPtrStr</span></a></span><span> </span><span id="local-6989586621683196981"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621683196981"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#RemotePtr"><span class="hs-identifier hs-type">RemotePtr</span></a></span><span> </span><span id="local-6989586621683196983"><span class="annot"><a href="#local-6989586621683196983"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">([RemotePtr ()] -&gt; RemotePtr ())
+-&gt; IO [RemotePtr ()] -&gt; IO (RemotePtr ())
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[RemotePtr ()] -&gt; RemotePtr ()
+forall a. HasCallStack =&gt; [a] -&gt; a
+</span><a href="GHC.Prelude.Basic.html#head"><span class="hs-identifier hs-var">head</span></a></span><span> </span><span class="annot"><span class="annottext">(IO [RemotePtr ()] -&gt; IO (RemotePtr ()))
+-&gt; IO [RemotePtr ()] -&gt; IO (RemotePtr ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Interp -&gt; Message [RemotePtr ()] -&gt; IO [RemotePtr ()]
+forall a. Binary a =&gt; Interp -&gt; Message a -&gt; IO a
+</span><a href="GHC.Runtime.Interpreter.html#interpCmd"><span class="hs-identifier hs-var">interpCmd</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683196960"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">(Message [RemotePtr ()] -&gt; IO [RemotePtr ()])
+-&gt; Message [RemotePtr ()] -&gt; IO [RemotePtr ()]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; Message [RemotePtr ()]
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.Message.html#MallocStrings"><span class="hs-identifier hs-var">MallocStrings</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621683196981"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-type">fromIntegral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196983"><span class="hs-identifier hs-type">p</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrFS"><span class="hs-identifier hs-type">BCONPtrFS</span></a></span><span> </span><span id="local-6989586621683196988"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621683196988"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-96"></span><span>    </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#RemotePtr"><span class="hs-identifier hs-type">RemotePtr</span></a></span><span> </span><span id="local-6989586621683196989"><span class="annot"><a href="#local-6989586621683196989"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">([RemotePtr ()] -&gt; RemotePtr ())
+-&gt; IO [RemotePtr ()] -&gt; IO (RemotePtr ())
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[RemotePtr ()] -&gt; RemotePtr ()
+forall a. HasCallStack =&gt; [a] -&gt; a
+</span><a href="GHC.Prelude.Basic.html#head"><span class="hs-identifier hs-var">head</span></a></span><span> </span><span class="annot"><span class="annottext">(IO [RemotePtr ()] -&gt; IO (RemotePtr ()))
+-&gt; IO [RemotePtr ()] -&gt; IO (RemotePtr ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Interp -&gt; Message [RemotePtr ()] -&gt; IO [RemotePtr ()]
+forall a. Binary a =&gt; Interp -&gt; Message a -&gt; IO a
+</span><a href="GHC.Runtime.Interpreter.html#interpCmd"><span class="hs-identifier hs-var">interpCmd</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683196960"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">(Message [RemotePtr ()] -&gt; IO [RemotePtr ()])
+-&gt; Message [RemotePtr ()] -&gt; IO [RemotePtr ()]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; Message [RemotePtr ()]
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.Message.html#MallocStrings"><span class="hs-identifier hs-var">MallocStrings</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">FastString -&gt; ByteString
+</span><a href="GHC.Data.FastString.html#bytesFS"><span class="hs-identifier hs-var">bytesFS</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621683196988"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-type">fromIntegral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196989"><span class="hs-identifier hs-type">p</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrFFIInfo"><span class="hs-identifier hs-type">BCONPtrFFIInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.ByteCode.Types.html#FFIInfo"><span class="hs-identifier hs-type">FFIInfo</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621683196993"><span id="local-6989586621683196994"><span class="annot"><span class="annottext">[FFIType]
+FFIType
+ffiInfoArgs :: [FFIType]
+ffiInfoRet :: FFIType
+ffiInfoRet :: FFIInfo -&gt; FFIType
+ffiInfoArgs :: FFIInfo -&gt; [FFIType]
+</span><a href="#local-6989586621683196993"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#RemotePtr"><span class="hs-identifier hs-type">RemotePtr</span></a></span><span> </span><span id="local-6989586621683196997"><span class="annot"><a href="#local-6989586621683196997"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Interp -&gt; Message (RemotePtr C_ffi_cif) -&gt; IO (RemotePtr C_ffi_cif)
+forall a. Binary a =&gt; Interp -&gt; Message a -&gt; IO a
+</span><a href="GHC.Runtime.Interpreter.html#interpCmd"><span class="hs-identifier hs-var">interpCmd</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683196960"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">(Message (RemotePtr C_ffi_cif) -&gt; IO (RemotePtr C_ffi_cif))
+-&gt; Message (RemotePtr C_ffi_cif) -&gt; IO (RemotePtr C_ffi_cif)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[FFIType] -&gt; FFIType -&gt; Message (RemotePtr C_ffi_cif)
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.Message.html#PrepFFI"><span class="hs-identifier hs-var">PrepFFI</span></a></span><span> </span><span class="annot"><span class="annottext">[FFIType]
+</span><a href="#local-6989586621683196993"><span class="hs-identifier hs-var">ffiInfoArgs</span></a></span><span> </span><span class="annot"><span class="annottext">FFIType
+</span><a href="#local-6989586621683196994"><span class="hs-identifier hs-var">ffiInfoRet</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-type">fromIntegral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196997"><span class="hs-identifier hs-type">p</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCONPtrCostCentre"><span class="hs-identifier hs-type">BCONPtrCostCentre</span></a></span><span> </span><span class="annot"><a href="GHC.ByteCode.Breakpoints.html#InternalBreakpointId"><span class="hs-identifier hs-type">InternalBreakpointId</span></a></span><span class="hs-special">{</span><span id="local-6989586621683197001"><span id="local-6989586621683197002"><span class="annot"><span class="annottext">BreakTickIndex
+Module
+ibi_info_mod :: Module
+ibi_info_index :: BreakTickIndex
+ibi_info_index :: InternalBreakpointId -&gt; BreakTickIndex
+ibi_info_mod :: InternalBreakpointId -&gt; Module
+</span><a href="#local-6989586621683197001"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Interp -&gt; Bool
+</span><a href="GHC.Runtime.Interpreter.Types.html#interpreterProfiled"><span class="hs-identifier hs-var">interpreterProfiled</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683196960"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-103"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (Array BreakTickIndex (RemotePtr CostCentre))
+-&gt; Array BreakTickIndex (RemotePtr CostCentre)
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="GHC.Data.Maybe.html#expectJust"><span class="hs-identifier hs-var">expectJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModuleEnv (Array BreakTickIndex (RemotePtr CostCentre))
+-&gt; Module -&gt; Maybe (Array BreakTickIndex (RemotePtr CostCentre))
+forall a. ModuleEnv a -&gt; Module -&gt; Maybe a
+</span><a href="GHC.Unit.Module.Env.html#lookupModuleEnv"><span class="hs-identifier hs-var">lookupModuleEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LinkedBreaks
+-&gt; ModuleEnv (Array BreakTickIndex (RemotePtr CostCentre))
+</span><a href="GHC.Linker.Types.html#ccs_env"><span class="hs-identifier hs-var">ccs_env</span></a></span><span> </span><span class="annot"><span class="annottext">LinkedBreaks
+</span><a href="#local-6989586621683196963"><span class="hs-identifier hs-var">lb</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621683197001"><span class="hs-identifier hs-var">ibi_info_mod</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Array BreakTickIndex (RemotePtr CostCentre)
+-&gt; BreakTickIndex -&gt; RemotePtr CostCentre
+forall (a :: * -&gt; * -&gt; *) e i.
+(IArray a e, Ix i) =&gt;
+a i e -&gt; i -&gt; e
+</span><a href="../../array-0.5.8.0-inplace/src/Data.Array.Base.html#%21"><span class="hs-operator hs-var">!</span></a></span><span> </span><span class="annot"><span class="annottext">BreakTickIndex
+</span><a href="#local-6989586621683197002"><span class="hs-identifier hs-var">ibi_info_index</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-104"></span><span>          </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#RemotePtr"><span class="hs-identifier hs-type">RemotePtr</span></a></span><span> </span><span id="local-6989586621683197010"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621683197010"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word -&gt; IO Word
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Word -&gt; IO Word) -&gt; Word -&gt; IO Word
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621683197010"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-106"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Ptr (ZonkAny 0) -&gt; RemotePtr (ZonkAny 0)
+forall a. Ptr a -&gt; RemotePtr a
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#toRemotePtr"><span class="hs-identifier hs-var">toRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr (ZonkAny 0)
+forall a. Ptr a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#nullPtr"><span class="hs-identifier hs-var">nullPtr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-107"></span><span>          </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#RemotePtr"><span class="hs-identifier hs-type">RemotePtr</span></a></span><span> </span><span id="local-6989586621683197013"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621683197013"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word -&gt; IO Word
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Word -&gt; IO Word) -&gt; Word -&gt; IO Word
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621683197013"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="annot"><a href="GHC.ByteCode.Linker.html#lookupStaticPtr"><span class="hs-identifier hs-type">lookupStaticPtr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#Interp"><span class="hs-identifier hs-type">Interp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html#FastString"><span class="hs-identifier hs-type">FastString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span id="lookupStaticPtr"><span class="annot"><span class="annottext">lookupStaticPtr :: Interp -&gt; FastString -&gt; IO (Ptr ())
+</span><a href="GHC.ByteCode.Linker.html#lookupStaticPtr"><span class="hs-identifier hs-var hs-var">lookupStaticPtr</span></a></span></span><span> </span><span id="local-6989586621683197014"><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197014"><span class="hs-identifier hs-var">interp</span></a></span></span><span> </span><span id="local-6989586621683197015"><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621683197015"><span class="hs-identifier hs-var">addr_of_label_string</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621683197016"><span class="annot"><a href="#local-6989586621683197016"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Interp -&gt; InterpSymbol 'Interpreted -&gt; IO (Maybe (Ptr ()))
+forall (s :: SuffixOrInterpreted).
+Interp -&gt; InterpSymbol s -&gt; IO (Maybe (Ptr ()))
+</span><a href="GHC.Runtime.Interpreter.html#lookupSymbol"><span class="hs-identifier hs-var">lookupSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197014"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FastString -&gt; InterpSymbol 'Interpreted
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IFaststringSymbol"><span class="hs-identifier hs-var">IFaststringSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621683197015"><span class="hs-identifier hs-var">addr_of_label_string</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621683197016"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683197019"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197019"><span class="hs-identifier hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ptr () -&gt; IO (Ptr ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197019"><span class="hs-identifier hs-var">ptr</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Ptr ())
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; SDoc -&gt; IO (Ptr ())
+forall a. [Char] -&gt; SDoc -&gt; IO a
+</span><a href="GHC.ByteCode.Linker.html#linkFail"><span class="hs-identifier hs-var">linkFail</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;GHC.ByteCode.Linker: can't find label&quot;</span></span><span>
+</span><span id="line-115"></span><span>                  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FastString -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">FastString
+</span><a href="#local-6989586621683197015"><span class="hs-identifier hs-var">addr_of_label_string</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><a href="GHC.ByteCode.Linker.html#lookupIE"><span class="hs-identifier hs-type">lookupIE</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#Interp"><span class="hs-identifier hs-type">Interp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#PkgsLoaded"><span class="hs-identifier hs-type">PkgsLoaded</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#ItblEnv"><span class="hs-identifier hs-type">ItblEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span id="lookupIE"><span class="annot"><span class="annottext">lookupIE :: Interp -&gt; PkgsLoaded -&gt; ItblEnv -&gt; Name -&gt; IO (Ptr ())
+</span><a href="GHC.ByteCode.Linker.html#lookupIE"><span class="hs-identifier hs-var hs-var">lookupIE</span></a></span></span><span> </span><span id="local-6989586621683197021"><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197021"><span class="hs-identifier hs-var">interp</span></a></span></span><span> </span><span id="local-6989586621683197022"><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197022"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span></span><span> </span><span id="local-6989586621683197023"><span class="annot"><span class="annottext">ItblEnv
+</span><a href="#local-6989586621683197023"><span class="hs-identifier hs-var">ie</span></a></span></span><span> </span><span id="local-6989586621683197024"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197024"><span class="hs-identifier hs-var">con_nm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ItblEnv -&gt; Name -&gt; Maybe (Name, ItblPtr)
+forall a. NameEnv a -&gt; Name -&gt; Maybe a
+</span><a href="GHC.Types.Name.Env.html#lookupNameEnv"><span class="hs-identifier hs-var">lookupNameEnv</span></a></span><span> </span><span class="annot"><span class="annottext">ItblEnv
+</span><a href="#local-6989586621683197023"><span class="hs-identifier hs-var">ie</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197024"><span class="hs-identifier hs-var">con_nm</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-120"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#ItblPtr"><span class="hs-identifier hs-type">ItblPtr</span></a></span><span> </span><span id="local-6989586621683197027"><span class="annot"><span class="annottext">RemotePtr StgInfoTable
+</span><a href="#local-6989586621683197027"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ptr () -&gt; IO (Ptr ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RemotePtr () -&gt; Ptr ()
+forall a. RemotePtr a -&gt; Ptr a
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#fromRemotePtr"><span class="hs-identifier hs-var">fromRemotePtr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RemotePtr StgInfoTable -&gt; RemotePtr ()
+forall a b. RemotePtr a -&gt; RemotePtr b
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#castRemotePtr"><span class="hs-identifier hs-var">castRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">RemotePtr StgInfoTable
+</span><a href="#local-6989586621683197027"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Name, ItblPtr)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-comment">-- try looking up in the object files.</span><span>
+</span><span id="line-122"></span><span>       </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683197030"><span class="annot"><span class="annottext">sym_to_find1 :: InterpSymbol ('Suffix &quot;con_info&quot;)
+</span><a href="#local-6989586621683197030"><span class="hs-identifier hs-var hs-var hs-var">sym_to_find1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name -&gt; InterpSymbol ('Suffix &quot;con_info&quot;)
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IConInfoSymbol"><span class="hs-identifier hs-var">IConInfoSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197024"><span class="hs-identifier hs-var">con_nm</span></a></span><span>
+</span><span id="line-123"></span><span>       </span><span id="local-6989586621683197032"><span class="annot"><a href="#local-6989586621683197032"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Interp
+-&gt; PkgsLoaded
+-&gt; InterpSymbol ('Suffix &quot;con_info&quot;)
+-&gt; IO (Maybe (Ptr ()))
+forall (s :: Symbol).
+Interp
+-&gt; PkgsLoaded -&gt; InterpSymbol ('Suffix s) -&gt; IO (Maybe (Ptr ()))
+</span><a href="GHC.ByteCode.Linker.html#lookupHsSymbol"><span class="hs-identifier hs-var">lookupHsSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197021"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197022"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;con_info&quot;)
+</span><a href="#local-6989586621683197030"><span class="hs-identifier hs-var">sym_to_find1</span></a></span><span>
+</span><span id="line-124"></span><span>       </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621683197032"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-125"></span><span>          </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683197034"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197034"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ptr () -&gt; IO (Ptr ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197034"><span class="hs-identifier hs-var">addr</span></a></span><span>
+</span><span id="line-126"></span><span>          </span><span class="annot"><span class="annottext">Maybe (Ptr ())
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-127"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-comment">-- perhaps a nullary constructor?</span><span>
+</span><span id="line-128"></span><span>                   </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683197035"><span class="annot"><span class="annottext">sym_to_find2 :: InterpSymbol ('Suffix &quot;static_info&quot;)
+</span><a href="#local-6989586621683197035"><span class="hs-identifier hs-var hs-var hs-var">sym_to_find2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name -&gt; InterpSymbol ('Suffix &quot;static_info&quot;)
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IStaticInfoSymbol"><span class="hs-identifier hs-var">IStaticInfoSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197024"><span class="hs-identifier hs-var">con_nm</span></a></span><span>
+</span><span id="line-129"></span><span>                   </span><span id="local-6989586621683197037"><span class="annot"><a href="#local-6989586621683197037"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Interp
+-&gt; PkgsLoaded
+-&gt; InterpSymbol ('Suffix &quot;static_info&quot;)
+-&gt; IO (Maybe (Ptr ()))
+forall (s :: Symbol).
+Interp
+-&gt; PkgsLoaded -&gt; InterpSymbol ('Suffix s) -&gt; IO (Maybe (Ptr ()))
+</span><a href="GHC.ByteCode.Linker.html#lookupHsSymbol"><span class="hs-identifier hs-var">lookupHsSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197021"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197022"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;static_info&quot;)
+</span><a href="#local-6989586621683197035"><span class="hs-identifier hs-var">sym_to_find2</span></a></span><span>
+</span><span id="line-130"></span><span>                   </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621683197037"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-131"></span><span>                      </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683197038"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197038"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ptr () -&gt; IO (Ptr ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197038"><span class="hs-identifier hs-var">addr</span></a></span><span>
+</span><span id="line-132"></span><span>                      </span><span class="annot"><span class="annottext">Maybe (Ptr ())
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; SDoc -&gt; IO (Ptr ())
+forall a. [Char] -&gt; SDoc -&gt; IO a
+</span><a href="GHC.ByteCode.Linker.html#linkFail"><span class="hs-identifier hs-var">linkFail</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;GHC.ByteCode.Linker.lookupIE&quot;</span></span><span>
+</span><span id="line-133"></span><span>                                      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;con_info&quot;) -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;con_info&quot;)
+</span><a href="#local-6989586621683197030"><span class="hs-identifier hs-var">sym_to_find1</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc
+</span><span class="hs-string">&quot; or &quot;</span></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>
+</span><span id="line-134"></span><span>                                       </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;static_info&quot;) -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;static_info&quot;)
+</span><a href="#local-6989586621683197035"><span class="hs-identifier hs-var">sym_to_find2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- see Note [Generating code for top-level string literal bindings] in GHC.StgToByteCode</span><span>
+</span><span id="line-137"></span><span class="annot"><a href="GHC.ByteCode.Linker.html#lookupAddr"><span class="hs-identifier hs-type">lookupAddr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#Interp"><span class="hs-identifier hs-type">Interp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#PkgsLoaded"><span class="hs-identifier hs-type">PkgsLoaded</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#AddrEnv"><span class="hs-identifier hs-type">AddrEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span id="lookupAddr"><span class="annot"><span class="annottext">lookupAddr :: Interp -&gt; PkgsLoaded -&gt; AddrEnv -&gt; Name -&gt; IO (Ptr ())
+</span><a href="GHC.ByteCode.Linker.html#lookupAddr"><span class="hs-identifier hs-var hs-var">lookupAddr</span></a></span></span><span> </span><span id="local-6989586621683197040"><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197040"><span class="hs-identifier hs-var">interp</span></a></span></span><span> </span><span id="local-6989586621683197041"><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197041"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span></span><span> </span><span id="local-6989586621683197042"><span class="annot"><span class="annottext">AddrEnv
+</span><a href="#local-6989586621683197042"><span class="hs-identifier hs-var">ae</span></a></span></span><span> </span><span id="local-6989586621683197043"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197043"><span class="hs-identifier hs-var">addr_nm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">AddrEnv -&gt; Name -&gt; Maybe (Name, AddrPtr)
+forall a. NameEnv a -&gt; Name -&gt; Maybe a
+</span><a href="GHC.Types.Name.Env.html#lookupNameEnv"><span class="hs-identifier hs-var">lookupNameEnv</span></a></span><span> </span><span class="annot"><span class="annottext">AddrEnv
+</span><a href="#local-6989586621683197042"><span class="hs-identifier hs-var">ae</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197043"><span class="hs-identifier hs-var">addr_nm</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-140"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#AddrPtr"><span class="hs-identifier hs-type">AddrPtr</span></a></span><span> </span><span id="local-6989586621683197045"><span class="annot"><span class="annottext">RemotePtr ()
+</span><a href="#local-6989586621683197045"><span class="hs-identifier hs-var">ptr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ptr () -&gt; IO (Ptr ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RemotePtr () -&gt; Ptr ()
+forall a. RemotePtr a -&gt; Ptr a
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#fromRemotePtr"><span class="hs-identifier hs-var">fromRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">RemotePtr ()
+</span><a href="#local-6989586621683197045"><span class="hs-identifier hs-var">ptr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Name, AddrPtr)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-comment">-- try looking up in the object files.</span><span>
+</span><span id="line-142"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683197046"><span class="annot"><span class="annottext">sym_to_find :: InterpSymbol ('Suffix &quot;bytes&quot;)
+</span><a href="#local-6989586621683197046"><span class="hs-identifier hs-var hs-var hs-var">sym_to_find</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name -&gt; InterpSymbol ('Suffix &quot;bytes&quot;)
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IBytesSymbol"><span class="hs-identifier hs-var">IBytesSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197043"><span class="hs-identifier hs-var">addr_nm</span></a></span><span>
+</span><span id="line-143"></span><span>                          </span><span class="hs-comment">-- see Note [Bytes label] in GHC.Cmm.CLabel</span><span>
+</span><span id="line-144"></span><span>      </span><span id="local-6989586621683197048"><span class="annot"><a href="#local-6989586621683197048"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Interp
+-&gt; PkgsLoaded
+-&gt; InterpSymbol ('Suffix &quot;bytes&quot;)
+-&gt; IO (Maybe (Ptr ()))
+forall (s :: Symbol).
+Interp
+-&gt; PkgsLoaded -&gt; InterpSymbol ('Suffix s) -&gt; IO (Maybe (Ptr ()))
+</span><a href="GHC.ByteCode.Linker.html#lookupHsSymbol"><span class="hs-identifier hs-var">lookupHsSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197040"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197041"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;bytes&quot;)
+</span><a href="#local-6989586621683197046"><span class="hs-identifier hs-var">sym_to_find</span></a></span><span>
+</span><span id="line-145"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621683197048"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683197049"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197049"><span class="hs-identifier hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ptr () -&gt; IO (Ptr ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197049"><span class="hs-identifier hs-var">ptr</span></a></span><span>
+</span><span id="line-147"></span><span>        </span><span class="annot"><span class="annottext">Maybe (Ptr ())
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; SDoc -&gt; IO (Ptr ())
+forall a. [Char] -&gt; SDoc -&gt; IO a
+</span><a href="GHC.ByteCode.Linker.html#linkFail"><span class="hs-identifier hs-var">linkFail</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;GHC.ByteCode.Linker.lookupAddr&quot;</span></span><span>
+</span><span id="line-148"></span><span>                     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;bytes&quot;) -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;bytes&quot;)
+</span><a href="#local-6989586621683197046"><span class="hs-identifier hs-var">sym_to_find</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="annot"><a href="GHC.ByteCode.Linker.html#lookupPrimOp"><span class="hs-identifier hs-type">lookupPrimOp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#Interp"><span class="hs-identifier hs-type">Interp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#PkgsLoaded"><span class="hs-identifier hs-type">PkgsLoaded</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Builtin.PrimOps.html#PrimOp"><span class="hs-identifier hs-type">PrimOp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#RemotePtr"><span class="hs-identifier hs-type">RemotePtr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span id="lookupPrimOp"><span class="annot"><span class="annottext">lookupPrimOp :: Interp -&gt; PkgsLoaded -&gt; PrimOp -&gt; IO (RemotePtr ())
+</span><a href="GHC.ByteCode.Linker.html#lookupPrimOp"><span class="hs-identifier hs-var hs-var">lookupPrimOp</span></a></span></span><span> </span><span id="local-6989586621683197051"><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197051"><span class="hs-identifier hs-var">interp</span></a></span></span><span> </span><span id="local-6989586621683197052"><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197052"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span></span><span> </span><span id="local-6989586621683197053"><span class="annot"><span class="annottext">PrimOp
+</span><a href="#local-6989586621683197053"><span class="hs-identifier hs-var">primop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683197054"><span class="annot"><span class="annottext">sym_to_find :: [Char]
+</span><a href="#local-6989586621683197054"><span class="hs-identifier hs-var hs-var hs-var">sym_to_find</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PrimOp -&gt; [Char] -&gt; [Char]
+</span><a href="GHC.ByteCode.Linker.html#primopToCLabel"><span class="hs-identifier hs-var">primopToCLabel</span></a></span><span> </span><span class="annot"><span class="annottext">PrimOp
+</span><a href="#local-6989586621683197053"><span class="hs-identifier hs-var">primop</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;closure&quot;</span></span><span>
+</span><span id="line-153"></span><span>  </span><span id="local-6989586621683197056"><span class="annot"><a href="#local-6989586621683197056"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Interp
+-&gt; PkgsLoaded
+-&gt; InterpSymbol ('Suffix &quot;closure&quot;)
+-&gt; IO (Maybe (Ptr ()))
+forall (s :: Symbol).
+Interp
+-&gt; PkgsLoaded -&gt; InterpSymbol ('Suffix s) -&gt; IO (Maybe (Ptr ()))
+</span><a href="GHC.ByteCode.Linker.html#lookupHsSymbol"><span class="hs-identifier hs-var">lookupHsSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197051"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197052"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name -&gt; InterpSymbol ('Suffix &quot;closure&quot;)
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IClosureSymbol"><span class="hs-identifier hs-var">IClosureSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id -&gt; Name
+</span><a href="GHC.Types.Id.html#idName"><span class="hs-identifier hs-var">Id.idName</span></a></span><span> </span><span class="annot"><span class="annottext">(Id -&gt; Name) -&gt; Id -&gt; Name
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PrimOp -&gt; Id
+</span><a href="GHC.Builtin.PrimOps.Ids.html#primOpId"><span class="hs-identifier hs-var">primOpId</span></a></span><span> </span><span class="annot"><span class="annottext">PrimOp
+</span><a href="#local-6989586621683197053"><span class="hs-identifier hs-var">primop</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621683197056"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-155"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683197060"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197060"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RemotePtr () -&gt; IO (RemotePtr ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ptr () -&gt; RemotePtr ()
+forall a. Ptr a -&gt; RemotePtr a
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#toRemotePtr"><span class="hs-identifier hs-var">toRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197060"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Ptr ())
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; SDoc -&gt; IO (RemotePtr ())
+forall a. [Char] -&gt; SDoc -&gt; IO a
+</span><a href="GHC.ByteCode.Linker.html#linkFail"><span class="hs-identifier hs-var">linkFail</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;GHC.ByteCode.Linker.lookupCE(primop)&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; SDoc
+forall doc. IsLine doc =&gt; [Char] -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621683197054"><span class="hs-identifier hs-var">sym_to_find</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="annot"><a href="GHC.ByteCode.Linker.html#resolvePtr"><span class="hs-identifier hs-type">resolvePtr</span></a></span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#Interp"><span class="hs-identifier hs-type">Interp</span></a></span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#PkgsLoaded"><span class="hs-identifier hs-type">PkgsLoaded</span></a></span><span>
+</span><span id="line-161"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#LinkerEnv"><span class="hs-identifier hs-type">LinkerEnv</span></a></span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#LinkedBreaks"><span class="hs-identifier hs-type">LinkedBreaks</span></a></span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Name.Env.html#NameEnv"><span class="hs-identifier hs-type">NameEnv</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtr"><span class="hs-identifier hs-type">BCOPtr</span></a></span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#ResolvedBCOPtr"><span class="hs-identifier hs-type">ResolvedBCOPtr</span></a></span><span>
+</span><span id="line-166"></span><span id="resolvePtr"><span class="annot"><span class="annottext">resolvePtr :: Interp
+-&gt; PkgsLoaded
+-&gt; LinkerEnv
+-&gt; LinkedBreaks
+-&gt; NameEnv BreakTickIndex
+-&gt; BCOPtr
+-&gt; IO ResolvedBCOPtr
+</span><a href="GHC.ByteCode.Linker.html#resolvePtr"><span class="hs-identifier hs-var hs-var">resolvePtr</span></a></span></span><span> </span><span id="local-6989586621683197062"><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197062"><span class="hs-identifier hs-var">interp</span></a></span></span><span> </span><span id="local-6989586621683197063"><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197063"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span></span><span> </span><span id="local-6989586621683197064"><span class="annot"><span class="annottext">LinkerEnv
+</span><a href="#local-6989586621683197064"><span class="hs-identifier hs-var">le</span></a></span></span><span> </span><span id="local-6989586621683197065"><span class="annot"><span class="annottext">LinkedBreaks
+</span><a href="#local-6989586621683197065"><span class="hs-identifier hs-var">lb</span></a></span></span><span> </span><span id="local-6989586621683197066"><span class="annot"><span class="annottext">NameEnv BreakTickIndex
+</span><a href="#local-6989586621683197066"><span class="hs-identifier hs-var">bco_ix</span></a></span></span><span> </span><span id="local-6989586621683197067"><span class="annot"><span class="annottext">BCOPtr
+</span><a href="#local-6989586621683197067"><span class="hs-identifier hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">BCOPtr
+</span><a href="#local-6989586621683197067"><span class="hs-identifier hs-var">ptr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-167"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtrName"><span class="hs-identifier hs-type">BCOPtrName</span></a></span><span> </span><span id="local-6989586621683197069"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197069"><span class="hs-identifier hs-var">nm</span></a></span></span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683197070"><span class="annot"><span class="annottext">BreakTickIndex
+</span><a href="#local-6989586621683197070"><span class="hs-identifier hs-var">ix</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NameEnv BreakTickIndex -&gt; Name -&gt; Maybe BreakTickIndex
+forall a. NameEnv a -&gt; Name -&gt; Maybe a
+</span><a href="GHC.Types.Name.Env.html#lookupNameEnv"><span class="hs-identifier hs-var">lookupNameEnv</span></a></span><span> </span><span class="annot"><span class="annottext">NameEnv BreakTickIndex
+</span><a href="#local-6989586621683197066"><span class="hs-identifier hs-var">bco_ix</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197069"><span class="hs-identifier hs-var">nm</span></a></span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ResolvedBCOPtr -&gt; IO ResolvedBCOPtr
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BreakTickIndex -&gt; ResolvedBCOPtr
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#ResolvedBCORef"><span class="hs-identifier hs-var">ResolvedBCORef</span></a></span><span> </span><span class="annot"><span class="annottext">BreakTickIndex
+</span><a href="#local-6989586621683197070"><span class="hs-identifier hs-var">ix</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- ref to another BCO in this group</span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683197072"><span class="annot"><span class="annottext">ForeignHValue
+</span><a href="#local-6989586621683197072"><span class="hs-identifier hs-var">rhv</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NameEnv (Name, ForeignHValue)
+-&gt; Name -&gt; Maybe (Name, ForeignHValue)
+forall a. NameEnv a -&gt; Name -&gt; Maybe a
+</span><a href="GHC.Types.Name.Env.html#lookupNameEnv"><span class="hs-identifier hs-var">lookupNameEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LinkerEnv -&gt; NameEnv (Name, ForeignHValue)
+</span><a href="GHC.Linker.Types.html#closure_env"><span class="hs-identifier hs-var">closure_env</span></a></span><span> </span><span class="annot"><span class="annottext">LinkerEnv
+</span><a href="#local-6989586621683197064"><span class="hs-identifier hs-var">le</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197069"><span class="hs-identifier hs-var">nm</span></a></span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ResolvedBCOPtr -&gt; IO ResolvedBCOPtr
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RemoteRef HValue -&gt; ResolvedBCOPtr
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#ResolvedBCOPtr"><span class="hs-identifier hs-var">ResolvedBCOPtr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForeignHValue -&gt; RemoteRef HValue
+forall a. ForeignRef a -&gt; RemoteRef a
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#unsafeForeignRefToRemoteRef"><span class="hs-identifier hs-var">unsafeForeignRefToRemoteRef</span></a></span><span> </span><span class="annot"><span class="annottext">ForeignHValue
+</span><a href="#local-6989586621683197072"><span class="hs-identifier hs-var">rhv</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>
+</span><span id="line-175"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; SDoc -&gt; IO ResolvedBCOPtr -&gt; IO ResolvedBCOPtr
+forall a. HasCallStack =&gt; Bool -&gt; SDoc -&gt; a -&gt; a
+</span><a href="GHC.Utils.Panic.html#assertPpr"><span class="hs-identifier hs-var">assertPpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name -&gt; Bool
+</span><a href="GHC.Types.Name.html#isExternalName"><span class="hs-identifier hs-var">isExternalName</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197069"><span class="hs-identifier hs-var">nm</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197069"><span class="hs-identifier hs-var">nm</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO ResolvedBCOPtr -&gt; IO ResolvedBCOPtr)
+-&gt; IO ResolvedBCOPtr -&gt; IO ResolvedBCOPtr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-176"></span><span>       </span><span class="hs-keyword">do</span><span>
+</span><span id="line-177"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683197078"><span class="annot"><span class="annottext">sym_to_find :: InterpSymbol ('Suffix &quot;closure&quot;)
+</span><a href="#local-6989586621683197078"><span class="hs-identifier hs-var hs-var hs-var">sym_to_find</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Name -&gt; InterpSymbol ('Suffix &quot;closure&quot;)
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#IClosureSymbol"><span class="hs-identifier hs-var">IClosureSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683197069"><span class="hs-identifier hs-var">nm</span></a></span><span>
+</span><span id="line-178"></span><span>          </span><span id="local-6989586621683197079"><span class="annot"><a href="#local-6989586621683197079"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Interp
+-&gt; PkgsLoaded
+-&gt; InterpSymbol ('Suffix &quot;closure&quot;)
+-&gt; IO (Maybe (Ptr ()))
+forall (s :: Symbol).
+Interp
+-&gt; PkgsLoaded -&gt; InterpSymbol ('Suffix s) -&gt; IO (Maybe (Ptr ()))
+</span><a href="GHC.ByteCode.Linker.html#lookupHsSymbol"><span class="hs-identifier hs-var">lookupHsSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197062"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197063"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;closure&quot;)
+</span><a href="#local-6989586621683197078"><span class="hs-identifier hs-var">sym_to_find</span></a></span><span>
+</span><span id="line-179"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621683197079"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-180"></span><span>            </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683197080"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197080"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ResolvedBCOPtr -&gt; IO ResolvedBCOPtr
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RemotePtr () -&gt; ResolvedBCOPtr
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#ResolvedBCOStaticPtr"><span class="hs-identifier hs-var">ResolvedBCOStaticPtr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ptr () -&gt; RemotePtr ()
+forall a. Ptr a -&gt; RemotePtr a
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#toRemotePtr"><span class="hs-identifier hs-var">toRemotePtr</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197080"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>            </span><span class="annot"><span class="annottext">Maybe (Ptr ())
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; SDoc -&gt; IO ResolvedBCOPtr
+forall a. [Char] -&gt; SDoc -&gt; IO a
+</span><a href="GHC.ByteCode.Linker.html#linkFail"><span class="hs-identifier hs-var">linkFail</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;GHC.ByteCode.Linker.lookupCE&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;closure&quot;) -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix &quot;closure&quot;)
+</span><a href="#local-6989586621683197078"><span class="hs-identifier hs-var">sym_to_find</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtrPrimOp"><span class="hs-identifier hs-type">BCOPtrPrimOp</span></a></span><span> </span><span id="local-6989586621683197083"><span class="annot"><span class="annottext">PrimOp
+</span><a href="#local-6989586621683197083"><span class="hs-identifier hs-var">op</span></a></span></span><span>
+</span><span id="line-184"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RemotePtr () -&gt; ResolvedBCOPtr
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#ResolvedBCOStaticPtr"><span class="hs-identifier hs-var">ResolvedBCOStaticPtr</span></a></span><span> </span><span class="annot"><span class="annottext">(RemotePtr () -&gt; ResolvedBCOPtr)
+-&gt; IO (RemotePtr ()) -&gt; IO ResolvedBCOPtr
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Interp -&gt; PkgsLoaded -&gt; PrimOp -&gt; IO (RemotePtr ())
+</span><a href="GHC.ByteCode.Linker.html#lookupPrimOp"><span class="hs-identifier hs-var">lookupPrimOp</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197062"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197063"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span><span> </span><span class="annot"><span class="annottext">PrimOp
+</span><a href="#local-6989586621683197083"><span class="hs-identifier hs-var">op</span></a></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtrBCO"><span class="hs-identifier hs-type">BCOPtrBCO</span></a></span><span> </span><span id="local-6989586621683197086"><span class="annot"><span class="annottext">UnlinkedBCO
+</span><a href="#local-6989586621683197086"><span class="hs-identifier hs-var">bco</span></a></span></span><span>
+</span><span id="line-187"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ResolvedBCO -&gt; ResolvedBCOPtr
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#ResolvedBCOPtrBCO"><span class="hs-identifier hs-var">ResolvedBCOPtrBCO</span></a></span><span> </span><span class="annot"><span class="annottext">(ResolvedBCO -&gt; ResolvedBCOPtr)
+-&gt; IO ResolvedBCO -&gt; IO ResolvedBCOPtr
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+-&gt; PkgsLoaded
+-&gt; LinkerEnv
+-&gt; LinkedBreaks
+-&gt; NameEnv BreakTickIndex
+-&gt; UnlinkedBCO
+-&gt; IO ResolvedBCO
+</span><a href="GHC.ByteCode.Linker.html#linkBCO"><span class="hs-identifier hs-var">linkBCO</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197062"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197063"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span><span> </span><span class="annot"><span class="annottext">LinkerEnv
+</span><a href="#local-6989586621683197064"><span class="hs-identifier hs-var">le</span></a></span><span> </span><span class="annot"><span class="annottext">LinkedBreaks
+</span><a href="#local-6989586621683197065"><span class="hs-identifier hs-var">lb</span></a></span><span> </span><span class="annot"><span class="annottext">NameEnv BreakTickIndex
+</span><a href="#local-6989586621683197066"><span class="hs-identifier hs-var">bco_ix</span></a></span><span> </span><span class="annot"><span class="annottext">UnlinkedBCO
+</span><a href="#local-6989586621683197086"><span class="hs-identifier hs-var">bco</span></a></span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span>  </span><span class="annot"><a href="GHC.ByteCode.Types.html#BCOPtrBreakArray"><span class="hs-identifier hs-type">BCOPtrBreakArray</span></a></span><span> </span><span id="local-6989586621683197089"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621683197089"><span class="hs-identifier hs-var">tick_mod</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-190"></span><span>    </span><span class="annot"><span class="annottext">ForeignRef BreakArray
+-&gt; (RemoteRef BreakArray -&gt; IO ResolvedBCOPtr) -&gt; IO ResolvedBCOPtr
+forall a b. ForeignRef a -&gt; (RemoteRef a -&gt; IO b) -&gt; IO b
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.RemoteTypes.html#withForeignRef"><span class="hs-identifier hs-var">withForeignRef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe (ForeignRef BreakArray) -&gt; ForeignRef BreakArray
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="GHC.Data.Maybe.html#expectJust"><span class="hs-identifier hs-var">expectJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModuleEnv (ForeignRef BreakArray)
+-&gt; Module -&gt; Maybe (ForeignRef BreakArray)
+forall a. ModuleEnv a -&gt; Module -&gt; Maybe a
+</span><a href="GHC.Unit.Module.Env.html#lookupModuleEnv"><span class="hs-identifier hs-var">lookupModuleEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LinkedBreaks -&gt; ModuleEnv (ForeignRef BreakArray)
+</span><a href="GHC.Linker.Types.html#breakarray_env"><span class="hs-identifier hs-var">breakarray_env</span></a></span><span> </span><span class="annot"><span class="annottext">LinkedBreaks
+</span><a href="#local-6989586621683197065"><span class="hs-identifier hs-var">lb</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621683197089"><span class="hs-identifier hs-var">tick_mod</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((RemoteRef BreakArray -&gt; IO ResolvedBCOPtr) -&gt; IO ResolvedBCOPtr)
+-&gt; (RemoteRef BreakArray -&gt; IO ResolvedBCOPtr) -&gt; IO ResolvedBCOPtr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-191"></span><span>      </span><span class="hs-glyph">\</span><span id="local-6989586621683197092"><span class="annot"><span class="annottext">RemoteRef BreakArray
+</span><a href="#local-6989586621683197092"><span class="hs-identifier hs-var">ba</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ResolvedBCOPtr -&gt; IO ResolvedBCOPtr
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(ResolvedBCOPtr -&gt; IO ResolvedBCOPtr)
+-&gt; ResolvedBCOPtr -&gt; IO ResolvedBCOPtr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RemoteRef BreakArray -&gt; ResolvedBCOPtr
+</span><a href="../../ghci-9.14.1-inplace/src/GHCi.ResolvedBCO.html#ResolvedBCOPtrBreakArray"><span class="hs-identifier hs-var">ResolvedBCOPtrBreakArray</span></a></span><span> </span><span class="annot"><span class="annottext">RemoteRef BreakArray
+</span><a href="#local-6989586621683197092"><span class="hs-identifier hs-var">ba</span></a></span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- | Look up the address of a Haskell symbol in the currently</span><span>
+</span><span id="line-194"></span><span class="hs-comment">-- loaded units.</span><span>
+</span><span id="line-195"></span><span class="hs-comment">--</span><span>
+</span><span id="line-196"></span><span class="hs-comment">-- See Note [Looking up symbols in the relevant objects].</span><span>
+</span><span id="line-197"></span><span id="local-6989586621683196773"><span class="annot"><a href="GHC.ByteCode.Linker.html#lookupHsSymbol"><span class="hs-identifier hs-type">lookupHsSymbol</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.html#Interp"><span class="hs-identifier hs-type">Interp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html#PkgsLoaded"><span class="hs-identifier hs-type">PkgsLoaded</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#InterpSymbol"><span class="hs-identifier hs-type">InterpSymbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#Suffix"><span class="hs-identifier hs-type">Suffix</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196773"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-198"></span><span id="lookupHsSymbol"><span class="annot"><span class="annottext">lookupHsSymbol :: forall (s :: Symbol).
+Interp
+-&gt; PkgsLoaded -&gt; InterpSymbol ('Suffix s) -&gt; IO (Maybe (Ptr ()))
+</span><a href="GHC.ByteCode.Linker.html#lookupHsSymbol"><span class="hs-identifier hs-var hs-var">lookupHsSymbol</span></a></span></span><span> </span><span id="local-6989586621683197104"><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197104"><span class="hs-identifier hs-var">interp</span></a></span></span><span> </span><span id="local-6989586621683197105"><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197105"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span></span><span> </span><span id="local-6989586621683197106"><span class="annot"><span class="annottext">InterpSymbol ('Suffix s)
+</span><a href="#local-6989586621683197106"><span class="hs-identifier hs-var">sym_to_find</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-199"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; SDoc -&gt; IO ()
+forall (m :: * -&gt; *).
+(HasCallStack, Applicative m) =&gt;
+Bool -&gt; SDoc -&gt; m ()
+</span><a href="GHC.Utils.Panic.html#massertPpr"><span class="hs-identifier hs-var">massertPpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name -&gt; Bool
+</span><a href="GHC.Types.Name.html#isExternalName"><span class="hs-identifier hs-var">isExternalName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s) -&gt; Name
+forall (s :: Symbol). InterpSymbol ('Suffix s) -&gt; Name
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolName"><span class="hs-identifier hs-var">interpSymbolName</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s)
+</span><a href="#local-6989586621683197106"><span class="hs-identifier hs-var">sym_to_find</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s) -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s)
+</span><a href="#local-6989586621683197106"><span class="hs-identifier hs-var">sym_to_find</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-200"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683197109"><span class="annot"><span class="annottext">pkg_id :: UnitId
+</span><a href="#local-6989586621683197109"><span class="hs-identifier hs-var hs-var">pkg_id</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Module -&gt; UnitId
+</span><a href="GHC.Unit.Types.html#moduleUnitId"><span class="hs-identifier hs-var">moduleUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">(Module -&gt; UnitId) -&gt; Module -&gt; UnitId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HasDebugCallStack =&gt; Name -&gt; Module
+Name -&gt; Module
+</span><a href="GHC.Types.Name.html#nameModule"><span class="hs-identifier hs-var">nameModule</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s) -&gt; Name
+forall (s :: Symbol). InterpSymbol ('Suffix s) -&gt; Name
+</span><a href="GHC.Runtime.Interpreter.Types.SymbolCache.html#interpSymbolName"><span class="hs-identifier hs-var">interpSymbolName</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s)
+</span><a href="#local-6989586621683197106"><span class="hs-identifier hs-var">sym_to_find</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-201"></span><span>      </span><span id="local-6989586621683197112"><span class="annot"><span class="annottext">loaded_dlls :: [RemotePtr LoadedDLL]
+</span><a href="#local-6989586621683197112"><span class="hs-identifier hs-var hs-var">loaded_dlls</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[RemotePtr LoadedDLL]
+-&gt; (LoadedPkgInfo -&gt; [RemotePtr LoadedDLL])
+-&gt; Maybe LoadedPkgInfo
+-&gt; [RemotePtr LoadedDLL]
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">LoadedPkgInfo -&gt; [RemotePtr LoadedDLL]
+</span><a href="GHC.Linker.Types.html#loaded_pkg_hs_dlls"><span class="hs-identifier hs-var">loaded_pkg_hs_dlls</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe LoadedPkgInfo -&gt; [RemotePtr LoadedDLL])
+-&gt; Maybe LoadedPkgInfo -&gt; [RemotePtr LoadedDLL]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded -&gt; UnitId -&gt; Maybe LoadedPkgInfo
+forall key elt.
+Uniquable key =&gt;
+UniqDFM key elt -&gt; key -&gt; Maybe elt
+</span><a href="GHC.Types.Unique.DFM.html#lookupUDFM"><span class="hs-identifier hs-var">lookupUDFM</span></a></span><span> </span><span class="annot"><span class="annottext">PkgsLoaded
+</span><a href="#local-6989586621683197105"><span class="hs-identifier hs-var">pkgs_loaded</span></a></span><span> </span><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621683197109"><span class="hs-identifier hs-var">pkg_id</span></a></span><span>
+</span><span id="line-202"></span><span>
+</span><span id="line-203"></span><span>      </span><span id="local-6989586621683197116"><span class="annot"><span class="annottext">go :: [RemotePtr LoadedDLL] -&gt; IO (Maybe (Ptr ()))
+</span><a href="#local-6989586621683197116"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621683197117"><span class="annot"><span class="annottext">RemotePtr LoadedDLL
+</span><a href="#local-6989586621683197117"><span class="hs-identifier hs-var">dll</span></a></span></span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621683197118"><span class="annot"><span class="annottext">[RemotePtr LoadedDLL]
+</span><a href="#local-6989586621683197118"><span class="hs-identifier hs-var">dlls</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-204"></span><span>        </span><span id="local-6989586621683197119"><span class="annot"><a href="#local-6989586621683197119"><span class="hs-identifier hs-var">mb_ptr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Interp
+-&gt; RemotePtr LoadedDLL
+-&gt; InterpSymbol ('Suffix s)
+-&gt; IO (Maybe (Ptr ()))
+forall (s :: SuffixOrInterpreted).
+Interp
+-&gt; RemotePtr LoadedDLL -&gt; InterpSymbol s -&gt; IO (Maybe (Ptr ()))
+</span><a href="GHC.Runtime.Interpreter.html#lookupSymbolInDLL"><span class="hs-identifier hs-var">lookupSymbolInDLL</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197104"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">RemotePtr LoadedDLL
+</span><a href="#local-6989586621683197117"><span class="hs-identifier hs-var">dll</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s)
+</span><a href="#local-6989586621683197106"><span class="hs-identifier hs-var">sym_to_find</span></a></span><span>
+</span><span id="line-205"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><a href="#local-6989586621683197119"><span class="hs-identifier hs-type">mb_ptr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-206"></span><span>          </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683197121"><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197121"><span class="hs-identifier hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (Ptr ()) -&gt; IO (Maybe (Ptr ()))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ptr () -&gt; Maybe (Ptr ())
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr ()
+</span><a href="#local-6989586621683197121"><span class="hs-identifier hs-var">ptr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span><span>          </span><span class="annot"><span class="annottext">Maybe (Ptr ())
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[RemotePtr LoadedDLL] -&gt; IO (Maybe (Ptr ()))
+</span><a href="#local-6989586621683197116"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[RemotePtr LoadedDLL]
+</span><a href="#local-6989586621683197118"><span class="hs-identifier hs-var">dlls</span></a></span><span>
+</span><span id="line-208"></span><span>      </span><span class="annot"><a href="#local-6989586621683197116"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-209"></span><span>        </span><span class="hs-comment">-- See Note [Symbols may not be found in pkgs_loaded] in GHC.Linker.Types</span><span>
+</span><span id="line-210"></span><span>        </span><span class="annot"><span class="annottext">Interp -&gt; InterpSymbol ('Suffix s) -&gt; IO (Maybe (Ptr ()))
+forall (s :: SuffixOrInterpreted).
+Interp -&gt; InterpSymbol s -&gt; IO (Maybe (Ptr ()))
+</span><a href="GHC.Runtime.Interpreter.html#lookupSymbol"><span class="hs-identifier hs-var">lookupSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">Interp
+</span><a href="#local-6989586621683197104"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="annot"><span class="annottext">InterpSymbol ('Suffix s)
+</span><a href="#local-6989586621683197106"><span class="hs-identifier hs-var">sym_to_find</span></a></span><span>
+</span><span id="line-211"></span><span>
+</span><span id="line-212"></span><span>  </span><span class="annot"><span class="annottext">[RemotePtr LoadedDLL] -&gt; IO (Maybe (Ptr ()))
+</span><a href="#local-6989586621683197116"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[RemotePtr LoadedDLL]
+</span><a href="#local-6989586621683197112"><span class="hs-identifier hs-var">loaded_dlls</span></a></span><span>
+</span><span id="line-213"></span><span>
+</span><span id="line-214"></span><span id="local-6989586621683196765"><span class="annot"><a href="GHC.ByteCode.Linker.html#linkFail"><span class="hs-identifier hs-type">linkFail</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#SDoc"><span class="hs-identifier hs-type">SDoc</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683196765"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-215"></span><span id="linkFail"><span class="annot"><span class="annottext">linkFail :: forall a. [Char] -&gt; SDoc -&gt; IO a
+</span><a href="GHC.ByteCode.Linker.html#linkFail"><span class="hs-identifier hs-var hs-var">linkFail</span></a></span></span><span> </span><span id="local-6989586621683197122"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621683197122"><span class="hs-identifier hs-var">who</span></a></span></span><span> </span><span id="local-6989586621683197123"><span class="annot"><span class="annottext">SDoc
+</span><a href="#local-6989586621683197123"><span class="hs-identifier hs-var">what</span></a></span></span><span>
+</span><span id="line-216"></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GhcException -&gt; IO a
+forall a. GhcException -&gt; IO a
+</span><a href="GHC.Utils.Panic.html#throwGhcExceptionIO"><span class="hs-identifier hs-var">throwGhcExceptionIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; GhcException
+</span><a href="GHC.Utils.Panic.html#ProgramError"><span class="hs-identifier hs-var">ProgramError</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; GhcException) -&gt; [Char] -&gt; GhcException
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-217"></span><span>        </span><span class="annot"><span class="annottext">[[Char]] -&gt; [Char]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.OldList.html#unlines"><span class="hs-identifier hs-var">unlines</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621683197122"><span class="hs-identifier hs-var">who</span></a></span><span>
+</span><span id="line-218"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;During interactive linking, GHCi couldn't find the following symbol:&quot;</span></span><span>
+</span><span id="line-219"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; [Char] -&gt; [Char]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; [Char] -&gt; [Char]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; [Char]
+</span><a href="GHC.Utils.Outputable.html#showSDocUnsafe"><span class="hs-identifier hs-var">showSDocUnsafe</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc
+</span><a href="#local-6989586621683197123"><span class="hs-identifier hs-var">what</span></a></span><span>
+</span><span id="line-220"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;This may be due to you not asking GHCi to load extra object files,&quot;</span></span><span>
+</span><span id="line-221"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;archives or DLLs needed by your current session.  Restart GHCi, specifying&quot;</span></span><span>
+</span><span id="line-222"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;the missing library using the -L/path/to/object/dir and -lmissinglibname&quot;</span></span><span>
+</span><span id="line-223"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;flags, or simply by naming the relevant files on the GHCi command line.&quot;</span></span><span>
+</span><span id="line-224"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Alternatively, this link failure might indicate a bug in GHCi.&quot;</span></span><span>
+</span><span id="line-225"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;If you suspect the latter, please report this as a GHC bug:&quot;</span></span><span>
+</span><span id="line-226"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;  https://www.haskell.org/ghc/reportabug&quot;</span></span><span>
+</span><span id="line-227"></span><span>                </span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span>
+</span><span id="line-230"></span><span>
+</span><span id="line-231"></span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span>
+</span><span id="line-234"></span><span class="hs-comment">-- See Note [Primop wrappers] in GHC.Builtin.PrimOps</span><span>
+</span><span id="line-235"></span><span class="annot"><a href="GHC.ByteCode.Linker.html#primopToCLabel"><span class="hs-identifier hs-type">primopToCLabel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Builtin.PrimOps.html#PrimOp"><span class="hs-identifier hs-type">PrimOp</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-236"></span><span id="primopToCLabel"><span class="annot"><span class="annottext">primopToCLabel :: PrimOp -&gt; [Char] -&gt; [Char]
+</span><a href="GHC.ByteCode.Linker.html#primopToCLabel"><span class="hs-identifier hs-var hs-var">primopToCLabel</span></a></span></span><span> </span><span id="local-6989586621683197128"><span class="annot"><span class="annottext">PrimOp
+</span><a href="#local-6989586621683197128"><span class="hs-identifier hs-var">primop</span></a></span></span><span> </span><span id="local-6989586621683197129"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621683197129"><span class="hs-identifier hs-var">suffix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[[Char]] -&gt; [Char]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concat"><span class="hs-identifier hs-var">concat</span></a></span><span>
+</span><span id="line-237"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;ghczminternal_GHCziInternalziPrimopWrappers_&quot;</span></span><span>
+</span><span id="line-238"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FastZString -&gt; [Char]
+</span><a href="GHC.Data.FastString.html#zString"><span class="hs-identifier hs-var">zString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FastString -&gt; FastZString
+</span><a href="GHC.Data.FastString.html#zEncodeFS"><span class="hs-identifier hs-var">zEncodeFS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OccName -&gt; FastString
+</span><a href="GHC.Types.Name.Occurrence.html#occNameFS"><span class="hs-identifier hs-var">occNameFS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PrimOp -&gt; OccName
+</span><a href="GHC.Builtin.PrimOps.html#primOpOcc"><span class="hs-identifier hs-var">primOpOcc</span></a></span><span> </span><span class="annot"><span class="annottext">PrimOp
+</span><a href="#local-6989586621683197128"><span class="hs-identifier hs-var">primop</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'_'</span></span><span class="annot"><span class="annottext">Char -&gt; [Char] -&gt; [Char]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621683197129"><span class="hs-identifier hs-var">suffix</span></a></span><span>
+</span><span id="line-240"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-241"></span></pre></body></html>

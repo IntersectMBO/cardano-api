@@ -1,0 +1,261 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span id="local-6989586621682649845"><span id="local-6989586621682649846"><span id="local-6989586621682649847"></span></span></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.ImpExp.IsBoot.html"><span class="hs-identifier">Language.Haskell.Syntax.ImpExp.IsBoot</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.ImpExp.IsBoot.html#IsBootInterface"><span class="hs-identifier">IsBootInterface</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier">Eq</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Ord"><span class="hs-identifier">Ord</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier">Show</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Data.Data.html"><span class="hs-identifier">Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rwhnf"><span class="hs-identifier">rwhnf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- | Indicates whether a module name is referring to a boot interface (hs-boot</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- file) or regular module (hs file). We need to treat boot modules specially</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- when building compilation graphs, since they break cycles. Regular source</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- files and signature files are treated equivalently.</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">data</span><span> </span><span id="IsBootInterface"><span class="annot"><a href="Language.Haskell.Syntax.ImpExp.IsBoot.html#IsBootInterface"><span class="hs-identifier hs-var">IsBootInterface</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NotBoot"><span class="annot"><a href="Language.Haskell.Syntax.ImpExp.IsBoot.html#NotBoot"><span class="hs-identifier hs-var">NotBoot</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="IsBoot"><span class="annot"><a href="Language.Haskell.Syntax.ImpExp.IsBoot.html#IsBoot"><span class="hs-identifier hs-var">IsBoot</span></a></span></span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682649852"><span id="local-6989586621682649857"><span class="annot"><span class="annottext">IsBootInterface -&gt; IsBootInterface -&gt; Bool
+(IsBootInterface -&gt; IsBootInterface -&gt; Bool)
+-&gt; (IsBootInterface -&gt; IsBootInterface -&gt; Bool)
+-&gt; Eq IsBootInterface
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+== :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+$c/= :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+/= :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682649864"><span id="local-6989586621682649866"><span id="local-6989586621682649868"><span id="local-6989586621682649872"><span id="local-6989586621682649875"><span id="local-6989586621682649878"><span id="local-6989586621682649881"><span class="annot"><span class="annottext">Eq IsBootInterface
+Eq IsBootInterface =&gt;
+(IsBootInterface -&gt; IsBootInterface -&gt; Ordering)
+-&gt; (IsBootInterface -&gt; IsBootInterface -&gt; Bool)
+-&gt; (IsBootInterface -&gt; IsBootInterface -&gt; Bool)
+-&gt; (IsBootInterface -&gt; IsBootInterface -&gt; Bool)
+-&gt; (IsBootInterface -&gt; IsBootInterface -&gt; Bool)
+-&gt; (IsBootInterface -&gt; IsBootInterface -&gt; IsBootInterface)
+-&gt; (IsBootInterface -&gt; IsBootInterface -&gt; IsBootInterface)
+-&gt; Ord IsBootInterface
+IsBootInterface -&gt; IsBootInterface -&gt; Bool
+IsBootInterface -&gt; IsBootInterface -&gt; Ordering
+IsBootInterface -&gt; IsBootInterface -&gt; IsBootInterface
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: IsBootInterface -&gt; IsBootInterface -&gt; Ordering
+compare :: IsBootInterface -&gt; IsBootInterface -&gt; Ordering
+$c&lt; :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+&lt; :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+$c&lt;= :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+&lt;= :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+$c&gt; :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+&gt; :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+$c&gt;= :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+&gt;= :: IsBootInterface -&gt; IsBootInterface -&gt; Bool
+$cmax :: IsBootInterface -&gt; IsBootInterface -&gt; IsBootInterface
+max :: IsBootInterface -&gt; IsBootInterface -&gt; IsBootInterface
+$cmin :: IsBootInterface -&gt; IsBootInterface -&gt; IsBootInterface
+min :: IsBootInterface -&gt; IsBootInterface -&gt; IsBootInterface
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682649889"><span id="local-6989586621682649891"><span id="local-6989586621682649895"><span class="annot"><span class="annottext">Int -&gt; IsBootInterface -&gt; ShowS
+[IsBootInterface] -&gt; ShowS
+IsBootInterface -&gt; String
+(Int -&gt; IsBootInterface -&gt; ShowS)
+-&gt; (IsBootInterface -&gt; String)
+-&gt; ([IsBootInterface] -&gt; ShowS)
+-&gt; Show IsBootInterface
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; IsBootInterface -&gt; ShowS
+showsPrec :: Int -&gt; IsBootInterface -&gt; ShowS
+$cshow :: IsBootInterface -&gt; String
+show :: IsBootInterface -&gt; String
+$cshowList :: [IsBootInterface] -&gt; ShowS
+showList :: [IsBootInterface] -&gt; ShowS
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682649902"><span id="local-6989586621682649904"><span id="local-6989586621682649906"><span id="local-6989586621682649908"><span id="local-6989586621682649910"><span id="local-6989586621682649916"><span id="local-6989586621682649921"><span id="local-6989586621682649924"><span id="local-6989586621682649927"><span id="local-6989586621682649930"><span id="local-6989586621682649933"><span id="local-6989586621682649936"><span id="local-6989586621682649941"><span id="local-6989586621682649946"><span class="annot"><span class="annottext">Typeable IsBootInterface
+Typeable IsBootInterface =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; IsBootInterface -&gt; c IsBootInterface)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c IsBootInterface)
+-&gt; (IsBootInterface -&gt; Constr)
+-&gt; (IsBootInterface -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c IsBootInterface))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c IsBootInterface))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; IsBootInterface -&gt; IsBootInterface)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; IsBootInterface -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; IsBootInterface -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; IsBootInterface -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; IsBootInterface -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; IsBootInterface -&gt; m IsBootInterface)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; IsBootInterface -&gt; m IsBootInterface)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; IsBootInterface -&gt; m IsBootInterface)
+-&gt; Data IsBootInterface
+IsBootInterface -&gt; Constr
+IsBootInterface -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; IsBootInterface -&gt; IsBootInterface
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; IsBootInterface -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; IsBootInterface -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; IsBootInterface -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; IsBootInterface -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; IsBootInterface -&gt; m IsBootInterface
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; IsBootInterface -&gt; m IsBootInterface
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c IsBootInterface
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; IsBootInterface -&gt; c IsBootInterface
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c IsBootInterface)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c IsBootInterface)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; IsBootInterface -&gt; c IsBootInterface
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; IsBootInterface -&gt; c IsBootInterface
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c IsBootInterface
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c IsBootInterface
+$ctoConstr :: IsBootInterface -&gt; Constr
+toConstr :: IsBootInterface -&gt; Constr
+$cdataTypeOf :: IsBootInterface -&gt; DataType
+dataTypeOf :: IsBootInterface -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c IsBootInterface)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c IsBootInterface)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c IsBootInterface)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c IsBootInterface)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; IsBootInterface -&gt; IsBootInterface
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; IsBootInterface -&gt; IsBootInterface
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; IsBootInterface -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; IsBootInterface -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; IsBootInterface -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; IsBootInterface -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; IsBootInterface -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; IsBootInterface -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; IsBootInterface -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; IsBootInterface -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; IsBootInterface -&gt; m IsBootInterface
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; IsBootInterface -&gt; m IsBootInterface
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; IsBootInterface -&gt; m IsBootInterface
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; IsBootInterface -&gt; m IsBootInterface
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; IsBootInterface -&gt; m IsBootInterface
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; IsBootInterface -&gt; m IsBootInterface
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.ImpExp.IsBoot.html#IsBootInterface"><span class="hs-identifier hs-type">IsBootInterface</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>  </span><span id="local-6989586621682649958"><span class="annot"><span class="annottext">rnf :: IsBootInterface -&gt; ()
+</span><a href="#local-6989586621682649958"><span class="hs-identifier hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IsBootInterface -&gt; ()
+forall a. a -&gt; ()
+</span><a href="../../deepseq-1.5.1.0-inplace/src/Control.DeepSeq.html#rwhnf"><span class="hs-identifier hs-var">rwhnf</span></a></span></pre></body></html>

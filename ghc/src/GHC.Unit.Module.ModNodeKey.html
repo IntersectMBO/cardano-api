@@ -1,0 +1,151 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html"><span class="hs-identifier">GHC.Unit.Module.ModNodeKey</span></a></span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier">ModNodeKeyWithUid</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#mnkToModule"><span class="hs-identifier">mnkToModule</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#moduleToMnk"><span class="hs-identifier">moduleToMnk</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#mnkIsBoot"><span class="hs-identifier">mnkIsBoot</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#mnkToInstalledModule"><span class="hs-identifier">mnkToInstalledModule</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#installedModuleToMnk"><span class="hs-identifier">installedModuleToMnk</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html"><span class="hs-identifier">GHC.Unit.Types</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">data</span><span> </span><span id="ModNodeKeyWithUid"><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-var">ModNodeKeyWithUid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ModNodeKeyWithUid"><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-var">ModNodeKeyWithUid</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="mnkModuleName"><span class="annot"><span class="annottext">ModNodeKeyWithUid -&gt; ModuleNameWithIsBoot
+</span><a href="GHC.Unit.Module.ModNodeKey.html#mnkModuleName"><span class="hs-identifier hs-var hs-var">mnkModuleName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Unit.Types.html#ModuleNameWithIsBoot"><span class="hs-identifier hs-type">ModuleNameWithIsBoot</span></a></span><span>
+</span><span id="line-15"></span><span>                                           </span><span class="hs-special">,</span><span> </span><span id="mnkUnitId"><span class="annot"><span class="annottext">ModNodeKeyWithUid -&gt; UnitId
+</span><a href="GHC.Unit.Module.ModNodeKey.html#mnkUnitId"><span class="hs-identifier hs-var hs-var">mnkUnitId</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Unit.Types.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682698778"><span id="local-6989586621682698785"><span class="annot"><span class="annottext">ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+(ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool)
+-&gt; (ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool)
+-&gt; Eq ModNodeKeyWithUid
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+== :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+$c/= :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+/= :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682698793"><span id="local-6989586621682698800"><span id="local-6989586621682698805"><span id="local-6989586621682698809"><span id="local-6989586621682698812"><span id="local-6989586621682698815"><span id="local-6989586621682698818"><span class="annot"><span class="annottext">Eq ModNodeKeyWithUid
+Eq ModNodeKeyWithUid =&gt;
+(ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Ordering)
+-&gt; (ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool)
+-&gt; (ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool)
+-&gt; (ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool)
+-&gt; (ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool)
+-&gt; (ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; ModNodeKeyWithUid)
+-&gt; (ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; ModNodeKeyWithUid)
+-&gt; Ord ModNodeKeyWithUid
+ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Ordering
+ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; ModNodeKeyWithUid
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Ordering
+compare :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Ordering
+$c&lt; :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+&lt; :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+$c&lt;= :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+&lt;= :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+$c&gt; :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+&gt; :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+$c&gt;= :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+&gt;= :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; Bool
+$cmax :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; ModNodeKeyWithUid
+max :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; ModNodeKeyWithUid
+$cmin :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; ModNodeKeyWithUid
+min :: ModNodeKeyWithUid -&gt; ModNodeKeyWithUid -&gt; ModNodeKeyWithUid
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#mnkToModule"><span class="hs-identifier hs-type">mnkToModule</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-type">ModNodeKeyWithUid</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span>
+</span><span id="line-18"></span><span id="mnkToModule"><span class="annot"><span class="annottext">mnkToModule :: ModNodeKeyWithUid -&gt; Module
+</span><a href="GHC.Unit.Module.ModNodeKey.html#mnkToModule"><span class="hs-identifier hs-var hs-var">mnkToModule</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-type">ModNodeKeyWithUid</span></a></span><span> </span><span id="local-6989586621682698826"><span class="annot"><span class="annottext">ModuleNameWithIsBoot
+</span><a href="#local-6989586621682698826"><span class="hs-identifier hs-var">mnwib</span></a></span></span><span> </span><span id="local-6989586621682698827"><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621682698827"><span class="hs-identifier hs-var">uid</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Unit -&gt; ModuleName -&gt; Module
+forall unit. unit -&gt; ModuleName -&gt; GenModule unit
+</span><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-var">Module</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Definite UnitId -&gt; Unit
+forall uid. Definite uid -&gt; GenUnit uid
+</span><a href="GHC.Unit.Types.html#RealUnit"><span class="hs-identifier hs-var">RealUnit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UnitId -&gt; Definite UnitId
+forall unit. unit -&gt; Definite unit
+</span><a href="GHC.Unit.Types.html#Definite"><span class="hs-identifier hs-var">Definite</span></a></span><span> </span><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621682698827"><span class="hs-identifier hs-var">uid</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModuleNameWithIsBoot -&gt; ModuleName
+forall mod. GenWithIsBoot mod -&gt; mod
+</span><a href="GHC.Unit.Types.html#gwib_mod"><span class="hs-identifier hs-var">gwib_mod</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleNameWithIsBoot
+</span><a href="#local-6989586621682698826"><span class="hs-identifier hs-var">mnwib</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#mnkToInstalledModule"><span class="hs-identifier hs-type">mnkToInstalledModule</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-type">ModNodeKeyWithUid</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#InstalledModule"><span class="hs-identifier hs-type">InstalledModule</span></a></span><span>
+</span><span id="line-21"></span><span id="mnkToInstalledModule"><span class="annot"><span class="annottext">mnkToInstalledModule :: ModNodeKeyWithUid -&gt; InstalledModule
+</span><a href="GHC.Unit.Module.ModNodeKey.html#mnkToInstalledModule"><span class="hs-identifier hs-var hs-var">mnkToInstalledModule</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-type">ModNodeKeyWithUid</span></a></span><span> </span><span id="local-6989586621682698832"><span class="annot"><span class="annottext">ModuleNameWithIsBoot
+</span><a href="#local-6989586621682698832"><span class="hs-identifier hs-var">mnwib</span></a></span></span><span> </span><span id="local-6989586621682698833"><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621682698833"><span class="hs-identifier hs-var">uid</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnitId -&gt; ModuleName -&gt; InstalledModule
+forall unit. unit -&gt; ModuleName -&gt; GenModule unit
+</span><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-var">Module</span></a></span><span> </span><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621682698833"><span class="hs-identifier hs-var">uid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModuleNameWithIsBoot -&gt; ModuleName
+forall mod. GenWithIsBoot mod -&gt; mod
+</span><a href="GHC.Unit.Types.html#gwib_mod"><span class="hs-identifier hs-var">gwib_mod</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleNameWithIsBoot
+</span><a href="#local-6989586621682698832"><span class="hs-identifier hs-var">mnwib</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><span class="hs-comment">-- | Already InstalledModules are always NotBoot</span></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#installedModuleToMnk"><span class="hs-identifier hs-type">installedModuleToMnk</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#InstalledModule"><span class="hs-identifier hs-type">InstalledModule</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-type">ModNodeKeyWithUid</span></a></span><span>
+</span><span id="line-25"></span><span id="installedModuleToMnk"><span class="annot"><span class="annottext">installedModuleToMnk :: InstalledModule -&gt; ModNodeKeyWithUid
+</span><a href="GHC.Unit.Module.ModNodeKey.html#installedModuleToMnk"><span class="hs-identifier hs-var hs-var">installedModuleToMnk</span></a></span></span><span> </span><span id="local-6989586621682698834"><span class="annot"><span class="annottext">InstalledModule
+</span><a href="#local-6989586621682698834"><span class="hs-identifier hs-var">mod</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleNameWithIsBoot -&gt; UnitId -&gt; ModNodeKeyWithUid
+</span><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-var">ModNodeKeyWithUid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModuleName -&gt; IsBootInterface -&gt; ModuleNameWithIsBoot
+forall mod. mod -&gt; IsBootInterface -&gt; GenWithIsBoot mod
+</span><a href="GHC.Unit.Types.html#GWIB"><span class="hs-identifier hs-var">GWIB</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InstalledModule -&gt; ModuleName
+forall unit. GenModule unit -&gt; ModuleName
+</span><a href="GHC.Unit.Types.html#moduleName"><span class="hs-identifier hs-var">moduleName</span></a></span><span> </span><span class="annot"><span class="annottext">InstalledModule
+</span><a href="#local-6989586621682698834"><span class="hs-identifier hs-var">mod</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IsBootInterface
+</span><a href="Language.Haskell.Syntax.ImpExp.IsBoot.html#NotBoot"><span class="hs-identifier hs-var">NotBoot</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InstalledModule -&gt; UnitId
+forall unit. GenModule unit -&gt; unit
+</span><a href="GHC.Unit.Types.html#moduleUnit"><span class="hs-identifier hs-var">moduleUnit</span></a></span><span> </span><span class="annot"><span class="annottext">InstalledModule
+</span><a href="#local-6989586621682698834"><span class="hs-identifier hs-var">mod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#moduleToMnk"><span class="hs-identifier hs-type">moduleToMnk</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.ImpExp.IsBoot.html#IsBootInterface"><span class="hs-identifier hs-type">IsBootInterface</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-type">ModNodeKeyWithUid</span></a></span><span>
+</span><span id="line-28"></span><span id="moduleToMnk"><span class="annot"><span class="annottext">moduleToMnk :: Module -&gt; IsBootInterface -&gt; ModNodeKeyWithUid
+</span><a href="GHC.Unit.Module.ModNodeKey.html#moduleToMnk"><span class="hs-identifier hs-var hs-var">moduleToMnk</span></a></span></span><span> </span><span id="local-6989586621682698839"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682698839"><span class="hs-identifier hs-var">mod</span></a></span></span><span> </span><span id="local-6989586621682698840"><span class="annot"><span class="annottext">IsBootInterface
+</span><a href="#local-6989586621682698840"><span class="hs-identifier hs-var">is_boot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleNameWithIsBoot -&gt; UnitId -&gt; ModNodeKeyWithUid
+</span><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-var">ModNodeKeyWithUid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModuleName -&gt; IsBootInterface -&gt; ModuleNameWithIsBoot
+forall mod. mod -&gt; IsBootInterface -&gt; GenWithIsBoot mod
+</span><a href="GHC.Unit.Types.html#GWIB"><span class="hs-identifier hs-var">GWIB</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Module -&gt; ModuleName
+forall unit. GenModule unit -&gt; ModuleName
+</span><a href="GHC.Unit.Types.html#moduleName"><span class="hs-identifier hs-var">moduleName</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682698839"><span class="hs-identifier hs-var">mod</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IsBootInterface
+</span><a href="#local-6989586621682698840"><span class="hs-identifier hs-var">is_boot</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Module -&gt; UnitId
+</span><a href="GHC.Unit.Types.html#moduleUnitId"><span class="hs-identifier hs-var">moduleUnitId</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682698839"><span class="hs-identifier hs-var">mod</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#mnkIsBoot"><span class="hs-identifier hs-type">mnkIsBoot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-type">ModNodeKeyWithUid</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.ImpExp.IsBoot.html#IsBootInterface"><span class="hs-identifier hs-type">IsBootInterface</span></a></span><span>
+</span><span id="line-31"></span><span id="mnkIsBoot"><span class="annot"><span class="annottext">mnkIsBoot :: ModNodeKeyWithUid -&gt; IsBootInterface
+</span><a href="GHC.Unit.Module.ModNodeKey.html#mnkIsBoot"><span class="hs-identifier hs-var hs-var">mnkIsBoot</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-type">ModNodeKeyWithUid</span></a></span><span> </span><span id="local-6989586621682698842"><span class="annot"><span class="annottext">ModuleNameWithIsBoot
+</span><a href="#local-6989586621682698842"><span class="hs-identifier hs-var">mnwib</span></a></span></span><span> </span><span class="annot"><span class="annottext">UnitId
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModuleNameWithIsBoot -&gt; IsBootInterface
+forall mod. GenWithIsBoot mod -&gt; IsBootInterface
+</span><a href="GHC.Unit.Types.html#gwib_isBoot"><span class="hs-identifier hs-var">gwib_isBoot</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleNameWithIsBoot
+</span><a href="#local-6989586621682698842"><span class="hs-identifier hs-var">mnwib</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-type">ModNodeKeyWithUid</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621682698857"><span class="annot"><span class="annottext">ppr :: ModNodeKeyWithUid -&gt; SDoc
+</span><a href="#local-6989586621682698857"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.ModNodeKey.html#ModNodeKeyWithUid"><span class="hs-identifier hs-type">ModNodeKeyWithUid</span></a></span><span> </span><span id="local-6989586621682698859"><span class="annot"><span class="annottext">ModuleNameWithIsBoot
+</span><a href="#local-6989586621682698859"><span class="hs-identifier hs-var">mnwib</span></a></span></span><span> </span><span id="local-6989586621682698860"><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621682698860"><span class="hs-identifier hs-var">uid</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnitId -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">UnitId
+</span><a href="#local-6989586621682698860"><span class="hs-identifier hs-var">uid</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc
+forall doc. IsLine doc =&gt; doc
+</span><a href="GHC.Utils.Outputable.html#colon"><span class="hs-identifier hs-var">colon</span></a></span><span> </span><span class="annot"><span class="annottext">SDoc -&gt; SDoc -&gt; SDoc
+forall doc. IsLine doc =&gt; doc -&gt; doc -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleNameWithIsBoot -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleNameWithIsBoot
+</span><a href="#local-6989586621682698859"><span class="hs-identifier hs-var">mnwib</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span></pre></body></html>

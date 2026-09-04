@@ -1,0 +1,283 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span id="local-6989586621682714570"><span id="local-6989586621682714571"></span></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Types.ThLevelIndex.html"><span class="hs-identifier">GHC.Types.ThLevelIndex</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Basic.html"><span class="hs-identifier">GHC.Types.Basic</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.Basic.html#ImportLevel"><span class="hs-identifier">ImportLevel</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Data.Data.html"><span class="hs-identifier">Data.Data</span></a></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="annot"><span class="hs-comment">-- | The integer which represents the level</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">newtype</span><span> </span><span id="ThLevelIndex"><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-var">ThLevelIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ThLevelIndex"><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-var">ThLevelIndex</span></a></span></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682714579"><span id="local-6989586621682714584"><span class="annot"><span class="annottext">ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+(ThLevelIndex -&gt; ThLevelIndex -&gt; Bool)
+-&gt; (ThLevelIndex -&gt; ThLevelIndex -&gt; Bool) -&gt; Eq ThLevelIndex
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+== :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+$c/= :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+/= :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682714593"><span id="local-6989586621682714598"><span id="local-6989586621682714602"><span id="local-6989586621682714606"><span id="local-6989586621682714610"><span id="local-6989586621682714614"><span id="local-6989586621682714618"><span class="annot"><span class="annottext">Eq ThLevelIndex
+Eq ThLevelIndex =&gt;
+(ThLevelIndex -&gt; ThLevelIndex -&gt; Ordering)
+-&gt; (ThLevelIndex -&gt; ThLevelIndex -&gt; Bool)
+-&gt; (ThLevelIndex -&gt; ThLevelIndex -&gt; Bool)
+-&gt; (ThLevelIndex -&gt; ThLevelIndex -&gt; Bool)
+-&gt; (ThLevelIndex -&gt; ThLevelIndex -&gt; Bool)
+-&gt; (ThLevelIndex -&gt; ThLevelIndex -&gt; ThLevelIndex)
+-&gt; (ThLevelIndex -&gt; ThLevelIndex -&gt; ThLevelIndex)
+-&gt; Ord ThLevelIndex
+ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+ThLevelIndex -&gt; ThLevelIndex -&gt; Ordering
+ThLevelIndex -&gt; ThLevelIndex -&gt; ThLevelIndex
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ThLevelIndex -&gt; ThLevelIndex -&gt; Ordering
+compare :: ThLevelIndex -&gt; ThLevelIndex -&gt; Ordering
+$c&lt; :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+&lt; :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+$c&lt;= :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+&lt;= :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+$c&gt; :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+&gt; :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+$c&gt;= :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+&gt;= :: ThLevelIndex -&gt; ThLevelIndex -&gt; Bool
+$cmax :: ThLevelIndex -&gt; ThLevelIndex -&gt; ThLevelIndex
+max :: ThLevelIndex -&gt; ThLevelIndex -&gt; ThLevelIndex
+$cmin :: ThLevelIndex -&gt; ThLevelIndex -&gt; ThLevelIndex
+min :: ThLevelIndex -&gt; ThLevelIndex -&gt; ThLevelIndex
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682714632"><span id="local-6989586621682714636"><span id="local-6989586621682714639"><span id="local-6989586621682714641"><span id="local-6989586621682714643"><span id="local-6989586621682714649"><span id="local-6989586621682714654"><span id="local-6989586621682714657"><span id="local-6989586621682714660"><span id="local-6989586621682714663"><span id="local-6989586621682714666"><span id="local-6989586621682714669"><span id="local-6989586621682714674"><span id="local-6989586621682714679"><span class="annot"><span class="annottext">Typeable ThLevelIndex
+Typeable ThLevelIndex =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; ThLevelIndex -&gt; c ThLevelIndex)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ThLevelIndex)
+-&gt; (ThLevelIndex -&gt; Constr)
+-&gt; (ThLevelIndex -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ThLevelIndex))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c ThLevelIndex))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; ThLevelIndex -&gt; ThLevelIndex)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ThLevelIndex -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ThLevelIndex -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ThLevelIndex -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ThLevelIndex -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ThLevelIndex -&gt; m ThLevelIndex)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ThLevelIndex -&gt; m ThLevelIndex)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; ThLevelIndex -&gt; m ThLevelIndex)
+-&gt; Data ThLevelIndex
+ThLevelIndex -&gt; Constr
+ThLevelIndex -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; ThLevelIndex -&gt; ThLevelIndex
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ThLevelIndex -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ThLevelIndex -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ThLevelIndex -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ThLevelIndex -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ThLevelIndex -&gt; m ThLevelIndex
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ThLevelIndex -&gt; m ThLevelIndex
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ThLevelIndex
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ThLevelIndex -&gt; c ThLevelIndex
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ThLevelIndex)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ThLevelIndex)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ThLevelIndex -&gt; c ThLevelIndex
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; ThLevelIndex -&gt; c ThLevelIndex
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ThLevelIndex
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ThLevelIndex
+$ctoConstr :: ThLevelIndex -&gt; Constr
+toConstr :: ThLevelIndex -&gt; Constr
+$cdataTypeOf :: ThLevelIndex -&gt; DataType
+dataTypeOf :: ThLevelIndex -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ThLevelIndex)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ThLevelIndex)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ThLevelIndex)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ThLevelIndex)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ThLevelIndex -&gt; ThLevelIndex
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; ThLevelIndex -&gt; ThLevelIndex
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ThLevelIndex -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ThLevelIndex -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ThLevelIndex -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ThLevelIndex -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ThLevelIndex -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; ThLevelIndex -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ThLevelIndex -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ThLevelIndex -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ThLevelIndex -&gt; m ThLevelIndex
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ThLevelIndex -&gt; m ThLevelIndex
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ThLevelIndex -&gt; m ThLevelIndex
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ThLevelIndex -&gt; m ThLevelIndex
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ThLevelIndex -&gt; m ThLevelIndex
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; ThLevelIndex -&gt; m ThLevelIndex
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-comment">-- NB: see Note [Template Haskell levels] in GHC.Tc.Gen.Splice</span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-comment">-- Incremented when going inside a bracket,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-comment">-- decremented when going inside a splice</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#Outputable"><span class="hs-identifier hs-type">Outputable</span></a></span><span> </span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>    </span><span id="local-6989586621682714693"><span class="annot"><span class="annottext">ppr :: ThLevelIndex -&gt; SDoc
+</span><a href="#local-6989586621682714693"><span class="hs-identifier hs-var hs-var hs-var">ppr</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span> </span><span id="local-6989586621682714695"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682714695"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; SDoc
+forall doc. IsLine doc =&gt; Int -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#int"><span class="hs-identifier hs-var">int</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682714695"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#incThLevelIndex"><span class="hs-identifier hs-type">incThLevelIndex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span>
+</span><span id="line-18"></span><span id="incThLevelIndex"><span class="annot"><span class="annottext">incThLevelIndex :: ThLevelIndex -&gt; ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#incThLevelIndex"><span class="hs-identifier hs-var hs-var">incThLevelIndex</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span> </span><span id="local-6989586621682714698"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682714698"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-var">ThLevelIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682714698"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#decThLevelIndex"><span class="hs-identifier hs-type">decThLevelIndex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span>
+</span><span id="line-21"></span><span id="decThLevelIndex"><span class="annot"><span class="annottext">decThLevelIndex :: ThLevelIndex -&gt; ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#decThLevelIndex"><span class="hs-identifier hs-var hs-var">decThLevelIndex</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span> </span><span id="local-6989586621682714701"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682714701"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-var">ThLevelIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682714701"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#topLevelIndex"><span class="hs-identifier hs-type">topLevelIndex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span>
+</span><span id="line-24"></span><span id="topLevelIndex"><span class="annot"><span class="annottext">topLevelIndex :: ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#topLevelIndex"><span class="hs-identifier hs-var hs-var">topLevelIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-var">ThLevelIndex</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#spliceLevelIndex"><span class="hs-identifier hs-type">spliceLevelIndex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span>
+</span><span id="line-27"></span><span id="spliceLevelIndex"><span class="annot"><span class="annottext">spliceLevelIndex :: ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#spliceLevelIndex"><span class="hs-identifier hs-var hs-var">spliceLevelIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ThLevelIndex -&gt; ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#decThLevelIndex"><span class="hs-identifier hs-var">decThLevelIndex</span></a></span><span> </span><span class="annot"><span class="annottext">ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#topLevelIndex"><span class="hs-identifier hs-var">topLevelIndex</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#quoteLevelIndex"><span class="hs-identifier hs-type">quoteLevelIndex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span>
+</span><span id="line-30"></span><span id="quoteLevelIndex"><span class="annot"><span class="annottext">quoteLevelIndex :: ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#quoteLevelIndex"><span class="hs-identifier hs-var hs-var">quoteLevelIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ThLevelIndex -&gt; ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#incThLevelIndex"><span class="hs-identifier hs-var">incThLevelIndex</span></a></span><span> </span><span class="annot"><span class="annottext">ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#topLevelIndex"><span class="hs-identifier hs-var">topLevelIndex</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><span class="hs-comment">-- | Convert a 'GHC.Types.Basic.ImportLevel' to a 'ThLevelIndex'</span></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#thLevelIndexFromImportLevel"><span class="hs-identifier hs-type">thLevelIndexFromImportLevel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Types.Basic.html#ImportLevel"><span class="hs-identifier hs-type">ImportLevel</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#ThLevelIndex"><span class="hs-identifier hs-type">ThLevelIndex</span></a></span><span>
+</span><span id="line-34"></span><span id="thLevelIndexFromImportLevel"><span class="annot"><span class="annottext">thLevelIndexFromImportLevel :: ImportLevel -&gt; ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#thLevelIndexFromImportLevel"><span class="hs-identifier hs-var hs-var">thLevelIndexFromImportLevel</span></a></span></span><span> </span><span class="annot"><span class="annottext">ImportLevel
+</span><a href="GHC.Types.Basic.html#NormalLevel"><span class="hs-identifier hs-var">NormalLevel</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#topLevelIndex"><span class="hs-identifier hs-var">topLevelIndex</span></a></span><span>
+</span><span id="line-35"></span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#thLevelIndexFromImportLevel"><span class="hs-identifier hs-var">thLevelIndexFromImportLevel</span></a></span><span> </span><span class="annot"><span class="annottext">ImportLevel
+</span><a href="GHC.Types.Basic.html#SpliceLevel"><span class="hs-identifier hs-var">SpliceLevel</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#spliceLevelIndex"><span class="hs-identifier hs-var">spliceLevelIndex</span></a></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="GHC.Types.ThLevelIndex.html#thLevelIndexFromImportLevel"><span class="hs-identifier hs-var">thLevelIndexFromImportLevel</span></a></span><span> </span><span class="annot"><span class="annottext">ImportLevel
+</span><a href="GHC.Types.Basic.html#QuoteLevel"><span class="hs-identifier hs-var">QuoteLevel</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ThLevelIndex
+</span><a href="GHC.Types.ThLevelIndex.html#quoteLevelIndex"><span class="hs-identifier hs-var">quoteLevelIndex</span></a></span><span>
+</span><span id="line-37"></span></pre></body></html>

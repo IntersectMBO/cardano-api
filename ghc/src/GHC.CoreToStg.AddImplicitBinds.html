@@ -1,0 +1,312 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-comment">{-
+(c) The University of Glasgow, 1994-2006
+
+Add implicit bindings
+-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.CoreToStg.AddImplicitBinds.html"><span class="hs-identifier">GHC.CoreToStg.AddImplicitBinds</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.CoreToStg.AddImplicitBinds.html#addImplicitBinds"><span class="hs-identifier">addImplicitBinds</span></a></span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.CoreToStg.Prep.html"><span class="hs-identifier">GHC.CoreToStg.Prep</span></a></span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.CoreToStg.Prep.html#CorePrepPgmConfig"><span class="hs-identifier">CorePrepPgmConfig</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.html"><span class="hs-identifier">GHC.Unit</span></a></span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Location.html#ModLocation"><span class="hs-identifier">ModLocation</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.html"><span class="hs-identifier">GHC.Core</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.DataCon.html"><span class="hs-identifier">GHC.Core.DataCon</span></a></span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Core.DataCon.html#DataCon"><span class="hs-identifier">DataCon</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Core.DataCon.html#dataConWorkId"><span class="hs-identifier">dataConWorkId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Core.DataCon.html#dataConWrapId"><span class="hs-identifier">dataConWrapId</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.TyCon.html"><span class="hs-identifier">GHC.Core.TyCon</span></a></span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Core.TyCon.html#TyCon"><span class="hs-identifier">TyCon</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Core.TyCon.html#tyConDataCons"><span class="hs-identifier">tyConDataCons</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Core.TyCon.html#isBoxedDataTyCon"><span class="hs-identifier">isBoxedDataTyCon</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Core.TyCon.html#tyConClass_maybe"><span class="hs-identifier">tyConClass_maybe</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.Class.html"><span class="hs-identifier">GHC.Core.Class</span></a></span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Core.Class.html#classAllSelIds"><span class="hs-identifier">classAllSelIds</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.html"><span class="hs-identifier">GHC.Types.Name</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html"><span class="hs-identifier">GHC.Types.Tickish</span></a></span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#GenTickish"><span class="hs-identifier">GenTickish</span></a></span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#SourceNote"><span class="hs-identifier">SourceNote</span></a></span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Id.html"><span class="hs-identifier">GHC.Types.Id</span></a></span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.Id.html#dataConWrapUnfolding_maybe"><span class="hs-identifier">dataConWrapUnfolding_maybe</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Id.Make.html"><span class="hs-identifier">GHC.Types.Id.Make</span></a></span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.Id.Make.html#mkDictSelRhs"><span class="hs-identifier">mkDictSelRhs</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html"><span class="hs-identifier">GHC.Types.SrcLoc</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html#SrcSpan"><span class="hs-identifier">SrcSpan</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html#realSrcLocSpan"><span class="hs-identifier">realSrcLocSpan</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html#mkRealSrcLoc"><span class="hs-identifier">mkRealSrcLoc</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.FastString.html"><span class="hs-identifier">GHC.Data.FastString</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><span class="hs-comment">{- *********************************************************************
+*                                                                      *
+        Implicit bindings
+*                                                                      *
+********************************************************************* -}</span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">{- Note [Injecting implicit bindings]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+`addImplicitBinds` injects the so-called &quot;implicit bindings&quot; generated by
+the TyCons of the module. Specifically:
+
+ * Data constructor wrappers
+ * Data constructor workers: see Note [Data constructor workers]
+ * Class op selectors: we want curriedn versions of these too
+
+Note that /record selector/ are injected much earlier, at the beginning
+of the pipeline -- see Note [Record selectors] in GHC.Tc.TyCl.Utils.
+
+At one time I tried injecting the implicit bindings *early*, at the
+beginning of SimplCore.  But that gave rise to real difficulty,
+because GlobalIds are supposed to have *fixed* IdInfo, but the
+simplifier and other core-to-core passes mess with IdInfo all the
+time.  The straw that broke the camels back was when a class selector
+got the wrong arity -- ie the simplifier gave it arity 2, whereas
+importing modules were expecting it to have arity 1 (#2844).
+It's much safer just to inject them right at the end, after tidying.
+
+Oh: two other reasons for injecting them late:
+
+  - If implicit Ids are already in the bindings when we start tidying,
+    we'd have to be careful not to treat them as external Ids (in
+    the sense of chooseExternalIds); else the Ids mentioned in *their*
+    RHSs will be treated as external and you get an interface file
+    saying      a18 = &lt;blah&gt;
+    but nothing referring to a18 (because the implicit Id is the
+    one that does, and implicit Ids don't appear in interface files).
+
+  - More seriously, the tidied type-envt will include the implicit
+    Id replete with a18 in its unfolding; but we won't take account
+    of a18 when computing a fingerprint for the class; result chaos.
+
+Note [Data constructor workers]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Create any necessary &quot;implicit&quot; bindings for data con workers.  We
+create the rather strange (non-recursive!) binding
+
+        $wC = \x y -&gt; $wC x y
+
+i.e. a curried constructor that allocates.  This means that we can
+treat the worker for a constructor like any other function in the rest
+of the compiler.  The point here is that CoreToStg will generate a
+StgConApp for the RHS, rather than a call to the worker (which would
+give a loop).  As Lennart says: the ice is thin here, but it works.
+
+Hmm.  Should we create bindings for dictionary constructors?  They are
+always fully applied, and the bindings are just there to support
+partial applications. But it's easier to let them through.
+-}</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="annot"><a href="GHC.CoreToStg.AddImplicitBinds.html#addImplicitBinds"><span class="hs-identifier hs-type">addImplicitBinds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.CoreToStg.Prep.html#CorePrepPgmConfig"><span class="hs-identifier hs-type">CorePrepPgmConfig</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Location.html#ModLocation"><span class="hs-identifier hs-type">ModLocation</span></a></span><span>
+</span><span id="line-91"></span><span>                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Core.TyCon.html#TyCon"><span class="hs-identifier hs-type">TyCon</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Core.html#CoreProgram"><span class="hs-identifier hs-type">CoreProgram</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.Core.html#CoreProgram"><span class="hs-identifier hs-type">CoreProgram</span></a></span><span>
+</span><span id="line-92"></span><span id="addImplicitBinds"><span class="annot"><span class="annottext">addImplicitBinds :: CorePrepPgmConfig
+-&gt; ModLocation -&gt; [TyCon] -&gt; CoreProgram -&gt; IO CoreProgram
+</span><a href="GHC.CoreToStg.AddImplicitBinds.html#addImplicitBinds"><span class="hs-identifier hs-var hs-var">addImplicitBinds</span></a></span></span><span> </span><span id="local-6989586621683208666"><span class="annot"><span class="annottext">CorePrepPgmConfig
+</span><a href="#local-6989586621683208666"><span class="hs-identifier hs-var">pgm_cfg</span></a></span></span><span> </span><span id="local-6989586621683208667"><span class="annot"><span class="annottext">ModLocation
+</span><a href="#local-6989586621683208667"><span class="hs-identifier hs-var">mod_loc</span></a></span></span><span> </span><span id="local-6989586621683208668"><span class="annot"><span class="annottext">[TyCon]
+</span><a href="#local-6989586621683208668"><span class="hs-identifier hs-var">tycons</span></a></span></span><span> </span><span id="local-6989586621683208669"><span class="annot"><span class="annottext">CoreProgram
+</span><a href="#local-6989586621683208669"><span class="hs-identifier hs-var">binds</span></a></span></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CoreProgram -&gt; IO CoreProgram
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CoreProgram
+</span><a href="#local-6989586621683208670"><span class="hs-identifier hs-var">implicit_binds</span></a></span><span> </span><span class="annot"><span class="annottext">CoreProgram -&gt; CoreProgram -&gt; CoreProgram
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">CoreProgram
+</span><a href="#local-6989586621683208669"><span class="hs-identifier hs-var">binds</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-95"></span><span>    </span><span id="local-6989586621683208671"><span class="annot"><span class="annottext">gen_debug_info :: Bool
+</span><a href="#local-6989586621683208671"><span class="hs-identifier hs-var hs-var">gen_debug_info</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CorePrepPgmConfig -&gt; Bool
+</span><a href="GHC.CoreToStg.Prep.html#cpPgm_generateDebugInfo"><span class="hs-identifier hs-var">cpPgm_generateDebugInfo</span></a></span><span> </span><span class="annot"><span class="annottext">CorePrepPgmConfig
+</span><a href="#local-6989586621683208666"><span class="hs-identifier hs-var">pgm_cfg</span></a></span><span>
+</span><span id="line-96"></span><span>    </span><span id="local-6989586621683208670"><span class="annot"><span class="annottext">implicit_binds :: CoreProgram
+</span><a href="#local-6989586621683208670"><span class="hs-identifier hs-var hs-var">implicit_binds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TyCon -&gt; CoreProgram) -&gt; [TyCon] -&gt; CoreProgram
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; ModLocation -&gt; TyCon -&gt; CoreProgram
+</span><a href="GHC.CoreToStg.AddImplicitBinds.html#mkImplicitBinds"><span class="hs-identifier hs-var">mkImplicitBinds</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621683208671"><span class="hs-identifier hs-var">gen_debug_info</span></a></span><span> </span><span class="annot"><span class="annottext">ModLocation
+</span><a href="#local-6989586621683208667"><span class="hs-identifier hs-var">mod_loc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[TyCon]
+</span><a href="#local-6989586621683208668"><span class="hs-identifier hs-var">tycons</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="annot"><a href="GHC.CoreToStg.AddImplicitBinds.html#mkImplicitBinds"><span class="hs-identifier hs-type">mkImplicitBinds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Location.html#ModLocation"><span class="hs-identifier hs-type">ModLocation</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Core.TyCon.html#TyCon"><span class="hs-identifier hs-type">TyCon</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Core.html#CoreBind"><span class="hs-identifier hs-type">CoreBind</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- See Note [Data constructor workers]</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- c.f. Note [Injecting implicit bindings] in GHC.Iface.Tidy</span><span>
+</span><span id="line-102"></span><span id="mkImplicitBinds"><span class="annot"><span class="annottext">mkImplicitBinds :: Bool -&gt; ModLocation -&gt; TyCon -&gt; CoreProgram
+</span><a href="GHC.CoreToStg.AddImplicitBinds.html#mkImplicitBinds"><span class="hs-identifier hs-var hs-var">mkImplicitBinds</span></a></span></span><span> </span><span id="local-6989586621683208676"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621683208676"><span class="hs-identifier hs-var">gen_debug_info</span></a></span></span><span> </span><span id="local-6989586621683208677"><span class="annot"><span class="annottext">ModLocation
+</span><a href="#local-6989586621683208677"><span class="hs-identifier hs-var">mod_loc</span></a></span></span><span> </span><span id="local-6989586621683208678"><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621683208678"><span class="hs-identifier hs-var">tycon</span></a></span></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CoreProgram
+</span><a href="#local-6989586621683208679"><span class="hs-identifier hs-var">classop_binds</span></a></span><span> </span><span class="annot"><span class="annottext">CoreProgram -&gt; CoreProgram -&gt; CoreProgram
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">CoreProgram
+</span><a href="#local-6989586621683208680"><span class="hs-identifier hs-var">datacon_binds</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>    </span><span id="local-6989586621683208680"><span class="annot"><span class="annottext">datacon_binds :: CoreProgram
+</span><a href="#local-6989586621683208680"><span class="hs-identifier hs-var hs-var">datacon_binds</span></a></span></span><span>
+</span><span id="line-106"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">TyCon -&gt; Bool
+</span><a href="GHC.Core.TyCon.html#isBoxedDataTyCon"><span class="hs-identifier hs-var">isBoxedDataTyCon</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621683208678"><span class="hs-identifier hs-var">tycon</span></a></span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DataCon -&gt; CoreProgram) -&gt; [DataCon] -&gt; CoreProgram
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; ModLocation -&gt; DataCon -&gt; CoreProgram
+</span><a href="GHC.CoreToStg.AddImplicitBinds.html#dataConBinds"><span class="hs-identifier hs-var">dataConBinds</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621683208676"><span class="hs-identifier hs-var">gen_debug_info</span></a></span><span> </span><span class="annot"><span class="annottext">ModLocation
+</span><a href="#local-6989586621683208677"><span class="hs-identifier hs-var">mod_loc</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TyCon -&gt; [DataCon]
+</span><a href="GHC.Core.TyCon.html#tyConDataCons"><span class="hs-identifier hs-var">tyConDataCons</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621683208678"><span class="hs-identifier hs-var">tycon</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-comment">-- The 'otherwise' includes family TyCons of course, but also (less obviously)</span><span>
+</span><span id="line-111"></span><span>      </span><span class="hs-comment">--  * Newtypes: see Note [Compulsory newtype unfolding] in GHC.Types.Id.Make</span><span>
+</span><span id="line-112"></span><span>      </span><span class="hs-comment">--  * type data: we don't want any code for type-only stuff (#24620)</span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span>    </span><span id="local-6989586621683208679"><span class="annot"><span class="annottext">classop_binds :: CoreProgram
+</span><a href="#local-6989586621683208679"><span class="hs-identifier hs-var hs-var">classop_binds</span></a></span></span><span>
+</span><span id="line-115"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683208682"><span class="annot"><span class="annottext">Class
+</span><a href="#local-6989586621683208682"><span class="hs-identifier hs-var">cls</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TyCon -&gt; Maybe Class
+</span><a href="GHC.Core.TyCon.html#tyConClass_maybe"><span class="hs-identifier hs-var">tyConClass_maybe</span></a></span><span> </span><span class="annot"><span class="annottext">TyCon
+</span><a href="#local-6989586621683208678"><span class="hs-identifier hs-var">tycon</span></a></span><span>
+</span><span id="line-116"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Id -&gt; Expr Id -&gt; Bind Id
+forall b. b -&gt; Expr b -&gt; Bind b
+</span><a href="GHC.Core.html#NonRec"><span class="hs-identifier hs-var">NonRec</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621683208684"><span class="hs-identifier hs-var">op</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Class -&gt; Int -&gt; Expr Id
+</span><a href="GHC.Types.Id.Make.html#mkDictSelRhs"><span class="hs-identifier hs-var">mkDictSelRhs</span></a></span><span> </span><span class="annot"><span class="annottext">Class
+</span><a href="#local-6989586621683208682"><span class="hs-identifier hs-var">cls</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621683208685"><span class="hs-identifier hs-var">val_index</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683208684"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621683208684"><span class="hs-identifier hs-var">op</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683208685"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621683208685"><span class="hs-identifier hs-var">val_index</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Class -&gt; [Id]
+</span><a href="GHC.Core.Class.html#classAllSelIds"><span class="hs-identifier hs-var">classAllSelIds</span></a></span><span> </span><span class="annot"><span class="annottext">Class
+</span><a href="#local-6989586621683208682"><span class="hs-identifier hs-var">cls</span></a></span><span> </span><span class="annot"><span class="annottext">[Id] -&gt; [Int] -&gt; [(Id, Int)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.List.html#zip"><span class="hs-operator hs-var">`zip`</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-glyph">..</span><span class="hs-special">]</span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-118"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>
+</span><span id="line-119"></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="GHC.CoreToStg.AddImplicitBinds.html#dataConBinds"><span class="hs-identifier hs-type">dataConBinds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Location.html#ModLocation"><span class="hs-identifier hs-type">ModLocation</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Core.DataCon.html#DataCon"><span class="hs-identifier hs-type">DataCon</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Core.html#CoreBind"><span class="hs-identifier hs-type">CoreBind</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-122"></span><span id="dataConBinds"><span class="annot"><span class="annottext">dataConBinds :: Bool -&gt; ModLocation -&gt; DataCon -&gt; CoreProgram
+</span><a href="GHC.CoreToStg.AddImplicitBinds.html#dataConBinds"><span class="hs-identifier hs-var hs-var">dataConBinds</span></a></span></span><span> </span><span id="local-6989586621683208686"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621683208686"><span class="hs-identifier hs-var">gen_debug_info</span></a></span></span><span> </span><span id="local-6989586621683208687"><span class="annot"><span class="annottext">ModLocation
+</span><a href="#local-6989586621683208687"><span class="hs-identifier hs-var">mod_loc</span></a></span></span><span> </span><span id="local-6989586621683208688"><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621683208688"><span class="hs-identifier hs-var">data_con</span></a></span></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CoreProgram
+</span><a href="#local-6989586621683208689"><span class="hs-identifier hs-var">wrapper_bind</span></a></span><span> </span><span class="annot"><span class="annottext">CoreProgram -&gt; CoreProgram -&gt; CoreProgram
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">CoreProgram
+</span><a href="#local-6989586621683208690"><span class="hs-identifier hs-var">worker_bind</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-125"></span><span>    </span><span id="local-6989586621683208691"><span class="annot"><span class="annottext">work_id :: Id
+</span><a href="#local-6989586621683208691"><span class="hs-identifier hs-var hs-var">work_id</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DataCon -&gt; Id
+</span><a href="GHC.Core.DataCon.html#dataConWorkId"><span class="hs-identifier hs-var">dataConWorkId</span></a></span><span> </span><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621683208688"><span class="hs-identifier hs-var">data_con</span></a></span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621683208692"><span class="annot"><span class="annottext">wrap_id :: Id
+</span><a href="#local-6989586621683208692"><span class="hs-identifier hs-var hs-var">wrap_id</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DataCon -&gt; Id
+</span><a href="GHC.Core.DataCon.html#dataConWrapId"><span class="hs-identifier hs-var">dataConWrapId</span></a></span><span> </span><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621683208688"><span class="hs-identifier hs-var">data_con</span></a></span><span>
+</span><span id="line-127"></span><span>    </span><span id="local-6989586621683208690"><span class="annot"><span class="annottext">worker_bind :: CoreProgram
+</span><a href="#local-6989586621683208690"><span class="hs-identifier hs-var hs-var">worker_bind</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Id -&gt; Expr Id -&gt; Bind Id
+forall b. b -&gt; Expr b -&gt; Bind b
+</span><a href="GHC.Core.html#NonRec"><span class="hs-identifier hs-var">NonRec</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621683208691"><span class="hs-identifier hs-var">work_id</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Expr Id -&gt; Expr Id
+</span><a href="#local-6989586621683208693"><span class="hs-identifier hs-var">add_tick</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id -&gt; Expr Id
+forall b. Id -&gt; Expr b
+</span><a href="GHC.Core.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621683208691"><span class="hs-identifier hs-var">work_id</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-128"></span><span>      </span><span class="hs-comment">-- worker_bind: the ice is thin here, but it works:</span><span>
+</span><span id="line-129"></span><span>      </span><span class="hs-comment">--              CorePrep will eta-expand it</span><span>
+</span><span id="line-130"></span><span>    </span><span id="local-6989586621683208689"><span class="annot"><span class="annottext">wrapper_bind :: CoreProgram
+</span><a href="#local-6989586621683208689"><span class="hs-identifier hs-var hs-var">wrapper_bind</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Id -&gt; Maybe (Expr Id)
+</span><a href="GHC.Types.Id.html#dataConWrapUnfolding_maybe"><span class="hs-identifier hs-var">dataConWrapUnfolding_maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621683208692"><span class="hs-identifier hs-var">wrap_id</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-131"></span><span>                     </span><span class="annot"><span class="annottext">Maybe (Expr Id)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-132"></span><span>                     </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683208695"><span class="annot"><span class="annottext">Expr Id
+</span><a href="#local-6989586621683208695"><span class="hs-identifier hs-var">rhs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Id -&gt; Expr Id -&gt; Bind Id
+forall b. b -&gt; Expr b -&gt; Bind b
+</span><a href="GHC.Core.html#NonRec"><span class="hs-identifier hs-var">NonRec</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621683208692"><span class="hs-identifier hs-var">wrap_id</span></a></span><span> </span><span class="annot"><span class="annottext">Expr Id
+</span><a href="#local-6989586621683208695"><span class="hs-identifier hs-var">rhs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-133"></span><span>    </span><span id="local-6989586621683208693"><span class="annot"><span class="annottext">add_tick :: Expr Id -&gt; Expr Id
+</span><a href="#local-6989586621683208693"><span class="hs-identifier hs-var hs-var">add_tick</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ModLocation -&gt; Name -&gt; Expr Id -&gt; Expr Id
+</span><a href="GHC.CoreToStg.AddImplicitBinds.html#tick_it"><span class="hs-identifier hs-var">tick_it</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621683208686"><span class="hs-identifier hs-var">gen_debug_info</span></a></span><span> </span><span class="annot"><span class="annottext">ModLocation
+</span><a href="#local-6989586621683208687"><span class="hs-identifier hs-var">mod_loc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataCon -&gt; Name
+forall a. NamedThing a =&gt; a -&gt; Name
+</span><a href="GHC.Types.Name.html#getName"><span class="hs-identifier hs-var">getName</span></a></span><span> </span><span class="annot"><span class="annottext">DataCon
+</span><a href="#local-6989586621683208688"><span class="hs-identifier hs-var">data_con</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="annot"><a href="GHC.CoreToStg.AddImplicitBinds.html#tick_it"><span class="hs-identifier hs-type">tick_it</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Location.html#ModLocation"><span class="hs-identifier hs-type">ModLocation</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Types.Name.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Core.html#CoreExpr"><span class="hs-identifier hs-type">CoreExpr</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Core.html#CoreExpr"><span class="hs-identifier hs-type">CoreExpr</span></a></span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- If we want to generate debug info, we put a source note on the</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- worker. This is useful, especially for heap profiling.</span><span>
+</span><span id="line-138"></span><span id="tick_it"><span class="annot"><span class="annottext">tick_it :: Bool -&gt; ModLocation -&gt; Name -&gt; Expr Id -&gt; Expr Id
+</span><a href="GHC.CoreToStg.AddImplicitBinds.html#tick_it"><span class="hs-identifier hs-var hs-var">tick_it</span></a></span></span><span> </span><span id="local-6989586621683208699"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621683208699"><span class="hs-identifier hs-var">generate_debug_info</span></a></span></span><span> </span><span id="local-6989586621683208700"><span class="annot"><span class="annottext">ModLocation
+</span><a href="#local-6989586621683208700"><span class="hs-identifier hs-var">mod_loc</span></a></span></span><span> </span><span id="local-6989586621683208701"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683208701"><span class="hs-identifier hs-var">name</span></a></span></span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621683208699"><span class="hs-identifier hs-var">generate_debug_info</span></a></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Expr Id -&gt; Expr Id
+forall a. a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html#RealSrcSpan"><span class="hs-identifier hs-type">RealSrcSpan</span></a></span><span> </span><span id="local-6989586621683208705"><span class="annot"><span class="annottext">RealSrcSpan
+</span><a href="#local-6989586621683208705"><span class="hs-identifier hs-var">span</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe BufSpan
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Name -&gt; SrcSpan
+</span><a href="GHC.Types.Name.html#nameSrcSpan"><span class="hs-identifier hs-var">nameSrcSpan</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683208701"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RealSrcSpan -&gt; Expr Id -&gt; Expr Id
+</span><a href="#local-6989586621683208707"><span class="hs-identifier hs-var">tick</span></a></span><span> </span><span class="annot"><span class="annottext">RealSrcSpan
+</span><a href="#local-6989586621683208705"><span class="hs-identifier hs-var">span</span></a></span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683208708"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621683208708"><span class="hs-identifier hs-var">file</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ModLocation -&gt; Maybe FilePath
+</span><a href="GHC.Unit.Module.Location.html#ml_hs_file"><span class="hs-identifier hs-var">ml_hs_file</span></a></span><span> </span><span class="annot"><span class="annottext">ModLocation
+</span><a href="#local-6989586621683208700"><span class="hs-identifier hs-var">mod_loc</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RealSrcSpan -&gt; Expr Id -&gt; Expr Id
+</span><a href="#local-6989586621683208707"><span class="hs-identifier hs-var">tick</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; RealSrcSpan
+</span><a href="#local-6989586621683208710"><span class="hs-identifier hs-var">span1</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621683208708"><span class="hs-identifier hs-var">file</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>                             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RealSrcSpan -&gt; Expr Id -&gt; Expr Id
+</span><a href="#local-6989586621683208707"><span class="hs-identifier hs-var">tick</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; RealSrcSpan
+</span><a href="#local-6989586621683208710"><span class="hs-identifier hs-var">span1</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;???&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-144"></span><span>    </span><span id="local-6989586621683208707"><span class="annot"><span class="annottext">tick :: RealSrcSpan -&gt; Expr Id -&gt; Expr Id
+</span><a href="#local-6989586621683208707"><span class="hs-identifier hs-var hs-var">tick</span></a></span></span><span> </span><span id="local-6989586621683208711"><span class="annot"><span class="annottext">RealSrcSpan
+</span><a href="#local-6989586621683208711"><span class="hs-identifier hs-var">span</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CoreTickish -&gt; Expr Id -&gt; Expr Id
+forall b. CoreTickish -&gt; Expr b -&gt; Expr b
+</span><a href="GHC.Core.html#Tick"><span class="hs-identifier hs-var">Tick</span></a></span><span> </span><span class="annot"><span class="annottext">(CoreTickish -&gt; Expr Id -&gt; Expr Id)
+-&gt; CoreTickish -&gt; Expr Id -&gt; Expr Id
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RealSrcSpan -&gt; LexicalFastString -&gt; CoreTickish
+forall (pass :: TickishPass).
+RealSrcSpan -&gt; LexicalFastString -&gt; GenTickish pass
+</span><a href="GHC.Types.Tickish.html#SourceNote"><span class="hs-identifier hs-var">SourceNote</span></a></span><span> </span><span class="annot"><span class="annottext">RealSrcSpan
+</span><a href="#local-6989586621683208711"><span class="hs-identifier hs-var">span</span></a></span><span> </span><span class="annot"><span class="annottext">(LexicalFastString -&gt; CoreTickish)
+-&gt; LexicalFastString -&gt; CoreTickish
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-145"></span><span>                 </span><span class="annot"><span class="annottext">FastString -&gt; LexicalFastString
+</span><a href="GHC.Data.FastString.html#LexicalFastString"><span class="hs-identifier hs-var">LexicalFastString</span></a></span><span> </span><span class="annot"><span class="annottext">(FastString -&gt; LexicalFastString)
+-&gt; FastString -&gt; LexicalFastString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FastString
+</span><a href="GHC.Data.FastString.html#mkFastString"><span class="hs-identifier hs-var">mkFastString</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; FastString) -&gt; FilePath -&gt; FastString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-146"></span><span>                 </span><span class="annot"><span class="annottext">SDocContext -&gt; SDoc -&gt; FilePath
+</span><a href="GHC.Utils.Outputable.html#renderWithContext"><span class="hs-identifier hs-var">renderWithContext</span></a></span><span> </span><span class="annot"><span class="annottext">SDocContext
+</span><a href="GHC.Utils.Outputable.html#defaultSDocContext"><span class="hs-identifier hs-var">defaultSDocContext</span></a></span><span> </span><span class="annot"><span class="annottext">(SDoc -&gt; FilePath) -&gt; SDoc -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621683208701"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-147"></span><span>    </span><span id="local-6989586621683208710"><span class="annot"><span class="annottext">span1 :: FilePath -&gt; RealSrcSpan
+</span><a href="#local-6989586621683208710"><span class="hs-identifier hs-var hs-var">span1</span></a></span></span><span> </span><span id="local-6989586621683208718"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621683208718"><span class="hs-identifier hs-var">file</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RealSrcLoc -&gt; RealSrcSpan
+</span><a href="GHC.Types.SrcLoc.html#realSrcLocSpan"><span class="hs-identifier hs-var">realSrcLocSpan</span></a></span><span> </span><span class="annot"><span class="annottext">(RealSrcLoc -&gt; RealSrcSpan) -&gt; RealSrcLoc -&gt; RealSrcSpan
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FastString -&gt; Int -&gt; Int -&gt; RealSrcLoc
+</span><a href="GHC.Types.SrcLoc.html#mkRealSrcLoc"><span class="hs-identifier hs-var">mkRealSrcLoc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; FastString
+</span><a href="GHC.Data.FastString.html#mkFastString"><span class="hs-identifier hs-var">mkFastString</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621683208718"><span class="hs-identifier hs-var">file</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span></pre></body></html>

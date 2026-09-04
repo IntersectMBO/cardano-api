@@ -1,0 +1,651 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-- | The 'HomePackageTable' (HPT) contains information about all modules that are part</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- of a home package. At its core, the information for each module is a</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- 'HomeModInfo'.</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- During upsweep, the HPT is a monotonically increasing data structure: it</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- only ever gets extended by inserting modules which are loaded and for which</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- we discover the information required to construct a 'ModInfo'.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- There should only ever exist one single HPT for any given home unit. It's</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- crucial we don't accidentally leak HPTs (e.g. by filtering it, which used to</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- happen -- #25511), so the HPT is mutable and only its reference should be shared.</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- This is alright because the modules don't change throughout compilation.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- :::WARNING:::</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- If you intend to change this interface, consider carefully whether you are</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- exposing memory-leak footguns which may end up being misused in the compiler</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- eventually. For instance, if you really, really, end up needing a way to take</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- a snapshot of the IORef (think: do you really need to?), at least make</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- obvious in the name like `snapshotCopyHpt`.</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- Or, do you really need a function to traverse all modules in the HPT? It is</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- often better to keep the computation internal to this module, such as in</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- 'hptCollectObjects'...</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html"><span class="hs-identifier">GHC.Unit.Home.PackageTable</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier">HomePackageTable</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#emptyHomePackageTable"><span class="hs-identifier">emptyHomePackageTable</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Lookups in the HPT</span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#lookupHpt"><span class="hs-identifier">lookupHpt</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#lookupHptByModule"><span class="hs-identifier">lookupHptByModule</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Extending the HPT</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#addHomeModInfoToHpt"><span class="hs-identifier">addHomeModInfoToHpt</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#addHomeModInfosToHpt"><span class="hs-identifier">addHomeModInfosToHpt</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Restrict the HPT</span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#restrictHpt"><span class="hs-identifier">restrictHpt</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Queries about home modules</span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptCompleteSigs"><span class="hs-identifier">hptCompleteSigs</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptAllInstances"><span class="hs-identifier">hptAllInstances</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptAllFamInstances"><span class="hs-identifier">hptAllFamInstances</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptAllAnnotations"><span class="hs-identifier">hptAllAnnotations</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** More Traversal-based queries</span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptCollectDependencies"><span class="hs-identifier">hptCollectDependencies</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptCollectObjects"><span class="hs-identifier">hptCollectObjects</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptCollectModules"><span class="hs-identifier">hptCollectModules</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Memory dangerous queries</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#concatHpt"><span class="hs-identifier">concatHpt</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Utilities</span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#pprHPT"><span class="hs-identifier">pprHPT</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Internals</span></span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">-- | These provide access to the internals of the HomePackageTable to</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-comment">-- facilitate existing workflows that used the previous API. For instance,</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">-- if you were listing out all elements or merging, you can keep doing so by reading</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">-- the internal IO ref and then using the moduleenv contents directly.</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-comment">-- In GHC itself these should be avoided, and other uses should justify why</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">-- it is not sufficient to go through the intended insert-only API.</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptInternalTableRef"><span class="hs-identifier">hptInternalTableRef</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptInternalTableFromRef"><span class="hs-identifier">hptInternalTableFromRef</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Legacy API</span></span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="hs-comment">-- | This API is deprecated and meant to be removed.</span></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#addToHpt"><span class="hs-identifier">addToHpt</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#addListToHpt"><span class="hs-identifier">addListToHpt</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Data.Maybe.html"><span class="hs-identifier">GHC.Data.Maybe</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.html#%3C%24%21%3E"><span class="hs-operator">(&lt;$!&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.FamInstEnv.html"><span class="hs-identifier">GHC.Core.FamInstEnv</span></a></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Core.InstEnv.html"><span class="hs-identifier">GHC.Core.InstEnv</span></a></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Linker.Types.html"><span class="hs-identifier">GHC.Linker.Types</span></a></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Annotations.html"><span class="hs-identifier">GHC.Types.Annotations</span></a></span><span>
+</span><span id="line-88"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html"><span class="hs-identifier">GHC.Types.CompleteMatch</span></a></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.DFM.html"><span class="hs-identifier">GHC.Types.Unique.DFM</span></a></span><span>
+</span><span id="line-90"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html"><span class="hs-identifier">GHC.Unit.Home.ModInfo</span></a></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.html"><span class="hs-identifier">GHC.Unit.Module</span></a></span><span>
+</span><span id="line-92"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.Deps.html"><span class="hs-identifier">GHC.Unit.Module.Deps</span></a></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModDetails.html"><span class="hs-identifier">GHC.Unit.Module.ModDetails</span></a></span><span>
+</span><span id="line-94"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModIface.html"><span class="hs-identifier">GHC.Unit.Module.ModIface</span></a></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Unique.html"><span class="hs-identifier">GHC.Types.Unique</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Unique.html#getUnique"><span class="hs-identifier">getUnique</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Unique.html#getKey"><span class="hs-identifier">getKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="GHC.Data.Word64Set.html"><span class="hs-identifier">GHC.Data.Word64Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">W64</span></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="annot"><span class="hs-comment">-- | Helps us find information about modules in the home package</span></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">newtype</span><span> </span><span id="HomePackageTable"><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-var">HomePackageTable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="HPT"><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HPT"><span class="hs-identifier hs-var">HPT</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span>    </span><span id="table"><span class="annot"><span class="annottext">HomePackageTable -&gt; IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var hs-var">table</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.Env.html#DModuleNameEnv"><span class="hs-identifier hs-type">DModuleNameEnv</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#HomeModInfo"><span class="hs-identifier hs-type">HomeModInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-comment">-- ^ Domain = modules in this home unit</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-comment">-- This is an IORef because we want to avoid leaking HPTs (see the particularly bad #25511).</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">-- Moreover, the HPT invariant allows mutability in this table without compromising thread safety or soundness.</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-comment">-- To recall:</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-comment">--   A query to the HPT should depend only on data relevant to that query, such that</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">--   there being more or less unrelated entries in the HPT does not influence the result in any way.</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-comment">-- Note that the HPT increases monotonically, except at certain barrier</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-comment">-- points like when 'restrictHpt' is called. At these barriers, it is safe</span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-comment">-- to temporarily violate the HPT monotonicity.</span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-comment">-- The elements of this table may be updated (e.g. on rehydration).</span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- | Create a new 'HomePackageTable'.</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- Be careful not to share it across e.g. different units, since it uses a</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- mutable variable under the hood to keep the monotonically increasing list of</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- loaded modules.</span><span>
+</span><span id="line-123"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#emptyHomePackageTable"><span class="hs-identifier hs-type">emptyHomePackageTable</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- romes:todo: use a MutableArray directly?</span><span>
+</span><span id="line-125"></span><span id="emptyHomePackageTable"><span class="annot"><span class="annottext">emptyHomePackageTable :: IO HomePackageTable
+</span><a href="GHC.Unit.Home.PackageTable.html#emptyHomePackageTable"><span class="hs-identifier hs-var hs-var">emptyHomePackageTable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621683140501"><span class="annot"><a href="#local-6989586621683140501"><span class="hs-identifier hs-var">table</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">DModuleNameEnv HomeModInfo
+-&gt; IO (IORef (DModuleNameEnv HomeModInfo))
+forall a. a -&gt; IO (IORef a)
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="annot"><span class="annottext">DModuleNameEnv HomeModInfo
+forall {k} (key :: k) elt. UniqDFM key elt
+</span><a href="GHC.Types.Unique.DFM.html#emptyUDFM"><span class="hs-identifier hs-var">emptyUDFM</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HPT"><span class="hs-identifier hs-type">HPT</span></a></span><span class="hs-special">{</span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var hs-type">table</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-130"></span><span class="annot"><span class="hs-comment">-- * Lookups in the HPT</span></span><span>
+</span><span id="line-131"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="annot"><span class="hs-comment">-- | Lookup the 'HomeModInfo' of a module in the HPT, given its name.</span></span><span>
+</span><span id="line-134"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#lookupHpt"><span class="hs-identifier hs-type">lookupHpt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#HomeModInfo"><span class="hs-identifier hs-type">HomeModInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span id="lookupHpt"><span class="annot"><span class="annottext">lookupHpt :: HomePackageTable -&gt; ModuleName -&gt; IO (Maybe HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#lookupHpt"><span class="hs-identifier hs-var hs-var">lookupHpt</span></a></span></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HPT"><span class="hs-identifier hs-type">HPT</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">table :: HomePackageTable -&gt; IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var">table</span></a></span><span class="hs-glyph">=</span><span id="local-6989586621683140504"><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140504"><span class="hs-identifier hs-var">hpt</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621683140505"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621683140505"><span class="hs-identifier hs-var">mn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DModuleNameEnv HomeModInfo -&gt; ModuleName -&gt; Maybe HomeModInfo
+forall key elt.
+Uniquable key =&gt;
+UniqDFM key elt -&gt; key -&gt; Maybe elt
+</span><a href="GHC.Types.Unique.DFM.html#lookupUDFM"><span class="hs-operator hs-var">`lookupUDFM`</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621683140505"><span class="hs-identifier hs-var">mn</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(DModuleNameEnv HomeModInfo -&gt; Maybe HomeModInfo)
+-&gt; IO (DModuleNameEnv HomeModInfo) -&gt; IO (Maybe HomeModInfo)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; b) -&gt; m a -&gt; m b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.html#%3C%24%21%3E"><span class="hs-operator hs-var">&lt;$!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+-&gt; IO (DModuleNameEnv HomeModInfo)
+forall a. IORef a -&gt; IO a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140504"><span class="hs-identifier hs-var">hpt</span></a></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="annot"><span class="hs-comment">-- | Lookup the 'HomeModInfo' of a 'Module' in the HPT.</span></span><span>
+</span><span id="line-138"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#lookupHptByModule"><span class="hs-identifier hs-type">lookupHptByModule</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#HomeModInfo"><span class="hs-identifier hs-type">HomeModInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span id="lookupHptByModule"><span class="annot"><span class="annottext">lookupHptByModule :: HomePackageTable -&gt; Module -&gt; IO (Maybe HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#lookupHptByModule"><span class="hs-identifier hs-var hs-var">lookupHptByModule</span></a></span></span><span> </span><span id="local-6989586621683140509"><span class="annot"><span class="annottext">HomePackageTable
+</span><a href="#local-6989586621683140509"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span id="local-6989586621683140510"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621683140510"><span class="hs-identifier hs-var">mod</span></a></span></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- The HPT is indexed by ModuleName, not Module,</span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-comment">-- we must check for a hit on the right Module</span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><span class="annottext">HomePackageTable -&gt; ModuleName -&gt; IO (Maybe HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#lookupHpt"><span class="hs-identifier hs-var">lookupHpt</span></a></span><span> </span><span class="annot"><span class="annottext">HomePackageTable
+</span><a href="#local-6989586621683140509"><span class="hs-identifier hs-var">hpt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Module -&gt; ModuleName
+forall unit. GenModule unit -&gt; ModuleName
+</span><a href="GHC.Unit.Types.html#moduleName"><span class="hs-identifier hs-var">moduleName</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621683140510"><span class="hs-identifier hs-var">mod</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IO (Maybe HomeModInfo)
+-&gt; (Maybe HomeModInfo -&gt; IO (Maybe HomeModInfo))
+-&gt; IO (Maybe HomeModInfo)
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe HomeModInfo -&gt; IO (Maybe HomeModInfo)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe HomeModInfo -&gt; IO (Maybe HomeModInfo))
+-&gt; (Maybe HomeModInfo -&gt; Maybe HomeModInfo)
+-&gt; Maybe HomeModInfo
+-&gt; IO (Maybe HomeModInfo)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-143"></span><span>      </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683140513"><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140513"><span class="hs-identifier hs-var">hm</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ModIface_ 'ModIfaceFinal -&gt; Module
+forall (phase :: ModIfacePhase). ModIface_ phase -&gt; Module
+</span><a href="GHC.Unit.Module.ModIface.html#mi_module"><span class="hs-identifier hs-var">mi_module</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HomeModInfo -&gt; ModIface_ 'ModIfaceFinal
+</span><a href="GHC.Unit.Home.ModInfo.html#hm_iface"><span class="hs-identifier hs-var">hm_iface</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140513"><span class="hs-identifier hs-var">hm</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Module -&gt; Module -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621683140510"><span class="hs-identifier hs-var">mod</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HomeModInfo -&gt; Maybe HomeModInfo
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140513"><span class="hs-identifier hs-var">hm</span></a></span><span>
+</span><span id="line-144"></span><span>      </span><span id="local-6989586621683140516"><span class="annot"><span class="annottext">Maybe HomeModInfo
+</span><a href="#local-6989586621683140516"><span class="hs-identifier hs-var">_otherwise</span></a></span></span><span>                               </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe HomeModInfo
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-147"></span><span class="annot"><span class="hs-comment">-- * Extending the HPT</span></span><span>
+</span><span id="line-148"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- | Add a new module to the HPT.</span><span>
+</span><span id="line-151"></span><span class="hs-comment">--</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- An HPT is a monotonically increasing data structure, holding information about loaded modules in a package.</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- This is the main function by which the HPT is extended or updated.</span><span>
+</span><span id="line-154"></span><span class="hs-comment">--</span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- When the module of the inserted 'HomeModInfo' does not exist, a new entry in</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- the HPT is created for that module name.</span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- When the module already has an entry, inserting a new one entry in the HPT</span><span>
+</span><span id="line-158"></span><span class="hs-comment">-- will always overwrite the existing entry for that module.</span><span>
+</span><span id="line-159"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#addHomeModInfoToHpt"><span class="hs-identifier hs-type">addHomeModInfoToHpt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#HomeModInfo"><span class="hs-identifier hs-type">HomeModInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span id="addHomeModInfoToHpt"><span class="annot"><span class="annottext">addHomeModInfoToHpt :: HomeModInfo -&gt; HomePackageTable -&gt; IO ()
+</span><a href="GHC.Unit.Home.PackageTable.html#addHomeModInfoToHpt"><span class="hs-identifier hs-var hs-var">addHomeModInfoToHpt</span></a></span></span><span> </span><span id="local-6989586621683140517"><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140517"><span class="hs-identifier hs-var">hmi</span></a></span></span><span> </span><span id="local-6989586621683140518"><span class="annot"><span class="annottext">HomePackageTable
+</span><a href="#local-6989586621683140518"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HomePackageTable -&gt; ModuleName -&gt; HomeModInfo -&gt; IO ()
+</span><a href="GHC.Unit.Home.PackageTable.html#addToHpt"><span class="hs-identifier hs-var">addToHpt</span></a></span><span> </span><span class="annot"><span class="annottext">HomePackageTable
+</span><a href="#local-6989586621683140518"><span class="hs-identifier hs-var">hpt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Module -&gt; ModuleName
+forall unit. GenModule unit -&gt; ModuleName
+</span><a href="GHC.Unit.Types.html#moduleName"><span class="hs-identifier hs-var">moduleName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModIface_ 'ModIfaceFinal -&gt; Module
+forall (phase :: ModIfacePhase). ModIface_ phase -&gt; Module
+</span><a href="GHC.Unit.Module.ModIface.html#mi_module"><span class="hs-identifier hs-var">mi_module</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HomeModInfo -&gt; ModIface_ 'ModIfaceFinal
+</span><a href="GHC.Unit.Home.ModInfo.html#hm_iface"><span class="hs-identifier hs-var">hm_iface</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140517"><span class="hs-identifier hs-var">hmi</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140517"><span class="hs-identifier hs-var">hmi</span></a></span><span>
+</span><span id="line-161"></span><span>
+</span><span id="line-162"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">addToHpt</span><span> </span><span class="hs-pragma">&quot;Deprecated in favour of 'addHomeModInfoToHpt', as the module at which a 'HomeModInfo' is inserted should always be derived from the 'HomeModInfo' itself.&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- After deprecation cycle, move `addToHpt` to a `where` clause inside `addHomeModInfoToHpt`.</span><span>
+</span><span id="line-164"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#addToHpt"><span class="hs-identifier hs-type">addToHpt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#HomeModInfo"><span class="hs-identifier hs-type">HomeModInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span id="addToHpt"><span class="annot"><span class="annottext">addToHpt :: HomePackageTable -&gt; ModuleName -&gt; HomeModInfo -&gt; IO ()
+</span><a href="GHC.Unit.Home.PackageTable.html#addToHpt"><span class="hs-identifier hs-var hs-var">addToHpt</span></a></span></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HPT"><span class="hs-identifier hs-type">HPT</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">table :: HomePackageTable -&gt; IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var">table</span></a></span><span class="hs-glyph">=</span><span id="local-6989586621683140519"><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140519"><span class="hs-identifier hs-var">hptr</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621683140520"><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621683140520"><span class="hs-identifier hs-var">mn</span></a></span></span><span> </span><span id="local-6989586621683140521"><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140521"><span class="hs-identifier hs-var">hmi</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-166"></span><span>  </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+-&gt; (DModuleNameEnv HomeModInfo -&gt; (DModuleNameEnv HomeModInfo, ()))
+-&gt; IO ()
+forall a b. IORef a -&gt; (a -&gt; (a, b)) -&gt; IO b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#atomicModifyIORef%27"><span class="hs-identifier hs-var">atomicModifyIORef'</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140519"><span class="hs-identifier hs-var">hptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621683140523"><span class="annot"><span class="annottext">DModuleNameEnv HomeModInfo
+</span><a href="#local-6989586621683140523"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DModuleNameEnv HomeModInfo
+-&gt; ModuleName -&gt; HomeModInfo -&gt; DModuleNameEnv HomeModInfo
+forall key elt.
+Uniquable key =&gt;
+UniqDFM key elt -&gt; key -&gt; elt -&gt; UniqDFM key elt
+</span><a href="GHC.Types.Unique.DFM.html#addToUDFM"><span class="hs-identifier hs-var">addToUDFM</span></a></span><span> </span><span class="annot"><span class="annottext">DModuleNameEnv HomeModInfo
+</span><a href="#local-6989586621683140523"><span class="hs-identifier hs-var">hpt</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName
+</span><a href="#local-6989586621683140520"><span class="hs-identifier hs-var">mn</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140521"><span class="hs-identifier hs-var">hmi</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-comment">-- If the key already existed in the map, this insertion is overwriting</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-comment">-- the HMI of a previously loaded module (likely in rehydration).</span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="annot"><span class="hs-comment">-- | 'addHomeModInfoToHpt' for multiple module infos.</span></span><span>
+</span><span id="line-171"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#addHomeModInfosToHpt"><span class="hs-identifier hs-type">addHomeModInfosToHpt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#HomeModInfo"><span class="hs-identifier hs-type">HomeModInfo</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span id="addHomeModInfosToHpt"><span class="annot"><span class="annottext">addHomeModInfosToHpt :: HomePackageTable -&gt; [HomeModInfo] -&gt; IO ()
+</span><a href="GHC.Unit.Home.PackageTable.html#addHomeModInfosToHpt"><span class="hs-identifier hs-var hs-var">addHomeModInfosToHpt</span></a></span></span><span> </span><span id="local-6989586621683140525"><span class="annot"><span class="annottext">HomePackageTable
+</span><a href="#local-6989586621683140525"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HomeModInfo -&gt; IO ()) -&gt; [HomeModInfo] -&gt; IO ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m ()
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#mapM_"><span class="hs-identifier hs-var">mapM_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(HomeModInfo -&gt; HomePackageTable -&gt; IO ())
+-&gt; HomePackageTable -&gt; HomeModInfo -&gt; IO ()
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo -&gt; HomePackageTable -&gt; IO ()
+</span><a href="GHC.Unit.Home.PackageTable.html#addHomeModInfoToHpt"><span class="hs-identifier hs-var">addHomeModInfoToHpt</span></a></span><span> </span><span class="annot"><span class="annottext">HomePackageTable
+</span><a href="#local-6989586621683140525"><span class="hs-identifier hs-var">hpt</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- | Thin each HPT variable to only contain keys from the given dependencies.</span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- This is used at the end of upsweep to make sure that only completely successfully loaded</span><span>
+</span><span id="line-176"></span><span class="hs-comment">-- modules are visible for subsequent operations.</span><span>
+</span><span id="line-177"></span><span class="hs-comment">--</span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- This is an exception to the invariant of the HPT -- that it grows</span><span>
+</span><span id="line-179"></span><span class="hs-comment">-- monotonically, never removing entries -- which is safe as long as it is only</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- called at barrier points, such as the end of upsweep, when all threads are</span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- done and we want to clean up failed entries.</span><span>
+</span><span id="line-182"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#restrictHpt"><span class="hs-identifier hs-type">restrictHpt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#HomeModInfo"><span class="hs-identifier hs-type">HomeModInfo</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span id="restrictHpt"><span class="annot"><span class="annottext">restrictHpt :: HomePackageTable -&gt; [HomeModInfo] -&gt; IO ()
+</span><a href="GHC.Unit.Home.PackageTable.html#restrictHpt"><span class="hs-identifier hs-var hs-var">restrictHpt</span></a></span></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HPT"><span class="hs-identifier hs-type">HPT</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">table :: HomePackageTable -&gt; IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var">table</span></a></span><span class="hs-glyph">=</span><span id="local-6989586621683140528"><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140528"><span class="hs-identifier hs-var">hptr</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621683140529"><span class="annot"><span class="annottext">[HomeModInfo]
+</span><a href="#local-6989586621683140529"><span class="hs-identifier hs-var">hmis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-184"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683140530"><span class="annot"><span class="annottext">key_set :: [Word64]
+</span><a href="#local-6989586621683140530"><span class="hs-identifier hs-var hs-var">key_set</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HomeModInfo -&gt; Word64) -&gt; [HomeModInfo] -&gt; [Word64]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Unique -&gt; Word64
+</span><a href="GHC.Types.Unique.html#getKey"><span class="hs-identifier hs-var">getKey</span></a></span><span> </span><span class="annot"><span class="annottext">(Unique -&gt; Word64)
+-&gt; (HomeModInfo -&gt; Unique) -&gt; HomeModInfo -&gt; Word64
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ModuleName -&gt; Unique
+forall a. Uniquable a =&gt; a -&gt; Unique
+</span><a href="GHC.Types.Unique.html#getUnique"><span class="hs-identifier hs-var">getUnique</span></a></span><span> </span><span class="annot"><span class="annottext">(ModuleName -&gt; Unique)
+-&gt; (HomeModInfo -&gt; ModuleName) -&gt; HomeModInfo -&gt; Unique
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo -&gt; ModuleName
+</span><a href="#local-6989586621683140531"><span class="hs-identifier hs-var">hmi_mod</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[HomeModInfo]
+</span><a href="#local-6989586621683140529"><span class="hs-identifier hs-var">hmis</span></a></span><span>
+</span><span id="line-185"></span><span>      </span><span id="local-6989586621683140531"><span class="annot"><span class="annottext">hmi_mod :: HomeModInfo -&gt; ModuleName
+</span><a href="#local-6989586621683140531"><span class="hs-identifier hs-var hs-var">hmi_mod</span></a></span></span><span> </span><span id="local-6989586621683140532"><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140532"><span class="hs-identifier hs-var">hmi</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Module -&gt; ModuleName
+forall unit. GenModule unit -&gt; ModuleName
+</span><a href="GHC.Unit.Types.html#moduleName"><span class="hs-identifier hs-var">moduleName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModIface_ 'ModIfaceFinal -&gt; Module
+forall (phase :: ModIfacePhase). ModIface_ phase -&gt; Module
+</span><a href="GHC.Unit.Module.ModIface.html#mi_module"><span class="hs-identifier hs-var">mi_module</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HomeModInfo -&gt; ModIface_ 'ModIfaceFinal
+</span><a href="GHC.Unit.Home.ModInfo.html#hm_iface"><span class="hs-identifier hs-var">hm_iface</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140532"><span class="hs-identifier hs-var">hmi</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+-&gt; (DModuleNameEnv HomeModInfo -&gt; (DModuleNameEnv HomeModInfo, ()))
+-&gt; IO ()
+forall a b. IORef a -&gt; (a -&gt; (a, b)) -&gt; IO b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#atomicModifyIORef%27"><span class="hs-identifier hs-var">atomicModifyIORef'</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140528"><span class="hs-identifier hs-var">hptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621683140533"><span class="annot"><span class="annottext">DModuleNameEnv HomeModInfo
+</span><a href="#local-6989586621683140533"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DModuleNameEnv HomeModInfo
+-&gt; Word64Set -&gt; DModuleNameEnv HomeModInfo
+forall {k} (key :: k) elt.
+UniqDFM key elt -&gt; Word64Set -&gt; UniqDFM key elt
+</span><a href="GHC.Types.Unique.DFM.html#udfmRestrictKeysSet"><span class="hs-identifier hs-var">udfmRestrictKeysSet</span></a></span><span> </span><span class="annot"><span class="annottext">DModuleNameEnv HomeModInfo
+</span><a href="#local-6989586621683140533"><span class="hs-identifier hs-var">hpt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Word64] -&gt; Word64Set
+</span><a href="GHC.Data.Word64Set.Internal.html#fromList"><span class="hs-identifier hs-var">W64.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[Word64]
+</span><a href="#local-6989586621683140530"><span class="hs-identifier hs-var">key_set</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">addListToHpt</span><span> </span><span class="hs-pragma">&quot;Deprecated in favour of 'addHomeModInfosToHpt', as the module at which a 'HomeModInfo' is inserted should always be derived from the 'HomeModInfo' itself.&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-189"></span><span class="hs-comment">-- After deprecation cycle, remove.</span><span>
+</span><span id="line-190"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#addListToHpt"><span class="hs-identifier hs-type">addListToHpt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Language.Haskell.Syntax.Module.Name.html#ModuleName"><span class="hs-identifier hs-type">ModuleName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#HomeModInfo"><span class="hs-identifier hs-type">HomeModInfo</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-191"></span><span id="addListToHpt"><span class="annot"><span class="annottext">addListToHpt :: HomePackageTable -&gt; [(ModuleName, HomeModInfo)] -&gt; IO ()
+</span><a href="GHC.Unit.Home.PackageTable.html#addListToHpt"><span class="hs-identifier hs-var hs-var">addListToHpt</span></a></span></span><span> </span><span id="local-6989586621683140536"><span class="annot"><span class="annottext">HomePackageTable
+</span><a href="#local-6989586621683140536"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((ModuleName, HomeModInfo) -&gt; IO ())
+-&gt; [(ModuleName, HomeModInfo)] -&gt; IO ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m ()
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#mapM_"><span class="hs-identifier hs-var">mapM_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ModuleName -&gt; HomeModInfo -&gt; IO ())
+-&gt; (ModuleName, HomeModInfo) -&gt; IO ()
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Tuple.html#uncurry"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HomePackageTable -&gt; ModuleName -&gt; HomeModInfo -&gt; IO ()
+</span><a href="GHC.Unit.Home.PackageTable.html#addToHpt"><span class="hs-identifier hs-var">addToHpt</span></a></span><span> </span><span class="annot"><span class="annottext">HomePackageTable
+</span><a href="#local-6989586621683140536"><span class="hs-identifier hs-var">hpt</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="hs-comment">----------------------------------------------------------------------------------</span><span>
+</span><span id="line-194"></span><span class="hs-comment">---- * Queries</span><span>
+</span><span id="line-195"></span><span class="hs-comment">----------------------------------------------------------------------------------</span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- | Get all 'CompleteMatches' (arising from COMPLETE pragmas) present in all</span><span>
+</span><span id="line-198"></span><span class="hs-comment">-- modules from this unit's HPT.</span><span>
+</span><span id="line-199"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptCompleteSigs"><span class="hs-identifier hs-type">hptCompleteSigs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.Types.CompleteMatch.html#CompleteMatches"><span class="hs-identifier hs-type">CompleteMatches</span></a></span><span>
+</span><span id="line-200"></span><span id="hptCompleteSigs"><span class="annot"><span class="annottext">hptCompleteSigs :: HomePackageTable -&gt; IO CompleteMatches
+</span><a href="GHC.Unit.Home.PackageTable.html#hptCompleteSigs"><span class="hs-identifier hs-var hs-var">hptCompleteSigs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HomeModInfo -&gt; CompleteMatches)
+-&gt; HomePackageTable -&gt; IO CompleteMatches
+forall a. (HomeModInfo -&gt; [a]) -&gt; HomePackageTable -&gt; IO [a]
+</span><a href="GHC.Unit.Home.PackageTable.html#concatHpt"><span class="hs-identifier hs-var">concatHpt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModDetails -&gt; CompleteMatches
+</span><a href="GHC.Unit.Module.ModDetails.html#md_complete_matches"><span class="hs-identifier hs-var">md_complete_matches</span></a></span><span> </span><span class="annot"><span class="annottext">(ModDetails -&gt; CompleteMatches)
+-&gt; (HomeModInfo -&gt; ModDetails) -&gt; HomeModInfo -&gt; CompleteMatches
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo -&gt; ModDetails
+</span><a href="GHC.Unit.Home.ModInfo.html#hm_details"><span class="hs-identifier hs-var">hm_details</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-201"></span><span>
+</span><span id="line-202"></span><span class="annot"><span class="hs-comment">-- | Find all the instance declarations (of classes and families) from this Home Package Table</span></span><span>
+</span><span id="line-203"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptAllInstances"><span class="hs-identifier hs-type">hptAllInstances</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Core.InstEnv.html#InstEnv"><span class="hs-identifier hs-type">InstEnv</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Core.FamInstEnv.html#FamInst"><span class="hs-identifier hs-type">FamInst</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-204"></span><span id="hptAllInstances"><span class="annot"><span class="annottext">hptAllInstances :: HomePackageTable -&gt; IO (InstEnv, [FamInst])
+</span><a href="GHC.Unit.Home.PackageTable.html#hptAllInstances"><span class="hs-identifier hs-var hs-var">hptAllInstances</span></a></span></span><span> </span><span id="local-6989586621683140540"><span class="annot"><span class="annottext">HomePackageTable
+</span><a href="#local-6989586621683140540"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-205"></span><span>  </span><span id="local-6989586621683140541"><span class="annot"><a href="#local-6989586621683140541"><span class="hs-identifier hs-var">hits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">((HomeModInfo -&gt; [(InstEnv, [FamInst])])
+ -&gt; HomePackageTable -&gt; IO [(InstEnv, [FamInst])])
+-&gt; HomePackageTable
+-&gt; (HomeModInfo -&gt; [(InstEnv, [FamInst])])
+-&gt; IO [(InstEnv, [FamInst])]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">(HomeModInfo -&gt; [(InstEnv, [FamInst])])
+-&gt; HomePackageTable -&gt; IO [(InstEnv, [FamInst])]
+forall a. (HomeModInfo -&gt; [a]) -&gt; HomePackageTable -&gt; IO [a]
+</span><a href="GHC.Unit.Home.PackageTable.html#concatHpt"><span class="hs-identifier hs-var">concatHpt</span></a></span><span> </span><span class="annot"><span class="annottext">HomePackageTable
+</span><a href="#local-6989586621683140540"><span class="hs-identifier hs-var">hpt</span></a></span><span> </span><span class="annot"><span class="annottext">((HomeModInfo -&gt; [(InstEnv, [FamInst])])
+ -&gt; IO [(InstEnv, [FamInst])])
+-&gt; (HomeModInfo -&gt; [(InstEnv, [FamInst])])
+-&gt; IO [(InstEnv, [FamInst])]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621683140542"><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140542"><span class="hs-identifier hs-var">mod_info</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-206"></span><span>     </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683140543"><span class="annot"><span class="annottext">details :: ModDetails
+</span><a href="#local-6989586621683140543"><span class="hs-identifier hs-var hs-var">details</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HomeModInfo -&gt; ModDetails
+</span><a href="GHC.Unit.Home.ModInfo.html#hm_details"><span class="hs-identifier hs-var">hm_details</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140542"><span class="hs-identifier hs-var">mod_info</span></a></span><span>
+</span><span id="line-207"></span><span>     </span><span class="annot"><span class="annottext">(InstEnv, [FamInst]) -&gt; [(InstEnv, [FamInst])]
+forall a. a -&gt; [a]
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModDetails -&gt; InstEnv
+</span><a href="GHC.Unit.Module.ModDetails.html#md_insts"><span class="hs-identifier hs-var">md_insts</span></a></span><span> </span><span class="annot"><span class="annottext">ModDetails
+</span><a href="#local-6989586621683140543"><span class="hs-identifier hs-var">details</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ModDetails -&gt; [FamInst]
+</span><a href="GHC.Unit.Module.ModDetails.html#md_fam_insts"><span class="hs-identifier hs-var">md_fam_insts</span></a></span><span> </span><span class="annot"><span class="annottext">ModDetails
+</span><a href="#local-6989586621683140543"><span class="hs-identifier hs-var">details</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-208"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683140546"><span class="annot"><a href="#local-6989586621683140546"><span class="hs-identifier hs-var">insts</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683140547"><span class="annot"><a href="#local-6989586621683140547"><span class="hs-identifier hs-var">famInsts</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="GHC.Prelude.Basic.html#unzip"><span class="hs-identifier hs-type">unzip</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683140541"><span class="hs-identifier hs-type">hits</span></a></span><span>
+</span><span id="line-209"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#foldl%27"><span class="hs-identifier hs-type">foldl'</span></a></span><span> </span><span class="annot"><a href="GHC.Core.InstEnv.html#unionInstEnv"><span class="hs-identifier hs-type">unionInstEnv</span></a></span><span> </span><span class="annot"><a href="GHC.Core.InstEnv.html#emptyInstEnv"><span class="hs-identifier hs-type">emptyInstEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683140546"><span class="hs-identifier hs-type">insts</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concat"><span class="hs-identifier hs-type">concat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683140547"><span class="hs-identifier hs-type">famInsts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-210"></span><span>
+</span><span id="line-211"></span><span class="annot"><span class="hs-comment">-- | Find all the family instance declarations from the HPT</span></span><span>
+</span><span id="line-212"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptAllFamInstances"><span class="hs-identifier hs-type">hptAllFamInstances</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.Env.html#ModuleEnv"><span class="hs-identifier hs-type">ModuleEnv</span></a></span><span> </span><span class="annot"><a href="GHC.Core.FamInstEnv.html#FamInstEnv"><span class="hs-identifier hs-type">FamInstEnv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-213"></span><span id="hptAllFamInstances"><span class="annot"><span class="annottext">hptAllFamInstances :: HomePackageTable -&gt; IO (ModuleEnv FamInstEnv)
+</span><a href="GHC.Unit.Home.PackageTable.html#hptAllFamInstances"><span class="hs-identifier hs-var hs-var">hptAllFamInstances</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([(Module, FamInstEnv)] -&gt; ModuleEnv FamInstEnv)
+-&gt; IO [(Module, FamInstEnv)] -&gt; IO (ModuleEnv FamInstEnv)
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[(Module, FamInstEnv)] -&gt; ModuleEnv FamInstEnv
+forall a. [(Module, a)] -&gt; ModuleEnv a
+</span><a href="GHC.Unit.Module.Env.html#mkModuleEnv"><span class="hs-identifier hs-var">mkModuleEnv</span></a></span><span> </span><span class="annot"><span class="annottext">(IO [(Module, FamInstEnv)] -&gt; IO (ModuleEnv FamInstEnv))
+-&gt; (HomePackageTable -&gt; IO [(Module, FamInstEnv)])
+-&gt; HomePackageTable
+-&gt; IO (ModuleEnv FamInstEnv)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(HomeModInfo -&gt; [(Module, FamInstEnv)])
+-&gt; HomePackageTable -&gt; IO [(Module, FamInstEnv)]
+forall a. (HomeModInfo -&gt; [a]) -&gt; HomePackageTable -&gt; IO [a]
+</span><a href="GHC.Unit.Home.PackageTable.html#concatHpt"><span class="hs-identifier hs-var">concatHpt</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621683140554"><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140554"><span class="hs-identifier hs-var">hmi</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">HomeModInfo -&gt; Module
+</span><a href="#local-6989586621683140555"><span class="hs-identifier hs-var">hmiModule</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140554"><span class="hs-identifier hs-var">hmi</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">HomeModInfo -&gt; FamInstEnv
+</span><a href="#local-6989586621683140556"><span class="hs-identifier hs-var">hmiFamInstEnv</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140554"><span class="hs-identifier hs-var">hmi</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-214"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-215"></span><span>    </span><span id="local-6989586621683140555"><span class="annot"><span class="annottext">hmiModule :: HomeModInfo -&gt; Module
+</span><a href="#local-6989586621683140555"><span class="hs-identifier hs-var hs-var">hmiModule</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ModIface_ 'ModIfaceFinal -&gt; Module
+forall (phase :: ModIfacePhase). ModIface_ phase -&gt; Module
+</span><a href="GHC.Unit.Module.ModIface.html#mi_module"><span class="hs-identifier hs-var">mi_module</span></a></span><span> </span><span class="annot"><span class="annottext">(ModIface_ 'ModIfaceFinal -&gt; Module)
+-&gt; (HomeModInfo -&gt; ModIface_ 'ModIfaceFinal)
+-&gt; HomeModInfo
+-&gt; Module
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo -&gt; ModIface_ 'ModIfaceFinal
+</span><a href="GHC.Unit.Home.ModInfo.html#hm_iface"><span class="hs-identifier hs-var">hm_iface</span></a></span><span>
+</span><span id="line-216"></span><span>    </span><span id="local-6989586621683140556"><span class="annot"><span class="annottext">hmiFamInstEnv :: HomeModInfo -&gt; FamInstEnv
+</span><a href="#local-6989586621683140556"><span class="hs-identifier hs-var hs-var">hmiFamInstEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FamInstEnv -&gt; [FamInst] -&gt; FamInstEnv
+</span><a href="GHC.Core.FamInstEnv.html#extendFamInstEnvList"><span class="hs-identifier hs-var">extendFamInstEnvList</span></a></span><span> </span><span class="annot"><span class="annottext">FamInstEnv
+</span><a href="GHC.Core.FamInstEnv.html#emptyFamInstEnv"><span class="hs-identifier hs-var">emptyFamInstEnv</span></a></span><span>
+</span><span id="line-217"></span><span>                      </span><span class="annot"><span class="annottext">([FamInst] -&gt; FamInstEnv)
+-&gt; (HomeModInfo -&gt; [FamInst]) -&gt; HomeModInfo -&gt; FamInstEnv
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ModDetails -&gt; [FamInst]
+</span><a href="GHC.Unit.Module.ModDetails.html#md_fam_insts"><span class="hs-identifier hs-var">md_fam_insts</span></a></span><span> </span><span class="annot"><span class="annottext">(ModDetails -&gt; [FamInst])
+-&gt; (HomeModInfo -&gt; ModDetails) -&gt; HomeModInfo -&gt; [FamInst]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo -&gt; ModDetails
+</span><a href="GHC.Unit.Home.ModInfo.html#hm_details"><span class="hs-identifier hs-var">hm_details</span></a></span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span><span class="annot"><span class="hs-comment">-- | All annotations from the HPT</span></span><span>
+</span><span id="line-220"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptAllAnnotations"><span class="hs-identifier hs-type">hptAllAnnotations</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Annotations.html#AnnEnv"><span class="hs-identifier hs-type">AnnEnv</span></a></span><span>
+</span><span id="line-221"></span><span id="hptAllAnnotations"><span class="annot"><span class="annottext">hptAllAnnotations :: HomePackageTable -&gt; IO AnnEnv
+</span><a href="GHC.Unit.Home.PackageTable.html#hptAllAnnotations"><span class="hs-identifier hs-var hs-var">hptAllAnnotations</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([Annotation] -&gt; AnnEnv) -&gt; IO [Annotation] -&gt; IO AnnEnv
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[Annotation] -&gt; AnnEnv
+</span><a href="GHC.Types.Annotations.html#mkAnnEnv"><span class="hs-identifier hs-var">mkAnnEnv</span></a></span><span> </span><span class="annot"><span class="annottext">(IO [Annotation] -&gt; IO AnnEnv)
+-&gt; (HomePackageTable -&gt; IO [Annotation])
+-&gt; HomePackageTable
+-&gt; IO AnnEnv
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(HomeModInfo -&gt; [Annotation])
+-&gt; HomePackageTable -&gt; IO [Annotation]
+forall a. (HomeModInfo -&gt; [a]) -&gt; HomePackageTable -&gt; IO [a]
+</span><a href="GHC.Unit.Home.PackageTable.html#concatHpt"><span class="hs-identifier hs-var">concatHpt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModDetails -&gt; [Annotation]
+</span><a href="GHC.Unit.Module.ModDetails.html#md_anns"><span class="hs-identifier hs-var">md_anns</span></a></span><span> </span><span class="annot"><span class="annottext">(ModDetails -&gt; [Annotation])
+-&gt; (HomeModInfo -&gt; ModDetails) -&gt; HomeModInfo -&gt; [Annotation]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo -&gt; ModDetails
+</span><a href="GHC.Unit.Home.ModInfo.html#hm_details"><span class="hs-identifier hs-var">hm_details</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span>
+</span><span id="line-223"></span><span>
+</span><span id="line-224"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-225"></span><span class="annot"><span class="hs-comment">-- * Traversal-based queries</span></span><span>
+</span><span id="line-226"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-227"></span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- | Collect the immediate dependencies of all modules in the HPT into a Set.</span><span>
+</span><span id="line-229"></span><span class="hs-comment">-- The immediate dependencies are given by the iface as @'dep_direct_pkgs' . 'mi_deps'@.</span><span>
+</span><span id="line-230"></span><span class="hs-comment">--</span><span>
+</span><span id="line-231"></span><span class="hs-comment">-- Note: This should be a query on the 'ModuleGraph', since we don't really</span><span>
+</span><span id="line-232"></span><span class="hs-comment">-- ever want to collect *all* dependencies. The current caller of this function</span><span>
+</span><span id="line-233"></span><span class="hs-comment">-- currently takes all dependencies only to then filter them with an ad-hoc transitive closure check.</span><span>
+</span><span id="line-234"></span><span class="hs-comment">-- See #25639</span><span>
+</span><span id="line-235"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptCollectDependencies"><span class="hs-identifier hs-type">hptCollectDependencies</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.Deps.html#IfaceImportLevel"><span class="hs-identifier hs-type">IfaceImportLevel</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#UnitId"><span class="hs-identifier hs-type">UnitId</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-236"></span><span id="hptCollectDependencies"><span class="annot"><span class="annottext">hptCollectDependencies :: HomePackageTable -&gt; IO (Set (IfaceImportLevel, UnitId))
+</span><a href="GHC.Unit.Home.PackageTable.html#hptCollectDependencies"><span class="hs-identifier hs-var hs-var">hptCollectDependencies</span></a></span></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HPT"><span class="hs-identifier hs-type">HPT</span></a></span><span class="hs-special">{</span><span id="local-6989586621683140563"><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+table :: HomePackageTable -&gt; IORef (DModuleNameEnv HomeModInfo)
+table :: IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var hs-var">table</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-237"></span><span>  </span><span id="local-6989586621683140564"><span class="annot"><a href="#local-6989586621683140564"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+-&gt; IO (DModuleNameEnv HomeModInfo)
+forall a. IORef a -&gt; IO a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140563"><span class="hs-identifier hs-var">table</span></a></span><span>
+</span><span id="line-238"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-239"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#foldr"><span class="hs-identifier hs-type">foldr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Set.Internal.html#union"><span class="hs-identifier hs-type">Set.union</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Module.Deps.html#dep_direct_pkgs"><span class="hs-identifier hs-var">dep_direct_pkgs</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModIface.html#mi_deps"><span class="hs-identifier hs-var">mi_deps</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#hm_iface"><span class="hs-identifier hs-var">hm_iface</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="../../containers-0.8-inplace/src/Data.Set.Internal.html#empty"><span class="hs-identifier hs-type">Set.empty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683140564"><span class="hs-identifier hs-type">hpt</span></a></span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- | Collect the linkable object of all modules in the HPT.</span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- The linkable objects are given by @'homeModInfoObject'@.</span><span>
+</span><span id="line-243"></span><span class="hs-comment">--</span><span>
+</span><span id="line-244"></span><span class="annot"><span class="hs-comment">-- $O(n)$ in the number of modules in the HPT.</span></span><span>
+</span><span id="line-245"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptCollectObjects"><span class="hs-identifier hs-type">hptCollectObjects</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Linker.Types.html#Linkable"><span class="hs-identifier hs-type">Linkable</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-246"></span><span id="hptCollectObjects"><span class="annot"><span class="annottext">hptCollectObjects :: HomePackageTable -&gt; IO [Linkable]
+</span><a href="GHC.Unit.Home.PackageTable.html#hptCollectObjects"><span class="hs-identifier hs-var hs-var">hptCollectObjects</span></a></span></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HPT"><span class="hs-identifier hs-type">HPT</span></a></span><span class="hs-special">{</span><span id="local-6989586621683140569"><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+table :: HomePackageTable -&gt; IORef (DModuleNameEnv HomeModInfo)
+table :: IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var hs-var">table</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-247"></span><span>  </span><span id="local-6989586621683140570"><span class="annot"><a href="#local-6989586621683140570"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+-&gt; IO (DModuleNameEnv HomeModInfo)
+forall a. IORef a -&gt; IO a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140569"><span class="hs-identifier hs-var">table</span></a></span><span>
+</span><span id="line-248"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-249"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#foldr"><span class="hs-identifier hs-type">foldr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="GHC.Data.Maybe.html#expectJust"><span class="hs-identifier hs-type">expectJust</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#homeModInfoObject"><span class="hs-identifier hs-type">homeModInfoObject</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><a href="#local-6989586621683140570"><span class="hs-identifier hs-type">hpt</span></a></span><span>
+</span><span id="line-250"></span><span>
+</span><span id="line-251"></span><span class="hs-comment">-- | Collect all module ifaces in the HPT</span><span>
+</span><span id="line-252"></span><span class="hs-comment">--</span><span>
+</span><span id="line-253"></span><span class="annot"><span class="hs-comment">-- $O(n)$ in the number of modules in the HPT.</span></span><span>
+</span><span id="line-254"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptCollectModules"><span class="hs-identifier hs-type">hptCollectModules</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-255"></span><span id="hptCollectModules"><span class="annot"><span class="annottext">hptCollectModules :: HomePackageTable -&gt; IO [Module]
+</span><a href="GHC.Unit.Home.PackageTable.html#hptCollectModules"><span class="hs-identifier hs-var hs-var">hptCollectModules</span></a></span></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HPT"><span class="hs-identifier hs-type">HPT</span></a></span><span class="hs-special">{</span><span id="local-6989586621683140572"><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+table :: HomePackageTable -&gt; IORef (DModuleNameEnv HomeModInfo)
+table :: IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var hs-var">table</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-256"></span><span>  </span><span id="local-6989586621683140573"><span class="annot"><a href="#local-6989586621683140573"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+-&gt; IO (DModuleNameEnv HomeModInfo)
+forall a. IORef a -&gt; IO a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140572"><span class="hs-identifier hs-var">table</span></a></span><span>
+</span><span id="line-257"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-258"></span><span>    </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#foldr"><span class="hs-identifier hs-type">foldr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Module.ModIface.html#mi_module"><span class="hs-identifier hs-var">mi_module</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#hm_iface"><span class="hs-identifier hs-var">hm_iface</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><a href="#local-6989586621683140573"><span class="hs-identifier hs-type">hpt</span></a></span><span>
+</span><span id="line-259"></span><span>
+</span><span id="line-260"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-261"></span><span class="annot"><span class="hs-comment">-- * Utilities</span></span><span>
+</span><span id="line-262"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-263"></span><span>
+</span><span id="line-264"></span><span class="hs-comment">-- | Pretty print a 'HomePackageTable'.</span><span>
+</span><span id="line-265"></span><span class="hs-comment">--</span><span>
+</span><span id="line-266"></span><span class="hs-comment">-- Make sure you really do need to print the whole HPT before infusing too much</span><span>
+</span><span id="line-267"></span><span class="hs-comment">-- code with IO.</span><span>
+</span><span id="line-268"></span><span class="hs-comment">--</span><span>
+</span><span id="line-269"></span><span class="hs-comment">-- For instance, in the HUG, it suffices to print the unit-keys present in the</span><span>
+</span><span id="line-270"></span><span class="hs-comment">-- unit map in failed lookups.</span><span>
+</span><span id="line-271"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#pprHPT"><span class="hs-identifier hs-type">pprHPT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html#SDoc"><span class="hs-identifier hs-type">SDoc</span></a></span><span>
+</span><span id="line-272"></span><span class="hs-comment">-- A bit arbitrary for now</span><span>
+</span><span id="line-273"></span><span id="pprHPT"><span class="annot"><span class="annottext">pprHPT :: HomePackageTable -&gt; IO SDoc
+</span><a href="GHC.Unit.Home.PackageTable.html#pprHPT"><span class="hs-identifier hs-var hs-var">pprHPT</span></a></span></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HPT"><span class="hs-identifier hs-type">HPT</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">table :: HomePackageTable -&gt; IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var">table</span></a></span><span class="hs-glyph">=</span><span id="local-6989586621683140574"><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140574"><span class="hs-identifier hs-var">hptr</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-274"></span><span>  </span><span id="local-6989586621683140575"><span class="annot"><a href="#local-6989586621683140575"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+-&gt; IO (DModuleNameEnv HomeModInfo)
+forall a. IORef a -&gt; IO a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140574"><span class="hs-identifier hs-var">hptr</span></a></span><span>
+</span><span id="line-275"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24%21"><span class="hs-operator hs-type">$!</span></a></span><span>
+</span><span id="line-276"></span><span>    </span><span class="annot"><a href="GHC.Types.Unique.DFM.html#pprUDFM"><span class="hs-identifier hs-type">pprUDFM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683140575"><span class="hs-identifier hs-type">hpt</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621683140578"><span class="annot"><span class="annottext">[HomeModInfo]
+</span><a href="#local-6989586621683140578"><span class="hs-identifier hs-var">hms</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-277"></span><span>      </span><span class="annot"><span class="annottext">[SDoc] -&gt; SDoc
+forall doc. IsDoc doc =&gt; [doc] -&gt; doc
+</span><a href="GHC.Utils.Outputable.html#vcat"><span class="hs-identifier hs-var">vcat</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Module -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ModIface_ 'ModIfaceFinal -&gt; Module
+forall (phase :: ModIfacePhase). ModIface_ phase -&gt; Module
+</span><a href="GHC.Unit.Module.ModIface.html#mi_module"><span class="hs-identifier hs-var">mi_module</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HomeModInfo -&gt; ModIface_ 'ModIfaceFinal
+</span><a href="GHC.Unit.Home.ModInfo.html#hm_iface"><span class="hs-identifier hs-var">hm_iface</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140581"><span class="hs-identifier hs-var">hm</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-278"></span><span>           </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621683140581"><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140581"><span class="hs-identifier hs-var">hm</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[HomeModInfo]
+</span><a href="#local-6989586621683140578"><span class="hs-identifier hs-var">hms</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-279"></span><span>
+</span><span id="line-280"></span><span class="hs-comment">----------------------------------------------------------------------------------</span><span>
+</span><span id="line-281"></span><span class="hs-comment">-- THE TYPE OF FOOTGUNS WE DON'T WANT TO EXPOSE</span><span>
+</span><span id="line-282"></span><span class="hs-comment">----------------------------------------------------------------------------------</span><span>
+</span><span id="line-283"></span><span>
+</span><span id="line-284"></span><span class="hs-comment">-- eltsHpt :: HomePackageTable -&gt; [HomeModInfo]</span><span>
+</span><span id="line-285"></span><span class="hs-comment">-- filterHpt :: (HomeModInfo -&gt; Bool) -&gt; HomePackageTable -&gt; HomePackageTable</span><span>
+</span><span id="line-286"></span><span class="hs-comment">-- mapHpt :: (HomeModInfo -&gt; HomeModInfo) -&gt; HomePackageTable -&gt; HomePackageTable</span><span>
+</span><span id="line-287"></span><span class="hs-comment">-- delFromHpt :: HomePackageTable -&gt; ModuleName -&gt; HomePackageTable</span><span>
+</span><span id="line-288"></span><span class="hs-comment">-- listToHpt :: [(ModuleName, HomeModInfo)] -&gt; HomePackageTable</span><span>
+</span><span id="line-289"></span><span class="hs-comment">-- listHMIToHpt :: [HomeModInfo] -&gt; HomePackageTable</span><span>
+</span><span id="line-290"></span><span>
+</span><span id="line-291"></span><span class="hs-comment">----------------------------------------------------------------------------------</span><span>
+</span><span id="line-292"></span><span class="hs-comment">-- Would be fine, but may lead to linearly traversing the HPT unnecessarily</span><span>
+</span><span id="line-293"></span><span class="hs-comment">-- (e.g. `lastLoadedKey` superseded bad usages)</span><span>
+</span><span id="line-294"></span><span class="hs-comment">----------------------------------------------------------------------------------</span><span>
+</span><span id="line-295"></span><span>
+</span><span id="line-296"></span><span class="hs-comment">-- allHpt :: (HomeModInfo -&gt; Bool) -&gt; HomePackageTable -&gt; Bool</span><span>
+</span><span id="line-297"></span><span class="hs-comment">-- allHpt = allUDFM</span><span>
+</span><span id="line-298"></span><span>
+</span><span id="line-299"></span><span class="hs-comment">-- anyHpt :: (HomeModInfo -&gt; Bool) -&gt; HomePackageTable -&gt; Bool</span><span>
+</span><span id="line-300"></span><span class="hs-comment">-- anyHpt = anyUDFM</span><span>
+</span><span id="line-301"></span><span>
+</span><span id="line-302"></span><span class="hs-comment">----------------------------------------------------------------------------------</span><span>
+</span><span id="line-303"></span><span class="hs-comment">-- Would be ok to expose this function very /careful/ with the argument function</span><span>
+</span><span id="line-304"></span><span class="hs-comment">----------------------------------------------------------------------------------</span><span>
+</span><span id="line-305"></span><span>
+</span><span id="line-306"></span><span class="hs-comment">-- | Like @concatMap f . 'eltsHpt'@, but filters out all 'HomeModInfo' for which</span><span>
+</span><span id="line-307"></span><span class="hs-comment">-- @f@ returns the empty list before doing the sort inherent to 'eltsUDFM'.</span><span>
+</span><span id="line-308"></span><span class="hs-comment">--</span><span>
+</span><span id="line-309"></span><span class="hs-comment">-- If this function is ever exposed from the HPT module, make sure the</span><span>
+</span><span id="line-310"></span><span class="hs-comment">-- argument function doesn't introduce leaks.</span><span>
+</span><span id="line-311"></span><span id="local-6989586621683140368"><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#concatHpt"><span class="hs-identifier hs-type">concatHpt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#HomeModInfo"><span class="hs-identifier hs-type">HomeModInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621683140368"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621683140368"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-312"></span><span id="concatHpt"><span class="annot"><span class="annottext">concatHpt :: forall a. (HomeModInfo -&gt; [a]) -&gt; HomePackageTable -&gt; IO [a]
+</span><a href="GHC.Unit.Home.PackageTable.html#concatHpt"><span class="hs-identifier hs-var hs-var">concatHpt</span></a></span></span><span> </span><span id="local-6989586621683140586"><span class="annot"><span class="annottext">HomeModInfo -&gt; [a]
+</span><a href="#local-6989586621683140586"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HPT"><span class="hs-identifier hs-type">HPT</span></a></span><span class="hs-special">{</span><span id="local-6989586621683140587"><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+table :: HomePackageTable -&gt; IORef (DModuleNameEnv HomeModInfo)
+table :: IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var hs-var">table</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-313"></span><span>  </span><span id="local-6989586621683140588"><span class="annot"><a href="#local-6989586621683140588"><span class="hs-identifier hs-var">hpt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+-&gt; IO (DModuleNameEnv HomeModInfo)
+forall a. IORef a -&gt; IO a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140587"><span class="hs-identifier hs-var">table</span></a></span><span>
+</span><span id="line-314"></span><span>  </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concat"><span class="hs-identifier hs-type">concat</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Unique.DFM.html#eltsUDFM"><span class="hs-identifier hs-type">eltsUDFM</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Unique.DFM.html#mapMaybeUDFM"><span class="hs-identifier hs-type">mapMaybeUDFM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683140590"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683140588"><span class="hs-identifier hs-type">hpt</span></a></span><span>
+</span><span id="line-315"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-316"></span><span>    </span><span id="local-6989586621683140590"><span class="annot"><span class="annottext">g :: HomeModInfo -&gt; Maybe [a]
+</span><a href="#local-6989586621683140590"><span class="hs-identifier hs-var hs-var">g</span></a></span></span><span> </span><span id="local-6989586621683140591"><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140591"><span class="hs-identifier hs-var">hmi</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">HomeModInfo -&gt; [a]
+</span><a href="#local-6989586621683140586"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">HomeModInfo
+</span><a href="#local-6989586621683140591"><span class="hs-identifier hs-var">hmi</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe [a]
+forall a. Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">;</span><span> </span><span id="local-6989586621683140592"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621683140592"><span class="hs-keyword hs-var">as</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; Maybe [a]
+forall a. a -&gt; Maybe a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621683140592"><span class="hs-keyword hs-var">as</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-317"></span><span>
+</span><span id="line-318"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-319"></span><span class="annot"><span class="hs-comment">-- * Internals (see haddocks!)</span></span><span>
+</span><span id="line-320"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-321"></span><span>
+</span><span id="line-322"></span><span class="hs-comment">-- | Gets the internal 'IORef' which holds the 'HomeModInfo's of this HPT.</span><span>
+</span><span id="line-323"></span><span class="hs-comment">-- Use with care.</span><span>
+</span><span id="line-324"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptInternalTableRef"><span class="hs-identifier hs-type">hptInternalTableRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.Env.html#DModuleNameEnv"><span class="hs-identifier hs-type">DModuleNameEnv</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#HomeModInfo"><span class="hs-identifier hs-type">HomeModInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-325"></span><span id="hptInternalTableRef"><span class="annot"><span class="annottext">hptInternalTableRef :: HomePackageTable -&gt; IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#hptInternalTableRef"><span class="hs-identifier hs-var hs-var">hptInternalTableRef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HomePackageTable -&gt; IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var">table</span></a></span><span>
+</span><span id="line-326"></span><span>
+</span><span id="line-327"></span><span class="hs-comment">-- | Construct a HomePackageTable from the IORef.</span><span>
+</span><span id="line-328"></span><span class="hs-comment">-- Use with care, only if you can really justify going around the intended insert-only API.</span><span>
+</span><span id="line-329"></span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#hptInternalTableFromRef"><span class="hs-identifier hs-type">hptInternalTableFromRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Module.Env.html#DModuleNameEnv"><span class="hs-identifier hs-type">DModuleNameEnv</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.ModInfo.html#HomeModInfo"><span class="hs-identifier hs-type">HomeModInfo</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HomePackageTable"><span class="hs-identifier hs-type">HomePackageTable</span></a></span><span>
+</span><span id="line-330"></span><span id="hptInternalTableFromRef"><span class="annot"><span class="annottext">hptInternalTableFromRef :: IORef (DModuleNameEnv HomeModInfo) -&gt; IO HomePackageTable
+</span><a href="GHC.Unit.Home.PackageTable.html#hptInternalTableFromRef"><span class="hs-identifier hs-var hs-var">hptInternalTableFromRef</span></a></span></span><span> </span><span id="local-6989586621683140593"><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140593"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-331"></span><span>  </span><span class="annot"><span class="annottext">HomePackageTable -&gt; IO HomePackageTable
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><a href="GHC.Unit.Home.PackageTable.html#HPT"><span class="hs-identifier hs-type">HPT</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-332"></span><span>    </span><span class="annot"><span class="annottext">table :: IORef (DModuleNameEnv HomeModInfo)
+</span><a href="GHC.Unit.Home.PackageTable.html#table"><span class="hs-identifier hs-var">table</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IORef (DModuleNameEnv HomeModInfo)
+</span><a href="#local-6989586621683140593"><span class="hs-identifier hs-var">ref</span></a></span><span>
+</span><span id="line-333"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-334"></span><span>
+</span><span id="line-335"></span></pre></body></html>

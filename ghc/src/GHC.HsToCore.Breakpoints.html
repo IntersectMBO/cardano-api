@@ -1,0 +1,218 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Information attached to Breakpoints generated from Ticks</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- The breakpoint information stored in 'ModBreaks' is generated during</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- desugaring from the ticks annotating the source expressions.</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- This information can be queried per-breakpoint using the 'BreakpointId'</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- datatype, which indexes tick-level breakpoint information.</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- 'ModBreaks' and 'BreakpointId's are not to be confused with</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- 'InternalModBreaks' and 'InternalBreakId's. The latter are constructed</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- during bytecode generation and can be found in 'GHC.ByteCode.Breakpoints'.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- See Note [ModBreaks vs InternalModBreaks] and Note [Breakpoint identifiers]</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html"><span class="hs-identifier">GHC.HsToCore.Breakpoints</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * ModBreaks</span></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#mkModBreaks"><span class="hs-identifier">mkModBreaks</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier">ModBreaks</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Re-exports BreakpointId</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakpointId"><span class="hs-identifier">BreakpointId</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakTickIndex"><span class="hs-identifier">BreakTickIndex</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Prelude.html"><span class="hs-identifier">GHC.Prelude</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../array-0.5.8.0-inplace/src/Data.Array.html"><span class="hs-identifier">Data.Array</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.HsToCore.Ticks.html"><span class="hs-identifier">GHC.HsToCore.Ticks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.HsToCore.Ticks.html#Tick"><span class="hs-identifier">Tick</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Data.SizedSeq.html"><span class="hs-identifier">GHC.Data.SizedSeq</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html"><span class="hs-identifier">GHC.Types.SrcLoc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.SrcLoc.html#SrcSpan"><span class="hs-identifier">SrcSpan</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Name.html"><span class="hs-identifier">GHC.Types.Name</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Name.Occurrence.html#OccName"><span class="hs-identifier">OccName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html"><span class="hs-identifier">GHC.Types.Tickish</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Types.Tickish.html#BreakTickIndex"><span class="hs-identifier">BreakTickIndex</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakpointId"><span class="hs-identifier">BreakpointId</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Unit.Module.html"><span class="hs-identifier">GHC.Unit.Module</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier">Module</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="GHC.Utils.Outputable.html"><span class="hs-identifier">GHC.Utils.Outputable</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../../base-4.22.0.0-inplace/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.OldList.html#intersperse"><span class="hs-identifier">intersperse</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- ModBreaks</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | All the information about the source-relevant breakpoints for a module</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- This information is constructed once during desugaring (with `mkModBreaks`)</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- from breakpoint ticks and fixed/unchanged from there on forward. It could be</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- exported as an abstract datatype because it should never be updated after</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- construction, only queried.</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- The arrays can be indexed using the int in the corresponding 'BreakpointId'</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- (i.e. the 'BreakpointId' whose 'Module' matches the 'Module' corresponding</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- to these 'ModBreaks') with the accessors 'modBreaks_locs', 'modBreaks_vars',</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- and 'modBreaks_decls'.</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">data</span><span> </span><span id="ModBreaks"><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-var">ModBreaks</span></a></span></span><span>
+</span><span id="line-52"></span><span>   </span><span class="hs-glyph">=</span><span> </span><span id="ModBreaks"><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-var">ModBreaks</span></a></span></span><span>
+</span><span id="line-53"></span><span>   </span><span class="hs-special">{</span><span> </span><span id="modBreaks_locs"><span class="annot"><span class="annottext">ModBreaks -&gt; Array BreakTickIndex SrcSpan
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_locs"><span class="hs-identifier hs-var hs-var">modBreaks_locs</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#Array"><span class="hs-identifier hs-type">Array</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakTickIndex"><span class="hs-identifier hs-type">BreakTickIndex</span></a></span><span> </span><span class="annot"><a href="GHC.Types.SrcLoc.html#SrcSpan"><span class="hs-identifier hs-type">SrcSpan</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><span class="hs-comment">-- ^ An array giving the source span of each breakpoint.</span></span><span>
+</span><span id="line-55"></span><span>   </span><span class="hs-special">,</span><span> </span><span id="modBreaks_vars"><span class="annot"><span class="annottext">ModBreaks -&gt; Array BreakTickIndex [OccName]
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_vars"><span class="hs-identifier hs-var hs-var">modBreaks_vars</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#Array"><span class="hs-identifier hs-type">Array</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakTickIndex"><span class="hs-identifier hs-type">BreakTickIndex</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="GHC.Types.Name.Occurrence.html#OccName"><span class="hs-identifier hs-type">OccName</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>        </span><span class="annot"><span class="hs-comment">-- ^ An array giving the names of the free variables at each breakpoint.</span></span><span>
+</span><span id="line-57"></span><span>   </span><span class="hs-special">,</span><span> </span><span id="modBreaks_decls"><span class="annot"><span class="annottext">ModBreaks -&gt; Array BreakTickIndex [String]
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_decls"><span class="hs-identifier hs-var hs-var">modBreaks_decls</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#Array"><span class="hs-identifier hs-type">Array</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakTickIndex"><span class="hs-identifier hs-type">BreakTickIndex</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>        </span><span class="hs-comment">-- ^ An array giving the names of the declarations enclosing each breakpoint.</span><span>
+</span><span id="line-59"></span><span>        </span><span class="hs-comment">-- See Note [Field modBreaks_decls]</span><span>
+</span><span id="line-60"></span><span>   </span><span class="hs-special">,</span><span> </span><span id="modBreaks_ccs"><span class="annot"><span class="annottext">ModBreaks -&gt; Array BreakTickIndex (String, String)
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_ccs"><span class="hs-identifier hs-var hs-var">modBreaks_ccs</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#Array"><span class="hs-identifier hs-type">Array</span></a></span><span> </span><span class="annot"><a href="GHC.Types.Tickish.html#BreakTickIndex"><span class="hs-identifier hs-type">BreakTickIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>        </span><span class="hs-comment">-- ^ Array pointing to cost centre info for each breakpoint;</span><span>
+</span><span id="line-62"></span><span>        </span><span class="hs-comment">-- actual 'CostCentre' allocation is done at link-time.</span><span>
+</span><span id="line-63"></span><span>   </span><span class="hs-special">,</span><span> </span><span id="modBreaks_module"><span class="annot"><span class="annottext">ModBreaks -&gt; Module
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_module"><span class="hs-identifier hs-var hs-var">modBreaks_module</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span>
+</span><span id="line-64"></span><span>        </span><span class="hs-comment">-- ^ The module to which this ModBreaks is associated.</span><span>
+</span><span id="line-65"></span><span>        </span><span class="hs-comment">-- We also cache this here for internal sanity checks.</span><span>
+</span><span id="line-66"></span><span>   </span><span class="hs-special">}</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- | Initialize memory for breakpoint data that is shared between the bytecode</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- generator and the interpreter.</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- Since GHCi and the RTS need to interact with breakpoint data and the bytecode</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- generator needs to encode this information for each expression, the data is</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- allocated remotely in GHCi's address space and passed to the codegen as</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- foreign pointers.</span><span>
+</span><span id="line-75"></span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#mkModBreaks"><span class="hs-identifier hs-type">mkModBreaks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="annot"><span class="hs-comment">{-^ Whether the interpreter is profiled and thus if we should include store a CCS array -}</span></span><span>
+</span><span id="line-76"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.Unit.Types.html#Module"><span class="hs-identifier hs-type">Module</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Data.SizedSeq.html#SizedSeq"><span class="hs-identifier hs-type">SizedSeq</span></a></span><span> </span><span class="annot"><a href="GHC.HsToCore.Ticks.html#Tick"><span class="hs-identifier hs-type">Tick</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-type">ModBreaks</span></a></span><span>
+</span><span id="line-77"></span><span id="mkModBreaks"><span class="annot"><span class="annottext">mkModBreaks :: Bool -&gt; Module -&gt; SizedSeq Tick -&gt; ModBreaks
+</span><a href="GHC.HsToCore.Breakpoints.html#mkModBreaks"><span class="hs-identifier hs-var hs-var">mkModBreaks</span></a></span></span><span> </span><span id="local-6989586621682933469"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682933469"><span class="hs-identifier hs-var">interpreterProfiled</span></a></span></span><span> </span><span id="local-6989586621682933470"><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933470"><span class="hs-identifier hs-var">modl</span></a></span></span><span> </span><span id="local-6989586621682933471"><span class="annot"><span class="annottext">SizedSeq Tick
+</span><a href="#local-6989586621682933471"><span class="hs-identifier hs-var">extendedMixEntries</span></a></span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621682933472"><span class="annot"><span class="annottext">count :: BreakTickIndex
+</span><a href="#local-6989586621682933472"><span class="hs-identifier hs-var hs-var">count</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; BreakTickIndex
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Word -&gt; BreakTickIndex) -&gt; Word -&gt; BreakTickIndex
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SizedSeq Tick -&gt; Word
+forall a. SizedSeq a -&gt; Word
+</span><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Data.SizedSeq.html#sizeSS"><span class="hs-identifier hs-var">sizeSS</span></a></span><span> </span><span class="annot"><span class="annottext">SizedSeq Tick
+</span><a href="#local-6989586621682933471"><span class="hs-identifier hs-var">extendedMixEntries</span></a></span><span>
+</span><span id="line-79"></span><span>        </span><span id="local-6989586621682933474"><span class="annot"><span class="annottext">entries :: [Tick]
+</span><a href="#local-6989586621682933474"><span class="hs-identifier hs-var hs-var">entries</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SizedSeq Tick -&gt; [Tick]
+forall a. SizedSeq a -&gt; [a]
+</span><a href="../../ghc-boot-9.14.1-inplace/src/GHC.Data.SizedSeq.html#ssElts"><span class="hs-identifier hs-var">ssElts</span></a></span><span> </span><span class="annot"><span class="annottext">SizedSeq Tick
+</span><a href="#local-6989586621682933471"><span class="hs-identifier hs-var">extendedMixEntries</span></a></span><span>
+</span><span id="line-80"></span><span>        </span><span id="local-6989586621682933476"><span class="annot"><span class="annottext">locsTicks :: Array BreakTickIndex SrcSpan
+</span><a href="#local-6989586621682933476"><span class="hs-identifier hs-var hs-var">locsTicks</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BreakTickIndex, BreakTickIndex)
+-&gt; [SrcSpan] -&gt; Array BreakTickIndex SrcSpan
+forall i e. Ix i =&gt; (i, i) -&gt; [e] -&gt; Array i e
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#listArray"><span class="hs-identifier hs-var">listArray</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">BreakTickIndex
+</span><a href="#local-6989586621682933472"><span class="hs-identifier hs-var">count</span></a></span><span class="annot"><span class="annottext">BreakTickIndex -&gt; BreakTickIndex -&gt; BreakTickIndex
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Tick -&gt; SrcSpan
+</span><a href="GHC.HsToCore.Ticks.html#tick_loc"><span class="hs-identifier hs-var">tick_loc</span></a></span><span>  </span><span class="annot"><span class="annottext">Tick
+</span><a href="#local-6989586621682933479"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621682933479"><span class="annot"><span class="annottext">Tick
+</span><a href="#local-6989586621682933479"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Tick]
+</span><a href="#local-6989586621682933474"><span class="hs-identifier hs-var">entries</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span><span>        </span><span id="local-6989586621682933480"><span class="annot"><span class="annottext">varsTicks :: Array BreakTickIndex [OccName]
+</span><a href="#local-6989586621682933480"><span class="hs-identifier hs-var hs-var">varsTicks</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BreakTickIndex, BreakTickIndex)
+-&gt; [[OccName]] -&gt; Array BreakTickIndex [OccName]
+forall i e. Ix i =&gt; (i, i) -&gt; [e] -&gt; Array i e
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#listArray"><span class="hs-identifier hs-var">listArray</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">BreakTickIndex
+</span><a href="#local-6989586621682933472"><span class="hs-identifier hs-var">count</span></a></span><span class="annot"><span class="annottext">BreakTickIndex -&gt; BreakTickIndex -&gt; BreakTickIndex
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Tick -&gt; [OccName]
+</span><a href="GHC.HsToCore.Ticks.html#tick_ids"><span class="hs-identifier hs-var">tick_ids</span></a></span><span>  </span><span class="annot"><span class="annottext">Tick
+</span><a href="#local-6989586621682933482"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621682933482"><span class="annot"><span class="annottext">Tick
+</span><a href="#local-6989586621682933482"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Tick]
+</span><a href="#local-6989586621682933474"><span class="hs-identifier hs-var">entries</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-82"></span><span>        </span><span id="local-6989586621682933483"><span class="annot"><span class="annottext">declsTicks :: Array BreakTickIndex [String]
+</span><a href="#local-6989586621682933483"><span class="hs-identifier hs-var hs-var">declsTicks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BreakTickIndex, BreakTickIndex)
+-&gt; [[String]] -&gt; Array BreakTickIndex [String]
+forall i e. Ix i =&gt; (i, i) -&gt; [e] -&gt; Array i e
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#listArray"><span class="hs-identifier hs-var">listArray</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">BreakTickIndex
+</span><a href="#local-6989586621682933472"><span class="hs-identifier hs-var">count</span></a></span><span class="annot"><span class="annottext">BreakTickIndex -&gt; BreakTickIndex -&gt; BreakTickIndex
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Tick -&gt; [String]
+</span><a href="GHC.HsToCore.Ticks.html#tick_path"><span class="hs-identifier hs-var">tick_path</span></a></span><span> </span><span class="annot"><span class="annottext">Tick
+</span><a href="#local-6989586621682933485"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621682933485"><span class="annot"><span class="annottext">Tick
+</span><a href="#local-6989586621682933485"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Tick]
+</span><a href="#local-6989586621682933474"><span class="hs-identifier hs-var">entries</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-83"></span><span>        </span><span id="local-6989586621682933486"><span class="annot"><span class="annottext">ccs :: Array BreakTickIndex (String, String)
+</span><a href="#local-6989586621682933486"><span class="hs-identifier hs-var hs-var">ccs</span></a></span></span><span>
+</span><span id="line-84"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621682933469"><span class="hs-identifier hs-var">interpreterProfiled</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-85"></span><span>              </span><span class="annot"><span class="annottext">(BreakTickIndex, BreakTickIndex)
+-&gt; [(String, String)] -&gt; Array BreakTickIndex (String, String)
+forall i e. Ix i =&gt; (i, i) -&gt; [e] -&gt; Array i e
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#listArray"><span class="hs-identifier hs-var">listArray</span></a></span><span>
+</span><span id="line-86"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BreakTickIndex
+</span><a href="#local-6989586621682933472"><span class="hs-identifier hs-var">count</span></a></span><span> </span><span class="annot"><span class="annottext">BreakTickIndex -&gt; BreakTickIndex -&gt; BreakTickIndex
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall (t :: * -&gt; *) a. Foldable t =&gt; t [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concat"><span class="hs-identifier hs-var">concat</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; String) -&gt; [String] -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; [String]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.OldList.html#intersperse"><span class="hs-identifier hs-var">intersperse</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; [String]) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tick -&gt; [String]
+</span><a href="GHC.HsToCore.Ticks.html#tick_path"><span class="hs-identifier hs-var">tick_path</span></a></span><span> </span><span class="annot"><span class="annottext">Tick
+</span><a href="#local-6989586621682933488"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-88"></span><span>                    </span><span class="annot"><span class="annottext">SDocContext -&gt; SDoc -&gt; String
+</span><a href="GHC.Utils.Outputable.html#renderWithContext"><span class="hs-identifier hs-var">renderWithContext</span></a></span><span> </span><span class="annot"><span class="annottext">SDocContext
+</span><a href="GHC.Utils.Outputable.html#defaultSDocContext"><span class="hs-identifier hs-var">defaultSDocContext</span></a></span><span> </span><span class="annot"><span class="annottext">(SDoc -&gt; String) -&gt; SDoc -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SrcSpan -&gt; SDoc
+forall a. Outputable a =&gt; a -&gt; SDoc
+</span><a href="GHC.Utils.Outputable.html#ppr"><span class="hs-identifier hs-var">ppr</span></a></span><span> </span><span class="annot"><span class="annottext">(SrcSpan -&gt; SDoc) -&gt; SrcSpan -&gt; SDoc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tick -&gt; SrcSpan
+</span><a href="GHC.HsToCore.Ticks.html#tick_loc"><span class="hs-identifier hs-var">tick_loc</span></a></span><span> </span><span class="annot"><span class="annottext">Tick
+</span><a href="#local-6989586621682933488"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-89"></span><span>                  </span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621682933488"><span class="annot"><span class="annottext">Tick
+</span><a href="#local-6989586621682933488"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Tick]
+</span><a href="#local-6989586621682933474"><span class="hs-identifier hs-var">entries</span></a></span><span>
+</span><span id="line-91"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-92"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BreakTickIndex, BreakTickIndex)
+-&gt; [(String, String)] -&gt; Array BreakTickIndex (String, String)
+forall i e. Ix i =&gt; (i, i) -&gt; [e] -&gt; Array i e
+</span><a href="../../ghc-internal-9.1401.0-inplace/src/GHC.Internal.Arr.html#listArray"><span class="hs-identifier hs-var">listArray</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">BreakTickIndex
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-93"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><a href="GHC.HsToCore.Breakpoints.html#ModBreaks"><span class="hs-identifier hs-type">ModBreaks</span></a></span><span>
+</span><span id="line-94"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">modBreaks_locs :: Array BreakTickIndex SrcSpan
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_locs"><span class="hs-identifier hs-var">modBreaks_locs</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Array BreakTickIndex SrcSpan
+</span><a href="#local-6989586621682933476"><span class="hs-identifier hs-var">locsTicks</span></a></span><span>
+</span><span id="line-95"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">modBreaks_vars :: Array BreakTickIndex [OccName]
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_vars"><span class="hs-identifier hs-var">modBreaks_vars</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Array BreakTickIndex [OccName]
+</span><a href="#local-6989586621682933480"><span class="hs-identifier hs-var">varsTicks</span></a></span><span>
+</span><span id="line-96"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">modBreaks_decls :: Array BreakTickIndex [String]
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_decls"><span class="hs-identifier hs-var">modBreaks_decls</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Array BreakTickIndex [String]
+</span><a href="#local-6989586621682933483"><span class="hs-identifier hs-var">declsTicks</span></a></span><span>
+</span><span id="line-97"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">modBreaks_ccs :: Array BreakTickIndex (String, String)
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_ccs"><span class="hs-identifier hs-var">modBreaks_ccs</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Array BreakTickIndex (String, String)
+</span><a href="#local-6989586621682933486"><span class="hs-identifier hs-var">ccs</span></a></span><span>
+</span><span id="line-98"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">modBreaks_module :: Module
+</span><a href="GHC.HsToCore.Breakpoints.html#modBreaks_module"><span class="hs-identifier hs-var">modBreaks_module</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Module
+</span><a href="#local-6989586621682933470"><span class="hs-identifier hs-var">modl</span></a></span><span>
+</span><span id="line-99"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-comment">{-
+Note [Field modBreaks_decls]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A value of eg [&quot;foo&quot;, &quot;bar&quot;, &quot;baz&quot;] in a `modBreaks_decls` field means:
+The breakpoint is in the function called &quot;baz&quot; that is declared in a `let`
+or `where` clause of a declaration called &quot;bar&quot;, which itself is declared
+in a `let` or `where` clause of the top-level function called &quot;foo&quot;.
+-}</span><span>
+</span><span id="line-109"></span></pre></body></html>
