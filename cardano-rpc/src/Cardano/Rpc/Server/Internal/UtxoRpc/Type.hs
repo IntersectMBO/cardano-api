@@ -5,6 +5,7 @@
 module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   ( utxoRpcPParamsToProtocolParams
   , genesisBundleToProto
+  , eraSummariesToProto
   , utxoToUtxoRpcAnyUtxoData
   , txInTxOutToAnyUtxoData
   , anyUtxoDataUtxoRpcToUtxo
@@ -31,6 +32,7 @@ where
 
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.EraSummary
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Genesis
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters

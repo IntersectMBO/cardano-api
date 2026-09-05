@@ -1,0 +1,7 @@
+project: cardano-rpc
+pr: 1325
+kind:
+  - feature
+  - breaking
+description: |
+  Implement the `ReadEraSummary` gRPC method, returning the era name and the start and end boundaries (Unix-epoch milliseconds, slot, epoch) of every era in the chain's history. The `NodeKernelAccess` type is now abstract; use the functions of `Cardano.Rpc.Server.NodeKernelAccess` instead of its record fields.
