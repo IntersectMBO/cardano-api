@@ -7,7 +7,13 @@
 {-# LANGUAGE NoFieldSelectors #-}
 
 module Cardano.Rpc.Server.NodeKernelAccess
-  ( NodeKernelAccess (..)
+  ( Type.NodeKernelAccess
+  , nodeKernelSystemStart
+  , securityParam
+  , genesisConfig
+  , readEraHistory
+  , readHardForkSummary
+  , readChainTipHeader
   , GenesisBundle (..)
   , mkNodeKernelAccess
   , fetchBlock
@@ -23,7 +29,11 @@ import Cardano.Api.Consensus qualified as Consensus
 import Cardano.Rpc.Server.Internal.Monad (MonadRpc, grab)
 import Cardano.Rpc.Server.Internal.TimedCache (newTimedCache)
 import Cardano.Rpc.Server.Internal.Tracing
-import Cardano.Rpc.Server.NodeKernelAccess.Type
+import Cardano.Rpc.Server.NodeKernelAccess.Type (GenesisBundle (..))
+import Cardano.Rpc.Server.NodeKernelAccess.Type qualified as Type
+
+import Ouroboros.Consensus.Cardano.Block (CardanoEras)
+import Ouroboros.Consensus.HardFork.History qualified as History
 
 import RIO (MonadUnliftIO, atomically, bracket, throwIO, withRunInIO)
 
@@ -52,27 +62,42 @@ mkNodeKernelAccess
   -- ^ Block type witness
   -> Consensus.NodeKernel IO addrNTN addrNTC blk
   -- ^ Consensus node kernel
-  -> m (Maybe NodeKernelAccess)
+  -> m (Maybe Type.NodeKernelAccess)
 mkNodeKernelAccess tracer shelleyGenesisHash shelleyGenesisFile blockType kernel = case blockType of
   Consensus.CardanoBlockType -> do
-    genesisConfig <- readGenesisBundle shelleyGenesisHash shelleyGenesisFile topLevelConfig
-    pure $ Just NodeKernelAccess{chainDb, systemStart, readEraHistory, securityParam, genesisConfig}
+    genesisBundle <- readGenesisBundle shelleyGenesisHash shelleyGenesisFile topLevelConfig
+    pure $
+      Just
+        Type.NodeKernelAccess
+          { Type.chainDb = chainDb
+          , Type.systemStart = Consensus.nodeSystemStart topLevelConfig
+          , Type.readEraHistory = readEraHistory'
+          , Type.readHardForkSummary = readHardForkSummary'
+          , Type.securityParam = Consensus.configSecurityParam topLevelConfig
+          , Type.genesisConfig = genesisBundle
+          }
    where
     chainDb = Consensus.getChainDB kernel
     topLevelConfig = Consensus.getTopLevelConfig kernel
     ledgerConfig = Consensus.configLedger topLevelConfig
-    systemStart = Consensus.nodeSystemStart topLevelConfig
-    securityParam = Consensus.configSecurityParam topLevelConfig
+    -- Primed because 'Cardano.Rpc.Server.NodeKernelAccess' also exports an
+    -- accessor of the same name; these are the local actions that feed the
+    -- corresponding record fields above.
+    --
     -- Read the current ledger state (cheap STM TVar read) and recompute
     -- the era summary on every call - O(number_of_eras).
     -- This is the same approach consensus uses for GetInterpreter queries
     -- (interpretQueryHardFork); neither path caches the summary.
     -- RunWithCachedSummary exists but is private to the blockchain time thread.
-    readEraHistory :: MonadIO n => n EraHistory
-    readEraHistory = liftIO $ do
+    readHardForkSummary'
+      :: MonadIO n
+      => n (History.Summary (CardanoEras Consensus.StandardCrypto))
+    readHardForkSummary' = liftIO $ do
       extLedger <- atomically $ Consensus.getCurrentLedger chainDb
-      pure . EraHistory . Consensus.mkInterpreter $
-        Consensus.hardForkSummary ledgerConfig (Consensus.ledgerState extLedger)
+      pure $ Consensus.hardForkSummary ledgerConfig (Consensus.ledgerState extLedger)
+
+    readEraHistory' :: MonadIO n => n EraHistory
+    readEraHistory' = EraHistory . Consensus.mkInterpreter <$> readHardForkSummary'
   _ -> do
     -- unsupported block type
     traceWith tracer . inject . TraceRpcUnsupportedBlockType . pack $ show blockType
@@ -134,7 +159,7 @@ readGenesisBundle shelleyGenesisHash shelleyGenesisFile topLevelConfig =
 -- gRPC UNAVAILABLE if the node kernel has not yet initialised.
 grabNodeKernelAccess
   :: MonadRpc e m
-  => m NodeKernelAccess
+  => m Type.NodeKernelAccess
 grabNodeKernelAccess =
   grab >>= liftIO . readIORef >>= \case
     Nothing ->
@@ -148,11 +173,50 @@ grabNodeKernelAccess =
     Just nodeKernelAccess ->
       pure nodeKernelAccess
 
+-- | The network's system start time, extracted from genesis config.
+-- Used together with 'readEraHistory' to convert slots to wall-clock time.
+nodeKernelSystemStart :: Type.NodeKernelAccess -> SystemStart
+nodeKernelSystemStart Type.NodeKernelAccess{Type.systemStart = value} = value
+
+-- | The protocol security parameter /k/: consensus never rolls back more
+-- than /k/ blocks.
+securityParam :: Type.NodeKernelAccess -> Consensus.SecurityParam
+securityParam Type.NodeKernelAccess{Type.securityParam = value} = value
+
+-- | The network's genesis configuration.
+genesisConfig :: Type.NodeKernelAccess -> GenesisBundle
+genesisConfig Type.NodeKernelAccess{Type.genesisConfig = value} = value
+
+-- | Read current era history from the ledger state.
+-- This is a separate read from ChainDB, but the inconsistency is always
+-- safe: the ledger state is at or ahead of any block in ChainDB, and era
+-- summaries only grow, so the returned history always covers the slot of
+-- any block fetched from ChainDB.
+readEraHistory :: MonadIO m => Type.NodeKernelAccess -> m EraHistory
+readEraHistory Type.NodeKernelAccess{Type.readEraHistory = action} = action
+
+-- | Read the raw hard-fork era summary 'readEraHistory' wraps into an opaque
+-- 'EraHistory' interpreter. Exposed separately because the @ReadEraSummary@
+-- RPC method needs the era boundaries themselves, not an interpreter that
+-- only answers slot/time conversion queries.
+readHardForkSummary
+  :: MonadIO m
+  => Type.NodeKernelAccess
+  -> m (History.Summary (CardanoEras Consensus.StandardCrypto))
+readHardForkSummary Type.NodeKernelAccess{Type.readHardForkSummary = action} = action
+
+-- | Read the current chain tip header from ChainDB, or 'Nothing' at origin.
+readChainTipHeader
+  :: MonadIO m
+  => Type.NodeKernelAccess
+  -> m (Maybe (Consensus.Header (Consensus.CardanoBlock Consensus.StandardCrypto)))
+readChainTipHeader Type.NodeKernelAccess{Type.chainDb = chainDb} = liftIO $ Consensus.getTipHeader chainDb
+
 -- | Fetch a raw block and its parsed era-contextualised form from ChainDB
 -- by slot and header hash.
 fetchBlock
   :: MonadIO m
-  => NodeKernelAccess
+  => Type.NodeKernelAccess
   -- ^ Node kernel access handle
   -> SlotNo
   -- ^ Block slot number
@@ -160,7 +224,7 @@ fetchBlock
   -- ^ Block header hash
   -> m (Maybe (ByteString, BlockInMode))
   -- ^ Raw CBOR bytes and the block in era context, or 'Nothing' if not found
-fetchBlock NodeKernelAccess{chainDb} slot (HeaderHash shortHash) = do
+fetchBlock Type.NodeKernelAccess{Type.chainDb = chainDb} slot (HeaderHash shortHash) = do
   let point = Consensus.RealPoint slot (Consensus.OneEraHash shortHash)
       component = (,) <$> fmap BSL.toStrict Consensus.GetRawBlock <*> fmap fromConsensusBlock Consensus.GetBlock
   liftIO $ Consensus.getBlockComponent chainDb component point
@@ -201,10 +265,10 @@ data ChainFollower = ChainFollower
 -- ChainSync client, so one follower per stream scales the same way.
 withFollower
   :: MonadUnliftIO m
-  => NodeKernelAccess
+  => Type.NodeKernelAccess
   -> (ChainFollower -> m a)
   -> m a
-withFollower NodeKernelAccess{chainDb} action =
+withFollower Type.NodeKernelAccess{Type.chainDb = chainDb} action =
   withRunInIO $ \runInIO ->
     Consensus.withRegistry $ \registry ->
       bracket

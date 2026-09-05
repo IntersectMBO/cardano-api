@@ -22,6 +22,8 @@ import Cardano.Chain.Genesis qualified as Byron (Config)
 import Cardano.Ledger.Alonzo.Genesis qualified as L (AlonzoGenesis)
 import Cardano.Ledger.Conway.Genesis qualified as L (ConwayGenesis)
 import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis)
+import Ouroboros.Consensus.Cardano.Block (CardanoEras)
+import Ouroboros.Consensus.HardFork.History qualified as History
 
 import Control.Monad.IO.Class (MonadIO)
 
@@ -39,6 +41,14 @@ data NodeKernelAccess = NodeKernelAccess
   -- always safe: the ledger state is at or ahead of any block in ChainDB,
   -- and era summaries only grow, so the returned history always covers the
   -- slot of any block fetched from ChainDB.
+  , readHardForkSummary
+      :: forall m
+       . MonadIO m
+      => m (History.Summary (CardanoEras Consensus.StandardCrypto))
+  -- ^ Read the raw hard-fork era summary 'readEraHistory' wraps into an
+  -- opaque 'EraHistory' interpreter. Exposed separately because the
+  -- @ReadEraSummary@ RPC method needs the era boundaries themselves, not an
+  -- interpreter that only answers slot/time conversion queries.
   , securityParam :: Consensus.SecurityParam
   -- ^ The protocol security parameter /k/: consensus never rolls back more
   -- than /k/ blocks.
