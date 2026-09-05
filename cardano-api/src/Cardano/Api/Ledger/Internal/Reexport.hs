@@ -19,6 +19,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , fromVRFVerKeyHash
   , toVRFVerKeyHash
   , StakePoolParams (..)
+  , BlsKey (..)
   , HasKeyRole
   , MIRPot (..)
   , MIRTarget (..)
@@ -455,7 +456,8 @@ import Cardano.Ledger.Shelley.TxCert
   , ShelleyTxCert (..)
   )
 import Cardano.Ledger.State
-  ( PoolMetadata (..)
+  ( BlsKey (..)
+  , PoolMetadata (..)
   , ScriptsNeeded
   , StakePoolParams (..)
   , StakePoolRelay (..)
