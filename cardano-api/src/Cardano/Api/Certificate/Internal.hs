@@ -50,7 +50,7 @@ data StakePoolParameters
   = StakePoolParameters
   { stakePoolId :: PoolId
   , stakePoolVRF :: Hash VrfKey
-  , stakePoolBlsKey :: Maybe Ledger.LeiosKey
+  , stakePoolBlsKey :: Maybe Ledger.BlsKey
   , stakePoolCost :: L.Coin
   , stakePoolMargin :: Rational
   , stakePoolRewardAccount :: StakeAddress
@@ -87,7 +87,7 @@ data StakePoolMetadataReference
 -- Internal conversion functions
 --
 
-toShelleyPoolParams :: StakePoolParameters -> Ledger.StakePoolParams
+toShelleyPoolParams :: StakePoolParameters -> Ledger.StakePoolParams era
 toShelleyPoolParams
   StakePoolParameters
     { stakePoolId = StakePoolKeyHash poolkh
@@ -122,7 +122,7 @@ toShelleyPoolParams
       , Ledger.sppMetadata =
           toShelleyPoolMetadata
             <$> Ledger.maybeToStrictMaybe stakePoolMetadata
-      , Ledger.sppLeiosKey = Ledger.maybeToStrictMaybe stakePoolBlsKey
+      , Ledger.sppBlsKey = Ledger.maybeToStrictMaybe stakePoolBlsKey
       }
    where
     toShelleyStakePoolRelay :: StakePoolRelay -> Ledger.StakePoolRelay
@@ -162,7 +162,7 @@ toShelleyPoolParams
         Ledger.textToUrl (Text.length url) url
 
 fromShelleyPoolParams
-  :: Ledger.StakePoolParams
+  :: Ledger.StakePoolParams era
   -> StakePoolParameters
 fromShelleyPoolParams
   Ledger.StakePoolParams
@@ -175,12 +175,12 @@ fromShelleyPoolParams
     , Ledger.sppOwners
     , Ledger.sppRelays
     , Ledger.sppMetadata
-    , Ledger.sppLeiosKey
+    , Ledger.sppBlsKey
     } =
     StakePoolParameters
       { stakePoolId = StakePoolKeyHash sppId
       , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash sppVrf)
-      , stakePoolBlsKey = Ledger.strictMaybeToMaybe sppLeiosKey
+      , stakePoolBlsKey = Ledger.strictMaybeToMaybe sppBlsKey
       , stakePoolCost = sppCost
       , stakePoolMargin = Ledger.unboundRational sppMargin
       , stakePoolRewardAccount = fromShelleyStakeAddr sppAccountAddress

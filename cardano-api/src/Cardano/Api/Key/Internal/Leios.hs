@@ -43,7 +43,7 @@ import Cardano.Crypto.DSIGN.BLS12381 qualified as Crypto
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Ledger.Hashes (HASH)
-import Cardano.Ledger.State (LeiosKey (..), LeiosPossessionProof (..), LeiosPubKey (..))
+import Cardano.Ledger.State qualified as L
 
 import Data.ByteString (ByteString)
 import Data.Either.Combinators (maybeToRight)
@@ -226,11 +226,11 @@ instance HasTextEnvelope BlsPossessionProof where
 -- A Leios key consists of the BLS verification key (public key) and a proof of possession,
 -- both derived from the BLS signing key. The proof of possession demonstrates ownership of
 -- the signing key, preventing rogue key attacks during signature aggregation.
-blsSigningKeyToLeiosKey :: SigningKey BlsKey -> LeiosKey
+blsSigningKeyToLeiosKey :: SigningKey BlsKey -> L.BlsKey
 blsSigningKeyToLeiosKey skey@(BlsSigningKey _) =
   let BlsVerificationKey rawVk = getVerificationKey skey
       BlsPossessionProof rawProof = createBlsPossessionProof skey
-   in LeiosKey
-        { leiosPubKey = LeiosPubKey rawVk
-        , leiosPossessionProof = LeiosPossessionProof rawProof
+   in L.BlsKey
+        { L.blsPubKey = rawVk
+        , L.blsPossessionProof = rawProof
         }

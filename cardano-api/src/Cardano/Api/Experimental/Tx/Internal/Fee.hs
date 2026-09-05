@@ -588,7 +588,7 @@ evaluateTransaction
   -> L.Tx L.TopTx (LedgerEra era)
   -- ^ Signed transaction to evaluate
   -> TxEvaluationResult (LedgerEra era)
-evaluateTransaction systemStart epochInfo protocolParams poolIds stakeDelegDeposits drepDelegDeposits utxo tx =
+evaluateTransaction systemStart epochInfo protocolParams poolIds stakeDelegDeposits _drepDelegDeposits utxo tx =
   obtainCommonConstraints (useEra @era) $ do
     let txEvalExecutionUnits =
           evaluateTransactionExecutionUnits systemStart epochInfo protocolParams utxo tx
@@ -617,7 +617,6 @@ evaluateTransaction systemStart epochInfo protocolParams poolIds stakeDelegDepos
           L.evalBalanceTxBody
             protocolParams
             lookupDelegDeposit
-            lookupDRepDeposit
             isRegPool
             utxo
             $ txWithEvaluatedExUnits ^. L.bodyTxL
@@ -625,11 +624,6 @@ evaluateTransaction systemStart epochInfo protocolParams poolIds stakeDelegDepos
  where
   isRegPool :: Ledger.KeyHash Ledger.StakePool -> Bool
   isRegPool keyHash = Api.StakePoolKeyHash keyHash `Set.member` poolIds
-
-  lookupDRepDeposit
-    :: Ledger.Credential Ledger.DRepRole -> Maybe L.Coin
-  lookupDRepDeposit drepCred =
-    Map.lookup drepCred drepDelegDeposits
 
   lookupDelegDeposit
     :: Ledger.Credential Ledger.Staking -> Maybe L.Coin
@@ -642,6 +636,10 @@ evaluateTransaction systemStart epochInfo protocolParams poolIds stakeDelegDepos
 --
 -- Finding the (non-zero) balance of a partially constructed transaction is
 -- useful for adjusting a transaction to be fully balanced.
+-- Note: the DRep deposit map is no longer consulted. The ledger dropped that
+-- lookup from 'evalBalanceTxBody' ("we do not need to look into DRep state in
+-- order to figure out the refund"); the parameter is kept so callers do not
+-- have to change.
 evaluateTransactionBalance
   :: forall era
    . IsEra era
@@ -652,24 +650,18 @@ evaluateTransactionBalance
   -> L.UTxO (LedgerEra era)
   -> UnsignedTx (LedgerEra era)
   -> L.Value (LedgerEra era)
-evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo (UnsignedTx unsignedTx) =
+evaluateTransactionBalance pp poolids stakeDelegDeposits _drepDelegDeposits utxo (UnsignedTx unsignedTx) =
   let txbody = unsignedTx ^. L.bodyTxL
    in obtainCommonConstraints (useEra @era) $
         L.evalBalanceTxBody
           pp
           lookupDelegDeposit
-          lookupDRepDeposit
           isRegPool
           utxo
           txbody
  where
   isRegPool :: Ledger.KeyHash Ledger.StakePool -> Bool
   isRegPool kh = Api.StakePoolKeyHash kh `Set.member` poolids
-
-  lookupDRepDeposit
-    :: Ledger.Credential Ledger.DRepRole -> Maybe L.Coin
-  lookupDRepDeposit drepCred =
-    Map.lookup drepCred drepDelegDeposits
 
   lookupDelegDeposit
     :: Ledger.Credential Ledger.Staking -> Maybe L.Coin

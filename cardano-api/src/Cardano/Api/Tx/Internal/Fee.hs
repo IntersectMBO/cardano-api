@@ -766,6 +766,10 @@ extractPlutusScriptAndLanguage p =
 --
 -- Finding the (non-zero) balance of a partially constructed transaction is
 -- useful for adjusting a transaction to be fully balanced.
+-- Note: the DRep deposit map is no longer consulted. The ledger dropped that
+-- lookup from 'evalBalanceTxBody' ("we do not need to look into DRep state in
+-- order to figure out the refund"); the parameter is kept so callers do not
+-- have to change.
 evaluateTransactionBalance
   :: forall era
    . ()
@@ -777,24 +781,18 @@ evaluateTransactionBalance
   -> UTxO era
   -> TxBody era
   -> TxOutValue era
-evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits utxo (ShelleyTxBody _ txbody _ _ _ _) =
+evaluateTransactionBalance sbe pp poolids stakeDelegDeposits _drepDelegDeposits utxo (ShelleyTxBody _ txbody _ _ _ _) =
   shelleyBasedEraConstraints sbe $
     TxOutValueShelleyBased sbe $
       L.evalBalanceTxBody
         pp
         lookupDelegDeposit
-        lookupDRepDeposit
         isRegPool
         (toLedgerUTxO sbe utxo)
         txbody
  where
   isRegPool :: Ledger.KeyHash Ledger.StakePool -> Bool
   isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
-
-  lookupDRepDeposit
-    :: Ledger.Credential Ledger.DRepRole -> Maybe L.Coin
-  lookupDRepDeposit drepCred =
-    Map.lookup drepCred drepDelegDeposits
 
   lookupDelegDeposit
     :: Ledger.Credential Ledger.Staking -> Maybe L.Coin

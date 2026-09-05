@@ -61,7 +61,7 @@ renderDebugPlutusFailure dpf =
   let pwc = dpfScriptWithContext dpf
       lang = case pwc of
         Plutus.PlutusWithContext{Plutus.pwcScript = script} ->
-          either Plutus.plutusLanguage Plutus.plutusLanguage script
+          Plutus.plutusLanguage script
 
       scriptArgs = case pwc of
         Plutus.PlutusWithContext{Plutus.pwcArgs = args} ->
@@ -73,7 +73,7 @@ renderDebugPlutusFailure dpf =
       evalError = dpfEvaluationError dpf
       binaryScript = case pwc of
         Plutus.PlutusWithContext{Plutus.pwcScript = scr} ->
-          let Plutus.Plutus bytes = either id Plutus.plutusFromRunnable scr
+          let Plutus.Plutus bytes = Plutus.plutusFromRunnable scr
            in Text.decodeUtf8 . B64.encode . BSS.fromShort $ Plutus.unPlutusBinary bytes
    in Text.unlines
         [ "Script hash: " <> serializeAsHexText (Plutus.pwcScriptHash pwc)
