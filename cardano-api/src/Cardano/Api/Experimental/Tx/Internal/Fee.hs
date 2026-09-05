@@ -20,6 +20,7 @@ module Cardano.Api.Experimental.Tx.Internal.Fee
   , calcMinFeeRecursive
   , collectTxBodyScriptWitnesses
   , estimateBalancedTxBody
+  , estimateTransactionKeyWitnessCount
   , evaluateTransaction
   , TxEvaluationResult (..)
   , evaluateTransactionExecutionUnits
@@ -1767,6 +1768,7 @@ estimateTransactionKeyWitnessCount
     , txWithdrawals
     , txCertificates
     , txProposalProcedures
+    , txVotingProcedures
     } =
     fromIntegral $
       sum (map estimateTxInWitnesses txIns)
@@ -1784,6 +1786,10 @@ estimateTransactionKeyWitnessCount
         + case txProposalProcedures of
           Just (TxProposalProcedures m) ->
             OMap.size m
+          Nothing -> 0
+        + case txVotingProcedures of
+          Just (TxVotingProcedures _ voteWits) ->
+            length [() | AnyKeyWitnessPlaceholder <- Map.elems voteWits]
           Nothing -> 0
    where
     estimateTxInWitnesses :: (TxIn, AnyWitness (LedgerEra era)) -> Int

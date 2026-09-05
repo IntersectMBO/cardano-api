@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1271
+kind:
+  - bugfix
+  - compatible
+description: |
+  Fix fee estimation for transactions containing votes: `estimateTransactionKeyWitnessCount` now accounts for the key witnesses required by key-credentialed voters (key-hash DReps, constitutional committee hot keys, and SPOs), so vote-carrying transactions no longer get underestimated fees and fail with `FeeTooSmallUTxO`. `estimateTransactionKeyWitnessCount` is now also exported from `Cardano.Api.Experimental`. See [issue #722](https://github.com/IntersectMBO/cardano-api/issues/722).
