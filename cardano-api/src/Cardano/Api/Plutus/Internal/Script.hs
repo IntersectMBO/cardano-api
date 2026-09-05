@@ -1511,7 +1511,9 @@ instance
         plutusScript = PlutusScriptBinary scriptShortBs
         plutusScriptInEra = PlutusScriptInEra $ PlutusScriptSerialised scriptShortBs
 
-    case Plutus.decodePlutusRunnable v plutusScript of
+    -- 'decodePlutusRunnable' is total now; the decode result it used to return
+    -- is a lazy field of 'PlutusRunnable', so forcing it keeps this check.
+    case Plutus.plutusRunnableResult (Plutus.decodePlutusRunnable v plutusScript) of
       Left e ->
         Left $
           CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.pack . show $ pretty e)

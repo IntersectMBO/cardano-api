@@ -102,9 +102,13 @@ instance
     tryPlutusScript :: L.Script era -> Maybe (AnyScript era)
     tryPlutusScript script = do
       ps <- L.toPlutusScript script
-      L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) ->
-        AnyPlutusScript . PlutusScriptInEra
-          <$> rightToMaybe (Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus)
+      L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) -> do
+        -- 'decodePlutusRunnable' is total now; the decode result it used to
+        -- return is a lazy field of 'PlutusRunnable', so forcing it keeps a
+        -- script that does not decode out of the result.
+        let runnable = Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus
+        _ <- rightToMaybe (Plutus.plutusRunnableResult runnable)
+        pure . AnyPlutusScript $ PlutusScriptInEra runnable
 
     noParseError :: CBOR.DecoderError
     noParseError =

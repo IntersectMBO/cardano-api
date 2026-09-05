@@ -173,11 +173,15 @@ toNewPlutusScriptWitness eon w l (Old.PScript (Old.PlutusScriptSerialised script
   let protocolVersion = getVersion eon
       plutusScript = L.Plutus $ L.PlutusBinary scriptShortBs
 
-  case L.decodePlutusRunnable @(Old.ToLedgerPlutusLanguage lang) protocolVersion plutusScript of
+  -- 'decodePlutusRunnable' is total now; the decode result it used to return
+  -- is a lazy field of 'PlutusRunnable', so forcing it keeps this check.
+  let plutusScriptRunnable =
+        L.decodePlutusRunnable @(Old.ToLedgerPlutusLanguage lang) protocolVersion plutusScript
+  case L.plutusRunnableResult plutusScriptRunnable of
     Left e ->
       Left $
         CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.pack . show $ pretty e)
-    Right plutusScriptRunnable ->
+    Right{} ->
       return $
         mkPlutusScriptWitness
           eon
