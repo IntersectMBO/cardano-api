@@ -1579,17 +1579,10 @@ resolveShelleyInitialFunds (SomeHasFS hasFS) genesis = do
  where
   clearInitialFundsSource extraConfig = extraConfig{Ledger.secInitialFunds = Ledger.NoInjection}
 
+-- | Deferring to 'dijkstraGenesisDefaults' keeps this in step with what the CLI
+-- writes and with the node's fallback genesis.
 exampleDijkstraGenesis :: Ledger.DijkstraGenesis
-exampleDijkstraGenesis =
-  Ledger.DijkstraGenesis
-    { Ledger.dgUpgradePParams =
-        Ledger.UpgradeDijkstraPParams
-          { Ledger.udppMaxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
-          , Ledger.udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
-          , Ledger.udppRefScriptCostStride = knownNonZeroBounded @25600 -- 25 KiB
-          , Ledger.udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
-          }
-    }
+exampleDijkstraGenesis = dijkstraGenesisDefaults
 
 data GenesisConfigError
   = NEError !Text
