@@ -478,3 +478,23 @@ instance HasTypeProxy (L.SLanguage L.PlutusV3) where
 instance HasTypeProxy (L.SLanguage L.PlutusV4) where
   data AsType (L.SLanguage L.PlutusV4) = AsPlutusScriptV4
   proxyToAsType _ = AsPlutusScriptV4
+
+-- cardano-ledger dropped the plain-CBOR instances for 'VKey' when it moved the
+-- type to EncCBOR/DecCBOR only, but the API's key envelopes are version-free
+-- and still need the plain classes. Both sides bottom out in the same
+-- fixed-size codec, so this restores the encoding already on disk.
+instance Typeable kd => CBOR.ToCBOR (L.Keys.VKey kd) where
+  toCBOR = CBOR.toCBOR . L.Keys.unVKey
+
+instance Typeable kd => CBOR.FromCBOR (L.Keys.VKey kd) where
+  fromCBOR = L.Keys.VKey <$> CBOR.fromCBOR
+
+-- Same story for 'OCert': the plain instances went away with the cardano-binary
+-- bump, but the .opcert envelope is version-free. 'OCert' encodes no
+-- version-conditional branches, so bridging the versioned encoder at any
+-- version reproduces the removed instances byte for byte.
+instance P.Crypto c => CBOR.ToCBOR (Ledger.OCert c) where
+  toCBOR = toPlainEncoding minBound . encCBOR
+
+instance P.Crypto c => CBOR.FromCBOR (Ledger.OCert c) where
+  fromCBOR = toPlainDecoder Nothing minBound decCBOR
