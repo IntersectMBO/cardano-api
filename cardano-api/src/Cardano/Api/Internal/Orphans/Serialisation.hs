@@ -84,7 +84,7 @@ import Cardano.Ledger.Shelley.TxBody qualified as L
 import Cardano.Ledger.Shelley.TxCert qualified as L
 import Cardano.Protocol.Crypto qualified as P
 import Cardano.Protocol.TPraos.API qualified as Ledger
-import Cardano.Protocol.TPraos.BHeader (HashHeader (..))
+import Cardano.Protocol.TPraos.BlockHeader (HashHeader (..))
 import Cardano.Protocol.TPraos.OCert qualified as Ledger
 import Cardano.Protocol.TPraos.Rules.Prtcl qualified as L
 import Cardano.Protocol.TPraos.Rules.Prtcl qualified as Ledger

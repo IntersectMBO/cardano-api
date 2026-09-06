@@ -150,6 +150,7 @@ library
     cardano-ledger-dijkstra >=0.1,
     cardano-ledger-mary >=1.8,
     cardano-ledger-shelley >=1.16,
+    cardano-protocol >= 0.1,
     cardano-protocol-tpraos >=1.4,
     cardano-slotting >=0.2.0.0,
     cardano-strict-containers >=0.1,

@@ -160,15 +160,12 @@ import Cardano.Ledger.BaseTypes
   ( Globals (..)
   , Nonce
   , ProtVer (..)
-  , boundRational
-  , knownNonZeroBounded
   , natVersion
   , (⭒)
   )
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
 import Cardano.Ledger.Dijkstra.Tx qualified as Ledger
 import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Keys qualified as SL
@@ -180,8 +177,8 @@ import Cardano.Ledger.Slot qualified as Ledger
 import Cardano.Ledger.State qualified as SL
 import Cardano.Protocol.Crypto qualified as Crypto
 import Cardano.Protocol.TPraos.API qualified as TPraos
-import Cardano.Protocol.TPraos.BHeader (checkLeaderNatValue)
-import Cardano.Protocol.TPraos.BHeader qualified as TPraos
+import Cardano.Protocol.TPraos.BlockHeader (checkLeaderNatValue)
+import Cardano.Protocol.TPraos.BlockHeader qualified as TPraos
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.EpochInfo.API qualified as Slot
 import Cardano.Slotting.Slot (WithOrigin (At, Origin))
