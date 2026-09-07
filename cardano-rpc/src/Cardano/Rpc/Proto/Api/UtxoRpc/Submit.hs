@@ -12,12 +12,10 @@ import Network.GRPC.Common.Protobuf
 
 import Proto.Utxorpc.V1beta.Submit.Submit
 import Proto.Utxorpc.V1beta.Submit.Submit_Fields hiding
-  ( fieldMask
-  , maybe'chain
+  ( maybe'chain
   , maybe'fieldMask
   , maybe'parsedState
   , maybe'predicate
-  , predicate
   , vec'allOf
   , vec'anyOf
   , vec'items

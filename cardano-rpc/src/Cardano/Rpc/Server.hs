@@ -36,6 +36,7 @@ import Cardano.Rpc.Server.Internal.Node
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.Tracing
 import Cardano.Rpc.Server.Internal.UtxoRpc.Eval
+import Cardano.Rpc.Server.Internal.UtxoRpc.Mempool
 import Cardano.Rpc.Server.Internal.UtxoRpc.Query
 import Cardano.Rpc.Server.Internal.UtxoRpc.Submit
 import Cardano.Rpc.Server.Internal.UtxoRpc.Sync
@@ -91,7 +92,7 @@ methodsUtxoRpcSubmit =
     . Method (mkNonStreaming $ wrapInSpan TraceRpcReadMempoolSpan . readMempoolMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcSubmitSpan . submitTxMethod)
     . UnsupportedMethod -- waitForTx
-    . UnsupportedMethod -- watchMempool
+    . Method (mkServerStreaming $ \req -> wrapInSpan TraceRpcWatchMempoolSpan . watchMempoolMethod req)
     $ NoMoreMethods
 
 -- | gRPC method table for the UTxO RPC @SyncService@.
