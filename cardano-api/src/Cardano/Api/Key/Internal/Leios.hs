@@ -203,7 +203,7 @@ blsPossessionProof hexBs =
 -- honest participants' keys during aggregation (a rogue key attack).
 createBlsPossessionProof :: SigningKey BlsKey -> BlsPossessionProof
 createBlsPossessionProof (BlsSigningKey sk) =
-  BlsPossessionProof (Crypto.createPossessionProofDSIGN Crypto.minSigPoPDST sk)
+  BlsPossessionProof (Crypto.createPossessionProofDSIGN sk)
 
 instance HasTypeProxy BlsPossessionProof where
   data AsType BlsPossessionProof = AsBlsPossessionProof
