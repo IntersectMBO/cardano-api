@@ -17,6 +17,7 @@ module Cardano.Rpc.Server.NodeKernelAccess
   , GenesisBundle (..)
   , mkNodeKernelAccess
   , fetchBlock
+  , readMempoolTxs
   , grabNodeKernelAccess
   , ChainChange (..)
   , ChainFollower (..)
@@ -34,6 +35,11 @@ import Cardano.Rpc.Server.NodeKernelAccess.Internal.Type qualified as Type
 
 import Ouroboros.Consensus.Cardano.Block (CardanoEras)
 import Ouroboros.Consensus.HardFork.History qualified as History
+import Ouroboros.Consensus.Ledger.SupportsMempool qualified as Consensus (txForgetValidated)
+import Ouroboros.Consensus.Mempool.API qualified as Consensus
+  ( MempoolSnapshot (snapshotTxs)
+  , getSnapshot
+  )
 
 import RIO (MonadUnliftIO, atomically, bracket, throwIO, withRunInIO)
 
@@ -70,6 +76,7 @@ mkNodeKernelAccess tracer shelleyGenesisHash shelleyGenesisFile blockType kernel
       Just
         Type.NodeKernelAccess
           { Type.chainDb = chainDb
+          , Type.mempool = Consensus.getMempool kernel
           , Type.systemStart = Consensus.nodeSystemStart topLevelConfig
           , Type.readHardForkSummary = readHardForkSummary'
           , Type.securityParam = Consensus.configSecurityParam topLevelConfig
@@ -220,6 +227,21 @@ fetchBlock Type.NodeKernelAccess{Type.chainDb = chainDb} slot (HeaderHash shortH
   let point = Consensus.RealPoint slot (Consensus.OneEraHash shortHash)
       component = (,) <$> fmap BSL.toStrict Consensus.GetRawBlock <*> fmap fromConsensusBlock Consensus.GetBlock
   liftIO $ Consensus.getBlockComponent chainDb component point
+
+-- | Read the current mempool contents as a point-in-time snapshot:
+-- transactions added or removed after the read are not reflected.
+-- Ticket numbers and mempool capacity accounting are dropped here, since
+-- 'readMempoolTxs' only serves the one-shot @ReadMempool@ method; a
+-- streaming consumer needing incremental delivery reads the mempool
+-- directly through the 'Type.mempool' field instead.
+readMempoolTxs
+  :: MonadIO m
+  => Type.NodeKernelAccess
+  -> m [Consensus.GenTx (Consensus.CardanoBlock Consensus.StandardCrypto)]
+readMempoolTxs Type.NodeKernelAccess{Type.mempool = mempool} = liftIO $ do
+  snapshot <- atomically $ Consensus.getSnapshot mempool
+  pure
+    [Consensus.txForgetValidated tx | (tx, _ticketNo, _txMeasure) <- Consensus.snapshotTxs snapshot]
 
 -- | A single instruction produced by a chain follower.
 --
