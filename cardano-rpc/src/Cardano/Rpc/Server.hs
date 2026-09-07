@@ -88,7 +88,7 @@ methodsUtxoRpcSubmit
   => Methods m (ProtobufMethodsOf UtxoRpc.SubmitService)
 methodsUtxoRpcSubmit =
   Method (mkNonStreaming $ wrapInSpan TraceRpcEvalTxSpan . evalTxMethod)
-    . UnsupportedMethod -- readMempool
+    . Method (mkNonStreaming $ wrapInSpan TraceRpcReadMempoolSpan . readMempoolMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcSubmitSpan . submitTxMethod)
     . UnsupportedMethod -- waitForTx
     . UnsupportedMethod -- watchMempool

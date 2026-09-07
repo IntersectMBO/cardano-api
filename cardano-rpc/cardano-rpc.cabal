@@ -74,6 +74,7 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.EraSummary
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Genesis
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
@@ -223,6 +224,7 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.FollowTipStream
     Test.Cardano.Rpc.Genesis.Fixture
     Test.Cardano.Rpc.Genesis.Property
+    Test.Cardano.Rpc.Mempool
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters
