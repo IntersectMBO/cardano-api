@@ -1,8 +1,8 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TypeFamilies #-}
-
 -- | Operational certificates
+--
+-- The certificate types and their decoding accessors now live in the
+-- cardano-keys package; re-exported here for compatibility, together with the
+-- issuing function this API adds on top of them.
 module Cardano.Api.Certificate.Internal.OperationalCertificate
   ( OperationalCertificate (..)
   , OperationalCertificateIssueCounter (..)
@@ -18,77 +18,19 @@ module Cardano.Api.Certificate.Internal.OperationalCertificate
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Byron.Internal.Key
 import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Internal.Orphans ()
 import Cardano.Api.Key.Internal
 import Cardano.Api.Key.Internal.Class
 import Cardano.Api.Key.Internal.Praos
-import Cardano.Api.ProtocolParameters
-import Cardano.Api.Serialise.Cbor
-import Cardano.Api.Serialise.TextEnvelope.Internal
 import Cardano.Api.Tx.Internal.Sign
 
 import Cardano.Crypto.DSIGN qualified as DSIGN
+import Cardano.Keys.OperationalCertificate
 import Cardano.Ledger.Keys qualified as Shelley
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.OCert qualified as Shelley
 
-import Data.Word
 import GHC.Stack (HasCallStack)
-
--- ----------------------------------------------------------------------------
--- Operational certificates
---
-
-data OperationalCertificate
-  = OperationalCertificate
-      !(Shelley.OCert StandardCrypto)
-      !(VerificationKey StakePoolKey)
-  deriving (Eq, Show)
-  deriving anyclass SerialiseAsCBOR
-
-data OperationalCertificateIssueCounter
-  = OperationalCertificateIssueCounter
-  { opCertIssueCount :: !Word64
-  , opCertIssueColdKey :: !(VerificationKey StakePoolKey) -- For consistency checking
-  }
-  deriving (Eq, Show)
-  deriving anyclass SerialiseAsCBOR
-
-instance ToCBOR OperationalCertificate where
-  toCBOR (OperationalCertificate ocert vkey) =
-    toCBOR (ocert, vkey)
-
-instance FromCBOR OperationalCertificate where
-  fromCBOR = do
-    (ocert, vkey) <- fromCBOR
-    return (OperationalCertificate ocert vkey)
-
-instance ToCBOR OperationalCertificateIssueCounter where
-  toCBOR (OperationalCertificateIssueCounter counter vkey) =
-    toCBOR (counter, vkey)
-
-instance FromCBOR OperationalCertificateIssueCounter where
-  fromCBOR = do
-    (counter, vkey) <- fromCBOR
-    return (OperationalCertificateIssueCounter counter vkey)
-
-instance HasTypeProxy OperationalCertificate where
-  data AsType OperationalCertificate = AsOperationalCertificate
-  proxyToAsType _ = AsOperationalCertificate
-
-instance HasTypeProxy OperationalCertificateIssueCounter where
-  data AsType OperationalCertificateIssueCounter = AsOperationalCertificateIssueCounter
-  proxyToAsType _ = AsOperationalCertificateIssueCounter
-
-instance HasTextEnvelope OperationalCertificate where
-  textEnvelopeType _ = "NodeOperationalCertificate"
-
-instance HasTextEnvelope OperationalCertificateIssueCounter where
-  textEnvelopeType _ = "NodeOperationalCertificateIssueCounter"
 
 data OperationalCertIssueError
   = -- | The stake pool verification key expected for the
@@ -188,12 +130,3 @@ issueOperationalCertificate
             ShelleyExtendedSigningKey poolExtendedSKey
         Right (GenesisDelegateExtendedSigningKey delegSKey) ->
           ShelleyExtendedSigningKey delegSKey
-
-getHotKey :: OperationalCertificate -> VerificationKey KesKey
-getHotKey (OperationalCertificate cert _) = KesVerificationKey $ Shelley.ocertVkHot cert
-
-getKesPeriod :: OperationalCertificate -> Word
-getKesPeriod (OperationalCertificate cert _) = Shelley.unKESPeriod $ Shelley.ocertKESPeriod cert
-
-getOpCertCount :: OperationalCertificate -> Word64
-getOpCertCount (OperationalCertificate cert _) = Shelley.ocertN cert
