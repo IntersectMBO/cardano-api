@@ -6,6 +6,7 @@
 module Cardano.Rpc.Server.Internal.UtxoRpc.Mempool
   ( watchMempoolMethod
   , watchMempoolStream
+  , txInMempoolMaskTable
   )
 where
 
@@ -99,6 +100,18 @@ watchMempoolStream readSnapshot nextSnapshot predicate fieldMaskPaths send = do
           _ -> snd (last newEntries)
     nextSnapshot snapshot >>= go lastSeenTicket'
 
+-- | Field-mask table for 'U5c.TxInMempool': proto field name paired with a
+-- copier for that field. A tripwire test asserts the names stay in sync
+-- with the generated proto descriptors.
+txInMempoolMaskTable
+  :: [(Text, Proto U5c.TxInMempool -> Proto U5c.TxInMempool -> Proto U5c.TxInMempool)]
+txInMempoolMaskTable =
+  [ ("ref", \tx -> U5c.ref .~ tx ^. U5c.ref)
+  , ("native_bytes", \tx -> U5c.nativeBytes .~ tx ^. U5c.nativeBytes)
+  , ("stage", \tx -> U5c.stage .~ tx ^. U5c.stage)
+  , ("cardano", \tx -> U5c.cardano .~ tx ^. U5c.cardano)
+  ]
+
 -- | Minimal field-mask pruning for 'U5c.TxInMempool': keeps only the
 -- top-level fields named in @paths@, or the whole message when @paths@ is
 -- empty (matching an absent field mask). There is no established
@@ -110,11 +123,8 @@ watchMempoolStream readSnapshot nextSnapshot predicate fieldMaskPaths send = do
 pruneTxInMempool :: [Text] -> Proto U5c.TxInMempool -> Proto U5c.TxInMempool
 pruneTxInMempool paths tx
   | null paths = tx
-  | otherwise =
-      defMessage
-        & keep "ref" (U5c.ref .~ tx ^. U5c.ref)
-        & keep "native_bytes" (U5c.nativeBytes .~ tx ^. U5c.nativeBytes)
-        & keep "stage" (U5c.stage .~ tx ^. U5c.stage)
-        & keep "cardano" (U5c.cardano .~ tx ^. U5c.cardano)
+  | otherwise = foldl' apply defMessage txInMempoolMaskTable
  where
-  keep name setter = if name `elem` paths then setter else id
+  apply acc (name, copier)
+    | name `elem` paths = copier tx acc
+    | otherwise = acc

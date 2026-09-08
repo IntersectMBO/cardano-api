@@ -13,7 +13,10 @@ module Test.Cardano.Rpc.WatchMempoolStream where
 
 import Cardano.Api
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as U5c
-import Cardano.Rpc.Server.Internal.UtxoRpc.Mempool (watchMempoolStream)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Mempool
+  ( txInMempoolMaskTable
+  , watchMempoolStream
+  )
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool (txInModeToTxInMempool)
 import Cardano.Rpc.Server.NodeKernelAccess (MempoolWatchSnapshot (..))
 
@@ -21,7 +24,11 @@ import Ouroboros.Consensus.Mempool.API qualified as Consensus (TicketNo)
 
 import RIO
 
+import Data.List (sort)
+import Data.Map qualified as Map
 import Data.ProtoLens (defMessage)
+import Data.Text qualified as Text
+import Data.ProtoLens.Message (fieldsByTextFormatName)
 import GHC.Stack (withFrozenCallStack)
 import Network.GRPC.Spec (NextElem (..), Proto (..))
 
@@ -77,6 +84,16 @@ hprop_watch_mempool_stream_prunes_by_field_mask = H.property $ do
   H.note_ "Only 'stage' survives pruning; 'ref'/'native_bytes'/'cardano' are back to their defaults"
   let expectedPruned = defMessage & U5c.stage .~ Proto U5c.STAGE_MEMPOOL
   sent === [NextElem (defMessage & U5c.tx .~ expectedPruned)]
+
+-- | Field names in 'txInMempoolMaskTable' must match the proto descriptor
+-- names for 'U5c.TxInMempool', and the count must remain in sync (a new
+-- proto field becomes a compile error, not a silent omission).
+hprop_tx_in_mempool_mask_table_matches_proto :: Property
+hprop_tx_in_mempool_mask_table_matches_proto = H.propertyOnce $ do
+  let descriptorNames = Map.keys $ fieldsByTextFormatName @U5c.TxInMempool
+      tableNames = Text.unpack . fst <$> txInMempoolMaskTable
+  length tableNames === length descriptorNames
+  sort tableNames === sort descriptorNames
 
 -- | A removal-only transition (the ticket list shrinks, nothing new appears
 -- after the last seen ticket) and a slot-only transition (the ticket list
