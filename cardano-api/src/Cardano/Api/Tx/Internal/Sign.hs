@@ -284,8 +284,8 @@ getTxBody (ShelleyTx sbe tx) =
     )
 
 instance IsShelleyBasedEra era => HasTextEnvelope (Tx era) where
-  textEnvelopeType _ =
-    case shelleyBasedEra :: ShelleyBasedEra era of
+  textEnvelopeTypes _ =
+    pure $ case shelleyBasedEra :: ShelleyBasedEra era of
       ShelleyBasedEraShelley -> "TxSignedShelley"
       ShelleyBasedEraAllegra -> "Tx AllegraEra"
       ShelleyBasedEraMary -> "Tx MaryEra"
@@ -549,8 +549,8 @@ instance IsShelleyBasedEra era => SerialiseAsCBOR (TxBody era) where
         (deserialiseShelleyBasedTx (ShelleyTx shelleyBasedEra) bs)
 
 instance IsShelleyBasedEra era => HasTextEnvelope (TxBody era) where
-  textEnvelopeType _ =
-    case shelleyBasedEra :: ShelleyBasedEra era of
+  textEnvelopeTypes _ =
+    pure $ case shelleyBasedEra :: ShelleyBasedEra era of
       ShelleyBasedEraShelley -> "TxUnsignedShelley"
       ShelleyBasedEraAllegra -> "TxBodyAllegra"
       ShelleyBasedEraMary -> "TxBodyMary"
@@ -835,8 +835,8 @@ decodeShelleyBasedWitness sbe bs =
             (fromIntegral t)
 
 instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
-  textEnvelopeType _ =
-    case cardanoEra :: CardanoEra era of
+  textEnvelopeTypes _ =
+    pure $ case cardanoEra :: CardanoEra era of
       ByronEra -> "TxWitnessByron"
       ShelleyEra -> "TxWitness ShelleyEra"
       AllegraEra -> "TxWitness AllegraEra"
