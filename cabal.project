@@ -52,6 +52,14 @@ constraints:
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8
 
+-- Temporary, until cardano-keys has its first CHaP release.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-keys
+  tag: 0dc3366fe1aa31497826edd55d9ba95e96dab289
+  subdir: cardano-keys
+  --sha256: sha256-O/8TIki4TvxcuZylyoxDqLUSJB6Ii1X4DbwGAFSzp8I=
+
 
 -- WASM compilation specific
 
