@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -23,7 +22,6 @@ import Cardano.Ledger.Alonzo.PParams qualified as Ledger
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.BaseTypes qualified as Ledger
-import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.PParams qualified as Ledger
@@ -40,9 +38,7 @@ import Ouroboros.Consensus.HardFork.History.Summary
   )
 import PlutusLedgerApi.Common qualified as P
 
-import Codec.Binary.Bech32 qualified as Bech32
 import Data.Bits (Bits)
-import Data.Data (Data)
 import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -55,16 +51,6 @@ import GHC.Stack (prettyCallStack)
 import Network.Mux qualified as Mux
 import Prettyprinter (indent)
 import Text.Parsec.Error qualified as P
-
-deriving instance Data DecoderError
-
-deriving instance Data CBOR.DeserialiseFailure
-
-deriving instance Data Bech32.DecodingError
-
-deriving instance Data Bech32.CharPosition
-
-deriving instance Data T.UnicodeException
 
 -- | These instances originally existed on the Lovelace type.
 -- As the Lovelace type is deleted and we use L.Coin instead,

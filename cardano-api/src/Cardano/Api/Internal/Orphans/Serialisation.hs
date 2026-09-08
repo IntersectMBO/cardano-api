@@ -7,7 +7,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans -Wno-unused-imports #-}
@@ -31,9 +30,7 @@ import Cardano.Api.Pretty.Internal.ShowOf
 import Cardano.Api.Serialise.Raw
 import Cardano.Api.Tx.Internal.TxIn
 
-import Cardano.Binary (DecoderError (..))
 import Cardano.Binary qualified as CBOR
-import Cardano.Binary.FixedSizeCodec qualified as Crypto
 import Cardano.Chain.Byron.API qualified as L
 import Cardano.Chain.Common qualified as L
 import Cardano.Chain.Delegation.Validation.Scheduling qualified as L.Scheduling
@@ -60,7 +57,6 @@ import Cardano.Ledger.Babbage.Rules qualified as L
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.BaseTypes qualified as Ledger
-import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Plain qualified as Plain
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway qualified as Conway (ApplyTxError (..))
@@ -85,7 +81,6 @@ import Cardano.Ledger.Shelley.TxCert qualified as L
 import Cardano.Protocol.Crypto qualified as P
 import Cardano.Protocol.TPraos.API qualified as Ledger
 import Cardano.Protocol.TPraos.BlockHeader (HashHeader (..))
-import Cardano.Protocol.TPraos.OCert qualified as Ledger
 import Cardano.Protocol.TPraos.Rules.Prtcl qualified as L
 import Cardano.Protocol.TPraos.Rules.Prtcl qualified as Ledger
 import Cardano.Protocol.TPraos.Rules.Tickn qualified as Ledger
@@ -103,8 +98,6 @@ import Ouroboros.Network.Protocol.LocalTxSubmission.Type qualified as Net.Tx
 import PlutusLedgerApi.Common qualified as P
 import PlutusLedgerApi.V2 qualified as V2
 
-import Codec.Binary.Bech32 qualified as Bech32
-import Codec.CBOR.Read qualified as CBOR
 import Data.Aeson
   ( KeyValue ((.=))
   , ToJSON (..)
@@ -135,7 +128,6 @@ import Data.Monoid
 import Data.Text qualified as T
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
-import Data.Typeable (Typeable)
 import Data.Word (Word16)
 import GHC.Exts (IsList (..), IsString (..))
 import GHC.Generics
@@ -478,16 +470,3 @@ instance HasTypeProxy (L.SLanguage L.PlutusV3) where
 instance HasTypeProxy (L.SLanguage L.PlutusV4) where
   data AsType (L.SLanguage L.PlutusV4) = AsPlutusScriptV4
   proxyToAsType _ = AsPlutusScriptV4
-
--- TODO: drop these and use EncCBOR/DecCBOR
-instance ToCBOR (Ledger.OCert P.StandardCrypto) where
-  toCBOR = L.toEraCBOR @L.ShelleyEra
-
-instance FromCBOR (Ledger.OCert P.StandardCrypto) where
-  fromCBOR = L.fromEraCBOR @L.ShelleyEra
-
-instance Typeable kd => ToCBOR (L.Keys.VKey kd) where
-  toCBOR (L.Keys.VKey vk) = Crypto.encodeFixedSized vk
-
-instance Typeable kd => FromCBOR (L.Keys.VKey kd) where
-  fromCBOR = L.Keys.VKey <$> Crypto.decodeFixedSized
