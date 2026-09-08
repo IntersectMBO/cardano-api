@@ -113,7 +113,7 @@ data GovernancePoll = GovernancePoll
   deriving (Show, Eq)
 
 instance HasTextEnvelope GovernancePoll where
-  textEnvelopeType _ = "GovernancePoll"
+  textEnvelopeTypes _ = pure "GovernancePoll"
 
 instance HasTypeProxy GovernancePoll where
   data AsType GovernancePoll = AsGovernancePoll

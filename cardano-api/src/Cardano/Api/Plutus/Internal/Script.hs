@@ -507,8 +507,8 @@ removePlutusScriptDoubleEncoding plutusScriptBytes =
         Right{} -> unwrapped
 
 instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
-  textEnvelopeType _ =
-    case scriptLanguage :: ScriptLanguage lang of
+  textEnvelopeTypes _ =
+    pure $ case scriptLanguage :: ScriptLanguage lang of
       SimpleScriptLanguage -> "SimpleScript"
       PlutusScriptLanguage PlutusScriptV1 -> "PlutusScriptV1"
       PlutusScriptLanguage PlutusScriptV2 -> "PlutusScriptV2"
@@ -1129,8 +1129,8 @@ instance HasTypeProxy lang => SerialiseAsRawBytes (PlutusScript lang) where
       deserialiseFromCBOR asType' bs
 
 instance IsPlutusScriptLanguage lang => HasTextEnvelope (PlutusScript lang) where
-  textEnvelopeType _ =
-    case plutusScriptVersion :: PlutusScriptVersion lang of
+  textEnvelopeTypes _ =
+    pure $ case plutusScriptVersion :: PlutusScriptVersion lang of
       PlutusScriptV1 -> "PlutusScriptV1"
       PlutusScriptV2 -> "PlutusScriptV2"
       PlutusScriptV3 -> "PlutusScriptV3"
