@@ -46,9 +46,8 @@ import Network.GRPC.Spec
 -- follower ('withFollower', opened at stream start and positioned at the
 -- current tip) that reports @STAGE_CONFIRMED@ when a ref appears in an
 -- applied block. The stream closes once every ref has reached
--- @STAGE_CONFIRMED@; blocking indefinitely between events is safe here (see
--- @Notes@ in @docs/node-kernel-access/10-mempool-methods.md@: grapesy runs
--- with the http2 timeout manager disabled).
+-- @STAGE_CONFIRMED@; blocking indefinitely between events is safe here
+-- (grapesy runs with the http2 timeout manager disabled).
 --
 -- __Race contract:__ a transaction that reaches the chain between
 -- submission and this call is invisible - it is no longer in the mempool
