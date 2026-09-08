@@ -71,7 +71,7 @@ methodsUtxoRpc
   => Methods m (ProtobufMethodsOf UtxoRpc.QueryService)
 methodsUtxoRpc =
   UnsupportedMethod -- readData
-    . UnsupportedMethod -- readEraSummary
+    . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadEraSummarySpan . readEraSummaryMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadGenesisSpan . readGenesisMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryParamsSpan . readParamsMethod)
     . UnsupportedMethod -- readState
