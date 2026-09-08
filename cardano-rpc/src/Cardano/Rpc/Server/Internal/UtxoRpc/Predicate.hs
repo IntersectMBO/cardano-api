@@ -19,6 +19,11 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
   , matchesAssetPatternProto
   , matchesCertificatePattern
   , credentialBytes
+  , CertificateCredentials (..)
+  , certificateCredentials
+  , certificateStakeCredentials
+  , certificatePoolKeyHashes
+  , certificateDRepBytes
   )
 where
 
@@ -37,7 +42,7 @@ import Data.ByteString qualified as BS
 import Data.ProtoLens (defMessage)
 import Data.Set qualified as Set
 import GHC.IsList
-import Network.GRPC.Spec (Proto)
+import Network.GRPC.Spec (Proto (..))
 
 -- | Check if a UTxO entry matches a 'UtxoPredicate'.
 -- All present fields are combined with AND logic.
@@ -326,10 +331,17 @@ matchesCertificatePattern pat cert =
     && all (matchesStakeDelegationPattern cert) (pat ^. UtxoRpc.maybe'stakeDelegation)
     && all (matchesPoolRegistrationPattern cert) (pat ^. UtxoRpc.maybe'poolRegistration)
     && all (matchesPoolRetirementPattern cert) (pat ^. UtxoRpc.maybe'poolRetirement)
-    && all (matchesAnyStakeCredential cert) (nonEmpty $ pat ^. UtxoRpc.anyStakeCredential)
-    && all (matchesAnyPoolKeyHash cert) (nonEmpty $ pat ^. UtxoRpc.anyPoolKeyhash)
-    && all (matchesAnyDRep cert) (nonEmpty $ pat ^. UtxoRpc.anyDrep)
+    && all
+      (matchesAnyStakeCredential (certStakeCredentials credentials))
+      (nonEmpty $ pat ^. UtxoRpc.anyStakeCredential)
+    && all
+      (matchesAnyPoolKeyHash (certPoolKeyHashes credentials))
+      (nonEmpty $ pat ^. UtxoRpc.anyPoolKeyhash)
+    && all (matchesAnyDRep (certDRepBytes credentials)) (nonEmpty $ pat ^. UtxoRpc.anyDrep)
  where
+  -- classified once, then read for all three any_* checks below
+  credentials = certificateCredentials cert
+
   -- these three fields are oneof branches: empty means "this branch isn't set"
   nonEmpty bytes = if BS.null bytes then Nothing else Just bytes
 
@@ -362,68 +374,111 @@ matchesCertificatePattern pat cert =
 credentialBytes :: Proto UtxoRpc.StakeCredential -> ByteString
 credentialBytes cred = fromMaybe (cred ^. UtxoRpc.scriptHash) (cred ^. UtxoRpc.maybe'addrKeyHash)
 
--- | Every stake-shaped credential embedded in a certificate, regardless of cert
--- type: stake (de)registration\/delegation, the Conway reg\/unreg\/vote-deleg
--- family, committee cold\/hot keys and the DRep registration family.
--- Excludes 'MirCert', whose targets are reward-adjustment recipients rather
--- than a credential the certificate is about.
+-- | The addr-key\/script hash bytes of a 'DRep' vote target, or 'Nothing' for
+-- an abstain\/no-confidence vote (which carries no hash).
+voteDrepBytes :: Proto UtxoRpc.DRep -> Maybe ByteString
+voteDrepBytes drep = drep ^. UtxoRpc.maybe'addrKeyHash <|> drep ^. UtxoRpc.maybe'scriptHash
+
+-- | Credentials a certificate is about, classified once per oneof variant.
+-- Exhaustive match, no wildcard: a new certificate variant in the proto is a
+-- compile error here, not a silently unmatched cert.
+data CertificateCredentials = CertificateCredentials
+  { certStakeCredentials :: [Proto UtxoRpc.StakeCredential]
+  , certPoolKeyHashes :: [ByteString]
+  , certDRepBytes :: [ByteString]
+  }
+
+certificateCredentials :: Proto UtxoRpc.Certificate -> CertificateCredentials
+certificateCredentials cert =
+  case cert ^. UtxoRpc.maybe'certificate of
+    Nothing -> CertificateCredentials [] [] []
+    Just (Proto variant) -> case variant of
+      UtxoRpc.Certificate'StakeRegistration cred ->
+        CertificateCredentials [Proto cred] [] []
+      UtxoRpc.Certificate'StakeDeregistration cred ->
+        CertificateCredentials [Proto cred] [] []
+      UtxoRpc.Certificate'StakeDelegation delegCert ->
+        CertificateCredentials
+          [Proto delegCert ^. UtxoRpc.stakeCredential]
+          [Proto delegCert ^. UtxoRpc.poolKeyhash]
+          []
+      -- a 'PoolRegistrationCert' only carries one key hash ('operator'); the
+      -- owners are deliberately excluded, matching 'matchesPoolRegistrationPattern'
+      UtxoRpc.Certificate'PoolRegistration regCert ->
+        CertificateCredentials [] [Proto regCert ^. UtxoRpc.operator] []
+      UtxoRpc.Certificate'PoolRetirement retireCert ->
+        CertificateCredentials [] [Proto retireCert ^. UtxoRpc.poolKeyhash] []
+      -- delegates genesis keys; carries no stake\/pool\/drep credential
+      UtxoRpc.Certificate'GenesisKeyDelegation _ ->
+        CertificateCredentials [] [] []
+      -- targets are reward-adjustment recipients, not a subject credential
+      UtxoRpc.Certificate'MirCert _ ->
+        CertificateCredentials [] [] []
+      UtxoRpc.Certificate'RegCert regCert ->
+        CertificateCredentials [Proto regCert ^. UtxoRpc.stakeCredential] [] []
+      UtxoRpc.Certificate'UnregCert unregCert ->
+        CertificateCredentials [Proto unregCert ^. UtxoRpc.stakeCredential] [] []
+      UtxoRpc.Certificate'VoteDelegCert voteDelegCert ->
+        CertificateCredentials
+          [Proto voteDelegCert ^. UtxoRpc.stakeCredential]
+          []
+          (maybeToList . voteDrepBytes $ Proto voteDelegCert ^. UtxoRpc.drep)
+      UtxoRpc.Certificate'StakeVoteDelegCert stakeVoteDelegCert ->
+        CertificateCredentials
+          [Proto stakeVoteDelegCert ^. UtxoRpc.stakeCredential]
+          [Proto stakeVoteDelegCert ^. UtxoRpc.poolKeyhash]
+          (maybeToList . voteDrepBytes $ Proto stakeVoteDelegCert ^. UtxoRpc.drep)
+      UtxoRpc.Certificate'StakeRegDelegCert stakeRegDelegCert ->
+        CertificateCredentials
+          [Proto stakeRegDelegCert ^. UtxoRpc.stakeCredential]
+          [Proto stakeRegDelegCert ^. UtxoRpc.poolKeyhash]
+          []
+      UtxoRpc.Certificate'VoteRegDelegCert voteRegDelegCert ->
+        CertificateCredentials
+          [Proto voteRegDelegCert ^. UtxoRpc.stakeCredential]
+          []
+          (maybeToList . voteDrepBytes $ Proto voteRegDelegCert ^. UtxoRpc.drep)
+      UtxoRpc.Certificate'StakeVoteRegDelegCert stakeVoteRegDelegCert ->
+        CertificateCredentials
+          [Proto stakeVoteRegDelegCert ^. UtxoRpc.stakeCredential]
+          [Proto stakeVoteRegDelegCert ^. UtxoRpc.poolKeyhash]
+          (maybeToList . voteDrepBytes $ Proto stakeVoteRegDelegCert ^. UtxoRpc.drep)
+      UtxoRpc.Certificate'AuthCommitteeHotCert authCert ->
+        CertificateCredentials
+          [ Proto authCert ^. UtxoRpc.committeeColdCredential
+          , Proto authCert ^. UtxoRpc.committeeHotCredential
+          ]
+          []
+          []
+      UtxoRpc.Certificate'ResignCommitteeColdCert resignCert ->
+        CertificateCredentials [Proto resignCert ^. UtxoRpc.committeeColdCredential] [] []
+      UtxoRpc.Certificate'RegDrepCert regDrepCert ->
+        let drepCredential = Proto regDrepCert ^. UtxoRpc.drepCredential
+         in CertificateCredentials [drepCredential] [] [credentialBytes drepCredential]
+      UtxoRpc.Certificate'UnregDrepCert unregDrepCert ->
+        let drepCredential = Proto unregDrepCert ^. UtxoRpc.drepCredential
+         in CertificateCredentials [drepCredential] [] [credentialBytes drepCredential]
+      UtxoRpc.Certificate'UpdateDrepCert updateDrepCert ->
+        let drepCredential = Proto updateDrepCert ^. UtxoRpc.drepCredential
+         in CertificateCredentials [drepCredential] [] [credentialBytes drepCredential]
+
+-- | Every stake-shaped credential embedded in a certificate; see 'certificateCredentials'.
 certificateStakeCredentials :: Proto UtxoRpc.Certificate -> [Proto UtxoRpc.StakeCredential]
-certificateStakeCredentials cert =
-  catMaybes
-    [ cert ^. UtxoRpc.maybe'stakeRegistration
-    , cert ^. UtxoRpc.maybe'stakeDeregistration
-    , (^. UtxoRpc.stakeCredential) <$> cert ^. UtxoRpc.maybe'stakeDelegation
-    , (^. UtxoRpc.stakeCredential) <$> cert ^. UtxoRpc.maybe'regCert
-    , (^. UtxoRpc.stakeCredential) <$> cert ^. UtxoRpc.maybe'unregCert
-    , (^. UtxoRpc.stakeCredential) <$> cert ^. UtxoRpc.maybe'voteDelegCert
-    , (^. UtxoRpc.stakeCredential) <$> cert ^. UtxoRpc.maybe'stakeVoteDelegCert
-    , (^. UtxoRpc.stakeCredential) <$> cert ^. UtxoRpc.maybe'stakeRegDelegCert
-    , (^. UtxoRpc.stakeCredential) <$> cert ^. UtxoRpc.maybe'voteRegDelegCert
-    , (^. UtxoRpc.stakeCredential) <$> cert ^. UtxoRpc.maybe'stakeVoteRegDelegCert
-    , (^. UtxoRpc.committeeColdCredential) <$> cert ^. UtxoRpc.maybe'authCommitteeHotCert
-    , (^. UtxoRpc.committeeHotCredential) <$> cert ^. UtxoRpc.maybe'authCommitteeHotCert
-    , (^. UtxoRpc.committeeColdCredential) <$> cert ^. UtxoRpc.maybe'resignCommitteeColdCert
-    , (^. UtxoRpc.drepCredential) <$> cert ^. UtxoRpc.maybe'regDrepCert
-    , (^. UtxoRpc.drepCredential) <$> cert ^. UtxoRpc.maybe'unregDrepCert
-    , (^. UtxoRpc.drepCredential) <$> cert ^. UtxoRpc.maybe'updateDrepCert
-    ]
+certificateStakeCredentials = certStakeCredentials . certificateCredentials
 
-matchesAnyStakeCredential :: Proto UtxoRpc.Certificate -> ByteString -> Bool
-matchesAnyStakeCredential cert bytes = any ((== bytes) . credentialBytes) (certificateStakeCredentials cert)
+matchesAnyStakeCredential :: [Proto UtxoRpc.StakeCredential] -> ByteString -> Bool
+matchesAnyStakeCredential stakeCredentials bytes = any ((== bytes) . credentialBytes) stakeCredentials
 
--- | Every pool key hash embedded in a certificate: pool registration\/retirement
--- and every delegation-with-a-pool cert variant.
+-- | Every pool key hash embedded in a certificate; see 'certificateCredentials'.
 certificatePoolKeyHashes :: Proto UtxoRpc.Certificate -> [ByteString]
-certificatePoolKeyHashes cert =
-  catMaybes
-    [ (^. UtxoRpc.operator) <$> cert ^. UtxoRpc.maybe'poolRegistration
-    , (^. UtxoRpc.poolKeyhash) <$> cert ^. UtxoRpc.maybe'poolRetirement
-    , (^. UtxoRpc.poolKeyhash) <$> cert ^. UtxoRpc.maybe'stakeDelegation
-    , (^. UtxoRpc.poolKeyhash) <$> cert ^. UtxoRpc.maybe'stakeVoteDelegCert
-    , (^. UtxoRpc.poolKeyhash) <$> cert ^. UtxoRpc.maybe'stakeRegDelegCert
-    , (^. UtxoRpc.poolKeyhash) <$> cert ^. UtxoRpc.maybe'stakeVoteRegDelegCert
-    ]
+certificatePoolKeyHashes = certPoolKeyHashes . certificateCredentials
 
-matchesAnyPoolKeyHash :: Proto UtxoRpc.Certificate -> ByteString -> Bool
-matchesAnyPoolKeyHash cert bytes = bytes `elem` certificatePoolKeyHashes cert
+matchesAnyPoolKeyHash :: [ByteString] -> ByteString -> Bool
+matchesAnyPoolKeyHash poolKeyHashes bytes = bytes `elem` poolKeyHashes
 
--- | Every DRep, identified by key\/script hash, embedded in a certificate.
--- Vote-delegation certs carry a 'DRep' (which may also be an abstain\/no-confidence
--- vote with no hash); the DRep registration family identifies the DRep via a
--- bare 'StakeCredential' instead.
+-- | Every DRep, identified by key\/script hash, embedded in a certificate; see 'certificateCredentials'.
 certificateDRepBytes :: Proto UtxoRpc.Certificate -> [ByteString]
-certificateDRepBytes cert =
-  catMaybes
-    [ drepBytes . (^. UtxoRpc.drep) =<< cert ^. UtxoRpc.maybe'voteDelegCert
-    , drepBytes . (^. UtxoRpc.drep) =<< cert ^. UtxoRpc.maybe'stakeVoteDelegCert
-    , drepBytes . (^. UtxoRpc.drep) =<< cert ^. UtxoRpc.maybe'voteRegDelegCert
-    , drepBytes . (^. UtxoRpc.drep) =<< cert ^. UtxoRpc.maybe'stakeVoteRegDelegCert
-    , credentialBytes . (^. UtxoRpc.drepCredential) <$> cert ^. UtxoRpc.maybe'regDrepCert
-    , credentialBytes . (^. UtxoRpc.drepCredential) <$> cert ^. UtxoRpc.maybe'unregDrepCert
-    , credentialBytes . (^. UtxoRpc.drepCredential) <$> cert ^. UtxoRpc.maybe'updateDrepCert
-    ]
- where
-  drepBytes drep = drep ^. UtxoRpc.maybe'addrKeyHash <|> drep ^. UtxoRpc.maybe'scriptHash
+certificateDRepBytes = certDRepBytes . certificateCredentials
 
-matchesAnyDRep :: Proto UtxoRpc.Certificate -> ByteString -> Bool
-matchesAnyDRep cert bytes = bytes `elem` certificateDRepBytes cert
+matchesAnyDRep :: [ByteString] -> ByteString -> Bool
+matchesAnyDRep drepHashes bytes = bytes `elem` drepHashes
