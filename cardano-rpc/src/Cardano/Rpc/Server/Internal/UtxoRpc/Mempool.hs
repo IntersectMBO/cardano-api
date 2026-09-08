@@ -6,14 +6,17 @@
 module Cardano.Rpc.Server.Internal.UtxoRpc.Mempool
   ( watchMempoolMethod
   , watchMempoolStream
-  , txInMempoolMaskTable
   )
 where
 
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as U5c
 import Cardano.Rpc.Server.Internal.Monad (MonadRpc)
 import Cardano.Rpc.Server.Internal.UtxoRpc.Predicate (matchesTxPredicate)
-import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool (txInModeToTxInMempool)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool
+  ( TxInMempoolFields (..)
+  , buildTxInMempool
+  , txInModeToTxInMempoolFields
+  )
 import Cardano.Rpc.Server.NodeKernelAccess
   ( MempoolWatchSnapshot (..)
   , grabNodeKernelAccess
@@ -91,40 +94,11 @@ watchMempoolStream readSnapshot nextSnapshot predicate fieldMaskPaths send = do
   go lastSeenTicket snapshot@MempoolWatchSnapshot{mempoolWatchTxsAfter = txsAfter} = do
     let newEntries = txsAfter lastSeenTicket
     forM_ newEntries $ \(txInMode, _ticketNo) ->
-      forM_ (txInModeToTxInMempool txInMode) $ \txInMempool ->
-        when (matchesTxPredicate predicate (txInMempool ^. U5c.cardano)) $
+      forM_ (txInModeToTxInMempoolFields txInMode) $ \fields ->
+        when (matchesTxPredicate predicate (txInMempoolFieldsCardano fields)) $
           liftIO . send . NextElem $
-            defMessage & U5c.tx .~ pruneTxInMempool fieldMaskPaths txInMempool
+            defMessage & U5c.tx .~ buildTxInMempool fieldMaskPaths fields
     let lastSeenTicket' = case newEntries of
           [] -> lastSeenTicket
           _ -> snd (last newEntries)
     nextSnapshot snapshot >>= go lastSeenTicket'
-
--- | Field-mask table for 'U5c.TxInMempool': proto field name paired with a
--- copier for that field. A tripwire test asserts the names stay in sync
--- with the generated proto descriptors.
-txInMempoolMaskTable
-  :: [(Text, Proto U5c.TxInMempool -> Proto U5c.TxInMempool -> Proto U5c.TxInMempool)]
-txInMempoolMaskTable =
-  [ ("ref", \tx -> U5c.ref .~ tx ^. U5c.ref)
-  , ("native_bytes", \tx -> U5c.nativeBytes .~ tx ^. U5c.nativeBytes)
-  , ("stage", \tx -> U5c.stage .~ tx ^. U5c.stage)
-  , ("cardano", \tx -> U5c.cardano .~ tx ^. U5c.cardano)
-  ]
-
--- | Minimal field-mask pruning for 'U5c.TxInMempool': keeps only the
--- top-level fields named in @paths@, or the whole message when @paths@ is
--- empty (matching an absent field mask). There is no established
--- field-mask convention elsewhere in cardano-rpc to follow (the only prior
--- art, 'Cardano.Rpc.Server.Internal.UtxoRpc.Query.readParamsMethod',
--- ignores its field mask outright), so this deliberately does not attempt
--- nested paths (e.g. into the @cardano@ payload) - an unrecognised or
--- nested path simply contributes nothing.
-pruneTxInMempool :: [Text] -> Proto U5c.TxInMempool -> Proto U5c.TxInMempool
-pruneTxInMempool paths tx
-  | null paths = tx
-  | otherwise = foldl' apply defMessage txInMempoolMaskTable
- where
-  apply acc (name, copier)
-    | name `elem` paths = copier tx acc
-    | otherwise = acc

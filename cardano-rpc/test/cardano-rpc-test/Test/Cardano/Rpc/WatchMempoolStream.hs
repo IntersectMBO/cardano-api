@@ -13,11 +13,11 @@ module Test.Cardano.Rpc.WatchMempoolStream where
 
 import Cardano.Api
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as U5c
-import Cardano.Rpc.Server.Internal.UtxoRpc.Mempool
+import Cardano.Rpc.Server.Internal.UtxoRpc.Mempool (watchMempoolStream)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool
   ( txInMempoolMaskTable
-  , watchMempoolStream
+  , txInModeToTxInMempool
   )
-import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool (txInModeToTxInMempool)
 import Cardano.Rpc.Server.NodeKernelAccess (MempoolWatchSnapshot (..))
 
 import Ouroboros.Consensus.Mempool.API qualified as Consensus (TicketNo)
@@ -27,8 +27,8 @@ import RIO
 import Data.List (sort)
 import Data.Map qualified as Map
 import Data.ProtoLens (defMessage)
-import Data.Text qualified as Text
 import Data.ProtoLens.Message (fieldsByTextFormatName)
+import Data.Text qualified as Text
 import GHC.Stack (withFrozenCallStack)
 import Network.GRPC.Spec (NextElem (..), Proto (..))
 
