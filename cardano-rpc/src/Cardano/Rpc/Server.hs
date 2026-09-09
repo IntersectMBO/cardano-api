@@ -48,6 +48,7 @@ import RIO
 
 import Control.Tracer
 import Network.GRPC.Common
+import Network.GRPC.Common.Exception (ExactException (..))
 import Network.GRPC.Server
 import Network.GRPC.Server.Protobuf
 import Network.GRPC.Server.Run
@@ -185,8 +186,8 @@ runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExce
 
   -- Clients must never see internal error detail or call stacks; full detail is
   -- still traced server-side by 'topLevelHandler'.
-  exceptionToClient :: SomeException -> IO (Maybe Text)
-  exceptionToClient e =
+  exceptionToClient :: ExactException -> IO (Maybe Text)
+  exceptionToClient (WrapExactException e) =
     pure . Just $ maybe genericErrorMessage renderRpcExceptionForClient $ fromException e
    where
     genericErrorMessage = "Internal error while processing the request."
