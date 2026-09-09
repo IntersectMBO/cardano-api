@@ -91,7 +91,7 @@ import Cardano.Protocol.TPraos.Rules.Prtcl qualified as Ledger
 import Cardano.Protocol.TPraos.Rules.Tickn qualified as Ledger
 import Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
-import Ouroboros.Consensus.Protocol.Praos (PraosState)
+import Ouroboros.Consensus.Protocol.Praos (BasePraosState)
 import Ouroboros.Consensus.Protocol.Praos qualified as Consensus
 import Ouroboros.Consensus.Protocol.TPraos (TPraosState)
 import Ouroboros.Consensus.Protocol.TPraos qualified as Consensus
@@ -370,7 +370,7 @@ instance ToJSON TPraosState where
       , "chainDepState" .= Consensus.tpraosStateChainDepState s
       ]
 
-instance ToJSON PraosState where
+instance ToJSON (BasePraosState pext) where
   toJSON s =
     Aeson.object
       [ "lastSlot" .= Consensus.praosStateLastSlot s

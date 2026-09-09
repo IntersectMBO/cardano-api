@@ -99,7 +99,7 @@ type family ConsensusProtocol era where
   ConsensusProtocol AlonzoEra = Consensus.TPraos StandardCrypto
   ConsensusProtocol BabbageEra = Consensus.Praos StandardCrypto
   ConsensusProtocol ConwayEra = Consensus.Praos StandardCrypto
-  ConsensusProtocol DijkstraEra = Consensus.Praos StandardCrypto
+  ConsensusProtocol DijkstraEra = Consensus.PraosWithLeios StandardCrypto
 
 type family ChainDepStateProtocol era where
   ChainDepStateProtocol ShelleyEra = Consensus.TPraosState
