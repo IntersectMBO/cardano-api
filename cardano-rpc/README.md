@@ -49,6 +49,15 @@ Use a dedicated chain indexing service for those.
 |--------|--------|
 | [WatchTx](https://utxorpc.org/watch/spec/#watchservice) | ⬜ Not supported |
 
+## Other gRPC services
+
+Besides the UTxO RPC spec above, `cardano-rpc` implements the standard [gRPC Server Reflection Protocol](https://github.com/grpc/grpc/blob/master/doc/server-reflection.md), so tools such as `grpcurl` can list and describe the server's services without needing local `.proto` files.
+
+| Method | Status |
+|--------|--------|
+| [grpc.reflection.v1.ServerReflection/ServerReflectionInfo](https://github.com/grpc/grpc/blob/master/doc/server-reflection.md) | ✅ Supported |
+| [grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo](https://github.com/grpc/grpc/blob/master/doc/server-reflection.md) | ✅ Supported |
+
 ## Building
 
 You need the following dependencies installed on your system:

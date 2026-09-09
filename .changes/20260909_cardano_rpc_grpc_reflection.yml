@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1334
+kind:
+  - feature
+description: |
+  The cardano-rpc gRPC server now implements the gRPC Server Reflection Protocol (grpc.reflection.v1 and grpc.reflection.v1alpha), so tools such as grpcurl, Postman and buf can list and describe the server's available services and message schemas without needing local .proto files.
