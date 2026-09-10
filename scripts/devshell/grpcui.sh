@@ -1,26 +1,23 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-# Function to handle cleanup on exit or signal
-cleanup() {
-    echo "Cleaning up..."
-    if [[ -n "$SOCAT_PID" ]] && kill -0 "$SOCAT_PID" 2>/dev/null; then
-        kill "$SOCAT_PID"
-        wait "$SOCAT_PID" 2>/dev/null
-    fi
-    exit
-}
+# Open grpcui against a cardano-rpc endpoint. The schema comes from the
+# server's reflection service, so no local proto files are needed.
+#
+# Usage: grpcui.sh [ADDRESS]
+#   ADDRESS is host:port (the default matches cardano-testnet started with
+#   --enable-grpc-http --grpc-listen-port-base 50051), or a path to the
+#   node's rpc.sock when it listens on a Unix socket instead.
 
-# Set trap for SIGINT and SIGTERM
-trap cleanup SIGINT SIGTERM
+endpoint="${1:-localhost:50051}"
+flags=()
 
-# Start socat in the background
-socat TCP-LISTEN:50051,reuseaddr,fork UNIX-CONNECT:./rpc.sock &
-SOCAT_PID=$!
-echo "Started socat with PID $SOCAT_PID"
+if [[ "$endpoint" == /* || "$endpoint" == ./* ]]; then
+  if [[ ! -S "$endpoint" ]]; then
+    echo "No Unix socket at $endpoint" >&2
+    exit 1
+  fi
+  flags=(-unix)
+fi
 
-grpcui -import-path cardano-rpc/proto \
-  -proto utxorpc/v1alpha/query/query.proto \
-  -proto utxorpc/v1alpha/submit/submit.proto \
-  -plaintext localhost:50051
-
-cleanup
+exec grpcui "${flags[@]}" -plaintext "$endpoint"
