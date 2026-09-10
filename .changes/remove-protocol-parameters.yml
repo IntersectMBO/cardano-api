@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1335
+kind:
+  - breaking
+description: |
+  Removed the long-deprecated `ProtocolParameters` record and its `FromJSON` and `ToJSON` instances. It had been marked deprecated since the Chang hard fork in favour of the ledger's `PParams` type, and its conversion functions were already removed in #729. Use `LedgerProtocolParameters` / `Ledger.PParams` instead. The remaining helper types in `Cardano.Api.ProtocolParameters` (`ExecutionUnitPrices`, `CostModel`, `PraosNonce`, `ProtocolParametersConversionError`, etc.) are unchanged.
