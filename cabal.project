@@ -60,9 +60,9 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-keys
-  tag: 130adb9ff090ff1ffc4636e5d75c1aff1a5bb592
+  tag: df20ae67e89920fdc65cd3c30a720dbcbf9e5344
   subdir: cardano-keys
-  --sha256: sha256-O7KOMiDK4en6HdXcnKU2LQFkUGZ7KPzK9/L95r9jOxA=
+  --sha256: sha256-TILlrhcfUOgVkrG5vi6QL8sjTaFvBKJIrnPvURG94A4=
 
 
 -- WASM compilation specific
