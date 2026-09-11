@@ -1,0 +1,642 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- | Handler for the gRPC Server Reflection API</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- (&lt;https://github.com/grpc/grpc/blob/master/doc/server-reflection.md&gt;),</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- @grpc.reflection.v1@ and the older @grpc.reflection.v1alpha@. This lets</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- generic clients (e.g. @grpcurl@) discover and decode this server's proto</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- services without a local copy of the @.proto@ files.</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Reflection</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html#serverReflectionInfoMethodV1"><span class="hs-identifier">serverReflectionInfoMethodV1</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html#serverReflectionInfoMethodV1alpha"><span class="hs-identifier">serverReflectionInfoMethodV1alpha</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html#answerReflectionRequest"><span class="hs-identifier">answerReflectionRequest</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html#qualifiedServiceName"><span class="hs-identifier">qualifiedServiceName</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.Reflection.V1.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.Reflection.V1</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V1</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.Reflection.V1alpha.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.Reflection.V1alpha</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V1alpha</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Error.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Error</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Error.html#throwGrpcErrorWithMessage"><span class="hs-identifier">throwGrpcErrorWithMessage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Reflection.DescriptorTable</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">RIO</span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ProtoLens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Message</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">decodeMessage</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">defMessage</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">encodeMessage</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ProtoLens.Service.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Service</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ServiceName</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ServicePackage</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/GHC.TypeLits.html"><span class="hs-identifier">GHC.TypeLits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.TypeLits.html#symbolVal"><span class="hs-identifier">symbolVal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.GRPC.Spec</span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">GrpcError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">GrpcInternal</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">GrpcInvalidArgument</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">GrpcNotFound</span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">NextElem</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NextElem</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">NoNextElem</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Proto</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proto</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">fromGrpcError</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- | Handle the @ServerReflectionInfo@ bidirectional stream for</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- @grpc.reflection.v1@: answer every request on the incoming stream in</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- turn, then forward the client's own terminal marker. A bidi handler that</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- returns without sending 'NoNextElem' itself has its stream cancelled</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- instead of closed with trailers, the same requirement as for</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- server-streaming handlers (both go through grapesy's identical</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- @sendOutput call . fromNextElem call@ path).</span><span>
+</span><span id="line-44"></span><span id="local-6989586621679678511"><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html#serverReflectionInfoMethodV1"><span class="hs-identifier hs-type">serverReflectionInfoMethodV1</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679678511"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-comment">-- ^ Fully qualified names of every service registered with this server,</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-comment">-- answered verbatim for @list_services@</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NextElem</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionRequest</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NextElem</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionResponse</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679678511"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-52"></span><span id="serverReflectionInfoMethodV1"><span class="annot"><span class="annottext">serverReflectionInfoMethodV1 :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+[Text]
+-&gt; IO (NextElem (Proto ServerReflectionRequest))
+-&gt; (NextElem (Proto ServerReflectionResponse) -&gt; IO ())
+-&gt; m ()
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.html#serverReflectionInfoMethodV1"><span class="hs-identifier hs-var hs-var">serverReflectionInfoMethodV1</span></a></span></span><span> </span><span id="local-6989586621679678782"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679678782"><span class="hs-identifier hs-var">serviceNames</span></a></span></span><span> </span><span id="local-6989586621679678783"><span class="annot"><span class="annottext">IO (NextElem (Proto ServerReflectionRequest))
+</span><a href="#local-6989586621679678783"><span class="hs-identifier hs-var">recv</span></a></span></span><span> </span><span id="local-6989586621679678784"><span class="annot"><span class="annottext">NextElem (Proto ServerReflectionResponse) -&gt; IO ()
+</span><a href="#local-6989586621679678784"><span class="hs-identifier hs-var">send</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679678786"><span class="hs-identifier hs-var">loop</span></a></span><span>
+</span><span id="line-53"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679678786"><span class="annot"><span class="annottext">loop :: IO ()
+</span><a href="#local-6989586621679678786"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">IO (NextElem (Proto ServerReflectionRequest))
+</span><a href="#local-6989586621679678783"><span class="hs-identifier hs-var">recv</span></a></span><span> </span><span class="annot"><span class="annottext">IO (NextElem (Proto ServerReflectionRequest))
+-&gt; (NextElem (Proto ServerReflectionRequest) -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">NextElem (Proto ServerReflectionRequest)
+</span><span class="hs-identifier hs-var">NoNextElem</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NextElem (Proto ServerReflectionResponse) -&gt; IO ()
+</span><a href="#local-6989586621679678784"><span class="hs-identifier hs-var">send</span></a></span><span> </span><span class="annot"><span class="annottext">NextElem (Proto ServerReflectionResponse)
+forall a. NextElem a
+</span><span class="hs-identifier hs-var">NoNextElem</span></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">NextElem</span></span><span> </span><span id="local-6989586621679678790"><span class="annot"><span class="annottext">Proto ServerReflectionRequest
+</span><a href="#local-6989586621679678790"><span class="hs-identifier hs-var">request</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><span class="annottext">NextElem (Proto ServerReflectionResponse) -&gt; IO ()
+</span><a href="#local-6989586621679678784"><span class="hs-identifier hs-var">send</span></a></span><span> </span><span class="annot"><span class="annottext">(NextElem (Proto ServerReflectionResponse) -&gt; IO ())
+-&gt; (Proto ServerReflectionResponse
+    -&gt; NextElem (Proto ServerReflectionResponse))
+-&gt; Proto ServerReflectionResponse
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Proto ServerReflectionResponse
+-&gt; NextElem (Proto ServerReflectionResponse)
+forall a. a -&gt; NextElem a
+</span><span class="hs-identifier hs-var">NextElem</span></span><span> </span><span class="annot"><span class="annottext">(Proto ServerReflectionResponse -&gt; IO ())
+-&gt; Proto ServerReflectionResponse -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorTable
+-&gt; [Text]
+-&gt; Proto ServerReflectionRequest
+-&gt; Proto ServerReflectionResponse
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.html#answerReflectionRequest"><span class="hs-identifier hs-var">answerReflectionRequest</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTable"><span class="hs-identifier hs-var">descriptorTable</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679678782"><span class="hs-identifier hs-var">serviceNames</span></a></span><span> </span><span class="annot"><span class="annottext">Proto ServerReflectionRequest
+</span><a href="#local-6989586621679678790"><span class="hs-identifier hs-var">request</span></a></span><span>
+</span><span id="line-59"></span><span>        </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679678786"><span class="hs-identifier hs-var">loop</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- | Handle the same stream for the legacy @grpc.reflection.v1alpha@, by</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- bridging each message to and from @v1@ and answering with the one core</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- 'answerReflectionRequest'.</span><span>
+</span><span id="line-64"></span><span id="local-6989586621679678529"><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html#serverReflectionInfoMethodV1alpha"><span class="hs-identifier hs-type">serverReflectionInfoMethodV1alpha</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679678529"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-comment">-- ^ Fully qualified names of every service registered with this server,</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-comment">-- answered verbatim for @list_services@</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NextElem</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V1alpha.ServerReflectionRequest</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NextElem</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V1alpha.ServerReflectionResponse</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679678529"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-72"></span><span id="serverReflectionInfoMethodV1alpha"><span class="annot"><span class="annottext">serverReflectionInfoMethodV1alpha :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+[Text]
+-&gt; IO (NextElem (Proto ServerReflectionRequest))
+-&gt; (NextElem (Proto ServerReflectionResponse) -&gt; IO ())
+-&gt; m ()
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.html#serverReflectionInfoMethodV1alpha"><span class="hs-identifier hs-var hs-var">serverReflectionInfoMethodV1alpha</span></a></span></span><span> </span><span id="local-6989586621679678795"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679678795"><span class="hs-identifier hs-var">serviceNames</span></a></span></span><span> </span><span id="local-6989586621679678796"><span class="annot"><span class="annottext">IO (NextElem (Proto ServerReflectionRequest))
+</span><a href="#local-6989586621679678796"><span class="hs-identifier hs-var">recv</span></a></span></span><span> </span><span id="local-6989586621679678797"><span class="annot"><span class="annottext">NextElem (Proto ServerReflectionResponse) -&gt; IO ()
+</span><a href="#local-6989586621679678797"><span class="hs-identifier hs-var">send</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679678798"><span class="hs-identifier hs-var">loop</span></a></span><span>
+</span><span id="line-73"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679678798"><span class="annot"><span class="annottext">loop :: IO ()
+</span><a href="#local-6989586621679678798"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">IO (NextElem (Proto ServerReflectionRequest))
+</span><a href="#local-6989586621679678796"><span class="hs-identifier hs-var">recv</span></a></span><span> </span><span class="annot"><span class="annottext">IO (NextElem (Proto ServerReflectionRequest))
+-&gt; (NextElem (Proto ServerReflectionRequest) -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">NextElem (Proto ServerReflectionRequest)
+</span><span class="hs-identifier hs-var">NoNextElem</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NextElem (Proto ServerReflectionResponse) -&gt; IO ()
+</span><a href="#local-6989586621679678797"><span class="hs-identifier hs-var">send</span></a></span><span> </span><span class="annot"><span class="annottext">NextElem (Proto ServerReflectionResponse)
+forall a. NextElem a
+</span><span class="hs-identifier hs-var">NoNextElem</span></span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">NextElem</span></span><span> </span><span id="local-6989586621679678813"><span class="annot"><span class="annottext">Proto ServerReflectionRequest
+</span><a href="#local-6989586621679678813"><span class="hs-identifier hs-var">request</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-78"></span><span>        </span><span id="local-6989586621679678814"><span class="annot"><a href="#local-6989586621679678814"><span class="hs-identifier hs-var">v1Request</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Proto ServerReflectionRequest -&gt; IO (Proto ServerReflectionRequest)
+forall a b (m :: * -&gt; *).
+(Message a, Message b, MonadIO m) =&gt;
+Proto a -&gt; m (Proto b)
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.html#bridgeMessage"><span class="hs-identifier hs-var">bridgeMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Proto ServerReflectionRequest
+</span><a href="#local-6989586621679678813"><span class="hs-identifier hs-var">request</span></a></span><span>
+</span><span id="line-79"></span><span>        </span><span id="local-6989586621679678816"><span class="annot"><a href="#local-6989586621679678816"><span class="hs-identifier hs-var">v1alphaResponse</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html#bridgeMessage"><span class="hs-identifier hs-type">bridgeMessage</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html#answerReflectionRequest"><span class="hs-identifier hs-type">answerReflectionRequest</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTable"><span class="hs-identifier hs-type">descriptorTable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679678795"><span class="hs-identifier hs-type">serviceNames</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679678814"><span class="hs-identifier hs-type">v1Request</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><a href="#local-6989586621679678797"><span class="hs-identifier hs-type">send</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">NextElem</span></span><span> </span><span class="annot"><a href="#local-6989586621679678816"><span class="hs-identifier hs-type">v1alphaResponse</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><a href="#local-6989586621679678798"><span class="hs-identifier hs-type">loop</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- | Answer one @ServerReflectionRequest@, dispatching on its</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- @message_request@ oneof.</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- Lookup failures ('V1.FileByFilename', 'V1.FileContainingSymbol') are</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- reported in-stream as an @ErrorResponse@ with @NOT_FOUND@, never as a</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- gRPC error: the RPC itself stays OK for the life of the stream.</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- No proto file served here declares proto2 extensions, so</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- @file_containing_extension@ always answers @NOT_FOUND@, while</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- @all_extension_numbers_of_type@ answers an empty @ExtensionNumberResponse@</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- for a type the server knows and @NOT_FOUND@ for one it does not.</span><span>
+</span><span id="line-93"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html#answerReflectionRequest"><span class="hs-identifier hs-type">answerReflectionRequest</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#DescriptorTable"><span class="hs-identifier hs-type">DescriptorTable</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionRequest</span></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionResponse</span></span><span>
+</span><span id="line-98"></span><span id="answerReflectionRequest"><span class="annot"><span class="annottext">answerReflectionRequest :: DescriptorTable
+-&gt; [Text]
+-&gt; Proto ServerReflectionRequest
+-&gt; Proto ServerReflectionResponse
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.html#answerReflectionRequest"><span class="hs-identifier hs-var hs-var">answerReflectionRequest</span></a></span></span><span> </span><span id="local-6989586621679678817"><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="#local-6989586621679678817"><span class="hs-identifier hs-var">table</span></a></span></span><span> </span><span id="local-6989586621679678818"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679678818"><span class="hs-identifier hs-var">serviceNames</span></a></span></span><span> </span><span id="local-6989586621679678819"><span class="annot"><span class="annottext">Proto ServerReflectionRequest
+</span><a href="#local-6989586621679678819"><span class="hs-identifier hs-var">request</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><span class="annottext">Proto ServerReflectionResponse
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><span class="annottext">Proto ServerReflectionResponse
+-&gt; (Proto ServerReflectionResponse
+    -&gt; Proto ServerReflectionResponse)
+-&gt; Proto ServerReflectionResponse
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ServerReflectionResponse) Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;validHost&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.validHost</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ServerReflectionResponse) Text
+-&gt; Text
+-&gt; Proto ServerReflectionResponse
+-&gt; Proto ServerReflectionResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto ServerReflectionRequest
+</span><a href="#local-6989586621679678819"><span class="hs-identifier hs-var">request</span></a></span><span> </span><span class="annot"><span class="annottext">Proto ServerReflectionRequest
+-&gt; Getting Text (Proto ServerReflectionRequest) Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text (Proto ServerReflectionRequest) Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;host&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.host</span></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="annottext">Proto ServerReflectionResponse
+-&gt; (Proto ServerReflectionResponse
+    -&gt; Proto ServerReflectionResponse)
+-&gt; Proto ServerReflectionResponse
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto ServerReflectionResponse)
+  (Proto ServerReflectionRequest)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;originalRequest&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.originalRequest</span></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto ServerReflectionResponse)
+  (Proto ServerReflectionRequest)
+-&gt; Proto ServerReflectionRequest
+-&gt; Proto ServerReflectionResponse
+-&gt; Proto ServerReflectionResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Proto ServerReflectionRequest
+</span><a href="#local-6989586621679678819"><span class="hs-identifier hs-var">request</span></a></span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><span class="annottext">Proto ServerReflectionResponse
+-&gt; (Proto ServerReflectionResponse
+    -&gt; Proto ServerReflectionResponse)
+-&gt; Proto ServerReflectionResponse
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Proto ServerReflectionResponse -&gt; Proto ServerReflectionResponse
+</span><a href="#local-6989586621679678826"><span class="hs-identifier hs-var">answer</span></a></span><span>
+</span><span id="line-103"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><a href="#local-6989586621679678826"><span class="hs-identifier hs-type">answer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionResponse</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionResponse</span></span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679678826"><span class="annot"><span class="annottext">answer :: Proto ServerReflectionResponse -&gt; Proto ServerReflectionResponse
+</span><a href="#local-6989586621679678826"><span class="hs-identifier hs-var hs-var">answer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Proto ServerReflectionRequest
+</span><a href="#local-6989586621679678819"><span class="hs-identifier hs-var">request</span></a></span><span> </span><span class="annot"><span class="annottext">Proto ServerReflectionRequest
+-&gt; Getting
+     (Maybe (Proto ServerReflectionRequest'MessageRequest))
+     (Proto ServerReflectionRequest)
+     (Maybe (Proto ServerReflectionRequest'MessageRequest))
+-&gt; Maybe (Proto ServerReflectionRequest'MessageRequest)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (Proto ServerReflectionRequest'MessageRequest))
+  (Proto ServerReflectionRequest)
+  (Maybe (Proto ServerReflectionRequest'MessageRequest))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'messageRequest&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.maybe'messageRequest</span></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">-- proto3 leaves message_request entirely unset when malformed by the</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-comment">-- client; there is no lookup to fail here, so this is INVALID_ARGUMENT</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-comment">-- rather than NOT_FOUND. Answering in-stream here matches grpc's</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">-- canonical C++ implementation; Go instead terminates the RPC.</span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Proto ServerReflectionRequest'MessageRequest)
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ServerReflectionResponse) (Proto ErrorResponse)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;errorResponse&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.errorResponse</span></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ServerReflectionResponse) (Proto ErrorResponse)
+-&gt; Proto ErrorResponse
+-&gt; Proto ServerReflectionResponse
+-&gt; Proto ServerReflectionResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">GrpcError -&gt; Text -&gt; Proto ErrorResponse
+</span><a href="#local-6989586621679678829"><span class="hs-identifier hs-var">mkErrorResponse</span></a></span><span> </span><span class="annot"><span class="annottext">GrpcError
+</span><span class="hs-identifier hs-var">GrpcInvalidArgument</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;no message_request set&quot;</span></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span id="local-6989586621679678830"><span class="annot"><span class="annottext">ServerReflectionRequest'MessageRequest
+</span><a href="#local-6989586621679678830"><span class="hs-identifier hs-var">messageRequest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ServerReflectionRequest'MessageRequest
+</span><a href="#local-6989586621679678830"><span class="hs-identifier hs-var">messageRequest</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-113"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionRequest'FileByFilename</span></span><span> </span><span id="local-6989586621679678832"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678832"><span class="hs-identifier hs-var">fileName</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-114"></span><span>        </span><span class="annot"><span class="annottext">Text
+-&gt; Proto ServerReflectionResponse -&gt; Proto ServerReflectionResponse
+</span><a href="#local-6989586621679678833"><span class="hs-identifier hs-var">fileDescriptorAnswer</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678832"><span class="hs-identifier hs-var">fileName</span></a></span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionRequest'FileContainingSymbol</span></span><span> </span><span id="local-6989586621679678835"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678835"><span class="hs-identifier hs-var">symbolName</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-116"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">DescriptorTable -&gt; Text -&gt; Maybe Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#lookupSymbol"><span class="hs-identifier hs-var">lookupSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="#local-6989586621679678817"><span class="hs-identifier hs-var">table</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678835"><span class="hs-identifier hs-var">symbolName</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-117"></span><span>          </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ServerReflectionResponse) (Proto ErrorResponse)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;errorResponse&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.errorResponse</span></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ServerReflectionResponse) (Proto ErrorResponse)
+-&gt; Proto ErrorResponse
+-&gt; Proto ServerReflectionResponse
+-&gt; Proto ServerReflectionResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">GrpcError -&gt; Text -&gt; Proto ErrorResponse
+</span><a href="#local-6989586621679678829"><span class="hs-identifier hs-var">mkErrorResponse</span></a></span><span> </span><span class="annot"><span class="annottext">GrpcError
+</span><span class="hs-identifier hs-var">GrpcNotFound</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;symbol not found: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678835"><span class="hs-identifier hs-var">symbolName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>          </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679678837"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678837"><span class="hs-identifier hs-var">fileName</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+-&gt; Proto ServerReflectionResponse -&gt; Proto ServerReflectionResponse
+</span><a href="#local-6989586621679678833"><span class="hs-identifier hs-var">fileDescriptorAnswer</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678837"><span class="hs-identifier hs-var">fileName</span></a></span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionRequest'FileContainingExtension</span></span><span> </span><span id="local-6989586621679678839"><span class="annot"><span class="annottext">ExtensionRequest
+</span><a href="#local-6989586621679678839"><span class="hs-identifier hs-var">extensionRequest</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-120"></span><span>        </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ServerReflectionResponse) (Proto ErrorResponse)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;errorResponse&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.errorResponse</span></span><span>
+</span><span id="line-121"></span><span>          </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ServerReflectionResponse) (Proto ErrorResponse)
+-&gt; Proto ErrorResponse
+-&gt; Proto ServerReflectionResponse
+-&gt; Proto ServerReflectionResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">GrpcError -&gt; Text -&gt; Proto ErrorResponse
+</span><a href="#local-6989586621679678829"><span class="hs-identifier hs-var">mkErrorResponse</span></a></span><span>
+</span><span id="line-122"></span><span>            </span><span class="annot"><span class="annottext">GrpcError
+</span><span class="hs-identifier hs-var">GrpcNotFound</span></span><span>
+</span><span id="line-123"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;no extensions are declared by this server (requested for type: &quot;</span></span><span>
+</span><span id="line-124"></span><span>                </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ExtensionRequest -&gt; Proto ExtensionRequest
+forall msg. msg -&gt; Proto msg
+</span><span class="hs-identifier hs-var">Proto</span></span><span> </span><span class="annot"><span class="annottext">ExtensionRequest
+</span><a href="#local-6989586621679678839"><span class="hs-identifier hs-var">extensionRequest</span></a></span><span> </span><span class="annot"><span class="annottext">Proto ExtensionRequest
+-&gt; Getting Text (Proto ExtensionRequest) Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text (Proto ExtensionRequest) Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;containingType&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.containingType</span></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>                </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;)&quot;</span></span><span>
+</span><span id="line-126"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionRequest'AllExtensionNumbersOfType</span></span><span> </span><span id="local-6989586621679678842"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678842"><span class="hs-identifier hs-var">typeName</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-128"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">DescriptorTable -&gt; Text -&gt; Maybe Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#lookupSymbol"><span class="hs-identifier hs-var">lookupSymbol</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="#local-6989586621679678817"><span class="hs-identifier hs-var">table</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678842"><span class="hs-identifier hs-var">typeName</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-129"></span><span>          </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ServerReflectionResponse) (Proto ErrorResponse)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;errorResponse&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.errorResponse</span></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ServerReflectionResponse) (Proto ErrorResponse)
+-&gt; Proto ErrorResponse
+-&gt; Proto ServerReflectionResponse
+-&gt; Proto ServerReflectionResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">GrpcError -&gt; Text -&gt; Proto ErrorResponse
+</span><a href="#local-6989586621679678829"><span class="hs-identifier hs-var">mkErrorResponse</span></a></span><span> </span><span class="annot"><span class="annottext">GrpcError
+</span><span class="hs-identifier hs-var">GrpcNotFound</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;type not found: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678842"><span class="hs-identifier hs-var">typeName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>          </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto ServerReflectionResponse)
+  (Proto ExtensionNumberResponse)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;allExtensionNumbersResponse&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.allExtensionNumbersResponse</span></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto ServerReflectionResponse)
+  (Proto ExtensionNumberResponse)
+-&gt; Proto ExtensionNumberResponse
+-&gt; Proto ServerReflectionResponse
+-&gt; Proto ServerReflectionResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto ExtensionNumberResponse
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span> </span><span class="annot"><span class="annottext">Proto ExtensionNumberResponse
+-&gt; (Proto ExtensionNumberResponse -&gt; Proto ExtensionNumberResponse)
+-&gt; Proto ExtensionNumberResponse
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExtensionNumberResponse) Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;baseTypeName&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.baseTypeName</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ExtensionNumberResponse) Text
+-&gt; Text
+-&gt; Proto ExtensionNumberResponse
+-&gt; Proto ExtensionNumberResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678842"><span class="hs-identifier hs-var">typeName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionRequest'ListServices</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-132"></span><span>        </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto ServerReflectionResponse)
+  (Proto ListServiceResponse)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;listServicesResponse&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.listServicesResponse</span></span><span>
+</span><span id="line-133"></span><span>          </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto ServerReflectionResponse)
+  (Proto ListServiceResponse)
+-&gt; Proto ListServiceResponse
+-&gt; Proto ServerReflectionResponse
+-&gt; Proto ServerReflectionResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto ListServiceResponse
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span> </span><span class="annot"><span class="annottext">Proto ListServiceResponse
+-&gt; (Proto ListServiceResponse -&gt; Proto ListServiceResponse)
+-&gt; Proto ListServiceResponse
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ListServiceResponse) [Proto ServiceResponse]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;service&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.service</span></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ListServiceResponse) [Proto ServiceResponse]
+-&gt; [Proto ServiceResponse]
+-&gt; Proto ListServiceResponse
+-&gt; Proto ListServiceResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Proto ServiceResponse)
+-&gt; [Text] -&gt; [Proto ServiceResponse]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679678848"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678848"><span class="hs-identifier hs-var">serviceName</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Proto ServiceResponse
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span> </span><span class="annot"><span class="annottext">Proto ServiceResponse
+-&gt; (Proto ServiceResponse -&gt; Proto ServiceResponse)
+-&gt; Proto ServiceResponse
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ServiceResponse) Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;name&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.name</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ServiceResponse) Text
+-&gt; Text -&gt; Proto ServiceResponse -&gt; Proto ServiceResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678848"><span class="hs-identifier hs-var">serviceName</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679678818"><span class="hs-identifier hs-var">serviceNames</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><a href="#local-6989586621679678833"><span class="hs-identifier hs-type">fileDescriptorAnswer</span></a></span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionResponse</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V1.ServerReflectionResponse</span></span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621679678833"><span class="annot"><span class="annottext">fileDescriptorAnswer :: Text
+-&gt; Proto ServerReflectionResponse -&gt; Proto ServerReflectionResponse
+</span><a href="#local-6989586621679678833"><span class="hs-identifier hs-var hs-var">fileDescriptorAnswer</span></a></span></span><span> </span><span id="local-6989586621679678850"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678850"><span class="hs-identifier hs-var">fileName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">DescriptorTable -&gt; Text -&gt; Maybe [FileEntry]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#transitiveClosure"><span class="hs-identifier hs-var">transitiveClosure</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="#local-6989586621679678817"><span class="hs-identifier hs-var">table</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678850"><span class="hs-identifier hs-var">fileName</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><span class="annottext">Maybe [FileEntry]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ServerReflectionResponse) (Proto ErrorResponse)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;errorResponse&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.errorResponse</span></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity (Proto ServerReflectionResponse) (Proto ErrorResponse)
+-&gt; Proto ErrorResponse
+-&gt; Proto ServerReflectionResponse
+-&gt; Proto ServerReflectionResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">GrpcError -&gt; Text -&gt; Proto ErrorResponse
+</span><a href="#local-6989586621679678829"><span class="hs-identifier hs-var">mkErrorResponse</span></a></span><span> </span><span class="annot"><span class="annottext">GrpcError
+</span><span class="hs-identifier hs-var">GrpcNotFound</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;file not found: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678850"><span class="hs-identifier hs-var">fileName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679678852"><span class="annot"><span class="annottext">[FileEntry]
+</span><a href="#local-6989586621679678852"><span class="hs-identifier hs-var">entries</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-140"></span><span>      </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto ServerReflectionResponse)
+  (Proto FileDescriptorResponse)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;fileDescriptorResponse&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.fileDescriptorResponse</span></span><span> </span><span class="annot"><span class="annottext">LensLike'
+  Identity
+  (Proto ServerReflectionResponse)
+  (Proto FileDescriptorResponse)
+-&gt; Proto FileDescriptorResponse
+-&gt; Proto ServerReflectionResponse
+-&gt; Proto ServerReflectionResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto FileDescriptorResponse
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span> </span><span class="annot"><span class="annottext">Proto FileDescriptorResponse
+-&gt; (Proto FileDescriptorResponse -&gt; Proto FileDescriptorResponse)
+-&gt; Proto FileDescriptorResponse
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto FileDescriptorResponse) [ByteString]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;fileDescriptorProto&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.fileDescriptorProto</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto FileDescriptorResponse) [ByteString]
+-&gt; [ByteString]
+-&gt; Proto FileDescriptorResponse
+-&gt; Proto FileDescriptorResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">(FileEntry -&gt; ByteString) -&gt; [FileEntry] -&gt; [ByteString]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">FileEntry -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileEntryBytes"><span class="hs-identifier hs-var">fileEntryBytes</span></a></span><span> </span><span class="annot"><span class="annottext">[FileEntry]
+</span><a href="#local-6989586621679678852"><span class="hs-identifier hs-var">entries</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span>  </span><span class="annot"><a href="#local-6989586621679678829"><span class="hs-identifier hs-type">mkErrorResponse</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">GrpcError</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">V1.ErrorResponse</span></span><span>
+</span><span id="line-143"></span><span>  </span><span id="local-6989586621679678829"><span class="annot"><span class="annottext">mkErrorResponse :: GrpcError -&gt; Text -&gt; Proto ErrorResponse
+</span><a href="#local-6989586621679678829"><span class="hs-identifier hs-var hs-var">mkErrorResponse</span></a></span></span><span> </span><span id="local-6989586621679678856"><span class="annot"><span class="annottext">GrpcError
+</span><a href="#local-6989586621679678856"><span class="hs-identifier hs-var">grpcError</span></a></span></span><span> </span><span id="local-6989586621679678857"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678857"><span class="hs-identifier hs-var">message</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><span class="annottext">Proto ErrorResponse
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span>
+</span><span id="line-145"></span><span>      </span><span class="annot"><span class="annottext">Proto ErrorResponse
+-&gt; (Proto ErrorResponse -&gt; Proto ErrorResponse)
+-&gt; Proto ErrorResponse
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ErrorResponse) Int32
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;errorCode&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.errorCode</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ErrorResponse) Int32
+-&gt; Int32 -&gt; Proto ErrorResponse -&gt; Proto ErrorResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Int32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GrpcError -&gt; Word
+</span><span class="hs-identifier hs-var">fromGrpcError</span></span><span> </span><span class="annot"><span class="annottext">GrpcError
+</span><a href="#local-6989586621679678856"><span class="hs-identifier hs-var">grpcError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><span class="annottext">Proto ErrorResponse
+-&gt; (Proto ErrorResponse -&gt; Proto ErrorResponse)
+-&gt; Proto ErrorResponse
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ErrorResponse) Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;errorMessage&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">V1.errorMessage</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto ErrorResponse) Text
+-&gt; Text -&gt; Proto ErrorResponse -&gt; Proto ErrorResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678857"><span class="hs-identifier hs-var">message</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- | Re-encode a message as a wire-compatible message with different</span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- generated Haskell types. Safe between schemas that agree on every field</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- number and wire type, which @v1@ and @v1alpha@ of the reflection protos</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- do (@v1alpha@ is @v1@ under its original package name); a future schema</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- divergence is reported as an @INTERNAL@ gRPC error rather than a panic.</span><span>
+</span><span id="line-153"></span><span id="local-6989586621679678533"><span id="local-6989586621679678534"><span id="local-6989586621679678535"><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html#bridgeMessage"><span class="hs-identifier hs-type">bridgeMessage</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Message</span></span><span> </span><span class="annot"><a href="#local-6989586621679678533"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Message</span></span><span> </span><span class="annot"><a href="#local-6989586621679678534"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679678535"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><a href="#local-6989586621679678533"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679678535"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><a href="#local-6989586621679678534"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-154"></span><span id="bridgeMessage"><span class="annot"><span class="annottext">bridgeMessage :: forall a b (m :: * -&gt; *).
+(Message a, Message b, MonadIO m) =&gt;
+Proto a -&gt; m (Proto b)
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.html#bridgeMessage"><span class="hs-identifier hs-var hs-var">bridgeMessage</span></a></span></span><span> </span><span id="local-6989586621679678875"><span class="annot"><span class="annottext">Proto a
+</span><a href="#local-6989586621679678875"><span class="hs-identifier hs-var">message</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-155"></span><span>  </span><span class="annot"><span class="annottext">(String -&gt; m (Proto b))
+-&gt; (Proto b -&gt; m (Proto b))
+-&gt; Either String (Proto b)
+-&gt; m (Proto b)
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GrpcError -&gt; Text -&gt; m (Proto b)
+forall (m :: * -&gt; *) a. MonadIO m =&gt; GrpcError -&gt; Text -&gt; m a
+</span><a href="Cardano.Rpc.Server.Internal.Error.html#throwGrpcErrorWithMessage"><span class="hs-identifier hs-var">throwGrpcErrorWithMessage</span></a></span><span> </span><span class="annot"><span class="annottext">GrpcError
+</span><span class="hs-identifier hs-var">GrpcInternal</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; m (Proto b)) -&gt; (String -&gt; Text) -&gt; String -&gt; m (Proto b)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;bridgeMessage: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; (String -&gt; Text) -&gt; String -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Proto b -&gt; m (Proto b)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String (Proto b) -&gt; m (Proto b))
+-&gt; Either String (Proto b) -&gt; m (Proto b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><span class="annottext">ByteString -&gt; Either String (Proto b)
+forall msg. Message msg =&gt; ByteString -&gt; Either String msg
+</span><span class="hs-identifier hs-var">decodeMessage</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto a -&gt; ByteString
+forall msg. Message msg =&gt; msg -&gt; ByteString
+</span><span class="hs-identifier hs-var">encodeMessage</span></span><span> </span><span class="annot"><span class="annottext">Proto a
+</span><a href="#local-6989586621679678875"><span class="hs-identifier hs-var">message</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="hs-comment">-- | The fully qualified name of a proto service, @\&lt;package\&gt;.\&lt;Service\&gt;@,</span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- read off its own compiled-in descriptor via proto-lens's 'Service' class.</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- Deriving it this way, rather than writing out the string, means the name</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- paired with each service's handler in &quot;Cardano.Rpc.Server&quot; and the name</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- 'answerReflectionRequest' (above) advertises for @list_services@ can</span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- never drift apart.</span><span>
+</span><span id="line-164"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.html#qualifiedServiceName"><span class="hs-identifier hs-type">qualifiedServiceName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679678615"><span class="annot"><a href="#local-6989586621679678615"><span class="hs-identifier hs-type">s</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Service</span></span><span> </span><span class="annot"><a href="#local-6989586621679678615"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-165"></span><span id="qualifiedServiceName"><span class="annot"><span class="annottext">qualifiedServiceName :: forall s. Service s =&gt; Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.html#qualifiedServiceName"><span class="hs-identifier hs-var hs-var">qualifiedServiceName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-166"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy (ServicePackage s) -&gt; String
+forall (n :: Symbol) (proxy :: Symbol -&gt; *).
+KnownSymbol n =&gt;
+proxy n -&gt; String
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.TypeLits.html#symbolVal"><span class="hs-identifier hs-var">symbolVal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall {k} (t :: k). Proxy t
+forall (t :: Symbol). Proxy t
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ServicePackage</span></span><span> </span><span class="annot"><a href="#local-6989586621679678615"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span>
+</span><span id="line-168"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy (ServiceName s) -&gt; String
+forall (n :: Symbol) (proxy :: Symbol -&gt; *).
+KnownSymbol n =&gt;
+proxy n -&gt; String
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.TypeLits.html#symbolVal"><span class="hs-identifier hs-var">symbolVal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall {k} (t :: k). Proxy t
+forall (t :: Symbol). Proxy t
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ServiceName</span></span><span> </span><span class="annot"><a href="#local-6989586621679678615"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span></pre></body></html>
