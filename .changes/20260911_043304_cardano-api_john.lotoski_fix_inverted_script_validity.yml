@@ -1,0 +1,7 @@
+description: Fixed `scriptValidityToIsValid`.  Before, an encoded transaction
+  carried the opposite phase-2 validity tag and a script-free transaction was
+  rejected with `ValidationTagMismatch Phase2Invalid PassedUnexpectedly`.
+kind:
+- bugfix
+pr: 1338
+project: cardano-api
