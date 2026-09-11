@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1336
+kind:
+  - refactoring
+description: |
+  Moved `EraBasedProtocolParametersUpdate`, its era-sliced record types (`CommonProtocolParametersUpdate`, `AlonzoOnwardsPParams`, `IntroducedIn*PParams`, `DeprecatedAfter*PParams`, `ShelleyToAlonzoPParams`), `createEraBasedProtocolParamUpdate`, `createPParams`, and the pre-Conway `UpdateProposal` machinery (`makeShelleyUpdateProposal`, `toLedgerUpdate`, `fromLedgerUpdate`, `toLedgerProposedPPUpdates`, `fromLedgerProposedPPUpdates`, `fromLedgerPParamsUpdate`) out of `Cardano.Api.ProtocolParameters` into a new module `Cardano.Api.Compatible.ProtocolParametersUpdate`. `Cardano.Api.ProtocolParameters` re-exports the new module, so its export list and `Cardano.Api` are unchanged; the moved items are additionally available via `Cardano.Api.Compatible`.

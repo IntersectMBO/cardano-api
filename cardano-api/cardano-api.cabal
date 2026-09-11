@@ -74,6 +74,7 @@ library
     Cardano.Api.Byron
     Cardano.Api.Compatible
     Cardano.Api.Compatible.Certificate
+    Cardano.Api.Compatible.ProtocolParametersUpdate
     Cardano.Api.Compatible.Tx
     Cardano.Api.Consensus
     Cardano.Api.Crypto.Ed25519Bip32
