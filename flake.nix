@@ -152,6 +152,8 @@
             # Packages in this repo
             p.cardano-api
             p.cardano-api-gen
+            p.cardano-rpc
+            p.cardano-wasm
             # Work around for issue created by our inability to register sublibs.
             # This package may need to be built and we need to make sure its dependencies
             # are included in `ghc-pkg list` (in particular `compact`)
