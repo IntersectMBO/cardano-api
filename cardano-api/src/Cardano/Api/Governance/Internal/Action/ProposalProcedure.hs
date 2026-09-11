@@ -183,7 +183,7 @@ instance IsShelleyBasedEra era => SerialiseAsCBOR (Proposal era) where
   deserialiseFromCBOR _proxy = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.decodeFull'
 
 instance IsShelleyBasedEra era => HasTextEnvelope (Proposal era) where
-  textEnvelopeType _ = "Governance proposal"
+  textEnvelopeTypes _ = pure "Governance proposal"
 
 instance HasTypeProxy era => HasTypeProxy (Proposal era) where
   data AsType (Proposal era) = AsProposal

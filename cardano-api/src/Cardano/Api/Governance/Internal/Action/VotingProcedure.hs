@@ -84,7 +84,7 @@ instance IsShelleyBasedEra era => SerialiseAsCBOR (VotingProcedure era) where
   deserialiseFromCBOR _proxy = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.decodeFull'
 
 instance IsShelleyBasedEra era => HasTextEnvelope (VotingProcedure era) where
-  textEnvelopeType _ = "Governance vote"
+  textEnvelopeTypes _ = pure "Governance vote"
 
 instance HasTypeProxy era => HasTypeProxy (VotingProcedure era) where
   data AsType (VotingProcedure era) = AsVote
@@ -116,7 +116,7 @@ instance IsShelleyBasedEra era => SerialiseAsCBOR (VotingProcedures era) where
   deserialiseFromCBOR _proxy = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.decodeFull'
 
 instance IsShelleyBasedEra era => HasTextEnvelope (VotingProcedures era) where
-  textEnvelopeType _ = "Governance voting procedures"
+  textEnvelopeTypes _ = pure "Governance voting procedures"
 
 instance HasTypeProxy era => HasTypeProxy (VotingProcedures era) where
   data AsType (VotingProcedures era) = AsVotingProcedures

@@ -51,6 +51,18 @@ semaphore: True
 constraints:
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8
+  -- cardano-crypto-class (in cardano-api and in the cardano-keys dependency)
+  -- requires crypton < 1.1; without this the GHC 9.14 solver greedily picks
+  -- crypton 1.1.4 and then cannot resolve cardano-crypto-class.
+  , crypton < 1.1
+
+-- Temporary, until cardano-keys has its first CHaP release.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-keys
+  tag: df20ae67e89920fdc65cd3c30a720dbcbf9e5344
+  subdir: cardano-keys
+  --sha256: sha256-TILlrhcfUOgVkrG5vi6QL8sjTaFvBKJIrnPvURG94A4=
 
 
 -- WASM compilation specific

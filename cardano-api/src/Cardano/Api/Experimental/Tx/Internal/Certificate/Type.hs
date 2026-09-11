@@ -37,7 +37,7 @@ instance
   )
   => HasTextEnvelope (Certificate ledgerera)
   where
-  textEnvelopeType _ = "Certificate"
+  textEnvelopeTypes _ = pure "Certificate"
 
 instance Typeable era => HasTypeProxy (Certificate era) where
   data AsType (Certificate era) = AsCertificate

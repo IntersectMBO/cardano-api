@@ -746,7 +746,7 @@ instance Typeable era => HasTypeProxy (UpdateProposal era) where
   proxyToAsType _ = AsUpdateProposal
 
 instance IsShelleyBasedEra era => HasTextEnvelope (UpdateProposal era) where
-  textEnvelopeType _ = "UpdateProposalShelley"
+  textEnvelopeTypes _ = pure "UpdateProposalShelley"
 
 instance IsShelleyBasedEra era => ToCBOR (UpdateProposal era) where
   toCBOR (UpdateProposal ppup epochno) =

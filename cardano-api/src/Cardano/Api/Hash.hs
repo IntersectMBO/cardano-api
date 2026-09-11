@@ -1,37 +1,7 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
-
+-- | This module now lives in the cardano-keys package; re-exported here for compatibility.
 module Cardano.Api.Hash
-  ( -- * Hash
-    Hash
-  , CastHash (..)
-  , AsType (AsHash)
-  , renderSafeHashAsHex
-
-    -- * HasTypeProxy
-  , HasTypeProxy (proxyToAsType)
-  , asType
-  , Proxy (..)
-  , FromSomeType (..)
+  ( module Cardano.Keys.Hash
   )
 where
 
-import Cardano.Api.HasTypeProxy
-
-import Cardano.Crypto.Hash qualified as Hash
-import Cardano.Ledger.Hashes qualified as Ledger
-
-import Data.Kind (Type)
-import Data.Text qualified as Text
-
-data family Hash keyrole :: Type
-
-class CastHash roleA roleB where
-  castHash :: Hash roleA -> Hash roleB
-
-instance HasTypeProxy a => HasTypeProxy (Hash a) where
-  data AsType (Hash a) = AsHash (AsType a)
-  proxyToAsType _ = AsHash (proxyToAsType (Proxy :: Proxy a))
-
-renderSafeHashAsHex :: Ledger.SafeHash tag -> Text.Text
-renderSafeHashAsHex = Hash.hashToTextAsHex . Ledger.extractHash
+import Cardano.Keys.Hash

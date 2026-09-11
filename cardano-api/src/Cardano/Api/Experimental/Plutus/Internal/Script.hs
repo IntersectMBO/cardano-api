@@ -86,8 +86,8 @@ instance
   (Plutus.PlutusLanguage lang, L.Era era, HasTypeProxy (Plutus.SLanguage lang))
   => HasTextEnvelope (PlutusScriptInEra lang era)
   where
-  textEnvelopeType _ =
-    fromString . Text.unpack . plutusLanguageToText $
+  textEnvelopeTypes _ =
+    pure . fromString . Text.unpack . plutusLanguageToText $
       AnyPlutusScriptLanguage $
         L.plutusSLanguage (Proxy @lang)
 

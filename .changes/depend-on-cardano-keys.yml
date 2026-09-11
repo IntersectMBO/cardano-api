@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1332
+kind:
+  - breaking
+  - refactoring
+description: |
+  The key types, their hashes and the raw-bytes, hex, CBOR, bech32 and text-envelope serialisations now come from the `cardano-keys` package. The module names, the exported names and `Cardano.Api`'s re-exports are unchanged, so most code needs no edit. Three things did change: `HasTextEnvelope` instances now define `textEnvelopeTypes :: AsType a -> NonEmpty TextEnvelopeType` instead of `textEnvelopeType` (the head of that list is the type written when serialising, the whole list is accepted when reading, and `textEnvelopeType` remains available as a free function); `getKesPeriod` returns a `KESPeriod` rather than a `Word`; and the error types that moved carry `render...` functions in `cardano-keys`, with the `Error` instances kept here.
