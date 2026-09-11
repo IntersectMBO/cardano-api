@@ -44,7 +44,7 @@ module Cardano.Api.Compatible.ProtocolParametersUpdate
   , fromLedgerPParamsUpdate
 
     -- * Data family instances
-  , AsType (..)
+  , AsType (AsUpdateProposal)
   )
 where
 
