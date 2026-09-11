@@ -7,11 +7,13 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Server
   ( runRpcServer
   , NodeKernelAccess
   , mkNodeKernelAccess
+  , registeredServiceNames
 
     -- * Traces
   , TraceRpc (..)
@@ -25,6 +27,8 @@ where
 
 import Cardano.Api
 import Cardano.Rpc.Proto.Api.Node qualified as Rpc
+import Cardano.Rpc.Proto.Api.Reflection.V1 qualified as ReflectionV1
+import Cardano.Rpc.Proto.Api.Reflection.V1alpha qualified as ReflectionV1alpha
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as UtxoRpc
 import Cardano.Rpc.Proto.Api.UtxoRpc.Sync qualified as UtxoRpc
@@ -34,6 +38,11 @@ import Cardano.Rpc.Server.Internal.Error (renderRpcExceptionForClient)
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Node
 import Cardano.Rpc.Server.Internal.Orphans ()
+import Cardano.Rpc.Server.Internal.Reflection
+  ( qualifiedServiceName
+  , serverReflectionInfoMethodV1
+  , serverReflectionInfoMethodV1alpha
+  )
 import Cardano.Rpc.Server.Internal.Tracing
 import Cardano.Rpc.Server.Internal.UtxoRpc.Eval
 import Cardano.Rpc.Server.Internal.UtxoRpc.Query
@@ -107,6 +116,42 @@ methodsSyncRpc =
     . Method (mkNonStreaming $ wrapInSpan TraceRpcReadTipSpan . readTipMethod)
     $ NoMoreMethods
 
+-- | gRPC method table for the Server Reflection API's @v1@ service.
+methodsReflectionV1
+  :: MonadIO m
+  => Methods m (ProtobufMethodsOf ReflectionV1.ServerReflection)
+methodsReflectionV1 =
+  Method (mkBiDiStreaming $ serverReflectionInfoMethodV1 registeredServiceNames) $
+    NoMoreMethods
+
+-- | gRPC method table for the Server Reflection API's legacy @v1alpha@ service.
+methodsReflectionV1alpha
+  :: MonadIO m
+  => Methods m (ProtobufMethodsOf ReflectionV1alpha.ServerReflection)
+methodsReflectionV1alpha =
+  Method (mkBiDiStreaming $ serverReflectionInfoMethodV1alpha registeredServiceNames) $
+    NoMoreMethods
+
+-- | Every service this server registers, paired with its handler methods
+-- in one list, so the name registered with grapesy and the name advertised
+-- by the Server Reflection API's @list_services@ ('registeredServiceNames')
+-- can never drift apart - unlike two hand-maintained lists, this cannot go
+-- out of sync by construction.
+registeredServices :: [(Text, [SomeRpcHandler (RIO RpcEnv)])]
+registeredServices =
+  [ (qualifiedServiceName @Rpc.Node, fromMethods methodsNodeRpc)
+  , (qualifiedServiceName @UtxoRpc.QueryService, fromMethods methodsUtxoRpc)
+  , (qualifiedServiceName @UtxoRpc.SubmitService, fromMethods methodsUtxoRpcSubmit)
+  , (qualifiedServiceName @UtxoRpc.SyncService, fromMethods methodsSyncRpc)
+  , (qualifiedServiceName @ReflectionV1.ServerReflection, fromMethods methodsReflectionV1)
+  , (qualifiedServiceName @ReflectionV1alpha.ServerReflection, fromMethods methodsReflectionV1alpha)
+  ]
+
+-- | Fully qualified names of every service this server registers, for the
+-- Server Reflection API's @list_services@.
+registeredServiceNames :: [Text]
+registeredServiceNames = map fst registeredServices
+
 -- | Start the gRPC server, registering all RPC service handlers.
 -- Does nothing when the RPC server is disabled in configuration.
 runRpcServer
@@ -169,12 +214,7 @@ runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExce
     runRIO rpcEnv $
       withRunInIO $ \runInIO ->
         runServer http2Settings config <=< mkGrpcServer serverParams . fmap (hoistSomeRpcHandler runInIO) $
-          mconcat
-            [ fromMethods methodsNodeRpc
-            , fromMethods methodsUtxoRpc
-            , fromMethods methodsUtxoRpcSubmit
-            , fromMethods methodsSyncRpc
-            ]
+          mconcat (map snd registeredServices)
  where
   serverParams :: ServerParams
   serverParams =
