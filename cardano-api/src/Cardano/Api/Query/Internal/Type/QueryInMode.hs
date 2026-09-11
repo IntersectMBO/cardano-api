@@ -293,7 +293,7 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era (SerialisedCurrentEpochState era)
   QueryPoolState
     :: Maybe (Set PoolId)
-    -> QueryInShelleyBasedEra era SerialisedPoolState
+    -> QueryInShelleyBasedEra era (SerialisedPoolState era)
   QueryPoolDistribution
     :: Maybe (Set PoolId)
     -> QueryInShelleyBasedEra era (Serialised (PoolDistribution era))
@@ -411,15 +411,15 @@ decodeCurrentEpochState
 decodeCurrentEpochState sbe (SerialisedCurrentEpochState (Serialised ls)) =
   shelleyBasedEraConstraints sbe $ CurrentEpochState <$> Plain.decodeFull ls
 
-newtype SerialisedPoolState
-  = SerialisedPoolState (Serialised L.QueryPoolStateResult)
+newtype SerialisedPoolState era
+  = SerialisedPoolState (Serialised (L.QueryPoolStateResult (ShelleyLedgerEra era)))
 
-newtype PoolState era = PoolState L.QueryPoolStateResult
+newtype PoolState era = PoolState (L.QueryPoolStateResult (ShelleyLedgerEra era))
 
 decodePoolState
   :: forall era
    . ShelleyBasedEra era
-  -> SerialisedPoolState
+  -> SerialisedPoolState era
   -> Either DecoderError (PoolState era)
 decodePoolState sbe (SerialisedPoolState (Serialised ls)) =
   shelleyBasedEraConstraints sbe $
@@ -951,7 +951,7 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryPoolState{} ->
       case q' of
         Consensus.GetCBOR Consensus.GetPoolState{} ->
-          SerialisedPoolState r'
+          SerialisedPoolState (Serialised (unSerialised r'))
         _ -> fromConsensusQueryResultMismatch
     QueryPoolDistribution{} ->
       case q' of
