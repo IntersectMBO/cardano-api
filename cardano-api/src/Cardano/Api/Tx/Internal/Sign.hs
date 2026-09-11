@@ -597,8 +597,8 @@ instance CBOR.DecCBOR ScriptValidity where
   decCBOR = isValidToScriptValidity <$> CBOR.decCBOR
 
 scriptValidityToIsValid :: ScriptValidity -> L.IsPhase2Valid
-scriptValidityToIsValid ScriptInvalid = L.Phase2Valid
-scriptValidityToIsValid ScriptValid = L.Phase2Invalid
+scriptValidityToIsValid ScriptInvalid = L.Phase2Invalid
+scriptValidityToIsValid ScriptValid = L.Phase2Valid
 
 isValidToScriptValidity :: L.IsPhase2Valid -> ScriptValidity
 isValidToScriptValidity L.Phase2Invalid = ScriptInvalid
