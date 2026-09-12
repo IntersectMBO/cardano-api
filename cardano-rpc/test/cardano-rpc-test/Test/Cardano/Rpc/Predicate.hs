@@ -14,6 +14,7 @@ import Cardano.Api.Serialise.Raw
 import Cardano.Api.Tx
 import Cardano.Api.Value
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
+import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as Submit
 import Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
 
 import RIO
@@ -39,6 +40,8 @@ import Test.Gen.Cardano.Api.Typed
 
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
 
 -- ---------------------------------------------------------------------------
 -- A. Default/empty patterns match everything
@@ -509,6 +512,258 @@ hprop_extract_nothing_for_default_predicate = H.propertyOnce $ do
   extractAddressesFromPredicate defMessage === Nothing
 
 -- ---------------------------------------------------------------------------
+-- H. TxPattern — consumes / produces
+-- ---------------------------------------------------------------------------
+
+hprop_tx_consumes_matches_resolved_input :: Property
+hprop_tx_consumes_matches_resolved_input = H.property $ do
+  address <- forAll genAddressShelley
+  let output = mkTxOutput (serialiseToRawBytes address) []
+      tx = mkTx [mkResolvedTxInput output] [] [] []
+      pat = defMessage & U5c.consumes .~ (defMessage & U5c.address .~ exactAddressPattern address)
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_consumes_rejects_wrong_output :: Property
+hprop_tx_consumes_rejects_wrong_output = H.property $ do
+  address <- forAll genAddressShelley
+  otherAddress <- forAll genAddressShelley
+  when (serialiseToRawBytes address /= serialiseToRawBytes otherAddress) $ do
+    let output = mkTxOutput (serialiseToRawBytes address) []
+        tx = mkTx [mkResolvedTxInput output] [] [] []
+        pat = defMessage & U5c.consumes .~ (defMessage & U5c.address .~ exactAddressPattern otherAddress)
+    H.assertWith tx $ not . matchesTxPattern pat
+
+hprop_tx_consumes_rejects_unresolved_input :: Property
+hprop_tx_consumes_rejects_unresolved_input = H.propertyOnce $ do
+  -- an input without 'as_output' contributes nothing (see 'matchesTxPattern' haddock):
+  -- even the default (match-everything) pattern must not fire on it
+  let tx = mkTx [defMessage] [] [] []
+      pat = defMessage & U5c.consumes .~ defMessage
+  H.assertWith tx $ not . matchesTxPattern pat
+
+hprop_tx_produces_matches_output :: Property
+hprop_tx_produces_matches_output = H.property $ do
+  address <- forAll genAddressShelley
+  let output = mkTxOutput (serialiseToRawBytes address) []
+      tx = mkTx [] [output] [] []
+      pat = defMessage & U5c.produces .~ (defMessage & U5c.address .~ exactAddressPattern address)
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_produces_rejects_when_no_output_matches :: Property
+hprop_tx_produces_rejects_when_no_output_matches = H.property $ do
+  address <- forAll genAddressShelley
+  otherAddress <- forAll genAddressShelley
+  when (serialiseToRawBytes address /= serialiseToRawBytes otherAddress) $ do
+    let output = mkTxOutput (serialiseToRawBytes address) []
+        tx = mkTx [] [output] [] []
+        pat = defMessage & U5c.produces .~ (defMessage & U5c.address .~ exactAddressPattern otherAddress)
+    H.assertWith tx $ not . matchesTxPattern pat
+
+-- ---------------------------------------------------------------------------
+-- I. TxPattern — has_address
+-- ---------------------------------------------------------------------------
+
+hprop_tx_has_address_matches_output_address :: Property
+hprop_tx_has_address_matches_output_address = H.property $ do
+  address <- forAll genAddressShelley
+  let output = mkTxOutput (serialiseToRawBytes address) []
+      tx = mkTx [] [output] [] []
+      pat = defMessage & U5c.hasAddress .~ exactAddressPattern address
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_has_address_matches_resolved_input_address :: Property
+hprop_tx_has_address_matches_resolved_input_address = H.property $ do
+  address <- forAll genAddressShelley
+  let output = mkTxOutput (serialiseToRawBytes address) []
+      tx = mkTx [mkResolvedTxInput output] [] [] []
+      pat = defMessage & U5c.hasAddress .~ exactAddressPattern address
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_has_address_rejects_when_absent :: Property
+hprop_tx_has_address_rejects_when_absent = H.property $ do
+  address <- forAll genAddressShelley
+  otherAddress <- forAll genAddressShelley
+  when (serialiseToRawBytes address /= serialiseToRawBytes otherAddress) $ do
+    let output = mkTxOutput (serialiseToRawBytes address) []
+        tx = mkTx [] [output] [] []
+        pat = defMessage & U5c.hasAddress .~ exactAddressPattern otherAddress
+    H.assertWith tx $ not . matchesTxPattern pat
+
+-- ---------------------------------------------------------------------------
+-- J. TxPattern — moves_asset / mints_asset
+-- ---------------------------------------------------------------------------
+
+hprop_tx_moves_asset_matches_output_asset :: Property
+hprop_tx_moves_asset_matches_output_asset = H.property $ do
+  policy <- forAll gen28Bytes
+  tokenName <- forAll genAssetName
+  let output = mkTxOutput mempty [mkMultiasset policy (serialiseToRawBytes tokenName) 1]
+      tx = mkTx [] [output] [] []
+      pat = defMessage & U5c.movesAsset .~ (defMessage & U5c.policyId .~ policy)
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_moves_asset_matches_resolved_input_asset :: Property
+hprop_tx_moves_asset_matches_resolved_input_asset = H.property $ do
+  policy <- forAll gen28Bytes
+  tokenName <- forAll genAssetName
+  let output = mkTxOutput mempty [mkMultiasset policy (serialiseToRawBytes tokenName) 1]
+      tx = mkTx [mkResolvedTxInput output] [] [] []
+      pat = defMessage & U5c.movesAsset .~ (defMessage & U5c.policyId .~ policy)
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_moves_asset_rejects_zero_quantity :: Property
+hprop_tx_moves_asset_rejects_zero_quantity = H.property $ do
+  policy <- forAll gen28Bytes
+  tokenName <- forAll genAssetName
+  let output = mkTxOutput mempty [mkMultiasset policy (serialiseToRawBytes tokenName) 0]
+      tx = mkTx [] [output] [] []
+      pat = defMessage & U5c.movesAsset .~ (defMessage & U5c.policyId .~ policy)
+  H.assertWith tx $ not . matchesTxPattern pat
+
+hprop_tx_mints_asset_matches_positive_mint :: Property
+hprop_tx_mints_asset_matches_positive_mint = H.property $ do
+  policy <- forAll gen28Bytes
+  tokenName <- forAll genAssetName
+  let tx = mkTx [] [] [mkMultiasset policy (serialiseToRawBytes tokenName) 1] []
+      pat = defMessage & U5c.mintsAsset .~ (defMessage & U5c.policyId .~ policy)
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_mints_asset_matches_burn :: Property
+hprop_tx_mints_asset_matches_burn = H.property $ do
+  -- burns are recorded as a negative quantity; mints_asset must still match them
+  policy <- forAll gen28Bytes
+  tokenName <- forAll genAssetName
+  let tx = mkTx [] [] [mkMultiasset policy (serialiseToRawBytes tokenName) (-1)] []
+      pat = defMessage & U5c.mintsAsset .~ (defMessage & U5c.policyId .~ policy)
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_mints_asset_rejects_zero_quantity :: Property
+hprop_tx_mints_asset_rejects_zero_quantity = H.property $ do
+  policy <- forAll gen28Bytes
+  tokenName <- forAll genAssetName
+  let tx = mkTx [] [] [mkMultiasset policy (serialiseToRawBytes tokenName) 0] []
+      pat = defMessage & U5c.mintsAsset .~ (defMessage & U5c.policyId .~ policy)
+  H.assertWith tx $ not . matchesTxPattern pat
+
+-- ---------------------------------------------------------------------------
+-- K. TxPattern — has_certificate
+-- ---------------------------------------------------------------------------
+
+hprop_tx_has_certificate_matches_stake_registration :: Property
+hprop_tx_has_certificate_matches_stake_registration = H.property $ do
+  credential <- forAll genStakeCredential
+  let cert = defMessage & U5c.stakeRegistration .~ mkStakeCredential credential
+      tx = mkTx [] [] [] [cert]
+      pat =
+        defMessage
+          & U5c.hasCertificate .~ (defMessage & U5c.stakeRegistration .~ mkStakeCredential credential)
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_has_certificate_rejects_different_credential :: Property
+hprop_tx_has_certificate_rejects_different_credential = H.property $ do
+  credential <- forAll genStakeCredential
+  otherCredential <- forAll genStakeCredential
+  when (serialiseStakeCredential credential /= serialiseStakeCredential otherCredential) $ do
+    let cert = defMessage & U5c.stakeRegistration .~ mkStakeCredential credential
+        tx = mkTx [] [] [] [cert]
+        pat =
+          defMessage
+            & U5c.hasCertificate .~ (defMessage & U5c.stakeRegistration .~ mkStakeCredential otherCredential)
+    H.assertWith tx $ not . matchesTxPattern pat
+
+hprop_tx_has_certificate_rejects_different_cert_shape :: Property
+hprop_tx_has_certificate_rejects_different_cert_shape = H.property $ do
+  -- a stake_registration pattern must not match a differently-shaped certificate,
+  -- even one carrying the exact same credential
+  credential <- forAll genStakeCredential
+  let cert = defMessage & U5c.stakeDeregistration .~ mkStakeCredential credential
+      tx = mkTx [] [] [] [cert]
+      pat =
+        defMessage
+          & U5c.hasCertificate .~ (defMessage & U5c.stakeRegistration .~ mkStakeCredential credential)
+  H.assertWith tx $ not . matchesTxPattern pat
+
+hprop_tx_has_certificate_any_stake_credential_matches_reg_cert :: Property
+hprop_tx_has_certificate_any_stake_credential_matches_reg_cert = H.property $ do
+  -- the any_stake_credential wildcard reaches into the Conway 'RegCert', which
+  -- the discriminated stake_registration branch does not (see the haddock on
+  -- 'matchesCertificatePattern')
+  credential <- forAll genStakeCredential
+  let cert = defMessage & U5c.regCert .~ (defMessage & U5c.stakeCredential .~ mkStakeCredential credential)
+      tx = mkTx [] [] [] [cert]
+      pat =
+        defMessage
+          & U5c.hasCertificate .~ (defMessage & U5c.anyStakeCredential .~ serialiseStakeCredential credential)
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_has_certificate_any_pool_keyhash_matches_registration :: Property
+hprop_tx_has_certificate_any_pool_keyhash_matches_registration = H.property $ do
+  poolKeyHash <- forAll gen28Bytes
+  let cert = defMessage & U5c.poolRegistration .~ (defMessage & U5c.operator .~ poolKeyHash)
+      tx = mkTx [] [] [] [cert]
+      pat = defMessage & U5c.hasCertificate .~ (defMessage & U5c.anyPoolKeyhash .~ poolKeyHash)
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_has_certificate_pool_retirement_matches :: Property
+hprop_tx_has_certificate_pool_retirement_matches = H.property $ do
+  poolKeyHash <- forAll gen28Bytes
+  let cert =
+        defMessage & U5c.poolRetirement .~ (defMessage & U5c.poolKeyhash .~ poolKeyHash & U5c.epoch .~ 100)
+      tx = mkTx [] [] [] [cert]
+      pat =
+        defMessage
+          & U5c.hasCertificate
+            .~ (defMessage & U5c.poolRetirement .~ (defMessage & U5c.poolKeyhash .~ poolKeyHash & U5c.epoch .~ 100))
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_has_certificate_default_matches_tx_with_any_cert :: Property
+hprop_tx_has_certificate_default_matches_tx_with_any_cert = H.property $ do
+  credential <- forAll genStakeCredential
+  let cert = defMessage & U5c.stakeRegistration .~ mkStakeCredential credential
+      tx = mkTx [] [] [] [cert]
+      pat = defMessage & U5c.hasCertificate .~ defMessage
+  H.assertWith tx $ matchesTxPattern pat
+
+hprop_tx_has_certificate_default_rejects_certless_tx :: Property
+hprop_tx_has_certificate_default_rejects_certless_tx = H.propertyOnce $ do
+  -- mirrors 'hprop_default_asset_pattern_rejects_ada_only': a present-but-empty
+  -- pattern still requires at least one certificate to exist
+  let tx = mkTx [] [] [] []
+      pat = defMessage & U5c.hasCertificate .~ defMessage
+  H.assertWith tx $ not . matchesTxPattern pat
+
+-- ---------------------------------------------------------------------------
+-- L. TxPredicate boolean combinators
+-- ---------------------------------------------------------------------------
+
+hprop_tx_predicate_default_matches_everything :: Property
+hprop_tx_predicate_default_matches_everything = H.propertyOnce $ do
+  let tx = mkTx [] [] [] []
+  H.assertWith tx $ matchesTxPredicate defMessage
+
+hprop_tx_predicate_not_inverts_match :: Property
+hprop_tx_predicate_not_inverts_match = H.propertyOnce $ do
+  let tx = mkTx [] [] [] []
+      inner = wrapInTxPredicate defMessage -- matches everything
+      predicate = defMessage & Submit.not .~ [inner]
+  H.assertWith tx $ not . matchesTxPredicate predicate
+
+hprop_tx_predicate_allOf_conjunction :: Property
+hprop_tx_predicate_allOf_conjunction = H.propertyOnce $ do
+  let tx = mkTx [] [] [] []
+      matchAll = wrapInTxPredicate defMessage
+      predicate = defMessage & Submit.allOf .~ [matchAll, matchAll]
+  H.assertWith tx $ matchesTxPredicate predicate
+
+hprop_tx_predicate_anyOf_disjunction :: Property
+hprop_tx_predicate_anyOf_disjunction = H.propertyOnce $ do
+  let tx = mkTx [] [] [] []
+      matchAll = wrapInTxPredicate defMessage
+      matchNone = wrapInTxPredicate (defMessage & U5c.hasCertificate .~ defMessage)
+      predicate = defMessage & Submit.anyOf .~ [matchAll, matchNone]
+  H.assertWith tx $ matchesTxPredicate predicate
+
+-- ---------------------------------------------------------------------------
 -- Helpers
 -- ---------------------------------------------------------------------------
 
@@ -541,3 +796,55 @@ wrapInPredicate outputPattern =
       .~ ( defMessage
              & U5c.cardano .~ outputPattern
          )
+
+-- | Wrap a TxPattern in a TxPredicate via match.cardano.
+wrapInTxPredicate :: Proto U5c.TxPattern -> Proto Submit.TxPredicate
+wrapInTxPredicate txPattern =
+  defMessage & Submit.match .~ (defMessage & Submit.cardano .~ txPattern)
+
+-- | An 'AddressPattern' matching only the given address exactly.
+exactAddressPattern :: SerialiseAsRawBytes addr => addr -> Proto U5c.AddressPattern
+exactAddressPattern address = defMessage & U5c.exactAddress .~ serialiseToRawBytes address
+
+-- | Build a 'U5c.StakeCredential' carrying the given credential's raw hash bytes.
+-- Always uses the addrKeyHash branch: 'credentialBytes' treats both branches
+-- alike, so which one is picked here does not affect what the tests exercise.
+mkStakeCredential :: StakeCredential -> Proto U5c.StakeCredential
+mkStakeCredential credential = defMessage & U5c.addrKeyHash .~ serialiseStakeCredential credential
+
+-- | Build a proto TxOutput with the given address and assets.
+mkTxOutput :: ByteString -> [Proto U5c.Multiasset] -> Proto U5c.TxOutput
+mkTxOutput address assets = defMessage & U5c.address .~ address & U5c.assets .~ assets
+
+-- | Build a proto Multiasset bundle with a single named asset of the given quantity.
+-- @quantity@ may be negative (a burn); it is built directly via 'BigInt.int'
+-- rather than going through the (package-internal) 'Inject' instance.
+mkMultiasset :: ByteString -> ByteString -> Integer -> Proto U5c.Multiasset
+mkMultiasset policy tokenName quantity =
+  defMessage
+    & U5c.policyId .~ policy
+    & U5c.assets
+      .~ [ defMessage & U5c.name .~ tokenName & U5c.quantity .~ (defMessage & U5c.int .~ fromIntegral quantity)
+         ]
+
+-- | A TxInput whose spent output has been resolved (see the 'matchesTxPattern' haddock).
+mkResolvedTxInput :: Proto U5c.TxOutput -> Proto U5c.TxInput
+mkResolvedTxInput output = defMessage & U5c.asOutput .~ output
+
+-- | Build a proto Tx from its inputs, outputs, minted assets and certificates.
+mkTx
+  :: [Proto U5c.TxInput]
+  -> [Proto U5c.TxOutput]
+  -> [Proto U5c.Multiasset]
+  -> [Proto U5c.Certificate]
+  -> Proto U5c.Tx
+mkTx inputs outputs mint certificates =
+  defMessage
+    & U5c.inputs .~ inputs
+    & U5c.outputs .~ outputs
+    & U5c.mint .~ mint
+    & U5c.certificates .~ certificates
+
+-- | Generate 28 raw bytes, the size of a Blake2b-224 hash (credentials, pool key hashes, DReps).
+gen28Bytes :: Gen ByteString
+gen28Bytes = Gen.bytes (Range.singleton 28)

@@ -17,6 +17,12 @@ module Cardano.Rpc.Server.NodeKernelAccess
   , GenesisBundle (..)
   , mkNodeKernelAccess
   , fetchBlock
+  , readMempoolTxs
+  , getMempoolSnapshot
+  , nextMempoolSnapshot
+  , MempoolWatchSnapshot (..)
+  , watchMempoolSnapshot
+  , nextMempoolWatchSnapshot
   , grabNodeKernelAccess
   , ChainChange (..)
   , ChainFollower (..)
@@ -34,9 +40,16 @@ import Cardano.Rpc.Server.NodeKernelAccess.Internal.Type qualified as Type
 
 import Ouroboros.Consensus.Cardano.Block (CardanoEras)
 import Ouroboros.Consensus.HardFork.History qualified as History
+import Ouroboros.Consensus.Ledger.SupportsMempool qualified as Consensus (txForgetValidated)
+import Ouroboros.Consensus.Mempool.API qualified as Consensus
+  ( MempoolSnapshot (snapshotSlotNo, snapshotTxs, snapshotTxsAfter)
+  , TicketNo
+  , getSnapshot
+  )
 
 import RIO (MonadUnliftIO, atomically, bracket, throwIO, withRunInIO)
 
+import Control.Monad.STM (check)
 import Control.Tracer (Tracer, traceWith)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
@@ -70,6 +83,7 @@ mkNodeKernelAccess tracer shelleyGenesisHash shelleyGenesisFile blockType kernel
       Just
         Type.NodeKernelAccess
           { Type.chainDb = chainDb
+          , Type.mempool = Consensus.getMempool kernel
           , Type.systemStart = Consensus.nodeSystemStart topLevelConfig
           , Type.readHardForkSummary = readHardForkSummary'
           , Type.securityParam = Consensus.configSecurityParam topLevelConfig
@@ -220,6 +234,125 @@ fetchBlock Type.NodeKernelAccess{Type.chainDb = chainDb} slot (HeaderHash shortH
   let point = Consensus.RealPoint slot (Consensus.OneEraHash shortHash)
       component = (,) <$> fmap BSL.toStrict Consensus.GetRawBlock <*> fmap fromConsensusBlock Consensus.GetBlock
   liftIO $ Consensus.getBlockComponent chainDb component point
+
+-- | Read the current mempool contents as a point-in-time snapshot:
+-- transactions added or removed after the read are not reflected.
+-- Ticket numbers and mempool capacity accounting are dropped here, since
+-- 'readMempoolTxs' only serves the one-shot @ReadMempool@ method; a
+-- streaming consumer needing incremental delivery uses 'getMempoolSnapshot'
+-- \/ 'nextMempoolSnapshot' (or the 'MempoolWatchSnapshot' projection of
+-- them) instead.
+readMempoolTxs
+  :: MonadIO m
+  => Type.NodeKernelAccess
+  -> m [Consensus.GenTx (Consensus.CardanoBlock Consensus.StandardCrypto)]
+readMempoolTxs Type.NodeKernelAccess{Type.mempool = mempool} = liftIO $ do
+  snapshot <- atomically $ Consensus.getSnapshot mempool
+  pure
+    [Consensus.txForgetValidated tx | (tx, _ticketNo, _txMeasure) <- Consensus.snapshotTxs snapshot]
+
+-- | Read the current mempool snapshot, without blocking.
+getMempoolSnapshot
+  :: MonadIO m
+  => Type.NodeKernelAccess
+  -> m (Consensus.MempoolSnapshot (Consensus.CardanoBlock Consensus.StandardCrypto))
+getMempoolSnapshot Type.NodeKernelAccess{Type.mempool = mempool} =
+  liftIO $ atomically (Consensus.getSnapshot mempool)
+
+-- | Block until the mempool snapshot differs from the given one, then
+-- return the new snapshot - consensus's own LocalTxMonitor server's own
+-- change-detection pattern
+-- ('Ouroboros.Consensus.MiniProtocol.LocalTxMonitor.Server.recvMsgAwaitAcquire'):
+-- the full 'Consensus.TicketNo' list of 'Consensus.snapshotTxs' plus
+-- 'Consensus.snapshotSlotNo'. A max-ticket comparison alone would miss
+-- removal-only changes.
+nextMempoolSnapshot
+  :: MonadIO m
+  => Type.NodeKernelAccess
+  -> Consensus.MempoolSnapshot (Consensus.CardanoBlock Consensus.StandardCrypto)
+  -> m (Consensus.MempoolSnapshot (Consensus.CardanoBlock Consensus.StandardCrypto))
+nextMempoolSnapshot Type.NodeKernelAccess{Type.mempool = mempool} previous =
+  liftIO . atomically $ do
+    candidate <- Consensus.getSnapshot mempool
+    check $ mempoolObservationKey candidate /= mempoolObservationKey previous
+    pure candidate
+
+-- | The change-detection key for a mempool snapshot: every current entry's
+-- ticket number, oldest to newest, plus the virtual block's slot number.
+-- Shared by 'nextMempoolSnapshot' and 'nextMempoolWatchSnapshot' so the two
+-- blocking-wait entry points (raw snapshot vs. the 'MempoolWatchSnapshot'
+-- projection) compare changes the same way.
+mempoolObservationKey
+  :: Consensus.MempoolSnapshot (Consensus.CardanoBlock Consensus.StandardCrypto)
+  -> ([Consensus.TicketNo], SlotNo)
+mempoolObservationKey snapshot =
+  ( [ticketNo | (_, ticketNo, _) <- Consensus.snapshotTxs snapshot]
+  , Consensus.snapshotSlotNo snapshot
+  )
+
+-- | A point-in-time view of the mempool for @WatchMempool@: every current
+-- entry's ticket number (for change detection), the virtual block's slot
+-- number, and a pure projection of entries newer than a given ticket,
+-- already unwrapped out of 'Consensus.Validated' into 'TxInMode' - a plain
+-- value that test code can construct directly with 'TxInMode' fixtures,
+-- with no need to fabricate a genuine 'Consensus.Validated' value or run
+-- mempool validation.
+data MempoolWatchSnapshot = MempoolWatchSnapshot
+  { mempoolWatchTicketNumbers :: [Consensus.TicketNo]
+  -- ^ Every current entry's ticket number, oldest to newest: half of the
+  -- change-detection key 'nextMempoolWatchSnapshot' compares (see
+  -- 'mempoolObservationKey'). A max-ticket comparison alone would miss
+  -- removal-only changes, which is why the full list is kept rather than
+  -- just its length or maximum.
+  , mempoolWatchSlotNo :: SlotNo
+  -- ^ The virtual block's slot number: the other half of the
+  -- change-detection key.
+  , mempoolWatchTxsAfter :: Consensus.TicketNo -> [(TxInMode, Consensus.TicketNo)]
+  -- ^ Entries with a ticket number greater than the given one, oldest to
+  -- newest.
+  }
+
+-- | Read the current mempool watch snapshot, without blocking.
+watchMempoolSnapshot
+  :: MonadIO m
+  => Type.NodeKernelAccess
+  -> m MempoolWatchSnapshot
+watchMempoolSnapshot nodeKernelAccess =
+  toMempoolWatchSnapshot <$> getMempoolSnapshot nodeKernelAccess
+
+-- | Block until the mempool snapshot's ticket list or slot number differs
+-- from the given one, then return the new snapshot. Reuses
+-- 'mempoolObservationKey', the same comparison 'nextMempoolSnapshot' uses.
+nextMempoolWatchSnapshot
+  :: MonadIO m
+  => Type.NodeKernelAccess
+  -> MempoolWatchSnapshot
+  -> m MempoolWatchSnapshot
+nextMempoolWatchSnapshot
+  Type.NodeKernelAccess{Type.mempool = mempool}
+  MempoolWatchSnapshot
+    { mempoolWatchTicketNumbers = previousTicketNumbers
+    , mempoolWatchSlotNo = previousSlotNo
+    } =
+    liftIO . atomically $ do
+      candidate <- Consensus.getSnapshot mempool
+      check $ mempoolObservationKey candidate /= (previousTicketNumbers, previousSlotNo)
+      pure $ toMempoolWatchSnapshot candidate
+
+toMempoolWatchSnapshot
+  :: Consensus.MempoolSnapshot (Consensus.CardanoBlock Consensus.StandardCrypto)
+  -> MempoolWatchSnapshot
+toMempoolWatchSnapshot snapshot =
+  MempoolWatchSnapshot
+    { mempoolWatchTicketNumbers = ticketNumbers
+    , mempoolWatchSlotNo = slotNo
+    , mempoolWatchTxsAfter = \ticketNo ->
+        [ (fromConsensusGenTx (Consensus.txForgetValidated tx), ticketNo')
+        | (tx, ticketNo', _txMeasure) <- Consensus.snapshotTxsAfter snapshot ticketNo
+        ]
+    }
+ where
+  (ticketNumbers, slotNo) = mempoolObservationKey snapshot
 
 -- | A single instruction produced by a chain follower.
 --

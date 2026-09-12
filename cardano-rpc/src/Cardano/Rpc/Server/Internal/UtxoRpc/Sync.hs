@@ -314,7 +314,7 @@ followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp f
       ChainRollBack point -> handleRollback point floorPoint tracked
     go floorPoint' tracked'
 
-  -- \| Dispatch a rollback to undo or reset. The window floor starts as
+  -- Dispatch a rollback to undo or reset. The window floor starts as
   -- the stream's start point and only ever moves forward, to a rollback
   -- target that fell outside the window (the 'Nothing' case below). A
   -- later rollback landing on the new floor can then be served as undo
@@ -341,7 +341,7 @@ followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp f
             kept' <- undoNewestFirst point kept undone
             pure (floorPoint, kept')
 
-  -- \| Split the tracked points at the rollback target. 'Nothing' means
+  -- Split the tracked points at the rollback target. 'Nothing' means
   -- the target is outside the window: not the floor and not a tracked
   -- point. Otherwise the first half is the points strictly newer than the
   -- target, to be undone newest first, and the second half is what
@@ -356,7 +356,7 @@ followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp f
       | point == floorPoint -> Just (tracked, Seq.empty)
       | otherwise -> Nothing
 
-  -- \| Re-fetch and emit @undo@ for each pending point, newest first.
+  -- Re-fetch and emit @undo@ for each pending point, newest first.
   -- Stops at the first fetch miss (garbage collection won the race) and
   -- sends a single absolute @reset@ at the rollback point instead.
   undoNewestFirst :: ChainPoint -> TrackedPoints -> TrackedPoints -> m TrackedPoints

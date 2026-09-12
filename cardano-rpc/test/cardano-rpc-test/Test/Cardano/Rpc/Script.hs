@@ -48,7 +48,7 @@ hprop_ledger_script_to_utxo_rpc_script_matches_old_api = H.property $ do
   scriptInEra@(ScriptInEra _ oldScript) <- forAll $ genScriptInEra sbe
   let ledgerScript = toShelleyScript scriptInEra
 
-  ledgerScriptToUtxoRpcScript sbe ledgerScript H.=== scriptToUtxoRpcScript oldScript
+  ledgerScriptToUtxoRpcScript sbe ledgerScript === scriptToUtxoRpcScript oldScript
 
 -- | A Dijkstra guard script has no utxorpc counterpart yet, so it must convert to
 -- the empty 'NativeScript' message rather than crashing.
@@ -57,7 +57,7 @@ hprop_dijkstra_guard_script_converts_to_empty_native_script = H.propertyOnce $ d
   rawHash <- H.nothingFail $ L.hashFromBytes (BS.replicate 28 0)
   let guardScript = L.RequireGuard (L.KeyHashObj (L.KeyHash rawHash))
 
-  ledgerNativeScriptToUtxoRpcNativeScript ShelleyBasedEraDijkstra guardScript H.=== defMessage
+  ledgerNativeScriptToUtxoRpcNativeScript ShelleyBasedEraDijkstra guardScript === defMessage
 
 -- | A Dijkstra native script that isn't a guard script still converts via the
 -- classic view patterns shared with earlier eras.
@@ -67,4 +67,4 @@ hprop_dijkstra_signature_script_sets_pubkey_hash = H.propertyOnce $ do
   let signatureScript = L.RequireSignature (L.KeyHash rawHash)
       result = ledgerNativeScriptToUtxoRpcNativeScript ShelleyBasedEraDijkstra signatureScript
 
-  result ^. U5c.scriptPubkeyHash H.=== L.hashToBytes rawHash
+  result ^. U5c.scriptPubkeyHash === L.hashToBytes rawHash
