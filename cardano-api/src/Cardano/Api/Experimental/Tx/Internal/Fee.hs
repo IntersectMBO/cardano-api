@@ -20,6 +20,7 @@ module Cardano.Api.Experimental.Tx.Internal.Fee
   , calcMinFeeRecursive
   , collectTxBodyScriptWitnesses
   , estimateBalancedTxBody
+  , estimateTransactionKeyWitnessCount
   , evaluateTransaction
   , TxEvaluationResult (..)
   , evaluateTransactionExecutionUnits
@@ -75,7 +76,8 @@ import Cardano.Ledger.Alonzo.Core qualified as Ledger
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
-import Cardano.Ledger.Credential as Ledger (Credential)
+import Cardano.Ledger.Credential as Ledger (Credential, credKeyHashWitness)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Val qualified as L
 
 import Control.Monad
@@ -1744,8 +1746,13 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
   | null failuresMap = Left TxBodyScriptBadScriptValidity
   | otherwise = Right $ Map.map (\_ -> ExecutionUnits 0 0) failuresMap <> exUnitsMap
 
--- | Provide and approximate count of the key witnesses (i.e. signatures)
+-- | Provide an approximate count of the key witnesses (i.e. signatures)
 -- required for a transaction.
+--
+-- Certificates, withdrawals, extra key witnesses and votes are deduplicated against
+-- each other, mirroring the key hash set ledger's @getWitsVKeyNeeded@ computes, so a
+-- key acting in several of those roles is counted once. A pool registration
+-- certificate counts one key witness for the operator and one for every owner.
 --
 -- This estimate is not exact and may overestimate the required number of witnesses.
 -- The function makes conservative assumptions, including:
@@ -1754,6 +1761,15 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
 --   multiple inputs may share the same address, requiring only one witness per address.
 --
 -- * Assuming regular and collateral inputs are distinct, even though they may overlap.
+--
+-- * Counting inputs and collateral inputs on top of the deduplicated set rather than
+--   against it, because their key hashes are only known from the UTxO. The result stays
+--   an upper bound: the number of inputs is at least the number of input key hashes
+--   missing from that set. Use 'calculateMinTxFee' with a 'L.UTxO' in hand for an exact
+--   count.
+--
+-- * Charging one witness per proposal procedure, even though a proposal needs no key
+--   witness of its own.
 --
 -- TODO: Consider implementing a more precise calculation that leverages the UTXO set
 -- to determine which inputs correspond to distinct addresses. Additionally, the
@@ -1767,25 +1783,62 @@ estimateTransactionKeyWitnessCount
     , txWithdrawals
     , txCertificates
     , txProposalProcedures
+    , txVotingProcedures
     } =
     fromIntegral $
-      sum (map estimateTxInWitnesses txIns)
+      Set.size knowableKeyHashes
+        + sum (map estimateTxInWitnesses txIns)
         + length txInsCollateral
-        + case txExtraKeyWits of
-          TxExtraKeyWitnesses khs ->
-            length khs
-        + case txWithdrawals of
-          TxWithdrawals withdrawals ->
-            length [() | (_, _, AnyKeyWitnessPlaceholder) <- withdrawals]
-        + case txCertificates of
-          TxCertificates credWits ->
-            length
-              [() | (_, Just AnyKeyWitnessPlaceholder) <- toList credWits]
         + case txProposalProcedures of
           Just (TxProposalProcedures m) ->
             OMap.size m
           Nothing -> 0
    where
+    -- The roles whose key hashes the body already pins down, unioned the way ledger's
+    -- 'Cardano.Ledger.Conway.UTxO.getConwayWitsVKeyNeeded' unions them.
+    knowableKeyHashes :: Set (L.KeyHash L.Witness)
+    knowableKeyHashes =
+      extraKeyHashes <> withdrawalKeyHashes <> certificateKeyHashes <> voteKeyHashes
+
+    extraKeyHashes :: Set (L.KeyHash L.Witness)
+    extraKeyHashes = case txExtraKeyWits of
+      TxExtraKeyWitnesses keyHashes ->
+        Set.fromList [asWitness $ Api.unPaymentKeyHash keyHash | keyHash <- keyHashes]
+
+    withdrawalKeyHashes :: Set (L.KeyHash L.Witness)
+    withdrawalKeyHashes = case txWithdrawals of
+      TxWithdrawals withdrawals ->
+        Set.fromList $
+          mapMaybe (\(StakeAddress _ credential, _, _) -> credKeyHashWitness credential) withdrawals
+
+    -- The certificate itself decides who must sign, mirroring ledger's
+    -- 'getVKeyWitnessTxCert': a pool registration certificate additionally
+    -- requires every owner to sign, not just the operator.
+    certificateKeyHashes :: Set (L.KeyHash L.Witness)
+    certificateKeyHashes = case txCertificates of
+      TxCertificates credWits ->
+        obtainCommonConstraints (useEra @era) $
+          let
+            -- Every owner of a pool registration certificate must also sign.
+            ownerKeyHashes :: L.TxCert (LedgerEra era) -> Set (L.KeyHash L.Witness)
+            ownerKeyHashes certificate = case certificate of
+              L.RegPoolTxCert poolParams -> Set.map asWitness (L.sppOwners poolParams)
+              _ -> mempty
+           in
+            Set.unions
+              [ maybe mempty Set.singleton (L.getVKeyWitnessTxCert certificate) <> ownerKeyHashes certificate
+              | (Exp.Certificate certificate, _) <- toList credWits
+              ]
+
+    voteKeyHashes :: Set (L.KeyHash L.Witness)
+    voteKeyHashes = case txVotingProcedures of
+      Nothing -> mempty
+      Just (TxVotingProcedures procedures _) ->
+        Map.foldrWithKey'
+          (\voter _ keyHashes -> maybe keyHashes (`Set.insert` keyHashes) (voterKeyHashWitness voter))
+          mempty
+          (L.unVotingProcedures procedures)
+
     estimateTxInWitnesses :: (TxIn, AnyWitness (LedgerEra era)) -> Int
     estimateTxInWitnesses (_, AnyKeyWitnessPlaceholder) = 1
     estimateTxInWitnesses (_, AnySimpleScriptWitness (SScript (SimpleScript simpleScript))) =
@@ -1808,6 +1861,13 @@ estimateTransactionKeyWitnessCount
     maxWitnessesInSimpleScript (Old.RequireAllOf simpleScripts) = sum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (Old.RequireAnyOf simpleScripts) = maximum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (Old.RequireMOf n simpleScripts) = sum $ take n $ sortBy (comparing Down) (map maxWitnessesInSimpleScript simpleScripts)
+
+    -- Mirrors ledger's 'Cardano.Ledger.Conway.UTxO.voterWitnesses': a committee or
+    -- DRep voter needs a VKey witness only when its credential is key-based.
+    voterKeyHashWitness :: L.Voter -> Maybe (L.KeyHash L.Witness)
+    voterKeyHashWitness (L.CommitteeVoter credential) = credKeyHashWitness credential
+    voterKeyHashWitness (L.DRepVoter credential) = credKeyHashWitness credential
+    voterKeyHashWitness (L.StakePoolVoter poolId) = Just (asWitness poolId)
 
 -- | Estimate the minimum transaction fee by analyzing the transaction structure
 -- and determining the required number and type of key witnesses.

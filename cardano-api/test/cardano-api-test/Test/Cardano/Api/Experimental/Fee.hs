@@ -2,6 +2,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Api.Experimental.Fee
@@ -25,17 +26,26 @@ import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
+import Data.Default (def)
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
 import Data.Sequence.Strict qualified as Seq
+import Data.Set qualified as Set
 import Data.Time.Clock.POSIX qualified as Time
 import Lens.Micro
 
-import Test.Gen.Cardano.Api.Typed (genAddressInEra, genStakeCredential, genTxIn)
+import Test.Gen.Cardano.Api.Typed
+  ( genAddressInEra
+  , genScriptHash
+  , genStakeCredential
+  , genTxId
+  , genTxIn
+  , genVerificationKeyHash
+  )
 
 import Test.Cardano.Api.Experimental (exampleProtocolParams, exampleProtocolParamsEra)
 
-import Hedgehog (Gen, Property)
+import Hedgehog (Gen, Property, (===))
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
@@ -62,6 +72,18 @@ tests =
         [ testProperty
             "unwitnessed certs produce no script witnesses"
             prop_collectTxBodyScriptWitnesses_ignores_unwitnessed_certs
+        ]
+    , testGroup
+        "estimateTransactionKeyWitnessCount"
+        [ testProperty
+            "counts key witnesses required by key-credentialed voters"
+            prop_estimateTransactionKeyWitnessCount_counts_vote_key_witnesses
+        , testProperty
+            "cross-role key witness dedupe"
+            prop_estimateTransactionKeyWitnessCount_dedupes_across_roles
+        , testProperty
+            "pool registration counts operator and every owner"
+            prop_estimateTransactionKeyWitnessCount_counts_pool_owners
         ]
     , testGroup
         "createCompatibleTx"
@@ -566,7 +588,7 @@ prop_calcMinFeeRecursive_well_funded_succeeds = H.property $ do
           (const False)
           utxo
           (resultLedgerTx ^. L.bodyTxL)
-  balance H.=== mempty
+  balance === mempty
 
 -- | Like 'prop_calcMinFeeRecursive_well_funded_succeeds' but the UTxO and
 -- output carry native tokens. Verifies that surplus tokens are correctly
@@ -586,7 +608,7 @@ prop_calcMinFeeRecursive_well_funded_multi_asset = H.property $ do
           (const False)
           utxo
           (resultLedgerTx ^. L.bodyTxL)
-  balance H.=== mempty
+  balance === mempty
 
 -- | 'calcMinFeeRecursive' is idempotent: applying it to its own result
 -- yields the same 'UnsignedTx'.  This confirms the fee has reached a
@@ -600,7 +622,7 @@ prop_calcMinFeeRecursive_fee_fixpoint = H.property $ do
   secondResult <-
     H.leftFail $
       Exp.calcMinFeeRecursive changeAddr resultTx utxo exampleProtocolParams mempty mempty 0
-  resultTx H.=== secondResult
+  resultTx === secondResult
 
 -- | When the outputs exceed the UTxO value the function returns
 -- 'Left (NotEnoughAdaForNewOutput _)' with a negative deficit coin.
@@ -653,7 +675,7 @@ prop_calcMinFeeRecursive_no_tx_outs = H.property $ do
       Exp.calcMinFeeRecursive changeAddr unsignedTx utxo exampleProtocolParams mempty mempty 0
   let outs = toList $ resultLedgerTx ^. L.bodyTxL . L.outputsTxBodyL
   -- The result should have exactly one output (the change output)
-  length outs H.=== 1
+  length outs === 1
 
 -- | When the surplus is just barely enough to cover the initial fee but not
 -- the higher fee after adding a change output, the change output balance
@@ -692,7 +714,7 @@ prop_calcMinFeeRecursive_withdrawal_funded_succeeds = H.property $ do
           (const False)
           utxo
           (resultLedgerTx ^. L.bodyTxL)
-  balance H.=== mempty
+  balance === mempty
 
 -- | When the input is tiny (below the minimum fee) and the withdrawal only
 -- covers @output - input@ exactly, 'calcMinFeeRecursive' must fail
@@ -781,7 +803,7 @@ prop_evaluateSignedTx_balanced_mempty = H.property $ do
           mempty
           utxo
           signedTx
-  Exp.txEvalBalance result H.=== mempty
+  Exp.txEvalBalance result === mempty
 
 -- | Evaluate a simple signed transaction, returning the result and UTxO.
 evalSimpleTx
@@ -824,7 +846,7 @@ prop_substituteExecutionUnits_preserves_certs = H.property $ do
         Exp.defaultTxBodyContent
           & Exp.setTxCertificates inputCerts
   result <- H.evalEither $ Exp.substituteExecutionUnits Map.empty txBodyContent
-  Exp.txCertificates result H.=== inputCerts
+  Exp.txCertificates result === inputCerts
 
 -- | 'collectTxBodyScriptWitnesses' must return exactly the script-witnessed
 -- certs (1 simple script witness in the generator) and must not include
@@ -837,7 +859,7 @@ prop_collectTxBodyScriptWitnesses_ignores_unwitnessed_certs = H.property $ do
         Exp.defaultTxBodyContent
           & Exp.setTxCertificates inputCerts
       scriptWitnesses = Exp.collectTxBodyScriptWitnesses txBodyContent
-  length scriptWitnesses H.=== 1
+  length scriptWitnesses === 1
 
 -- | 'createCompatibleTx' must include every certificate (both witnessed and
 -- unwitnessed) in the resulting ledger transaction body. This ensures that
@@ -850,7 +872,112 @@ prop_createCompatibleTx_preserves_all_certs = H.property $ do
   Api.ShelleyTx _ ledgerTx <-
     H.evalEither $ createCompatibleTx sbe [] [] mempty 0 (NoPParamsUpdate sbe) NoVotes inputCerts
   let bodyCerts = ledgerTx ^. L.bodyTxL . L.certsTxBodyL
-  Seq.length bodyCerts H.=== expectedCount
+  Seq.length bodyCerts === expectedCount
+
+-- | Regression test for: a key-credentialed voter (e.g. a key-hash DRep)
+-- requires a VKey witness to satisfy the ledger, but
+-- 'estimateTransactionKeyWitnessCount''s record pattern does not destructure
+-- 'txVotingProcedures' at all, so a vote witnessed by
+-- 'AnyKeyWitnessPlaceholder' contributes zero to the estimate. A transaction
+-- containing only a generated mix of key-credentialed and script-credentialed
+-- votes (and nothing else) must be estimated to need exactly one key witness
+-- per key-credentialed voter - script-credentialed votes must not add to the
+-- count. Voters are drawn from a small pool and each one votes on several of
+-- a small pool of governance action ids, so the same voter recurs for
+-- several action ids; the count must still be one per voter, not one per
+-- vote.
+prop_estimateTransactionKeyWitnessCount_counts_vote_key_witnesses :: Property
+prop_estimateTransactionKeyWitnessCount_counts_vote_key_witnesses = H.property $ do
+  (voteEntries, expectedKeyWitnessCount) <- H.forAll genVotingProceduresWithKeyWitnessCount
+  txVotingProcedures <- H.leftFail $ Exp.mkTxVotingProcedures voteEntries
+  let txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxVotingProcedures txVotingProcedures
+      keyWitnessCount = Exp.estimateTransactionKeyWitnessCount @Exp.ConwayEra txBodyContent
+  keyWitnessCount === fromIntegral expectedKeyWitnessCount
+
+-- | Cross-role dedupe: a stake key that both withdraws rewards and is
+-- deregistered by a certificate in the same transaction needs one key
+-- witness, not two, while an unrelated extra key witness still counts
+-- separately. A certificate for a different stake key collides with
+-- nothing, so all three keys count.
+prop_estimateTransactionKeyWitnessCount_dedupes_across_roles :: Property
+prop_estimateTransactionKeyWitnessCount_dedupes_across_roles = H.property $ do
+  withdrawingStakeKeyHash <- H.forAll $ genVerificationKeyHash Api.AsStakeKey
+  unrelatedStakeKeyHash <- H.forAll $ genVerificationKeyHash Api.AsStakeKey
+  extraPaymentKeyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  let stakeCredential = Api.StakeCredentialByKey withdrawingStakeKeyHash
+      stakeAddress = Api.makeStakeAddress Api.Mainnet stakeCredential
+      unregistrationCert credential =
+        Exp.Certificate $
+          L.ConwayTxCertDeleg $
+            L.ConwayUnRegCert (Api.toShelleyStakeCredential credential) (L.SJust (L.Coin 2_000_000))
+      contentWithCertFor credential =
+        Exp.defaultTxBodyContent
+          & Exp.setTxWithdrawals
+            (Exp.TxWithdrawals [(stakeAddress, L.Coin 0, Exp.AnyKeyWitnessPlaceholder)])
+          & Exp.setTxCertificates
+            ( Exp.mkTxCertificates
+                Exp.ConwayEra
+                [(unregistrationCert credential, Exp.AnyKeyWitnessPlaceholder)]
+            )
+          & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses [extraPaymentKeyHash])
+  -- the deregistered key is the withdrawing key: counted once, plus the extra key witness
+  Exp.estimateTransactionKeyWitnessCount @Exp.ConwayEra (contentWithCertFor stakeCredential)
+    === 2
+  -- an unrelated deregistered key: nothing collides
+  Exp.estimateTransactionKeyWitnessCount @Exp.ConwayEra
+    (contentWithCertFor (Api.StakeCredentialByKey unrelatedStakeKeyHash))
+    === 3
+
+-- | A pool registration certificate requires a signature from the operator
+-- and from every owner, mirroring ledger's 'getShelleyWitsVKeyNeeded'. An
+-- owner who also withdraws rewards in the same transaction still counts once.
+prop_estimateTransactionKeyWitnessCount_counts_pool_owners :: Property
+prop_estimateTransactionKeyWitnessCount_counts_pool_owners = H.property $ do
+  operatorKeyHash <- H.forAll $ genVerificationKeyHash Api.AsStakePoolKey
+  withdrawingStakeKeyHash <- H.forAll $ genVerificationKeyHash Api.AsStakeKey
+  otherOwnerStakeKeyHash <- H.forAll $ genVerificationKeyHash Api.AsStakeKey
+  unrelatedOwnerStakeKeyHash <- H.forAll $ genVerificationKeyHash Api.AsStakeKey
+  Api.VrfKeyHash vrfKeyHash <- H.forAll $ genVerificationKeyHash Api.AsVrfKey
+  let stakeAddress = Api.makeStakeAddress Api.Mainnet (Api.StakeCredentialByKey withdrawingStakeKeyHash)
+      poolParamsWithOwners owners =
+        L.StakePoolParams
+          { L.sppId = Api.unStakePoolKeyHash operatorKeyHash
+          , L.sppVrf = L.toVRFVerKeyHash vrfKeyHash
+          , L.sppPledge = L.Coin 0
+          , L.sppCost = L.Coin 0
+          , L.sppMargin = minBound
+          , L.sppAccountAddress = def
+          , L.sppOwners = owners
+          , L.sppRelays = mempty
+          , L.sppMetadata = L.SNothing
+          }
+      registrationCertFor owners =
+        Exp.Certificate $ L.RegPoolTxCert (poolParamsWithOwners owners)
+      contentWithOwners owners =
+        Exp.defaultTxBodyContent
+          & Exp.setTxWithdrawals
+            (Exp.TxWithdrawals [(stakeAddress, L.Coin 0, Exp.AnyKeyWitnessPlaceholder)])
+          & Exp.setTxCertificates
+            ( Exp.mkTxCertificates
+                Exp.ConwayEra
+                [(registrationCertFor owners, Exp.AnyKeyWitnessPlaceholder)]
+            )
+  -- the withdrawing key is also a pool owner: counted once, plus the operator and the other owner
+  Exp.estimateTransactionKeyWitnessCount @Exp.ConwayEra
+    ( contentWithOwners
+        (Set.fromList [Api.unStakeKeyHash withdrawingStakeKeyHash, Api.unStakeKeyHash otherOwnerStakeKeyHash])
+    )
+    === 3
+  -- owners disjoint from the withdrawing key: nothing collides, so all four keys count
+  Exp.estimateTransactionKeyWitnessCount @Exp.ConwayEra
+    ( contentWithOwners
+        ( Set.fromList
+            [Api.unStakeKeyHash otherOwnerStakeKeyHash, Api.unStakeKeyHash unrelatedOwnerStakeKeyHash]
+        )
+    )
+    === 4
 
 -- ---------------------------------------------------------------------------
 -- Shared cert generators
@@ -909,3 +1036,91 @@ genShuffledCertsWithCount = do
       ]
   shuffled <- Gen.shuffle allCerts
   pure (shuffled, length shuffled)
+
+-- ---------------------------------------------------------------------------
+-- Shared vote generators
+-- ---------------------------------------------------------------------------
+
+-- | Generate 'Exp.mkTxVotingProcedures' input mixing key-credentialed voters
+-- ('L.DRepVoter'/'L.CommitteeVoter' over a key hash, plus 'L.StakePoolVoter',
+-- which is always key-credentialed - all witnessed by
+-- 'AnyKeyWitnessPlaceholder') with script-credentialed voters
+-- ('L.DRepVoter'/'L.CommitteeVoter' over a script hash, witnessed by a
+-- reference-input simple script - 'L.StakePoolVoter' has no
+-- script-credentialed form). Each bucket draws its hashes via 'Gen.set', so
+-- voters within a bucket never collide as witness-map keys; voters across
+-- buckets can never collide either, since they differ in the 'L.Voter' or
+-- 'L.Credential' constructor regardless of the underlying hash bytes.
+--
+-- Votes are drawn from a small pool of governance action ids: every voter
+-- votes on a random non-empty subset of the pool, as one list entry per
+-- action id, so a voter voting on several actions becomes several entries
+-- that 'Exp.mkTxVotingProcedures' must merge under the same 'L.Voter' key -
+-- this is the voter/action-id collision requested in review. Returns the
+-- generated entries together with the number of key-credentialed voters,
+-- i.e. the key-witness count 'estimateTransactionKeyWitnessCount' must
+-- report for a transaction containing only these votes.
+genVotingProceduresWithKeyWitnessCount
+  :: Gen
+       ( [(L.VotingProcedures (Exp.LedgerEra Exp.ConwayEra), Exp.AnyWitness (Exp.LedgerEra Exp.ConwayEra))]
+       , Int
+       )
+genVotingProceduresWithKeyWitnessCount = do
+  drepKeyHashes <-
+    Gen.set (Range.linear 0 5) (Api.unDRepKeyHash <$> genVerificationKeyHash Api.AsDRepKey)
+  committeeKeyHashes <-
+    Gen.set
+      (Range.linear 0 5)
+      (Api.unCommitteeHotKeyHash <$> genVerificationKeyHash Api.AsCommitteeHotKey)
+  stakePoolKeyHashes <-
+    Gen.set (Range.linear 0 5) (Api.unStakePoolKeyHash <$> genVerificationKeyHash Api.AsStakePoolKey)
+  drepScriptHashes <- Gen.set (Range.linear 0 5) (Api.toShelleyScriptHash <$> genScriptHash)
+  committeeScriptHashes <- Gen.set (Range.linear 0 5) (Api.toShelleyScriptHash <$> genScriptHash)
+  refTxIn <- genTxIn
+  govActionIdPool <- toList <$> Gen.set (Range.linear 1 3) genGovActionId
+
+  let keyVoters =
+        [L.DRepVoter (L.KeyHashObj kh) | kh <- toList drepKeyHashes]
+          <> [L.CommitteeVoter (L.KeyHashObj kh) | kh <- toList committeeKeyHashes]
+          <> [L.StakePoolVoter kh | kh <- toList stakePoolKeyHashes]
+      scriptVoters =
+        [L.DRepVoter (L.ScriptHashObj sh) | sh <- toList drepScriptHashes]
+          <> [L.CommitteeVoter (L.ScriptHashObj sh) | sh <- toList committeeScriptHashes]
+      scriptWitness = Exp.AnySimpleScriptWitness (Exp.SReferenceScript refTxIn)
+
+  keyEntries <-
+    concat <$> traverse (voterEntries govActionIdPool Exp.AnyKeyWitnessPlaceholder) keyVoters
+  scriptEntries <- concat <$> traverse (voterEntries govActionIdPool scriptWitness) scriptVoters
+
+  pure (keyEntries <> scriptEntries, length keyVoters)
+ where
+  votingProcedure = L.VotingProcedure{L.vProcVote = L.VoteYes, L.vProcAnchor = L.SNothing}
+
+  -- One entry per action id the voter votes on, witnessed identically each
+  -- time - 'Exp.mkTxVotingProcedures' merges same-voter entries with
+  -- disjoint action ids and 'Map.union's their (identical) witnesses, so the
+  -- resulting witness map still has exactly one entry per voter.
+  voterEntries
+    :: [L.GovActionId]
+    -> Exp.AnyWitness (Exp.LedgerEra Exp.ConwayEra)
+    -> L.Voter
+    -> Gen
+         [(L.VotingProcedures (Exp.LedgerEra Exp.ConwayEra), Exp.AnyWitness (Exp.LedgerEra Exp.ConwayEra))]
+  voterEntries govActionIdPool witness voter = do
+    votedActionIds <- genVotedActionIds govActionIdPool
+    pure
+      [ (L.VotingProcedures (Map.singleton voter (Map.singleton actionId votingProcedure)), witness)
+      | actionId <- votedActionIds
+      ]
+
+  genGovActionId :: Gen L.GovActionId
+  genGovActionId =
+    (L.GovActionId . Api.toShelleyTxId <$> genTxId)
+      <*> (L.GovActionIx <$> Gen.word16 (Range.linear 0 5))
+
+  -- A random non-empty subset of the pool - the source of the same voter
+  -- voting on several action ids.
+  genVotedActionIds :: [L.GovActionId] -> Gen [L.GovActionId]
+  genVotedActionIds actionIdPool = do
+    count <- Gen.int (Range.linear 1 (length actionIdPool))
+    take count <$> Gen.shuffle actionIdPool
