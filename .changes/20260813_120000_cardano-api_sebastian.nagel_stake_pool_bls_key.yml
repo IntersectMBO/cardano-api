@@ -1,0 +1,7 @@
+description: |
+  Added `stakePoolBlsKey :: Maybe Ledger.BlsKey` to `StakePoolParameters`, wired to the ledger's `sppBlsKey` in `toShelleyPoolParams`/`fromShelleyPoolParams`. This is a BLS voting key plus its proof of possession, registrable from the Dijkstra era onwards; `Nothing` for a pool that does not vote. Callers constructing `StakePoolParameters` need to set the new field. Also added `createBlsKeyRegistration :: SigningKey BlsKey -> Ledger.BlsKey`, which derives the verification key and proof of possession from a BLS signing key, and re-exported the ledger's `BlsKey` from `Cardano.Api.Ledger`.
+kind:
+  - feature
+  - breaking
+pr: 0
+project: cardano-api
