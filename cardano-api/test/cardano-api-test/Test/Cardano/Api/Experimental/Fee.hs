@@ -10,16 +10,29 @@ module Test.Cardano.Api.Experimental.Fee
 where
 
 import Cardano.Api qualified as Api
-import Cardano.Api.Compatible.Tx (AnyProtocolUpdate (..), AnyVote (..), createCompatibleTx)
+import Cardano.Api.Compatible.Tx
+  ( AnyVote (..)
+  , CompatibleTxBodyContent (..)
+  , CompatibleTxError (..)
+  , createCompatibleTx
+  , defaultCompatibleTxBodyContent
+  )
 import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.AnyScriptWitness
+  ( AnyPlutusScriptWitness (AnyPlutusSpendingScriptWitness, AnyPlutusVotingScriptWitness)
+  , PlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV3)
+  )
 import Cardano.Api.Experimental.Era (convert)
+import Cardano.Api.Experimental.Plutus (plutusScriptInEraToScript)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Monad.Error (failEitherWith)
 
+import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Mary.Value qualified as Mary
+import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Ledger.Tools qualified as L (calcMinFeeTx)
 import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
@@ -27,11 +40,20 @@ import Cardano.Slotting.Time qualified as Slotting
 
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
+import Data.Maybe (isJust)
+import Data.Maybe.Strict (StrictMaybe (SNothing))
 import Data.Sequence.Strict qualified as Seq
+import Data.Set qualified as Set
 import Data.Time.Clock.POSIX qualified as Time
 import Lens.Micro
 
-import Test.Gen.Cardano.Api.Typed (genAddressInEra, genStakeCredential, genTxIn)
+import Test.Gen.Cardano.Api.Typed
+  ( genAddressInEra
+  , genPlutusScriptInEra
+  , genStakeCredential
+  , genTxIn
+  , genVerificationKeyHash
+  )
 
 import Test.Cardano.Api.Experimental (exampleProtocolParams, exampleProtocolParamsEra)
 
@@ -68,6 +90,21 @@ tests =
         [ testProperty
             "all certs (witnessed and unwitnessed) appear in the ledger tx"
             prop_createCompatibleTx_preserves_all_certs
+        , testProperty
+            "spending redeemer indices follow sorted input order, not argument order"
+            prop_createCompatibleTx_redeemer_indices_follow_sorted_inputs
+        , testProperty
+            "an inline plutus spending script witness lands in the tx witness set"
+            prop_createCompatibleTx_inline_plutus_script_in_witness_set
+        , testProperty
+            "an inline plutus vote script witness lands in the tx witness set"
+            prop_createCompatibleTx_inline_plutus_vote_script_in_witness_set
+        , testProperty
+            "plutus witnesses without protocol parameters are rejected"
+            prop_createCompatibleTx_missing_pparams_with_plutus_witness
+        , testProperty
+            "collateral, validity upper bound and metadata are threaded through"
+            prop_createCompatibleTx_extra_content_is_threaded_through
         ]
     , testGroup
         "calcMinFeeRecursive"
@@ -848,9 +885,237 @@ prop_createCompatibleTx_preserves_all_certs = H.property $ do
   let sbe = convert Exp.ConwayEra
       inputCerts = Exp.mkTxCertificates Exp.ConwayEra allCerts
   Api.ShelleyTx _ ledgerTx <-
-    H.evalEither $ createCompatibleTx sbe [] [] mempty 0 (NoPParamsUpdate sbe) NoVotes inputCerts
+    H.evalEither $
+      createCompatibleTx sbe (defaultCompatibleTxBodyContent sbe){compatibleTxCertificates = inputCerts}
   let bodyCerts = ledgerTx ^. L.bodyTxL . L.certsTxBodyL
   Seq.length bodyCerts H.=== expectedCount
+
+-- | 'createCompatibleTx' must index spending redeemer pointers by the
+-- input's position in the final, sorted ledger input set, never by the
+-- order the caller supplied inputs in. The ledger stores tx inputs in a
+-- 'Data.Set.Set', not a list, so swapping the argument order of two
+-- plutus-witnessed inputs must not change which redeemer lands at which
+-- index.
+prop_createCompatibleTx_redeemer_indices_follow_sorted_inputs :: Property
+prop_createCompatibleTx_redeemer_indices_follow_sorted_inputs = H.property $ do
+  txIn1@(Api.TxIn txId (Api.TxIx txIx)) <- H.forAll genTxIn
+  let txIn2 = Api.TxIn txId (Api.TxIx (txIx + 1))
+
+      sbe = convert Exp.ConwayEra
+
+      mkRedeemer :: Integer -> Api.HashableScriptData
+      mkRedeemer n = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor n []
+
+      mkSpendingWitness redeemer =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusSpendingScriptWitness $
+            PlutusSpendingScriptWitnessV3 $
+              Exp.PlutusScriptWitness
+                Plutus.SPlutusV3
+                (Exp.PReferenceScript txIn1)
+                Exp.NoScriptDatum
+                redeemer
+                (Api.ExecutionUnits 0 0)
+
+      ins =
+        [ (txIn1, mkSpendingWitness (mkRedeemer 1))
+        , (txIn2, mkSpendingWitness (mkRedeemer 2))
+        ]
+
+      baseContent =
+        (defaultCompatibleTxBodyContent sbe)
+          { compatibleTxProtocolParams = Just exampleProtocolParams
+          , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
+          }
+
+      build orderedIns = createCompatibleTx sbe baseContent{compatibleTxIns = orderedIns}
+
+  Api.ShelleyTx _ forwardTx <- H.evalEither $ build ins
+  Api.ShelleyTx _ reversedTx <- H.evalEither $ build (reverse ins)
+
+  let forwardRedeemers = forwardTx ^. L.witsTxL . Alonzo.rdmrsTxWitsL
+      reversedRedeemers = reversedTx ^. L.witsTxL . Alonzo.rdmrsTxWitsL
+
+  -- Order-invariance is the core claim: if indices were derived from
+  -- argument-list position instead of sorted 'TxIn' order, reversing the
+  -- argument order would swap which redeemer lands at which index.
+  forwardRedeemers H.=== reversedRedeemers
+
+  -- Pin down the exact mapping too, so a different bug (e.g. always
+  -- indexing everything to 0) cannot slip through the check above.
+  --
+  -- 'txIn1' and 'txIn2' share a 'TxId' and only differ by 'TxIx' ('ix' vs
+  -- 'ix + 1'), so 'txIn1' sorts first: its redeemer must land at index 0,
+  -- 'txIn2''s at index 1.
+  let expectedRedeemers =
+        L.Redeemers $
+          Map.fromList
+            [
+              ( L.ConwaySpending (L.AsIx 0)
+              , (Api.toAlonzoData (mkRedeemer 1), Api.toAlonzoExUnits (Api.ExecutionUnits 0 0))
+              )
+            ,
+              ( L.ConwaySpending (L.AsIx 1)
+              , (Api.toAlonzoData (mkRedeemer 2), Api.toAlonzoExUnits (Api.ExecutionUnits 0 0))
+              )
+            ]
+
+  forwardRedeemers H.=== expectedRedeemers
+
+-- | An inline (non-reference) plutus spending script witness must land in
+-- the resulting ledger transaction's witness set ('L.scriptTxWitsL').
+prop_createCompatibleTx_inline_plutus_script_in_witness_set :: Property
+prop_createCompatibleTx_inline_plutus_script_in_witness_set = H.property $ do
+  txIn <- H.forAll genTxIn
+  scriptInEra <- H.forAll genPlutusScriptInEra
+  let sbe = convert Exp.ConwayEra
+
+      redeemer = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor 0 []
+
+      witness =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusSpendingScriptWitness $
+            PlutusSpendingScriptWitnessV3 $
+              Exp.PlutusScriptWitness
+                Plutus.SPlutusV3
+                (Exp.PScript scriptInEra)
+                Exp.NoScriptDatum
+                redeemer
+                (Api.ExecutionUnits 0 0)
+
+  Api.ShelleyTx _ ledgerTx <-
+    H.evalEither $
+      createCompatibleTx sbe $
+        (defaultCompatibleTxBodyContent sbe)
+          { compatibleTxIns = [(txIn, witness)]
+          , compatibleTxProtocolParams = Just exampleProtocolParams
+          , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
+          }
+
+  let scriptWits = ledgerTx ^. L.witsTxL . L.scriptTxWitsL
+      expectedHash = L.hashScript $ plutusScriptInEraToScript scriptInEra
+
+  H.assertWith scriptWits (not . null)
+  H.assertWith scriptWits (Map.member expectedHash)
+
+-- | A plutus-witnessed vote's script must land in the resulting ledger
+-- transaction's witness set, just like a plutus-witnessed certificate or
+-- spending input does. Regression test: 'createCompatibleTx' used to
+-- discard 'AnyVote''s witness map entirely, so a script-witnessed vote's
+-- script never made it into the tx.
+prop_createCompatibleTx_inline_plutus_vote_script_in_witness_set :: Property
+prop_createCompatibleTx_inline_plutus_vote_script_in_witness_set = H.property $ do
+  scriptInEra <- H.forAll genPlutusScriptInEra
+  voterKeyHash <- H.forAll $ Api.unDRepKeyHash <$> genVerificationKeyHash Api.AsDRepKey
+  L.TxIn govActionTxId _ <- Api.toShelleyTxIn <$> H.forAll genTxIn
+  let sbe = convert Exp.ConwayEra
+
+      voter = L.DRepVoter (L.KeyHashObj voterKeyHash)
+      govActionId = L.GovActionId govActionTxId (L.GovActionIx 0)
+      votingProcedure = L.VotingProcedure L.VoteYes SNothing
+      votingProcedures = L.VotingProcedures (Map.singleton voter (Map.singleton govActionId votingProcedure))
+
+      redeemer = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor 0 []
+
+      witness =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusVotingScriptWitness $
+            Exp.PlutusScriptWitness
+              Plutus.SPlutusV3
+              (Exp.PScript scriptInEra)
+              Exp.NoScriptDatum
+              redeemer
+              (Api.ExecutionUnits 0 0)
+
+  txVotingProcedures <-
+    H.leftFail $ Exp.mkTxVotingProcedures [(votingProcedures, witness)]
+
+  Api.ShelleyTx _ ledgerTx <-
+    H.evalEither $
+      createCompatibleTx sbe $
+        (defaultCompatibleTxBodyContent sbe)
+          { compatibleTxVotingProcedures = VotingProcedures Api.ConwayEraOnwardsConway txVotingProcedures
+          , compatibleTxProtocolParams = Just exampleProtocolParams
+          }
+
+  let scriptWits = ledgerTx ^. L.witsTxL . L.scriptTxWitsL
+      expectedHash = L.hashScript $ plutusScriptInEraToScript scriptInEra
+      redeemers = ledgerTx ^. L.witsTxL . Alonzo.rdmrsTxWitsL
+      expectedRedeemers =
+        L.Redeemers $
+          Map.singleton
+            (L.ConwayVoting (L.AsIx 0))
+            (Api.toAlonzoData redeemer, Api.toAlonzoExUnits (Api.ExecutionUnits 0 0))
+
+  H.assertWith scriptWits (not . null)
+  H.assertWith scriptWits (Map.member expectedHash)
+  redeemers H.=== expectedRedeemers
+  H.assertWith
+    (ledgerTx ^. L.bodyTxL . UnexportedLedger.scriptIntegrityHashTxBodyL)
+    (isJust . L.strictMaybeToMaybe)
+
+-- | 'createCompatibleTx' must reject plutus script witnesses when no
+-- protocol parameters were supplied, since those are required to compute
+-- the script integrity hash.
+prop_createCompatibleTx_missing_pparams_with_plutus_witness :: Property
+prop_createCompatibleTx_missing_pparams_with_plutus_witness = H.property $ do
+  txIn <- H.forAll genTxIn
+  let sbe = convert Exp.ConwayEra
+
+      redeemer = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor 0 []
+
+      witness =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusSpendingScriptWitness $
+            PlutusSpendingScriptWitnessV3 $
+              Exp.PlutusScriptWitness
+                Plutus.SPlutusV3
+                (Exp.PReferenceScript txIn)
+                Exp.NoScriptDatum
+                redeemer
+                (Api.ExecutionUnits 0 0)
+
+  case createCompatibleTx sbe $
+    (defaultCompatibleTxBodyContent sbe)
+      { compatibleTxIns = [(txIn, witness)]
+      , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
+      } of
+    Left CompatibleTxMissingScriptIntegrityPParams -> H.success
+    Right _ ->
+      H.annotate "Expected CompatibleTxMissingScriptIntegrityPParams but tx was built successfully"
+        >> H.failure
+
+-- | 'createCompatibleTx' must thread the collateral inputs, the validity
+-- interval's upper bound, and metadata parts of 'CompatibleTxBodyContent'
+-- into the resulting transaction (both the aux data hash on the body and
+-- the aux data itself on the tx).
+prop_createCompatibleTx_extra_content_is_threaded_through :: Property
+prop_createCompatibleTx_extra_content_is_threaded_through = H.property $ do
+  collateralTxIn <- H.forAll genTxIn
+  let sbe = convert Exp.ConwayEra
+
+      upperBound = Slotting.SlotNo 100
+
+      metadata = Api.TxMetadata $ Map.fromList [(1, Api.TxMetaText "createCompatibleTx")]
+
+  Api.ShelleyTx _ ledgerTx <-
+    H.evalEither $
+      createCompatibleTx sbe $
+        (defaultCompatibleTxBodyContent sbe)
+          { compatibleTxInsCollateral = [collateralTxIn]
+          , compatibleTxValidityUpperBound = Just upperBound
+          , compatibleTxMetadata = Api.TxMetadataInEra sbe metadata
+          , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
+          }
+
+  let ledgerBody = ledgerTx ^. L.bodyTxL
+
+  ledgerBody ^. UnexportedLedger.collateralInputsTxBodyL
+    H.=== Set.singleton (Api.toShelleyTxIn collateralTxIn)
+  ledgerBody ^. UnexportedLedger.vldtTxBodyL . UnexportedLedger.invalidHereAfterL
+    H.=== L.SJust upperBound
+  H.assertWith (ledgerBody ^. UnexportedLedger.auxDataHashTxBodyL) (isJust . L.strictMaybeToMaybe)
+  H.assertWith (ledgerTx ^. UnexportedLedger.auxDataTxL) (isJust . L.strictMaybeToMaybe)
 
 -- ---------------------------------------------------------------------------
 -- Shared cert generators
