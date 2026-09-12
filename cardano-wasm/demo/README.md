@@ -52,6 +52,7 @@ python3 -m http.server -d dist 8080     # any static server works
 ```
 src/        the Elm application
 web/        page shell, CSS, and the JS glue that drives the cardano-wasm API
+tests/      elm-test unit suite and the Node wasm API regression suite
 build.sh    compiles the Elm app and assembles a servable directory
 ```
 
@@ -61,6 +62,9 @@ from Elm over HTTPS.
 
 ## Development
 
-- Source is `elm-format`-canonical; CI validates it (`elm-format --validate src/`).
-- CI builds the demo in the *Haskell CI (WASM)* workflow and the GitHub Pages workflow
-  publishes the result.
+- Source is `elm-format`-canonical; CI validates it (`elm-format --validate src/ tests/`).
+- Unit tests for the pure core (bech32, ada ↔ lovelace, balance arithmetic): `elm-test`.
+- API regression tests against the built wasm library: see
+  [`tests/wasm/README.md`](tests/wasm/README.md).
+- CI runs all of the above in the *Haskell CI (WASM)* workflow and the GitHub Pages
+  workflow publishes the built demo.
