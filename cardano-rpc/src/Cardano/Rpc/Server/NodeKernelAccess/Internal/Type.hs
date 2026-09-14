@@ -23,6 +23,7 @@ import Cardano.Ledger.Conway.Genesis qualified as L (ConwayGenesis)
 import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis)
 import Ouroboros.Consensus.Cardano.Block (CardanoEras)
 import Ouroboros.Consensus.HardFork.History qualified as History
+import Ouroboros.Consensus.Mempool.API qualified as Consensus (Mempool)
 
 import Control.Monad.IO.Class (MonadIO)
 
@@ -31,6 +32,8 @@ import Control.Monad.IO.Class (MonadIO)
 data NodeKernelAccess = NodeKernelAccess
   { chainDb :: Consensus.ChainDB IO (Consensus.CardanoBlock Consensus.StandardCrypto)
   -- ^ Handle to the consensus chain database
+  , mempool :: Consensus.Mempool IO (Consensus.CardanoBlock Consensus.StandardCrypto)
+  -- ^ Handle to the consensus mempool
   , systemStart :: SystemStart
   -- ^ Network system start time, extracted from genesis config.
   -- Used together with the era history to convert slots to wall-clock time.
