@@ -351,28 +351,37 @@
             ];
           };
         };
-        flakeWithWasmShell = nixpkgs.lib.recursiveUpdate flake {
-          devShells = wasmShell;
-          hydraJobs = {devShells = wasmShell;};
+        # cardano-rpc quickstart shells: each shell.nix already stands on its
+        # own for plain `nix-shell` users, so just import them here rather
+        # than duplicating their package lists.
+        rpcQuickstartShells = {
+          rpc-quickstart = import ./cardano-rpc/quickstart/shell.nix {pkgs = nixpkgs;};
+          rpc-quickstart-rust = import ./cardano-rpc/quickstart/rust/shell.nix {pkgs = nixpkgs;};
+          rpc-quickstart-typescript = import ./cardano-rpc/quickstart/typescript/shell.nix {pkgs = nixpkgs;};
+          rpc-quickstart-go = import ./cardano-rpc/quickstart/go/shell.nix {pkgs = nixpkgs;};
+          # Haskell needs the project's own haskell.nix toolchain (GHC, cabal
+          # and the Cardano C libraries), which a plain nixpkgs mkShell can't
+          # provide, so alias the repository's own dev shell instead of a
+          # per-language shell.nix.
+          rpc-quickstart-haskell = flake.devShells.default;
         };
-        flakeWithPlaywrightShell = nixpkgs.lib.recursiveUpdate flakeWithWasmShell {
-          devShells = playwrightShell;
-          hydraJobs = {devShells = playwrightShell;};
-        };
-        flakeWithDemoShell = nixpkgs.lib.recursiveUpdate flakeWithPlaywrightShell {
-          devShells = demoShell;
-          hydraJobs = {devShells = demoShell;};
-        };
+        # wasm/playwright/demo are built by Hydra too (hydraJobs.devShells);
+        # rpcQuickstartShells is interactive-only, see hydraJobs below.
+        extraDevShells = wasmShell // playwrightShell // demoShell;
+        # ciJobsAggregates doesn't forward a devShells key, and flake.hydraJobs
+        # already has its own devShells.default, so merge both explicitly.
+        hydraDevShells = (flake.hydraJobs.devShells or {}) // extraDevShells;
       in
-        nixpkgs.lib.recursiveUpdate flakeWithDemoShell rec {
+        nixpkgs.lib.recursiveUpdate flake rec {
           project = cabalProject;
           # add a required job, that's basically all hydraJobs.
           hydraJobs =
             nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates
             {
               ciJobs =
-                flakeWithDemoShell.hydraJobs
+                flake.hydraJobs
                 // {
+                  devShells = hydraDevShells;
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
                   proto-js-bundle = proto-js-bundle-drv;
@@ -384,6 +393,7 @@
                 wasm-typedoc = wasm-typedoc-drv;
                 proto-js-bundle = proto-js-bundle-drv;
               };
+              devShells = hydraDevShells;
             };
           legacyPackages = {
             inherit cabalProject nixpkgs;
@@ -401,7 +411,7 @@
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
             };
           in
-            profilingShell cabalProject;
+            profilingShell cabalProject // extraDevShells // rpcQuickstartShells;
           # formatter used by nix fmt
           formatter = nixpkgs.alejandra;
         }

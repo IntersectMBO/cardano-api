@@ -1,0 +1,13 @@
+[package]
+name = "cardano-rpc-quickstart"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+utxorpc-spec = { version = "0.19.2", default-features = false, features = [
+    "utxorpc-v1beta-sync",
+    "utxorpc-v1beta-query",
+] }
+tonic = "0.12.3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+hex = "0.4"

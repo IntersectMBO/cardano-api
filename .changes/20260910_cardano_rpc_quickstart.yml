@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1337
+kind:
+  - documentation
+description: |
+  Add a verified quickstart to the cardano-rpc README, showing how to start a local single-node cluster with gRPC enabled in one command, make first calls with buf and grpcurl, and configure the server, plus a new quickstart directory with runnable example projects in multiple languages demonstrating first calls and building and submitting a transaction, each runnable through a nix development shell.
