@@ -1,0 +1,607 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- | The proto file descriptors served by the gRPC Server Reflection API,</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- compiled into this binary, plus a package-qualified symbol index over</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- their contents (services, methods, messages, fields, oneofs, enums and</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- enum values).</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Every proto file cardano-rpc serves is represented here by one</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- 'FileEntry', keyed by the file name embedded in its own descriptor (e.g.</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- @&quot;cardano/rpc/node.proto&quot;@), which is also how dependent files refer to</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- it in their own @dependency@ list.</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Reflection.DescriptorTable</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#FileEntry"><span class="hs-identifier">FileEntry</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#DescriptorTable"><span class="hs-identifier">DescriptorTable</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTable"><span class="hs-identifier">descriptorTable</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileNames"><span class="hs-identifier">fileNames</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#lookupFile"><span class="hs-identifier">lookupFile</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#lookupSymbol"><span class="hs-identifier">lookupSymbol</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#transitiveClosure"><span class="hs-identifier">transitiveClosure</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileSymbolNames"><span class="hs-identifier">fileSymbolNames</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">RIO</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ProtoLens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Message</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">packedFileDescriptor</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ProtoLens.Descriptor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fileDescriptor</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Proto.Cardano.Rpc.Node</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">CurrentEra</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Proto.Google.Protobuf.Descriptor</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Proto.Google.Protobuf.Descriptor_Fields</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Descriptor</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Proto.Google.Protobuf.Empty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Empty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Proto.Google.Protobuf.FieldMask</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FieldMask</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Proto.Grpc.Reflection.V1.Reflection</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ReflectionV1</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Proto.Grpc.Reflection.V1alpha.Reflection</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ReflectionV1alpha</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Proto.Utxorpc.V1beta.Cardano.Cardano</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">TxInput</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Proto.Utxorpc.V1beta.Query.Query</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ReadParamsRequest</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Proto.Utxorpc.V1beta.Submit.Submit</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">SubmitTxRequest</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Proto.Utxorpc.V1beta.Sync.Sync</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FollowTipRequest</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- | The descriptor table for every proto file this server's gRPC API is</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- built from: the six services it registers, plus the well-known</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- @google.protobuf@ types and the reflection protos themselves.</span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTable"><span class="hs-identifier hs-type">descriptorTable</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#DescriptorTable"><span class="hs-identifier hs-type">DescriptorTable</span></a></span><span>
+</span><span id="line-50"></span><span id="descriptorTable"><span class="annot"><span class="annottext">descriptorTable :: DescriptorTable
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTable"><span class="hs-identifier hs-var hs-var">descriptorTable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#DescriptorTable"><span class="hs-identifier hs-type">DescriptorTable</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">descriptorTableFileIndex :: Map Text FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTableFileIndex"><span class="hs-identifier hs-var">descriptorTableFileIndex</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><span class="annottext">[(Text, FileEntry)] -&gt; Map Text FileEntry
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">FileEntry -&gt; FileDescriptorProto
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileEntryDescriptor"><span class="hs-identifier hs-var">fileEntryDescriptor</span></a></span><span> </span><span class="annot"><span class="annottext">FileEntry
+</span><a href="#local-6989586621679678330"><span class="hs-identifier hs-var">entry</span></a></span><span> </span><span class="annot"><span class="annottext">FileDescriptorProto
+-&gt; Getting Text FileDescriptorProto Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text FileDescriptorProto Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;name&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.name</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FileEntry
+</span><a href="#local-6989586621679678330"><span class="hs-identifier hs-var">entry</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679678330"><span class="annot"><span class="annottext">FileEntry
+</span><a href="#local-6989586621679678330"><span class="hs-identifier hs-var">entry</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[FileEntry]
+</span><a href="#local-6989586621679678333"><span class="hs-identifier hs-var">entries</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">descriptorTableSymbolIndex :: Map Text Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTableSymbolIndex"><span class="hs-identifier hs-var">descriptorTableSymbolIndex</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-55"></span><span>        </span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; Map Text Text
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span>
+</span><span id="line-56"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678335"><span class="hs-identifier hs-var">symbolName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FileEntry -&gt; FileDescriptorProto
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileEntryDescriptor"><span class="hs-identifier hs-var">fileEntryDescriptor</span></a></span><span> </span><span class="annot"><span class="annottext">FileEntry
+</span><a href="#local-6989586621679678336"><span class="hs-identifier hs-var">entry</span></a></span><span> </span><span class="annot"><span class="annottext">FileDescriptorProto
+-&gt; Getting Text FileDescriptorProto Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text FileDescriptorProto Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;name&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.name</span></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679678336"><span class="annot"><span class="annottext">FileEntry
+</span><a href="#local-6989586621679678336"><span class="hs-identifier hs-var">entry</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[FileEntry]
+</span><a href="#local-6989586621679678333"><span class="hs-identifier hs-var">entries</span></a></span><span>
+</span><span id="line-58"></span><span>          </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678335"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678335"><span class="hs-identifier hs-var">symbolName</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FileDescriptorProto -&gt; [Text]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileSymbolNames"><span class="hs-identifier hs-var">fileSymbolNames</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FileEntry -&gt; FileDescriptorProto
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileEntryDescriptor"><span class="hs-identifier hs-var">fileEntryDescriptor</span></a></span><span> </span><span class="annot"><span class="annottext">FileEntry
+</span><a href="#local-6989586621679678336"><span class="hs-identifier hs-var">entry</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-61"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679678333"><span class="annot"><span class="annottext">entries :: [FileEntry]
+</span><a href="#local-6989586621679678333"><span class="hs-identifier hs-var hs-var">entries</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall msg. Message msg =&gt; FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#mkFileEntry"><span class="hs-identifier hs-var">mkFileEntry</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">CurrentEra</span></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall msg. Message msg =&gt; FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#mkFileEntry"><span class="hs-identifier hs-var">mkFileEntry</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">TxInput</span></span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall msg. Message msg =&gt; FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#mkFileEntry"><span class="hs-identifier hs-var">mkFileEntry</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">ReadParamsRequest</span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall msg. Message msg =&gt; FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#mkFileEntry"><span class="hs-identifier hs-var">mkFileEntry</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">SubmitTxRequest</span></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall msg. Message msg =&gt; FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#mkFileEntry"><span class="hs-identifier hs-var">mkFileEntry</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">FollowTipRequest</span></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall msg. Message msg =&gt; FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#mkFileEntry"><span class="hs-identifier hs-var">mkFileEntry</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Empty</span></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall msg. Message msg =&gt; FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#mkFileEntry"><span class="hs-identifier hs-var">mkFileEntry</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">FieldMask</span></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall msg. Message msg =&gt; FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#mkFileEntry"><span class="hs-identifier hs-var">mkFileEntry</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">ReflectionV1.ServerReflectionRequest</span></span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall msg. Message msg =&gt; FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#mkFileEntry"><span class="hs-identifier hs-var">mkFileEntry</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">ReflectionV1alpha.ServerReflectionRequest</span></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | Resolve a fully qualified symbol - a service, method, message, nested</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- message, field, oneof, enum, or enum value name - to the file that</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- declares it.</span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#lookupSymbol"><span class="hs-identifier hs-type">lookupSymbol</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#DescriptorTable"><span class="hs-identifier hs-type">DescriptorTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-78"></span><span id="lookupSymbol"><span class="annot"><span class="annottext">lookupSymbol :: DescriptorTable -&gt; Text -&gt; Maybe Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#lookupSymbol"><span class="hs-identifier hs-var hs-var">lookupSymbol</span></a></span></span><span> </span><span id="local-6989586621679678356"><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="#local-6989586621679678356"><span class="hs-identifier hs-var">table</span></a></span></span><span> </span><span id="local-6989586621679678357"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678357"><span class="hs-identifier hs-var">symbolName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Map Text Text -&gt; Maybe Text
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678357"><span class="hs-identifier hs-var">symbolName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DescriptorTable -&gt; Map Text Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTableSymbolIndex"><span class="hs-identifier hs-var">descriptorTableSymbolIndex</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="#local-6989586621679678356"><span class="hs-identifier hs-var">table</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- | The named file, plus every file it transitively depends on, in</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- traversal order with the file itself first, deduplicated. 'Nothing' if</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- the file itself is not in the table; a dependency that is missing from</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- the table (which should not happen - see the table's closure invariant)</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- is silently skipped rather than failing the whole lookup.</span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#transitiveClosure"><span class="hs-identifier hs-type">transitiveClosure</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#DescriptorTable"><span class="hs-identifier hs-type">DescriptorTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#FileEntry"><span class="hs-identifier hs-type">FileEntry</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-86"></span><span id="transitiveClosure"><span class="annot"><span class="annottext">transitiveClosure :: DescriptorTable -&gt; Text -&gt; Maybe [FileEntry]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#transitiveClosure"><span class="hs-identifier hs-var hs-var">transitiveClosure</span></a></span></span><span> </span><span id="local-6989586621679678359"><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="#local-6989586621679678359"><span class="hs-identifier hs-var">table</span></a></span></span><span> </span><span id="local-6989586621679678360"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678360"><span class="hs-identifier hs-var">rootName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679678361"><span class="annot"><a href="#local-6989586621679678361"><span class="hs-identifier hs-var">rootEntry</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">DescriptorTable -&gt; Text -&gt; Maybe FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#lookupFile"><span class="hs-identifier hs-var">lookupFile</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="#local-6989586621679678359"><span class="hs-identifier hs-var">table</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678360"><span class="hs-identifier hs-var">rootName</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><a href="#local-6989586621679678361"><span class="hs-identifier hs-type">rootEntry</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679678362"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#singleton"><span class="hs-identifier hs-type">Set.singleton</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679678360"><span class="hs-identifier hs-type">rootName</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileEntryDescriptor"><span class="hs-identifier hs-var">fileEntryDescriptor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679678361"><span class="hs-identifier hs-type">rootEntry</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">^.</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Descriptor.dependency</span></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>  </span><span id="local-6989586621679678362"><span class="annot"><span class="annottext">go :: Set Text -&gt; [Text] -&gt; [FileEntry]
+</span><a href="#local-6989586621679678362"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="#local-6989586621679678362"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679678371"><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679678371"><span class="hs-identifier hs-var">seen</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679678372"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678372"><span class="hs-identifier hs-var">depName</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679678373"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679678373"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678372"><span class="hs-identifier hs-var">depName</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Set Text -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#member"><span class="hs-operator hs-var">`Set.member`</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679678371"><span class="hs-identifier hs-var">seen</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Text -&gt; [Text] -&gt; [FileEntry]
+</span><a href="#local-6989586621679678362"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679678371"><span class="hs-identifier hs-var">seen</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679678373"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">DescriptorTable -&gt; Text -&gt; Maybe FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#lookupFile"><span class="hs-identifier hs-var">lookupFile</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="#local-6989586621679678359"><span class="hs-identifier hs-var">table</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678372"><span class="hs-identifier hs-var">depName</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-95"></span><span>        </span><span class="annot"><span class="annottext">Maybe FileEntry
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Set Text -&gt; [Text] -&gt; [FileEntry]
+</span><a href="#local-6989586621679678362"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Set Text -&gt; Set Text
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#insert"><span class="hs-identifier hs-var">Set.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678372"><span class="hs-identifier hs-var">depName</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679678371"><span class="hs-identifier hs-var">seen</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679678373"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679678376"><span class="annot"><span class="annottext">FileEntry
+</span><a href="#local-6989586621679678376"><span class="hs-identifier hs-var">depEntry</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>          </span><span class="annot"><span class="annottext">FileEntry
+</span><a href="#local-6989586621679678376"><span class="hs-identifier hs-var">depEntry</span></a></span><span>
+</span><span id="line-98"></span><span>            </span><span class="annot"><span class="annottext">FileEntry -&gt; [FileEntry] -&gt; [FileEntry]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text -&gt; [Text] -&gt; [FileEntry]
+</span><a href="#local-6989586621679678362"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Set Text -&gt; Set Text
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#insert"><span class="hs-identifier hs-var">Set.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678372"><span class="hs-identifier hs-var">depName</span></a></span><span> </span><span class="annot"><span class="annottext">Set Text
+</span><a href="#local-6989586621679678371"><span class="hs-identifier hs-var">seen</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679678373"><span class="hs-identifier hs-var">rest</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FileEntry -&gt; FileDescriptorProto
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileEntryDescriptor"><span class="hs-identifier hs-var">fileEntryDescriptor</span></a></span><span> </span><span class="annot"><span class="annottext">FileEntry
+</span><a href="#local-6989586621679678376"><span class="hs-identifier hs-var">depEntry</span></a></span><span> </span><span class="annot"><span class="annottext">FileDescriptorProto
+-&gt; Getting [Text] FileDescriptorProto [Text] -&gt; [Text]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting [Text] FileDescriptorProto [Text]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;dependency&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.dependency</span></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="annot"><span class="hs-comment">-- | Look up a file by name (e.g. @&quot;cardano/rpc/node.proto&quot;@).</span></span><span>
+</span><span id="line-101"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#lookupFile"><span class="hs-identifier hs-type">lookupFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#DescriptorTable"><span class="hs-identifier hs-type">DescriptorTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#FileEntry"><span class="hs-identifier hs-type">FileEntry</span></a></span><span>
+</span><span id="line-102"></span><span id="lookupFile"><span class="annot"><span class="annottext">lookupFile :: DescriptorTable -&gt; Text -&gt; Maybe FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#lookupFile"><span class="hs-identifier hs-var hs-var">lookupFile</span></a></span></span><span> </span><span id="local-6989586621679678377"><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="#local-6989586621679678377"><span class="hs-identifier hs-var">table</span></a></span></span><span> </span><span id="local-6989586621679678378"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678378"><span class="hs-identifier hs-var">fileName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Map Text FileEntry -&gt; Maybe FileEntry
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678378"><span class="hs-identifier hs-var">fileName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DescriptorTable -&gt; Map Text FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTableFileIndex"><span class="hs-identifier hs-var">descriptorTableFileIndex</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorTable
+</span><a href="#local-6989586621679678377"><span class="hs-identifier hs-var">table</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="annot"><span class="hs-comment">-- | The name of every served proto file.</span></span><span>
+</span><span id="line-105"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileNames"><span class="hs-identifier hs-type">fileNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#DescriptorTable"><span class="hs-identifier hs-type">DescriptorTable</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span id="fileNames"><span class="annot"><span class="annottext">fileNames :: DescriptorTable -&gt; [Text]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileNames"><span class="hs-identifier hs-var hs-var">fileNames</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Text FileEntry -&gt; [Text]
+forall k a. Map k a -&gt; [k]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#keys"><span class="hs-identifier hs-var">Map.keys</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Text FileEntry -&gt; [Text])
+-&gt; (DescriptorTable -&gt; Map Text FileEntry)
+-&gt; DescriptorTable
+-&gt; [Text]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorTable -&gt; Map Text FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTableFileIndex"><span class="hs-identifier hs-var">descriptorTableFileIndex</span></a></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- | Build the 'FileEntry' for the proto file containing @msg@, using one</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- representative message type per file (any message declared in the file</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- works - 'packedFileDescriptor'\/'fileDescriptor' both resolve to the whole</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- containing file, not just @msg@ itself).</span><span>
+</span><span id="line-112"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#mkFileEntry"><span class="hs-identifier hs-type">mkFileEntry</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679678174"><span class="annot"><a href="#local-6989586621679678174"><span class="hs-identifier hs-type">msg</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Message</span></span><span> </span><span class="annot"><a href="#local-6989586621679678174"><span class="hs-identifier hs-type">msg</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#FileEntry"><span class="hs-identifier hs-type">FileEntry</span></a></span><span>
+</span><span id="line-113"></span><span id="mkFileEntry"><span class="annot"><span class="annottext">mkFileEntry :: forall msg. Message msg =&gt; FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#mkFileEntry"><span class="hs-identifier hs-var hs-var">mkFileEntry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#FileEntry"><span class="hs-identifier hs-type">FileEntry</span></a></span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">fileEntryDescriptor :: FileDescriptorProto
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileEntryDescriptor"><span class="hs-identifier hs-var">fileEntryDescriptor</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Message a =&gt; FileDescriptorProto
+</span><span class="hs-identifier hs-var">fileDescriptor</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679678174"><span class="hs-identifier hs-type">msg</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">fileEntryBytes :: ByteString
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileEntryBytes"><span class="hs-identifier hs-var">fileEntryBytes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy msg -&gt; ByteString
+forall msg. Message msg =&gt; Proxy msg -&gt; ByteString
+</span><span class="hs-identifier hs-var">packedFileDescriptor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679678174"><span class="hs-identifier hs-type">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- | Every package-qualified symbol a file declares: its services (and their</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- methods), top-level and nested messages (and their fields and oneofs),</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- and top-level and nested enums (and their values).</span><span>
+</span><span id="line-122"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileSymbolNames"><span class="hs-identifier hs-type">fileSymbolNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FileDescriptorProto</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-123"></span><span id="fileSymbolNames"><span class="annot"><span class="annottext">fileSymbolNames :: FileDescriptorProto -&gt; [Text]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileSymbolNames"><span class="hs-identifier hs-var hs-var">fileSymbolNames</span></a></span></span><span> </span><span id="local-6989586621679678386"><span class="annot"><span class="annottext">FileDescriptorProto
+</span><a href="#local-6989586621679678386"><span class="hs-identifier hs-var">descriptor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><span class="annottext">(ServiceDescriptorProto -&gt; [Text])
+-&gt; [ServiceDescriptorProto] -&gt; [Text]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; ServiceDescriptorProto -&gt; [Text]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#serviceSymbolNames"><span class="hs-identifier hs-var">serviceSymbolNames</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678389"><span class="hs-identifier hs-var">packageName</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FileDescriptorProto
+</span><a href="#local-6989586621679678386"><span class="hs-identifier hs-var">descriptor</span></a></span><span> </span><span class="annot"><span class="annottext">FileDescriptorProto
+-&gt; Getting
+     [ServiceDescriptorProto]
+     FileDescriptorProto
+     [ServiceDescriptorProto]
+-&gt; [ServiceDescriptorProto]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [ServiceDescriptorProto]
+  FileDescriptorProto
+  [ServiceDescriptorProto]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;service&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.service</span></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(DescriptorProto -&gt; [Text]) -&gt; [DescriptorProto] -&gt; [Text]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; DescriptorProto -&gt; [Text]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#messageSymbolNames"><span class="hs-identifier hs-var">messageSymbolNames</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678389"><span class="hs-identifier hs-var">packageName</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FileDescriptorProto
+</span><a href="#local-6989586621679678386"><span class="hs-identifier hs-var">descriptor</span></a></span><span> </span><span class="annot"><span class="annottext">FileDescriptorProto
+-&gt; Getting [DescriptorProto] FileDescriptorProto [DescriptorProto]
+-&gt; [DescriptorProto]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting [DescriptorProto] FileDescriptorProto [DescriptorProto]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;messageType&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.messageType</span></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(EnumDescriptorProto -&gt; [Text]) -&gt; [EnumDescriptorProto] -&gt; [Text]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; EnumDescriptorProto -&gt; [Text]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#enumSymbolNames"><span class="hs-identifier hs-var">enumSymbolNames</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678389"><span class="hs-identifier hs-var">packageName</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FileDescriptorProto
+</span><a href="#local-6989586621679678386"><span class="hs-identifier hs-var">descriptor</span></a></span><span> </span><span class="annot"><span class="annottext">FileDescriptorProto
+-&gt; Getting
+     [EnumDescriptorProto] FileDescriptorProto [EnumDescriptorProto]
+-&gt; [EnumDescriptorProto]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [EnumDescriptorProto] FileDescriptorProto [EnumDescriptorProto]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;enumType&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.enumType</span></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-128"></span><span>  </span><span id="local-6989586621679678389"><span class="annot"><span class="annottext">packageName :: Text
+</span><a href="#local-6989586621679678389"><span class="hs-identifier hs-var hs-var">packageName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FileDescriptorProto
+</span><a href="#local-6989586621679678386"><span class="hs-identifier hs-var">descriptor</span></a></span><span> </span><span class="annot"><span class="annottext">FileDescriptorProto
+-&gt; Getting Text FileDescriptorProto Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text FileDescriptorProto Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;package&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.package</span></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="annot"><span class="hs-comment">-- | A service's own symbol, plus one per method it declares.</span></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#serviceSymbolNames"><span class="hs-identifier hs-type">serviceSymbolNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ServiceDescriptorProto</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-132"></span><span id="serviceSymbolNames"><span class="annot"><span class="annottext">serviceSymbolNames :: Text -&gt; ServiceDescriptorProto -&gt; [Text]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#serviceSymbolNames"><span class="hs-identifier hs-var hs-var">serviceSymbolNames</span></a></span></span><span> </span><span id="local-6989586621679678399"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678399"><span class="hs-identifier hs-var">packageName</span></a></span></span><span> </span><span id="local-6989586621679678400"><span class="annot"><span class="annottext">ServiceDescriptorProto
+</span><a href="#local-6989586621679678400"><span class="hs-identifier hs-var">service</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678401"><span class="hs-identifier hs-var">serviceName</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">(MethodDescriptorProto -&gt; Text)
+-&gt; [MethodDescriptorProto] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#qualify"><span class="hs-identifier hs-var">qualify</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678401"><span class="hs-identifier hs-var">serviceName</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text)
+-&gt; (MethodDescriptorProto -&gt; Text) -&gt; MethodDescriptorProto -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MethodDescriptorProto
+-&gt; Getting Text MethodDescriptorProto Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text MethodDescriptorProto Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;name&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.name</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ServiceDescriptorProto
+</span><a href="#local-6989586621679678400"><span class="hs-identifier hs-var">service</span></a></span><span> </span><span class="annot"><span class="annottext">ServiceDescriptorProto
+-&gt; Getting
+     [MethodDescriptorProto]
+     ServiceDescriptorProto
+     [MethodDescriptorProto]
+-&gt; [MethodDescriptorProto]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [MethodDescriptorProto]
+  ServiceDescriptorProto
+  [MethodDescriptorProto]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;method&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.method</span></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-135"></span><span>  </span><span id="local-6989586621679678401"><span class="annot"><span class="annottext">serviceName :: Text
+</span><a href="#local-6989586621679678401"><span class="hs-identifier hs-var hs-var">serviceName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#qualify"><span class="hs-identifier hs-var">qualify</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678399"><span class="hs-identifier hs-var">packageName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ServiceDescriptorProto
+</span><a href="#local-6989586621679678400"><span class="hs-identifier hs-var">service</span></a></span><span> </span><span class="annot"><span class="annottext">ServiceDescriptorProto
+-&gt; Getting Text ServiceDescriptorProto Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text ServiceDescriptorProto Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;name&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.name</span></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- | A message's own symbol, plus every symbol nested inside it, recursively:</span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- its fields and oneof declarations (both scoped to the message itself,</span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- like enum values are), its nested messages, and its nested enums.</span><span>
+</span><span id="line-140"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#messageSymbolNames"><span class="hs-identifier hs-type">messageSymbolNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DescriptorProto</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-141"></span><span id="messageSymbolNames"><span class="annot"><span class="annottext">messageSymbolNames :: Text -&gt; DescriptorProto -&gt; [Text]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#messageSymbolNames"><span class="hs-identifier hs-var hs-var">messageSymbolNames</span></a></span></span><span> </span><span id="local-6989586621679678407"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678407"><span class="hs-identifier hs-var">enclosingName</span></a></span></span><span> </span><span id="local-6989586621679678408"><span class="annot"><span class="annottext">DescriptorProto
+</span><a href="#local-6989586621679678408"><span class="hs-identifier hs-var">message</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-142"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678409"><span class="hs-identifier hs-var">messageName</span></a></span><span>
+</span><span id="line-143"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">(DescriptorProto -&gt; [Text]) -&gt; [DescriptorProto] -&gt; [Text]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; DescriptorProto -&gt; [Text]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#messageSymbolNames"><span class="hs-identifier hs-var">messageSymbolNames</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678409"><span class="hs-identifier hs-var">messageName</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DescriptorProto
+</span><a href="#local-6989586621679678408"><span class="hs-identifier hs-var">message</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorProto
+-&gt; Getting [DescriptorProto] DescriptorProto [DescriptorProto]
+-&gt; [DescriptorProto]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting [DescriptorProto] DescriptorProto [DescriptorProto]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;nestedType&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.nestedType</span></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(EnumDescriptorProto -&gt; [Text]) -&gt; [EnumDescriptorProto] -&gt; [Text]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; EnumDescriptorProto -&gt; [Text]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#enumSymbolNames"><span class="hs-identifier hs-var">enumSymbolNames</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678409"><span class="hs-identifier hs-var">messageName</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DescriptorProto
+</span><a href="#local-6989586621679678408"><span class="hs-identifier hs-var">message</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorProto
+-&gt; Getting
+     [EnumDescriptorProto] DescriptorProto [EnumDescriptorProto]
+-&gt; [EnumDescriptorProto]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting [EnumDescriptorProto] DescriptorProto [EnumDescriptorProto]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;enumType&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.enumType</span></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>      </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(FieldDescriptorProto -&gt; Text) -&gt; [FieldDescriptorProto] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#qualify"><span class="hs-identifier hs-var">qualify</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678409"><span class="hs-identifier hs-var">messageName</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text)
+-&gt; (FieldDescriptorProto -&gt; Text) -&gt; FieldDescriptorProto -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FieldDescriptorProto
+-&gt; Getting Text FieldDescriptorProto Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text FieldDescriptorProto Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;name&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.name</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DescriptorProto
+</span><a href="#local-6989586621679678408"><span class="hs-identifier hs-var">message</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorProto
+-&gt; Getting
+     [FieldDescriptorProto] DescriptorProto [FieldDescriptorProto]
+-&gt; [FieldDescriptorProto]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [FieldDescriptorProto] DescriptorProto [FieldDescriptorProto]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;field&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.field</span></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(OneofDescriptorProto -&gt; Text) -&gt; [OneofDescriptorProto] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#qualify"><span class="hs-identifier hs-var">qualify</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678409"><span class="hs-identifier hs-var">messageName</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text)
+-&gt; (OneofDescriptorProto -&gt; Text) -&gt; OneofDescriptorProto -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OneofDescriptorProto
+-&gt; Getting Text OneofDescriptorProto Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text OneofDescriptorProto Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;name&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.name</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DescriptorProto
+</span><a href="#local-6989586621679678408"><span class="hs-identifier hs-var">message</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorProto
+-&gt; Getting
+     [OneofDescriptorProto] DescriptorProto [OneofDescriptorProto]
+-&gt; [OneofDescriptorProto]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [OneofDescriptorProto] DescriptorProto [OneofDescriptorProto]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;oneofDecl&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.oneofDecl</span></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-148"></span><span>  </span><span id="local-6989586621679678409"><span class="annot"><span class="annottext">messageName :: Text
+</span><a href="#local-6989586621679678409"><span class="hs-identifier hs-var hs-var">messageName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#qualify"><span class="hs-identifier hs-var">qualify</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678407"><span class="hs-identifier hs-var">enclosingName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DescriptorProto
+</span><a href="#local-6989586621679678408"><span class="hs-identifier hs-var">message</span></a></span><span> </span><span class="annot"><span class="annottext">DescriptorProto -&gt; Getting Text DescriptorProto Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text DescriptorProto Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;name&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.name</span></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- | An enum's own symbol, plus one per value it declares. Protobuf scopes</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- an enum VALUE's fully qualified name to the enum's own enclosing scope</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- (the package, or the containing message), not to the enum type itself,</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- so a value's symbol is a SIBLING of its enum's symbol, not nested under</span><span>
+</span><span id="line-154"></span><span class="hs-comment">-- it - e.g. @cardano.rpc.conway@, not @cardano.rpc.Era.conway@.</span><span>
+</span><span id="line-155"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#enumSymbolNames"><span class="hs-identifier hs-type">enumSymbolNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">EnumDescriptorProto</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-156"></span><span id="enumSymbolNames"><span class="annot"><span class="annottext">enumSymbolNames :: Text -&gt; EnumDescriptorProto -&gt; [Text]
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#enumSymbolNames"><span class="hs-identifier hs-var hs-var">enumSymbolNames</span></a></span></span><span> </span><span id="local-6989586621679678416"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678416"><span class="hs-identifier hs-var">enclosingName</span></a></span></span><span> </span><span id="local-6989586621679678417"><span class="annot"><span class="annottext">EnumDescriptorProto
+</span><a href="#local-6989586621679678417"><span class="hs-identifier hs-var">enum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-157"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#qualify"><span class="hs-identifier hs-var">qualify</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678416"><span class="hs-identifier hs-var">enclosingName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EnumDescriptorProto
+</span><a href="#local-6989586621679678417"><span class="hs-identifier hs-var">enum</span></a></span><span> </span><span class="annot"><span class="annottext">EnumDescriptorProto
+-&gt; Getting Text EnumDescriptorProto Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text EnumDescriptorProto Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;name&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.name</span></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">(EnumValueDescriptorProto -&gt; Text)
+-&gt; [EnumValueDescriptorProto] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#qualify"><span class="hs-identifier hs-var">qualify</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678416"><span class="hs-identifier hs-var">enclosingName</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text)
+-&gt; (EnumValueDescriptorProto -&gt; Text)
+-&gt; EnumValueDescriptorProto
+-&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EnumValueDescriptorProto
+-&gt; Getting Text EnumValueDescriptorProto Text -&gt; Text
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting Text EnumValueDescriptorProto Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;name&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.name</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EnumDescriptorProto
+</span><a href="#local-6989586621679678417"><span class="hs-identifier hs-var">enum</span></a></span><span> </span><span class="annot"><span class="annottext">EnumDescriptorProto
+-&gt; Getting
+     [EnumValueDescriptorProto]
+     EnumDescriptorProto
+     [EnumValueDescriptorProto]
+-&gt; [EnumValueDescriptorProto]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  [EnumValueDescriptorProto]
+  EnumDescriptorProto
+  [EnumValueDescriptorProto]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;value&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">Descriptor.value</span></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- | Join a package\/enclosing-message prefix and a name with a dot, or just</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- the name if the prefix is empty (a file with no @package@ declaration).</span><span>
+</span><span id="line-162"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#qualify"><span class="hs-identifier hs-type">qualify</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-163"></span><span id="qualify"><span class="annot"><span class="annottext">qualify :: Text -&gt; Text -&gt; Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#qualify"><span class="hs-identifier hs-var hs-var">qualify</span></a></span></span><span> </span><span id="local-6989586621679678419"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678419"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span id="local-6989586621679678420"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678420"><span class="hs-identifier hs-var">name</span></a></span></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.html#null"><span class="hs-identifier hs-var">Text.null</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678419"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678420"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678419"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679678420"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- | One served proto file: its decoded descriptor, used to walk dependencies</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- and resolve symbols, and the packed bytes of that same descriptor, sent</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- verbatim in a @FileDescriptorResponse@.</span><span>
+</span><span id="line-170"></span><span class="hs-keyword">data</span><span> </span><span id="FileEntry"><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#FileEntry"><span class="hs-identifier hs-var">FileEntry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="FileEntry"><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#FileEntry"><span class="hs-identifier hs-var">FileEntry</span></a></span></span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="fileEntryDescriptor"><span class="annot"><span class="annottext">FileEntry -&gt; FileDescriptorProto
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileEntryDescriptor"><span class="hs-identifier hs-var hs-var">fileEntryDescriptor</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FileDescriptorProto</span></span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="fileEntryBytes"><span class="annot"><span class="annottext">FileEntry -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#fileEntryBytes"><span class="hs-identifier hs-var hs-var">fileEntryBytes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-173"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-174"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679678423"><span id="local-6989586621679678429"><span class="annot"><span class="annottext">FileEntry -&gt; FileEntry -&gt; Bool
+(FileEntry -&gt; FileEntry -&gt; Bool)
+-&gt; (FileEntry -&gt; FileEntry -&gt; Bool) -&gt; Eq FileEntry
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: FileEntry -&gt; FileEntry -&gt; Bool
+== :: FileEntry -&gt; FileEntry -&gt; Bool
+$c/= :: FileEntry -&gt; FileEntry -&gt; Bool
+/= :: FileEntry -&gt; FileEntry -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678434"><span id="local-6989586621679678442"><span id="local-6989586621679678446"><span class="annot"><span class="annottext">Int -&gt; FileEntry -&gt; ShowS
+[FileEntry] -&gt; ShowS
+FileEntry -&gt; String
+(Int -&gt; FileEntry -&gt; ShowS)
+-&gt; (FileEntry -&gt; String)
+-&gt; ([FileEntry] -&gt; ShowS)
+-&gt; Show FileEntry
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; FileEntry -&gt; ShowS
+showsPrec :: Int -&gt; FileEntry -&gt; ShowS
+$cshow :: FileEntry -&gt; String
+show :: FileEntry -&gt; String
+$cshowList :: [FileEntry] -&gt; ShowS
+showList :: [FileEntry] -&gt; ShowS
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span class="hs-keyword">data</span><span> </span><span id="DescriptorTable"><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#DescriptorTable"><span class="hs-identifier hs-var">DescriptorTable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DescriptorTable"><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#DescriptorTable"><span class="hs-identifier hs-var">DescriptorTable</span></a></span></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="descriptorTableFileIndex"><span class="annot"><span class="annottext">DescriptorTable -&gt; Map Text FileEntry
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTableFileIndex"><span class="hs-identifier hs-var hs-var">descriptorTableFileIndex</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#FileEntry"><span class="hs-identifier hs-type">FileEntry</span></a></span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="descriptorTableSymbolIndex"><span class="annot"><span class="annottext">DescriptorTable -&gt; Map Text Text
+</span><a href="Cardano.Rpc.Server.Internal.Reflection.DescriptorTable.html#descriptorTableSymbolIndex"><span class="hs-identifier hs-var hs-var">descriptorTableSymbolIndex</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-comment">-- ^ Fully qualified symbol (service, method, message, field, oneof, enum,</span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-comment">-- or enum value name) to the file name that declares it.</span><span>
+</span><span id="line-181"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-182"></span></pre></body></html>

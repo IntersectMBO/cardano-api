@@ -1,0 +1,46 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-- HasCallStack is unused in these dummy implementations, but keeps the</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- signatures identical to the Posix and Win32 variants.</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-redundant-constraints #-}</span><span class="hs-cpp">
+
+#if defined(wasm32_HOST_ARCH)
+</span><span class="hs-cpp">#define WASM
+</span><span class="hs-cpp">#endif
+</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.IO.Internal.Compat.Wasm</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">(</span><span class="hs-cpp">
+#ifdef WASM
+</span><span>    </span><span class="hs-identifier">checkVrfFilePermissionsImpl</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">handleFileForWritingWithOwnerPermissionImpl</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">writeSecretsImpl</span><span class="hs-cpp">
+#endif
+</span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">where</span><span class="hs-cpp">
+
+#ifdef WASM
+</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Cardano.Api.Error</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">FileError</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Cardano.Api.IO.Internal.Base</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Control.Monad.Except</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">ExceptT</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.ByteString</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">ByteString</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">GHC.Stack</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">HasCallStack</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">System.IO</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Handle</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-identifier">handleFileForWritingWithOwnerPermissionImpl</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">FilePath</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Handle</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Either</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">FileError</span><span> </span><span class="hs-identifier">e</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-identifier">handleFileForWritingWithOwnerPermissionImpl</span><span> </span><span class="hs-identifier">_path</span><span> </span><span class="hs-identifier">_f</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">return</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-identifier">Right</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- Dummy implementation for WASM</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-identifier">writeSecretsImpl</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">HasCallStack</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-identifier">FilePath</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-identifier">Char</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-identifier">Char</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">a</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">ByteString</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-identifier">a</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-identifier">writeSecretsImpl</span><span> </span><span class="hs-identifier">_outDir</span><span> </span><span class="hs-identifier">_prefix</span><span> </span><span class="hs-identifier">_suffix</span><span> </span><span class="hs-identifier">_secretOp</span><span> </span><span class="hs-identifier">_xs</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">return</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- Dummy implementation for WASM</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- | Make sure the VRF private key file is readable only</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- by the current process owner the node is running under.</span><span>
+</span><span id="line-41"></span><span class="hs-identifier">checkVrfFilePermissionsImpl</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">File</span><span> </span><span class="hs-identifier">content</span><span> </span><span class="hs-identifier">direction</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">ExceptT</span><span> </span><span class="hs-identifier">VRFPrivateKeyFilePermissionError</span><span> </span><span class="hs-identifier">IO</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-identifier">checkVrfFilePermissionsImpl</span><span> </span><span class="hs-identifier">_vrfPrivKeyFile</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">return</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- Dummy implementation for WASM</span><span class="hs-cpp">
+
+#endif
+</span></pre></body></html>

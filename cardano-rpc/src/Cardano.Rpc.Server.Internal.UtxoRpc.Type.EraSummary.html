@@ -1,0 +1,254 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Conversion of the node's hard-fork era summary to the UTxO RPC</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- 'U5c.EraSummaries' message.</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.EraSummary.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.EraSummary</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.EraSummary.html#eraSummariesToProto"><span class="hs-identifier">eraSummariesToProto</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#AnyCardanoEra"><span class="hs-identifier">AnyCardanoEra</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.1.0-4faba7576f1c1ab85107dd4ee538cf49733dbf6f0aeb4c6cc428e01d7a8d7dfc/share/doc/html/src/Cardano.Slotting.Time.html#SystemStart"><span class="hs-identifier">SystemStart</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.Pretty.html#docToText"><span class="hs-identifier">docToText</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">pretty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.1.0-4faba7576f1c1ab85107dd4ee538cf49733dbf6f0aeb4c6cc428e01d7a8d7dfc/share/doc/html/src/Cardano.Slotting.Slot.html#unEpochNo"><span class="hs-identifier">unEpochNo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.1.0-4faba7576f1c1ab85107dd4ee538cf49733dbf6f0aeb4c6cc428e01d7a8d7dfc/share/doc/html/src/Cardano.Slotting.Slot.html#unSlotNo"><span class="hs-identifier">unSlotNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.Consensus.html"><span class="hs-identifier">Cardano.Api.Consensus</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U5c</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint.html#utcTimeToMs"><span class="hs-identifier">utcTimeToMs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.1.0-4faba7576f1c1ab85107dd4ee538cf49733dbf6f0aeb4c6cc428e01d7a8d7dfc/share/doc/html/src/Cardano.Slotting.Time.html"><span class="hs-identifier">Cardano.Slotting.Time</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.1.0-4faba7576f1c1ab85107dd4ee538cf49733dbf6f0aeb4c6cc428e01d7a8d7dfc/share/doc/html/src/Cardano.Slotting.Time.html#fromRelativeTime"><span class="hs-identifier">fromRelativeTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Ouroboros.Consensus.Cardano.Block</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">CardanoEras</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.html"><span class="hs-identifier">Ouroboros.Consensus.HardFork.History</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">History</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">RIO</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ProtoLens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">defMessage</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.SOP.NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">nonEmptyToList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.GRPC.Spec</span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | Convert the node's hard-fork era summary to the UTxO RPC</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- 'U5c.EraSummaries' message.</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- Every era except the last gets its 'U5c.maybe''end' populated from the</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- confirmed era transition. The last era's end is always left unset, even</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- when consensus already supplies a bound for it: consensus cannot</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- distinguish a confirmed transition from the safe-zone forecast horizon, so</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- the spec's &quot;if the era has a well-defined ending&quot; only ever holds for</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- non-final eras here. 'History.EraUnbounded' likewise maps to unset.</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- 'U5c.protocolParams' is left unset for every era: the node does not keep</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- historical per-era protocol parameters. Use @ReadParams@ for the current</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- era's parameters.</span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.EraSummary.html#eraSummariesToProto"><span class="hs-identifier hs-type">eraSummariesToProto</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.1.0-4faba7576f1c1ab85107dd4ee538cf49733dbf6f0aeb4c6cc428e01d7a8d7dfc/share/doc/html/src/Cardano.Slotting.Time.html#SystemStart"><span class="hs-identifier hs-type">SystemStart</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#Summary"><span class="hs-identifier hs-type">History.Summary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">CardanoEras</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-protocol-0.1.0.0-caa54715e7022da85348f7aa83fd2f85ef36a29adc27658ea040e9cb56e01f7b/share/doc/html/src/Cardano.Protocol.Crypto.html#StandardCrypto"><span class="hs-identifier hs-type">Consensus.StandardCrypto</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.EraSummaries</span></span><span>
+</span><span id="line-43"></span><span id="eraSummariesToProto"><span class="annot"><span class="annottext">eraSummariesToProto :: SystemStart
+-&gt; Summary (CardanoEras StandardCrypto) -&gt; Proto EraSummaries
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.EraSummary.html#eraSummariesToProto"><span class="hs-identifier hs-var hs-var">eraSummariesToProto</span></a></span></span><span> </span><span id="local-6989586621679682408"><span class="annot"><span class="annottext">SystemStart
+</span><a href="#local-6989586621679682408"><span class="hs-identifier hs-var">systemStart</span></a></span></span><span> </span><span id="local-6989586621679682409"><span class="annot"><span class="annottext">Summary (CardanoEras StandardCrypto)
+</span><a href="#local-6989586621679682409"><span class="hs-identifier hs-var">summary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><span class="annottext">Proto EraSummaries
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span> </span><span class="annot"><span class="annottext">Proto EraSummaries
+-&gt; (Proto EraSummaries -&gt; Proto EraSummaries) -&gt; Proto EraSummaries
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraSummaries) [Proto EraSummary]
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;summaries&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.summaries</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraSummaries) [Proto EraSummary]
+-&gt; [Proto EraSummary] -&gt; Proto EraSummaries -&gt; Proto EraSummaries
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Bool -&gt; EraSummary -&gt; Proto EraSummary)
+-&gt; [Text] -&gt; [Bool] -&gt; [EraSummary] -&gt; [Proto EraSummary]
+forall a b c d. (a -&gt; b -&gt; c -&gt; d) -&gt; [a] -&gt; [b] -&gt; [c] -&gt; [d]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.List.html#zipWith3"><span class="hs-identifier hs-var">zipWith3</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Bool -&gt; EraSummary -&gt; Proto EraSummary
+</span><a href="#local-6989586621679682414"><span class="hs-identifier hs-var">mkEraSummary</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679682415"><span class="hs-identifier hs-var">eraNames</span></a></span><span> </span><span class="annot"><span class="annottext">[Bool]
+</span><a href="#local-6989586621679682416"><span class="hs-identifier hs-var">isLastEra</span></a></span><span> </span><span class="annot"><span class="annottext">[EraSummary]
+</span><a href="#local-6989586621679682417"><span class="hs-identifier hs-var">eraEntries</span></a></span><span>
+</span><span id="line-45"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-comment">-- All eras in chronological order, i.e. the same order as the summary's</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-comment">-- entries: 'History.Summary' has no era name field, an entry's era is its</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-comment">-- position, so the names are zipped in positionally.</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="#local-6989586621679682415"><span class="hs-identifier hs-type">eraNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679682415"><span class="annot"><span class="annottext">eraNames :: [Text]
+</span><a href="#local-6989586621679682415"><span class="hs-identifier hs-var hs-var">eraNames</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.html#toLower"><span class="hs-identifier hs-var">Text.toLower</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; (Doc AnsiStyle -&gt; Text) -&gt; Doc AnsiStyle -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Text
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.Pretty.html#docToText"><span class="hs-identifier hs-var">docToText</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc AnsiStyle -&gt; Text) -&gt; Doc AnsiStyle -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra era -&gt; Doc AnsiStyle
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+forall ann. CardanoEra era -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="#local-6989586621679682421"><span class="hs-identifier hs-var">era</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#AnyCardanoEra"><span class="hs-identifier hs-type">AnyCardanoEra</span></a></span><span> </span><span id="local-6989586621679682421"><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="#local-6989586621679682421"><span class="hs-identifier hs-var">era</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">AnyCardanoEra
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#minBound"><span class="hs-identifier hs-var">minBound</span></a></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">AnyCardanoEra
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="#local-6989586621679682417"><span class="hs-identifier hs-type">eraEntries</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#EraSummary"><span class="hs-identifier hs-type">History.EraSummary</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679682417"><span class="annot"><span class="annottext">eraEntries :: [EraSummary]
+</span><a href="#local-6989586621679682417"><span class="hs-identifier hs-var hs-var">eraEntries</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmpty (CardanoEras StandardCrypto) EraSummary -&gt; [EraSummary]
+forall (xs :: [*]) a. NonEmpty xs a -&gt; [a]
+</span><span class="hs-identifier hs-var">nonEmptyToList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Summary (CardanoEras StandardCrypto)
+-&gt; NonEmpty (CardanoEras StandardCrypto) EraSummary
+forall (xs :: [*]). Summary xs -&gt; NonEmpty xs EraSummary
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#getSummary"><span class="hs-identifier hs-var">History.getSummary</span></a></span><span> </span><span class="annot"><span class="annottext">Summary (CardanoEras StandardCrypto)
+</span><a href="#local-6989586621679682409"><span class="hs-identifier hs-var">summary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-comment">-- 'eraEntries' is always non-empty ('Summary' wraps a non-empty list), so</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-comment">-- this always ends in exactly one 'True'.</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><a href="#local-6989586621679682416"><span class="hs-identifier hs-type">isLastEra</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679682416"><span class="annot"><span class="annottext">isLastEra :: [Bool]
+</span><a href="#local-6989586621679682416"><span class="hs-identifier hs-var hs-var">isLastEra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Bool -&gt; [Bool]
+forall a. Int -&gt; a -&gt; [a]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.List.html#replicate"><span class="hs-identifier hs-var">replicate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[EraSummary] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[EraSummary]
+</span><a href="#local-6989586621679682417"><span class="hs-identifier hs-var">eraEntries</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">[Bool] -&gt; [Bool] -&gt; [Bool]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="#local-6989586621679682414"><span class="hs-identifier hs-type">mkEraSummary</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#EraSummary"><span class="hs-identifier hs-type">History.EraSummary</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.EraSummary</span></span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679682414"><span class="annot"><span class="annottext">mkEraSummary :: Text -&gt; Bool -&gt; EraSummary -&gt; Proto EraSummary
+</span><a href="#local-6989586621679682414"><span class="hs-identifier hs-var hs-var">mkEraSummary</span></a></span></span><span> </span><span id="local-6989586621679682430"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679682430"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679682431"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679682431"><span class="hs-identifier hs-var">isLast</span></a></span></span><span> </span><span id="local-6989586621679682432"><span class="annot"><span class="annottext">EraSummary
+</span><a href="#local-6989586621679682432"><span class="hs-identifier hs-var">entry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="annottext">Proto EraSummary
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><span class="annottext">Proto EraSummary
+-&gt; (Proto EraSummary -&gt; Proto EraSummary) -&gt; Proto EraSummary
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraSummary) Text
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;name&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.name</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraSummary) Text
+-&gt; Text -&gt; Proto EraSummary -&gt; Proto EraSummary
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679682430"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><span class="annottext">Proto EraSummary
+-&gt; (Proto EraSummary -&gt; Proto EraSummary) -&gt; Proto EraSummary
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraSummary) (Proto EraBoundary)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;start&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.start</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraSummary) (Proto EraBoundary)
+-&gt; Proto EraBoundary -&gt; Proto EraSummary -&gt; Proto EraSummary
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Bound -&gt; Proto EraBoundary
+</span><a href="#local-6989586621679682435"><span class="hs-identifier hs-var">boundToProto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EraSummary -&gt; Bound
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#eraStart"><span class="hs-identifier hs-var">History.eraStart</span></a></span><span> </span><span class="annot"><span class="annottext">EraSummary
+</span><a href="#local-6989586621679682432"><span class="hs-identifier hs-var">entry</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>      </span><span class="annot"><span class="annottext">Proto EraSummary
+-&gt; (Proto EraSummary -&gt; Proto EraSummary) -&gt; Proto EraSummary
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraSummary) (Maybe (Proto EraBoundary))
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;maybe'end&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.maybe'end</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraSummary) (Maybe (Proto EraBoundary))
+-&gt; Maybe (Proto EraBoundary)
+-&gt; Proto EraSummary
+-&gt; Proto EraSummary
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679682431"><span class="hs-identifier hs-var">isLast</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Maybe (Proto EraBoundary)
+forall a. Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">EraEnd -&gt; Maybe (Proto EraBoundary)
+</span><a href="#local-6989586621679682438"><span class="hs-identifier hs-var">endToProto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EraSummary -&gt; EraEnd
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#eraEnd"><span class="hs-identifier hs-var">History.eraEnd</span></a></span><span> </span><span class="annot"><span class="annottext">EraSummary
+</span><a href="#local-6989586621679682432"><span class="hs-identifier hs-var">entry</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><a href="#local-6989586621679682438"><span class="hs-identifier hs-type">endToProto</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#EraEnd"><span class="hs-identifier hs-type">History.EraEnd</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.EraBoundary</span></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621679682438"><span class="annot"><span class="annottext">endToProto :: EraEnd -&gt; Maybe (Proto EraBoundary)
+</span><a href="#local-6989586621679682438"><span class="hs-identifier hs-var hs-var">endToProto</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#EraEnd"><span class="hs-identifier hs-type">History.EraEnd</span></a></span><span> </span><span id="local-6989586621679682441"><span class="annot"><span class="annottext">Bound
+</span><a href="#local-6989586621679682441"><span class="hs-identifier hs-var">bound</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Proto EraBoundary -&gt; Maybe (Proto EraBoundary)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bound -&gt; Proto EraBoundary
+</span><a href="#local-6989586621679682435"><span class="hs-identifier hs-var">boundToProto</span></a></span><span> </span><span class="annot"><span class="annottext">Bound
+</span><a href="#local-6989586621679682441"><span class="hs-identifier hs-var">bound</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">EraEnd
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#EraUnbounded"><span class="hs-identifier hs-var">History.EraUnbounded</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (Proto EraBoundary)
+forall a. Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><a href="#local-6989586621679682435"><span class="hs-identifier hs-type">boundToProto</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#Bound"><span class="hs-identifier hs-type">History.Bound</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.EraBoundary</span></span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679682435"><span class="annot"><span class="annottext">boundToProto :: Bound -&gt; Proto EraBoundary
+</span><a href="#local-6989586621679682435"><span class="hs-identifier hs-var hs-var">boundToProto</span></a></span></span><span> </span><span id="local-6989586621679682442"><span class="annot"><span class="annottext">Bound
+</span><a href="#local-6989586621679682442"><span class="hs-identifier hs-var">bound</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">Proto EraBoundary
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">Proto EraBoundary
+-&gt; (Proto EraBoundary -&gt; Proto EraBoundary) -&gt; Proto EraBoundary
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraBoundary) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;time&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.time</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraBoundary) Word64
+-&gt; Word64 -&gt; Proto EraBoundary -&gt; Proto EraBoundary
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Bound -&gt; Word64
+</span><a href="#local-6989586621679682444"><span class="hs-identifier hs-var">boundTimeMs</span></a></span><span> </span><span class="annot"><span class="annottext">Bound
+</span><a href="#local-6989586621679682442"><span class="hs-identifier hs-var">bound</span></a></span><span>
+</span><span id="line-79"></span><span>      </span><span class="annot"><span class="annottext">Proto EraBoundary
+-&gt; (Proto EraBoundary -&gt; Proto EraBoundary) -&gt; Proto EraBoundary
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraBoundary) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;slot&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.slot</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraBoundary) Word64
+-&gt; Word64 -&gt; Proto EraBoundary -&gt; Proto EraBoundary
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.1.0-4faba7576f1c1ab85107dd4ee538cf49733dbf6f0aeb4c6cc428e01d7a8d7dfc/share/doc/html/src/Cardano.Slotting.Slot.html#unSlotNo"><span class="hs-identifier hs-var">unSlotNo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bound -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#boundSlot"><span class="hs-identifier hs-var">History.boundSlot</span></a></span><span> </span><span class="annot"><span class="annottext">Bound
+</span><a href="#local-6989586621679682442"><span class="hs-identifier hs-var">bound</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>      </span><span class="annot"><span class="annottext">Proto EraBoundary
+-&gt; (Proto EraBoundary -&gt; Proto EraBoundary) -&gt; Proto EraBoundary
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraBoundary) Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;epoch&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.epoch</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto EraBoundary) Word64
+-&gt; Word64 -&gt; Proto EraBoundary -&gt; Proto EraBoundary
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.1.0-4faba7576f1c1ab85107dd4ee538cf49733dbf6f0aeb4c6cc428e01d7a8d7dfc/share/doc/html/src/Cardano.Slotting.Slot.html#unEpochNo"><span class="hs-identifier hs-var">unEpochNo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bound -&gt; EpochNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#boundEpoch"><span class="hs-identifier hs-var">History.boundEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Bound
+</span><a href="#local-6989586621679682442"><span class="hs-identifier hs-var">bound</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-comment">-- Reuses 'utcTimeToMs', the same millisecond conversion 'mkChainPointMsg'</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-comment">-- and 'mkTipBlockRef' use for their proto timestamps, for consistency</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-comment">-- across the API. 'fromRelativeTime' adds the boundary's 'RelativeTime' to</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-comment">-- the system start with 'Pico'-precision arithmetic throughout.</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><a href="#local-6989586621679682444"><span class="hs-identifier hs-type">boundTimeMs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#Bound"><span class="hs-identifier hs-type">History.Bound</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679682444"><span class="annot"><span class="annottext">boundTimeMs :: Bound -&gt; Word64
+</span><a href="#local-6989586621679682444"><span class="hs-identifier hs-var hs-var">boundTimeMs</span></a></span></span><span> </span><span id="local-6989586621679682449"><span class="annot"><span class="annottext">Bound
+</span><a href="#local-6989586621679682449"><span class="hs-identifier hs-var">bound</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; Word64
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint.html#utcTimeToMs"><span class="hs-identifier hs-var">utcTimeToMs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SystemStart -&gt; RelativeTime -&gt; UTCTime
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.1.0-4faba7576f1c1ab85107dd4ee538cf49733dbf6f0aeb4c6cc428e01d7a8d7dfc/share/doc/html/src/Cardano.Slotting.Time.html#fromRelativeTime"><span class="hs-identifier hs-var">fromRelativeTime</span></a></span><span> </span><span class="annot"><span class="annottext">SystemStart
+</span><a href="#local-6989586621679682408"><span class="hs-identifier hs-var">systemStart</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bound -&gt; RelativeTime
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-cda0a26412a543fa9f17c418ef7635d7b3c7a47ace5c674bc17cfee263605ff7/share/doc/html/src/Ouroboros.Consensus.HardFork.History.Summary.html#boundTime"><span class="hs-identifier hs-var">History.boundTime</span></a></span><span> </span><span class="annot"><span class="annottext">Bound
+</span><a href="#local-6989586621679682449"><span class="hs-identifier hs-var">bound</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span></pre></body></html>
