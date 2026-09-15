@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1342
+kind:
+  - documentation
+description: |
+  Add transaction-building examples to the cardano-rpc quickstart's Rust, Python and Haskell guides, each building, signing, submitting and confirming a payment against a local cluster.

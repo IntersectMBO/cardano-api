@@ -1,0 +1,155 @@
+name: Run RPC quickstart examples
+
+on:
+  # This is the only path-filtered workflow in the repository: every matrix job
+  # boots its own cardano-testnet cluster, which is far too heavy to run on PRs
+  # that cannot affect the quickstart examples. There is deliberately no
+  # `merge_group` trigger - merge queues ignore `paths` filters, and this is not
+  # a required check.
+  pull_request:
+    paths:
+      - 'cardano-rpc/quickstart/**'
+      - 'cardano-rpc/README.md'
+      - '.github/workflows/rpc-quickstart-examples.yml'
+      - 'flake.nix'
+      - 'flake.lock'
+  # Scheduled runs execute on master and ignore the `paths` filter above, which
+  # is the point: they catch drift no filter can see. The examples resolve
+  # cardano-node master fresh on every run, and they install straight from npm,
+  # PyPI and crates.io, so any of those moving can break a quickstart without a
+  # single file in this repository changing.
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  run-examples:
+    name: ${{ matrix.lang }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lang: typescript
+            devshell: .#rpc-quickstart-typescript
+            dir: cardano-rpc/quickstart/typescript
+            run: |
+              # The README documents `npm install`, so run exactly that even
+              # though `npm ci` would be the more CI-idiomatic choice now that
+              # package-lock.json is committed.
+              npm install
+              node send-lovelace.mjs
+          - lang: python
+            devshell: .#rpc-quickstart-python
+            dir: cardano-rpc/quickstart/python
+            run: |
+              # The venv paths are used directly: `source venv/bin/activate`
+              # would not survive into the next step.
+              python3 -m venv venv
+              venv/bin/pip install -r requirements.txt
+              venv/bin/python main.py
+              venv/bin/python send_lovelace.py
+          - lang: rust
+            devshell: .#rpc-quickstart-rust
+            dir: cardano-rpc/quickstart/rust
+            run: |
+              cargo run
+              cargo run --bin send-lovelace
+          - lang: go
+            devshell: .#rpc-quickstart-go
+            dir: cardano-rpc/quickstart/go
+            run: |
+              # Go has no send-lovelace example yet.
+              go run .
+          - lang: haskell
+            devshell: ''
+            dir: .
+            run: |
+              # This deliberately diverges from the README's `cabal run`.
+              # Building the flake attribute substitutes the whole dependency
+              # closure from cache.iog.io, so CI only ever compiles
+              # cardano-api, cardano-rpc and the example itself. The examples
+              # read the cluster from the absolute /tmp/demo-cluster path, so
+              # running them outside their source directory is fine.
+              nix build --print-build-logs '.#rpc-quickstart-haskell'
+              ./result/bin/cardano-rpc-quickstart
+              ./result/bin/send-lovelace
+
+    steps:
+      - uses: actions/checkout@v6
+
+      # `accept-flake-config` is a global setting, so it also covers the
+      # `nix run` of cardano-node below and lets that flake's own
+      # cache.iog.io substituter apply.
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+
+      # Each matrix job runs on its own runner VM, so every job can boot a
+      # cluster on the same ports without conflicting. cardano-node master is
+      # resolved fresh on every run by design - the examples are documentation
+      # and must keep working against the current node.
+      - name: Start a local test cluster
+        run: |
+          setsid nix run github:IntersectMBO/cardano-node#cardano-testnet -- \
+            cardano --num-pool-nodes 1 --enable-grpc-http \
+            --grpc-listen-port-base 50051 --output-dir /tmp/demo-cluster \
+            > /tmp/cluster.log 2>&1 &
+          echo $! > /tmp/cluster.pid
+          echo "Cluster started, pid $(cat /tmp/cluster.pid)."
+
+      - name: Wait for the gRPC endpoint
+        run: |
+          ready='gRPC endpoint of node1: http://127.0.0.1:50051'
+          for attempt in $(seq 1 120); do
+            if grep -qF "$ready" /tmp/cluster.log; then
+              echo "Cluster ready after $((attempt * 5))s."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Cluster did not log '$ready' within 10 minutes."
+          echo "--- last 100 lines of /tmp/cluster.log ---"
+          tail -n 100 /tmp/cluster.log
+          exit 1
+
+      - name: Enter the ${{ matrix.lang }} dev shell
+        if: matrix.devshell != ''
+        uses: rrbutani/use-nix-shell-action@v1
+        with:
+          devShell: ${{ matrix.devshell }}
+
+      # Both examples run sequentially against the same cluster: each spends
+      # whatever sits at utxo1 and returns the change there.
+      - name: Run the ${{ matrix.lang }} examples
+        working-directory: ${{ matrix.dir }}
+        run: ${{ matrix.run }}
+
+      - name: Dump the cluster log
+        if: failure()
+        # Never fail this step itself: the log is missing only when the job
+        # failed before the cluster was even started.
+        run: tail -n 200 /tmp/cluster.log || true
+
+      - name: Stop the cluster
+        if: always()
+        run: |
+          if [ -f /tmp/cluster.pid ]; then
+            # `setsid` made the recorded pid the process-group leader, so this
+            # reaps the whole node tree in one go.
+            kill -- "-$(cat /tmp/cluster.pid)" 2>/dev/null || true
+          fi
+          # Belt and braces, scoped to this run's output directory so an
+          # unrelated cardano-node is never touched.
+          pkill -f 'cardano-node.*/tmp/demo-cluster' || true
+          rm -rf /tmp/demo-cluster

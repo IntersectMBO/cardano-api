@@ -19,7 +19,7 @@ The example itself builds anywhere once you copy these files; only the `nix deve
 From this directory, get `go` from the repository's flake (the `.` flake reference resolves to the repository root from anywhere inside the clone):
 
 ```bash
-nix develop .#rpc-quickstart-go
+nix develop .#rpc-quickstart-go  # recommended
 ```
 
 or with `nix-shell` (using the `shell.nix` in this directory):

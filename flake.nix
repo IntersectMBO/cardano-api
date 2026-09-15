@@ -355,17 +355,40 @@
         # own for plain `nix-shell` users, so just import them here rather
         # than duplicating their package lists.
         rpcQuickstartShells = {
-          rpc-quickstart = import ./cardano-rpc/quickstart/shell.nix {pkgs = nixpkgs;};
-          rpc-quickstart-rust = import ./cardano-rpc/quickstart/rust/shell.nix {pkgs = nixpkgs;};
-          rpc-quickstart-typescript = import ./cardano-rpc/quickstart/typescript/shell.nix {pkgs = nixpkgs;};
-          rpc-quickstart-go = import ./cardano-rpc/quickstart/go/shell.nix {pkgs = nixpkgs;};
-          rpc-quickstart-python = import ./cardano-rpc/quickstart/python/shell.nix {pkgs = nixpkgs;};
+          rpc-quickstart = import ./cardano-rpc/quickstart/shell.nix {pkgs = nixpkgs.unstable;};
+          rpc-quickstart-rust = import ./cardano-rpc/quickstart/rust/shell.nix {pkgs = nixpkgs.unstable;};
+          rpc-quickstart-typescript = import ./cardano-rpc/quickstart/typescript/shell.nix {pkgs = nixpkgs.unstable;};
+          rpc-quickstart-go = import ./cardano-rpc/quickstart/go/shell.nix {pkgs = nixpkgs.unstable;};
+          rpc-quickstart-python = import ./cardano-rpc/quickstart/python/shell.nix {pkgs = nixpkgs.unstable;};
           # Haskell needs the project's own haskell.nix toolchain (GHC, cabal
           # and the Cardano C libraries), which a plain nixpkgs mkShell can't
           # provide, so alias the repository's own dev shell instead of a
           # per-language shell.nix.
           rpc-quickstart-haskell = flake.devShells.default;
         };
+        # The Haskell quickstart is a standalone cabal project (readers copy it
+        # out of the repo), so fold it in through a derived project instead of
+        # the repository's own cabal.project.
+        quickstartProject = cabalProject.appendModule {
+          # Concatenated with the base project's cabalProjectLocal, so the CHaP
+          # repository stanza already applies here. `allow-newer` keeps the
+          # example's doc-facing `^>=` bounds from breaking the flake's solve
+          # on cardano-api/cardano-rpc version bumps.
+          cabalProjectLocal = ''
+            packages: cardano-rpc/quickstart/haskell
+            allow-newer: cardano-rpc-quickstart:cardano-rpc, cardano-rpc-quickstart:cardano-api
+          '';
+        };
+        rpc-quickstart-haskell-drv = let
+          exes = quickstartProject.hsPkgs.cardano-rpc-quickstart.components.exes;
+        in
+          nixpkgs.symlinkJoin {
+            name = "rpc-quickstart-haskell";
+            paths = [
+              exes.cardano-rpc-quickstart
+              exes.send-lovelace
+            ];
+          };
         # wasm/playwright/demo are built by Hydra too (hydraJobs.devShells);
         # rpcQuickstartShells is interactive-only, see hydraJobs below.
         extraDevShells = wasmShell // playwrightShell // demoShell;
@@ -387,13 +410,24 @@
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
                   proto-js-bundle = proto-js-bundle-drv;
                   wasm-typedoc = wasm-typedoc-drv;
+                }
+                // lib.optionalAttrs (system == "x86_64-linux") {
+                  # just x86_64-linux to save evaluation and building time
+                  rpc-quickstart-haskell = rpc-quickstart-haskell-drv;
                 };
+              # Don't block merges on RPC quickstart failures
+              nonRequiredPaths = [(lib.hasPrefix "rpc-quickstart-haskell")];
             }
             // {
-              packages = {
-                wasm-typedoc = wasm-typedoc-drv;
-                proto-js-bundle = proto-js-bundle-drv;
-              };
+              packages =
+                {
+                  wasm-typedoc = wasm-typedoc-drv;
+                  proto-js-bundle = proto-js-bundle-drv;
+                }
+                # x86_64-linux only; see comment on the ciJobs merge above.
+                // lib.optionalAttrs (system == "x86_64-linux") {
+                  rpc-quickstart-haskell = rpc-quickstart-haskell-drv;
+                };
               devShells = hydraDevShells;
             };
           legacyPackages = {
@@ -404,6 +438,7 @@
           packages = {
             proto-js-bundle = proto-js-bundle-drv;
             wasm-typedoc = wasm-typedoc-drv;
+            rpc-quickstart-haskell = rpc-quickstart-haskell-drv;
           };
           devShells = let
             # profiling shell
