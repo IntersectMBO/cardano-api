@@ -1,0 +1,2 @@
+grpcio==1.84.0
+utxorpc-spec==0.19.2
