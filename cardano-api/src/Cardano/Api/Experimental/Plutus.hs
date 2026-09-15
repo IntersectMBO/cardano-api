@@ -31,6 +31,7 @@ module Cardano.Api.Experimental.Plutus
   , PlutusScriptPurpose (..)
   , PlutusScriptDatum (..)
   , NoScriptDatum
+  , mkSpendingScriptDatum
   , getPlutusScriptWitnessLanguage
 
     -- ** Constuct an indexed plutus script witness.

@@ -288,14 +288,14 @@ deriving via
     Show (L.ConwayLedgerPredFailure ledgerera) => ToJSON (L.ConwayLedgerPredFailure ledgerera)
 
 deriving via
-  ShowOf (L.DijkstraMempoolPredFailure ledgerera)
-  instance
-    Show (L.DijkstraMempoolPredFailure ledgerera) => ToJSON (L.DijkstraMempoolPredFailure ledgerera)
-
-deriving via
   ShowOf (L.DijkstraLedgerPredFailure ledgerera)
   instance
     Show (L.DijkstraLedgerPredFailure ledgerera) => ToJSON (L.DijkstraLedgerPredFailure ledgerera)
+
+deriving via
+  ShowOf (L.DijkstraMempoolPredFailure ledgerera)
+  instance
+    Show (L.DijkstraMempoolPredFailure ledgerera) => ToJSON (L.DijkstraMempoolPredFailure ledgerera)
 
 deriving via
   ShowOf (L.ShelleyDelegsPredFailure ledgerera)
