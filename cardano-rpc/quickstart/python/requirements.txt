@@ -1,2 +1,7 @@
 grpcio==1.84.0
 utxorpc-spec==0.19.2
+pycardano==0.19.2
+# pycardano depends on cbor2>=5.6.5 with no upper bound, but cbor2 6.x renamed
+# APIs that pycardano 0.19.2 still uses (e.g. FrozenDict). Pin a 5.x pair.
+cbor2==5.8.0
+cbor2pure==5.8.0
