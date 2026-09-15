@@ -23,7 +23,7 @@ The steps below start a local cluster and make first calls against it; the same 
    cd cardano-api
    ```
 
-Work through [Start a local cluster](#start-a-local-cluster) and [Make your first call](#make-your-first-call) below, then follow whichever quickstart in [Language examples](#language-examples) matches your stack.
+Work through [Start a local cluster](#start-a-local-cluster) and [Make your first call](#make-your-first-call) below (the first calls are optional; each language guide stands on its own once the cluster is running), then follow whichever quickstart in [Language examples](#language-examples) matches your stack.
 
 ### Start a local cluster
 
@@ -35,7 +35,7 @@ nix run github:IntersectMBO/cardano-node#cardano-testnet -- \
 ```
 
 This starts a testnet with a single block-producing cardano-node and its gRPC server enabled over plain HTTP/2 (h2c), and keeps running in the foreground until you press Ctrl+C.
-The cluster is ready once it logs `gRPC endpoint of node1: http://127.0.0.1:50051`; open a second terminal for everything below.
+The cluster is ready once it logs `gRPC endpoint of node1: http://127.0.0.1:50051`, typically well under a minute once binaries are cached; open a second terminal for everything below.
 The cluster comes with funded test wallets, created at startup under `/tmp/demo-cluster/utxo-keys/utxo1` to `utxo3` (`utxo.skey`, `utxo.vkey`, `utxo.addr`); the [TypeScript quickstart](quickstart/typescript/README.md)'s transaction example spends from `utxo1`.
 
 The gRPC endpoint is `localhost:50051`.
@@ -59,7 +59,7 @@ Every example below talks to `localhost:50051`.
 ### Make your first call
 
 First enter a subshell that puts the tools on PATH (your prompt changes; run the commands below inside it).
-`.#rpc-quickstart` bundles every tool the CLI examples and the Rust, TypeScript, and Go language examples below need; the per-language shells (`.#rpc-quickstart-rust`, `.#rpc-quickstart-typescript`, `.#rpc-quickstart-go`) are minimal alternatives if you only want one.
+`.#rpc-quickstart` bundles every tool the CLI examples and the Rust, TypeScript, Go, and Python language examples below need; the per-language shells (`.#rpc-quickstart-rust`, `.#rpc-quickstart-typescript`, `.#rpc-quickstart-go`, `.#rpc-quickstart-python`) are minimal alternatives if you only want one.
 The Haskell example uses the repository's own dev shell instead (`.#rpc-quickstart-haskell`), since it needs the full haskell.nix toolchain rather than a plain nixpkgs shell:
 
 ```bash
@@ -123,6 +123,7 @@ buf curl \
 - **Rust**: first calls via the `utxorpc-spec` crate (the `utxorpc` wrapper crate is v1alpha-only, so the example uses the generated `utxorpc-spec` bindings). See [quickstart/rust/README.md](quickstart/rust/README.md).
 - **TypeScript**: build and submit a transaction with MeshJS (published UTxO RPC (u5c) providers are v1alpha-only, so the example ships its own small v1beta provider). See [quickstart/typescript/README.md](quickstart/typescript/README.md).
 - **Go**: first calls via the `go-sdk` wrapper (its `cardano` package speaks v1beta directly and builds the h2c cleartext transport for you). See [quickstart/go/README.md](quickstart/go/README.md).
+- **Python**: first calls via the `utxorpc-spec` package (the `utxorpc` wrapper package is v1alpha-only, so the example uses the generated `utxorpc-spec` bindings). See [quickstart/python/README.md](quickstart/python/README.md).
 - **Haskell**: first calls via the `cardano-rpc` package's own client, `Cardano.Rpc.Client` (which re-exports the grapesy gRPC client, with the generated proto-lens bindings separately exposed as package modules, so no separate SDK is needed). See [quickstart/haskell/README.md](quickstart/haskell/README.md).
 
 ### Clean up
