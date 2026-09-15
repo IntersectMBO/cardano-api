@@ -85,7 +85,7 @@ import Cardano.Api.Network.Internal.NetworkId
 import Cardano.Api.Query.Internal.Type.DebugLedgerState
 import Cardano.Api.Serialise.Cbor (SerialiseAsCBOR (deserialiseFromCBOR, serialiseToCBOR))
 import Cardano.Api.Serialise.TextEnvelope.Internal
-  ( HasTextEnvelope (textEnvelopeType)
+  ( HasTextEnvelope (textEnvelopeTypes)
   , TextEnvelopeType
   )
 import Cardano.Api.Tx.Internal.Body
@@ -132,6 +132,7 @@ import Data.Bifunctor (bimap, first)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.Either.Combinators (rightToMaybe)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
@@ -194,8 +195,8 @@ instance SerialiseAsCBOR EraHistory where
 -- @transaction calculate-plutus-script-cost@ command in @cartdano-cli and it
 -- can be obtained through the @query era-history@ command.
 instance HasTextEnvelope EraHistory where
-  textEnvelopeType :: AsType EraHistory -> TextEnvelopeType
-  textEnvelopeType _ = "EraHistory"
+  textEnvelopeTypes :: AsType EraHistory -> NonEmpty TextEnvelopeType
+  textEnvelopeTypes _ = pure "EraHistory"
 
 getProgress
   :: ()
