@@ -359,6 +359,7 @@
           rpc-quickstart-rust = import ./cardano-rpc/quickstart/rust/shell.nix {pkgs = nixpkgs;};
           rpc-quickstart-typescript = import ./cardano-rpc/quickstart/typescript/shell.nix {pkgs = nixpkgs;};
           rpc-quickstart-go = import ./cardano-rpc/quickstart/go/shell.nix {pkgs = nixpkgs;};
+          rpc-quickstart-python = import ./cardano-rpc/quickstart/python/shell.nix {pkgs = nixpkgs;};
           # Haskell needs the project's own haskell.nix toolchain (GHC, cabal
           # and the Cardano C libraries), which a plain nixpkgs mkShell can't
           # provide, so alias the repository's own dev shell instead of a
