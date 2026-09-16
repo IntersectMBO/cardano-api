@@ -1,5 +1,15 @@
 # Changelog for cardano-rpc
 
+## 11.4.0.0 -- 2026-09-16
+
+- The cardano-rpc gRPC server now implements the gRPC Server Reflection Protocol (grpc.reflection.v1 and grpc.reflection.v1alpha), so tools such as grpcurl, Postman and buf can list and describe the server's available services and message schemas without needing local .proto files.
+  (feature)
+  [PR 1334](https://github.com/intersectmbo/cardano-api/pull/1334)
+
+- Implement the `ReadEraSummary` gRPC method, returning the era name and the start and end boundaries (Unix-epoch milliseconds, slot, epoch) of every era in the chain's history. The `NodeKernelAccess` type is now abstract; use the functions of `Cardano.Rpc.Server.NodeKernelAccess` instead of its record fields.
+  (feature, breaking)
+  [PR 1325](https://github.com/intersectmbo/cardano-api/pull/1325)
+
 ## 11.3.0.0 -- 2026-09-04
 
 - The cardano-rpc gRPC server can now listen on HTTP/2 (h2c) or HTTP/2 over TLS on a configured IP address and port instead of only a unix domain socket, configured via new cardano-node options such as `--grpc-listen-port` and `--grpc-tls-certificate`. `RpcConfigF`'s `rpcSocketPath` field was replaced by the new `RpcEndpoint` sum type. Error responses no longer include internal diagnostic detail such as call stacks. Script evaluation requests are rejected when the transaction exceeds the protocol maximum size or carries more than 100 redeemers. UTxO reads are limited to 20000 keys and block fetches to 500 references per request.
