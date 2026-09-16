@@ -1,6 +1,0 @@
-project: cardano-rpc
-pr: 1341
-kind:
-  - documentation
-description: |
-  Add a Python example to the cardano-rpc quickstart, demonstrating first calls against the node's gRPC interface using the published utxorpc-spec v1beta bindings, with its own Nix development shell.
