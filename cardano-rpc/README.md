@@ -2,7 +2,7 @@
 
 ## What's this
 
-The `cardano-rpc` package provides the client and server Haskell modules for cardano-node's built-in gRPC interface, implementing the [UTxO RPC](https://utxorpc.org/introduction) specification.
+The `cardano-rpc` package provides the client and server Haskell modules for cardano-node's built-in gRPC interface ([gRPC](https://grpc.io) is a typed, binary RPC framework served over HTTP/2), implementing the [UTxO RPC](https://utxorpc.org/introduction) specification.
 It is enabled with a configuration flag: there is no extra service to run, and it is built, tested, and released together with cardano-node.
 Because UTxO RPC is a standard, the same client code also works against other servers that implement it, such as Dolos.
 It serves live chain data: the tip, UTxO queries, protocol parameters, and transaction evaluation and submission.
@@ -10,7 +10,7 @@ It is not an indexer: there are no address-history or by-hash lookups; see [UTxO
 
 ## Quickstart
 
-The steps below start a local cluster and make first calls against it; the same configuration works against any network, from the local cluster used here to mainnet.
+The steps below start a local cluster and make first calls against it; the same configuration works against [any network](#using-your-own-node), from the local cluster used here to mainnet.
 
 ### Prerequisites
 
@@ -34,9 +34,9 @@ nix run github:IntersectMBO/cardano-node#cardano-testnet -- \
   cardano --num-pool-nodes 1 --enable-grpc-http --grpc-listen-port-base 50051 --output-dir /tmp/demo-cluster
 ```
 
-This starts a testnet with a single block-producing cardano-node and its gRPC server enabled over plain HTTP/2 (h2c), and keeps running in the foreground until you press Ctrl+C.
+This starts a testnet with a single block-producing cardano-node and its gRPC server enabled over plain HTTP/2 without TLS (h2c), and keeps running in the foreground until you press Ctrl+C.
 The cluster is ready once it logs `gRPC endpoint of node1: http://127.0.0.1:50051`, typically well under a minute once binaries are cached; open a second terminal for everything below.
-The cluster comes with funded test wallets, created at startup under `/tmp/demo-cluster/utxo-keys/utxo1` to `utxo3` (`utxo.skey`, `utxo.vkey`, `utxo.addr`); the [TypeScript quickstart](quickstart/typescript/README.md)'s transaction example spends from `utxo1`.
+The cluster comes with funded test wallets, created at startup under `/tmp/demo-cluster/utxo-keys/utxo1` to `utxo3` (`utxo.skey`, `utxo.vkey`, `utxo.addr`); the language examples' transaction flows spend from `utxo1`.
 
 The gRPC endpoint is `localhost:50051`.
 Without `--enable-grpc-http` (i.e. with `--enable-grpc`), you get a Unix socket at `/tmp/demo-cluster/socket/node1/rpc.sock` instead, next to cardano-node's IPC socket; see the [configuration reference](#configuration-reference) for the full set of transports.
@@ -58,12 +58,14 @@ Every example below talks to `localhost:50051`.
 
 ### Make your first call
 
+For node operators, these calls are a scriptable network equivalent of `cardano-cli query tip` and `query protocol-parameters`, useful for monitoring.
+
 First enter a subshell that puts the tools on PATH (your prompt changes; run the commands below inside it).
 `.#rpc-quickstart` bundles every tool the CLI examples and the Rust, TypeScript, Go, and Python language examples below need; the per-language shells (`.#rpc-quickstart-rust`, `.#rpc-quickstart-typescript`, `.#rpc-quickstart-go`, `.#rpc-quickstart-python`) are minimal alternatives if you only want one.
 The Haskell example uses the repository's own dev shell instead (`.#rpc-quickstart-haskell`), since it needs the full haskell.nix toolchain rather than a plain nixpkgs shell:
 
 ```bash
-nix develop .#rpc-quickstart
+nix develop .#rpc-quickstart  # recommended
 ```
 
 or with `nix-shell` (using `cardano-rpc/quickstart/shell.nix`):
@@ -78,7 +80,7 @@ or fetch them ad hoc:
 nix shell nixpkgs#buf nixpkgs#grpcurl
 ```
 
-The server supports gRPC reflection, so it can describe its own services and methods; none of the commands below need local schema files.
+The server supports gRPC reflection, so it can describe its own services and methods; none of the commands below need local schema files (the `.proto` files describing the API).
 List the services it exposes with grpcurl:
 
 ```bash
@@ -118,13 +120,32 @@ buf curl \
   http://localhost:50051/utxorpc.v1beta.query.QueryService/ReadParams
 ```
 
+grpcurl and buf alone are enough to explore every implemented method; the language quickstarts below are only needed if you want to call the API from code.
+
+### Using your own node
+
+Already running a `cardano-node`?
+Enable the gRPC server in its configuration file:
+
+```json
+{
+  "EnableRpc": true,
+  "RpcListenPort": 50051
+}
+```
+
+`RpcListenAddress` defaults to `127.0.0.1`.
+The configuration is read at startup, so enabling it requires a node restart.
+The same grpcurl/buf commands above work against `<host>:50051`.
+See the [configuration reference](#configuration-reference) for the Unix-socket and TLS transports, and [Security](#security) before exposing anything beyond localhost.
+
 ### Language examples
 
-- **Rust**: first calls via the `utxorpc-spec` crate (the `utxorpc` wrapper crate is v1alpha-only, so the example uses the generated `utxorpc-spec` bindings). See [quickstart/rust/README.md](quickstart/rust/README.md).
-- **TypeScript**: build and submit a transaction with MeshJS (published UTxO RPC (u5c) providers are v1alpha-only, so the example ships its own small v1beta provider). See [quickstart/typescript/README.md](quickstart/typescript/README.md).
+- **Rust**: first calls and a transaction example with pallas-txbuilder via the `utxorpc-spec` crate (the `utxorpc` wrapper crate is v1alpha-only, so the example uses the generated `utxorpc-spec` bindings). See [quickstart/rust/README.md](quickstart/rust/README.md).
+- **TypeScript**: build and submit a transaction with MeshJS (published UTxO RPC providers are v1alpha-only, so the example ships its own small v1beta provider). See [quickstart/typescript/README.md](quickstart/typescript/README.md).
 - **Go**: first calls via the `go-sdk` wrapper (its `cardano` package speaks v1beta directly and builds the h2c cleartext transport for you). See [quickstart/go/README.md](quickstart/go/README.md).
-- **Python**: first calls via the `utxorpc-spec` package (the `utxorpc` wrapper package is v1alpha-only, so the example uses the generated `utxorpc-spec` bindings). See [quickstart/python/README.md](quickstart/python/README.md).
-- **Haskell**: first calls via the `cardano-rpc` package's own client, `Cardano.Rpc.Client` (which re-exports the grapesy gRPC client, with the generated proto-lens bindings separately exposed as package modules, so no separate SDK is needed). See [quickstart/haskell/README.md](quickstart/haskell/README.md).
+- **Python**: first calls and a transaction example with PyCardano via the `utxorpc-spec` package (the `utxorpc` wrapper package is v1alpha-only, so the example uses the generated `utxorpc-spec` bindings). See [quickstart/python/README.md](quickstart/python/README.md).
+- **Haskell**: first calls and a transaction example with cardano-api's experimental transaction API via the `cardano-rpc` package's own client, `Cardano.Rpc.Client` (which re-exports the grapesy gRPC client, with the generated proto-lens bindings separately exposed as package modules, so no separate SDK is needed). See [quickstart/haskell/README.md](quickstart/haskell/README.md).
 
 ### Clean up
 
@@ -138,11 +159,12 @@ rm -rf /tmp/demo-cluster
 
 The gRPC server is off by default.
 Enable it with `--grpc-enable` or `EnableRpc: true` in the cardano-node configuration; a node socket path must also be configured.
+Settings are read at node startup; changing them requires a restart.
 
 Exactly one transport is active at a time:
 
 1. Unix socket (default): `rpc.sock` next to the node socket, or `--grpc-socket-path` / `RpcSocketPath`.
-2. HTTP/2 cleartext: `--grpc-listen-port` / `RpcListenPort`, optionally `--grpc-listen-address` / `RpcListenAddress` (default `127.0.0.1`).
+2. HTTP/2 without TLS (h2c): `--grpc-listen-port` / `RpcListenPort`, optionally `--grpc-listen-address` / `RpcListenAddress` (default `127.0.0.1`).
 3. HTTP/2 with TLS: add `--grpc-tls-certificate` and `--grpc-tls-private-key` (`RpcTlsCertificateFile`, `RpcTlsPrivateKeyFile`), optionally repeatable `--grpc-tls-chain-certificate` (`RpcTlsChainCertificateFiles`).
 
 The three transports are mutually exclusive.
@@ -152,9 +174,8 @@ Clients connect over TCP the same way as in the examples above: replace the Unix
 
 ## UTxO RPC spec coverage
 
-Methods marked ⬜ or ❌ are exposed by the server but respond with the `UNIMPLEMENTED` gRPC status.
-Methods marked ❌ cannot be served by `cardano-node` at all: they need a whole-chain index (transaction by hash, datum by hash) that the node does not maintain, and supporting them would mean building an external chain indexer into the node.
-Use a dedicated chain indexing service for those.
+Methods that are not implemented (⬜, ❌) still respond, with the `UNIMPLEMENTED` gRPC status.
+The ❌ methods need a whole-chain index (transaction by hash, datum by hash) that the node does not maintain; use a dedicated chain indexing service for those.
 
 ### `v1beta` version
 #### [QueryService](https://utxorpc.org/query/spec/)
@@ -251,6 +272,6 @@ TLS encrypts the connection and lets clients verify the node; it does not restri
 A TLS listener on a public address is as open as a cleartext one.
 
 For deployment, keep the listener on loopback or a trusted network segment.
-Anywhere else, front it with a reverse proxy that terminates TLS and handles authentication and rate limiting, the pattern recommended in ADR-018.
+Anywhere else, front it with a reverse proxy that terminates TLS and handles authentication and rate limiting.
 
 The server writes TLS key-log material if `SSLKEYLOGFILE` is set in its environment.

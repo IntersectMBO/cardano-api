@@ -8,7 +8,8 @@ The example sends 5 ADA from the cluster's `utxo1` wallet to the `utxo2` address
 > `@meshsdk/provider`'s off-the-shelf `U5CProvider` does not work against cardano-rpc: it is pinned to `@utxorpc/sdk` 0.6.x, which speaks the older `utxorpc.v1alpha` services, while cardano-rpc serves `v1beta` (v1beta packaging for the SDKs is tracked in utxorpc/spec#209).
 > Until the SDKs move to v1beta, [`cardano-rpc-provider.mjs`](cardano-rpc-provider.mjs) talks v1beta directly by loading the proto files at runtime.
 >
-> The provider is demo scaffolding for plain ADA and native-asset payments: it maps oversized numeric values onto the `int` variant only, and it does not surface datums, inline datums, or reference scripts.
+> The provider is demo scaffolding for plain ADA and native-asset payments: it maps oversized numeric values onto the `int` variant of cardano-rpc's `BigInt` type (the proto type for values beyond 64-bit integers) only, and it does not surface datums, inline datums, or reference scripts.
+> The examples sign with the demo cluster's throwaway keys; do not point them at a node whose wallet keys hold real funds.
 > Do not lift it unchanged into a dApp that touches script-locked UTxOs.
 
 ## Prerequisites
@@ -21,7 +22,7 @@ It talks to the cluster's gRPC endpoint at `localhost:50051`.
 From this directory, get `node` from the repository's flake (the `.` flake reference resolves to the repository root from anywhere inside the clone):
 
 ```bash
-nix develop .#rpc-quickstart-typescript
+nix develop .#rpc-quickstart-typescript  # recommended
 ```
 
 or with `nix-shell` (using the `shell.nix` in this directory):
@@ -60,5 +61,6 @@ Confirmed: 5000000 lovelace landed at addr_test1vp0fsh3r9t3zmsfkv27qkwh66vudurnt
 ```
 
 See [`send-lovelace.mjs`](send-lovelace.mjs) for the full script: building the transaction with `MeshTxBuilder`, then confirming by polling the recipient's UTxOs for the new output.
+If the cluster is not reachable, the first call fails immediately with a connection error; if the submitted transaction never confirms, the script times out after about a minute with an explicit error.
 
 `@grpc/grpc-js` can also target the Unix socket directly with a `unix://` address, for a node started with `--enable-grpc` instead.

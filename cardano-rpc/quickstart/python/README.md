@@ -18,7 +18,7 @@ The example itself runs anywhere once you copy these files; only the `nix develo
 From the repository root, `cd cardano-rpc/quickstart/python`, then get `python3` from the repository's flake (the `.` flake reference resolves to the repository root from anywhere inside the clone):
 
 ```bash
-nix develop .#rpc-quickstart-python
+nix develop .#rpc-quickstart-python  # recommended
 ```
 
 or with `nix-shell` (using the `shell.nix` in this directory):
@@ -57,3 +57,42 @@ Protocol parameters: max_tx_size 16384 max_block_body_size 65536
 ```
 
 grpcio can also connect straight to the Unix socket with a `unix:` target (e.g. `grpc.insecure_channel("unix:///tmp/demo-cluster/socket/node1/rpc.sock")`), for a node started with `--enable-grpc` instead.
+
+## Build and submit a transaction
+
+[`send_lovelace.py`](send_lovelace.py) builds and submits a transaction with [PyCardano](https://pycardano.readthedocs.io/), using cardano-rpc for UTxO queries, protocol parameters, and submission.
+It sends 5 ADA from the cluster's `utxo1` wallet to the `utxo2` address, then polls the recipient's UTxOs until the new output appears.
+If the cluster is not reachable, the first call fails immediately with a connection error; if the submitted transaction never confirms, the script times out after about a minute with an explicit error.
+`send_lovelace.py` and the extra dependencies it needs are already in this directory; `requirements.txt` already lists them.
+
+> [!IMPORTANT]
+> PyCardano has no cardano-rpc integration, so `send_lovelace.py` defines `CardanoRpcChainContext`, a `pycardano.ChainContext` subclass that talks `v1beta` directly through `utxorpc-spec`, the same generated stubs [`main.py`](main.py) uses.
+> PyCardano's `build_and_sign` balances the fee and change output (the leftover value returned to the sender) automatically from that context.
+> It is demo scaffolding for plain ADA payments: it spends every UTxO it finds at the sender address instead of running proper coin selection (choosing only the inputs needed), and it does not handle native assets and does not surface datums, inline datums, reference scripts, or script cost models; it also maps oversized numeric values onto the `int` branch of cardano-rpc's `BigInt` type (the proto type for values beyond 64-bit integers) only.
+> The examples sign with the demo cluster's throwaway keys; do not point them at a node whose wallet keys hold real funds.
+> Do not lift it unchanged into a dApp that touches script-locked UTxOs.
+
+The [Prerequisites](#prerequisites) and [Run it](#run-it) sections above set up a running cluster and an activated virtual environment with the pinned dependencies installed.
+From this directory, with the virtual environment still active:
+
+```bash
+python send_lovelace.py
+```
+
+Sample output (your values will differ):
+
+```
+Sender address:    addr_test1vzk7y8ppza3qzmqvsmfm6ysc5wxw6kraandep2p06g9yf2s20478e
+Recipient address: addr_test1vrgrv8vwfpqu42l3qpxecmfykh82ygyfd8aa8dsqzlh5j0qff9sxr
+Spendable UTxOs:   1
+Submitted tx: d06a9bf3562671e4975f10abb91e06842bf2a124d11619d27279d0ba2df2671e
+Confirmed: 5000000 lovelace landed at addr_test1vrgrv8vwfpqu42l3qpxecmfykh82ygyfd8aa8dsqzlh5j0qff9sxr (d06a9bf3562671e4975f10abb91e06842bf2a124d11619d27279d0ba2df2671e#0)
+```
+
+> [!NOTE]
+> `requirements.txt` pins `cbor2==5.8.0` and `cbor2pure==5.8.0` alongside `pycardano==0.19.2`.
+> PyCardano depends on `cbor2>=5.6.5` with no upper bound, but `cbor2` 6.x renamed APIs (e.g. `FrozenDict`) that PyCardano 0.19.2 still imports, so an unpinned install pulls in a `cbor2` that breaks `import pycardano` outright.
+> If you bump `pycardano` in future, check whether a newer release has picked up the `cbor2` 6.x rename before dropping this pin.
+
+`send_lovelace.py` loads the `utxo1` genesis signing key straight from its TextEnvelope file with `PaymentSigningKey.from_json()`.
+The file's `type` field is `GenesisUTxOSigningKey_ed25519`, not `PaymentSigningKeyShelley_ed25519`, but `from_json()` only checks the type when called with `validate_type=True`, so the mismatch is harmless here.

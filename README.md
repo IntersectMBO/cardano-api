@@ -157,6 +157,8 @@ See the [Contributing guide](CONTRIBUTING.md) for how to contribute to this proj
 * [Pablo Lamela](https://github.com/palas)
 
 [![x86\_64-linux](https://img.shields.io/endpoint?url=https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-linux.required/shield&style=flat-square&label=x86_64-linux)](https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-linux.required)
-[![x86\_64-darwin](https://img.shields.io/endpoint?url=https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-darwin.required/shield&style=flat-square&label=x86_64-darwin)](https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-darwin.required)
+[![aarch64-linux](https://img.shields.io/endpoint?url=https://ci.iog.io/job/IntersectMBO-cardano-api/master/aarch64-linux.required/shield&style=flat-square&label=aarch64-linux)](https://ci.iog.io/job/IntersectMBO-cardano-api/master/aarch64-linux.required)
+[![aarch64-darwin](https://img.shields.io/endpoint?url=https://ci.iog.io/job/IntersectMBO-cardano-api/master/aarch64-darwin.required/shield&style=flat-square&label=aarch64-darwin)](https://ci.iog.io/job/IntersectMBO-cardano-api/master/aarch64-darwin.required)
 [![GHA Build](https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-api/haskell.yml?branch=master&label=GHA%20Build&style=flat-square)](https://github.com/IntersectMBO/cardano-api/actions/workflows/haskell.yml?query=branch%3Amaster)
 [![Haddock](https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-api/github-page.yml?branch=master&label=Haddocks&style=flat-square)](https://github.com/IntersectMBO/cardano-api/actions/workflows/github-page.yml?query=branch%3Amaster)
+[![RPC Quickstart](https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-api/rpc-quickstart-examples.yml?branch=master&label=RPC%20Quickstart&style=flat-square)](https://github.com/IntersectMBO/cardano-api/actions/workflows/rpc-quickstart-examples.yml?query=branch%3Amaster)
