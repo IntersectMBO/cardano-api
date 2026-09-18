@@ -47,11 +47,6 @@ write-ghc-environment-files: always
 jobs: $ncpus
 semaphore: True
 
-
-constraints:
-  -- haskell.nix patch does not work for 1.6.8
-  , any.crypton-x509-system < 1.6.8
-
 -- cardano-crypto-class (in cardano-api and in the cardano-keys dependency)
 -- requires crypton < 1.1. The GHC 9.14 solver otherwise greedily picks
 -- crypton 1.1.4 and then cannot resolve cardano-crypto-class; older
@@ -176,64 +171,84 @@ if impl(ghc >=9.14)
 
 -- TEMPORARY: switching to crypton >= 1.1 (which depends on `ram` instead of
 -- `memory`) needs cardano-crypto-class-2.6.0.0 (the first version depending
--- on crypton ^>=1.1 and `ram`), but the released ouroboros-consensus-4.1.0.0
--- pins `cardano-crypto-class ^>=2.5`, which excludes it. The blocks below
--- replicate the (draft, do-not-merge) upstream fix in
--- https://github.com/IntersectMBO/ouroboros-consensus/pull/2213, which widens
--- ouroboros-consensus's bound to also allow cardano-crypto-class-2.6.0.0 and
--- pulls in the handful of other packages that need to move in lockstep with
--- it. Remove all of this once these land upstream and a release picks them up.
+-- on crypton ^>=1.1 and `ram`). ouroboros-consensus is pinned to erikd/ram's
+-- rebase onto current ouroboros-consensus main (which already requires
+-- cardano-crypto-class ^>=2.6 natively), rather than the latest release,
+-- which still excludes it. The cardano-ledger and kes-agent pins below are
+-- the same ones that ouroboros-consensus main itself uses, kept in lockstep
+-- so the whole tree resolves to one consistent set of versions. Remove all
+-- of this once a cardano-crypto-class-2.6-compatible ouroboros-consensus is
+-- released and picks up released cardano-ledger/kes-agent in turn.
+--
+-- cardano-keys-11.0.0.0 (a released, external dependency we don't control)
+-- pins cardano-crypto-class/cardano-crypto-wrapper/cardano-ledger-core/
+-- cardano-ledger-shelley too tightly to admit the versions above, so those
+-- are relaxed with allow-newer instead of widening a bound in our own code.
 allow-newer:
-  cardano-ledger-mary:cardano-crypto-class,
-  cardano-ledger-shelley:cardano-crypto-class,
-  cardano-ledger-binary:cardano-crypto-class,
-  cardano-ledger-core:cardano-crypto-class,
-  cardano-protocol:cardano-crypto-class,
-  cardano-protocol-tpraos:cardano-crypto-class,
-  kes-agent:cardano-crypto-class,
-  kes-agent-crypto:cardano-crypto-class,
+  cardano-keys:cardano-crypto-class,
+  cardano-keys:cardano-crypto-wrapper,
+  cardano-keys:cardano-ledger-core,
+  cardano-keys:cardano-ledger-shelley,
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 206dffef96e76e42e15a1fb9fd6796394aef3409
+  tag: 391fa83eb920f86d230cd8a0292be8d679cedb7b
 
--- TEMPORARY: pulls in cardano-base PR #694 (erikd/contra-tracer, not yet
--- merged) https://github.com/IntersectMBO/cardano-base/pull/694, which widens
--- cardano-crypto-class:testlib's contra-tracer bound so it builds against the
--- same contra-tracer version as everything else here. Needed by the
--- ouroboros-consensus pin above. Remove once this PR (or an equivalent fix)
--- is released.
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-base
-  tag: ad3afec8113872652ec8edf19ae1280552ce2a20
-  subdir: cardano-crypto-class
-
--- TEMPORARY: pulls in kes-agent PR #105 (erikd/contra-tracer, not yet merged)
--- https://github.com/input-output-hk/kes-agent/pull/105, which widens the
--- same contra-tracer bound for kes-agent/kes-agent-crypto, on top of the
--- FixedSizeCodec migration cardano-crypto-class-2.6.0.0 needs. Needed by the
--- ouroboros-consensus pin above. Remove once this PR (or an equivalent fix)
--- is released.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/kes-agent
-  tag: 0e9a16c61ecc6b5cc747ae0ebdb718a02eae8ddc
+  tag: 4625f3cf543566517d08882e659c97932d106d86
   subdir:
     kes-agent
     kes-agent-crypto
 
--- TEMPORARY: pulls in cardano-ledger PR #5999 (erikd/ram, not yet merged)
--- https://github.com/IntersectMBO/cardano-ledger/pull/5999, which switches
--- cardano-crypto-wrapper from `memory` to `ram` so it builds against crypton
--- >=1.1. Needed by the ouroboros-consensus pin above. Remove once this PR (or
--- an equivalent fix) is released.
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/cardano-base.git
+  tag: d92e2e3841eaad354c5e1ef77b458b347f471271
+  subdir: cardano-crypto-leios
+
+-- ouroboros-consensus's own cabal.project pins ouroboros-network to this same
+-- commit ("pin ouroboros-network to main, where NodeToClientV_23 is the only
+-- NodeToClient version"); the ouroboros-consensus-cardano source above is
+-- written against it, and building it against the older CHaP release
+-- (same version number, different, older API) fails to compile.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 09495ae9e6a063929ac9f2a8a80d210735c3a66e
+  subdir:
+    ouroboros-network
+    cardano-diffusion
+    network-mux
+
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: 407b27ad62459cccf346145f97f63a259ae7ec75
-  subdir: eras/byron/crypto
+  tag: fb723848a28256fe372ea9ba692eccded6a12a53
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/conway/impl
+    eras/dijkstra/impl
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley/test-suite
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/vector-map
 
 -- TEMPORARY: cardano-addresses-4.0.2 (the latest released on CHaP) still pins
 -- `crypton >=0.32 && <1.1` and depends on the standalone `cardano-crypto`
