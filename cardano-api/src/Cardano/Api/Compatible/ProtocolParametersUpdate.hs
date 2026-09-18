@@ -201,6 +201,15 @@ data IntroducedInDijkstraPParams era
   , idMaxRefScriptSizePerTx :: StrictMaybe Word32
   , idRefScriptCostStride :: StrictMaybe (Ledger.NonZero Word32)
   , idRefScriptCostMultiplier :: StrictMaybe Ledger.PositiveInterval
+  , idLeiosAnnouncementPeriodLength :: StrictMaybe Ledger.Milliseconds32
+  , idLeiosVotePeriodLength :: StrictMaybe Ledger.Milliseconds32
+  , idLeiosDiffusionPeriodLength :: StrictMaybe Ledger.Milliseconds32
+  , idLeiosCommitteeSize :: StrictMaybe Word16
+  , idLeiosQuorumStakeThreshold :: StrictMaybe Ledger.UnitInterval
+  , idMaxEndorserBlockReferencesSize :: StrictMaybe Word32
+  , idMaxEndorserBlockTxsSize :: StrictMaybe Word32
+  , idMaxEndorserBlockExUnits :: StrictMaybe Plutus.OrdExUnits
+  , idMaxRefScriptSizePerEndorserBlock :: StrictMaybe Word32
   }
   deriving (Eq, Show)
 
@@ -214,6 +223,15 @@ createIntroducedInDijkstraPParams IntroducedInDijkstraPParams{..} =
     & Ledger.ppuMaxRefScriptSizePerTxL .~ idMaxRefScriptSizePerTx
     & Ledger.ppuRefScriptCostStrideL .~ idRefScriptCostStride
     & Ledger.ppuRefScriptCostMultiplierL .~ idRefScriptCostMultiplier
+    & Ledger.ppuLeiosAnnouncementPeriodLengthL .~ idLeiosAnnouncementPeriodLength
+    & Ledger.ppuLeiosVotePeriodLengthL .~ idLeiosVotePeriodLength
+    & Ledger.ppuLeiosDiffusionPeriodLengthL .~ idLeiosDiffusionPeriodLength
+    & Ledger.ppuLeiosCommitteeSizeL .~ idLeiosCommitteeSize
+    & Ledger.ppuLeiosQuorumStakeThresholdL .~ idLeiosQuorumStakeThreshold
+    & Ledger.ppuMaxEndorserBlockReferencesSizeL .~ idMaxEndorserBlockReferencesSize
+    & Ledger.ppuMaxEndorserBlockTxsSizeL .~ idMaxEndorserBlockTxsSize
+    & Ledger.ppuMaxEndorserBlockExUnitsL .~ idMaxEndorserBlockExUnits
+    & Ledger.ppuMaxRefScriptSizePerEndorserBlockL .~ idMaxRefScriptSizePerEndorserBlock
 
 pparamsUpdateToIntroducedInDijkstraPParams
   :: Ledger.DijkstraEraPParams ledgerera
@@ -225,6 +243,15 @@ pparamsUpdateToIntroducedInDijkstraPParams ppupdate =
     , idMaxRefScriptSizePerTx = ppupdate ^. Ledger.ppuMaxRefScriptSizePerTxL
     , idRefScriptCostStride = ppupdate ^. Ledger.ppuRefScriptCostStrideL
     , idRefScriptCostMultiplier = ppupdate ^. Ledger.ppuRefScriptCostMultiplierL
+    , idLeiosAnnouncementPeriodLength = ppupdate ^. Ledger.ppuLeiosAnnouncementPeriodLengthL
+    , idLeiosVotePeriodLength = ppupdate ^. Ledger.ppuLeiosVotePeriodLengthL
+    , idLeiosDiffusionPeriodLength = ppupdate ^. Ledger.ppuLeiosDiffusionPeriodLengthL
+    , idLeiosCommitteeSize = ppupdate ^. Ledger.ppuLeiosCommitteeSizeL
+    , idLeiosQuorumStakeThreshold = ppupdate ^. Ledger.ppuLeiosQuorumStakeThresholdL
+    , idMaxEndorserBlockReferencesSize = ppupdate ^. Ledger.ppuMaxEndorserBlockReferencesSizeL
+    , idMaxEndorserBlockTxsSize = ppupdate ^. Ledger.ppuMaxEndorserBlockTxsSizeL
+    , idMaxEndorserBlockExUnits = ppupdate ^. Ledger.ppuMaxEndorserBlockExUnitsL
+    , idMaxRefScriptSizePerEndorserBlock = ppupdate ^. Ledger.ppuMaxRefScriptSizePerEndorserBlockL
     }
 
 createEraBasedProtocolParamUpdate
