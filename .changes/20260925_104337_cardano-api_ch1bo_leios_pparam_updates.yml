@@ -1,0 +1,9 @@
+description: |
+  Add the Leios protocol parameters to pparams updates via
+  `createIntroducedInDijkstraPParams` by extending
+  `pparamsUpdateToIntroducedInDijkstraPParams`
+kind:
+- breaking
+- feature
+pr: 1333
+project: cardano-api
