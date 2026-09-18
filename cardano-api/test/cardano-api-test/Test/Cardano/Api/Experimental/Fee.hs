@@ -952,6 +952,7 @@ prop_estimateTransactionKeyWitnessCount_counts_pool_owners = H.property $ do
           , L.sppOwners = owners
           , L.sppRelays = mempty
           , L.sppMetadata = L.SNothing
+          , L.sppBlsKey = L.SNothing
           }
       registrationCertFor owners =
         Exp.Certificate $ L.RegPoolTxCert (poolParamsWithOwners owners)
