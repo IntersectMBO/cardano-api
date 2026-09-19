@@ -2160,7 +2160,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         decodeCurrentEpochState sbe serCurrEpochState
 
     let snapshot :: ShelleyAPI.SnapShot
-        snapshot = ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
+        snapshot = SL.msSnapShot . ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
         markSnapshotPoolDistr
           :: Map
                (SL.KeyHash SL.StakePool)
