@@ -41,6 +41,7 @@ module Cardano.Api.Experimental
   , evaluateTransactionFee
   , collectTxBodyScriptWitnesses
   , substituteExecutionUnits
+  , estimateTransactionKeyWitnessCount
 
     -- ** Era-related
   , BabbageEra
