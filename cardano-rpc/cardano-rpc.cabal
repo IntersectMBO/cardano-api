@@ -65,6 +65,7 @@ library
     Cardano.Rpc.Server.Internal.TimedCache
     Cardano.Rpc.Server.Internal.Tracing
     Cardano.Rpc.Server.Internal.UtxoRpc.Eval
+    Cardano.Rpc.Server.Internal.UtxoRpc.Mempool
     Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
     Cardano.Rpc.Server.Internal.UtxoRpc.Submit
@@ -78,6 +79,7 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.EraSummary
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Genesis
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
@@ -85,6 +87,7 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
+    Cardano.Rpc.Server.Internal.UtxoRpc.WaitForTx
     Cardano.Rpc.Server.NodeKernelAccess
 
   other-modules:
@@ -138,6 +141,7 @@ library
     random,
     rio,
     sop-extras,
+    stm,
     strict-sop-core,
     text,
     time,
@@ -232,6 +236,7 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.FollowTipStream
     Test.Cardano.Rpc.Genesis.Fixture
     Test.Cardano.Rpc.Genesis.Property
+    Test.Cardano.Rpc.Mempool
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters
@@ -240,3 +245,5 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.Script
     Test.Cardano.Rpc.TxOutput
     Test.Cardano.Rpc.Type
+    Test.Cardano.Rpc.WaitForTxStream
+    Test.Cardano.Rpc.WatchMempoolStream

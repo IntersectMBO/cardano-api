@@ -92,6 +92,12 @@ data TraceRpcSubmit
     TraceRpcEvalTxDecodingError SerialiseAsRawBytesError
   | -- | Transaction evaluation span
     TraceRpcEvalTxSpan TraceSpanEvent
+  | -- | Mempool read span
+    TraceRpcReadMempoolSpan TraceSpanEvent
+  | -- | Transaction confirmation wait span
+    TraceRpcWaitForTxSpan TraceSpanEvent
+  | -- | Mempool watch span
+    TraceRpcWatchMempoolSpan TraceSpanEvent
   deriving Show
 
 instance Pretty TraceRpcSubmit where
@@ -100,6 +106,12 @@ instance Pretty TraceRpcSubmit where
     TraceRpcSubmitSpan (SpanEnd _) -> "Finished submit method"
     TraceRpcEvalTxSpan (SpanBegin _) -> "Started eval tx method"
     TraceRpcEvalTxSpan (SpanEnd _) -> "Finished eval tx method"
+    TraceRpcReadMempoolSpan (SpanBegin _) -> "Started read mempool method"
+    TraceRpcReadMempoolSpan (SpanEnd _) -> "Finished read mempool method"
+    TraceRpcWaitForTxSpan (SpanBegin _) -> "Started wait for tx method"
+    TraceRpcWaitForTxSpan (SpanEnd _) -> "Finished wait for tx method"
+    TraceRpcWatchMempoolSpan (SpanBegin _) -> "Started watch mempool method"
+    TraceRpcWatchMempoolSpan (SpanEnd _) -> "Finished watch mempool method"
     TraceRpcEvalTxDecodingError e -> "Failed to decode transaction for evaluation: " <> pshow e
     TraceRpcSubmitN2cConnectionError e -> "N2C connection error while trying to submit a transaction: " <> prettyException e
     TraceRpcSubmitTxDecodingError e -> "Failed to decode transaction: " <> pshow e
