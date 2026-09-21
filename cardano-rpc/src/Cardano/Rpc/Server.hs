@@ -49,6 +49,7 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Mempool
 import Cardano.Rpc.Server.Internal.UtxoRpc.Query
 import Cardano.Rpc.Server.Internal.UtxoRpc.Submit
 import Cardano.Rpc.Server.Internal.UtxoRpc.Sync
+import Cardano.Rpc.Server.Internal.UtxoRpc.WaitForTx
 import Cardano.Rpc.Server.NodeKernelAccess
   ( NodeKernelAccess
   , mkNodeKernelAccess
@@ -100,7 +101,7 @@ methodsUtxoRpcSubmit =
   Method (mkNonStreaming $ wrapInSpan TraceRpcEvalTxSpan . evalTxMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcReadMempoolSpan . readMempoolMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcSubmitSpan . submitTxMethod)
-    . UnsupportedMethod -- waitForTx
+    . Method (mkServerStreaming $ \req -> wrapInSpan TraceRpcWaitForTxSpan . waitForTxMethod req)
     . Method (mkServerStreaming $ \req -> wrapInSpan TraceRpcWatchMempoolSpan . watchMempoolMethod req)
     $ NoMoreMethods
 
