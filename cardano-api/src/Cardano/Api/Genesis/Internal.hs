@@ -58,7 +58,7 @@ import Cardano.Ledger.Conway.PParams
   , PoolVotingThresholds (..)
   , UpgradeConwayPParams (..)
   )
-import Cardano.Ledger.Core.PParams (MaxPledgeLeverage (..))
+import Cardano.Ledger.Core (MaxPledgeLeverage (..))
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
 import Cardano.Ledger.Plutus (Language (..))

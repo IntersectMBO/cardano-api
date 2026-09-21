@@ -247,7 +247,7 @@ poolCertToUtxoRpcCertificate = \case
                & U5c.epoch .~ L.unEpochNo epochNo
            )
 
-stakePoolParamsToUtxoRpcPoolRegistration :: L.StakePoolParams -> Proto UtxoRpc.PoolRegistrationCert
+stakePoolParamsToUtxoRpcPoolRegistration :: L.StakePoolParams era -> Proto UtxoRpc.PoolRegistrationCert
 stakePoolParamsToUtxoRpcPoolRegistration poolParams =
   defMessage
     & U5c.operator .~ keyHashToBytes (L.sppId poolParams)

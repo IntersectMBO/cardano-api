@@ -160,7 +160,7 @@ toShelleyPoolParams
         Ledger.textToUrl (Text.length url) url
 
 fromShelleyPoolParams
-  :: Ledger.StakePoolParams
+  :: Ledger.StakePoolParams era
   -> StakePoolParameters
 fromShelleyPoolParams
   Ledger.StakePoolParams
