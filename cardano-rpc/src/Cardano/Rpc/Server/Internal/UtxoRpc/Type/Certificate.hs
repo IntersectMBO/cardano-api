@@ -235,7 +235,7 @@ conwayGovCertToUtxoRpcCertificate = \case
                & U5c.maybe'anchor .~ fmap anchorToUtxoRpcAnchor (L.strictMaybeToMaybe anchor)
            )
 
-poolCertToUtxoRpcCertificate :: L.PoolCert -> Proto UtxoRpc.Certificate
+poolCertToUtxoRpcCertificate :: L.PoolCert era -> Proto UtxoRpc.Certificate
 poolCertToUtxoRpcCertificate = \case
   L.RegPool poolParams ->
     defMessage & U5c.poolRegistration .~ stakePoolParamsToUtxoRpcPoolRegistration poolParams
