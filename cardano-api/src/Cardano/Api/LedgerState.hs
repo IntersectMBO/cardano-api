@@ -166,7 +166,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
 import Cardano.Ledger.Dijkstra.Tx qualified as Ledger
 import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Keys qualified as SL
@@ -2156,7 +2155,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         decodeCurrentEpochState sbe serCurrEpochState
 
     let snapshot :: ShelleyAPI.SnapShot
-        snapshot = ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
+        snapshot = SL.msSnapShot . ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
         markSnapshotPoolDistr
           :: Map
                (SL.KeyHash SL.StakePool)
