@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1348
+kind:
+  - feature
+description: |
+  Add the `ReadMempool` method to the UTxO RPC submit service, which returns the transactions currently in the node's mempool.
