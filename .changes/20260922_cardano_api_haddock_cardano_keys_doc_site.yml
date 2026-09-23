@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1353
+kind:
+  - maintenance
+description: |
+  Modified haddock script so that it finds `cardano-keys`.
