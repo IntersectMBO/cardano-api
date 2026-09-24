@@ -45,6 +45,7 @@ import Cardano.Rpc.Server.Internal.Reflection
   )
 import Cardano.Rpc.Server.Internal.Tracing
 import Cardano.Rpc.Server.Internal.UtxoRpc.Eval
+import Cardano.Rpc.Server.Internal.UtxoRpc.Mempool
 import Cardano.Rpc.Server.Internal.UtxoRpc.Query
 import Cardano.Rpc.Server.Internal.UtxoRpc.Submit
 import Cardano.Rpc.Server.Internal.UtxoRpc.Sync
@@ -100,7 +101,7 @@ methodsUtxoRpcSubmit =
     . Method (mkNonStreaming $ wrapInSpan TraceRpcReadMempoolSpan . readMempoolMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcSubmitSpan . submitTxMethod)
     . UnsupportedMethod -- waitForTx
-    . UnsupportedMethod -- watchMempool
+    . Method (mkServerStreaming $ \req -> wrapInSpan TraceRpcWatchMempoolSpan . watchMempoolMethod req)
     $ NoMoreMethods
 
 -- | gRPC method table for the UTxO RPC @SyncService@.
@@ -121,7 +122,8 @@ methodsReflectionV1
   :: MonadIO m
   => Methods m (ProtobufMethodsOf ReflectionV1.ServerReflection)
 methodsReflectionV1 =
-  Method (mkBiDiStreaming $ serverReflectionInfoMethodV1 registeredServiceNames) $
+  Method
+    (mkBiDiStreaming $ serverReflectionInfoMethodV1 registeredServiceNames)
     NoMoreMethods
 
 -- | gRPC method table for the Server Reflection API's legacy @v1alpha@ service.
@@ -129,7 +131,8 @@ methodsReflectionV1alpha
   :: MonadIO m
   => Methods m (ProtobufMethodsOf ReflectionV1alpha.ServerReflection)
 methodsReflectionV1alpha =
-  Method (mkBiDiStreaming $ serverReflectionInfoMethodV1alpha registeredServiceNames) $
+  Method
+    (mkBiDiStreaming $ serverReflectionInfoMethodV1alpha registeredServiceNames)
     NoMoreMethods
 
 -- | Every service this server registers, paired with its handler methods
