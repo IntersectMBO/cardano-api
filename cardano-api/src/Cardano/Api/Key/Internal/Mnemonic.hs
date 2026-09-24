@@ -15,6 +15,7 @@ module Cardano.Api.Key.Internal.Mnemonic
   )
 where
 
+import Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
 import Cardano.Api.Error (Error (..))
 import Cardano.Api.Key.Internal
   ( AsType
@@ -35,6 +36,7 @@ import Cardano.Address.Derivation
   , XPrv
   , genMasterKeyFromMnemonic
   , indexFromWord32
+  , xprvToBytes
   )
 import Cardano.Address.Style.Shelley
   ( Role (..)
@@ -44,6 +46,7 @@ import Cardano.Address.Style.Shelley
   , deriveDRepPrivateKey
   )
 import Cardano.Crypto.Encoding.BIP39 (Dictionary (dictionaryIndexToWord))
+import Cardano.Crypto.Wallet qualified as Crypto.HD
 import Cardano.Mnemonic
   ( MkSomeMnemonic (mkSomeMnemonic)
   , MkSomeMnemonicError (..)
@@ -59,6 +62,7 @@ import Data.ByteString qualified as BS
 import Data.Either.Combinators (mapLeft, maybeToRight)
 import Data.Either.Extra (maybeToEither)
 import Data.Foldable (toList)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
@@ -146,6 +150,23 @@ class IndexedSigningKeyFromRootKey keyrole where
     -> Either Word32 (SigningKey keyrole)
     -- ^ The derived extended signing key or the 'indexType' if it is invalid.
 
+-- | cardano-addresses' own 'XPrv' (from key derivation) and the 'Crypto.HD.XPrv'
+-- ("Cardano.Crypto.Wallet", from the standalone @cardano-crypto@ package) that
+-- 'SigningKey' constructors expect used to be the same type: cardano-addresses
+-- re-exported cardano-crypto's. Since cardano-addresses vendored its own copy of
+-- "Cardano.Crypto.Wallet" (to drop the @cardano-crypto@/@memory@ dependency in
+-- favour of @crypton@/@ram@), the two are now distinct types, so bridge between
+-- them via the same 96-byte compact raw format both sides already use (compare
+-- 'Cardano.Address.Derivation.xprvToBytes' with
+-- 'Cardano.Api.Crypto.Ed25519Bip32.xPrvToBytes'/'xPrvFromBytes'). Both are
+-- implementations of the same BIP32-Ed25519 extended-key format, so this
+-- round-trip is lossless.
+toCryptoXPrv :: XPrv -> Crypto.HD.XPrv
+toCryptoXPrv =
+  fromMaybe (error "toCryptoXPrv: impossible: cardano-addresses' XPrv is always 96 bytes")
+    . xPrvFromBytes
+    . xprvToBytes
+
 instance IndexedSigningKeyFromRootKey PaymentExtendedKey where
   deriveSigningKeyFromAccountWithPaymentKeyIndex
     :: AsType PaymentExtendedKey
@@ -154,7 +175,11 @@ instance IndexedSigningKeyFromRootKey PaymentExtendedKey where
     -> Either Word32 (SigningKey PaymentExtendedKey)
   deriveSigningKeyFromAccountWithPaymentKeyIndex _ accK idx = do
     payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
-    return $ PaymentExtendedSigningKey $ getKey $ deriveAddressPrivateKey accK UTxOExternal payKeyIx
+    return $
+      PaymentExtendedSigningKey $
+        toCryptoXPrv $
+          getKey $
+            deriveAddressPrivateKey accK UTxOExternal payKeyIx
 
 instance IndexedSigningKeyFromRootKey StakeExtendedKey where
   deriveSigningKeyFromAccountWithPaymentKeyIndex
@@ -164,7 +189,11 @@ instance IndexedSigningKeyFromRootKey StakeExtendedKey where
     -> Either Word32 (SigningKey StakeExtendedKey)
   deriveSigningKeyFromAccountWithPaymentKeyIndex _ accK idx = do
     payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
-    return $ StakeExtendedSigningKey $ getKey $ deriveAddressPrivateKey accK Stake payKeyIx
+    return $
+      StakeExtendedSigningKey $
+        toCryptoXPrv $
+          getKey $
+            deriveAddressPrivateKey accK Stake payKeyIx
 
 instance SigningKeyFromRootKey DRepExtendedKey where
   deriveSigningKeyFromAccount
@@ -172,7 +201,7 @@ instance SigningKeyFromRootKey DRepExtendedKey where
     -> Shelley 'AccountK XPrv
     -> SigningKey DRepExtendedKey
   deriveSigningKeyFromAccount _ accK =
-    DRepExtendedSigningKey $ getKey $ deriveDRepPrivateKey accK
+    DRepExtendedSigningKey $ toCryptoXPrv $ getKey $ deriveDRepPrivateKey accK
 
 instance SigningKeyFromRootKey CommitteeColdExtendedKey where
   deriveSigningKeyFromAccount
@@ -180,7 +209,7 @@ instance SigningKeyFromRootKey CommitteeColdExtendedKey where
     -> Shelley 'AccountK XPrv
     -> SigningKey CommitteeColdExtendedKey
   deriveSigningKeyFromAccount _ accK =
-    CommitteeColdExtendedSigningKey $ getKey $ deriveCCColdPrivateKey accK
+    CommitteeColdExtendedSigningKey $ toCryptoXPrv $ getKey $ deriveCCColdPrivateKey accK
 
 instance SigningKeyFromRootKey CommitteeHotExtendedKey where
   deriveSigningKeyFromAccount
@@ -188,7 +217,7 @@ instance SigningKeyFromRootKey CommitteeHotExtendedKey where
     -> Shelley 'AccountK XPrv
     -> SigningKey CommitteeHotExtendedKey
   deriveSigningKeyFromAccount _ accK =
-    CommitteeHotExtendedSigningKey $ getKey $ deriveCCHotPrivateKey accK
+    CommitteeHotExtendedSigningKey $ toCryptoXPrv $ getKey $ deriveCCHotPrivateKey accK
 
 -- | Generate a signing key from a mnemonic sentence given a function that
 -- derives a key from an account extended key.

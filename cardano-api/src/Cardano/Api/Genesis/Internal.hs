@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -75,6 +76,7 @@ import PlutusCore.Evaluation.Machine.ExBudgetingDefaults
 import PlutusCore.Evaluation.Machine.MachineParameters
 import PlutusLedgerApi.Common (IsParamName, readParamName)
 import PlutusLedgerApi.V3 qualified as V3
+import PlutusLedgerApi.V4 qualified as V4
 
 import Control.Monad
 import Control.Monad.Trans.Fail.String (errorFail)
@@ -195,7 +197,7 @@ shelleyGenesisDefaults =
 
 dijkstraGenesisDefaults :: DijkstraGenesis
 dijkstraGenesisDefaults =
-  -- copied from: https://github.com/IntersectMBO/cardano-ledger/blob/232511b0fa01cd848cd7a569d1acc322124cf9b8/eras/dijkstra/impl/testlib/Test/Cardano/Ledger/Dijkstra/ImpTest.hs#L121
+  -- copied from: https://github.com/IntersectMBO/cardano-ledger/blob/fb723848a28256fe372ea9ba692eccded6a12a53/eras/dijkstra/impl/testlib/Test/Cardano/Ledger/Dijkstra/Examples.hs
   DijkstraGenesis
     { dgUpgradePParams =
         UpgradeDijkstraPParams
@@ -203,8 +205,76 @@ dijkstraGenesisDefaults =
           , udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
           , udppRefScriptCostStride = knownNonZeroBounded @25600 -- 25 KiB
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          , udppMaxPledgeLeverage = MaxPledgeLeverage SNothing
+          , udppMinPoolMargin = fromJust $ boundRational 0.015
+          , udppPlutusV4CostModel = testingCostModelV4
+          , -- Feasible values of CIP-164 Table 7
+            udppLeiosAnnouncementPeriodLength = Milliseconds32 1_000 -- L_hdr
+          , udppLeiosVotePeriodLength = Milliseconds32 4_000 -- L_vote
+          , udppLeiosDiffusionPeriodLength = Milliseconds32 7_000 -- L_diff
+          , udppLeiosCommitteeSize = 900 -- N_c
+          , udppLeiosQuorumStakeThreshold = fromJust $ boundRational 0.75 -- tau
+          , udppMaxEndorserBlockReferencesSize = 512 * 1024 -- 512 KiB
+          , udppMaxEndorserBlockTxsSize = 12 * 1024 * 1024 -- 12 MiB
+          , udppMaxEndorserBlockExUnits = L.OrdExUnits $ ExUnits 7_000_000_000 2_000_000_000_000
+          , udppMaxRefScriptSizePerEndorserBlock = 12 * 1024 * 1024 -- 12 MiB
           }
     }
+ where
+  testingCostModelV4 :: HasCallStack => L.CostModel
+  testingCostModelV4 = mkCostModel' PlutusV4 $ snd <$> costModelParamsForTesting
+
+  mkCostModel' :: (Integral i, Show i, HasCallStack) => Language -> [i] -> L.CostModel
+  mkCostModel' lang params =
+    case L.mkCostModel lang $ map fromIntegral params of
+      Left err ->
+        error $
+          "CostModel parameters are not well-formed for "
+            ++ show lang
+            ++ ": "
+            ++ show err
+            ++ "\n"
+            ++ show params
+      Right costModel -> costModel
+
+  costModelParamsForTesting :: HasCallStack => [(V4.ParamName, Int64)]
+  costModelParamsForTesting =
+    take (L.costModelInitParamCount PlutusV4)
+      . Map.toList
+      . fromJust
+      $ extractCostModelParamsLedgerOrder mCostModel
+
+  -- Unlike PlutusV3, PlutusV4 is already the full cost model, so unlike
+  -- 'conwayGenesisDefaults' below, there is nothing to clear here.
+  mCostModel :: MCostModel
+  mCostModel = toMCostModel defaultCekCostModelForTesting
+
+  toMCostModel
+    :: CostModel CekMachineCosts BuiltinCostModel
+    -> MCostModel
+  toMCostModel cm =
+    cm
+      & machineCostModel
+        %~ bmap (Just . runIdentity)
+      & builtinCostModel
+        %~ bmap (MCostingFun . Just)
+
+  extractCostModelParamsLedgerOrder
+    :: (IsParamName p, Ord p)
+    => MCostModel
+    -> Maybe (Map.Map p Int64)
+  extractCostModelParamsLedgerOrder =
+    extractInAlphaOrder
+      >=> toLedgerOrder
+   where
+    extractInAlphaOrder = extractCostModelParams
+    toLedgerOrder = mapKeysM readParamName
+
+    mapKeysM :: (Monad m, Ord k2) => (k1 -> m k2) -> Map.Map k1 a -> m (Map.Map k2 a)
+    mapKeysM = viaListM . mapM . firstM
+
+    viaListM op = fmap Map.fromList . op . Map.toList
+    firstM f (k, v) = (,v) <$> f k
 
 -- | Some reasonable starting defaults for constructing a 'ConwayGenesis'.
 -- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs

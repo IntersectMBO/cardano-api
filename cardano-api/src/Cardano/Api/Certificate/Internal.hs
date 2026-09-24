@@ -86,7 +86,7 @@ data StakePoolMetadataReference
 -- Internal conversion functions
 --
 
-toShelleyPoolParams :: StakePoolParameters -> Ledger.StakePoolParams
+toShelleyPoolParams :: StakePoolParameters -> Ledger.StakePoolParams era
 toShelleyPoolParams
   StakePoolParameters
     { stakePoolId = StakePoolKeyHash poolkh
@@ -104,6 +104,7 @@ toShelleyPoolParams
     Ledger.StakePoolParams
       { Ledger.sppId = poolkh
       , Ledger.sppVrf = Ledger.toVRFVerKeyHash vrfkh
+      , Ledger.sppBlsKey = Ledger.SNothing
       , Ledger.sppPledge = stakePoolPledge
       , Ledger.sppCost = stakePoolCost
       , Ledger.sppMargin =
@@ -159,7 +160,7 @@ toShelleyPoolParams
         Ledger.textToUrl (Text.length url) url
 
 fromShelleyPoolParams
-  :: Ledger.StakePoolParams
+  :: Ledger.StakePoolParams era
   -> StakePoolParameters
 fromShelleyPoolParams
   Ledger.StakePoolParams

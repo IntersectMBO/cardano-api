@@ -160,15 +160,12 @@ import Cardano.Ledger.BaseTypes
   ( Globals (..)
   , Nonce
   , ProtVer (..)
-  , boundRational
-  , knownNonZeroBounded
   , natVersion
   , (⭒)
   )
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
 import Cardano.Ledger.Dijkstra.Tx qualified as Ledger
 import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Keys qualified as SL
@@ -1528,7 +1525,7 @@ readCardanoGenesisConfig enc = do
   alonzoGenesis <- readAlonzoGenesisConfig enc
   conwayGenesis <- readConwayGenesisConfig enc
   -- TODO Dijkstra: build real genesis value
-  let dijkstraGenesis = exampleDijkstraGenesis -- TODO Dijkstra: add plumbing to read genesis
+  let dijkstraGenesis = dijkstraGenesisDefaults -- TODO Dijkstra: add plumbing to read genesis
   let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
 
@@ -1578,18 +1575,6 @@ resolveShelleyInitialFunds (SomeHasFS hasFS) genesis = do
       & Ledger.sgExtraConfigL .~ (clearInitialFundsSource <$> Ledger.sgExtraConfig genesis)
  where
   clearInitialFundsSource extraConfig = extraConfig{Ledger.secInitialFunds = Ledger.NoInjection}
-
-exampleDijkstraGenesis :: Ledger.DijkstraGenesis
-exampleDijkstraGenesis =
-  Ledger.DijkstraGenesis
-    { Ledger.dgUpgradePParams =
-        Ledger.UpgradeDijkstraPParams
-          { Ledger.udppMaxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
-          , Ledger.udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
-          , Ledger.udppRefScriptCostStride = knownNonZeroBounded @25600 -- 25 KiB
-          , Ledger.udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
-          }
-    }
 
 data GenesisConfigError
   = NEError !Text
@@ -2170,7 +2155,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         decodeCurrentEpochState sbe serCurrEpochState
 
     let snapshot :: ShelleyAPI.SnapShot
-        snapshot = ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
+        snapshot = SL.msSnapShot . ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
         markSnapshotPoolDistr
           :: Map
                (SL.KeyHash SL.StakePool)

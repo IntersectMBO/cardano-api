@@ -91,6 +91,7 @@ test_currentEpochEligibleLeadershipSlots =
                     ( KeyHash "a2927c1e43974b036d8e6838d410279266946e8a094895cfc748c91d"
                     , L.IndividualPoolStake
                         { L.individualPoolStake = 1 % 3
+                        , L.individualPoolStakeBls = L.SNothing
                         , L.individualTotalPoolStake = toCompactPartial 0
                         , L.individualPoolStakeVrf = hash1
                         }
@@ -99,6 +100,7 @@ test_currentEpochEligibleLeadershipSlots =
                     ( KeyHash "83c5da842d7437e411d3c4db8aaa7a7d2c1642aee932108c9857282d"
                     , L.IndividualPoolStake
                         { L.individualPoolStake = 1 % 3
+                        , L.individualPoolStakeBls = L.SNothing
                         , L.individualTotalPoolStake = toCompactPartial 0
                         , L.individualPoolStakeVrf = hash2
                         }
@@ -107,6 +109,7 @@ test_currentEpochEligibleLeadershipSlots =
                     ( KeyHash "362c2c2128ee75ca39690c27b42e809301231098003443669e2b03f3"
                     , L.IndividualPoolStake
                         { L.individualPoolStake = 1 % 3
+                        , L.individualPoolStakeBls = L.SNothing
                         , L.individualTotalPoolStake = toCompactPartial 0
                         , L.individualPoolStakeVrf = hash3
                         }
