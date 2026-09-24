@@ -184,12 +184,14 @@ The ❌ methods need a whole-chain index (transaction by hash, datum by hash) th
 |--------|--------|
 | [ReadParams](https://utxorpc.org/query/spec/#readparamsrequest) | ✅ Supported |
 | [ReadUtxos](https://utxorpc.org/query/spec/#readutxosrequest) | ✅ Supported |
-| [SearchUtxos](https://utxorpc.org/query/spec/#searchutxosrequest) | ✅ Supported |
+| [SearchUtxos](https://utxorpc.org/query/spec/#searchutxosrequest) | ✅ Supported for exact-address predicates† |
 | [ReadData](https://utxorpc.org/query/spec/#readdatarequest) | ❌ Not supported, needs a chain indexer |
 | [ReadTx](https://utxorpc.org/query/spec/#queryservice) | ❌ Not supported, needs a chain indexer |
 | [ReadGenesis](https://utxorpc.org/query/spec/#queryservice) | ✅ Supported |
 | [ReadEraSummary](https://utxorpc.org/query/spec/#queryservice) | ✅ Supported |
 | [ReadState](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
+
+† The predicate must be a single exact-address match, or `anyOf` over exact-address matches. Other predicate shapes (payment or delegation part only, asset only, `allOf`, `not`) are rejected with `INVALID_ARGUMENT`, because the node can only query the UTxO set by address.
 
 #### [SubmitService](https://utxorpc.org/submit/spec/)
 
@@ -199,7 +201,7 @@ The ❌ methods need a whole-chain index (transaction by hash, datum by hash) th
 | [EvalTx](https://utxorpc.org/submit/spec/#evaltx) | ✅ Supported |
 | [WaitForTx](https://utxorpc.org/submit/spec/#waitfortx) | ⬜ Not supported |
 | [ReadMempool](https://utxorpc.org/submit/spec/#readmempool) | ✅ Supported |
-| [WatchMempool](https://utxorpc.org/submit/spec/#watchmempool) | ⬜ Not supported |
+| [WatchMempool](https://utxorpc.org/submit/spec/#watchmempool) | ✅ Supported |
 
 #### [SyncService](https://utxorpc.org/sync/spec/)
 

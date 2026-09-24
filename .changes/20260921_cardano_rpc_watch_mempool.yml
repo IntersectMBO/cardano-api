@@ -1,0 +1,7 @@
+project: cardano-rpc
+pr: 1350
+kind:
+  - feature
+  - breaking
+description: |
+  Add the `WatchMempool` method to the UTxO RPC submit service, which streams transactions entering the node's mempool, optionally filtered by a transaction predicate.

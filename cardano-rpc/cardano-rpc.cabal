@@ -65,6 +65,7 @@ library
     Cardano.Rpc.Server.Internal.TimedCache
     Cardano.Rpc.Server.Internal.Tracing
     Cardano.Rpc.Server.Internal.UtxoRpc.Eval
+    Cardano.Rpc.Server.Internal.UtxoRpc.Mempool
     Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
     Cardano.Rpc.Server.Internal.UtxoRpc.Submit
@@ -139,6 +140,7 @@ library
     random,
     rio,
     sop-extras,
+    stm,
     strict-sop-core,
     text,
     time,
@@ -242,3 +244,4 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.Script
     Test.Cardano.Rpc.TxOutput
     Test.Cardano.Rpc.Type
+    Test.Cardano.Rpc.WatchMempoolStream
