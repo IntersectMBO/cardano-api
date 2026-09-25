@@ -192,6 +192,7 @@ The ❌ methods need a whole-chain index (transaction by hash, datum by hash) th
 | [ReadState](https://utxorpc.org/query/spec/#queryservice) | ⬜ Not supported |
 
 † The predicate must be a single exact-address match, or `anyOf` over exact-address matches. Other predicate shapes (payment or delegation part only, asset only, `allOf`, `not`) are rejected with `INVALID_ARGUMENT`, because the node can only query the UTxO set by address.
+A request naming more than 20,000 distinct addresses is rejected with `INVALID_ARGUMENT`.
 
 #### [SubmitService](https://utxorpc.org/submit/spec/)
 
