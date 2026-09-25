@@ -133,9 +133,7 @@ jobs:
       run: |
         wasm32-wasi-cabal build cardano-wasm --only-dependencies
 
-    # Store the cabal cache even when a previous step failed, but skip on an exact
-    # key hit: cache entries are immutable, so re-saving the just-restored content
-    # would only be rejected with a warning.
+    # Store the cabal cache only when the build succeeds, and skip if dependencies already cached (hash matches).
     - name: Cache Cabal store
       uses: actions/cache/save@v4
       if: steps.cache.outputs.cache-hit != 'true'
