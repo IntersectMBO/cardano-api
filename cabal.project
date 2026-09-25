@@ -100,6 +100,13 @@ if arch(wasm32)
     tag: ab92e48e9fdf3abe214f85fdbe5301c1280e14e9
     --sha256: sha256-U+ln/gbXoQZpNjZHydNa0FG/9GdJFgL1+T3+7KTzDWo=
 
+  -- The wasm fork of `network` above is pinned at 3.2.7.0, while
+  -- cardano-config requires ^>=3.2.8. The 3.2.8 release only adds the
+  -- IP_DONTFRAG/IP_MTU_DISCOVER and KeepInit socket options, neither of
+  -- which cardano-config uses (it only needs `PortNumber`), so relax the
+  -- lower bound rather than carrying a forked 3.2.8.
+  allow-older: cardano-config:network
+
   package cardano-crypto-praos
     flags: -external-libsodium-vrf
 
