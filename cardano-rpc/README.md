@@ -36,10 +36,24 @@ nix run github:IntersectMBO/cardano-node#cardano-testnet -- \
 
 This starts a testnet with a single block-producing cardano-node and its gRPC server enabled over plain HTTP/2 without TLS (h2c), and keeps running in the foreground until you press Ctrl+C.
 The cluster is ready once it logs `gRPC endpoint of node1: http://127.0.0.1:50051`, typically well under a minute once binaries are cached; open a second terminal for everything below.
+Or wait for the manifest that cardano-testnet writes once the cluster is ready:
+
+```bash
+until [ -f /tmp/demo-cluster/manifest.json ]; do sleep 1; done
+```
+
 The cluster comes with funded test wallets, created at startup under `/tmp/demo-cluster/utxo-keys/utxo1` to `utxo3` (`utxo.skey`, `utxo.vkey`, `utxo.addr`); the language examples' transaction flows spend from `utxo1`.
 
 The gRPC endpoint is `localhost:50051`.
-Without `--enable-grpc-http` (i.e. with `--enable-grpc`), you get a Unix socket at `/tmp/demo-cluster/socket/node1/rpc.sock` instead, next to cardano-node's IPC socket; see the [configuration reference](#configuration-reference) for the full set of transports.
+With `--enable-grpc` the server listens on a Unix socket instead, next to cardano-node's IPC socket; the manifest gives its path, relative to the output directory:
+
+```bash
+jq -r '.nodes[0].grpc.socketPath' /tmp/demo-cluster/manifest.json
+# socket/node1/rpc.sock
+```
+
+i.e. `/tmp/demo-cluster/socket/node1/rpc.sock` here.
+See the [configuration reference](#configuration-reference) for the full set of transports.
 Every example below talks to `localhost:50051`.
 
 > [!TIP]
