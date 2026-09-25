@@ -69,24 +69,28 @@ getTxScriptWitnessRequirements
   :: L.AlonzoEraScript era
   => Monoid (TxScriptWitnessRequirements era)
   => [(Witnessable witnessable era, AnyWitness era)]
-  -> TxScriptWitnessRequirements era
-getTxScriptWitnessRequirements wits =
-  let TxScriptWitnessRequirements l s d _ =
-        mconcat
-          [ TxScriptWitnessRequirements
+  -> Either L.Language (TxScriptWitnessRequirements era)
+getTxScriptWitnessRequirements wits = do
+  reqs <-
+    traverse
+      ( \(_, anyWit) -> do
+          script <- getAnyWitnessScript anyWit
+          return $
+            TxScriptWitnessRequirements
               (maybe mempty Set.singleton $ getAnyWitnessPlutusLanguage anyWit)
-              (maybe mempty return $ getAnyWitnessScript anyWit)
+              (maybe mempty return script)
               (getAnyWitnessScriptData anyWit)
               mempty
-          | (_, anyWit) <- wits
-          ]
-   in TxScriptWitnessRequirements l s d (getAnyWitnessRedeemerPointerMap wits)
+      )
+      wits
+  let TxScriptWitnessRequirements l s d _ = mconcat reqs
+  return $ TxScriptWitnessRequirements l s d (getAnyWitnessRedeemerPointerMap wits)
 
 getTxScriptWitnessesRequirements
   :: L.AlonzoEraScript era
   => Monoid (TxScriptWitnessRequirements era)
   => [(Witnessable witnessable era, AnyWitness era)]
-  -> TxScriptWitnessRequirements era
+  -> Either L.Language (TxScriptWitnessRequirements era)
 getTxScriptWitnessesRequirements wits =
   getTxScriptWitnessRequirements wits
 

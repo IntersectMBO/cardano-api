@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1359
+kind:
+  - feature
+  - compatible
+description: |
+  `scriptLanguageSupportedInEra` and `toScriptInEra` now accept Plutus V4 scripts in the Dijkstra era, so V4 scripts can be used as reference scripts in transaction outputs and as auxiliary scripts.

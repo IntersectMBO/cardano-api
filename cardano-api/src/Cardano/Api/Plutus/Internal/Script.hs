@@ -666,6 +666,8 @@ scriptLanguageSupportedInEra era lang =
       Just PlutusScriptV2InDijkstra
     (ShelleyBasedEraDijkstra, PlutusScriptLanguage PlutusScriptV3) ->
       Just PlutusScriptV3InDijkstra
+    (ShelleyBasedEraDijkstra, PlutusScriptLanguage PlutusScriptV4) ->
+      Just PlutusScriptV4InDijkstra
     _ -> Nothing
 
 languageOfScriptLanguageInEra

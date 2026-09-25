@@ -17,6 +17,7 @@ import Cardano.Api.Experimental.Plutus hiding (AnyPlutusScript (..))
 import Cardano.Api.Experimental.Plutus qualified as Plutus
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Plutus qualified as Script
 import Cardano.Api.Serialise.Cbor (SerialiseAsCBOR (..))
 
 import Cardano.Ledger.Conway qualified as L
@@ -39,9 +40,11 @@ import Test.Gen.Cardano.Api.Typed
   , genMintWitnessable
   , genPlutusScriptInEra
   , genSimpleScriptMintWitness
+  , genTxIn
   , genWitnessable
   )
 
+import Test.Cardano.Api.Experimental (exampleProtocolParams)
 import Test.Cardano.Api.Orphans ()
 
 import Hedgehog
@@ -218,6 +221,63 @@ prop_extractAllIndexedPlutusScriptWitnesses =
 
     length allGeneratedPlutusScriptWitnesses === length extractedPlutusScriptWitnesses
 
+-- | 'Exp.makeUnsignedTx' must reject a transaction containing an inline
+-- (non-reference) Plutus script witness whose language the era does not
+-- support, rather than silently omitting the script while keeping its
+-- redeemer. Plutus V4 is only supported from the Dijkstra era onwards, so an
+-- inline V4 witness in a Conway transaction must be rejected.
+prop_makeUnsignedTx_rejects_unsupported_plutus_language :: Property
+prop_makeUnsignedTx_rejects_unsupported_plutus_language = property $ do
+  srcTxIn <- forAll genTxIn
+  v3ScriptInEra <- forAll genPlutusScriptInEra
+  v4ScriptInEra <-
+    H.leftFail $ deserialisePlutusScriptInEra L.SPlutusV4 (serialiseToCBOR v3ScriptInEra)
+  let dummyRedeemer = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor 0 []
+      plutusWit =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusSpendingScriptWitness $
+            PlutusSpendingScriptWitnessV4 $
+              PlutusScriptWitness
+                L.SPlutusV4
+                (PScript v4ScriptInEra)
+                NoScriptDatum
+                dummyRedeemer
+                (Script.ExecutionUnits 0 0)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxProtocolParams exampleProtocolParams
+          & Exp.setTxIns [(srcTxIn, plutusWit)]
+          & Exp.setTxFee 0
+  Exp.makeUnsignedTx ConwayEra txBodyContent
+    === Left (Exp.MakeUnsignedTxPlutusLanguageNotSupportedInEra L.PlutusV4 (Some ConwayEra))
+
+-- | A reference-script Plutus witness only records the language and redeemer
+-- in the transaction body; the script itself lives in the referenced UTxO, so
+-- 'Exp.makeUnsignedTx' must accept it even in an era, such as Conway, that
+-- does not support the language as an inline script.
+prop_makeUnsignedTx_accepts_reference_plutus_v4_witness :: Property
+prop_makeUnsignedTx_accepts_reference_plutus_v4_witness = property $ do
+  srcTxIn <- forAll genTxIn
+  refTxIn <- forAll genTxIn
+  let dummyRedeemer = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor 0 []
+      plutusWit =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusSpendingScriptWitness $
+            PlutusSpendingScriptWitnessV4 $
+              PlutusScriptWitness
+                L.SPlutusV4
+                (PReferenceScript refTxIn)
+                NoScriptDatum
+                dummyRedeemer
+                (Script.ExecutionUnits 0 0)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxProtocolParams exampleProtocolParams
+          & Exp.setTxIns [(srcTxIn, plutusWit)]
+          & Exp.setTxFee 0
+  _ <- H.leftFail $ Exp.makeUnsignedTx ConwayEra txBodyContent
+  success
+
 -- | 'toPlutusScriptPurposeIndex' classifies ledger redeemer pointers the same
 -- way as the older 'Api.toScriptIndex', for every purpose category the two
 -- share, at every era with plutus scripts. 'GuardingScript' (Dijkstra's new
@@ -307,6 +367,12 @@ tests =
     , testProperty
         "prop_extractAllIndexedPlutusScriptWitnesses"
         prop_extractAllIndexedPlutusScriptWitnesses
+    , testProperty
+        "prop_makeUnsignedTx_rejects_unsupported_plutus_language"
+        prop_makeUnsignedTx_rejects_unsupported_plutus_language
+    , testProperty
+        "prop_makeUnsignedTx_accepts_reference_plutus_v4_witness"
+        prop_makeUnsignedTx_accepts_reference_plutus_v4_witness
     , testProperty "prop_getAnyWitnessRedeemerPointerMap" prop_getAnyWitnessRedeemerPointerMap
     , testProperty "prop_toAnyWitness" prop_toAnyWitness
     , testProperty
