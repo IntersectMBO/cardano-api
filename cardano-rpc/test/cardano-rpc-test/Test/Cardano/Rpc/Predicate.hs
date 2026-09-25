@@ -511,6 +511,20 @@ hprop_extract_nothing_for_default_predicate = H.propertyOnce $ do
   -- Empty predicate: no match field, all lists empty → Nothing
   extractAddressesFromPredicate defMessage === Nothing
 
+hprop_predicate_leaves_counts_repeated_terms :: Property
+hprop_predicate_leaves_counts_repeated_terms = H.property $ do
+  address <- forAll genAddressShelley
+  copies <- forAll $ Gen.int (Range.linear 1 50)
+  let addressBytes = serialiseToRawBytes address
+      outputPattern = defMessage & U5c.address .~ (defMessage & U5c.exactAddress .~ addressBytes)
+      leaf = wrapInPredicate outputPattern
+      -- nested anyOf: duplicates must be counted as raw terms, not collapsed
+      inner = defMessage & U5c.anyOf .~ replicate copies leaf
+      predicate = defMessage & U5c.anyOf .~ [inner]
+  length (predicateLeaves predicate) === copies
+  addresses <- H.nothingFail $ extractAddressesFromPredicate predicate
+  Set.size addresses === 1
+
 -- ---------------------------------------------------------------------------
 -- H. TxPattern — consumes / produces
 -- ---------------------------------------------------------------------------
@@ -777,6 +791,35 @@ hprop_tx_predicate_anyOf_disjunction = H.propertyOnce $ do
   H.assertWith tx $ matchesTxPredicate predicate
 
 -- ---------------------------------------------------------------------------
+-- M. Compiled predicate vs. 'matchesUtxoPredicate' oracle
+-- ---------------------------------------------------------------------------
+
+hprop_compiled_predicate_matches_oracle :: Property
+hprop_compiled_predicate_matches_oracle = H.property $ do
+  poolAddresses <- forAll $ Gen.list (Range.linear 1 3) genAddressShelley
+  allLeaves <- forAll $ concat <$> traverse genLeavesForAddress poolAddresses
+  repeatedLeaves <- forAll $ Gen.list (Range.linear 0 3) (Gen.element allLeaves)
+  let (group1, group2) = splitAt (length allLeaves `div` 2) (allLeaves <> repeatedLeaves)
+      wrappedGroup2 = map wrapInPredicate group2
+      -- only nest when group1 is non-empty: an empty 'anyOf' sub-predicate is
+      -- a shape 'compileUtxoPredicate' rejects, same as 'extractAddressesFromPredicate'
+      topLevelAnyOf
+        | null group1 = wrappedGroup2
+        | otherwise = (defMessage & U5c.anyOf .~ map wrapInPredicate group1) : wrappedGroup2
+      predicate = defMessage & U5c.anyOf .~ topLevelAnyOf
+
+  compiled <- H.nothingFail $ compileUtxoPredicate predicate
+
+  let expectedAddresses = Set.fromList $ map toAddressAny poolAddresses
+  H.annotate $ "Compiled addresses: " <> show (compiledPredicateAddresses compiled)
+  compiledPredicateAddresses compiled === expectedAddresses
+
+  poolOutputs <- forAll $ traverse genTxOutAtAddress poolAddresses
+  freshOutputs <- forAll $ Gen.list (Range.linear 1 5) genTxOut
+  forM_ (poolOutputs <> freshOutputs) $ \txOut ->
+    matchesCompiledPredicate compiled txOut === matchesUtxoPredicate predicate txOut
+
+-- ---------------------------------------------------------------------------
 -- Helpers
 -- ---------------------------------------------------------------------------
 
@@ -861,3 +904,58 @@ mkTx inputs outputs mint certificates =
 -- | Generate 28 raw bytes, the size of a Blake2b-224 hash (credentials, pool key hashes, DReps).
 gen28Bytes :: Gen ByteString
 gen28Bytes = Gen.bytes (Range.singleton 28)
+
+-- | One address's predicate leaves: either a single pure exact-address leaf
+-- (compiles to 'AcceptAll'), or 1-2 impure leaves carrying an extra filter.
+genLeavesForAddress :: Address ShelleyAddr -> Gen [Proto U5c.TxOutputPattern]
+genLeavesForAddress address = do
+  isPure <- Gen.bool
+  if isPure
+    then pure [defMessage & U5c.address .~ (defMessage & U5c.exactAddress .~ addressBytes)]
+    else Gen.list (Range.linear 1 2) (genImpureLeaf addressBytes)
+ where
+  addressBytes = serialiseToRawBytes address
+
+-- | A leaf naming the given address exactly, plus a payment\/delegation\/asset
+-- filter - including an asset pattern present but with no fields set.
+genImpureLeaf :: ByteString -> Gen (Proto U5c.TxOutputPattern)
+genImpureLeaf addressBytes =
+  Gen.choice
+    [withPaymentPart, withDelegationPart, withConcreteAsset, withEmptyAsset, withPaymentAndAsset]
+ where
+  baseAddress = defMessage & U5c.exactAddress .~ addressBytes
+  withPaymentPart = do
+    credential <- genPaymentCredential
+    pure $
+      defMessage & U5c.address .~ (baseAddress & U5c.paymentPart .~ serialisePaymentCredential credential)
+  withDelegationPart = do
+    credential <- genStakeCredential
+    pure $
+      defMessage
+        & U5c.address .~ (baseAddress & U5c.delegationPart .~ serialiseStakeCredential credential)
+  withConcreteAsset = do
+    assetPattern <- genConcreteAssetPattern
+    pure $ defMessage & U5c.address .~ baseAddress & U5c.asset .~ assetPattern
+  withEmptyAsset =
+    pure $ defMessage & U5c.address .~ baseAddress & U5c.asset .~ defMessage
+  withPaymentAndAsset = do
+    credential <- genPaymentCredential
+    assetPattern <- genConcreteAssetPattern
+    pure $
+      defMessage
+        & U5c.address .~ (baseAddress & U5c.paymentPart .~ serialisePaymentCredential credential)
+        & U5c.asset .~ assetPattern
+  genConcreteAssetPattern = do
+    policy <- genPolicyId
+    tokenName <- genAssetName
+    pure $
+      defMessage
+        & U5c.policyId .~ serialiseToRawBytes policy
+        & U5c.assetName .~ serialiseToRawBytes tokenName
+
+-- | A TxOut at the given address, with a generated value.
+genTxOutAtAddress :: Address ShelleyAddr -> Gen (TxOut CtxUTxO TestEra)
+genTxOutAtAddress address = do
+  (value, _) <- genValueWithNativeAsset
+  let txOutValue = TxOutValueShelleyBased sbe (toLedgerValue meo value)
+  pure $ TxOut (shelleyAddressInEra sbe address) txOutValue TxOutDatumNone ReferenceScriptNone

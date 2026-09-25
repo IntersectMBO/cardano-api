@@ -11,6 +11,11 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
   , matchesAssetPattern
   , exactAddressPredicate
   , extractAddressesFromPredicate
+  , predicateLeaves
+  , CompiledUtxoPredicate
+  , compileUtxoPredicate
+  , compiledPredicateAddresses
+  , matchesCompiledPredicate
 
     -- * Transaction predicates
   , matchesTxPredicate
@@ -46,8 +51,8 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt (utxoRpcBigIntToInteger)
 import RIO hiding (toList)
 
 import Data.ByteString qualified as BS
+import Data.Map.Strict qualified as Map
 import Data.ProtoLens (defMessage)
-import Data.Set qualified as Set
 import GHC.IsList
 import Network.GRPC.Spec (Proto (..))
 
@@ -164,24 +169,76 @@ matchesAssetPattern pat value =
       && qty > 0
   matchesEntry (AdaAssetId, _) = False
 
+-- | Compile a predicate once into a per-address lookup table: matching a UTxO
+-- then costs one map lookup, not a walk over every address term. Same acceptance rule as 'extractAddressesFromPredicate'.
+compileUtxoPredicate :: Proto UtxoRpc.UtxoPredicate -> Maybe CompiledUtxoPredicate
+compileUtxoPredicate p =
+  case (p ^. UtxoRpc.maybe'match, p ^. UtxoRpc.not, p ^. UtxoRpc.allOf, p ^. UtxoRpc.anyOf) of
+    (Just pat, [], [], []) ->
+      CompiledUtxoPredicate . uncurry Map.singleton <$> compileLeaf pat
+    (Nothing, [], [], anyPreds@(_ : _)) ->
+      CompiledUtxoPredicate . Map.unionsWith (<>) . map unCompiled
+        <$> traverse compileUtxoPredicate anyPreds
+    _ -> Nothing
+ where
+  unCompiled (CompiledUtxoPredicate matchersByAddress) = matchersByAddress
+
+-- | The exact addresses a compiled predicate names, for 'QueryUTxOByAddress'.
+compiledPredicateAddresses :: CompiledUtxoPredicate -> Set AddressAny
+compiledPredicateAddresses (CompiledUtxoPredicate matchersByAddress) = Map.keysSet matchersByAddress
+
+-- | Match a UTxO entry against a predicate already compiled by 'compileUtxoPredicate'.
+matchesCompiledPredicate
+  :: IsCardanoEra era
+  => CompiledUtxoPredicate
+  -> TxOut CtxUTxO era
+  -> Bool
+matchesCompiledPredicate (CompiledUtxoPredicate matchersByAddress) txOut@(TxOut (AddressInEra _ address) _ _ _) =
+  maybe False matchesAddressMatcher $ Map.lookup (toAddressAny address) matchersByAddress
+ where
+  matchesAddressMatcher AcceptAll = True
+  matchesAddressMatcher (AnyOfPatterns patterns) = any (`matchesAnyUtxoPattern` txOut) patterns
+
 -- | Try to extract a set of exact addresses from the predicate for use with 'QueryUTxOByAddress'.
 -- Returns 'Just' if the optimization is applicable, 'Nothing' otherwise.
 extractAddressesFromPredicate :: Proto UtxoRpc.UtxoPredicate -> Maybe (Set AddressAny)
-extractAddressesFromPredicate p =
-  case (p ^. UtxoRpc.maybe'match, p ^. UtxoRpc.not, p ^. UtxoRpc.allOf, p ^. UtxoRpc.anyOf) of
-    (Just pat, [], [], []) -> extractAddressFromPattern pat
-    (Nothing, [], [], anyPreds@(_ : _)) ->
-      Set.unions <$> traverse extractAddressesFromPredicate anyPreds
-    _ -> Nothing
- where
-  extractAddressFromPattern :: Proto UtxoRpc.AnyUtxoPattern -> Maybe (Set AddressAny)
-  extractAddressFromPattern pat = do
-    txoPat <- pat ^. UtxoRpc.maybe'cardano
-    addrPat <- txoPat ^. UtxoRpc.maybe'address
-    let exact = addrPat ^. UtxoRpc.exactAddress
-    guard $ not (BS.null exact)
-    addrAny <- either (const Nothing) Just $ deserialiseFromRawBytes AsAddressAny exact
-    pure $ Set.singleton addrAny
+extractAddressesFromPredicate = fmap compiledPredicateAddresses . compileUtxoPredicate
+
+-- | How a compiled predicate finishes matching a UTxO once its address is
+-- found: unconditionally, or via the leaves that also carry a payment\/delegation\/asset filter.
+data AddressMatcher
+  = AcceptAll
+  | AnyOfPatterns [Proto UtxoRpc.AnyUtxoPattern]
+
+instance Semigroup AddressMatcher where
+  AcceptAll <> _ = AcceptAll
+  _ <> AcceptAll = AcceptAll
+  AnyOfPatterns patterns1 <> AnyOfPatterns patterns2 = AnyOfPatterns (patterns1 <> patterns2)
+
+-- | A 'UtxoPredicate' compiled into a per-address lookup table; see 'compileUtxoPredicate'.
+newtype CompiledUtxoPredicate = CompiledUtxoPredicate (Map AddressAny AddressMatcher)
+
+-- | Compile one leaf: same acceptance rule as the old per-leaf extraction
+-- (non-empty, deserialisable exact address). A leaf with no other filter set becomes 'AcceptAll'.
+compileLeaf :: Proto UtxoRpc.AnyUtxoPattern -> Maybe (AddressAny, AddressMatcher)
+compileLeaf leaf = do
+  txoPat <- leaf ^. UtxoRpc.maybe'cardano
+  addrPat <- txoPat ^. UtxoRpc.maybe'address
+  let exact = addrPat ^. UtxoRpc.exactAddress
+  guard $ not (BS.null exact)
+  addrAny <- either (const Nothing) Just $ deserialiseFromRawBytes AsAddressAny exact
+  let isPureExact =
+        BS.null (addrPat ^. UtxoRpc.paymentPart)
+          && BS.null (addrPat ^. UtxoRpc.delegationPart)
+          && isNothing (txoPat ^. UtxoRpc.maybe'asset)
+  pure (addrAny, if isPureExact then AcceptAll else AnyOfPatterns [leaf])
+
+-- | Every 'match' leaf in the predicate tree, duplicates included, descending
+-- through 'not', 'allOf' and 'anyOf'. Lazy, so a caller can stop after N leaves.
+predicateLeaves :: Proto UtxoRpc.UtxoPredicate -> [Proto UtxoRpc.AnyUtxoPattern]
+predicateLeaves p =
+  maybeToList (p ^. UtxoRpc.maybe'match)
+    <> concatMap predicateLeaves (p ^. UtxoRpc.not <> p ^. UtxoRpc.allOf <> p ^. UtxoRpc.anyOf)
 
 -- ---------------------------------------------------------------------------
 -- TxPredicate: matching a mempool\/submitted tx (proto-native, no ledger types)

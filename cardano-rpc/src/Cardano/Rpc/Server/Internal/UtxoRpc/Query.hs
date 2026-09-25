@@ -41,7 +41,7 @@ import RIO hiding (toList)
 
 import Control.Error.Util (hush)
 import Data.Default
-import Data.List (sortBy)
+import Data.Map.Strict qualified as Map
 import Data.ProtoLens (defMessage)
 import Data.Text qualified as Text (pack)
 import Data.Time.Clock (UTCTime)
@@ -96,12 +96,12 @@ readUtxosMethod req
   | null $ req ^. U5c.keys = pure defMessage
   | otherwise = do
       let keyCount = length $ req ^. U5c.keys
-      when (keyCount > maxReadUtxosKeys) $
+      when (keyCount > maxUtxoQueryKeys) $
         throwGrpcErrorWithMessage GrpcInvalidArgument $
           "too many keys: "
             <> tshow keyCount
             <> ", maximum "
-            <> tshow maxReadUtxosKeys
+            <> tshow maxUtxoQueryKeys
             <> "; batch your requests"
 
       utxoFilter <- QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. U5c.keys)
@@ -131,10 +131,10 @@ readUtxosMethod req
     txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. U5c.hash
     pure $ TxIn txId' (TxIx . fromIntegral $ r ^. U5c.index)
 
--- | Bounds per-request UTxO lookups the node performs; SearchUtxos pagination
--- caps at 10_000 per page.
-maxReadUtxosKeys :: Int
-maxReadUtxosKeys = 20_000
+-- | Bounds per-request UTxO lookups the node performs: ReadUtxos keys and
+-- SearchUtxos predicate address terms. SearchUtxos pagination caps at 10_000 per page.
+maxUtxoQueryKeys :: Int
+maxUtxoQueryKeys = 20_000
 
 -- | Handle the @SearchUtxos@ RPC method.
 -- Filters the UTxO set by a predicate and returns a paginated result.
@@ -146,13 +146,21 @@ searchUtxosMethod
   -> m (Proto UtxoRpc.SearchUtxosResponse)
 searchUtxosMethod req = do
   -- TODO: field masks are ignored for now (same as readParamsMethod)
-  let mPredicate = req ^. U5c.maybe'predicate
-      maxItems = req ^. U5c.maxItems
+  let maxItems = req ^. U5c.maxItems
       startToken = req ^. U5c.maybe'startToken
 
-  utxoFilter <- case mPredicate >>= extractAddressesFromPredicate of
-    Just addrs -> pure $ QueryUTxOByAddress addrs
-    Nothing ->
+  (compiledPredicate, utxoFilter) <- case req ^. U5c.maybe'predicate of
+    Just p
+      -- Counted on raw terms: repeated addresses would dodge a distinct-address
+      -- cap, and compiling/merging the predicate still costs one step per term.
+      | not . null . drop maxUtxoQueryKeys $ predicateLeaves p ->
+          throwGrpcErrorWithMessage GrpcInvalidArgument $
+            "predicate names more than "
+              <> tshow maxUtxoQueryKeys
+              <> " address terms (repeated addresses count); batch your requests"
+      | Just compiled <- compileUtxoPredicate p ->
+          pure (compiled, QueryUTxOByAddress $ compiledPredicateAddresses compiled)
+    _ ->
       throwGrpcErrorWithMessage
         GrpcInvalidArgument
         "predicate too broad: must contain exact address match to avoid fetching the entire UTxO set"
@@ -173,11 +181,8 @@ searchUtxosMethod req = do
   timestamp <- slotToTimestamp systemStart eraHistory chainPoint
 
   obtainCommonConstraints eon $ do
-    let filtered =
-          maybe id (\p -> filter $ matchesUtxoPredicate p . snd) mPredicate $
-            toList utxo
-
-    let (page, nextTok) = paginateByTxIn filtered startToken maxItems
+    let (page, nextTok) =
+          paginateByTxIn (matchesCompiledPredicate compiledPredicate) (unUTxO utxo) startToken maxItems
 
     pure $
       defMessage
@@ -292,14 +297,17 @@ networkMagicToCaip2 = \case
   2 -> "cardano:preview"
   magic -> "cardano:" <> tshow magic
 
--- | Paginate a list of UTxO entries using cursor-based pagination.
--- Items are sorted by 'TxIn'\'s 'Ord' instance (lexicographic on 'TxId', then numeric on 'TxIx').
+-- | Paginate a 'Map' of UTxO entries using cursor-based pagination.
+-- The map is already ordered by 'TxIn'\'s 'Ord' instance (lexicographic on 'TxId', then numeric
+-- on 'TxIx'), so no sort is needed.
 -- The start token is the 'renderTxIn' of the last item on the previous page;
 -- all items up to and including it are skipped, so the next page begins
 -- immediately after that cursor.
 paginateByTxIn
-  :: [(TxIn, a)]
-  -- ^ UTxO entries to paginate
+  :: (a -> Bool)
+  -- ^ keep only entries whose value satisfies the predicate
+  -> Map TxIn a
+  -- ^ UTxO entries to paginate, in the map's key order
   -> Maybe Text
   -- ^ start token: the 'renderTxIn' of the last 'TxIn' from the previous page,
   -- or 'Nothing' for the first page
@@ -308,14 +316,17 @@ paginateByTxIn
   -- capped at 'maxPageSize')
   -> ([(TxIn, a)], Maybe Text)
   -- ^ page of results and the next start token ('Nothing' when there are no more pages)
-paginateByTxIn items startToken maxItems = (page, nextToken)
+paginateByTxIn keep items startToken maxItems = (page, nextToken)
  where
-  sorted = sortBy (compare `on` fst) items
-  afterToken = maybe sorted dropAfterCursor $ hush . P.runParser parseTxIn =<< startToken
-  dropAfterCursor cursor = dropWhile (\(txIn, _) -> txIn <= cursor) sorted
+  -- 'Map.split' excludes the cursor key itself.
+  afterCursor =
+    maybe items (\cursor -> snd $ Map.split cursor items) $
+      hush . P.runParser parseTxIn =<< startToken
+  -- Lazy: 'take'/'drop' below force only the page plus one match.
+  matching = filter (keep . snd) $ Map.toAscList afterCursor
   limit = min (if maxItems > 0 then fromIntegral maxItems else defaultPageSize) maxPageSize
-  page = take limit afterToken
-  hasMore = not . null $ drop limit afterToken
+  page = take limit matching
+  hasMore = not . null $ drop limit matching
   nextToken = do
     guard hasMore
     pure . renderTxIn . fst $ last page
