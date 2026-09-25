@@ -75,6 +75,7 @@ module Cardano.Api.Key
   , BlsPossessionProof
   , blsPossessionProof
   , createBlsPossessionProof
+  , toLedgerBlsKey
 
     -- ** Type proxy
   , HasTypeProxy (..)
