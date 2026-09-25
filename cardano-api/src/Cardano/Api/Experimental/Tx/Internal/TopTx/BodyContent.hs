@@ -29,6 +29,7 @@ module Cardano.Api.Experimental.Tx.Internal.TopTx.BodyContent
   , extractDatumsAndHashes
   , getDatums
   , collectTxBodyScriptWitnessRequirements
+  , collectScriptWitnessRequirements
   , makeUnsignedTx
   , extractAllIndexedPlutusScriptWitnesses
   , txMintValueToValue
@@ -60,9 +61,23 @@ module Cardano.Api.Experimental.Tx.Internal.TopTx.BodyContent
   , setTxValidityUpperBound
   , setTxVotingProcedures
   , setTxWithdrawals
+  , setTxGuards
+  , setTxSubTransactions
+  , setTxRequiredTopLevelGuards
+  , setTxDirectDeposits
+  , setTxAccountBalanceIntervals
+  , setTxStartingAccountBalanceIntervals
 
     -- * Internal conversions
+  , convTxIns
+  , convReferenceInputs
+  , convWithdrawals
+  , convCertificates
+  , convMintValue
   , convProposalProcedures
+  , convVotingProcedures
+  , convPParamsToScriptIntegrityHash
+  , toAuxiliaryData
   , extractWitnessableTxIns
   , extractWitnessableMints
   , extractWitnessableCertificates
@@ -176,6 +191,8 @@ data MakeUnsignedTxError
     -- parameters were provided. Protocol parameters are required to
     -- compute the script integrity hash (script_data_hash).
     MakeUnsignedTxMissingProtocolParams
+  | -- | A sub-transaction was requested in an era that has no sub-transactions.
+    MakeUnsignedTxSubTransactionsUnsupported
   deriving (Eq, Show)
 
 instance Error MakeUnsignedTxError where
@@ -185,6 +202,8 @@ instance Error MakeUnsignedTxError where
       , "Protocol parameters are required to compute the script integrity hash "
       , "(script_data_hash) from the cost models."
       ]
+  prettyError MakeUnsignedTxSubTransactionsUnsupported =
+    "Sub-transactions are only supported from the Dijkstra era onwards."
 
 makeUnsignedTx
   :: forall era
@@ -1018,7 +1037,40 @@ collectTxBodyScriptWitnessRequirements
     , txVotingProcedures
     , txProposalProcedures
     , txSupplementalDatums
-    } = obtainCommonConstraints (useEra @era) $ do
+    } =
+    collectScriptWitnessRequirements @era
+      txIns
+      txInsReference
+      txCertificates
+      txMintValue
+      txWithdrawals
+      txVotingProcedures
+      txProposalProcedures
+      txSupplementalDatums
+
+-- | Collect the script witness requirements of the body fields shared between
+-- top-level and sub-transactions.
+collectScriptWitnessRequirements
+  :: forall era
+   . IsEra era
+  => [(TxIn, AnyWitness (LedgerEra era))]
+  -> TxInsReference (LedgerEra era)
+  -> TxCertificates (LedgerEra era)
+  -> TxMintValue (LedgerEra era)
+  -> TxWithdrawals (LedgerEra era)
+  -> Maybe (TxVotingProcedures (LedgerEra era))
+  -> Maybe (TxProposalProcedures (LedgerEra era))
+  -> Map L.DataHash (L.Data (LedgerEra era))
+  -> TxScriptWitnessRequirements (LedgerEra era)
+collectScriptWitnessRequirements
+  txIns
+  txInsReference
+  txCertificates
+  txMintValue
+  txWithdrawals
+  txVotingProcedures
+  txProposalProcedures
+  txSupplementalDatums = obtainCommonConstraints (useEra @era) $ do
     let supplementaldatums =
           TxScriptWitnessRequirements
             mempty
@@ -1156,6 +1208,30 @@ setTxTreasuryDonation v txBodyContent = txBodyContent{txTreasuryDonation = Just 
 
 setTxSupplementalDatums :: Map L.DataHash (L.Data era) -> TxBodyContent era -> TxBodyContent era
 setTxSupplementalDatums v txBodyContent = txBodyContent{txSupplementalDatums = v}
+
+setTxGuards :: OSet (L.Credential L.Guard) -> TxBodyContent era -> TxBodyContent era
+setTxGuards v txBodyContent = txBodyContent{txGuards = v}
+
+-- | Sub-transactions are keyed by their transaction id, which is derived from
+-- each sub-transaction here so callers never compute it by hand.
+setTxSubTransactions :: L.EraTx era => [L.Tx L.SubTx era] -> TxBodyContent era -> TxBodyContent era
+setTxSubTransactions v txBodyContent = txBodyContent{txSubTransactions = LOMap.fromFoldable v}
+
+setTxRequiredTopLevelGuards
+  :: Map (L.Credential L.Guard) (StrictMaybe (L.Data era)) -> TxBodyContent era -> TxBodyContent era
+setTxRequiredTopLevelGuards v txBodyContent = txBodyContent{txRequiredTopLevelGuards = v}
+
+setTxDirectDeposits :: L.DirectDeposits -> TxBodyContent era -> TxBodyContent era
+setTxDirectDeposits v txBodyContent = txBodyContent{txDirectDeposits = v}
+
+setTxAccountBalanceIntervals
+  :: L.AccountBalanceIntervals era -> TxBodyContent era -> TxBodyContent era
+setTxAccountBalanceIntervals v txBodyContent = txBodyContent{txAccountBalanceIntervals = v}
+
+setTxStartingAccountBalanceIntervals
+  :: L.AccountBalanceIntervals era -> TxBodyContent era -> TxBodyContent era
+setTxStartingAccountBalanceIntervals v txBodyContent =
+  txBodyContent{txStartingAccountBalanceIntervals = v}
 
 modTxOuts
   :: ([TxOut era] -> [TxOut era]) -> TxBodyContent era -> TxBodyContent era
