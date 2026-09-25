@@ -1,0 +1,203 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- | Handler for the @WatchMempool@ SubmitService RPC method: stream</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- mempool transactions matching a predicate as they enter the mempool.</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Mempool.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Mempool</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Mempool.html#watchMempoolMethod"><span class="hs-identifier">watchMempoolMethod</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Mempool.html#watchMempoolStream"><span class="hs-identifier">watchMempoolStream</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Submit.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Submit</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U5c</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Monad.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Monad.html#MonadRpc"><span class="hs-identifier">MonadRpc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Predicate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesTxPredicate"><span class="hs-identifier">matchesTxPredicate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempool"><span class="hs-identifier">txInModeToTxInMempool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html"><span class="hs-identifier">Cardano.Rpc.Server.NodeKernelAccess</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html#MempoolWatchSnapshot"><span class="hs-identifier">MempoolWatchSnapshot</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html#grabNodeKernelAccess"><span class="hs-identifier">grabNodeKernelAccess</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html#nextMempoolWatchSnapshot"><span class="hs-identifier">nextMempoolWatchSnapshot</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html#watchMempoolSnapshot"><span class="hs-identifier">watchMempoolSnapshot</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-b0adf0ce98ef5250aefa811c60a6974f432956dec28e26f881490310b67db107/share/doc/html/src/Ouroboros.Consensus.Mempool.API.html"><span class="hs-identifier">Ouroboros.Consensus.Mempool.API</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-b0adf0ce98ef5250aefa811c60a6974f432956dec28e26f881490310b67db107/share/doc/html/src/Ouroboros.Consensus.Mempool.TxSeq.html#TicketNo"><span class="hs-identifier">TicketNo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-b0adf0ce98ef5250aefa811c60a6974f432956dec28e26f881490310b67db107/share/doc/html/src/Ouroboros.Consensus.Mempool.TxSeq.html#zeroTicketNo"><span class="hs-identifier">zeroTicketNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">RIO</span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ProtoLens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">defMessage</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.GRPC.Spec</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NextElem</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NextElem</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Proto</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | Handle the @WatchMempool@ SubmitService RPC method.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- Streams new mempool entries matching the request's predicate, each with</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- 'U5c.stage' always @STAGE_MEMPOOL@ (the first locally observable stage;</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- see 'Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.matchesTxPredicate').</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- Runs until the client disconnects or the stream is otherwise closed.</span><span>
+</span><span id="line-37"></span><span id="local-6989586621679704306"><span id="local-6989586621679704307"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Mempool.html#watchMempoolMethod"><span class="hs-identifier hs-type">watchMempoolMethod</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.Monad.html#MonadRpc"><span class="hs-identifier hs-type">MonadRpc</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679704306"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679704307"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.WatchMempoolRequest</span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Request containing a filter predicate</span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NextElem</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.WatchMempoolResponse</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Callback used to send each streamed response</span></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679704307"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-44"></span><span id="watchMempoolMethod"><span class="annot"><span class="annottext">watchMempoolMethod :: forall e (m :: * -&gt; *).
+MonadRpc e m =&gt;
+Proto WatchMempoolRequest
+-&gt; (NextElem (Proto WatchMempoolResponse) -&gt; IO ()) -&gt; m ()
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Mempool.html#watchMempoolMethod"><span class="hs-identifier hs-var hs-var">watchMempoolMethod</span></a></span></span><span> </span><span id="local-6989586621679704451"><span class="annot"><span class="annottext">Proto WatchMempoolRequest
+</span><a href="#local-6989586621679704451"><span class="hs-identifier hs-var">request</span></a></span></span><span> </span><span id="local-6989586621679704452"><span class="annot"><span class="annottext">NextElem (Proto WatchMempoolResponse) -&gt; IO ()
+</span><a href="#local-6989586621679704452"><span class="hs-identifier hs-var">send</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679704453"><span class="annot"><a href="#local-6989586621679704453"><span class="hs-identifier hs-var">nodeKernelAccess</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m NodeKernelAccess
+forall e (m :: * -&gt; *). MonadRpc e m =&gt; m NodeKernelAccess
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.html#grabNodeKernelAccess"><span class="hs-identifier hs-var">grabNodeKernelAccess</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Mempool.html#watchMempoolStream"><span class="hs-identifier hs-type">watchMempoolStream</span></a></span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html#watchMempoolSnapshot"><span class="hs-identifier hs-type">watchMempoolSnapshot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679704453"><span class="hs-identifier hs-type">nodeKernelAccess</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html#nextMempoolWatchSnapshot"><span class="hs-identifier hs-type">nextMempoolWatchSnapshot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679704453"><span class="hs-identifier hs-type">nodeKernelAccess</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679704451"><span class="hs-identifier hs-type">request</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">^.</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.predicate</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><a href="#local-6989586621679704452"><span class="hs-identifier hs-type">send</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- | The @WatchMempool@ streaming loop. Emits every mempool entry newer than</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- the last one seen, oldest first, filtered by the predicate.</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- Removals and slot-only changes (no new ticket) produce no message: the</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- proto has no representation for eviction, and a max-ticket comparison</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- upstream would otherwise miss exactly these transitions (see</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- 'Cardano.Rpc.Server.NodeKernelAccess.nextMempoolWatchSnapshot').</span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Mempool.html#watchMempoolStream"><span class="hs-identifier hs-type">watchMempoolStream</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679704353"><span class="annot"><a href="#local-6989586621679704353"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-61"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679704353"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679704353"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html#MempoolWatchSnapshot"><span class="hs-identifier hs-type">MempoolWatchSnapshot</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-comment">-- ^ Read the current mempool watch snapshot, without blocking - used</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-comment">-- once, for the initial baseline</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html#MempoolWatchSnapshot"><span class="hs-identifier hs-type">MempoolWatchSnapshot</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679704353"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html#MempoolWatchSnapshot"><span class="hs-identifier hs-type">MempoolWatchSnapshot</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-comment">-- ^ Block until the snapshot differs from the given one, then return the</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-comment">-- new one</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.TxPredicate</span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Predicate filtering which new entries are sent</span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NextElem</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">U5c.WatchMempoolResponse</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Callback used to send each streamed response</span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679704353"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span id="watchMempoolStream"><span class="annot"><span class="annottext">watchMempoolStream :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+m MempoolWatchSnapshot
+-&gt; (MempoolWatchSnapshot -&gt; m MempoolWatchSnapshot)
+-&gt; Proto TxPredicate
+-&gt; (NextElem (Proto WatchMempoolResponse) -&gt; IO ())
+-&gt; m ()
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Mempool.html#watchMempoolStream"><span class="hs-identifier hs-var hs-var">watchMempoolStream</span></a></span></span><span> </span><span id="local-6989586621679704489"><span class="annot"><span class="annottext">m MempoolWatchSnapshot
+</span><a href="#local-6989586621679704489"><span class="hs-identifier hs-var">readSnapshot</span></a></span></span><span> </span><span id="local-6989586621679704490"><span class="annot"><span class="annottext">MempoolWatchSnapshot -&gt; m MempoolWatchSnapshot
+</span><a href="#local-6989586621679704490"><span class="hs-identifier hs-var">nextSnapshot</span></a></span></span><span> </span><span id="local-6989586621679704491"><span class="annot"><span class="annottext">Proto TxPredicate
+</span><a href="#local-6989586621679704491"><span class="hs-identifier hs-var">predicate</span></a></span></span><span> </span><span id="local-6989586621679704492"><span class="annot"><span class="annottext">NextElem (Proto WatchMempoolResponse) -&gt; IO ()
+</span><a href="#local-6989586621679704492"><span class="hs-identifier hs-var">send</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679704493"><span class="annot"><a href="#local-6989586621679704493"><span class="hs-identifier hs-var">initial</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m MempoolWatchSnapshot
+</span><a href="#local-6989586621679704489"><span class="hs-identifier hs-var">readSnapshot</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><a href="#local-6989586621679704494"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-b0adf0ce98ef5250aefa811c60a6974f432956dec28e26f881490310b67db107/share/doc/html/src/Ouroboros.Consensus.Mempool.TxSeq.html#zeroTicketNo"><span class="hs-identifier hs-type">Consensus.zeroTicketNo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679704493"><span class="hs-identifier hs-type">initial</span></a></span><span>
+</span><span id="line-76"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="#local-6989586621679704494"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-4.2.1.0-b0adf0ce98ef5250aefa811c60a6974f432956dec28e26f881490310b67db107/share/doc/html/src/Ouroboros.Consensus.Mempool.TxSeq.html#TicketNo"><span class="hs-identifier hs-type">Consensus.TicketNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html#MempoolWatchSnapshot"><span class="hs-identifier hs-type">MempoolWatchSnapshot</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679704353"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>  </span><span id="local-6989586621679704494"><span class="annot"><span class="annottext">go :: TicketNo -&gt; MempoolWatchSnapshot -&gt; m ()
+</span><a href="#local-6989586621679704494"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679704495"><span class="annot"><span class="annottext">TicketNo
+</span><a href="#local-6989586621679704495"><span class="hs-identifier hs-var">lastSeenTicket</span></a></span></span><span> </span><span id="local-6989586621679704496"><span class="annot"><span class="annottext">snapshot :: MempoolWatchSnapshot
+</span><a href="#local-6989586621679704496"><span class="hs-identifier hs-var">snapshot</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.html#MempoolWatchSnapshot"><span class="hs-identifier hs-type">MempoolWatchSnapshot</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">mempoolWatchTxsAfter :: MempoolWatchSnapshot -&gt; TicketNo -&gt; [(TxInMode, TicketNo)]
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.html#mempoolWatchTxsAfter"><span class="hs-identifier hs-var">mempoolWatchTxsAfter</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679704499"><span class="annot"><span class="annottext">TicketNo -&gt; [(TxInMode, TicketNo)]
+</span><a href="#local-6989586621679704499"><span class="hs-identifier hs-var">txsAfter</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679704500"><span class="annot"><span class="annottext">newEntries :: [(TxInMode, TicketNo)]
+</span><a href="#local-6989586621679704500"><span class="hs-identifier hs-var hs-var hs-var">newEntries</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TicketNo -&gt; [(TxInMode, TicketNo)]
+</span><a href="#local-6989586621679704499"><span class="hs-identifier hs-var">txsAfter</span></a></span><span> </span><span class="annot"><span class="annottext">TicketNo
+</span><a href="#local-6989586621679704495"><span class="hs-identifier hs-var">lastSeenTicket</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">[(TxInMode, TicketNo)] -&gt; ((TxInMode, TicketNo) -&gt; m ()) -&gt; m ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#forM_"><span class="hs-identifier hs-var">forM_</span></a></span><span> </span><span class="annot"><span class="annottext">[(TxInMode, TicketNo)]
+</span><a href="#local-6989586621679704500"><span class="hs-identifier hs-var">newEntries</span></a></span><span> </span><span class="annot"><span class="annottext">(((TxInMode, TicketNo) -&gt; m ()) -&gt; m ())
+-&gt; ((TxInMode, TicketNo) -&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679704502"><span class="annot"><span class="annottext">TxInMode
+</span><a href="#local-6989586621679704502"><span class="hs-identifier hs-var">txInMode</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679704503"><span class="annot"><span class="annottext">TicketNo
+</span><a href="#local-6989586621679704503"><span class="hs-identifier hs-var">_ticketNo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-81"></span><span>      </span><span class="annot"><span class="annottext">Maybe (Proto TxInMempool) -&gt; (Proto TxInMempool -&gt; m ()) -&gt; m ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#forM_"><span class="hs-identifier hs-var">forM_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxInMode -&gt; Maybe (Proto TxInMempool)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempool"><span class="hs-identifier hs-var">txInModeToTxInMempool</span></a></span><span> </span><span class="annot"><span class="annottext">TxInMode
+</span><a href="#local-6989586621679704502"><span class="hs-identifier hs-var">txInMode</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Proto TxInMempool -&gt; m ()) -&gt; m ())
+-&gt; (Proto TxInMempool -&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679704504"><span class="annot"><span class="annottext">Proto TxInMempool
+</span><a href="#local-6989586621679704504"><span class="hs-identifier hs-var">txInMempool</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; m () -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto TxPredicate -&gt; Proto Tx -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Predicate.html#matchesTxPredicate"><span class="hs-identifier hs-var">matchesTxPredicate</span></a></span><span> </span><span class="annot"><span class="annottext">Proto TxPredicate
+</span><a href="#local-6989586621679704491"><span class="hs-identifier hs-var">predicate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proto TxInMempool
+</span><a href="#local-6989586621679704504"><span class="hs-identifier hs-var">txInMempool</span></a></span><span> </span><span class="annot"><span class="annottext">Proto TxInMempool
+-&gt; Getting (Proto Tx) (Proto TxInMempool) (Proto Tx) -&gt; Proto Tx
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting (Proto Tx) (Proto TxInMempool) (Proto Tx)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;cardano&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.cardano</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-83"></span><span>          </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ())
+-&gt; (Proto WatchMempoolResponse -&gt; IO ())
+-&gt; Proto WatchMempoolResponse
+-&gt; m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NextElem (Proto WatchMempoolResponse) -&gt; IO ()
+</span><a href="#local-6989586621679704492"><span class="hs-identifier hs-var">send</span></a></span><span> </span><span class="annot"><span class="annottext">(NextElem (Proto WatchMempoolResponse) -&gt; IO ())
+-&gt; (Proto WatchMempoolResponse
+    -&gt; NextElem (Proto WatchMempoolResponse))
+-&gt; Proto WatchMempoolResponse
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Proto WatchMempoolResponse -&gt; NextElem (Proto WatchMempoolResponse)
+forall a. a -&gt; NextElem a
+</span><span class="hs-identifier hs-var">NextElem</span></span><span> </span><span class="annot"><span class="annottext">(Proto WatchMempoolResponse -&gt; m ())
+-&gt; Proto WatchMempoolResponse -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-84"></span><span>            </span><span class="annot"><span class="annottext">Proto WatchMempoolResponse
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span> </span><span class="annot"><span class="annottext">Proto WatchMempoolResponse
+-&gt; (Proto WatchMempoolResponse -&gt; Proto WatchMempoolResponse)
+-&gt; Proto WatchMempoolResponse
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto WatchMempoolResponse) (Proto TxInMempool)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;tx&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.tx</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto WatchMempoolResponse) (Proto TxInMempool)
+-&gt; Proto TxInMempool
+-&gt; Proto WatchMempoolResponse
+-&gt; Proto WatchMempoolResponse
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Proto TxInMempool
+</span><a href="#local-6989586621679704504"><span class="hs-identifier hs-var">txInMempool</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679704514"><span class="annot"><span class="annottext">lastSeenTicket' :: TicketNo
+</span><a href="#local-6989586621679704514"><span class="hs-identifier hs-var hs-var">lastSeenTicket'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[(TxInMode, TicketNo)]
+</span><a href="#local-6989586621679704500"><span class="hs-identifier hs-var">newEntries</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-86"></span><span>          </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TicketNo
+</span><a href="#local-6989586621679704495"><span class="hs-identifier hs-var">lastSeenTicket</span></a></span><span>
+</span><span id="line-87"></span><span>          </span><span class="annot"><span class="annottext">[(TxInMode, TicketNo)]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(TxInMode, TicketNo) -&gt; TicketNo
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(TxInMode, TicketNo)] -&gt; (TxInMode, TicketNo)
+forall a. HasCallStack =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.List.html#last"><span class="hs-identifier hs-var">last</span></a></span><span> </span><span class="annot"><span class="annottext">[(TxInMode, TicketNo)]
+</span><a href="#local-6989586621679704500"><span class="hs-identifier hs-var">newEntries</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="annottext">MempoolWatchSnapshot -&gt; m MempoolWatchSnapshot
+</span><a href="#local-6989586621679704490"><span class="hs-identifier hs-var">nextSnapshot</span></a></span><span> </span><span class="annot"><span class="annottext">MempoolWatchSnapshot
+</span><a href="#local-6989586621679704496"><span class="hs-identifier hs-var">snapshot</span></a></span><span> </span><span class="annot"><span class="annottext">m MempoolWatchSnapshot -&gt; (MempoolWatchSnapshot -&gt; m ()) -&gt; m ()
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">TicketNo -&gt; MempoolWatchSnapshot -&gt; m ()
+</span><a href="#local-6989586621679704494"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">TicketNo
+</span><a href="#local-6989586621679704514"><span class="hs-identifier hs-var">lastSeenTicket'</span></a></span><span>
+</span><span id="line-89"></span></pre></body></html>

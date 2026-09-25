@@ -1,0 +1,215 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- | Conversion of a mempool transaction to the UTxO RPC @TxInMempool@</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- message.</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempool"><span class="hs-identifier">txInModeToTxInMempool</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Submit.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Submit</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U5c</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Submit.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Submit</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UtxoRpc</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron.html#byronTxToUtxoRpcTx"><span class="hs-identifier">byronTxToUtxoRpcTx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#anyEraTxConstraints"><span class="hs-identifier">anyEraTxConstraints</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#txToUtxoRpcTx"><span class="hs-identifier">txToUtxoRpcTx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-crypto-wrapper-1.7.0.0-74f7297ac29b37de5c6b55e35c4e7729561d855f8dcd99d26c7da5ddf9a42153/share/doc/html/src/Cardano.Crypto.html"><span class="hs-identifier">Cardano.Crypto</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-crypto-wrapper-1.7.0.0-74f7297ac29b37de5c6b55e35c4e7729561d855f8dcd99d26c7da5ddf9a42153/share/doc/html/src/Cardano.Crypto.Hashing.html#hashToBytes"><span class="hs-identifier">hashToBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.9.1.0-e3af057af2a917cc7012ae68f91989d16a645a9ba641da6ee866f743025492a2/share/doc/html/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.21.0.0-9a54ba3ecfdd57bbf1c24fb489fd7e393bf689c639a5c7b78a01bf407974aa8f/share/doc/html/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">RIO</span></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ProtoLens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">defMessage</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.GRPC.Spec</span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | Convert a transaction read from the mempool to the UTxO RPC</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- 'UtxoRpc.TxInMempool' message, always at 'U5c.STAGE_MEMPOOL'.</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- @native_bytes@ fidelity differs by era: the Shelley-onwards ledger @Tx@ is</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- not 'SafeToHash'-backed, so its @native_bytes@ is a canonical</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- re-encoding, not the submitter's original bytes (same caveat as</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- 'Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput.txOutToUtxoRpcTxOutput').</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- The Byron arm has no such caveat: its @ATxAux@ carries a real byte</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- annotation, so 'CBOR.recoverBytes' recovers the true original bytes.</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- 'Nothing' for the three Byron special payloads (delegation certificates,</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- update proposals, update votes): they have no proto @Tx@ representation,</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- and cannot occur on any network still running today, since Byron</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- transitioned to Shelley years before any currently live Cardano network</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- started.</span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempool"><span class="hs-identifier hs-type">txInModeToTxInMempool</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.Consensus.Internal.InMode.html#TxInMode"><span class="hs-identifier hs-type">TxInMode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.TxInMempool</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span id="txInModeToTxInMempool"><span class="annot"><span class="annottext">txInModeToTxInMempool :: TxInMode -&gt; Maybe (Proto TxInMempool)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempool"><span class="hs-identifier hs-var hs-var">txInModeToTxInMempool</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.Consensus.Internal.InMode.html#TxInMode"><span class="hs-identifier hs-type">TxInMode</span></a></span><span> </span><span id="local-6989586621679698347"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679698347"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span id="local-6989586621679698348"><span class="annot"><span class="annottext">tx :: Tx era
+</span><a href="#local-6989586621679698348"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Sign.html#ShelleyTx"><span class="hs-identifier hs-type">ShelleyTx</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679698350"><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679698350"><span class="hs-identifier hs-var">ledgerTx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="annottext">Proto TxInMempool -&gt; Maybe (Proto TxInMempool)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Proto TxInMempool -&gt; Maybe (Proto TxInMempool))
+-&gt; Proto TxInMempool -&gt; Maybe (Proto TxInMempool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-45"></span><span>      </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; ((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt;
+    Proto TxInMempool)
+-&gt; Proto TxInMempool
+forall era a.
+ShelleyBasedEra era
+-&gt; ((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt; a)
+-&gt; a
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#anyEraTxConstraints"><span class="hs-identifier hs-var">anyEraTxConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679698347"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">(((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt;
+  Proto TxInMempool)
+ -&gt; Proto TxInMempool)
+-&gt; ((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt;
+    Proto TxInMempool)
+-&gt; Proto TxInMempool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-46"></span><span>        </span><span class="annot"><span class="annottext">Proto TxInMempool
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span>
+</span><span id="line-47"></span><span>          </span><span class="annot"><span class="annottext">Proto TxInMempool
+-&gt; (Proto TxInMempool -&gt; Proto TxInMempool) -&gt; Proto TxInMempool
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;ref&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.ref</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) ByteString
+-&gt; ByteString -&gt; Proto TxInMempool -&gt; Proto TxInMempool
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId -&gt; TxId
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxId"><span class="hs-identifier hs-var">fromShelleyTxId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era) -&gt; TxId
+forall era (l :: TxLevel). EraTx era =&gt; Tx l era -&gt; TxId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.21.0.0-9a54ba3ecfdd57bbf1c24fb489fd7e393bf689c639a5c7b78a01bf407974aa8f/share/doc/html/src/Cardano.Ledger.Core.html#txIdTx"><span class="hs-identifier hs-var">L.txIdTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679698350"><span class="hs-identifier hs-var">ledgerTx</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>          </span><span class="annot"><span class="annottext">Proto TxInMempool
+-&gt; (Proto TxInMempool -&gt; Proto TxInMempool) -&gt; Proto TxInMempool
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;nativeBytes&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.nativeBytes</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) ByteString
+-&gt; ByteString -&gt; Proto TxInMempool -&gt; Proto TxInMempool
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Tx era -&gt; ByteString
+forall a. SerialiseAsCBOR a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.Cbor.html#serialiseToCBOR"><span class="hs-identifier hs-var">serialiseToCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679698348"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-49"></span><span>          </span><span class="annot"><span class="annottext">Proto TxInMempool
+-&gt; (Proto TxInMempool -&gt; Proto TxInMempool) -&gt; Proto TxInMempool
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) (Proto Stage)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;stage&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.stage</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) (Proto Stage)
+-&gt; Proto Stage -&gt; Proto TxInMempool -&gt; Proto TxInMempool
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Stage -&gt; Proto Stage
+forall msg. msg -&gt; Proto msg
+</span><span class="hs-identifier hs-var">Proto</span></span><span> </span><span class="annot"><span class="annottext">Stage
+</span><span class="hs-identifier hs-var">U5c.STAGE_MEMPOOL</span></span><span>
+</span><span id="line-50"></span><span>          </span><span class="annot"><span class="annottext">Proto TxInMempool
+-&gt; (Proto TxInMempool -&gt; Proto TxInMempool) -&gt; Proto TxInMempool
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) (Proto Tx)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;cardano&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.cardano</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) (Proto Tx)
+-&gt; Proto Tx -&gt; Proto TxInMempool -&gt; Proto TxInMempool
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era) -&gt; Proto Tx
+forall era.
+IsShelleyBasedEra era =&gt;
+Tx TopTx (ShelleyLedgerEra era) -&gt; Proto Tx
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#txToUtxoRpcTx"><span class="hs-identifier hs-var">txToUtxoRpcTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679698350"><span class="hs-identifier hs-var">ledgerTx</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.7.0.0/doc/html/cardano-api/src/Cardano.Api.Consensus.Internal.InMode.html#TxInByronSpecial"><span class="hs-identifier hs-type">TxInByronSpecial</span></a></span><span> </span><span id="local-6989586621679698387"><span class="annot"><span class="annottext">GenTx ByronBlock
+</span><a href="#local-6989586621679698387"><span class="hs-identifier hs-var">genTx</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">GenTx ByronBlock
+</span><a href="#local-6989586621679698387"><span class="hs-identifier hs-var">genTx</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">ByronTx</span></span><span> </span><span id="local-6989586621679698389"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679698389"><span class="hs-identifier hs-var">byronTxId</span></a></span></span><span> </span><span id="local-6989586621679698390"><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679698390"><span class="hs-identifier hs-var">aTxAux</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><span class="annottext">Proto TxInMempool -&gt; Maybe (Proto TxInMempool)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Proto TxInMempool -&gt; Maybe (Proto TxInMempool))
+-&gt; Proto TxInMempool -&gt; Maybe (Proto TxInMempool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><span class="annottext">Proto TxInMempool
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span>
+</span><span id="line-55"></span><span>          </span><span class="annot"><span class="annottext">Proto TxInMempool
+-&gt; (Proto TxInMempool -&gt; Proto TxInMempool) -&gt; Proto TxInMempool
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;ref&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.ref</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) ByteString
+-&gt; ByteString -&gt; Proto TxInMempool -&gt; Proto TxInMempool
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; ByteString
+forall algo a. AbstractHash algo a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-crypto-wrapper-1.7.0.0-74f7297ac29b37de5c6b55e35c4e7729561d855f8dcd99d26c7da5ddf9a42153/share/doc/html/src/Cardano.Crypto.Hashing.html#hashToBytes"><span class="hs-identifier hs-var">Byron.hashToBytes</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679698389"><span class="hs-identifier hs-var">byronTxId</span></a></span><span>
+</span><span id="line-56"></span><span>          </span><span class="annot"><span class="annottext">Proto TxInMempool
+-&gt; (Proto TxInMempool -&gt; Proto TxInMempool) -&gt; Proto TxInMempool
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;nativeBytes&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.nativeBytes</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) ByteString
+-&gt; ByteString -&gt; Proto TxInMempool -&gt; Proto TxInMempool
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString -&gt; ByteString
+forall t. Decoded t =&gt; t -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.9.1.0-e3af057af2a917cc7012ae68f91989d16a645a9ba641da6ee866f743025492a2/share/doc/html/src/Cardano.Ledger.Binary.Decoding.Annotated.html#recoverBytes"><span class="hs-identifier hs-var">CBOR.recoverBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679698390"><span class="hs-identifier hs-var">aTxAux</span></a></span><span>
+</span><span id="line-57"></span><span>          </span><span class="annot"><span class="annottext">Proto TxInMempool
+-&gt; (Proto TxInMempool -&gt; Proto TxInMempool) -&gt; Proto TxInMempool
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) (Proto Stage)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;stage&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.stage</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) (Proto Stage)
+-&gt; Proto Stage -&gt; Proto TxInMempool -&gt; Proto TxInMempool
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Stage -&gt; Proto Stage
+forall msg. msg -&gt; Proto msg
+</span><span class="hs-identifier hs-var">Proto</span></span><span> </span><span class="annot"><span class="annottext">Stage
+</span><span class="hs-identifier hs-var">U5c.STAGE_MEMPOOL</span></span><span>
+</span><span id="line-58"></span><span>          </span><span class="annot"><span class="annottext">Proto TxInMempool
+-&gt; (Proto TxInMempool -&gt; Proto TxInMempool) -&gt; Proto TxInMempool
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) (Proto Tx)
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;cardano&quot; a) =&gt;
+LensLike' f s a
+</span><span class="hs-identifier hs-var">U5c.cardano</span></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity (Proto TxInMempool) (Proto Tx)
+-&gt; Proto Tx -&gt; Proto TxInMempool -&gt; Proto TxInMempool
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString -&gt; Proto Tx
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron.html#byronTxToUtxoRpcTx"><span class="hs-identifier hs-var">byronTxToUtxoRpcTx</span></a></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679698390"><span class="hs-identifier hs-var">aTxAux</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">ByronDlg</span></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (Proto TxInMempool)
+forall a. Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">ByronUpdateProposal</span></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (Proto TxInMempool)
+forall a. Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">ByronUpdateVote</span></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (Proto TxInMempool)
+forall a. Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-62"></span></pre></body></html>

@@ -1,0 +1,698 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- | TextEnvelope Serialisation</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- The envelope type, its JSON codec and the pure decoders now live in the</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- cardano-keys package; re-exported here for compatibility, together with the</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- era-coupled and file-based functions this API adds on top of them.</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html"><span class="hs-identifier">Cardano.Api.Serialise.TextEnvelope.Internal</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#HasTextEnvelope"><span class="hs-identifier">HasTextEnvelope</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#textEnvelopeType"><span class="hs-identifier">textEnvelopeType</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#textEnvelopeTypeInEra"><span class="hs-identifier">textEnvelopeTypeInEra</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelope"><span class="hs-identifier">TextEnvelope</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeType"><span class="hs-identifier">TextEnvelopeType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeDescr"><span class="hs-identifier">TextEnvelopeDescr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#textEnvelopeRawCBOR"><span class="hs-identifier">textEnvelopeRawCBOR</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeError"><span class="hs-identifier">TextEnvelopeError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#serialiseToTextEnvelope"><span class="hs-identifier">serialiseToTextEnvelope</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#deserialiseFromTextEnvelope"><span class="hs-identifier">deserialiseFromTextEnvelope</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readFileTextEnvelope"><span class="hs-identifier">readFileTextEnvelope</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#writeFileTextEnvelope"><span class="hs-identifier">writeFileTextEnvelope</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#writeFileTextEnvelopeWithOwnerPermissions"><span class="hs-identifier">writeFileTextEnvelopeWithOwnerPermissions</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readTextEnvelopeFromFile"><span class="hs-identifier">readTextEnvelopeFromFile</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readTextEnvelopeOfTypeFromFile"><span class="hs-identifier">readTextEnvelopeOfTypeFromFile</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#textEnvelopeToJSON"><span class="hs-identifier">textEnvelopeToJSON</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#serialiseTextEnvelope"><span class="hs-identifier">serialiseTextEnvelope</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#legacyComparison"><span class="hs-identifier">legacyComparison</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#textEnvelopeTypeToEra"><span class="hs-identifier">textEnvelopeTypeToEra</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Reading one of several key types</span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.HasTypeProxy.html#FromSomeType"><span class="hs-identifier">FromSomeType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#deserialiseFromTextEnvelopeAnyOf"><span class="hs-identifier">deserialiseFromTextEnvelopeAnyOf</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#decodeTextEnvelopeJSON"><span class="hs-identifier">decodeTextEnvelopeJSON</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#deserialiseFromTextEnvelopeJSON"><span class="hs-identifier">deserialiseFromTextEnvelopeJSON</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#deserialiseFromTextEnvelopeJSONAnyOf"><span class="hs-identifier">deserialiseFromTextEnvelopeJSONAnyOf</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readFileTextEnvelopeAnyOf"><span class="hs-identifier">readFileTextEnvelopeAnyOf</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Data family instances</span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.HasTypeProxy.html#AsType"><span class="hs-identifier">AsType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.html"><span class="hs-identifier">Cardano.Api.Era</span></a></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html"><span class="hs-identifier">Cardano.Api.Error</span></a></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html"><span class="hs-identifier">Cardano.Api.HasTypeProxy</span></a></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.IO.html"><span class="hs-identifier">Cardano.Api.IO</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html"><span class="hs-identifier">Cardano.Keys.Serialise.TextEnvelope</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/transformers-0.6.1.2-inplace/src/Control.Monad.Trans.Except.html"><span class="hs-identifier">Control.Monad.Trans.Except</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/transformers-0.6.1.2-inplace/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier">ExceptT</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/transformers-0.6.1.2-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier">runExceptT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Except.Extra</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">firstExceptT</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hoistEither</span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeError"><span class="hs-identifier hs-type">TextEnvelopeError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621682784997"><span class="annot"><span class="annottext">prettyError :: forall ann. TextEnvelopeError -&gt; Doc ann
+</span><a href="#local-6989586621682784997"><span class="hs-identifier hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TextEnvelopeError -&gt; Doc ann
+forall ann. TextEnvelopeError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#renderTextEnvelopeError"><span class="hs-identifier hs-var">renderTextEnvelopeError</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span id="local-6989586621682784759"><span id="local-6989586621682784760"><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#textEnvelopeTypeInEra"><span class="hs-identifier hs-type">textEnvelopeTypeInEra</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682784759"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784760"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#CardanoEra"><span class="hs-identifier hs-type">CardanoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784760"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.HasTypeProxy.html#AsType"><span class="hs-identifier hs-type">AsType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682784759"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784760"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeType"><span class="hs-identifier hs-type">TextEnvelopeType</span></a></span></span></span><span>
+</span><span id="line-67"></span><span id="textEnvelopeTypeInEra"><span class="annot"><span class="annottext">textEnvelopeTypeInEra :: forall (f :: * -&gt; *) era.
+HasTextEnvelope (f era) =&gt;
+CardanoEra era -&gt; AsType (f era) -&gt; TextEnvelopeType
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#textEnvelopeTypeInEra"><span class="hs-identifier hs-var hs-var">textEnvelopeTypeInEra</span></a></span></span><span> </span><span class="annot"><span class="annottext">CardanoEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="annottext">AsType (f era) -&gt; TextEnvelopeType
+forall a. HasTextEnvelope a =&gt; AsType a -&gt; TextEnvelopeType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#textEnvelopeType"><span class="hs-identifier hs-var">textEnvelopeType</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- | Write a value to a file in the text envelope format.</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- Note that this does /not/ set conservative file permissions: the file is</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- created with the default permissions which should be restricted with `umask`. When writing sensitive data such as</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- signing keys, use 'writeFileTextEnvelopeWithOwnerPermissions' instead,</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- which tries to restrict access to the file owner where the platform</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- supports it (see its documentation for the exact guarantees).</span><span>
+</span><span id="line-77"></span><span id="local-6989586621682784768"><span id="local-6989586621682784769"><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#writeFileTextEnvelope"><span class="hs-identifier hs-type">writeFileTextEnvelope</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784768"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784769"><span class="hs-identifier hs-type">content</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#Out"><span class="hs-identifier hs-type">Out</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeDescr"><span class="hs-identifier hs-type">TextEnvelopeDescr</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682784768"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-83"></span><span id="writeFileTextEnvelope"><span class="annot"><span class="annottext">writeFileTextEnvelope :: forall a content.
+HasTextEnvelope a =&gt;
+File content 'Out
+-&gt; Maybe TextEnvelopeDescr -&gt; a -&gt; IO (Either (FileError ()) ())
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#writeFileTextEnvelope"><span class="hs-identifier hs-var hs-var">writeFileTextEnvelope</span></a></span></span><span> </span><span id="local-6989586621682785005"><span class="annot"><span class="annottext">File content 'Out
+</span><a href="#local-6989586621682785005"><span class="hs-identifier hs-var">outputFile</span></a></span></span><span> </span><span id="local-6989586621682785006"><span class="annot"><span class="annottext">Maybe TextEnvelopeDescr
+</span><a href="#local-6989586621682785006"><span class="hs-identifier hs-var">mbDescr</span></a></span></span><span> </span><span id="local-6989586621682785007"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682785007"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">File content 'Out -&gt; ByteString -&gt; IO (Either (FileError ()) ())
+forall (m :: * -&gt; *) content e.
+MonadIO m =&gt;
+File content 'Out -&gt; ByteString -&gt; m (Either (FileError e) ())
+</span><a href="Cardano.Api.IO.html#writeLazyByteStringFile"><span class="hs-identifier hs-var">writeLazyByteStringFile</span></a></span><span> </span><span class="annot"><span class="annottext">File content 'Out
+</span><a href="#local-6989586621682785005"><span class="hs-identifier hs-var">outputFile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe TextEnvelopeDescr -&gt; a -&gt; ByteString
+forall a.
+HasTextEnvelope a =&gt;
+Maybe TextEnvelopeDescr -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#textEnvelopeToJSON"><span class="hs-identifier hs-var">textEnvelopeToJSON</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe TextEnvelopeDescr
+</span><a href="#local-6989586621682785006"><span class="hs-identifier hs-var">mbDescr</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682785007"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- | Like 'writeFileTextEnvelope', but the file is created so that only its</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- owner has access to it, to the extent the platform allows it.</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- On POSIX and Windows, the contents are written to a freshly created</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- temporary file which is then renamed over the target path. The target file</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- therefore never exists in a partially written state: if writing fails</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- midway (e.g. on a crash or a full disk), its previous contents are left</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- untouched. A pre-existing file is replaced wholesale: its previous</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- permission bits are not preserved, and a symlink is replaced by a regular</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- file rather than written through.</span><span>
+</span><span id="line-96"></span><span class="hs-comment">--</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- * On POSIX systems, the file is created with @0600@ permissions (read</span><span>
+</span><span id="line-98"></span><span class="hs-comment">--   and write for the file owner only, further filtered by the process's</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--   @umask@), and its ownership is set to the current (real) user. The</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--   contents are synced to disk before the rename and the directory after</span><span>
+</span><span id="line-101"></span><span class="hs-comment">--   it, so a power failure can neither leave an empty file at the target</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--   path nor undo a completed write.</span><span>
+</span><span id="line-103"></span><span class="hs-comment">--</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- * On Windows, the file is owned by the current user, but no explicit</span><span>
+</span><span id="line-105"></span><span class="hs-comment">--   ACL is set: the file inherits the access control list of the target</span><span>
+</span><span id="line-106"></span><span class="hs-comment">--   directory.</span><span>
+</span><span id="line-107"></span><span class="hs-comment">--</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- * On WASM, this is currently a no-op: no file is written at all.</span><span>
+</span><span id="line-109"></span><span class="hs-comment">--</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- Use this when writing sensitive data such as signing keys.</span><span>
+</span><span id="line-111"></span><span id="local-6989586621682784780"><span id="local-6989586621682784781"><span id="local-6989586621682784782"><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#writeFileTextEnvelopeWithOwnerPermissions"><span class="hs-identifier hs-type">writeFileTextEnvelopeWithOwnerPermissions</span></a></span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784780"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784781"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784782"><span class="hs-identifier hs-type">content</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#Out"><span class="hs-identifier hs-type">Out</span></a></span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeDescr"><span class="hs-identifier hs-type">TextEnvelopeDescr</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682784780"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621682784781"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-118"></span><span id="writeFileTextEnvelopeWithOwnerPermissions"><span class="annot"><span class="annottext">writeFileTextEnvelopeWithOwnerPermissions :: forall a (m :: * -&gt; *) content.
+(HasTextEnvelope a, MonadIO m) =&gt;
+File content 'Out
+-&gt; Maybe TextEnvelopeDescr -&gt; a -&gt; m (Either (FileError ()) ())
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#writeFileTextEnvelopeWithOwnerPermissions"><span class="hs-identifier hs-var hs-var">writeFileTextEnvelopeWithOwnerPermissions</span></a></span></span><span> </span><span id="local-6989586621682785013"><span class="annot"><span class="annottext">File content 'Out
+</span><a href="#local-6989586621682785013"><span class="hs-identifier hs-var">outputFile</span></a></span></span><span> </span><span id="local-6989586621682785014"><span class="annot"><span class="annottext">Maybe TextEnvelopeDescr
+</span><a href="#local-6989586621682785014"><span class="hs-identifier hs-var">mbDescr</span></a></span></span><span> </span><span id="local-6989586621682785015"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682785015"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-119"></span><span>  </span><span class="annot"><span class="annottext">File content 'Out -&gt; ByteString -&gt; m (Either (FileError ()) ())
+forall (m :: * -&gt; *) content e.
+MonadIO m =&gt;
+File content 'Out -&gt; ByteString -&gt; m (Either (FileError e) ())
+</span><a href="Cardano.Api.IO.html#writeLazyByteStringFileWithOwnerPermissions"><span class="hs-identifier hs-var">writeLazyByteStringFileWithOwnerPermissions</span></a></span><span> </span><span class="annot"><span class="annottext">File content 'Out
+</span><a href="#local-6989586621682785013"><span class="hs-identifier hs-var">outputFile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe TextEnvelopeDescr -&gt; a -&gt; ByteString
+forall a.
+HasTextEnvelope a =&gt;
+Maybe TextEnvelopeDescr -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#textEnvelopeToJSON"><span class="hs-identifier hs-var">textEnvelopeToJSON</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe TextEnvelopeDescr
+</span><a href="#local-6989586621682785014"><span class="hs-identifier hs-var">mbDescr</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621682785015"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span id="local-6989586621682784786"><span id="local-6989586621682784787"><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readFileTextEnvelope"><span class="hs-identifier hs-type">readFileTextEnvelope</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784786"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784787"><span class="hs-identifier hs-type">content</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#In"><span class="hs-identifier hs-type">In</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeError"><span class="hs-identifier hs-type">TextEnvelopeError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621682784786"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-125"></span><span id="readFileTextEnvelope"><span class="annot"><span class="annottext">readFileTextEnvelope :: forall a content.
+HasTextEnvelope a =&gt;
+File content 'In -&gt; IO (Either (FileError TextEnvelopeError) a)
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readFileTextEnvelope"><span class="hs-identifier hs-var hs-var">readFileTextEnvelope</span></a></span></span><span> </span><span id="local-6989586621682785023"><span class="annot"><span class="annottext">File content 'In
+</span><a href="#local-6989586621682785023"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><span class="annottext">ExceptT (FileError TextEnvelopeError) IO a
+-&gt; IO (Either (FileError TextEnvelopeError) a)
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/transformers-0.6.1.2-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier hs-var">runExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT (FileError TextEnvelopeError) IO a
+ -&gt; IO (Either (FileError TextEnvelopeError) a))
+-&gt; ExceptT (FileError TextEnvelopeError) IO a
+-&gt; IO (Either (FileError TextEnvelopeError) a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-127"></span><span>    </span><span id="local-6989586621682785024"><span class="annot"><a href="#local-6989586621682785024"><span class="hs-identifier hs-var">content</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath
+-&gt; (FilePath -&gt; IO ByteString)
+-&gt; ExceptT (FileError TextEnvelopeError) IO ByteString
+forall (m :: * -&gt; *) s e.
+MonadIO m =&gt;
+FilePath -&gt; (FilePath -&gt; IO s) -&gt; ExceptT (FileError e) m s
+</span><a href="Cardano.Api.Error.html#fileIOExceptT"><span class="hs-identifier hs-var">fileIOExceptT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">File content 'In -&gt; FilePath
+forall content (direction :: FileDirection).
+File content direction -&gt; FilePath
+</span><a href="Cardano.Api.IO.Internal.Base.html#unFile"><span class="hs-identifier hs-var">unFile</span></a></span><span> </span><span class="annot"><span class="annottext">File content 'In
+</span><a href="#local-6989586621682785023"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="Cardano.Api.IO.html#readFileBlocking"><span class="hs-identifier hs-var">readFileBlocking</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">firstExceptT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#unFile"><span class="hs-identifier hs-var">unFile</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682785023"><span class="hs-identifier hs-type">path</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">hoistEither</span></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-130"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#deserialiseFromTextEnvelopeJSON"><span class="hs-identifier hs-type">deserialiseFromTextEnvelopeJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682785024"><span class="hs-identifier hs-type">content</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span id="local-6989586621682784815"><span id="local-6989586621682784817"><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readFileTextEnvelopeAnyOf"><span class="hs-identifier hs-type">readFileTextEnvelopeAnyOf</span></a></span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.HasTypeProxy.html#FromSomeType"><span class="hs-identifier hs-type">FromSomeType</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784815"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682784817"><span class="hs-identifier hs-type">content</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#In"><span class="hs-identifier hs-type">In</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeError"><span class="hs-identifier hs-type">TextEnvelopeError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621682784815"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-136"></span><span id="readFileTextEnvelopeAnyOf"><span class="annot"><span class="annottext">readFileTextEnvelopeAnyOf :: forall b content.
+[FromSomeType HasTextEnvelope b]
+-&gt; File content 'In -&gt; IO (Either (FileError TextEnvelopeError) b)
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readFileTextEnvelopeAnyOf"><span class="hs-identifier hs-var hs-var">readFileTextEnvelopeAnyOf</span></a></span></span><span> </span><span id="local-6989586621682785033"><span class="annot"><span class="annottext">[FromSomeType HasTextEnvelope b]
+</span><a href="#local-6989586621682785033"><span class="hs-identifier hs-var">types</span></a></span></span><span> </span><span id="local-6989586621682785034"><span class="annot"><span class="annottext">File content 'In
+</span><a href="#local-6989586621682785034"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-137"></span><span>  </span><span class="annot"><span class="annottext">ExceptT (FileError TextEnvelopeError) IO b
+-&gt; IO (Either (FileError TextEnvelopeError) b)
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/transformers-0.6.1.2-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier hs-var">runExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT (FileError TextEnvelopeError) IO b
+ -&gt; IO (Either (FileError TextEnvelopeError) b))
+-&gt; ExceptT (FileError TextEnvelopeError) IO b
+-&gt; IO (Either (FileError TextEnvelopeError) b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-138"></span><span>    </span><span id="local-6989586621682785035"><span class="annot"><a href="#local-6989586621682785035"><span class="hs-identifier hs-var">content</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath
+-&gt; (FilePath -&gt; IO ByteString)
+-&gt; ExceptT (FileError TextEnvelopeError) IO ByteString
+forall (m :: * -&gt; *) s e.
+MonadIO m =&gt;
+FilePath -&gt; (FilePath -&gt; IO s) -&gt; ExceptT (FileError e) m s
+</span><a href="Cardano.Api.Error.html#fileIOExceptT"><span class="hs-identifier hs-var">fileIOExceptT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">File content 'In -&gt; FilePath
+forall content (direction :: FileDirection).
+File content direction -&gt; FilePath
+</span><a href="Cardano.Api.IO.Internal.Base.html#unFile"><span class="hs-identifier hs-var">unFile</span></a></span><span> </span><span class="annot"><span class="annottext">File content 'In
+</span><a href="#local-6989586621682785034"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="Cardano.Api.IO.html#readFileBlocking"><span class="hs-identifier hs-var">readFileBlocking</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">firstExceptT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#unFile"><span class="hs-identifier hs-var">unFile</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682785034"><span class="hs-identifier hs-type">path</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-140"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">hoistEither</span></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-141"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#deserialiseFromTextEnvelopeJSONAnyOf"><span class="hs-identifier hs-type">deserialiseFromTextEnvelopeJSONAnyOf</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682785033"><span class="hs-identifier hs-type">types</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682785035"><span class="hs-identifier hs-type">content</span></a></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readTextEnvelopeFromFile"><span class="hs-identifier hs-type">readTextEnvelopeFromFile</span></a></span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeError"><span class="hs-identifier hs-type">TextEnvelopeError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelope"><span class="hs-identifier hs-type">TextEnvelope</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span id="readTextEnvelopeFromFile"><span class="annot"><span class="annottext">readTextEnvelopeFromFile :: FilePath -&gt; IO (Either (FileError TextEnvelopeError) TextEnvelope)
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readTextEnvelopeFromFile"><span class="hs-identifier hs-var hs-var">readTextEnvelopeFromFile</span></a></span></span><span> </span><span id="local-6989586621682785036"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621682785036"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-147"></span><span>  </span><span class="annot"><span class="annottext">ExceptT (FileError TextEnvelopeError) IO TextEnvelope
+-&gt; IO (Either (FileError TextEnvelopeError) TextEnvelope)
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/transformers-0.6.1.2-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier hs-var">runExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT (FileError TextEnvelopeError) IO TextEnvelope
+ -&gt; IO (Either (FileError TextEnvelopeError) TextEnvelope))
+-&gt; ExceptT (FileError TextEnvelopeError) IO TextEnvelope
+-&gt; IO (Either (FileError TextEnvelopeError) TextEnvelope)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-148"></span><span>    </span><span id="local-6989586621682785037"><span class="annot"><a href="#local-6989586621682785037"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath
+-&gt; (FilePath -&gt; IO ByteString)
+-&gt; ExceptT (FileError TextEnvelopeError) IO ByteString
+forall (m :: * -&gt; *) s e.
+MonadIO m =&gt;
+FilePath -&gt; (FilePath -&gt; IO s) -&gt; ExceptT (FileError e) m s
+</span><a href="Cardano.Api.Error.html#fileIOExceptT"><span class="hs-identifier hs-var">fileIOExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621682785036"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="Cardano.Api.IO.html#readFileBlocking"><span class="hs-identifier hs-var">readFileBlocking</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">firstExceptT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682785036"><span class="hs-identifier hs-type">path</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeAesonDecodeError"><span class="hs-identifier hs-type">TextEnvelopeAesonDecodeError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-150"></span><span>      </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">hoistEither</span></span><span>
+</span><span id="line-151"></span><span>      </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.eitherDecodeStrict'</span></span><span> </span><span class="annot"><a href="#local-6989586621682785037"><span class="hs-identifier hs-type">bs</span></a></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readTextEnvelopeOfTypeFromFile"><span class="hs-identifier hs-type">readTextEnvelopeOfTypeFromFile</span></a></span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeType"><span class="hs-identifier hs-type">TextEnvelopeType</span></a></span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeError"><span class="hs-identifier hs-type">TextEnvelopeError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelope"><span class="hs-identifier hs-type">TextEnvelope</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-157"></span><span id="readTextEnvelopeOfTypeFromFile"><span class="annot"><span class="annottext">readTextEnvelopeOfTypeFromFile :: TextEnvelopeType
+-&gt; FilePath
+-&gt; IO (Either (FileError TextEnvelopeError) TextEnvelope)
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readTextEnvelopeOfTypeFromFile"><span class="hs-identifier hs-var hs-var">readTextEnvelopeOfTypeFromFile</span></a></span></span><span> </span><span id="local-6989586621682785041"><span class="annot"><span class="annottext">TextEnvelopeType
+</span><a href="#local-6989586621682785041"><span class="hs-identifier hs-var">expectedType</span></a></span></span><span> </span><span id="local-6989586621682785042"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621682785042"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-158"></span><span>  </span><span class="annot"><span class="annottext">ExceptT (FileError TextEnvelopeError) IO TextEnvelope
+-&gt; IO (Either (FileError TextEnvelopeError) TextEnvelope)
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/transformers-0.6.1.2-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier hs-var">runExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT (FileError TextEnvelopeError) IO TextEnvelope
+ -&gt; IO (Either (FileError TextEnvelopeError) TextEnvelope))
+-&gt; ExceptT (FileError TextEnvelopeError) IO TextEnvelope
+-&gt; IO (Either (FileError TextEnvelopeError) TextEnvelope)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-159"></span><span>    </span><span id="local-6989586621682785043"><span class="annot"><a href="#local-6989586621682785043"><span class="hs-identifier hs-var">te</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Either (FileError TextEnvelopeError) TextEnvelope)
+-&gt; ExceptT (FileError TextEnvelopeError) IO TextEnvelope
+forall e (m :: * -&gt; *) a. m (Either e a) -&gt; ExceptT e m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/transformers-0.6.1.2-inplace/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-var">ExceptT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; IO (Either (FileError TextEnvelopeError) TextEnvelope)
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readTextEnvelopeFromFile"><span class="hs-identifier hs-var">readTextEnvelopeFromFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621682785042"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">firstExceptT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682785042"><span class="hs-identifier hs-type">path</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-161"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">hoistEither</span></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-162"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#expectTextEnvelopeOfType"><span class="hs-identifier hs-type">expectTextEnvelopeOfType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682785041"><span class="hs-identifier hs-type">expectedType</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621682785043"><span class="hs-identifier hs-type">te</span></a></span><span>
+</span><span id="line-163"></span><span>    </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-type">return</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682785043"><span class="hs-identifier hs-type">te</span></a></span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#textEnvelopeTypeToEra"><span class="hs-identifier hs-type">textEnvelopeTypeToEra</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/text-2.1.3-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeError"><span class="hs-identifier hs-type">TextEnvelopeError</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-type">AnyShelleyBasedEra</span></a></span><span>
+</span><span id="line-166"></span><span id="textEnvelopeTypeToEra"><span class="annot"><span class="annottext">textEnvelopeTypeToEra :: Text -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#textEnvelopeTypeToEra"><span class="hs-identifier hs-var hs-var">textEnvelopeTypeToEra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-168"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxSignedShelley&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ShelleyEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraShelley"><span class="hs-identifier hs-var">ShelleyBasedEraShelley</span></a></span><span>
+</span><span id="line-169"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Tx AllegraEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AllegraEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAllegra"><span class="hs-identifier hs-var">ShelleyBasedEraAllegra</span></a></span><span>
+</span><span id="line-170"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Tx MaryEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra MaryEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraMary"><span class="hs-identifier hs-var">ShelleyBasedEraMary</span></a></span><span>
+</span><span id="line-171"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Tx AlonzoEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AlonzoEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAlonzo"><span class="hs-identifier hs-var">ShelleyBasedEraAlonzo</span></a></span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Tx BabbageEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span>
+</span><span id="line-173"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Tx ConwayEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ConwayEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConway"><span class="hs-identifier hs-var">ShelleyBasedEraConway</span></a></span><span>
+</span><span id="line-174"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Tx DijkstraEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra DijkstraEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra DijkstraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraDijkstra"><span class="hs-identifier hs-var">ShelleyBasedEraDijkstra</span></a></span><span>
+</span><span id="line-175"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Witnessed Tx ShelleyEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ShelleyEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraShelley"><span class="hs-identifier hs-var">ShelleyBasedEraShelley</span></a></span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Witnessed Tx AllegraEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AllegraEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAllegra"><span class="hs-identifier hs-var">ShelleyBasedEraAllegra</span></a></span><span>
+</span><span id="line-177"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Witnessed Tx MaryEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra MaryEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraMary"><span class="hs-identifier hs-var">ShelleyBasedEraMary</span></a></span><span>
+</span><span id="line-178"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Witnessed Tx AlonzoEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AlonzoEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAlonzo"><span class="hs-identifier hs-var">ShelleyBasedEraAlonzo</span></a></span><span>
+</span><span id="line-179"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Witnessed Tx BabbageEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span>
+</span><span id="line-180"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Witnessed Tx ConwayEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ConwayEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConway"><span class="hs-identifier hs-var">ShelleyBasedEraConway</span></a></span><span>
+</span><span id="line-181"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Witnessed Tx DijkstraEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra DijkstraEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra DijkstraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraDijkstra"><span class="hs-identifier hs-var">ShelleyBasedEraDijkstra</span></a></span><span>
+</span><span id="line-182"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unwitnessed Tx ShelleyEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ShelleyEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraShelley"><span class="hs-identifier hs-var">ShelleyBasedEraShelley</span></a></span><span>
+</span><span id="line-183"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unwitnessed Tx AllegraEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AllegraEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAllegra"><span class="hs-identifier hs-var">ShelleyBasedEraAllegra</span></a></span><span>
+</span><span id="line-184"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unwitnessed Tx MaryEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra MaryEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraMary"><span class="hs-identifier hs-var">ShelleyBasedEraMary</span></a></span><span>
+</span><span id="line-185"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unwitnessed Tx AlonzoEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AlonzoEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAlonzo"><span class="hs-identifier hs-var">ShelleyBasedEraAlonzo</span></a></span><span>
+</span><span id="line-186"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unwitnessed Tx BabbageEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span>
+</span><span id="line-187"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unwitnessed Tx ConwayEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ConwayEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConway"><span class="hs-identifier hs-var">ShelleyBasedEraConway</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unwitnessed Tx DijkstraEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra DijkstraEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra DijkstraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraDijkstra"><span class="hs-identifier hs-var">ShelleyBasedEraDijkstra</span></a></span><span>
+</span><span id="line-189"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxWitness ShelleyEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ShelleyEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraShelley"><span class="hs-identifier hs-var">ShelleyBasedEraShelley</span></a></span><span>
+</span><span id="line-190"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxWitness AllegraEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AllegraEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAllegra"><span class="hs-identifier hs-var">ShelleyBasedEraAllegra</span></a></span><span>
+</span><span id="line-191"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxWitness MaryEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra MaryEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraMary"><span class="hs-identifier hs-var">ShelleyBasedEraMary</span></a></span><span>
+</span><span id="line-192"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxWitness AlonzoEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AlonzoEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAlonzo"><span class="hs-identifier hs-var">ShelleyBasedEraAlonzo</span></a></span><span>
+</span><span id="line-193"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxWitness BabbageEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span>
+</span><span id="line-194"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxWitness ConwayEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ConwayEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConway"><span class="hs-identifier hs-var">ShelleyBasedEraConway</span></a></span><span>
+</span><span id="line-195"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxWitness DijkstraEra&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a. a -&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyShelleyBasedEra -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; AnyShelleyBasedEra
+-&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra DijkstraEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra DijkstraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraDijkstra"><span class="hs-identifier hs-var">ShelleyBasedEraDijkstra</span></a></span><span>
+</span><span id="line-196"></span><span>    </span><span id="local-6989586621682785054"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621682785054"><span class="hs-identifier hs-var">unknownCddlType</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TextEnvelopeError -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(TextEnvelopeError -&gt; Either TextEnvelopeError AnyShelleyBasedEra)
+-&gt; TextEnvelopeError -&gt; Either TextEnvelopeError AnyShelleyBasedEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; TextEnvelopeError
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-c7e87e90275008513dc94d0a6a857e02c500e0ad2a5c1cf7b6aeacdd4acf70cb/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeUnknownType"><span class="hs-identifier hs-var">TextEnvelopeUnknownType</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621682785054"><span class="hs-identifier hs-var">unknownCddlType</span></a></span><span>
+</span><span id="line-197"></span></pre></body></html>
