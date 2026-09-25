@@ -223,8 +223,8 @@ import Cardano.Api.Era.Internal.Core qualified as Api
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
-import Cardano.Api.Experimental.Tx.Internal.BodyContent.New
 import Cardano.Api.Experimental.Tx.Internal.Fee
+import Cardano.Api.Experimental.Tx.Internal.TopTx.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)
