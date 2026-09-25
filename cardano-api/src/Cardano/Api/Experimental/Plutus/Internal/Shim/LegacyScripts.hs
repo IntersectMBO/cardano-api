@@ -54,6 +54,7 @@ import Cardano.Ledger.Plutus.Language qualified as L
 
 import Data.Text qualified as Text
 import Data.Typeable
+import GHC.Stack (HasCallStack)
 
 -- | This module is concerned with converting legacy api scripts and by extension
 -- script witnesses to the new api.
@@ -381,7 +382,8 @@ legacyWitnessConversion
 legacyWitnessConversion eon = mapM (toAnyWitness eon)
 
 legacyWitnessToScriptRequirements
-  :: AlonzoEraOnwards era
+  :: HasCallStack
+  => AlonzoEraOnwards era
   -> [(Witnessable witnessable (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness ctx era))]
   -> Either CBOR.DecoderError (TxScriptWitnessRequirements (ShelleyLedgerEra era))
 legacyWitnessToScriptRequirements eon wits = do
@@ -389,7 +391,14 @@ legacyWitnessToScriptRequirements eon wits = do
   return $
     alonzoEraOnwardsConstraints eon $
       obtainMonoidConstraint eon $
-        getTxScriptWitnessesRequirements r
+        -- Legacy witnesses carry a 'ScriptLanguageInEra' proof, so the era already
+        -- supports every language reachable here; this 'Left' cannot occur.
+        either
+          ( \lang ->
+              error $ "legacyWitnessToScriptRequirements: unreachable, language/era proof excludes " <> show lang
+          )
+          id
+          (getTxScriptWitnessesRequirements r)
 
 -- Misc helpers
 

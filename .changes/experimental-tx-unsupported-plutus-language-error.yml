@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1359
+kind:
+  - breaking
+  - bugfix
+description: |
+  `makeUnsignedTx` now fails with `MakeUnsignedTxPlutusLanguageNotSupportedInEra` when a transaction contains an inline Plutus script whose language the era does not support (previously the script was silently omitted from the witness set while its redeemer was kept, producing a transaction that failed at submission); the return types of `getAnyWitnessScript`, `getAnyPlutusWitnessPlutusScript`, `getTxScriptWitnessRequirements` and `getTxScriptWitnessesRequirements` changed to `Either`.

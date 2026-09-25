@@ -92,9 +92,9 @@ getAnyWitnessSimpleScript (AnyPlutusScriptWitness _) = Nothing
 getAnyWitnessPlutusScript
   :: L.AlonzoEraScript era
   => AnyWitness era
-  -> Maybe (L.Script era)
-getAnyWitnessPlutusScript AnyKeyWitnessPlaceholder = Nothing
-getAnyWitnessPlutusScript (AnySimpleScriptWitness _) = Nothing
+  -> Either L.Language (Maybe (L.Script era))
+getAnyWitnessPlutusScript AnyKeyWitnessPlaceholder = Right Nothing
+getAnyWitnessPlutusScript (AnySimpleScriptWitness _) = Right Nothing
 getAnyWitnessPlutusScript
   ( AnyPlutusScriptWitness
       s
@@ -115,9 +115,9 @@ getAnyWitnessScriptData AnySimpleScriptWitness{} = mempty
 getAnyWitnessScriptData (AnyPlutusScriptWitness s) = getAnyPlutusScriptData s
 
 getAnyWitnessScript
-  :: L.AlonzoEraScript era => AnyWitness era -> Maybe (L.Script era)
-getAnyWitnessScript AnyKeyWitnessPlaceholder = Nothing
-getAnyWitnessScript ss@(AnySimpleScriptWitness{}) = getAnyWitnessSimpleScript ss
+  :: L.AlonzoEraScript era => AnyWitness era -> Either L.Language (Maybe (L.Script era))
+getAnyWitnessScript AnyKeyWitnessPlaceholder = Right Nothing
+getAnyWitnessScript ss@(AnySimpleScriptWitness{}) = Right $ getAnyWitnessSimpleScript ss
 getAnyWitnessScript ps@(AnyPlutusScriptWitness{}) = getAnyWitnessPlutusScript ps
 
 getPlutusDatum
