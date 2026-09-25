@@ -56,7 +56,15 @@ Tip: slot 65 height 5 hash bc51dd8ca524466726cd0f4f50d5ae481eda1630bf7dba59c3cb1
 Protocol parameters: max_tx_size 16384 max_block_body_size 65536
 ```
 
-grpcio can also connect straight to the Unix socket with a `unix:` target (e.g. `grpc.insecure_channel("unix:///tmp/demo-cluster/socket/node1/rpc.sock")`), for a node started with `--enable-grpc` instead.
+grpcio can also connect straight to the Unix socket, for a node started with `--enable-grpc` instead.
+Get its path (relative to `/tmp/demo-cluster`) from the manifest:
+
+```bash
+jq -r '.nodes[0].grpc.socketPath' /tmp/demo-cluster/manifest.json
+# socket/node1/rpc.sock
+```
+
+then use it as a `unix:` target, e.g. `grpc.insecure_channel("unix:///tmp/demo-cluster/socket/node1/rpc.sock")`.
 
 ## Build and submit a transaction
 
