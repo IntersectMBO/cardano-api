@@ -381,7 +381,7 @@ test-suite cardano-api-test
     cardano-ledger-babbage,
     cardano-ledger-binary,
     cardano-ledger-conway,
-    cardano-ledger-core,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.22,
     cardano-ledger-dijkstra,
     cardano-ledger-mary,
     cardano-ledger-shelley,
@@ -396,6 +396,7 @@ test-suite cardano-api-test
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,
+    mempack,
     microlens,
     mtl,
     ouroboros-consensus:{cardano, ouroboros-consensus, protocol},
@@ -410,6 +411,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Address
     Test.Cardano.Api.Bech32
     Test.Cardano.Api.CBOR
+    Test.Cardano.Api.Certificate
     Test.Cardano.Api.Cip129
     Test.Cardano.Api.Crypto
     Test.Cardano.Api.Envelope
