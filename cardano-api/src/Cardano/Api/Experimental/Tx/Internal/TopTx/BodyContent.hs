@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
+module Cardano.Api.Experimental.Tx.Internal.TopTx.BodyContent
   ( TxCertificates (..)
   , TxReturnCollateral (..)
   , TxTotalCollateral (..)
@@ -139,6 +139,7 @@ import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Core qualified as L (TxLevel (..))
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Language (PlutusBinary (..), plutusLanguage)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
@@ -796,6 +797,15 @@ data TxBodyContent era
   , txSupplementalDatums :: Map L.DataHash (L.Data era)
   -- ^ Supplemental datums are datums whose hashes correspond to output datum hashes.
   -- They are included in the transaction witness set for communication purposes only.
+  -- ------------------------------------------------------------
+  -- Fields below are new in the Dijkstra era.
+  -- ------------------------------------------------------------
+  , txGuards :: OSet (L.Credential L.Guard)
+  , txSubTransactions :: OMap L.TxId (L.Tx L.SubTx era)
+  , txRequiredTopLevelGuards :: Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
+  , txDirectDeposits :: L.DirectDeposits
+  , txAccountBalanceIntervals :: L.AccountBalanceIntervals era
+  , txStartingAccountBalanceIntervals :: L.AccountBalanceIntervals era
   }
 
 defaultTxBodyContent
@@ -824,6 +834,12 @@ defaultTxBodyContent =
     , txCurrentTreasuryValue = Nothing
     , txTreasuryDonation = Nothing
     , txSupplementalDatums = mempty
+    , txGuards = OSet.empty
+    , txSubTransactions = OMap.empty
+    , txRequiredTopLevelGuards = mempty
+    , txDirectDeposits = L.DirectDeposits mempty
+    , txAccountBalanceIntervals = L.AccountBalanceIntervals mempty
+    , txStartingAccountBalanceIntervals = L.AccountBalanceIntervals mempty
     }
 
 extractAllIndexedPlutusScriptWitnesses
