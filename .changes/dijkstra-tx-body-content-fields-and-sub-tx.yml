@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1361
+kind:
+  - breaking
+  - feature
+description: |
+  Renamed `Cardano.Api.Experimental.Tx.Internal.BodyContent.New` to `Cardano.Api.Experimental.Tx.Internal.TopTx.BodyContent`. Added the Dijkstra-era fields to the experimental `TxBodyContent` (`txGuards`, `txSubTransactions`, `txRequiredTopLevelGuards`, `txDirectDeposits`, `txAccountBalanceIntervals`, `txStartingAccountBalanceIntervals`) and populated the ones the ledger exposes when building a Dijkstra transaction body. Added `Cardano.Api.Experimental.Tx.Internal.SubTransaction` with a draft `SubTx` content type for Dijkstra sub-transactions.

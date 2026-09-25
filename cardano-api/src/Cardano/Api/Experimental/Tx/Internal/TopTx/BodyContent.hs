@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
+module Cardano.Api.Experimental.Tx.Internal.TopTx.BodyContent
   ( TxCertificates (..)
   , TxReturnCollateral (..)
   , TxTotalCollateral (..)
@@ -29,6 +29,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , extractDatumsAndHashes
   , getDatums
   , collectTxBodyScriptWitnessRequirements
+  , collectScriptWitnessRequirements
   , makeUnsignedTx
   , extractAllIndexedPlutusScriptWitnesses
   , txMintValueToValue
@@ -60,9 +61,23 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent.New
   , setTxValidityUpperBound
   , setTxVotingProcedures
   , setTxWithdrawals
+  , setTxGuards
+  , setTxSubTransactions
+  , setTxRequiredTopLevelGuards
+  , setTxDirectDeposits
+  , setTxAccountBalanceIntervals
+  , setTxStartingAccountBalanceIntervals
 
     -- * Internal conversions
+  , convTxIns
+  , convReferenceInputs
+  , convWithdrawals
+  , convCertificates
+  , convMintValue
   , convProposalProcedures
+  , convVotingProcedures
+  , convPParamsToScriptIntegrityHash
+  , toAuxiliaryData
   , extractWitnessableTxIns
   , extractWitnessableMints
   , extractWitnessableCertificates
@@ -139,7 +154,11 @@ import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Core qualified as L (TxLevel (..))
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Dijkstra.TxBody qualified as L
+  ( DijkstraEraTxBody (accountBalanceIntervalsTxBodyL, subTransactionsTxBodyL)
+  )
 import Cardano.Ledger.Plutus.Language (PlutusBinary (..), plutusLanguage)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
@@ -156,6 +175,7 @@ import Data.Map.Ordered.Strict qualified as OMap
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
+import Data.OMap.Strict qualified as LOMap
 import Data.OSet.Strict (OSet)
 import Data.OSet.Strict qualified as OSet
 import Data.Sequence.Strict qualified as Seq
@@ -171,6 +191,8 @@ data MakeUnsignedTxError
     -- parameters were provided. Protocol parameters are required to
     -- compute the script integrity hash (script_data_hash).
     MakeUnsignedTxMissingProtocolParams
+  | -- | A sub-transaction was requested in an era that has no sub-transactions.
+    MakeUnsignedTxSubTransactionsUnsupported
   deriving (Eq, Show)
 
 instance Error MakeUnsignedTxError where
@@ -180,6 +202,8 @@ instance Error MakeUnsignedTxError where
       , "Protocol parameters are required to compute the script integrity hash "
       , "(script_data_hash) from the cost models."
       ]
+  prettyError MakeUnsignedTxSubTransactionsUnsupported =
+    "Sub-transactions are only supported from the Dijkstra era onwards."
 
 makeUnsignedTx
   :: forall era
@@ -192,7 +216,6 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
   -- cardano-api types
   let apiMintValue = txMintValue bc
       apiReferenceInputs = txInsReference bc
-      apiExtraKeyWitnesses = txExtraKeyWits bc
 
       -- Ledger types
       txins = convTxIns $ txIns bc
@@ -216,32 +239,26 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
       languages
 
   let setMint = convMintValue apiMintValue
-      setReqSignerHashes = convExtraKeyWitnesses apiExtraKeyWitnesses
-      -- reqSignerHashesTxBodyL is gated AtMostEra "Conway" in the ledger;
-      -- Dijkstra replaced required signer hashes with guards, and a key-hash
-      -- guard makes the ledger demand that key's signature: translate,
-      -- appending so any other guards stay intact.
-      applyReqSignerHashes b = case era of
-        ConwayEra -> b & L.reqSignerHashesTxBodyL .~ setReqSignerHashes
-        DijkstraEra ->
-          b & L.guardsTxBodyL %~ (<> OSet.fromSet (Set.map L.KeyHashObj setReqSignerHashes))
-      ledgerTxBody =
-        applyReqSignerHashes $
-          L.mkBasicTxBody
-            & L.inputsTxBodyL .~ txins
-            & L.collateralInputsTxBodyL .~ collTxIns
-            & L.referenceInputsTxBodyL .~ refTxIns
-            & L.outputsTxBodyL .~ outs
-            & L.totalCollateralTxBodyL .~ L.maybeToStrictMaybe totCollateral
-            & L.collateralReturnTxBodyL .~ L.maybeToStrictMaybe retCollateral
-            & L.feeTxBodyL .~ fee
-            & L.vldtTxBodyL . L.invalidBeforeL .~ L.maybeToStrictMaybe (txValidityLowerBound bc)
-            & L.vldtTxBodyL . L.invalidHereAfterL .~ L.maybeToStrictMaybe (txValidityUpperBound bc)
-            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-            & L.withdrawalsTxBodyL .~ withdrawals
-            & L.certsTxBodyL .~ certs
-            & L.mintTxBodyL .~ setMint
-            & L.auxDataHashTxBodyL .~ L.maybeToStrictMaybe (Ledger.hashTxAuxData <$> txAuxData)
+      -- The ledger body is built in two stages. This first stage sets only the
+      -- fields whose lenses exist in every era we support, so it needs no case
+      -- on the era. Fields that exist in some eras only, or whose meaning
+      -- changed between eras, are set in 'eraSpecificLedgerTxBody'.
+      commonLedgerTxBody =
+        L.mkBasicTxBody
+          & L.inputsTxBodyL .~ txins
+          & L.collateralInputsTxBodyL .~ collTxIns
+          & L.referenceInputsTxBodyL .~ refTxIns
+          & L.outputsTxBodyL .~ outs
+          & L.totalCollateralTxBodyL .~ L.maybeToStrictMaybe totCollateral
+          & L.collateralReturnTxBodyL .~ L.maybeToStrictMaybe retCollateral
+          & L.feeTxBodyL .~ fee
+          & L.vldtTxBodyL . L.invalidBeforeL .~ L.maybeToStrictMaybe (txValidityLowerBound bc)
+          & L.vldtTxBodyL . L.invalidHereAfterL .~ L.maybeToStrictMaybe (txValidityUpperBound bc)
+          & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+          & L.withdrawalsTxBodyL .~ withdrawals
+          & L.certsTxBodyL .~ certs
+          & L.mintTxBodyL .~ setMint
+          & L.auxDataHashTxBodyL .~ L.maybeToStrictMaybe (Ledger.hashTxAuxData <$> txAuxData)
 
       scriptWitnesses =
         L.mkBasicTxWits
@@ -253,7 +270,7 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
           & L.datsTxWitsL .~ datums
           & L.rdmrsTxWitsL .~ redeemers
 
-  let eraSpecificTxBody = eraSpecificLedgerTxBody era ledgerTxBody bc
+  let eraSpecificTxBody = eraSpecificLedgerTxBody era commonLedgerTxBody bc
   Right $
     UnsignedTx $
       L.mkBasicTx eraSpecificTxBody
@@ -352,29 +369,51 @@ toAuxiliaryData txMData ss' =
           let ss = [L.NativeScript s | SimpleScript s <- ss']
            in guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
 
+-- | Second stage of building the ledger body. Takes the era-agnostic body from
+-- 'makeUnsignedTx' and sets the fields that differ between eras:
+--
+-- * Governance fields (proposals, votes, treasury) exist from Conway onwards.
+--
+-- * Required signer hashes exist up to and including Conway. Dijkstra replaced
+--   them with guards, and a key-hash guard makes the ledger demand that key's
+--   signature, so the extra key witnesses are translated into guards there and
+--   merged with the guards requested directly.
+--
+-- * Sub-transactions, direct deposits and account balance intervals are new in
+--   Dijkstra.
+--
+-- 'txRequiredTopLevelGuards' and 'txStartingAccountBalanceIntervals' have no
+-- top-level lens in the ledger version we build against and are not yet set.
 eraSpecificLedgerTxBody
   :: Era era
   -> L.TxBody L.TopTx (LedgerEra era)
   -> TxBodyContent (LedgerEra era)
   -> L.TxBody L.TopTx (LedgerEra era)
 eraSpecificLedgerTxBody era ledgerbody bc =
-  body era
- where
-  body e =
-    let propProcedures = txProposalProcedures bc
-        voteProcedures = txVotingProcedures bc
-        treasuryDonation = txTreasuryDonation bc
-        currentTreasuryValue = txCurrentTreasuryValue bc
-     in obtainCommonConstraints e $
+  obtainCommonConstraints era $
+    let conwayOnwards =
           ledgerbody
             & L.proposalProceduresTxBodyL
-              .~ convProposalProcedures propProcedures
+              .~ convProposalProcedures (txProposalProcedures bc)
             & L.votingProceduresTxBodyL
-              .~ convVotingProcedures voteProcedures
+              .~ convVotingProcedures (txVotingProcedures bc)
             & L.treasuryDonationTxBodyL
-              .~ fromMaybe (L.Coin 0) treasuryDonation
+              .~ fromMaybe (L.Coin 0) (txTreasuryDonation bc)
             & L.currentTreasuryValueTxBodyL
-              .~ L.maybeToStrictMaybe currentTreasuryValue
+              .~ L.maybeToStrictMaybe (txCurrentTreasuryValue bc)
+     in case era of
+          ConwayEra ->
+            conwayOnwards
+              & L.reqSignerHashesTxBodyL .~ reqSignerHashes
+          DijkstraEra ->
+            conwayOnwards
+              & L.guardsTxBodyL
+                .~ (txGuards bc <> OSet.fromSet (Set.map L.KeyHashObj reqSignerHashes))
+              & L.subTransactionsTxBodyL .~ txSubTransactions bc
+              & L.directDepositsTxBodyL .~ txDirectDeposits bc
+              & L.accountBalanceIntervalsTxBodyL .~ txAccountBalanceIntervals bc
+ where
+  reqSignerHashes = convExtraKeyWitnesses (txExtraKeyWits bc)
 
 data TxOut era where
   TxOut :: L.EraTxOut era => L.TxOut era -> TxOut era
@@ -796,6 +835,15 @@ data TxBodyContent era
   , txSupplementalDatums :: Map L.DataHash (L.Data era)
   -- ^ Supplemental datums are datums whose hashes correspond to output datum hashes.
   -- They are included in the transaction witness set for communication purposes only.
+  -- ------------------------------------------------------------
+  -- Fields below are new in the Dijkstra era.
+  -- ------------------------------------------------------------
+  , txGuards :: OSet (L.Credential L.Guard)
+  , txSubTransactions :: LOMap.OMap L.TxId (L.Tx L.SubTx era)
+  , txRequiredTopLevelGuards :: Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
+  , txDirectDeposits :: L.DirectDeposits
+  , txAccountBalanceIntervals :: L.AccountBalanceIntervals era
+  , txStartingAccountBalanceIntervals :: L.AccountBalanceIntervals era
   }
 
 defaultTxBodyContent
@@ -824,6 +872,12 @@ defaultTxBodyContent =
     , txCurrentTreasuryValue = Nothing
     , txTreasuryDonation = Nothing
     , txSupplementalDatums = mempty
+    , txGuards = OSet.empty
+    , txSubTransactions = LOMap.empty
+    , txRequiredTopLevelGuards = mempty
+    , txDirectDeposits = L.DirectDeposits mempty
+    , txAccountBalanceIntervals = L.AccountBalanceIntervals mempty
+    , txStartingAccountBalanceIntervals = L.AccountBalanceIntervals mempty
     }
 
 extractAllIndexedPlutusScriptWitnesses
@@ -983,7 +1037,40 @@ collectTxBodyScriptWitnessRequirements
     , txVotingProcedures
     , txProposalProcedures
     , txSupplementalDatums
-    } = obtainCommonConstraints (useEra @era) $ do
+    } =
+    collectScriptWitnessRequirements @era
+      txIns
+      txInsReference
+      txCertificates
+      txMintValue
+      txWithdrawals
+      txVotingProcedures
+      txProposalProcedures
+      txSupplementalDatums
+
+-- | Collect the script witness requirements of the body fields shared between
+-- top-level and sub-transactions.
+collectScriptWitnessRequirements
+  :: forall era
+   . IsEra era
+  => [(TxIn, AnyWitness (LedgerEra era))]
+  -> TxInsReference (LedgerEra era)
+  -> TxCertificates (LedgerEra era)
+  -> TxMintValue (LedgerEra era)
+  -> TxWithdrawals (LedgerEra era)
+  -> Maybe (TxVotingProcedures (LedgerEra era))
+  -> Maybe (TxProposalProcedures (LedgerEra era))
+  -> Map L.DataHash (L.Data (LedgerEra era))
+  -> TxScriptWitnessRequirements (LedgerEra era)
+collectScriptWitnessRequirements
+  txIns
+  txInsReference
+  txCertificates
+  txMintValue
+  txWithdrawals
+  txVotingProcedures
+  txProposalProcedures
+  txSupplementalDatums = obtainCommonConstraints (useEra @era) $ do
     let supplementaldatums =
           TxScriptWitnessRequirements
             mempty
@@ -1121,6 +1208,30 @@ setTxTreasuryDonation v txBodyContent = txBodyContent{txTreasuryDonation = Just 
 
 setTxSupplementalDatums :: Map L.DataHash (L.Data era) -> TxBodyContent era -> TxBodyContent era
 setTxSupplementalDatums v txBodyContent = txBodyContent{txSupplementalDatums = v}
+
+setTxGuards :: OSet (L.Credential L.Guard) -> TxBodyContent era -> TxBodyContent era
+setTxGuards v txBodyContent = txBodyContent{txGuards = v}
+
+-- | Sub-transactions are keyed by their transaction id, which is derived from
+-- each sub-transaction here so callers never compute it by hand.
+setTxSubTransactions :: L.EraTx era => [L.Tx L.SubTx era] -> TxBodyContent era -> TxBodyContent era
+setTxSubTransactions v txBodyContent = txBodyContent{txSubTransactions = LOMap.fromFoldable v}
+
+setTxRequiredTopLevelGuards
+  :: Map (L.Credential L.Guard) (StrictMaybe (L.Data era)) -> TxBodyContent era -> TxBodyContent era
+setTxRequiredTopLevelGuards v txBodyContent = txBodyContent{txRequiredTopLevelGuards = v}
+
+setTxDirectDeposits :: L.DirectDeposits -> TxBodyContent era -> TxBodyContent era
+setTxDirectDeposits v txBodyContent = txBodyContent{txDirectDeposits = v}
+
+setTxAccountBalanceIntervals
+  :: L.AccountBalanceIntervals era -> TxBodyContent era -> TxBodyContent era
+setTxAccountBalanceIntervals v txBodyContent = txBodyContent{txAccountBalanceIntervals = v}
+
+setTxStartingAccountBalanceIntervals
+  :: L.AccountBalanceIntervals era -> TxBodyContent era -> TxBodyContent era
+setTxStartingAccountBalanceIntervals v txBodyContent =
+  txBodyContent{txStartingAccountBalanceIntervals = v}
 
 modTxOuts
   :: ([TxOut era] -> [TxOut era]) -> TxBodyContent era -> TxBodyContent era
