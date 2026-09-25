@@ -1,0 +1,5 @@
+description: 'bump plutus: 1.65 ⇒ 1.70'
+kind:
+- maintenance
+pr: 1354
+project: cardano-api
