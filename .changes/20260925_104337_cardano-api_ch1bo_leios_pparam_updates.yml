@@ -5,5 +5,5 @@ description: |
 kind:
 - breaking
 - feature
-pr: 1333
+pr: 1328
 project: cardano-api
