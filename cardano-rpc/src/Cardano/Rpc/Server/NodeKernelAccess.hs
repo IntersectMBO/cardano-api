@@ -31,6 +31,7 @@ module Cardano.Rpc.Server.NodeKernelAccess
 
     -- * Mempool
   , readMempoolTxs
+  , nextMempoolSnapshot
   , MempoolWatchSnapshot (..)
   , watchMempoolSnapshot
   , nextMempoolWatchSnapshot
@@ -260,10 +261,30 @@ readMempoolTxs Type.NodeKernelAccess{Type.mempool = mempool} = do
   pure
     [Consensus.txForgetValidated tx | (tx, _ticketNo, _txMeasure) <- Consensus.snapshotTxs snapshot]
 
+-- | Read the next mempool snapshot. With no previous snapshot, return the
+-- current one without blocking. Otherwise block until the snapshot differs
+-- from the given one - consensus's own LocalTxMonitor server's
+-- change-detection pattern
+-- ('Ouroboros.Consensus.MiniProtocol.LocalTxMonitor.Server.recvMsgAwaitAcquire'):
+-- the full 'Consensus.TicketNo' list of 'Consensus.snapshotTxs' plus
+-- 'Consensus.snapshotSlotNo'. A max-ticket comparison alone would miss
+-- removal-only changes.
+nextMempoolSnapshot
+  :: MonadIO m
+  => Type.NodeKernelAccess
+  -> Maybe (Consensus.MempoolSnapshot (Consensus.CardanoBlock Consensus.StandardCrypto))
+  -> m (Consensus.MempoolSnapshot (Consensus.CardanoBlock Consensus.StandardCrypto))
+nextMempoolSnapshot Type.NodeKernelAccess{Type.mempool = mempool} previous =
+  atomically $ do
+    candidate <- Consensus.getSnapshot mempool
+    check $ maybe True ((mempoolObservationKey candidate /=) . mempoolObservationKey) previous
+    pure candidate
+
 -- | The change-detection key for a mempool snapshot: every current entry's
 -- ticket number, oldest to newest, plus the virtual block's slot number.
--- Computed inside 'toMempoolWatchSnapshot', whose stored fields
--- 'nextMempoolWatchSnapshot' compares to decide whether the mempool changed.
+-- Computed by 'toMempoolWatchSnapshot' and directly by 'nextMempoolSnapshot',
+-- so both blocking-wait entry points (raw snapshot vs. the
+-- 'MempoolWatchSnapshot' projection) compare changes the same way.
 mempoolObservationKey
   :: Consensus.MempoolSnapshot (Consensus.CardanoBlock Consensus.StandardCrypto)
   -> ([Consensus.TicketNo], SlotNo)
