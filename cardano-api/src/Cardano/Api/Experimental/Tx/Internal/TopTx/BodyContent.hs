@@ -29,6 +29,7 @@ module Cardano.Api.Experimental.Tx.Internal.TopTx.BodyContent
   , extractDatumsAndHashes
   , getDatums
   , collectTxBodyScriptWitnessRequirements
+  , collectScriptWitnessRequirements
   , makeUnsignedTx
   , extractAllIndexedPlutusScriptWitnesses
   , txMintValueToValue
@@ -1015,7 +1016,40 @@ collectTxBodyScriptWitnessRequirements
     , txVotingProcedures
     , txProposalProcedures
     , txSupplementalDatums
-    } = obtainCommonConstraints (useEra @era) $ do
+    } =
+    collectScriptWitnessRequirements @era
+      txIns
+      txInsReference
+      txCertificates
+      txMintValue
+      txWithdrawals
+      txVotingProcedures
+      txProposalProcedures
+      txSupplementalDatums
+
+-- | Collect the script witness requirements of the body fields shared between
+-- top-level and sub-transactions.
+collectScriptWitnessRequirements
+  :: forall era
+   . IsEra era
+  => [(TxIn, AnyWitness (LedgerEra era))]
+  -> TxInsReference (LedgerEra era)
+  -> TxCertificates (LedgerEra era)
+  -> TxMintValue (LedgerEra era)
+  -> TxWithdrawals (LedgerEra era)
+  -> Maybe (TxVotingProcedures (LedgerEra era))
+  -> Maybe (TxProposalProcedures (LedgerEra era))
+  -> Map L.DataHash (L.Data (LedgerEra era))
+  -> TxScriptWitnessRequirements (LedgerEra era)
+collectScriptWitnessRequirements
+  txIns
+  txInsReference
+  txCertificates
+  txMintValue
+  txWithdrawals
+  txVotingProcedures
+  txProposalProcedures
+  txSupplementalDatums = obtainCommonConstraints (useEra @era) $ do
     let supplementaldatums =
           TxScriptWitnessRequirements
             mempty
