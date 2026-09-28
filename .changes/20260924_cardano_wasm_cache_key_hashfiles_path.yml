@@ -1,0 +1,6 @@
+project: cardano-wasm
+pr: 1355
+kind:
+  - maintenance
+description: |
+  Fixed the wasm CI cabal cache key `hashFiles` which pointed at the wrong path.
