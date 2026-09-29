@@ -81,6 +81,7 @@ import Cardano.Ledger.Dijkstra.TxBody qualified as L
   ( DijkstraEraTxBody (accountBalanceIntervalsTxBodyL, requiredTopLevelGuardsL)
   )
 
+import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Maybe (fromMaybe)
 import GHC.Exts (IsList (..))
@@ -153,8 +154,9 @@ makeUnsignedSubTx
   :: SubTxBodyContent (LedgerEra DijkstraEra)
   -> Either MakeUnsignedTxError UnsignedSubTx
 makeUnsignedSubTx st = do
-  let TxScriptWitnessRequirements languages scripts datums redeemers =
-        collectTxBodyScriptWitnessRequirements @_ @DijkstraEra st
+  TxScriptWitnessRequirements languages scripts datums redeemers <-
+    first (\language -> MakeUnsignedTxPlutusLanguageNotSupportedInEra language (Some DijkstraEra)) $
+      collectTxBodyScriptWitnessRequirements @_ @DijkstraEra st
 
   scriptIntegrityHash <-
     convPParamsToScriptIntegrityHash @DijkstraEra
