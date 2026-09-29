@@ -239,11 +239,8 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
       languages
 
   let setMint = convMintValue apiMintValue
-      -- The ledger body is built in two stages. The experimental API targets
-      -- the current mainnet era (Conway) and the upcoming Dijkstra era, so this
-      -- first stage sets only the fields both have lenses for, and needs no
-      -- case on the era. Fields that exist in only one of them, or whose
-      -- meaning changed between them, are set in 'eraSpecificLedgerTxBody'.
+      -- Fields common to all supported eras. Era-specific fields are set in
+      -- 'eraSpecificLedgerTxBody'.
       commonLedgerTxBody =
         L.mkBasicTxBody
           & L.inputsTxBodyL .~ txins
@@ -260,6 +257,10 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
           & L.certsTxBodyL .~ certs
           & L.mintTxBodyL .~ setMint
           & L.auxDataHashTxBodyL .~ L.maybeToStrictMaybe (Ledger.hashTxAuxData <$> txAuxData)
+          & L.proposalProceduresTxBodyL .~ convProposalProcedures (txProposalProcedures bc)
+          & L.votingProceduresTxBodyL .~ convVotingProcedures (txVotingProcedures bc)
+          & L.treasuryDonationTxBodyL .~ fromMaybe (L.Coin 0) (txTreasuryDonation bc)
+          & L.currentTreasuryValueTxBodyL .~ L.maybeToStrictMaybe (txCurrentTreasuryValue bc)
 
       scriptWitnesses =
         L.mkBasicTxWits
@@ -370,45 +371,26 @@ toAuxiliaryData txMData ss' =
           let ss = [L.NativeScript s | SimpleScript s <- ss']
            in guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
 
--- | Second stage of building the ledger body. Takes the era-agnostic body from
--- 'makeUnsignedTx' and sets the fields whose presence or meaning depends on
--- the era. Anything specific to one era is documented on its branch below.
+-- | Set the fields that differ between eras on the body built in 'makeUnsignedTx'.
 eraSpecificLedgerTxBody
   :: Era era
   -> L.TxBody L.TopTx (LedgerEra era)
   -> TxBodyContent (LedgerEra era)
   -> L.TxBody L.TopTx (LedgerEra era)
 eraSpecificLedgerTxBody era ledgerbody bc =
-  obtainCommonConstraints era $
-    let conwayOnwards =
-          ledgerbody
-            & L.proposalProceduresTxBodyL
-              .~ convProposalProcedures (txProposalProcedures bc)
-            & L.votingProceduresTxBodyL
-              .~ convVotingProcedures (txVotingProcedures bc)
-            & L.treasuryDonationTxBodyL
-              .~ fromMaybe (L.Coin 0) (txTreasuryDonation bc)
-            & L.currentTreasuryValueTxBodyL
-              .~ L.maybeToStrictMaybe (txCurrentTreasuryValue bc)
-     in case era of
-          ConwayEra ->
-            conwayOnwards
-              & L.reqSignerHashesTxBodyL .~ reqSignerHashes
-          DijkstraEra ->
-            -- Dijkstra replaced required signer hashes with guards. A key-hash
-            -- guard makes the ledger demand that key's signature, so the extra
-            -- key witnesses are translated into guards and merged with the
-            -- guards requested directly.
-            --
-            -- 'txRequiredTopLevelGuards' and 'txStartingAccountBalanceIntervals'
-            -- have no top-level lens in the ledger version we build against and
-            -- are not yet set.
-            conwayOnwards
-              & L.guardsTxBodyL
-                .~ (txGuards bc <> OSet.fromSet (Set.map L.KeyHashObj reqSignerHashes))
-              & L.subTransactionsTxBodyL .~ txSubTransactions bc
-              & L.directDepositsTxBodyL .~ txDirectDeposits bc
-              & L.accountBalanceIntervalsTxBodyL .~ txAccountBalanceIntervals bc
+  case era of
+    ConwayEra ->
+      ledgerbody
+        & L.reqSignerHashesTxBodyL .~ reqSignerHashes
+    DijkstraEra ->
+      -- Dijkstra replaced required signer hashes with guards, so extra key
+      -- witnesses become key-hash guards.
+      ledgerbody
+        & L.guardsTxBodyL
+          .~ (txGuards bc <> OSet.fromSet (Set.map L.KeyHashObj reqSignerHashes))
+        & L.subTransactionsTxBodyL .~ txSubTransactions bc
+        & L.directDepositsTxBodyL .~ txDirectDeposits bc
+        & L.accountBalanceIntervalsTxBodyL .~ txAccountBalanceIntervals bc
  where
   reqSignerHashes = convExtraKeyWitnesses (txExtraKeyWits bc)
 
