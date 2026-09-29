@@ -70,6 +70,7 @@ import Cardano.Ledger.Shelley.Genesis
   , emptyGenesisStaking
   )
 import Cardano.Ledger.Shelley.Genesis qualified as Ledger
+import Cardano.Slotting.Slot (SlotInterval (..))
 import PlutusCore.Evaluation.Machine.BuiltinCostModel
 import PlutusCore.Evaluation.Machine.CostModelInterface
 import PlutusCore.Evaluation.Machine.ExBudgetingDefaults
@@ -218,6 +219,12 @@ dijkstraGenesisDefaults =
           , udppMaxEndorserBlockTxsSize = 12 * 1024 * 1024 -- 12 MiB
           , udppMaxEndorserBlockExUnits = L.OrdExUnits $ ExUnits 7_000_000_000 2_000_000_000_000
           , udppMaxRefScriptSizePerEndorserBlock = 12 * 1024 * 1024 -- 12 MiB
+          , udppPerasMinCandidateBlockAge = SlotInterval 90
+          , udppPerasHealingFactor = fromJust $ boundRational 0.5
+          , udppPerasCertBoost = 15
+          , udppPerasTargetCommitteeSize = 800
+          , udppPerasBootstrapRound = SJust 0
+          , udppPerasQuorumThresholdSafetyMargin = fromJust $ boundRational 0.05
           }
     }
  where
