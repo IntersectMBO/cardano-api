@@ -233,50 +233,55 @@ getAnyPlutusScriptData AnyPlutusCertifyingScriptWitness{} = mempty
 getAnyPlutusScriptData AnyPlutusProposingScriptWitness{} = mempty
 getAnyPlutusScriptData AnyPlutusVotingScriptWitness{} = mempty
 
+-- | Resolves the ledger script for a Plutus witness.
+-- A reference witness has no script to resolve here, so it returns @Right Nothing@.
+-- An inline witness returns @Right (Just script)@, or @Left lang@ when the era rejects the language.
 getAnyPlutusWitnessPlutusScript
   :: L.AlonzoEraScript era
   => AnyPlutusScriptWitness lang purpose era
-  -> Maybe (L.Script era)
+  -> Either L.Language (Maybe (L.Script era))
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV1 s)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable L.SPlutusV1 =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript L.SPlutusV1 s
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV2 s)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable L.SPlutusV2 =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript L.SPlutusV2 s
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV3 s)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable L.SPlutusV3 =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript L.SPlutusV3 s
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV4 s)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable L.SPlutusV4 =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript L.SPlutusV4 s
 getAnyPlutusWitnessPlutusScript (AnyPlutusMintingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable l =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript l s
 getAnyPlutusWitnessPlutusScript (AnyPlutusWithdrawingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable l =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript l s
 getAnyPlutusWitnessPlutusScript (AnyPlutusCertifyingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable l =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript l s
 getAnyPlutusWitnessPlutusScript (AnyPlutusProposingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable l =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript l s
 getAnyPlutusWitnessPlutusScript (AnyPlutusVotingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable l =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript l s
 
--- It should be noted that 'PlutusRunnable' is constructed via deserialization. The deserialization
--- instance lives in ledger and will fail for an invalid script language/era pairing.
-fromPlutusRunnable
+resolvePlutusWitnessScript
   :: L.AlonzoEraScript era
   => L.SLanguage lang
+  -> PlutusScriptWitness lang purpose era
+  -> Either L.Language (Maybe (L.Script era))
+resolvePlutusWitnessScript slang s =
+  case getPlutusScriptRunnable s of
+    Nothing -> Right Nothing
+    Just runnable -> Just . L.fromPlutusScript <$> fromPlutusRunnable slang runnable
+
+-- | 'PlutusRunnable' is built by deserialisation in the ledger, which rejects a language
+-- the era does not support. That case is returned as 'Left' with the language.
+fromPlutusRunnable
+  :: forall era lang
+   . L.AlonzoEraScript era
+  => L.SLanguage lang
   -> L.PlutusRunnable lang
-  -> Maybe (L.PlutusScript era)
-fromPlutusRunnable L.SPlutusV1 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
-fromPlutusRunnable L.SPlutusV2 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
-fromPlutusRunnable L.SPlutusV3 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
-fromPlutusRunnable L.SPlutusV4 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
+  -> Either L.Language (L.PlutusScript era)
+fromPlutusRunnable slang = case slang of
+  L.SPlutusV1 -> go
+  L.SPlutusV2 -> go
+  L.SPlutusV3 -> go
+  L.SPlutusV4 -> go
+ where
+  go :: L.PlutusLanguage lang => L.PlutusRunnable lang -> Either L.Language (L.PlutusScript era)
+  go = maybe (Left $ L.plutusLanguage slang) Right . L.mkPlutusScript . L.plutusFromRunnable
