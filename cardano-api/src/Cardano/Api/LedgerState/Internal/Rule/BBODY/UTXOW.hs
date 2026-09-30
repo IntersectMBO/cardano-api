@@ -8,6 +8,7 @@ module Cardano.Api.LedgerState.Internal.Rule.BBODY.UTXOW
   ( handleAlonzoUTxOWEvent
   , handleAllegraMaryUTxOWEvent
   , handleConwayUTxOWEvent
+  , handleDijkstraUTxOWEvent
   , handlePreAlonzoUTxOWEvent
   )
 where
@@ -24,6 +25,7 @@ import Cardano.Ledger.Alonzo.Rules qualified as Alonzo
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Rules qualified as Conway
 import Cardano.Ledger.Core qualified as Ledger.Core
+import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Shelley.Rules qualified as Shelley
 
 import Control.State.Transition.Extended
@@ -35,6 +37,16 @@ handleConwayUTxOWEvent = \case
   (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent TxUTxODiff{})) -> Nothing
   (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent (Alonzo.UtxosEvent conwayUTxOsEvent))) ->
     case conwayUTxOsEvent of
+      Conway.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
+      Conway.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
+
+handleDijkstraUTxOWEvent
+  :: AlonzoUtxowEvent DijkstraEra -> Maybe LedgerEvent
+handleDijkstraUTxOWEvent = \case
+  (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent TotalDeposits{})) -> Nothing
+  (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent TxUTxODiff{})) -> Nothing
+  (Alonzo.WrappedShelleyEraEvent (Shelley.UtxoEvent (Alonzo.UtxosEvent dijkstraUTxOsEvent))) ->
+    case dijkstraUTxOsEvent of
       Conway.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
       Conway.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
 
