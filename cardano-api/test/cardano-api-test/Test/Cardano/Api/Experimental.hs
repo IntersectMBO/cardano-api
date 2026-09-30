@@ -243,18 +243,19 @@ prop_sign_sub_tx_preserves_id = H.property $ do
   Exp.getUnsignedSubTxId subTx H.=== Exp.getSignedSubTxId signed
   H.assert $ wit `Set.member` (ledgerTx ^. L.witsTxL . UnexportedLedger.addrTxWitsL)
 
--- | The construction path end to end: 'Exp.SubTx' content through
+-- | The construction path end to end: 'Exp.SubTxBodyContent' through
 -- 'Exp.makeUnsignedSubTx', signing, and embedding in a Dijkstra top-level
--- body, where the ledger keys the sub-transaction by its id.
+-- body, where the ledger keys the sub-transaction by its id. The setters are
+-- the ones shared with 'Exp.TxBodyContent'.
 prop_sub_tx_embedded_in_top_level_body :: Property
 prop_sub_tx_embedded_in_top_level_body = H.property $ do
   donation <- H.forAll Q.arbitrary
   guards <- H.forAll Q.arbitrary
   sk <- H.forAllWith (const "<ShelleyWitnessSigningKey>") genShelleyWitnessSigningKey
   let content =
-        Exp.defaultSubTx
-          & Exp.setSubTxTreasuryDonation donation
-          & Exp.setSubTxGuards guards
+        Exp.defaultSubTxBodyContent
+          & Exp.setTxTreasuryDonation donation
+          & Exp.setTxGuards guards
   unsigned <- H.evalEither $ Exp.makeUnsignedSubTx Exp.DijkstraEra content
   let signed@(Exp.SignedSubTx ledgerSubTx) =
         Exp.signSubTx [] [Exp.makeSubTxKeyWitness unsigned sk] unsigned
