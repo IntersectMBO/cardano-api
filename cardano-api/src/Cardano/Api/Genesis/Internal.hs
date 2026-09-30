@@ -225,6 +225,8 @@ dijkstraGenesisDefaults =
           , udppPerasTargetCommitteeSize = 800
           , udppPerasBootstrapRound = SJust 0
           , udppPerasQuorumThresholdSafetyMargin = fromJust $ boundRational 0.05
+          , udppRefInputsCostPerMultiAssetPolicy = Coin 0
+          , udppRefInputsCostPerDatumByte = L.CoinPerByte (L.CompactCoin 0)
           }
     }
  where
