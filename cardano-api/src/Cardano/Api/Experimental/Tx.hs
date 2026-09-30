@@ -323,11 +323,9 @@ import Cardano.Api.Serialise.Raw
 import Cardano.Api.Tx.Internal.Body qualified as Api
 import Cardano.Api.Tx.Internal.Sign
 
-import Cardano.Crypto.Hash qualified as Hash
 import Cardano.Ledger.Alonzo.Core qualified as Ledger
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
-import Cardano.Ledger.Hashes qualified as L hiding (Hash)
 
 import Control.Exception (displayException)
 import Data.Bifunctor (bimap)
@@ -335,7 +333,6 @@ import Data.ByteString.Lazy (fromStrict)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Set (Set)
-import Data.Set qualified as Set
 import GHC.Stack
 import Lens.Micro
 
@@ -343,11 +340,6 @@ getUnsignedTxFee :: UnsignedTx era -> L.Coin
 getUnsignedTxFee (UnsignedTx unsignedTx) =
   let txbody = unsignedTx ^. L.bodyTxL
    in txbody ^. L.feeTxBodyL
-
-hashTxBody
-  :: L.HashAnnotated (Ledger.TxBody Ledger.TopTx era) L.EraIndependentTxBody
-  => L.TxBody Ledger.TopTx era -> Hash.Hash L.HASH L.EraIndependentTxBody
-hashTxBody = L.extractHash . L.hashAnnotated
 
 makeKeyWitness
   :: HasCallStack
@@ -357,13 +349,7 @@ makeKeyWitness
   -> L.WitVKey L.Witness
 makeKeyWitness era (UnsignedTx unsignedTx) wsk =
   obtainCommonConstraints era $
-    let txbody = unsignedTx ^. L.bodyTxL
-        txhash :: Hash.Hash L.HASH L.EraIndependentTxBody
-        txhash = obtainCommonConstraints era $ hashTxBody txbody
-        sk = toShelleySigningKey wsk
-        vk = getShelleyKeyWitnessVerificationKey sk
-        signature = makeShelleySignature txhash sk
-     in L.WitVKey vk signature
+    makeShelleyKeyWitnessFromHash (hashTxBody (unsignedTx ^. L.bodyTxL)) wsk
 
 -- | A transaction that has been witnesssed
 data SignedTx era
@@ -406,16 +392,8 @@ signTx
   -> SignedTx era
 signTx era bootstrapWits shelleyKeyWits (UnsignedTx unsigned) =
   obtainCommonConstraints era $
-    let currentScriptWitnesses = unsigned ^. L.witsTxL
-        keyWits =
-          obtainCommonConstraints era $
-            L.mkBasicTxWits
-              & L.addrTxWitsL
-                .~ Set.fromList shelleyKeyWits
-              & L.bootAddrTxWitsL
-                .~ Set.fromList bootstrapWits
-        signedTx = unsigned & L.witsTxL .~ (keyWits <> currentScriptWitnesses)
-     in SignedTx signedTx
+    SignedTx $
+      addKeyWitnesses bootstrapWits shelleyKeyWits unsigned
 
 -- | Like 'evaluateTransaction' but accepts a 'SignedTx' directly.
 evaluateSignedTx
