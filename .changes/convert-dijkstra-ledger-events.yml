@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1362
+kind:
+  - bugfix
+description: |
+  `toLedgerEvent` (used by `foldBlocks` and the ledger-state folding machinery) no longer dies with a non-exhaustive pattern match when a Dijkstra-era block's ledger events are forced.
