@@ -1048,36 +1048,14 @@ substituteExecutionUnits
   -> Either (TxBodyErrorAutoBalance (LedgerEra era)) (TxBodyContent (LedgerEra era))
 substituteExecutionUnits
   exUnitsMap
-  txbodycontent@( TxBodyContent
-                    txIns
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    txWithdrawals
-                    txCertificates
-                    txMintValue
-                    _
-                    txProposalProcedures
-                    txVotingProcedures
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                  ) = do
+  txbodycontent@TxBodyContent
+    { txIns
+    , txWithdrawals
+    , txCertificates
+    , txMintValue
+    , txProposalProcedures
+    , txVotingProcedures
+    } = do
     mappedTxIns <- mapScriptWitnessesTxIns txIns
     mappedWithdrawals <- mapScriptWitnessesWithdrawals txWithdrawals
     mappedMintedVals <- mapScriptWitnessesMinting txMintValue
