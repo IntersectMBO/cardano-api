@@ -257,8 +257,6 @@ data MakeUnsignedTxError
     -- parameters were provided. Protocol parameters are required to
     -- compute the script integrity hash (script_data_hash).
     MakeUnsignedTxMissingProtocolParams
-  | -- | A sub-transaction was requested in an era that has no sub-transactions.
-    MakeUnsignedTxSubTransactionsUnsupported
   deriving (Eq, Show)
 
 instance Error MakeUnsignedTxError where
@@ -268,8 +266,6 @@ instance Error MakeUnsignedTxError where
       , "Protocol parameters are required to compute the script integrity hash "
       , "(script_data_hash) from the cost models."
       ]
-  prettyError MakeUnsignedTxSubTransactionsUnsupported =
-    "Sub-transactions are only supported from the Dijkstra era onwards."
 
 makeUnsignedTx
   :: forall era

@@ -50,7 +50,6 @@ import Cardano.Slotting.Time qualified as Slotting
 import Control.Monad.Identity (Identity)
 import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
-import Data.Either (isLeft)
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
@@ -147,9 +146,6 @@ tests =
             "Sub-transaction envelope types name the era"
             prop_sub_tx_envelope_types
         , testProperty
-            "Sub-transactions cannot be decoded in Conway"
-            prop_sub_tx_not_decodable_in_conway
-        , testProperty
             "Signing a sub-transaction does not change its id"
             prop_sign_sub_tx_preserves_id
         , testProperty
@@ -203,12 +199,12 @@ prop_roundtrip_cbor_unsigned_sub_tx = H.property $ do
   H.tripping
     subTx
     Api.serialiseToCBOR
-    (Api.deserialiseFromCBOR (Exp.AsUnsignedSubTx Api.AsDijkstraEra))
+    (Api.deserialiseFromCBOR Exp.AsUnsignedSubTx)
 
 prop_roundtrip_cbor_signed_sub_tx :: Property
 prop_roundtrip_cbor_signed_sub_tx = H.property $ do
   subTx <- H.forAll genSignedSubTx
-  H.tripping subTx Api.serialiseToCBOR (Api.deserialiseFromCBOR (Exp.AsSignedSubTx Api.AsDijkstraEra))
+  H.tripping subTx Api.serialiseToCBOR (Api.deserialiseFromCBOR Exp.AsSignedSubTx)
 
 prop_roundtrip_text_envelope_unsigned_sub_tx :: Property
 prop_roundtrip_text_envelope_unsigned_sub_tx = H.property $ do
@@ -222,17 +218,10 @@ prop_roundtrip_text_envelope_signed_sub_tx = H.property $ do
 
 prop_sub_tx_envelope_types :: Property
 prop_sub_tx_envelope_types = H.propertyOnce $ do
-  Api.textEnvelopeType (Exp.AsUnsignedSubTx Api.AsDijkstraEra)
+  Api.textEnvelopeType Exp.AsUnsignedSubTx
     H.=== Api.TextEnvelopeType "Unwitnessed SubTx DijkstraEra"
-  Api.textEnvelopeType (Exp.AsSignedSubTx Api.AsDijkstraEra)
+  Api.textEnvelopeType Exp.AsSignedSubTx
     H.=== Api.TextEnvelopeType "Witnessed SubTx DijkstraEra"
-
-prop_sub_tx_not_decodable_in_conway :: Property
-prop_sub_tx_not_decodable_in_conway = H.property $ do
-  subTx <- H.forAll genUnsignedSubTx
-  let bytes = Api.serialiseToCBOR subTx
-  H.assert . isLeft $ Api.deserialiseFromCBOR (Exp.AsUnsignedSubTx Api.AsConwayEra) bytes
-  H.assert . isLeft $ Api.deserialiseFromCBOR (Exp.AsSignedSubTx Api.AsConwayEra) bytes
 
 prop_sign_sub_tx_preserves_id :: Property
 prop_sign_sub_tx_preserves_id = H.property $ do
@@ -256,7 +245,7 @@ prop_sub_tx_embedded_in_top_level_body = H.property $ do
         Exp.defaultSubTxBodyContent
           & Exp.setTxTreasuryDonation donation
           & Exp.setTxGuards guards
-  unsigned <- H.evalEither $ Exp.makeUnsignedSubTx Exp.DijkstraEra content
+  unsigned <- H.evalEither $ Exp.makeUnsignedSubTx content
   let signed@(Exp.SignedSubTx ledgerSubTx) =
         Exp.signSubTx [] [Exp.makeSubTxKeyWitness unsigned sk] unsigned
       subTxId = UnexportedLedger.txIdTx ledgerSubTx

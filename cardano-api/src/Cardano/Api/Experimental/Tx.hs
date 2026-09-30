@@ -239,8 +239,6 @@ module Cardano.Api.Experimental.Tx
   , makeSignedSubTx
   , getUnsignedSubTxId
   , getSignedSubTxId
-  , unsignedSubTxFromSomeTypes
-  , signedSubTxFromSomeTypes
   , AsType (AsUnsignedSubTx, AsSignedSubTx)
 
     -- * TxBodyContent sub type
