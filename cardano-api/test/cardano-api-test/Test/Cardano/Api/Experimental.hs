@@ -31,7 +31,7 @@ import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Ledger qualified as Ledger
 import Cardano.Api.Parser.Text qualified as Api
 import Cardano.Api.Plutus qualified as Script
-import Cardano.Api.Tx (Tx (ShelleyTx))
+import Cardano.Api.Tx (Tx (ShelleyTx), toShelleyTxId)
 
 import Cardano.Ledger.Address qualified as L
 import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
@@ -40,6 +40,7 @@ import Cardano.Ledger.Babbage.TxBody qualified as L
 import Cardano.Ledger.Conway qualified as L
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
+import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Slotting.EpochInfo qualified as Slotting
@@ -49,21 +50,25 @@ import Cardano.Slotting.Time qualified as Slotting
 import Control.Monad.Identity (Identity)
 import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
+import Data.Either (isLeft)
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.OMap.Strict qualified as LOMap
 import Data.Ratio ((%))
+import Data.Set qualified as Set
 import Data.Text.Encoding qualified as Text
 import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time
 import Lens.Micro
 
-import Test.Gen.Cardano.Api.Experimental (genAnyScript)
+import Test.Gen.Cardano.Api.Experimental (genAnyScript, genSignedSubTx, genUnsignedSubTx)
 import Test.Gen.Cardano.Api.Typed
   ( genAddressInEra
   , genPlutusScriptInEra
   , genProposal
+  , genShelleyWitnessSigningKey
   , genSimpleScript
   , genStakeCredential
   , genTx
@@ -74,6 +79,7 @@ import Hedgehog (Gen, Property)
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
+import Hedgehog.Gen.QuickCheck qualified as Q
 import Hedgehog.Internal.Property qualified as H
 import Hedgehog.Range qualified as Range
 import Test.Tasty (TestTree, testGroup)
@@ -124,6 +130,36 @@ tests =
             prop_roundtrip_read_file_any_script
         ]
     , testGroup
+        "Sub-transactions"
+        [ testProperty
+            "Roundtrip SerialiseAsCBOR UnsignedSubTx"
+            prop_roundtrip_cbor_unsigned_sub_tx
+        , testProperty
+            "Roundtrip SerialiseAsCBOR SignedSubTx"
+            prop_roundtrip_cbor_signed_sub_tx
+        , testProperty
+            "Roundtrip TextEnvelope UnsignedSubTx"
+            prop_roundtrip_text_envelope_unsigned_sub_tx
+        , testProperty
+            "Roundtrip TextEnvelope SignedSubTx"
+            prop_roundtrip_text_envelope_signed_sub_tx
+        , testProperty
+            "Sub-transaction envelope types name the era"
+            prop_sub_tx_envelope_types
+        , testProperty
+            "Sub-transactions cannot be decoded in Conway"
+            prop_sub_tx_not_decodable_in_conway
+        , testProperty
+            "Signing a sub-transaction does not change its id"
+            prop_sign_sub_tx_preserves_id
+        , testProperty
+            "Sub-transaction built from content is embedded under its id"
+            prop_sub_tx_embedded_in_top_level_body
+        , testProperty
+            "Top-level body keeps required top-level guards and starting account balance intervals"
+            prop_makeUnsignedTx_dijkstra_top_level_only_fields
+        ]
+    , testGroup
         "makeUnsignedTx"
         [ testProperty
             "Plutus scripts without protocol params returns MakeUnsignedTxMissingProtocolParams"
@@ -160,6 +196,92 @@ tests =
             prop_calcMinFeeRecursive_no_tx_outs
         ]
     ]
+
+prop_roundtrip_cbor_unsigned_sub_tx :: Property
+prop_roundtrip_cbor_unsigned_sub_tx = H.property $ do
+  subTx <- H.forAll genUnsignedSubTx
+  H.tripping
+    subTx
+    Api.serialiseToCBOR
+    (Api.deserialiseFromCBOR (Exp.AsUnsignedSubTx Api.AsDijkstraEra))
+
+prop_roundtrip_cbor_signed_sub_tx :: Property
+prop_roundtrip_cbor_signed_sub_tx = H.property $ do
+  subTx <- H.forAll genSignedSubTx
+  H.tripping subTx Api.serialiseToCBOR (Api.deserialiseFromCBOR (Exp.AsSignedSubTx Api.AsDijkstraEra))
+
+prop_roundtrip_text_envelope_unsigned_sub_tx :: Property
+prop_roundtrip_text_envelope_unsigned_sub_tx = H.property $ do
+  subTx <- H.forAll genUnsignedSubTx
+  H.tripping subTx (Api.serialiseToTextEnvelope Nothing) Api.deserialiseFromTextEnvelope
+
+prop_roundtrip_text_envelope_signed_sub_tx :: Property
+prop_roundtrip_text_envelope_signed_sub_tx = H.property $ do
+  subTx <- H.forAll genSignedSubTx
+  H.tripping subTx (Api.serialiseToTextEnvelope Nothing) Api.deserialiseFromTextEnvelope
+
+prop_sub_tx_envelope_types :: Property
+prop_sub_tx_envelope_types = H.propertyOnce $ do
+  Api.textEnvelopeType (Exp.AsUnsignedSubTx Api.AsDijkstraEra)
+    H.=== Api.TextEnvelopeType "Unwitnessed SubTx DijkstraEra"
+  Api.textEnvelopeType (Exp.AsSignedSubTx Api.AsDijkstraEra)
+    H.=== Api.TextEnvelopeType "Witnessed SubTx DijkstraEra"
+
+prop_sub_tx_not_decodable_in_conway :: Property
+prop_sub_tx_not_decodable_in_conway = H.property $ do
+  subTx <- H.forAll genUnsignedSubTx
+  let bytes = Api.serialiseToCBOR subTx
+  H.assert . isLeft $ Api.deserialiseFromCBOR (Exp.AsUnsignedSubTx Api.AsConwayEra) bytes
+  H.assert . isLeft $ Api.deserialiseFromCBOR (Exp.AsSignedSubTx Api.AsConwayEra) bytes
+
+prop_sign_sub_tx_preserves_id :: Property
+prop_sign_sub_tx_preserves_id = H.property $ do
+  subTx <- H.forAll genUnsignedSubTx
+  sk <- H.forAllWith (const "<ShelleyWitnessSigningKey>") genShelleyWitnessSigningKey
+  let wit = Exp.makeSubTxKeyWitness subTx sk
+      signed@(Exp.SignedSubTx ledgerTx) = Exp.signSubTx [] [wit] subTx
+  Exp.getUnsignedSubTxId subTx H.=== Exp.getSignedSubTxId signed
+  H.assert $ wit `Set.member` (ledgerTx ^. L.witsTxL . UnexportedLedger.addrTxWitsL)
+
+-- | The construction path end to end: 'Exp.SubTx' content through
+-- 'Exp.makeUnsignedSubTx', signing, and embedding in a Dijkstra top-level
+-- body, where the ledger keys the sub-transaction by its id.
+prop_sub_tx_embedded_in_top_level_body :: Property
+prop_sub_tx_embedded_in_top_level_body = H.property $ do
+  donation <- H.forAll Q.arbitrary
+  guards <- H.forAll Q.arbitrary
+  sk <- H.forAllWith (const "<ShelleyWitnessSigningKey>") genShelleyWitnessSigningKey
+  let content =
+        Exp.defaultSubTx
+          & Exp.setSubTxTreasuryDonation donation
+          & Exp.setSubTxGuards guards
+  unsigned <- H.evalEither $ Exp.makeUnsignedSubTx Exp.DijkstraEra content
+  let signed@(Exp.SignedSubTx ledgerSubTx) =
+        Exp.signSubTx [] [Exp.makeSubTxKeyWitness unsigned sk] unsigned
+      subTxId = UnexportedLedger.txIdTx ledgerSubTx
+  ledgerSubTx ^. L.bodyTxL . L.treasuryDonationTxBodyL H.=== donation
+  ledgerSubTx ^. L.bodyTxL . UnexportedLedger.guardsTxBodyL H.=== guards
+  toShelleyTxId (Exp.getSignedSubTxId signed) H.=== subTxId
+  Exp.UnsignedTx tx <-
+    H.evalEither $
+      Exp.makeUnsignedTx Exp.DijkstraEra $
+        Exp.defaultTxBodyContent & Exp.setTxSignedSubTransactions [signed]
+  let subTxs = tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL
+  LOMap.lookup subTxId subTxs H.=== Just ledgerSubTx
+  length subTxs H.=== 1
+
+prop_makeUnsignedTx_dijkstra_top_level_only_fields :: Property
+prop_makeUnsignedTx_dijkstra_top_level_only_fields = H.property $ do
+  requiredGuards <- H.forAll Q.arbitrary
+  startingIntervals <- H.forAll Q.arbitrary
+  let bodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxRequiredTopLevelGuards requiredGuards
+          & Exp.setTxStartingAccountBalanceIntervals startingIntervals
+  Exp.UnsignedTx tx <- H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra bodyContent
+  let body = tx ^. L.bodyTxL
+  body ^. Dijkstra.requiredTopLevelGuardsL H.=== requiredGuards
+  body ^. Dijkstra.startingAccountBalanceIntervalsTxBodyL H.=== startingIntervals
 
 prop_roundtrip_cbor_any_script :: Property
 prop_roundtrip_cbor_any_script = H.property $ do

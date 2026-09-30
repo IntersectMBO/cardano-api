@@ -27,6 +27,21 @@ module Cardano.Api.Experimental
   , getAnchorDataFromCertificate
   , mkTxCertificates
 
+    -- ** Sub-transactions (Dijkstra era onwards)
+  , SubTx (..)
+  , defaultSubTx
+  , UnsignedSubTx (..)
+  , SignedSubTx (..)
+  , makeUnsignedSubTx
+  , makeSubTxKeyWitness
+  , signSubTx
+  , makeSignedSubTx
+  , getUnsignedSubTxId
+  , getSignedSubTxId
+  , unsignedSubTxFromSomeTypes
+  , signedSubTxFromSomeTypes
+  , setTxSignedSubTransactions
+
     -- ** Transaction evaluation
   , evaluateTransaction
   , evaluateSignedTx
@@ -45,6 +60,7 @@ module Cardano.Api.Experimental
     -- ** Era-related
   , BabbageEra
   , ConwayEra
+  , DijkstraEra
   , Era (..)
   , IsEra (..)
   , Some (..)

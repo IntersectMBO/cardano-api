@@ -157,7 +157,12 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Core qualified as L (TxLevel (..))
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Dijkstra.TxBody qualified as L
-  ( DijkstraEraTxBody (accountBalanceIntervalsTxBodyL, subTransactionsTxBodyL)
+  ( DijkstraEraTxBody
+      ( accountBalanceIntervalsTxBodyL
+      , requiredTopLevelGuardsL
+      , startingAccountBalanceIntervalsTxBodyL
+      , subTransactionsTxBodyL
+      )
   )
 import Cardano.Ledger.Plutus.Language (PlutusBinary (..), plutusLanguage)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
@@ -389,8 +394,10 @@ eraSpecificLedgerTxBody era ledgerbody bc =
         & L.guardsTxBodyL
           .~ (txGuards bc <> OSet.fromSet (Set.map L.KeyHashObj reqSignerHashes))
         & L.subTransactionsTxBodyL .~ txSubTransactions bc
+        & L.requiredTopLevelGuardsL .~ txRequiredTopLevelGuards bc
         & L.directDepositsTxBodyL .~ txDirectDeposits bc
         & L.accountBalanceIntervalsTxBodyL .~ txAccountBalanceIntervals bc
+        & L.startingAccountBalanceIntervalsTxBodyL .~ txStartingAccountBalanceIntervals bc
  where
   reqSignerHashes = convExtraKeyWitnesses (txExtraKeyWits bc)
 
