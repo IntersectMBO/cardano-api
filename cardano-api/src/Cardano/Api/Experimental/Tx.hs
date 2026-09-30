@@ -158,6 +158,53 @@ module Cardano.Api.Experimental.Tx
   , setTxVotingProcedures
   , setTxWithdrawals
 
+    -- ** Dijkstra era onwards
+  , setTxGuards
+  , setTxSubTransactions
+  , setTxSignedSubTransactions
+  , setTxRequiredTopLevelGuards
+  , setTxDirectDeposits
+  , setTxAccountBalanceIntervals
+  , setTxStartingAccountBalanceIntervals
+
+    -- * Sub-transactions (Dijkstra era onwards)
+  , SubTx (..)
+  , defaultSubTx
+  , UnsignedSubTx (..)
+  , SignedSubTx (..)
+  , makeUnsignedSubTx
+  , makeSubTxKeyWitness
+  , signSubTx
+  , makeSignedSubTx
+  , collectSubTxScriptWitnessRequirements
+  , getUnsignedSubTxId
+  , getSignedSubTxId
+  , unsignedSubTxFromSomeTypes
+  , signedSubTxFromSomeTypes
+  , AsType (AsUnsignedSubTx, AsSignedSubTx)
+
+    -- ** SubTx setters
+  , setSubTxIns
+  , setSubTxInsReference
+  , setSubTxOuts
+  , setSubTxCertificates
+  , setSubTxWithdrawals
+  , setSubTxValidityLowerBound
+  , setSubTxValidityUpperBound
+  , setSubTxMintValue
+  , setSubTxProtocolParams
+  , setSubTxMetadata
+  , setSubTxAuxScripts
+  , setSubTxProposalProcedures
+  , setSubTxVotingProcedures
+  , setSubTxCurrentTreasuryValue
+  , setSubTxTreasuryDonation
+  , setSubTxSupplementalDatums
+  , setSubTxGuards
+  , setSubTxRequiredTopLevelGuards
+  , setSubTxDirectDeposits
+  , setSubTxAccountBalanceIntervals
+
     -- * TxBodyContent sub type
   , TxCertificates (..)
   , TxMintValue (..)
@@ -224,6 +271,7 @@ import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Experimental.Tx.Internal.Fee
+import Cardano.Api.Experimental.Tx.Internal.SubTransaction
 import Cardano.Api.Experimental.Tx.Internal.TopTx.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Experimental.Tx.Internal.Type
@@ -231,7 +279,6 @@ import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal.Script qualified as Api
 import Cardano.Api.Pretty (docToString, pretty)
-import Cardano.Api.ProtocolParameters
 import Cardano.Api.Query.Internal.Type.QueryInMode (LedgerEpochInfo, SystemStart)
 import Cardano.Api.Serialise.Raw
   ( SerialiseAsRawBytes (..)

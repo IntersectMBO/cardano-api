@@ -18,6 +18,7 @@
 module Cardano.Api.Experimental.Era
   ( BabbageEra
   , ConwayEra
+  , DijkstraEra
   , Era (..)
   , IsEra (..)
   , Some (..)
@@ -28,6 +29,7 @@ module Cardano.Api.Experimental.Era
   , EraCommonConstraints
   , obtainCommonConstraints
   , eraProtVerHigh
+  , eraAsType
   , obtainConwayConstraints
   , sbeToEra
   )
@@ -344,3 +346,7 @@ type EraConwayConstraints =
 -- this is the major protocol version that the era has started in.
 eraProtVerHigh :: forall era. Era era -> L.Version
 eraProtVerHigh eon = obtainCommonConstraints eon $ L.eraProtVerHigh @(LedgerEra era)
+
+-- | The type proxy of an era, from its 'Era' witness.
+eraAsType :: forall era. HasTypeProxy era => Era era -> AsType era
+eraAsType _ = asType @era
