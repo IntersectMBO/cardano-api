@@ -28,8 +28,8 @@ module Cardano.Api.Experimental
   , mkTxCertificates
 
     -- ** Sub-transactions (Dijkstra era onwards)
-  , SubTx (..)
-  , defaultSubTx
+  , SubTxBodyContent
+  , defaultSubTxBodyContent
   , UnsignedSubTx (..)
   , SignedSubTx (..)
   , makeUnsignedSubTx

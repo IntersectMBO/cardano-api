@@ -129,81 +129,119 @@ module Cardano.Api.Experimental.Tx
   , getUnsignedTxFee
 
     -- * TxBodyContent
-  , TxBodyContent (..)
+
+    -- | Body content is one type, 'BodyContent', indexed by the transaction
+    -- level. 'TxBodyContent' is a top-level body and 'SubTxBodyContent' is a
+    -- Dijkstra sub-transaction body. A setter typed @BodyContent l era@ works
+    -- on both; a setter typed @TxBodyContent era@ sets a field that only a
+    -- top-level body has.
+  , BodyContent (..)
+  , TxBodyContent
+  , SubTxBodyContent
   , defaultTxBodyContent
+  , defaultSubTxBodyContent
   , mkTxCertificates
   , mkTxVotingProcedures
   , mkTxProposalProcedures
+
+    -- ** Fields of a top-level body
+  , txIns
+  , txInsCollateral
+  , txInsReference
+  , txOuts
+  , txTotalCollateral
+  , txReturnCollateral
+  , txFee
+  , txValidityLowerBound
+  , txValidityUpperBound
+  , txMetadata
+  , txAuxScripts
+  , txExtraKeyWits
+  , txProtocolParams
+  , txWithdrawals
+  , txCertificates
+  , txMintValue
+  , txScriptValidity
+  , txProposalProcedures
+  , txVotingProcedures
+  , txCurrentTreasuryValue
+  , txTreasuryDonation
+  , txSupplementalDatums
+  , txGuards
+  , txSubTransactions
+  , txRequiredTopLevelGuards
+  , txDirectDeposits
+  , txAccountBalanceIntervals
+  , txStartingAccountBalanceIntervals
+
+    -- ** Fields of a sub-transaction body
+  , subTxIns
+  , subTxInsReference
+  , subTxOuts
+  , subTxValidityLowerBound
+  , subTxValidityUpperBound
+  , subTxMetadata
+  , subTxAuxScripts
+  , subTxProtocolParams
+  , subTxWithdrawals
+  , subTxCertificates
+  , subTxMintValue
+  , subTxProposalProcedures
+  , subTxVotingProcedures
+  , subTxCurrentTreasuryValue
+  , subTxTreasuryDonation
+  , subTxSupplementalDatums
+  , subTxGuards
+  , subTxRequiredTopLevelGuards
+  , subTxDirectDeposits
+  , subTxAccountBalanceIntervals
+
+    -- ** Setters shared by both levels
   , modTxOuts
   , setTxAuxScripts
   , setTxCertificates
-  , setTxReturnCollateral
-  , setTxTotalCollateral
   , setTxCurrentTreasuryValue
-  , setTxExtraKeyWits
-  , setTxFee
   , setTxIns
-  , setTxInsCollateral
   , setTxInsReference
   , setTxMetadata
   , setTxMintValue
   , setTxOuts
   , setTxProposalProcedures
   , setTxProtocolParams
-  , setTxScriptValidity
   , setTxSupplementalDatums
   , setTxTreasuryDonation
   , setTxValidityLowerBound
   , setTxValidityUpperBound
   , setTxVotingProcedures
   , setTxWithdrawals
-
-    -- ** Dijkstra era onwards
   , setTxGuards
-  , setTxSubTransactions
-  , setTxSignedSubTransactions
   , setTxRequiredTopLevelGuards
   , setTxDirectDeposits
   , setTxAccountBalanceIntervals
+
+    -- ** Setters for top-level bodies only
+  , setTxReturnCollateral
+  , setTxTotalCollateral
+  , setTxExtraKeyWits
+  , setTxFee
+  , setTxInsCollateral
+  , setTxScriptValidity
+  , setTxSubTransactions
+  , setTxSignedSubTransactions
   , setTxStartingAccountBalanceIntervals
 
     -- * Sub-transactions (Dijkstra era onwards)
-  , SubTx (..)
-  , defaultSubTx
   , UnsignedSubTx (..)
   , SignedSubTx (..)
   , makeUnsignedSubTx
   , makeSubTxKeyWitness
   , signSubTx
   , makeSignedSubTx
-  , collectSubTxScriptWitnessRequirements
   , getUnsignedSubTxId
   , getSignedSubTxId
   , unsignedSubTxFromSomeTypes
   , signedSubTxFromSomeTypes
   , AsType (AsUnsignedSubTx, AsSignedSubTx)
-
-    -- ** SubTx setters
-  , setSubTxIns
-  , setSubTxInsReference
-  , setSubTxOuts
-  , setSubTxCertificates
-  , setSubTxWithdrawals
-  , setSubTxValidityLowerBound
-  , setSubTxValidityUpperBound
-  , setSubTxMintValue
-  , setSubTxProtocolParams
-  , setSubTxMetadata
-  , setSubTxAuxScripts
-  , setSubTxProposalProcedures
-  , setSubTxVotingProcedures
-  , setSubTxCurrentTreasuryValue
-  , setSubTxTreasuryDonation
-  , setSubTxSupplementalDatums
-  , setSubTxGuards
-  , setSubTxRequiredTopLevelGuards
-  , setSubTxDirectDeposits
-  , setSubTxAccountBalanceIntervals
 
     -- * TxBodyContent sub type
   , TxCertificates (..)
@@ -270,9 +308,9 @@ import Cardano.Api.Era.Internal.Core qualified as Api
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
+import Cardano.Api.Experimental.Tx.Internal.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.Fee
 import Cardano.Api.Experimental.Tx.Internal.SubTransaction
-import Cardano.Api.Experimental.Tx.Internal.TopTx.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)

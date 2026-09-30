@@ -240,7 +240,7 @@ library
     Cardano.Api.Experimental.Tx.Internal.Certificate.Type
     Cardano.Api.Experimental.Tx.Internal.Fee
     Cardano.Api.Experimental.Tx.Internal.SubTransaction
-    Cardano.Api.Experimental.Tx.Internal.TopTx.BodyContent
+    Cardano.Api.Experimental.Tx.Internal.BodyContent
     Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
     Cardano.Api.Experimental.Tx.Internal.Type
     Cardano.Api.Genesis.Internal
