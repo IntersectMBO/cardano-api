@@ -154,8 +154,8 @@ genScriptWitnessedTxProposals :: Gen (TxProposalProcedures era)
 genScriptWitnessedTxProposals = return $ TxProposalProcedures OMap.empty
 
 -- | An arbitrary Dijkstra sub-transaction. May contain key witnesses.
-genUnsignedSubTx :: Gen (UnsignedSubTx DijkstraEra)
+genUnsignedSubTx :: Gen UnsignedSubTx
 genUnsignedSubTx = UnsignedSubTx <$> Q.arbitrary
 
-genSignedSubTx :: Gen (SignedSubTx DijkstraEra)
+genSignedSubTx :: Gen SignedSubTx
 genSignedSubTx = SignedSubTx <$> Q.arbitrary
