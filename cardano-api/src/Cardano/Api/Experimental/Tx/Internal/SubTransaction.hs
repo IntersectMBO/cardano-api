@@ -142,11 +142,11 @@ data SubTx era
   , subTxCurrentTreasuryValue :: Maybe L.Coin
   , subTxTreasuryDonation :: Maybe L.Coin
   , subTxSupplementalDatums :: Map L.DataHash (L.Data era)
-  -- ^ ------------------------------------------------------------
-  -- Fields above are shared with the Conway-era 'TxBodyContent'.
-  -- Fields below are new in the Dijkstra era.
-  -- ------------------------------------------------------------
-  , subTxGuards :: OSet (L.Credential L.Guard)
+  , -- ------------------------------------------------------------
+    -- Fields above are shared with the Conway-era 'TxBodyContent'.
+    -- Fields below are new in the Dijkstra era.
+    -- ------------------------------------------------------------
+    subTxGuards :: OSet (L.Credential L.Guard)
   , subTxRequiredTopLevelGuards :: Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   , subTxDirectDeposits :: L.DirectDeposits
   , subTxAccountBalanceIntervals :: L.AccountBalanceIntervals era
