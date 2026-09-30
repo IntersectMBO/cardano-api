@@ -76,17 +76,13 @@ import Cardano.Api.Tx.Internal.TxIn (TxId, fromShelleyTxId)
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
-import Cardano.Ledger.Core qualified as L
-  ( HashAnnotated (..)
-  , TxLevel (..)
-  )
+import Cardano.Ledger.Core qualified as L (TxLevel (..))
 import Cardano.Ledger.Dijkstra.TxBody qualified as L
   ( DijkstraEraTxBody (accountBalanceIntervalsTxBodyL, requiredTopLevelGuardsL)
   )
 
 import Data.ByteString.Lazy qualified as LBS
 import Data.Maybe (fromMaybe)
-import Data.Set qualified as Set
 import GHC.Exts (IsList (..))
 import Lens.Micro
 
@@ -208,10 +204,7 @@ makeSubTxKeyWitness
   -> ShelleyWitnessSigningKey
   -> L.WitVKey L.Witness
 makeSubTxKeyWitness (UnsignedSubTx unsigned) wsk =
-  let txhash = L.extractHash $ L.hashAnnotated (unsigned ^. L.bodyTxL)
-      sk = toShelleySigningKey wsk
-      vk = getShelleyKeyWitnessVerificationKey sk
-   in L.WitVKey vk (makeShelleySignature txhash sk)
+  makeShelleyKeyWitnessFromHash (hashTxBody (unsigned ^. L.bodyTxL)) wsk
 
 -- | Add key witnesses to an unsigned sub-transaction.
 signSubTx
@@ -220,11 +213,7 @@ signSubTx
   -> UnsignedSubTx
   -> SignedSubTx
 signSubTx bootstrapWits shelleyKeyWits (UnsignedSubTx unsigned) =
-  let keyWits =
-        L.mkBasicTxWits
-          & L.addrTxWitsL .~ Set.fromList shelleyKeyWits
-          & L.bootAddrTxWitsL .~ Set.fromList bootstrapWits
-   in SignedSubTx $ unsigned & L.witsTxL %~ (keyWits <>)
+  SignedSubTx $ addKeyWitnesses bootstrapWits shelleyKeyWits unsigned
 
 -- | Build and sign a sub-transaction in one step.
 makeSignedSubTx
