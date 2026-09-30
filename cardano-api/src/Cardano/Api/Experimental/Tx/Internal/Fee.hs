@@ -42,8 +42,8 @@ import Cardano.Api.Experimental.AnyScriptWitness qualified as Exp
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
+import Cardano.Api.Experimental.Tx.Internal.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
-import Cardano.Api.Experimental.Tx.Internal.TopTx.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.Key.Internal qualified as Api
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
