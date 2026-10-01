@@ -47,10 +47,13 @@ import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
+import Control.Exception (ErrorCall (..), evaluate, try)
 import Control.Monad.Identity (Identity)
 import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
+import Data.Either (isRight)
 import Data.Foldable (toList)
+import Data.List (isInfixOf)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -160,6 +163,9 @@ tests =
         [ testProperty
             "Plutus scripts without protocol params returns MakeUnsignedTxMissingProtocolParams"
             prop_makeUnsignedTx_plutus_without_pparams
+        , testProperty
+            "Dijkstra-only fields set on a Conway body are rejected, not dropped"
+            prop_makeUnsignedTx_conway_rejects_dijkstra_only_fields
         , testProperty
             "Proposal-procedure redeemer pointers follow OMap insertion order, not Ord order"
             prop_makeUnsignedTx_proposal_redeemer_indices_follow_insertion_order
@@ -772,6 +778,23 @@ prop_roundtrip_serialise_as_raw_bytes_signed_tx = H.withTests (H.TestLimit 20) $
 -- ---------------------------------------------------------------------------
 -- Regression test for makeUnsignedTx
 -- ---------------------------------------------------------------------------
+
+-- | The body content record is shared by Conway and Dijkstra, so a Dijkstra-only
+-- field can be set on a Conway body. Building must throw, naming the field,
+-- rather than silently producing a body without it. The same content builds in
+-- Dijkstra.
+prop_makeUnsignedTx_conway_rejects_dijkstra_only_fields :: Property
+prop_makeUnsignedTx_conway_rejects_dijkstra_only_fields = H.property $ do
+  guardCredential <- H.forAll Q.arbitrary
+  let bodyContent :: Exp.TxBodyContent era
+      bodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxRequiredTopLevelGuards (Map.singleton guardCredential SNothing)
+  result <- H.evalIO . try $ evaluate (Exp.makeUnsignedTx Exp.ConwayEra bodyContent)
+  case result of
+    Left (ErrorCallWithLocation msg _) -> H.assert ("txRequiredTopLevelGuards" `isInfixOf` msg)
+    Right _ -> H.failure
+  H.assert . isRight $ Exp.makeUnsignedTx Exp.DijkstraEra bodyContent
 
 -- | Regression test: 'makeUnsignedTx' must return 'Left MakeUnsignedTxMissingProtocolParams'
 -- when the transaction body contains a Plutus script witness but no protocol parameters.
