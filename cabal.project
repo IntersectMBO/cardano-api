@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-09-01T20:29:07Z
-  , cardano-haskell-packages 2026-09-15T21:40:46Z
+  , cardano-haskell-packages 2026-09-30T12:46:04Z
 
 packages:
     cardano-api
@@ -188,6 +188,7 @@ allow-newer:
   cardano-keys:cardano-crypto-class,
   cardano-keys:cardano-crypto-wrapper,
   cardano-keys:cardano-ledger-core,
+  cardano-keys:cardano-protocol,
   cardano-keys:cardano-ledger-shelley,
 
 -- Kept in sync with the exact SRPs ouroboros-consensus itself uses (see its
@@ -198,13 +199,13 @@ allow-newer:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 1fe3caa7cdc0db8449adc358eea6be84710a5eb6
-  --sha256: sha256-Urq7yF70g7DchgNGcS/SZIEA+8T4d58h/ivpR8mJNck=
+  tag: 5b8c2bfeb4ec516ad83a7dcef98d9101d5666280
+  --sha256: sha256-BQ4Y4hw2wlww3wlf3243z8UdZdYGg+HRaHuwmUezizQ=
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/kes-agent
-  tag: 4625f3cf543566517d08882e659c97932d106d86
+  tag: 920de6b5c578c4d2fb7639a9734a96e39400e2b8
   --sha256: sha256-CSHWndpeJFqCEFNT6ysfyN6x+O4vZ9TtYOOsZKcLnIA=
   subdir:
     kes-agent
@@ -213,8 +214,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-base.git
-  tag: d92e2e3841eaad354c5e1ef77b458b347f471271
-  --sha256: sha256-WUBluY6UqvBkS5cNsJnKMOaW+1dTfL3mg8iq/kVPV0o=
+  tag: 3d5e2ba1e76b7cd3bead8bd3f81a2e7ee743ce5c
+  --sha256: sha256-Wr6CZW4OR4nsbARIbLKIf61jQfO1WsiT9HPLV+mfZYU=
   subdir: cardano-crypto-leios
 
 -- ouroboros-consensus's own cabal.project pins ouroboros-network to this same
@@ -225,18 +226,28 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 09495ae9e6a063929ac9f2a8a80d210735c3a66e
-  --sha256: sha256-/m3CUFKSnTw8YpyIMhcpdVbHWu6FEqjiQFiPORWLFFI=
+  tag: a3d8017e798b225055aaf9118ad062fe58bc650f
+  --sha256: sha256-nrDi43HfvKAg+5wE6PF4QI4HmYh1rav3a5uqw24BFv0=
   subdir:
     ouroboros-network
     cardano-diffusion
     network-mux
 
+-- ouroboros-consensus's rebase onto upstream main moved its own node-config
+-- parsing onto cardano-config ^>=2.0, pulled in via its own SRP to its main
+-- branch (not released to CHaP yet). SRPs aren't transitive across
+-- cabal.project files, so mirror that same SRP here too.
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-config.git
+  tag: d6340b13b9c789441905f27d90984a6018bbe503
+  --sha256: sha256-diV4bf/cU0u0VNC6dMMe4Y/pPFI0s+MqxCIpzd9c+E8=
+
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: d37df81c04fee76b5206d426edc990ebd641b2a4
-  --sha256: sha256-sfCMBZx0IujpIwkXgh7Ylu1d1O6WMqJ9S2LvJBG9RdI=
+  tag: c9e53ed9b9f6a7b2f20aedc7fa0b84da7725ede3
+  --sha256: sha256-Mpmm0oFhH4dyqka/yKb95ilHzpKbTSAQ1DVkDPoV2FA=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
