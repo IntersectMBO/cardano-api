@@ -321,6 +321,19 @@ instance Semigroup (Ledger.DijkstraPParams StrictMaybe era) where
           lastMappendWithTHKD Ledger.dppMaxEndorserBlockExUnits p1 p2
       , Ledger.dppMaxRefScriptSizePerEndorserBlock =
           lastMappendWithTHKD Ledger.dppMaxRefScriptSizePerEndorserBlock p1 p2
+      , Ledger.dppPerasMinCandidateBlockAge =
+          lastMappendWithTHKD Ledger.dppPerasMinCandidateBlockAge p1 p2
+      , Ledger.dppPerasHealingFactor = lastMappendWithTHKD Ledger.dppPerasHealingFactor p1 p2
+      , Ledger.dppPerasCertBoost = lastMappendWithTHKD Ledger.dppPerasCertBoost p1 p2
+      , Ledger.dppPerasTargetCommitteeSize =
+          lastMappendWithTHKD Ledger.dppPerasTargetCommitteeSize p1 p2
+      , Ledger.dppPerasBootstrapRound = lastMappendWithTHKD Ledger.dppPerasBootstrapRound p1 p2
+      , Ledger.dppPerasQuorumThresholdSafetyMargin =
+          lastMappendWithTHKD Ledger.dppPerasQuorumThresholdSafetyMargin p1 p2
+      , Ledger.dppRefInputsCostPerMultiAssetPolicy =
+          lastMappendWithTHKD Ledger.dppRefInputsCostPerMultiAssetPolicy p1 p2
+      , Ledger.dppRefInputsCostPerDatumByte =
+          lastMappendWithTHKD Ledger.dppRefInputsCostPerDatumByte p1 p2
       }
 
 lastMappendWithTHKD :: (a -> Ledger.THKD g StrictMaybe b) -> a -> a -> Ledger.THKD g StrictMaybe b
