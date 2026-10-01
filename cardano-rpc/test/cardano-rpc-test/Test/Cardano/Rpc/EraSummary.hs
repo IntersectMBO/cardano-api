@@ -14,6 +14,7 @@ import Cardano.Slotting.Time (RelativeTime (..))
 import Ouroboros.Consensus.BlockchainTime.WallClock.Types (slotLengthFromSec)
 import Ouroboros.Consensus.Cardano.Block (CardanoEras)
 import Ouroboros.Consensus.HardFork.History qualified as History
+import Ouroboros.Consensus.Peras.Types (PerasRoundNo (..))
 
 import RIO
 
@@ -30,6 +31,7 @@ dummyEraParams =
   History.defaultEraParams
     (Consensus.SecurityParam (knownNonZeroBounded @2160))
     (slotLengthFromSec 1)
+    History.NoPerasEnabled
 
 mkBound :: SlotNo -> EpochNo -> RelativeTime -> History.Bound
 mkBound slot epoch time =
@@ -37,7 +39,7 @@ mkBound slot epoch time =
     { History.boundTime = time
     , History.boundSlot = slot
     , History.boundEpoch = epoch
-    , History.boundPerasRound = History.NoPerasEnabled
+    , History.boundNextPerasRound = PerasRoundNo 0
     }
 
 mkEraSummary :: History.Bound -> History.EraEnd -> History.EraSummary
