@@ -249,6 +249,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text.Encoding qualified as Text
 import GHC.Exts (IsList (..))
+import GHC.Stack (HasCallStack)
 import Lens.Micro
 
 -- | Error that can occur when constructing an unsigned transaction.
@@ -334,7 +335,9 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
           & L.datsTxWitsL .~ datums
           & L.rdmrsTxWitsL .~ redeemers
 
-  let eraSpecificTxBody = eraSpecificLedgerTxBody era commonLedgerTxBody bc
+  -- Forced here so that the Conway check in 'eraSpecificLedgerTxBody' fires
+  -- when the transaction is built, not when the body is first inspected.
+  eraSpecificTxBody <- pure $! eraSpecificLedgerTxBody era commonLedgerTxBody bc
   Right $
     UnsignedTx $
       L.mkBasicTx eraSpecificTxBody
@@ -434,16 +437,27 @@ toAuxiliaryData txMData ss' =
            in guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
 
 -- | Set the fields that differ between eras on the body built in 'makeUnsignedTx'.
+--
+-- The body content record is shared by all eras, so fields that exist only
+-- from Dijkstra onwards can be set on a Conway body, where there is nowhere
+-- to put them. Building for Conway rejects that instead of dropping them.
 eraSpecificLedgerTxBody
-  :: Era era
+  :: HasCallStack
+  => Era era
   -> L.TxBody L.TopTx (LedgerEra era)
   -> TxBodyContent (LedgerEra era)
   -> L.TxBody L.TopTx (LedgerEra era)
 eraSpecificLedgerTxBody era ledgerbody bc =
   case era of
-    ConwayEra ->
-      ledgerbody
-        & L.reqSignerHashesTxBodyL .~ reqSignerHashes
+    ConwayEra
+      | not (null dijkstraOnlyFieldsSet) ->
+          error $
+            "makeUnsignedTx: fields that only exist from the Dijkstra era onwards were set on a "
+              <> "Conway body: "
+              <> List.intercalate ", " dijkstraOnlyFieldsSet
+      | otherwise ->
+          ledgerbody
+            & L.reqSignerHashesTxBodyL .~ reqSignerHashes
     DijkstraEra ->
       -- Dijkstra replaced required signer hashes with guards, so extra key
       -- witnesses become key-hash guards.
@@ -457,6 +471,27 @@ eraSpecificLedgerTxBody era ledgerbody bc =
         & L.startingAccountBalanceIntervalsTxBodyL .~ txStartingAccountBalanceIntervals bc
  where
   reqSignerHashes = convExtraKeyWitnesses (txExtraKeyWits bc)
+
+  -- Every field the Dijkstra branch above writes must be empty in Conway.
+  dijkstraOnlyFieldsSet :: [String]
+  dijkstraOnlyFieldsSet =
+    [ name
+    | (name, isPresent) <-
+        [ ("txGuards", present (txGuards bc))
+        , ("txSubTransactions", present (txSubTransactions bc))
+        , ("txRequiredTopLevelGuards", present (txRequiredTopLevelGuards bc))
+        , ("txDirectDeposits", present (L.unDirectDeposits (txDirectDeposits bc)))
+        , ("txAccountBalanceIntervals", present (L.unAccountBalanceIntervals (txAccountBalanceIntervals bc)))
+        ,
+          ( "txStartingAccountBalanceIntervals"
+          , present (L.unAccountBalanceIntervals (txStartingAccountBalanceIntervals bc))
+          )
+        ]
+    , isPresent
+    ]
+
+  present :: Foldable f => f a -> Bool
+  present = not . null
 
 data TxOut era where
   TxOut :: L.EraTxOut era => L.TxOut era -> TxOut era
