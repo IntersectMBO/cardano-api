@@ -218,6 +218,20 @@ prop_extractAllIndexedPlutusScriptWitnesses =
 
     length allGeneratedPlutusScriptWitnesses === length extractedPlutusScriptWitnesses
 
+-- | A Plutus script whose language the era does not support is representable
+-- only through deserialisation, and that is where it must be rejected. V4 fails
+-- in Conway. An inline witness of such a script cannot even be written, because
+-- 'PlutusScriptInEra' demands 'PlutusLangInEra' at the type level.
+prop_deserialise_rejects_unsupported_plutus_language :: Property
+prop_deserialise_rejects_unsupported_plutus_language = property $ do
+  v3ScriptInEra <- forAll genPlutusScriptInEra
+  let v4Bytes = serialiseToCBOR v3ScriptInEra
+  case deserialiseAnyPlutusScriptOfLanguage @ConwayEra v4Bytes L.SPlutusV4 of
+    Left _ -> success
+    Right _ -> do
+      annotate "PlutusV4 must not deserialise in Conway"
+      failure
+
 -- | 'toPlutusScriptPurposeIndex' classifies ledger redeemer pointers the same
 -- way as the older 'Api.toScriptIndex', for every purpose category the two
 -- share, at every era with plutus scripts. 'GuardingScript' (Dijkstra's new
@@ -307,6 +321,9 @@ tests =
     , testProperty
         "prop_extractAllIndexedPlutusScriptWitnesses"
         prop_extractAllIndexedPlutusScriptWitnesses
+    , testProperty
+        "prop_deserialise_rejects_unsupported_plutus_language"
+        prop_deserialise_rejects_unsupported_plutus_language
     , testProperty "prop_getAnyWitnessRedeemerPointerMap" prop_getAnyWitnessRedeemerPointerMap
     , testProperty "prop_toAnyWitness" prop_toAnyWitness
     , testProperty

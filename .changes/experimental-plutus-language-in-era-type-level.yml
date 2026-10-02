@@ -1,0 +1,9 @@
+project: cardano-api
+pr:
+kind:
+  - breaking
+  - bugfix
+description: |
+  The `PlutusScriptInEra` constructor now requires the type-level `PlutusLangInEra lang era` constraint, so a Plutus script in a language the era does not support cannot be placed in an experimental transaction. Before, such a script was silently dropped from the witness set while its redeemer was kept, so the transaction failed on submission.
+  The check happens once at deserialisation: `deserialiseAnyPlutusScriptOfLanguage`, `decodeAnyPlutusScript` and the `SerialiseAsCBOR` instances for `PlutusScriptInEra` and `AnyScript` reject an unsupported language, and `deserialiseAnyPlutusScriptFromTextEnvelope` no longer accepts envelope types for such languages.
+  New `PlutusLangsInEra` class and `PlutusLangInEraEvidence` witness provide the runtime evidence for code that learns the language at runtime. `EraCommonConstraints` now includes `PlutusLangsInEra (LedgerEra era)`.
