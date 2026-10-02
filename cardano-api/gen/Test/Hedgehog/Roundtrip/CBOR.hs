@@ -111,7 +111,11 @@ assertValidPlutusScriptBytesExperimental
 assertValidPlutusScriptBytesExperimental era scriptBytes lang = do
   -- Decode a plutus script (double wrapped or "normal" plutus script) with the existing SerialiseAsCBOR instance for
   -- 'Script lang'. This should produce plutus script bytes that are not double encoded.
-  case Exp.obtainCommonConstraints era $ Exp.deserialisePlutusScriptInEra lang scriptBytes
-         :: Either DecoderError (Exp.PlutusScriptInEra lang (Exp.LedgerEra era)) of
-    Left e -> failWith Nothing $ "Plutus lang: Error decoding script bytes: " ++ show (e :: DecoderError)
-    Right (Exp.PlutusScriptInEra{}) -> H.success
+  Exp.obtainCommonConstraints era $
+    case Exp.plutusLangInEra @(Exp.LedgerEra era) lang of
+      Nothing -> failWith Nothing "Plutus lang: language not supported in era"
+      Just Exp.PlutusLangInEraEvidence ->
+        case Exp.deserialisePlutusScriptInEra lang scriptBytes
+               :: Either DecoderError (Exp.PlutusScriptInEra lang (Exp.LedgerEra era)) of
+          Left e -> failWith Nothing $ "Plutus lang: Error decoding script bytes: " ++ show (e :: DecoderError)
+          Right (Exp.PlutusScriptInEra{}) -> H.success
