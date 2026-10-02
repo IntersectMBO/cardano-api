@@ -1,0 +1,10 @@
+project: cardano-api
+pr: 0
+kind:
+  - breaking
+description: |
+  Use `hermod-tracing-api` instead of `contra-tracer`, as `ouroboros-network`
+  and `ouroboros-consensus` now do. The tracers that appear in the API, such as
+  the KES agent tracer that block forging takes (`Cardano.Api.Consensus`
+  `Protocol` class, `LedgerState`), are hermod traces
+  (`Hermod.Tracing.API.Tracer`). Requires `ouroboros-consensus ^>=4.2`.

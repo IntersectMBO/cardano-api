@@ -130,7 +130,6 @@ import Control.Exception (SomeException, throwIO)
 import Control.Exception.Safe (tryAny)
 import Control.Monad (void)
 import Control.Monad.IO.Class
-import Control.Tracer (nullTracer)
 import Data.Aeson (ToJSON, object, toJSON, (.=))
 import Data.ByteString.Lazy qualified as LBS
 import Data.Void (Void)
@@ -138,6 +137,8 @@ import GHC.Exts (IsList (..))
 import GHC.Stack (HasCallStack)
 import Network.Mux qualified as Net
 import Network.Mux.Trace (nullTracers)
+
+import Hermod.Tracing.API.Tracer (nullTracer)
 
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols

@@ -228,7 +228,6 @@ import Control.Monad
 import Control.Monad.Class.MonadST (MonadST)
 import Control.Monad.Class.MonadThrow (MonadThrow)
 import Control.Monad.State.Strict
-import Control.Tracer qualified as Tracer
 import Data.Aeson as Aeson
   ( FromJSON (parseJSON)
   , Object
@@ -278,6 +277,8 @@ import Network.Mux qualified as Mux
 import Network.TypedProtocol.Core (Nat (..))
 import System.FS.API (SomeHasFS (..))
 import System.FilePath
+
+import Hermod.Tracing.API.Tracer qualified as Tracer
 
 data InitialLedgerStateError
   = -- | Failed to read or parse the network config file.

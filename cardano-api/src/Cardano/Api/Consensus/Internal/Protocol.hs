@@ -46,9 +46,9 @@ import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
 import Ouroboros.Consensus.Util.IOLike (IOLike)
 
-import Control.Tracer qualified as Tracer
 import System.FS.API (SomeHasFS)
 
+import Hermod.Tracing.API.Tracer qualified as Tracer
 import Type.Reflection ((:~:) (..))
 
 class (RunNode blk, IOLike m) => Protocol m blk where
