@@ -233,7 +233,6 @@ import Control.Monad
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (Pair, Parser)
-import Data.Bifunctor (first)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Short qualified as SBS
 import Data.Functor
@@ -267,9 +266,6 @@ data MakeUnsignedTxError
     -- eras, so this is only detected when the body is built.
     -- The field names are those of the 'TxBodyContent' record.
     MakeUnsignedTxFieldsNotSupportedInEra (Some Era) (NonEmpty Text)
-  | -- | An inline Plutus script witness uses a language the era does not
-    -- support.
-    MakeUnsignedTxPlutusLanguageNotSupportedInEra L.Language (Some Era)
   deriving (Eq, Show)
 
 instance Error MakeUnsignedTxError where
@@ -286,14 +282,6 @@ instance Error MakeUnsignedTxError where
       , " era: "
       , pretty . Text.intercalate ", " $ NonEmpty.toList fields
       ]
-  prettyError (MakeUnsignedTxPlutusLanguageNotSupportedInEra language (Some era)) =
-    mconcat
-      [ "Plutus script language "
-      , pshow language
-      , " is not supported in the "
-      , pretty era
-      , " era."
-      ]
 
 makeUnsignedTx
   :: forall era
@@ -301,9 +289,7 @@ makeUnsignedTx
   -> TxBodyContent (LedgerEra era)
   -> Either MakeUnsignedTxError (UnsignedTx (LedgerEra era))
 makeUnsignedTx era bc = obtainCommonConstraints era $ do
-  TxScriptWitnessRequirements languages scripts datums redeemers <-
-    first (\language -> MakeUnsignedTxPlutusLanguageNotSupportedInEra language (Some era)) $
-      collectTxBodyScriptWitnessRequirements bc
+  let TxScriptWitnessRequirements languages scripts datums redeemers = collectTxBodyScriptWitnessRequirements bc
 
   -- cardano-api types
   let apiMintValue = txMintValue bc
@@ -1345,7 +1331,7 @@ collectTxBodyScriptWitnessRequirements
   :: forall l era
    . IsEra era
   => BodyContent l (LedgerEra era)
-  -> Either L.Language (TxScriptWitnessRequirements (LedgerEra era))
+  -> TxScriptWitnessRequirements (LedgerEra era)
 collectTxBodyScriptWitnessRequirements
   BodyContent
     { bcIns
@@ -1356,7 +1342,7 @@ collectTxBodyScriptWitnessRequirements
     , bcVotingProcedures
     , bcProposalProcedures
     , bcSupplementalDatums
-    } = obtainCommonConstraints (useEra @era) $ obtainMonoidConstraint (useEra @era) $ do
+    } = obtainCommonConstraints (useEra @era) $ do
     let supplementaldatums =
           TxScriptWitnessRequirements
             mempty
@@ -1364,17 +1350,26 @@ collectTxBodyScriptWitnessRequirements
             (getDatums bcInsReference bcSupplementalDatums)
             mempty
 
-    txInWits <- getTxScriptWitnessesRequirements $ extractWitnessableTxIns bcIns
-    txWithdrawalWits <- getTxScriptWitnessesRequirements $ extractWitnessableWithdrawals bcWithdrawals
-    txCertWits <- getTxScriptWitnessesRequirements $ extractWitnessableCertificates bcCertificates
-    txMintWits <-
-      getTxScriptWitnessesRequirements
-        [(wit, anyScriptWitnessToAnyWitness sw) | (wit, sw) <- extractWitnessableMints bcMintValue]
-    txVotingWits <- getTxScriptWitnessesRequirements $ extractWitnessableVotes bcVotingProcedures
-    txProposalWits <-
-      getTxScriptWitnessesRequirements $ extractWitnessableProposals bcProposalProcedures
+    let txInWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            extractWitnessableTxIns bcIns
+        txWithdrawalWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            extractWitnessableWithdrawals bcWithdrawals
+        txCertWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            extractWitnessableCertificates bcCertificates
+        txMintWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            [(wit, anyScriptWitnessToAnyWitness sw) | (wit, sw) <- extractWitnessableMints bcMintValue]
+        txVotingWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            extractWitnessableVotes bcVotingProcedures
+        txProposalWits =
+          obtainMonoidConstraint (useEra @era) getTxScriptWitnessesRequirements $
+            extractWitnessableProposals bcProposalProcedures
 
-    Right $
+    obtainMonoidConstraint (useEra @era) $
       mconcat
         [ supplementaldatums
         , txInWits
