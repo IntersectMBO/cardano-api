@@ -318,7 +318,7 @@ estimateBalancedTxBody'
   byronwits
   sizeOfAllReferenceScripts
   changeaddr
-  totalUTxOValue = do
+  totalUTxOValue = obtainCommonConstraints (useEra @era) $ do
     -- The ledger requires collateral only for transactions that run Plutus
     -- scripts, so collateral inputs on a transaction without them are an
     -- error: the ledger would ignore them, but they would cost fees and
@@ -354,12 +354,10 @@ estimateBalancedTxBody'
           -- registered before and has not included duplicate stake pool registration certificates.
           let assumeStakePoolHasNotBeenRegistered = const False
            in sum
-                [ obtainCommonConstraints (useEra @era) $
-                    L.getTotalDepositsTxCerts pparams assumeStakePoolHasNotBeenRegistered certificates
-                , obtainCommonConstraints (useEra @era) $
-                    mconcat $
-                      map (^. L.pProcDepositL) $
-                        toList proposalProcedures
+                [ L.getTotalDepositsTxCerts pparams assumeStakePoolHasNotBeenRegistered certificates
+                , mconcat $
+                    map (^. L.pProcDepositL) $
+                      toList proposalProcedures
                 ]
         availableUTxOValue :: L.MaryValue
         availableUTxOValue = totalUTxOValue L.<-> L.inject totalDeposits
@@ -378,8 +376,7 @@ estimateBalancedTxBody'
       changeWithMaxLovelace = L.modifyCoin (const maxLovelaceChange) partialChange
       changeTxOut :: L.TxOut (LedgerEra era)
       changeTxOut =
-        obtainCommonConstraints (useEra @era) $
-          L.mkBasicTxOut (toShelleyAddr changeaddr) changeWithMaxLovelace
+        L.mkBasicTxOut (toShelleyAddr changeaddr) changeWithMaxLovelace
 
     let (mDummyReturnCollateral, mDummyTotalCollateral) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
 
@@ -393,7 +390,7 @@ estimateBalancedTxBody'
           txbodycontent1
             { txFee = maxLovelaceFee
             , txOuts =
-                obtainCommonConstraints (useEra @era) (TxOut changeTxOut)
+                TxOut changeTxOut
                   : txOuts txbodycontent
             , txReturnCollateral = mDummyReturnCollateral
             , txTotalCollateral = mDummyTotalCollateral
@@ -409,15 +406,14 @@ estimateBalancedTxBody'
     -- Step 4. We use the fee to calculate the required collateral
     (maybeReturnTxCollateral, maybeTotalTxCollateral) <-
       first (TxFeeEstimationBalanceError . TxBodyErrorCollateral) $
-        obtainCommonConstraints (useEra @era) $
-          calcReturnAndTotalCollateral
-            fee
-            pparams
-            (txInsCollateral txbodycontent)
-            (txReturnCollateral txbodycontent)
-            (txTotalCollateral txbodycontent)
-            changeaddr
-            (L.inject totalPotentialCollateral)
+        calcReturnAndTotalCollateral
+          fee
+          pparams
+          (txInsCollateral txbodycontent)
+          (txReturnCollateral txbodycontent)
+          (txTotalCollateral txbodycontent)
+          changeaddr
+          (L.inject totalPotentialCollateral)
 
     -- Step 5. Now we can calculate the balance of the tx. What matter here are:
     --  1. The original outputs
@@ -433,51 +429,51 @@ estimateBalancedTxBody'
             , txTotalCollateral = maybeTotalTxCollateral
             }
 
-    let fakeUTxO = createFakeUTxO txbodycontent1 $ L.coin availableUTxOValue
+    let fakeUTxO =
+          createFakeUTxO (toShelleyAddr changeaddr) txbodycontent1 $
+            L.coin availableUTxOValue
         balance :: Ledger.Value (LedgerEra era) =
           evaluateTransactionBalance pparams poolids stakeDelegDeposits fakeUTxO txbody2
 
         coinBalance :: L.Coin
-        coinBalance = obtainCommonConstraints (useEra @era) $ L.coin balance
+        coinBalance = L.coin balance
 
         balanceTxOut :: TxOut (LedgerEra era)
         balanceTxOut =
-          obtainCommonConstraints (useEra @era) $
-            TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance)
-    obtainCommonConstraints (useEra @era) $ do
-      when (coinBalance < 0) $
-        Left $
-          TxFeeEstimationBalanceError $
-            BalanceIsNegative coinBalance txbody2
+          TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance)
+    when (coinBalance < 0) $
+      Left $
+        TxFeeEstimationBalanceError $
+          BalanceIsNegative coinBalance txbody2
 
-      -- Step 6. Check all txouts have the min required UTxO value
-      -- TOOD: Fix me. You need a new error type to accomodate your new types
-      first (TxFeeEstimationBalanceError . uncurry TxBodyErrorMinUTxONotMet)
-        . mapM_ (checkMinUTxOValue pparams)
-        $ txOuts txbodycontent1
+    -- Step 6. Check all txouts have the min required UTxO value
+    -- TOOD: Fix me. You need a new error type to accomodate your new types
+    first (TxFeeEstimationBalanceError . uncurry TxBodyErrorMinUTxONotMet)
+      . mapM_ (checkMinUTxOValue pparams)
+      $ txOuts txbodycontent1
 
-      -- check if the balance is positive or negative
-      -- in one case we can produce change, in the other the inputs are insufficient
-      finalTxOuts <-
-        first TxFeeEstimationBalanceError $
-          checkAndIncludeChange pparams balanceTxOut (txOuts txbodycontent1)
+    -- check if the balance is positive or negative
+    -- in one case we can produce change, in the other the inputs are insufficient
+    finalTxOuts <-
+      first TxFeeEstimationBalanceError $
+        checkAndIncludeChange pparams balanceTxOut (txOuts txbodycontent1)
 
-      -- Step 7.
+    -- Step 7.
 
-      -- Create the txbody with the final fee and change output. This should work
-      -- provided that the fee and change are less than 2^32-1, and so will
-      -- fit within the encoding size we picked above when calculating the fee.
-      -- Yes this could be an over-estimate by a few bytes if the fee or change
-      -- would fit within 2^16-1. That's a possible optimisation.
-      let finalTxBodyContent =
-            txbodycontent1
-              { txFee = fee
-              , txOuts = finalTxOuts
-              , txReturnCollateral = maybeReturnTxCollateral
-              , txTotalCollateral = maybeTotalTxCollateral
-              }
+    -- Create the txbody with the final fee and change output. This should work
+    -- provided that the fee and change are less than 2^32-1, and so will
+    -- fit within the encoding size we picked above when calculating the fee.
+    -- Yes this could be an over-estimate by a few bytes if the fee or change
+    -- would fit within 2^16-1. That's a possible optimisation.
+    let finalTxBodyContent =
+          txbodycontent1
+            { txFee = fee
+            , txOuts = finalTxOuts
+            , txReturnCollateral = maybeReturnTxCollateral
+            , txTotalCollateral = maybeTotalTxCollateral
+            }
 
-      return finalTxBodyContent
+    return finalTxBodyContent
 
 data IsEmpty = Empty | NonEmpty
   deriving (Eq, Show)
@@ -654,25 +650,29 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits utxo (UnsignedTx unsign
   lookupDelegDeposit stakeCred =
     Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
 
--- | This is used in the balance calculation in the event where
--- the user does not supply the UTxO(s) they intend to spend
--- but they must supply their total balance of ADA.
--- evaluateTransactionBalance calls evalBalanceTxBody which requires a UTxO value.
--- This eventually calls getConsumedMaryValue which retrieves the balance
--- from the transaction itself. This necessitated a function to create a "fake" UTxO
--- to still use evalBalanceTxBody however this will fail for transactions
--- containing multi-assets, refunds and withdrawals.
+-- | Build a single-entry UTxO for the first input holding the declared total ADA, so the balance
+-- can be evaluated without the real UTxO set. The first output is the template, or a plain
+-- output at the change address when there are no outputs. Native assets outside the first
+-- output are not represented.
 -- TODO: Include multiassets
-createFakeUTxO :: TxBodyContent era -> Coin -> L.UTxO era
-createFakeUTxO txbodycontent totalAdaInUTxO =
+createFakeUTxO
+  :: L.EraTxOut era
+  => L.Addr
+  -- ^ The change address used when there are no outputs.
+  -> TxBodyContent era
+  -- ^ The transaction body content.
+  -> Coin
+  -- ^ The total ADA declared by the caller.
+  -> L.UTxO era
+createFakeUTxO changeAddress txbodycontent totalAdaInUTxO = do
   let singleTxIn = maybe [] (return . toShelleyTxIn . fst) $ List.uncons [txin | (txin, _) <- txIns txbodycontent]
       singleTxOut =
-        maybe [] (\(TxOut firstOut, _rest) -> return $ firstOut & L.coinTxOutL .~ totalAdaInUTxO) $
-          List.uncons $
-            txOuts txbodycontent
-   in -- Take one txin and one txout. Replace the out value with totalAdaInUTxO
-      -- Return an empty UTxO if there are no txins or txouts
-      L.UTxO $ fromList $ zip singleTxIn singleTxOut
+        maybe
+          [L.mkBasicTxOut changeAddress (L.inject totalAdaInUTxO)]
+          (\(TxOut firstOut, _rest) -> return $ firstOut & L.coinTxOutL .~ totalAdaInUTxO)
+          . List.uncons
+          $ txOuts txbodycontent
+  L.UTxO . fromList $ zip singleTxIn singleTxOut
 
 -- | Whether the transaction contains any Plutus script witness. The ledger
 -- requires collateral only for transactions that run Plutus scripts.

@@ -454,6 +454,52 @@ prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
   let balancedProposalProcedureList = toList balancedProposalProcedureOMap
   balancedProposalProcedureList === [(proposalProcedure, ViewTx)]
 
+-- | Regression test for: https://github.com/IntersectMBO/cardano-cli/issues/1199
+prop_estimate_balanced_tx_body_balances_without_outputs :: Property
+prop_estimate_balanced_tx_body_balances_without_outputs = H.propertyOnce $ do
+  let meo = MaryEraOnwardsConway
+      sbe = convert meo
+
+  ledgerPParams <-
+    H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  let address = mkKeyHashAddress sbe
+      fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      content =
+        defaultTxBodyContent sbe
+          & setTxIns [(fundingTxIn, BuildTxWith (KeyWitness KeyWitnessForSpending))]
+          & setTxProtocolParams (pure $ pure (LedgerProtocolParameters ledgerPParams))
+
+  (BalancedTxBody balancedContent _ _changeOut fee) <-
+    H.leftFail $
+      estimateBalancedTxBody
+        meo
+        content
+        ledgerPParams
+        mempty
+        mempty
+        mempty
+        (L.Coin 0)
+        1
+        0
+        0
+        address
+        (lovelaceToValue 150_000_000)
+
+  H.note_ "Check that fee is greater than zero"
+  H.assertWith fee (> L.Coin 0)
+
+  case txOuts balancedContent of
+    [TxOut outAddr outValue _ _] -> do
+      H.note_ "Check that the output is at the change address"
+      outAddr === address
+      H.note_ "Check that the output's lovelace equals the declared value minus the fee"
+      txOutValueToLovelace outValue === L.Coin 150_000_000 - fee
+    outs -> do
+      H.annotateShow outs
+      H.annotate "Expected exactly one output"
+      H.failure
+
 -- * Utilities
 
 mkSimpleUTxOs :: ShelleyBasedEra ConwayEra -> UTxO ConwayEra
@@ -491,4 +537,7 @@ tests =
     , testProperty
         "Governance actions are preserved by autobalance"
         prop_ensure_gov_actions_are_preserved_by_autobalance
+    , testProperty
+        "estimateBalancedTxBody balances a transaction with no outputs"
+        prop_estimate_balanced_tx_body_balances_without_outputs
     ]

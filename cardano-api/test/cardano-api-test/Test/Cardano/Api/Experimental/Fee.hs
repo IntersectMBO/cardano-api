@@ -44,6 +44,7 @@ import Test.Gen.Cardano.Api.Typed
   )
 
 import Test.Cardano.Api.Experimental (exampleProtocolParams, exampleProtocolParamsEra)
+import Test.Cardano.Api.Transaction.Fixtures (mkTxIn)
 
 import Hedgehog (Gen, Property, (===))
 import Hedgehog qualified as H
@@ -141,6 +142,12 @@ tests =
         , testProperty
             "balanced tx has mempty balance"
             prop_evaluateSignedTx_balanced_mempty
+        ]
+    , testGroup
+        "estimateBalancedTxBody"
+        [ testProperty
+            "balances a transaction with no outputs"
+            prop_estimateBalancedTxBody_balances_without_outputs
         ]
     ]
 
@@ -804,6 +811,48 @@ prop_evaluateSignedTx_balanced_mempty = H.property $ do
           utxo
           signedTx
   Exp.txEvalBalance result === mempty
+
+-- | Regression test for: https://github.com/IntersectMBO/cardano-cli/issues/1199
+prop_estimateBalancedTxBody_balances_without_outputs :: Property
+prop_estimateBalancedTxBody_balances_without_outputs = H.propertyOnce $ do
+  let era = Exp.ConwayEra
+      sbe = convert era
+      txIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      addr =
+        L.Addr
+          L.Testnet
+          (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+          L.StakeRefNull
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+
+  balancedContent <-
+    H.leftFail $
+      Exp.estimateBalancedTxBody
+        era
+        txBodyContent
+        exampleProtocolParams
+        mempty
+        mempty
+        mempty
+        (L.Coin 0)
+        1
+        0
+        0
+        (Api.fromShelleyAddr sbe addr)
+        (L.MaryValue (L.Coin 150_000_000) mempty)
+
+  case Exp.txOuts balancedContent of
+    [Exp.TxOut txOut] -> do
+      txOut ^. L.addrTxOutL === addr
+      let fee = Exp.txFee balancedContent
+      H.assertWith fee (> L.Coin 0)
+      txOut ^. L.coinTxOutL === L.Coin 150_000_000 - fee
+    outs -> do
+      H.annotateShow outs
+      H.annotate "Expected exactly one output"
+      H.failure
 
 -- | Evaluate a simple signed transaction, returning the result and UTxO.
 evalSimpleTx
