@@ -22,6 +22,7 @@ module Cardano.Api.Experimental.AnyScriptWitness
   )
 where
 
+import Cardano.Api.Experimental.Plutus.Internal.Language
 import Cardano.Api.Experimental.Plutus.Internal.Script
 import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Simple.Script
@@ -233,55 +234,51 @@ getAnyPlutusScriptData AnyPlutusCertifyingScriptWitness{} = mempty
 getAnyPlutusScriptData AnyPlutusProposingScriptWitness{} = mempty
 getAnyPlutusScriptData AnyPlutusVotingScriptWitness{} = mempty
 
--- | Resolves the ledger script for a Plutus witness.
--- A reference witness has no script to resolve here, so it returns @Right Nothing@.
--- An inline witness returns @Right (Just script)@, or @Left lang@ when the era rejects the language.
 getAnyPlutusWitnessPlutusScript
   :: L.AlonzoEraScript era
   => AnyPlutusScriptWitness lang purpose era
-  -> Either L.Language (Maybe (L.Script era))
+  -> Maybe (L.Script era)
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV1 s)) =
-  resolvePlutusWitnessScript L.SPlutusV1 s
+  resolvePlutusWitnessScript s
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV2 s)) =
-  resolvePlutusWitnessScript L.SPlutusV2 s
+  resolvePlutusWitnessScript s
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV3 s)) =
-  resolvePlutusWitnessScript L.SPlutusV3 s
+  resolvePlutusWitnessScript s
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV4 s)) =
-  resolvePlutusWitnessScript L.SPlutusV4 s
-getAnyPlutusWitnessPlutusScript (AnyPlutusMintingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  resolvePlutusWitnessScript l s
-getAnyPlutusWitnessPlutusScript (AnyPlutusWithdrawingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  resolvePlutusWitnessScript l s
-getAnyPlutusWitnessPlutusScript (AnyPlutusCertifyingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  resolvePlutusWitnessScript l s
-getAnyPlutusWitnessPlutusScript (AnyPlutusProposingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  resolvePlutusWitnessScript l s
-getAnyPlutusWitnessPlutusScript (AnyPlutusVotingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  resolvePlutusWitnessScript l s
+  resolvePlutusWitnessScript s
+getAnyPlutusWitnessPlutusScript (AnyPlutusMintingScriptWitness s) = resolvePlutusWitnessScript s
+getAnyPlutusWitnessPlutusScript (AnyPlutusWithdrawingScriptWitness s) = resolvePlutusWitnessScript s
+getAnyPlutusWitnessPlutusScript (AnyPlutusCertifyingScriptWitness s) = resolvePlutusWitnessScript s
+getAnyPlutusWitnessPlutusScript (AnyPlutusProposingScriptWitness s) = resolvePlutusWitnessScript s
+getAnyPlutusWitnessPlutusScript (AnyPlutusVotingScriptWitness s) = resolvePlutusWitnessScript s
 
+-- | A reference witness carries no script, so it resolves to 'Nothing'.
+-- An inline witness always resolves: the 'PlutusScriptInEra' it holds is the
+-- proof that the era supports the language.
 resolvePlutusWitnessScript
   :: L.AlonzoEraScript era
-  => L.SLanguage lang
-  -> PlutusScriptWitness lang purpose era
-  -> Either L.Language (Maybe (L.Script era))
-resolvePlutusWitnessScript slang s =
-  case getPlutusScriptRunnable s of
-    Nothing -> Right Nothing
-    Just runnable -> Just . L.fromPlutusScript <$> fromPlutusRunnable slang runnable
+  => PlutusScriptWitness lang purpose era
+  -> Maybe (L.Script era)
+resolvePlutusWitnessScript (PlutusScriptWitness slang (PScript (PlutusScriptInEra runnable)) _ _ _) =
+  Just . L.fromPlutusScript $ fromPlutusRunnable slang runnable
+resolvePlutusWitnessScript (PlutusScriptWitness _ PReferenceScript{} _ _ _) = Nothing
 
--- | 'PlutusRunnable' is built by deserialisation in the ledger, which rejects a language
--- the era does not support. That case is returned as 'Left' with the language.
+-- | Convert a runnable script to the era's ledger script type.
+--
+-- Ledger's 'L.mkPlutusScript' returns 'Nothing' when the era does not support
+-- the language. 'PlutusLangInEra' excludes that pairing at the type level, so
+-- the 'Nothing' branch is unreachable and the result is total.
 fromPlutusRunnable
   :: forall era lang
-   . L.AlonzoEraScript era
+   . (L.AlonzoEraScript era, L.PlutusLanguage lang, PlutusLangInEra lang era)
   => L.SLanguage lang
   -> L.PlutusRunnable lang
-  -> Either L.Language (L.PlutusScript era)
-fromPlutusRunnable slang = case slang of
-  L.SPlutusV1 -> go
-  L.SPlutusV2 -> go
-  L.SPlutusV3 -> go
-  L.SPlutusV4 -> go
- where
-  go :: L.PlutusLanguage lang => L.PlutusRunnable lang -> Either L.Language (L.PlutusScript era)
-  go = maybe (Left $ L.plutusLanguage slang) Right . L.mkPlutusScript . L.plutusFromRunnable
+  -> L.PlutusScript era
+fromPlutusRunnable slang runnable =
+  case L.mkPlutusScript $ L.plutusFromRunnable runnable of
+    Just script -> script
+    Nothing ->
+      error $
+        "fromPlutusRunnable: unreachable, PlutusLangInEra excludes "
+          <> show (L.plutusLanguage slang)
+          <> " in this era"
