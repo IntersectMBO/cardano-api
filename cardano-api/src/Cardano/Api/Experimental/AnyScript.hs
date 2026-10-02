@@ -75,7 +75,7 @@ instance Eq (AnyScript era) where
   _ == _ = False
 
 instance
-  L.AlonzoEraScript era
+  (L.AlonzoEraScript era, PlutusLangsInEra era)
   => SerialiseAsCBOR (AnyScript era)
   where
   serialiseToCBOR (AnySimpleScript (SimpleScript ns)) =
@@ -102,10 +102,11 @@ instance
     tryPlutusScript :: L.Script era -> Maybe (AnyScript era)
     tryPlutusScript script = do
       ps <- L.toPlutusScript script
-      L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) ->
+      L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) -> do
+        PlutusLangInEraEvidence <- plutusLangInEra @era (Plutus.plutusSLanguage (Proxy @l))
         let plutusRunnable = Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus
-         in AnyPlutusScript . PlutusScriptInEra
-              <$> (plutusRunnable <$ rightToMaybe (Plutus.plutusRunnableResult plutusRunnable))
+        AnyPlutusScript . PlutusScriptInEra
+          <$> (plutusRunnable <$ rightToMaybe (Plutus.plutusRunnableResult plutusRunnable))
 
     noParseError :: CBOR.DecoderError
     noParseError =
@@ -128,10 +129,12 @@ deserialiseAnyPlutusScriptOfLanguage
   :: forall era lang
    . (IsEra era, Plutus.PlutusLanguage lang, HasTypeProxy (Plutus.SLanguage lang))
   => BS.ByteString -> L.SLanguage lang -> Either CBOR.DecoderError (AnyScript (LedgerEra era))
-deserialiseAnyPlutusScriptOfLanguage bs lang = do
-  s :: (PlutusScriptInEra lang (LedgerEra era)) <-
-    obtainCommonConstraints (useEra @era) (deserialisePlutusScriptInEra lang bs)
-  return $ AnyPlutusScript s
+deserialiseAnyPlutusScriptOfLanguage bs lang = obtainCommonConstraints (useEra @era) $
+  case plutusLangInEra @(LedgerEra era) lang of
+    Nothing -> Left $ plutusLanguageNotSupportedInEraError lang
+    Just PlutusLangInEraEvidence -> do
+      s :: (PlutusScriptInEra lang (LedgerEra era)) <- deserialisePlutusScriptInEra lang bs
+      return $ AnyPlutusScript s
 
 data AnyScriptDecodeError
   = -- | A text envelope was decoded, but its Plutus CBOR payload could not be.

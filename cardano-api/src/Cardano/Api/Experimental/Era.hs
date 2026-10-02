@@ -44,6 +44,7 @@ import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
 import Cardano.Api.Error
+import Cardano.Api.Experimental.Plutus.Internal.Language (PlutusLangsInEra)
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Pretty.Internal.ShowOf
@@ -316,6 +317,7 @@ type EraCommonConstraints era =
   , L.EraTxCert (LedgerEra era)
   , L.EraTxOut (LedgerEra era)
   , L.EraUTxO (LedgerEra era)
+  , PlutusLangsInEra (LedgerEra era)
   , HasTypeProxy era
   , Ord (L.PlutusPurpose L.AsIx (LedgerEra era))
   , L.GovState (LedgerEra era) ~ L.ConwayGovState (LedgerEra era)
