@@ -9,7 +9,6 @@ on:
   pull_request:
     paths:
       - 'cardano-rpc/quickstart/**'
-      - 'cardano-rpc/README.md'
       - '.github/workflows/rpc-quickstart-examples.yml'
       - 'flake.nix'
       - 'flake.lock'
@@ -108,17 +107,17 @@ jobs:
           echo $! > /tmp/cluster.pid
           echo "Cluster started, pid $(cat /tmp/cluster.pid)."
 
-      - name: Wait for the gRPC endpoint
+      - name: Wait for the cluster manifest
         run: |
-          ready='gRPC endpoint of node1: http://127.0.0.1:50051'
+          manifest=/tmp/demo-cluster/manifest.json
           for attempt in $(seq 1 120); do
-            if grep -qF "$ready" /tmp/cluster.log; then
+            if [ -f "$manifest" ]; then
               echo "Cluster ready after $((attempt * 5))s."
               exit 0
             fi
             sleep 5
           done
-          echo "::error::Cluster did not log '$ready' within 10 minutes."
+          echo "::error::$manifest did not appear within 10 minutes."
           echo "--- last 100 lines of /tmp/cluster.log ---"
           tail -n 100 /tmp/cluster.log
           exit 1

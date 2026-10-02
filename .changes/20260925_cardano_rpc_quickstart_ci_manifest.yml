@@ -1,0 +1,8 @@
+project: cardano-rpc
+pr: 1357
+kind:
+  - maintenance
+  - documentation
+description: |
+  The quickstart examples workflow now waits for the manifest file that cardano-testnet writes once the local cluster is ready, instead of watching the node log for a fixed message.
+  The quickstart README now also shows how to wait for that file and how to read the gRPC socket path from it.
