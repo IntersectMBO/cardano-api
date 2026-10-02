@@ -194,7 +194,7 @@ test-suite cardano-rpc-test
     cardano-ledger-byron:testlib,
     cardano-ledger-conway,
     cardano-ledger-conway:testlib,
-    cardano-ledger-core >=1.19,
+    cardano-ledger-core,
     cardano-ledger-dijkstra,
     cardano-ledger-shelley,
     cardano-ledger-shelley:testlib,
