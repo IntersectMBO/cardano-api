@@ -45,12 +45,13 @@ import Cardano.Rpc.Server.NodeKernelAccess
 
 import RIO
 
-import Control.Tracer
 import Network.GRPC.Common
 import Network.GRPC.Server
 import Network.GRPC.Server.Protobuf
 import Network.GRPC.Server.Run
 import Network.GRPC.Server.StreamType
+
+import Hermod.Tracing.API.Tracer
 
 -- | gRPC method table for the @Node@ service.
 methodsNodeRpc

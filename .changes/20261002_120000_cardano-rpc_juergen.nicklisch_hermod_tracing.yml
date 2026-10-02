@@ -1,0 +1,8 @@
+project: cardano-rpc
+pr: 0
+kind:
+  - breaking
+description: |
+  Use `hermod-tracing-api` instead of `contra-tracer`, as `cardano-api`, `ouroboros-network` and
+  `ouroboros-consensus` now do. `runRpcServer`, `mkNodeKernelAccess` and the `RpcEnv` tracer take
+  hermod traces (`Hermod.Tracing.API.Tracer`).

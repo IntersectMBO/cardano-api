@@ -27,7 +27,6 @@ import Cardano.Rpc.Server.NodeKernelAccess.Type
 
 import RIO (MonadUnliftIO, atomically, bracket, throwIO, withRunInIO)
 
-import Control.Tracer (Tracer, traceWith)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.IORef
@@ -37,6 +36,8 @@ import Data.Time.Clock (DiffTime)
 -- Imported narrowly: grpc-spec exports an unrelated ':*' which would otherwise
 -- make the 'NP' pattern match in 'readGenesisBundle' ambiguous.
 import Network.GRPC.Spec (GrpcError (..), GrpcException (..))
+
+import Hermod.Tracing.API.Tracer (Tracer, traceWith)
 
 -- | Construct 'NodeKernelAccess' from a consensus 'Consensus.NodeKernel'.
 -- Returns 'Nothing' and traces the block type for non-Cardano block types.

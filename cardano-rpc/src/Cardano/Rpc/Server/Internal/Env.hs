@@ -12,8 +12,9 @@ import Cardano.Rpc.Server.Config
 import Cardano.Rpc.Server.Internal.Tracing
 import Cardano.Rpc.Server.NodeKernelAccess.Type (NodeKernelAccess)
 
-import Control.Tracer (Tracer)
 import Data.IORef
+
+import Hermod.Tracing.API.Tracer (Tracer)
 
 data RpcEnv = RpcEnv
   { config :: !RpcConfig

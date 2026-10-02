@@ -28,8 +28,9 @@ import Cardano.Rpc.Server.NodeKernelAccess.Type (NodeKernelAccess)
 
 import RIO
 
-import Control.Tracer (Tracer, traceWith)
 import System.Random.Stateful (globalStdGen, uniformM)
+
+import Hermod.Tracing.API.Tracer (Tracer, traceWith)
 
 -- | Provides a value of type 'field' from the value 'env'
 -- Used in conjunction with 'MonadReader env m' allows to easily access fields from the environment.
