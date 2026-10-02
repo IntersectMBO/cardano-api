@@ -225,32 +225,19 @@ prop_extractAllIndexedPlutusScriptWitnesses =
 
     length allGeneratedPlutusScriptWitnesses === length extractedPlutusScriptWitnesses
 
--- | An inline Plutus witness must be rejected, not silently dropped with its
--- redeemer, when the era does not support its language. V4 fails in Conway.
-prop_makeUnsignedTx_rejects_unsupported_plutus_language :: Property
-prop_makeUnsignedTx_rejects_unsupported_plutus_language = property $ do
-  srcTxIn <- forAll genTxIn
+-- | A Plutus script whose language the era does not support is representable
+-- only through deserialisation, and that is where it must be rejected. V4 fails
+-- in Conway. An inline witness of such a script cannot even be written, because
+-- 'PlutusScriptInEra' demands 'PlutusLangInEra' at the type level.
+prop_deserialise_rejects_unsupported_plutus_language :: Property
+prop_deserialise_rejects_unsupported_plutus_language = property $ do
   v3ScriptInEra <- forAll genPlutusScriptInEra
-  v4ScriptInEra <-
-    H.leftFail $ deserialisePlutusScriptInEra L.SPlutusV4 (serialiseToCBOR v3ScriptInEra)
-  let dummyRedeemer = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor 0 []
-      plutusWit =
-        Exp.AnyPlutusScriptWitness $
-          AnyPlutusSpendingScriptWitness $
-            PlutusSpendingScriptWitnessV4 $
-              PlutusScriptWitness
-                L.SPlutusV4
-                (PScript v4ScriptInEra)
-                NoScriptDatum
-                dummyRedeemer
-                (Script.ExecutionUnits 0 0)
-      txBodyContent =
-        Exp.defaultTxBodyContent
-          & Exp.setTxProtocolParams exampleProtocolParams
-          & Exp.setTxIns [(srcTxIn, plutusWit)]
-          & Exp.setTxFee 0
-  Exp.makeUnsignedTx ConwayEra txBodyContent
-    === Left (Exp.MakeUnsignedTxPlutusLanguageNotSupportedInEra L.PlutusV4 (Some ConwayEra))
+  let v4Bytes = serialiseToCBOR v3ScriptInEra
+  case deserialiseAnyPlutusScriptOfLanguage @ConwayEra v4Bytes L.SPlutusV4 of
+    Left _ -> success
+    Right _ -> do
+      annotate "PlutusV4 must not deserialise in Conway"
+      failure
 
 -- | A reference witness only records the language and redeemer in the body,
 -- so 'Exp.makeUnsignedTx' must accept it even where the era forbids an inline witness of that language.
@@ -398,8 +385,8 @@ tests =
         "prop_extractAllIndexedPlutusScriptWitnesses"
         prop_extractAllIndexedPlutusScriptWitnesses
     , testProperty
-        "prop_makeUnsignedTx_rejects_unsupported_plutus_language"
-        prop_makeUnsignedTx_rejects_unsupported_plutus_language
+        "prop_deserialise_rejects_unsupported_plutus_language"
+        prop_deserialise_rejects_unsupported_plutus_language
     , testProperty
         "prop_makeUnsignedTx_accepts_reference_plutus_v4_witness"
         prop_makeUnsignedTx_accepts_reference_plutus_v4_witness
