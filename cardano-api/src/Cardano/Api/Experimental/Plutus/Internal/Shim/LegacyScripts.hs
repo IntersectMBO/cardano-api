@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -88,13 +89,14 @@ convertToNewScriptWitness
   -> Either
        CBOR.DecoderError
        (Witnessable thing (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))
-convertToNewScriptWitness eon (Old.PlutusScriptWitness _ v scriptOrRefInput datum scriptRedeemer execUnits) witnessable = do
+convertToNewScriptWitness eon (Old.PlutusScriptWitness langInEra v scriptOrRefInput datum scriptRedeemer execUnits) witnessable = do
   let d = createPlutusScriptDatum witnessable v datum
   newScriptWitness <-
     obtainConstraints v $
       toNewPlutusScriptWitness
         eon
         witnessable
+        langInEra
         v
         scriptOrRefInput
         scriptRedeemer
@@ -159,6 +161,7 @@ toNewPlutusScriptWitness
    . L.PlutusLanguage (Old.ToLedgerPlutusLanguage lang)
   => AlonzoEraOnwards era
   -> Witnessable thing (ShelleyLedgerEra era)
+  -> Old.ScriptLanguageInEra lang era
   -> Old.PlutusScriptVersion lang
   -> Old.PlutusScriptOrReferenceInput lang
   -> ScriptRedeemer
@@ -169,7 +172,7 @@ toNewPlutusScriptWitness
        ( AnyWitness
            (ShelleyLedgerEra era)
        )
-toNewPlutusScriptWitness eon w l (Old.PScript (Old.PlutusScriptSerialised scriptShortBs)) scriptRedeemer execUnits datum = do
+toNewPlutusScriptWitness eon w langInEra l (Old.PScript (Old.PlutusScriptSerialised scriptShortBs)) scriptRedeemer execUnits datum = do
   let protocolVersion = getVersion eon
       plutusScript = L.Plutus $ L.PlutusBinary scriptShortBs
       plutusScriptRunnable =
@@ -180,16 +183,18 @@ toNewPlutusScriptWitness eon w l (Old.PScript (Old.PlutusScriptSerialised script
       Left $
         CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.pack . show $ pretty e)
     Right{} ->
-      return $
-        mkPlutusScriptWitness
-          eon
-          w
-          (toPlutusSLanguage l)
-          plutusScriptRunnable
-          datum
-          scriptRedeemer
-          execUnits
-toNewPlutusScriptWitness _ w l (Old.PReferenceScript refInput) scriptRedeemer execUnits datum =
+      case legacyPlutusLangInEraEvidence langInEra l of
+        PlutusLangInEraEvidence ->
+          return $
+            mkPlutusScriptWitness
+              eon
+              w
+              (toPlutusSLanguage l)
+              plutusScriptRunnable
+              datum
+              scriptRedeemer
+              execUnits
+toNewPlutusScriptWitness _ w _ l (Old.PReferenceScript refInput) scriptRedeemer execUnits datum =
   return $
     mkReferencePlutusScriptWitness w (toPlutusSLanguage l) refInput datum scriptRedeemer execUnits
 
@@ -201,9 +206,36 @@ type family PlutusScriptFor thing where
   PlutusScriptFor VoterItem = VotingScript
   PlutusScriptFor ProposalItem = ProposingScript
 
+-- | A legacy witness carries a 'Old.ScriptLanguageInEra' proof that the era
+-- supports its language. This turns that proof into the evidence the
+-- experimental 'PlutusScriptInEra' constructor demands.
+legacyPlutusLangInEraEvidence
+  :: Old.ScriptLanguageInEra lang era
+  -> Old.PlutusScriptVersion lang
+  -> PlutusLangInEraEvidence (Old.ToLedgerPlutusLanguage lang) (ShelleyLedgerEra era)
+legacyPlutusLangInEraEvidence langInEra v = case langInEra of
+  Old.PlutusScriptV1InAlonzo -> PlutusLangInEraEvidence
+  Old.PlutusScriptV1InBabbage -> PlutusLangInEraEvidence
+  Old.PlutusScriptV1InConway -> PlutusLangInEraEvidence
+  Old.PlutusScriptV1InDijkstra -> PlutusLangInEraEvidence
+  Old.PlutusScriptV2InBabbage -> PlutusLangInEraEvidence
+  Old.PlutusScriptV2InConway -> PlutusLangInEraEvidence
+  Old.PlutusScriptV2InDijkstra -> PlutusLangInEraEvidence
+  Old.PlutusScriptV3InConway -> PlutusLangInEraEvidence
+  Old.PlutusScriptV3InDijkstra -> PlutusLangInEraEvidence
+  Old.PlutusScriptV4InDijkstra -> PlutusLangInEraEvidence
+  -- There is no 'Old.PlutusScriptVersion SimpleScript'', so these arms are unreachable.
+  Old.SimpleScriptInShelley -> case v of {}
+  Old.SimpleScriptInAllegra -> case v of {}
+  Old.SimpleScriptInMary -> case v of {}
+  Old.SimpleScriptInAlonzo -> case v of {}
+  Old.SimpleScriptInBabbage -> case v of {}
+  Old.SimpleScriptInConway -> case v of {}
+  Old.SimpleScriptInDijkstra -> case v of {}
+
 mkPlutusScriptWitness
   :: forall era thing plutuslang
-   . L.PlutusLanguage plutuslang
+   . (L.PlutusLanguage plutuslang, PlutusLangInEra plutuslang (ShelleyLedgerEra era))
   => AlonzoEraOnwards era
   -> Witnessable thing (ShelleyLedgerEra era)
   -> L.SLanguage plutuslang
