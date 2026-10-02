@@ -42,8 +42,8 @@ import Cardano.Api.Experimental.AnyScriptWitness qualified as Exp
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
-import Cardano.Api.Experimental.Tx.Internal.BodyContent.New
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
+import Cardano.Api.Experimental.Tx.Internal.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.Key.Internal qualified as Api
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
@@ -1048,30 +1048,14 @@ substituteExecutionUnits
   -> Either (TxBodyErrorAutoBalance (LedgerEra era)) (TxBodyContent (LedgerEra era))
 substituteExecutionUnits
   exUnitsMap
-  txbodycontent@( TxBodyContent
-                    txIns
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    _
-                    txWithdrawals
-                    txCertificates
-                    txMintValue
-                    _
-                    txProposalProcedures
-                    txVotingProcedures
-                    _
-                    _
-                    _
-                  ) = do
+  txbodycontent@TxBodyContent
+    { txIns
+    , txWithdrawals
+    , txCertificates
+    , txMintValue
+    , txProposalProcedures
+    , txVotingProcedures
+    } = do
     mappedTxIns <- mapScriptWitnessesTxIns txIns
     mappedWithdrawals <- mapScriptWitnessesWithdrawals txWithdrawals
     mappedMintedVals <- mapScriptWitnessesMinting txMintValue
