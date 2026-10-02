@@ -199,7 +199,7 @@ The ❌ methods need a whole-chain index (transaction by hash, datum by hash) th
 |--------|--------|
 | [SubmitTx](https://utxorpc.org/submit/spec/#submittx) | ✅ Supported |
 | [EvalTx](https://utxorpc.org/submit/spec/#evaltx) | ✅ Supported |
-| [WaitForTx](https://utxorpc.org/submit/spec/#waitfortx) | ⬜ Not supported |
+| [WaitForTx](https://utxorpc.org/submit/spec/#waitfortx) | ✅ Supported |
 | [ReadMempool](https://utxorpc.org/submit/spec/#readmempool) | ✅ Supported |
 | [WatchMempool](https://utxorpc.org/submit/spec/#watchmempool) | ✅ Supported |
 
