@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Experimental.AnyScriptWitness
@@ -22,7 +23,6 @@ module Cardano.Api.Experimental.AnyScriptWitness
   )
 where
 
-import Cardano.Api.Experimental.Plutus.Internal.Language
 import Cardano.Api.Experimental.Plutus.Internal.Script
 import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Simple.Script
@@ -259,26 +259,26 @@ resolvePlutusWitnessScript
   :: L.AlonzoEraScript era
   => PlutusScriptWitness lang purpose era
   -> Maybe (L.Script era)
-resolvePlutusWitnessScript (PlutusScriptWitness slang (PScript (PlutusScriptInEra runnable)) _ _ _) =
-  Just . L.fromPlutusScript $ fromPlutusRunnable slang runnable
+resolvePlutusWitnessScript (PlutusScriptWitness _ (PScript s) _ _ _) =
+  Just . L.fromPlutusScript $ fromPlutusRunnable s
 resolvePlutusWitnessScript (PlutusScriptWitness _ PReferenceScript{} _ _ _) = Nothing
 
 -- | Convert a runnable script to the era's ledger script type.
 --
--- Ledger's 'L.mkPlutusScript' returns 'Nothing' when the era does not support
--- the language. 'PlutusLangInEra' excludes that pairing at the type level, so
--- the 'Nothing' branch is unreachable and the result is total.
+-- The argument type is the restriction: a 'PlutusScriptInEra' can only be
+-- built for a language/era pairing in the 'PlutusLangInEra' table. Ledger's
+-- 'L.mkPlutusScript' only returns 'Nothing' for a pairing outside that table,
+-- so the 'Nothing' branch is unreachable and the result is total.
 fromPlutusRunnable
   :: forall era lang
-   . (L.AlonzoEraScript era, L.PlutusLanguage lang, PlutusLangInEra lang era)
-  => L.SLanguage lang
-  -> L.PlutusRunnable lang
+   . L.AlonzoEraScript era
+  => PlutusScriptInEra lang era
   -> L.PlutusScript era
-fromPlutusRunnable slang runnable =
+fromPlutusRunnable (PlutusScriptInEra runnable) =
   case L.mkPlutusScript $ L.plutusFromRunnable runnable of
     Just script -> script
     Nothing ->
       error $
         "fromPlutusRunnable: unreachable, PlutusLangInEra excludes "
-          <> show (L.plutusLanguage slang)
+          <> show (L.plutusLanguage (L.plutusSLanguage (Proxy @lang)))
           <> " in this era"
