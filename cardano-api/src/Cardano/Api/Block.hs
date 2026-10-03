@@ -312,8 +312,7 @@ fromConsensusPointHF (Consensus.BlockPoint slot (Consensus.OneEraHash h)) =
 -- | Convert a 'Consensus.Point' for single Shelley-era block type
 toConsensusPoint
   :: forall ledgerera protocol
-   . Consensus.ShelleyCompatible protocol ledgerera
-  => ChainPoint
+   . ChainPoint
   -> Consensus.Point (Consensus.ShelleyBlock protocol ledgerera)
 toConsensusPoint ChainPointAtGenesis = Consensus.GenesisPoint
 toConsensusPoint (ChainPoint slot (HeaderHash h)) =
@@ -327,8 +326,7 @@ toConsensusPoint (ChainPoint slot (HeaderHash h)) =
 -- | Convert a 'Consensus.Point' for single Shelley-era block type
 fromConsensusPoint
   :: forall protocol ledgerera
-   . Consensus.ShelleyCompatible protocol ledgerera
-  => Consensus.Point (Consensus.ShelleyBlock protocol ledgerera)
+   . Consensus.Point (Consensus.ShelleyBlock protocol ledgerera)
   -> ChainPoint
 fromConsensusPoint Consensus.GenesisPoint = ChainPointAtGenesis
 fromConsensusPoint (Consensus.BlockPoint slot h) =
