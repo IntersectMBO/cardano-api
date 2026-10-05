@@ -189,6 +189,7 @@ import Cardano.Api.Plutus.Internal.Script
   )
 import Cardano.Api.Plutus.Internal.Script qualified as OldScript
 import Cardano.Api.Plutus.Internal.ScriptData qualified as Api
+import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Cbor (serialiseToCBOR)
 import Cardano.Api.Tx.Internal.Body
   ( CtxTx
@@ -236,6 +237,8 @@ import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Short qualified as SBS
 import Data.Functor
 import Data.List qualified as List
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Ordered.Strict (OMap)
 import Data.Map.Ordered.Strict qualified as OMap
 import Data.Map.Strict (Map)
@@ -247,9 +250,9 @@ import Data.OSet.Strict qualified as OSet
 import Data.Sequence.Strict qualified as Seq
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import GHC.Exts (IsList (..))
-import GHC.Stack (HasCallStack)
 import Lens.Micro
 
 -- | Error that can occur when constructing an unsigned transaction.
@@ -258,6 +261,11 @@ data MakeUnsignedTxError
     -- parameters were provided. Protocol parameters are required to
     -- compute the script integrity hash (script_data_hash).
     MakeUnsignedTxMissingProtocolParams
+  | -- | Fields were set on the body content that the ledger body of the
+    -- target era has no slot for. The body content record is shared by all
+    -- eras, so this is only detected when the body is built.
+    -- The field names are those of the 'TxBodyContent' record.
+    MakeUnsignedTxFieldsNotSupportedInEra (Some Era) (NonEmpty Text)
   deriving (Eq, Show)
 
 instance Error MakeUnsignedTxError where
@@ -266,6 +274,13 @@ instance Error MakeUnsignedTxError where
       [ "Transaction uses Plutus scripts but no protocol parameters were provided. "
       , "Protocol parameters are required to compute the script integrity hash "
       , "(script_data_hash) from the cost models."
+      ]
+  prettyError (MakeUnsignedTxFieldsNotSupportedInEra (Some era) fields) =
+    mconcat
+      [ "Transaction body content sets fields that do not exist in the "
+      , pshow era
+      , " era: "
+      , pretty . Text.intercalate ", " $ NonEmpty.toList fields
       ]
 
 makeUnsignedTx
@@ -335,9 +350,7 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
           & L.datsTxWitsL .~ datums
           & L.rdmrsTxWitsL .~ redeemers
 
-  -- Forced here so that the Conway check in 'eraSpecificLedgerTxBody' fires
-  -- when the transaction is built, not when the body is first inspected.
-  eraSpecificTxBody <- pure $! eraSpecificLedgerTxBody era commonLedgerTxBody bc
+  eraSpecificTxBody <- eraSpecificLedgerTxBody era commonLedgerTxBody bc
   Right $
     UnsignedTx $
       L.mkBasicTx eraSpecificTxBody
@@ -437,43 +450,37 @@ toAuxiliaryData txMData ss' =
            in guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
 
 -- | Set the fields that differ between eras on the body built in 'makeUnsignedTx'.
---
--- The body content record is shared by all eras, so fields that exist only
--- from Dijkstra onwards can be set on a Conway body, where there is nowhere
--- to put them. Building for Conway rejects that instead of dropping them.
 eraSpecificLedgerTxBody
-  :: HasCallStack
-  => Era era
+  :: Era era
   -> L.TxBody L.TopTx (LedgerEra era)
   -> TxBodyContent (LedgerEra era)
-  -> L.TxBody L.TopTx (LedgerEra era)
+  -> Either MakeUnsignedTxError (L.TxBody L.TopTx (LedgerEra era))
 eraSpecificLedgerTxBody era ledgerbody bc =
   case era of
-    ConwayEra
-      | not (null dijkstraOnlyFieldsSet) ->
-          error $
-            "makeUnsignedTx: fields that only exist from the Dijkstra era onwards were set on a "
-              <> "Conway body: "
-              <> List.intercalate ", " dijkstraOnlyFieldsSet
-      | otherwise ->
-          ledgerbody
-            & L.reqSignerHashesTxBodyL .~ reqSignerHashes
+    ConwayEra ->
+      case NonEmpty.nonEmpty dijkstraOnlyFieldsSet of
+        Just fields -> Left $ MakeUnsignedTxFieldsNotSupportedInEra (Some era) fields
+        Nothing ->
+          Right $
+            ledgerbody
+              & L.reqSignerHashesTxBodyL .~ reqSignerHashes
     DijkstraEra ->
       -- Dijkstra replaced required signer hashes with guards, so extra key
       -- witnesses become key-hash guards.
-      ledgerbody
-        & L.guardsTxBodyL
-          .~ (txGuards bc <> OSet.fromSet (Set.map L.KeyHashObj reqSignerHashes))
-        & L.subTransactionsTxBodyL .~ txSubTransactions bc
-        & L.requiredTopLevelGuardsL .~ txRequiredTopLevelGuards bc
-        & L.directDepositsTxBodyL .~ txDirectDeposits bc
-        & L.accountBalanceIntervalsTxBodyL .~ txAccountBalanceIntervals bc
-        & L.startingAccountBalanceIntervalsTxBodyL .~ txStartingAccountBalanceIntervals bc
+      Right $
+        ledgerbody
+          & L.guardsTxBodyL
+            .~ (txGuards bc <> OSet.fromSet (Set.map L.KeyHashObj reqSignerHashes))
+          & L.subTransactionsTxBodyL .~ txSubTransactions bc
+          & L.requiredTopLevelGuardsL .~ txRequiredTopLevelGuards bc
+          & L.directDepositsTxBodyL .~ txDirectDeposits bc
+          & L.accountBalanceIntervalsTxBodyL .~ txAccountBalanceIntervals bc
+          & L.startingAccountBalanceIntervalsTxBodyL .~ txStartingAccountBalanceIntervals bc
  where
   reqSignerHashes = convExtraKeyWitnesses (txExtraKeyWits bc)
 
   -- Every field the Dijkstra branch above writes must be empty in Conway.
-  dijkstraOnlyFieldsSet :: [String]
+  dijkstraOnlyFieldsSet :: [Text]
   dijkstraOnlyFieldsSet =
     [ name
     | (name, isPresent) <-
@@ -481,7 +488,10 @@ eraSpecificLedgerTxBody era ledgerbody bc =
         , ("txSubTransactions", present (txSubTransactions bc))
         , ("txRequiredTopLevelGuards", present (txRequiredTopLevelGuards bc))
         , ("txDirectDeposits", present (L.unDirectDeposits (txDirectDeposits bc)))
-        , ("txAccountBalanceIntervals", present (L.unAccountBalanceIntervals (txAccountBalanceIntervals bc)))
+        ,
+          ( "txAccountBalanceIntervals"
+          , present (L.unAccountBalanceIntervals (txAccountBalanceIntervals bc))
+          )
         ,
           ( "txStartingAccountBalanceIntervals"
           , present (L.unAccountBalanceIntervals (txStartingAccountBalanceIntervals bc))
