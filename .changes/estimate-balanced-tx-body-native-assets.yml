@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1366
+kind:
+  - bugfix
+description: |
+  `estimateBalancedTxBody` (in both `Cardano.Api` and `Cardano.Api.Experimental`) now accounts for native assets in the declared total UTxO value: the change output keeps the tokens that are not sent to other outputs, so `cardano-cli transaction build-estimate` with a multi-asset `--total-utxo-value` balances correctly; tokens present in outputs but missing from the declared total now fail with a negative balance error instead of being silently ignored or aborting with an "Illegal Value in TxOut" exception; the same exception no longer escapes when the balance has zero ADA with a negative token quantity, or when deposits exceed the declared ADA in the legacy `estimateBalancedTxBody`.

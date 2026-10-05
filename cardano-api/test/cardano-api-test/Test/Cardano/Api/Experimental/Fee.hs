@@ -27,11 +27,11 @@ import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
 import Data.Default (def)
-import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
 import Data.Time.Clock.POSIX qualified as Time
+import GHC.Exts (IsList (..))
 import Lens.Micro
 
 import Test.Gen.Cardano.Api.Typed
@@ -130,6 +130,9 @@ tests =
         [ testProperty
             "underfunded transaction fails with TxBodyErrorBalanceNegative"
             prop_makeTransactionBodyAutoBalance_balance_negative
+        , testProperty
+            "zero ada balance with negative assets fails with TxBodyErrorBalanceNegative"
+            prop_makeTransactionBodyAutoBalance_fails_on_zero_ada_negative_assets
         ]
     , testGroup
         "evaluateTransaction"
@@ -148,6 +151,12 @@ tests =
         [ testProperty
             "balances a transaction with no outputs"
             prop_estimateBalancedTxBody_balances_without_outputs
+        , testProperty
+            "keeps native assets in the change output"
+            prop_estimateBalancedTxBody_keeps_native_assets_in_change
+        , testProperty
+            "fails when an output spends undeclared native assets"
+            prop_estimateBalancedTxBody_fails_on_undeclared_native_assets
         ]
     ]
 
@@ -533,6 +542,39 @@ genAutoBalanceNegativeTx era = do
           & Exp.setTxFee 0
   return (txBodyContent, utxo, changeAddr)
 
+-- | A UTxO whose ADA exactly matches the output, which also spends 3 tokens the UTxO lacks.
+genAutoBalanceZeroAdaNegativeAssetsTx
+  :: Exp.Era era
+  -> Gen
+       ( Exp.TxBodyContent (Exp.LedgerEra era)
+       , L.UTxO (Exp.LedgerEra era)
+       , Api.AddressInEra era
+       )
+genAutoBalanceZeroAdaNegativeAssetsTx era = do
+  let sbe = convert era
+  txIn <- genTxIn
+  addr <- genAddressInEra sbe
+  changeAddr <- genAddressInEra sbe
+  coin <- L.Coin <$> Gen.integral (Range.linear 2_000_000 10_000_000)
+  let policyId = L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
+      multiAsset = L.MultiAsset $ Map.singleton policyId (Map.singleton (Mary.AssetName "testtoken") 3)
+      ledgerTxIn = Api.toShelleyTxIn txIn
+      shelleyAddr = Api.toShelleyAddr addr
+      fundingTxOut =
+        Exp.obtainCommonConstraints era $
+          L.mkBasicTxOut shelleyAddr (L.MaryValue coin mempty)
+      utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
+      sendTxOut =
+        Exp.obtainCommonConstraints era $
+          Exp.TxOut $
+            L.mkBasicTxOut shelleyAddr (L.MaryValue coin multiAsset)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [sendTxOut]
+          & Exp.setTxFee 0
+  return (txBodyContent, utxo, changeAddr)
+
 -- | Like 'genWithdrawalFundedTx' but with a tiny input (100 lovelace), well
 -- below the minimum transaction fee, and no surplus over @output - input@.
 -- Initial @change = input + withdrawal - output = input = 100@ (fee is still
@@ -773,6 +815,40 @@ prop_makeTransactionBodyAutoBalance_balance_negative = H.property $ do
       H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
         >> H.failure
 
+-- | A zero-ADA balance with a negative token quantity is a balance error, not a ledger exception.
+prop_makeTransactionBodyAutoBalance_fails_on_zero_ada_negative_assets :: Property
+prop_makeTransactionBodyAutoBalance_fails_on_zero_ada_negative_assets = H.property $ do
+  (txBodyContent, utxo, changeAddr) <-
+    H.forAllWith (const "<TxBodyContent, UTxO, AddressInEra>") $
+      genAutoBalanceZeroAdaNegativeAssetsTx Exp.ConwayEra
+  let systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
+      epochInfo =
+        Api.LedgerEpochInfo $
+          Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+  let result =
+        Exp.makeTransactionBodyAutoBalance
+          systemStart
+          epochInfo
+          exampleProtocolParams
+          mempty
+          mempty
+          utxo
+          txBodyContent
+          changeAddr
+          Nothing
+  case result of
+    Left err@(Exp.TxBodyErrorBalanceNegative coin _multiAsset) -> do
+      -- force the error fully: the pre-fix code embeds a thunk here that
+      -- throws a ledger error only when evaluated, not when merely matched
+      _ <- H.evalNF $ show err
+      coin === L.Coin 0
+    Left err -> do
+      _ <- H.evalNF $ show err
+      H.failure
+    Right _ ->
+      H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
+        >> H.failure
+
 -- | A well-funded transaction returns a positive fee from 'evaluateTransaction'.
 prop_evaluateTransaction_positive_fee :: Property
 prop_evaluateTransaction_positive_fee = H.property $ do
@@ -853,6 +929,94 @@ prop_estimateBalancedTxBody_balances_without_outputs = H.propertyOnce $ do
       H.annotateShow outs
       H.annotate "Expected exactly one output"
       H.failure
+
+-- | 'estimateBalancedTxBody' folds surplus native assets into the change output
+-- alongside the surplus ada, rather than discarding them.
+prop_estimateBalancedTxBody_keeps_native_assets_in_change :: Property
+prop_estimateBalancedTxBody_keeps_native_assets_in_change = H.propertyOnce $ do
+  let era = Exp.ConwayEra
+      sbe = convert era
+      txIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      addr =
+        L.Addr
+          L.Testnet
+          (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+          L.StakeRefNull
+      policy = L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
+      tokens n = L.MultiAsset $ fromList [(policy, fromList [(Mary.AssetName "testtoken", n)])]
+      explicitOut = Exp.TxOut $ L.mkBasicTxOut addr (L.MaryValue (L.Coin 10_000_000) (tokens 3))
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [explicitOut]
+
+  balancedContent <-
+    H.leftFail $
+      Exp.estimateBalancedTxBody
+        era
+        txBodyContent
+        exampleProtocolParams
+        mempty
+        mempty
+        mempty
+        (L.Coin 0)
+        1
+        0
+        0
+        (Api.fromShelleyAddr sbe addr)
+        (L.MaryValue (L.Coin 150_000_000) (tokens 10))
+
+  case Exp.txOuts balancedContent of
+    [_, Exp.TxOut changeOut] -> do
+      changeOut ^. L.addrTxOutL === addr
+      let fee = Exp.txFee balancedContent
+          L.MaryValue changeCoin changeAssets = changeOut ^. L.valueTxOutL
+      H.assertWith fee (> L.Coin 0)
+      changeCoin === L.Coin 150_000_000 - 10_000_000 - fee
+      changeAssets === tokens 7
+    outs -> do
+      H.annotateShow outs
+      H.annotate "Expected exactly two outputs"
+      H.failure
+
+-- | 'estimateBalancedTxBody' rejects a transaction whose outputs spend native
+-- assets that are not present in the declared available value.
+prop_estimateBalancedTxBody_fails_on_undeclared_native_assets :: Property
+prop_estimateBalancedTxBody_fails_on_undeclared_native_assets = H.propertyOnce $ do
+  let era = Exp.ConwayEra
+      sbe = convert era
+      txIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      addr =
+        L.Addr
+          L.Testnet
+          (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+          L.StakeRefNull
+      policy = L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
+      tokens n = L.MultiAsset $ fromList [(policy, fromList [(Mary.AssetName "testtoken", n)])]
+      explicitOut = Exp.TxOut $ L.mkBasicTxOut addr (L.MaryValue (L.Coin 10_000_000) (tokens 3))
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [explicitOut]
+
+  case Exp.estimateBalancedTxBody
+    era
+    txBodyContent
+    exampleProtocolParams
+    mempty
+    mempty
+    mempty
+    (L.Coin 0)
+    1
+    0
+    0
+    (Api.fromShelleyAddr sbe addr)
+    (L.MaryValue (L.Coin 150_000_000) mempty) of
+    Left (Exp.TxFeeEstimationBalanceError (Exp.TxBodyErrorBalanceNegative _ _)) -> H.success
+    Left err -> H.annotateShow err >> H.failure
+    Right _ ->
+      H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
+        >> H.failure
 
 -- | Evaluate a simple signed transaction, returning the result and UTxO.
 evalSimpleTx

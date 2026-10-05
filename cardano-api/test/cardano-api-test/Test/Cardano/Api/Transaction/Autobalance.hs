@@ -27,6 +27,7 @@ import Data.Bifunctor (first)
 import Data.Function
 import Data.Map.Strict qualified as M
 import GHC.Exts (IsList (..))
+import Lens.Micro ((.~))
 
 import Test.Gen.Cardano.Api.Typed
 
@@ -454,6 +455,69 @@ prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
   let balancedProposalProcedureList = toList balancedProposalProcedureOMap
   balancedProposalProcedureList === [(proposalProcedure, ViewTx)]
 
+-- | A zero-ADA balance with a negative token quantity is a balance error, not a ledger exception.
+prop_make_transaction_body_auto_balance_fails_on_zero_ada_negative_assets :: Property
+prop_make_transaction_body_auto_balance_fails_on_zero_ada_negative_assets = H.propertyOnce $ do
+  let ceo = ConwayEraOnwardsConway
+      beo = BabbageEraOnwardsConway
+      meo = MaryEraOnwardsConway
+      sbe = convert ceo
+
+  let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
+
+  pparams <-
+    LedgerProtocolParameters
+      <$> H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  -- a single UTxO holding exactly 4_000_000 lovelace and no tokens
+  let utxos = mkUtxos beo Nothing
+      txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
+      address = mkKeyHashAddress sbe
+      testPolicyId = PolicyId . ScriptHash $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
+      assetId = AssetId testPolicyId (UnsafeAssetName "testtoken")
+      -- spends the entire 4_000_000 lovelace UTxO plus 3 tokens it does not hold,
+      -- so the fee-free initial balance is exactly 0 ADA and -3 tokens
+      outputValue = fromList [(AdaAssetId, 4_000_000), (assetId, 3)]
+      txOut =
+        [ TxOut
+            address
+            (TxOutValueShelleyBased sbe $ toLedgerValue meo outputValue)
+            TxOutDatumNone
+            ReferenceScriptNone
+        ]
+
+  let content =
+        defaultTxBodyContent sbe
+          & setTxIns txInputs
+          & setTxOuts txOut
+          & setTxProtocolParams (pure $ pure pparams)
+
+  let result =
+        makeTransactionBodyAutoBalance
+          sbe
+          testSystemStart
+          epochInfo
+          pparams
+          mempty
+          mempty
+          utxos
+          content
+          address
+          Nothing
+
+  case result of
+    Left err@(TxBodyErrorBalanceNegative _ _) -> do
+      -- force the error fully: the pre-fix code embeds a thunk here that
+      -- throws a ledger error only when evaluated, not when merely matched
+      _ <- H.evalNF $ show err
+      H.success
+    Left err -> do
+      _ <- H.evalNF $ show err
+      H.failure
+    Right _ ->
+      H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
+        >> H.failure
+
 -- | Regression test for: https://github.com/IntersectMBO/cardano-cli/issues/1199
 prop_estimate_balanced_tx_body_balances_without_outputs :: Property
 prop_estimate_balanced_tx_body_balances_without_outputs = H.propertyOnce $ do
@@ -500,6 +564,172 @@ prop_estimate_balanced_tx_body_balances_without_outputs = H.propertyOnce $ do
       H.annotate "Expected exactly one output"
       H.failure
 
+-- | 'estimateBalancedTxBody' folds surplus native assets into the change output
+-- alongside the surplus ada, rather than discarding them.
+prop_estimate_balanced_tx_body_keeps_native_assets_in_change :: Property
+prop_estimate_balanced_tx_body_keeps_native_assets_in_change = H.propertyOnce $ do
+  let meo = MaryEraOnwardsConway
+      sbe = convert meo
+
+  ledgerPParams <-
+    H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  let address = mkKeyHashAddress sbe
+      fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      testPolicyId = PolicyId . ScriptHash $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
+      assetId = AssetId testPolicyId (UnsafeAssetName "testtoken")
+      totalValue = fromList [(AdaAssetId, 150_000_000), (assetId, 10)]
+      explicitValue = fromList [(AdaAssetId, 10_000_000), (assetId, 3)]
+      explicitOut =
+        TxOut
+          address
+          (TxOutValueShelleyBased sbe $ toLedgerValue meo explicitValue)
+          TxOutDatumNone
+          ReferenceScriptNone
+      content =
+        defaultTxBodyContent sbe
+          & setTxIns [(fundingTxIn, BuildTxWith (KeyWitness KeyWitnessForSpending))]
+          & setTxOuts [explicitOut]
+          & setTxProtocolParams (pure $ pure (LedgerProtocolParameters ledgerPParams))
+
+  (BalancedTxBody balancedContent _ _changeOut fee) <-
+    H.leftFail $
+      estimateBalancedTxBody
+        meo
+        content
+        ledgerPParams
+        mempty
+        mempty
+        mempty
+        (L.Coin 0)
+        1
+        0
+        0
+        address
+        totalValue
+
+  H.note_ "Check that fee is greater than zero"
+  H.assertWith fee (> L.Coin 0)
+
+  case txOuts balancedContent of
+    [_, TxOut outAddr outValue _ _] -> do
+      H.note_ "Check that the second output is at the change address"
+      outAddr === address
+      H.note_ "Check that the change holds the surplus ada and the surplus tokens"
+      let expectedValue =
+            fromList
+              [ (AdaAssetId, 150_000_000 - 10_000_000 - lovelaceToQuantity fee)
+              , (assetId, 7)
+              ]
+      txOutValueToValue outValue === expectedValue
+    outs -> do
+      H.annotateShow outs
+      H.annotate "Expected exactly two outputs"
+      H.failure
+
+-- | 'estimateBalancedTxBody' rejects a transaction whose outputs spend native
+-- assets that are not present in the declared available value.
+prop_estimate_balanced_tx_body_fails_on_undeclared_native_assets :: Property
+prop_estimate_balanced_tx_body_fails_on_undeclared_native_assets = H.propertyOnce $ do
+  let meo = MaryEraOnwardsConway
+      sbe = convert meo
+
+  ledgerPParams <-
+    H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  let address = mkKeyHashAddress sbe
+      fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      testPolicyId = PolicyId . ScriptHash $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
+      assetId = AssetId testPolicyId (UnsafeAssetName "testtoken")
+      explicitValue = fromList [(AdaAssetId, 10_000_000), (assetId, 3)]
+      explicitOut =
+        TxOut
+          address
+          (TxOutValueShelleyBased sbe $ toLedgerValue meo explicitValue)
+          TxOutDatumNone
+          ReferenceScriptNone
+      content =
+        defaultTxBodyContent sbe
+          & setTxIns [(fundingTxIn, BuildTxWith (KeyWitness KeyWitnessForSpending))]
+          & setTxOuts [explicitOut]
+          & setTxProtocolParams (pure $ pure (LedgerProtocolParameters ledgerPParams))
+
+  case estimateBalancedTxBody
+    meo
+    content
+    ledgerPParams
+    mempty
+    mempty
+    mempty
+    (L.Coin 0)
+    1
+    0
+    0
+    address
+    (lovelaceToValue 150_000_000) of
+    Left (TxFeeEstimationBalanceError (TxBodyErrorBalanceNegative _ _)) -> H.success
+    Left err -> H.annotateShow err >> H.failure
+    Right _ ->
+      H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
+        >> H.failure
+
+-- | 'estimateBalancedTxBody' rejects a transaction whose certificate deposits exceed the declared available ada.
+prop_estimate_balanced_tx_body_fails_when_deposits_exceed_declared_ada :: Property
+prop_estimate_balanced_tx_body_fails_when_deposits_exceed_declared_ada = H.propertyOnce $ do
+  let meo = MaryEraOnwardsConway
+      sbe = convert meo
+
+  ledgerPParams0 <-
+    H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  -- the fixture's own stakeAddressDeposit is 0, so force a realistic non-zero key
+  -- deposit here to make the registration certificate actually cost ada
+  let keyDeposit = L.Coin 2_000_000
+      ledgerPParams = ledgerPParams0 & L.ppKeyDepositL .~ keyDeposit
+      declaredAda = L.Coin (L.unCoin keyDeposit `div` 2)
+
+  let address = mkKeyHashAddress sbe
+      fundingTxIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      stakeKeyHash = L.KeyHash "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137"
+      stakeCred = StakeCredentialByKey $ StakeKeyHash stakeKeyHash
+      certs =
+        [
+          ( Exp.Certificate
+              (L.ConwayTxCertDeleg (L.ConwayRegCert (toShelleyStakeCredential stakeCred) (L.SJust keyDeposit)))
+          , Nothing
+          )
+        ]
+      content =
+        defaultTxBodyContent sbe
+          & setTxIns [(fundingTxIn, BuildTxWith (KeyWitness KeyWitnessForSpending))]
+          & setTxCertificates (mkTxCertificates sbe certs)
+          & setTxProtocolParams (pure $ pure (LedgerProtocolParameters ledgerPParams))
+
+  case estimateBalancedTxBody
+    meo
+    content
+    ledgerPParams
+    mempty
+    mempty
+    mempty
+    (L.Coin 0)
+    1
+    0
+    0
+    address
+    (lovelaceToValue declaredAda) of
+    Left err@(TxFeeEstimationBalanceError (TxBodyErrorBalanceNegative _ _)) -> do
+      -- force the error fully: a mis-ordered guard could embed a thunk that only
+      -- throws the ledger's "Illegal Value in TxOut" error when evaluated
+      _ <- H.evalNF $ show err
+      H.success
+    Left err -> do
+      _ <- H.evalNF $ show err
+      H.failure
+    Right _ ->
+      H.annotate "Expected TxFeeEstimationBalanceError but tx balanced successfully"
+        >> H.failure
+
 -- * Utilities
 
 mkSimpleUTxOs :: ShelleyBasedEra ConwayEra -> UTxO ConwayEra
@@ -538,6 +768,18 @@ tests =
         "Governance actions are preserved by autobalance"
         prop_ensure_gov_actions_are_preserved_by_autobalance
     , testProperty
+        "makeTransactionBodyAutoBalance fails on zero ada balance with negative assets"
+        prop_make_transaction_body_auto_balance_fails_on_zero_ada_negative_assets
+    , testProperty
         "estimateBalancedTxBody balances a transaction with no outputs"
         prop_estimate_balanced_tx_body_balances_without_outputs
+    , testProperty
+        "estimateBalancedTxBody keeps native assets in the change output"
+        prop_estimate_balanced_tx_body_keeps_native_assets_in_change
+    , testProperty
+        "estimateBalancedTxBody fails when an output spends undeclared native assets"
+        prop_estimate_balanced_tx_body_fails_on_undeclared_native_assets
+    , testProperty
+        "estimateBalancedTxBody fails when certificate deposits exceed the declared ada"
+        prop_estimate_balanced_tx_body_fails_when_deposits_exceed_declared_ada
     ]
