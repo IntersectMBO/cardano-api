@@ -353,7 +353,7 @@ estimateBalancedTxBody
             , txTotalCollateral = reqCol
             }
 
-    let fakeUTxO = createFakeUTxO sbe txbodycontent1 $ selectLovelace availableUTxOValue
+    let fakeUTxO = createFakeUTxO sbe changeaddr txbodycontent1 $ selectLovelace availableUTxOValue
         balance =
           evaluateTransactionBalance sbe pparams poolids stakeDelegDeposits fakeUTxO txbody2
         balanceTxOut = TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone
@@ -1462,25 +1462,30 @@ calculatePartialChangeValue sbe incoming txbodycontent = do
   newUtxoValue =
     mconcat [fromLedgerValue sbe v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- txOuts txbodycontent]
 
--- | This is used in the balance calculation in the event where
--- the user does not supply the UTxO(s) they intend to spend
--- but they must supply their total balance of ADA.
--- evaluateTransactionBalance calls evalBalanceTxBody which requires a UTxO value.
--- This eventually calls getConsumedMaryValue which retrieves the balance
--- from the transaction itself. This necessitated a function to create a "fake" UTxO
--- to still use evalBalanceTxBody however this will fail for transactions
--- containing multi-assets, refunds and withdrawals.
+-- | Build a single-entry UTxO for the first input holding the declared total ADA, so the balance
+-- can be evaluated without the real UTxO set. The first output is the template, or a plain
+-- output at the change address when there are no outputs. Native assets outside the first
+-- output are not represented.
 -- TODO: Include multiassets
-createFakeUTxO :: ShelleyBasedEra era -> TxBodyContent BuildTx era -> Coin -> UTxO era
-createFakeUTxO sbe txbodycontent totalAdaInUTxO =
+createFakeUTxO
+  :: ShelleyBasedEra era
+  -> AddressInEra era
+  -- ^ The change address used when there are no outputs.
+  -> TxBodyContent BuildTx era
+  -- ^ The transaction body content.
+  -> Coin
+  -- ^ The total ADA declared by the caller.
+  -> UTxO era
+createFakeUTxO sbe changeAddress txbodycontent totalAdaInUTxO = do
   let singleTxIn = maybe [] (return . fst) $ List.uncons [txin | (txin, _) <- txIns txbodycontent]
+      changeValue = lovelaceToTxOutValue sbe totalAdaInUTxO
       singleTxOut =
-        maybe [] (return . updateTxOut sbe totalAdaInUTxO . toCtxUTxOTxOut . fst) $
-          List.uncons $
-            txOuts txbodycontent
-   in -- Take one txin and one txout. Replace the out value with totalAdaInUTxO
-      -- Return an empty UTxO if there are no txins or txouts
-      UTxO $ fromList $ zip singleTxIn singleTxOut
+        maybe
+          [TxOut changeAddress changeValue TxOutDatumNone ReferenceScriptNone]
+          (return . updateTxOut sbe totalAdaInUTxO . toCtxUTxOTxOut . fst)
+          . List.uncons
+          $ txOuts txbodycontent
+  UTxO . fromList $ zip singleTxIn singleTxOut
 
 updateTxOut :: ShelleyBasedEra era -> Coin -> TxOut CtxUTxO era -> TxOut CtxUTxO era
 updateTxOut sbe updatedValue txout =
