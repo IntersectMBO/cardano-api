@@ -100,6 +100,12 @@ if arch(wasm32)
     tag: ab92e48e9fdf3abe214f85fdbe5301c1280e14e9
     --sha256: sha256-U+ln/gbXoQZpNjZHydNa0FG/9GdJFgL1+T3+7KTzDWo=
 
+  source-repository-package
+    type: git
+    location: https://github.com/palas/ram
+    tag: 73125424da174adf25e607d7584014becd5fb6a7
+    --sha256: sha256-fo3MlxW+0kUdXFSJILZ6L4HFmATr8R8oytlbyyaKYn0=
+
   -- The wasm fork of `network` above is pinned at 3.2.7.0, while
   -- cardano-config requires ^>=3.2.8. The 3.2.8 release only adds the
   -- IP_DONTFRAG/IP_MTU_DISCOVER and KeepInit socket options, neither of
