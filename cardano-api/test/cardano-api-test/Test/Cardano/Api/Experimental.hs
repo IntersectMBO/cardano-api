@@ -47,13 +47,12 @@ import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
-import Control.Exception (ErrorCall (..), evaluate, try)
 import Control.Monad.Identity (Identity)
 import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
 import Data.Either (isRight)
 import Data.Foldable (toList)
-import Data.List (isInfixOf)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -780,7 +779,7 @@ prop_roundtrip_serialise_as_raw_bytes_signed_tx = H.withTests (H.TestLimit 20) $
 -- ---------------------------------------------------------------------------
 
 -- | The body content record is shared by Conway and Dijkstra, so a Dijkstra-only
--- field can be set on a Conway body. Building must throw, naming the field,
+-- field can be set on a Conway body. Building must fail, naming the field,
 -- rather than silently producing a body without it. The same content builds in
 -- Dijkstra.
 prop_makeUnsignedTx_conway_rejects_dijkstra_only_fields :: Property
@@ -790,9 +789,12 @@ prop_makeUnsignedTx_conway_rejects_dijkstra_only_fields = H.property $ do
       bodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxRequiredTopLevelGuards (Map.singleton guardCredential SNothing)
-  result <- H.evalIO . try $ evaluate (Exp.makeUnsignedTx Exp.ConwayEra bodyContent)
-  case result of
-    Left (ErrorCallWithLocation msg _) -> H.assert ("txRequiredTopLevelGuards" `isInfixOf` msg)
+  case Exp.makeUnsignedTx Exp.ConwayEra bodyContent of
+    Left err ->
+      err
+        H.=== Exp.MakeUnsignedTxFieldsNotSupportedInEra
+          (Exp.Some Exp.ConwayEra)
+          ("txRequiredTopLevelGuards" :| [])
     Right _ -> H.failure
   H.assert . isRight $ Exp.makeUnsignedTx Exp.DijkstraEra bodyContent
 
