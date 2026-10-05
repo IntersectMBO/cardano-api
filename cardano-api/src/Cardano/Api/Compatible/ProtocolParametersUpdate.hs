@@ -209,7 +209,7 @@ data IntroducedInDijkstraPParams era
   deriving (Eq, Show)
 
 createIntroducedInDijkstraPParams
-  :: (Ledger.DijkstraEraPParams ledgerera)
+  :: Ledger.DijkstraEraPParams ledgerera
   => IntroducedInDijkstraPParams ledgerera
   -> Ledger.PParamsUpdate ledgerera
 createIntroducedInDijkstraPParams IntroducedInDijkstraPParams{..} =
