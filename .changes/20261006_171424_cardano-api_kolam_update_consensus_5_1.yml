@@ -1,0 +1,5 @@
+description: Bump ouroboros-consensus to 5.1
+kind:
+- release
+pr: 1368
+project: cardano-api
