@@ -1,1 +1,1 @@
-{ pkgs ? import <nixpkgs> {} }: pkgs.mkShell { packages = with pkgs; [ nodejs ]; }
+{pkgs ? import <nixpkgs> {}}: pkgs.mkShell {packages = with pkgs; [nodejs];}

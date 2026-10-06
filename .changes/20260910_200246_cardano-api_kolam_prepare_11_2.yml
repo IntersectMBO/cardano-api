@@ -1,0 +1,9 @@
+description: |
+  Compatibility updates for ouroboros-consensus 4.0, cardano-ledger, and plutus 1.68:
+  fix `SerialisedPoolState` to carry an era type parameter, add `individualPoolStakeBls`
+  field to `IndividualPoolStake`, update `History.Bound` to the new Peras API
+  (`PerasRoundNo`, `NoPerasEnabled`), and bump dependency bounds accordingly.
+kind:
+- release
+pr: 1328
+project: cardano-api
