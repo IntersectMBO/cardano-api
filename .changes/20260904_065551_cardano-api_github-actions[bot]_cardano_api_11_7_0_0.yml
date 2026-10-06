@@ -1,5 +1,0 @@
-description: Release cardano-api 11.7.0.0
-kind:
-- release
-pr: 1329
-project: cardano-api
