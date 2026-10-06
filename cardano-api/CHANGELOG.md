@@ -1,5 +1,57 @@
 # Changelog for cardano-api
 
+## 11.8.0.0 -- 2026-10-06
+
+- `estimateBalancedTxBody` (in both `Cardano.Api` and `Cardano.Api.Experimental`) now balances a transaction that has no outputs by producing a single change output, instead of failing with "The transaction balance is negative"; this also fixes `cardano-cli transaction build-estimate` when no `--tx-out` is given (IntersectMBO/cardano-cli#1199, https://github.com/IntersectMBO/cardano-cli/issues/1199).
+  (bugfix)
+  [PR 1365](https://github.com/intersectmbo/cardano-api/pull/1365)
+
+- `toLedgerEvent` (used by `foldBlocks` and the ledger-state folding machinery) no longer dies with a non-exhaustive pattern match when a Dijkstra-era block's ledger events are forced.
+  (bugfix)
+  [PR 1362](https://github.com/intersectmbo/cardano-api/pull/1362)
+
+- Renamed `Cardano.Api.Experimental.Tx.Internal.BodyContent.New` to `Cardano.Api.Experimental.Tx.Internal.BodyContent` and made body content one type, `BodyContent l era`, indexed by the ledger transaction level, with the fields that exist only in a top-level body kept in a `TopTxOnlyFields` GADT. `TxBodyContent era` and `SubTxBodyContent era` are type synonyms for the two levels and record pattern synonyms of the same names present each as a flat record, so existing `TxBodyContent` field access and record updates are unchanged; `TxBodyContent (..)` imports become `BodyContent (..)` plus the field names. Setters of shared fields are typed `BodyContent l era` and work on both levels; the eight top-level-only setters keep their `TxBodyContent era` type. Added the Dijkstra-era fields to the experimental body content (`txGuards`, `txSubTransactions`, `txRequiredTopLevelGuards`, `txDirectDeposits`, `txAccountBalanceIntervals`, `txStartingAccountBalanceIntervals`) and populated all of them when building a Dijkstra transaction body. Added `Cardano.Api.Experimental.Tx.Internal.SubTransaction` with `UnsignedSubTx` and `SignedSubTx` (fixed to the Dijkstra era, the only era with sub-transactions), construction and signing from `SubTxBodyContent` (`makeUnsignedSubTx`, `makeSubTxKeyWitness`, `signSubTx`, `makeSignedSubTx`), `SerialiseAsCBOR` and `HasTextEnvelope` instances (`Unwitnessed SubTx DijkstraEra` / `Witnessed SubTx DijkstraEra`), `getUnsignedSubTxId`/`getSignedSubTxId` and `setTxSignedSubTransactions`; all re-exported from `Cardano.Api.Experimental.Tx` and `Cardano.Api.Experimental` together with `DijkstraEra`.
+  (breaking, feature)
+  [PR 1361](https://github.com/intersectmbo/cardano-api/pull/1361)
+
+- The IPv4 address of a stake pool relay is no longer byte-reversed in stake pool registration certificates created by cardano-api, nor in pool parameters and certificates decoded from the chain; this is fixed by requiring cardano-ledger-binary 1.9.1.0 (IntersectMBO/cardano-cli#1442).
+  (bugfix)
+  [PR 1360](https://github.com/intersectmbo/cardano-api/pull/1360)
+
+- Removed the long-deprecated `ProtocolParameters` record and its `FromJSON` and `ToJSON` instances. It had been marked deprecated since the Chang hard fork in favour of the ledger's `PParams` type, and its conversion functions were already removed in #729. Use `LedgerProtocolParameters` / `Ledger.PParams` instead. The remaining helper types in `Cardano.Api.ProtocolParameters` (`ExecutionUnitPrices`, `CostModel`, `PraosNonce`, `ProtocolParametersConversionError`, etc.) are unchanged.
+  (breaking)
+  [PR 1335](https://github.com/intersectmbo/cardano-api/pull/1335)
+
+- The key types, their hashes and the raw-bytes, hex, CBOR, bech32 and text-envelope serialisations now come from the `cardano-keys` package. The module names, the exported names and `Cardano.Api`'s re-exports are unchanged, so most code needs no edit. Three things did change: `HasTextEnvelope` instances now define `textEnvelopeTypes :: AsType a -> NonEmpty TextEnvelopeType` instead of `textEnvelopeType` (the head of that list is the type written when serialising, the whole list is accepted when reading, and `textEnvelopeType` remains available as a free function); `getKesPeriod` returns a `KESPeriod` rather than a `Word`; and the error types that moved carry `render...` functions in `cardano-keys`, with the `Error` instances kept here.
+  (breaking, refactoring)
+  [PR 1332](https://github.com/intersectmbo/cardano-api/pull/1332)
+
+- Added `stakePoolBlsKey :: Maybe Ledger.BlsKey` to `StakePoolParameters`, wired
+  to `sppBlsKey` in both `toShelleyPoolParams` and `fromShelleyPoolParams`.
+  Existing record-construction sites must add the field; use `Nothing` for pools
+  that do not register a BLS voting key. The field holds a BLS verification key
+  together with its proof of possession, registrable from the Dijkstra era
+  onwards. Use `toLedgerBlsKey :: SigningKey BlsKey -> Ledger.BlsKey` (new) to
+  derive that pair from a BLS signing key. `Ledger.BlsKey` is now re-exported
+  from `Cardano.Api.Ledger` to avoid a direct `cardano-ledger-core` dependency
+  at call sites.
+  (feature, breaking)
+  [PR 1328](https://github.com/intersectmbo/cardano-api/pull/1328)
+
+- Add the Leios protocol parameters to pparams updates via
+  `createIntroducedInDijkstraPParams` by extending
+  `pparamsUpdateToIntroducedInDijkstraPParams`
+  (breaking, feature)
+  [PR 1328](https://github.com/intersectmbo/cardano-api/pull/1328)
+
+- Removed the era case combinators `caseByronOrShelleyBasedEra` and `caseShelleyToBabbageOrConwayEraOnwards`, along with the internal `caseShelleyEraOnlyOrAllegraEraOnwards`, and the now-empty `Cardano.Api.Era.Internal.Case` module. Use `inEonForEra` / `inEonForShelleyBasedEra` with the appropriate eon, or match on the era constructors where both branches need era constraints.
+  (breaking, refactoring)
+  [PR 1326](https://github.com/intersectmbo/cardano-api/pull/1326)
+
+- Fix fee estimation for transactions containing votes: `estimateTransactionKeyWitnessCount` now accounts for the key witnesses required by key-credentialed voters (key-hash DReps, constitutional committee hot keys, and SPOs), so vote-carrying transactions no longer get underestimated fees and fail with `FeeTooSmallUTxO`. Fee estimation also no longer counts the same key twice when it is required by more than one of certificates, withdrawals, extra key witnesses and votes. `estimateTransactionKeyWitnessCount` is now also exported from `Cardano.Api.Experimental`. Pool registration certificates now count one key witness for the operator and each owner. See [issue #722](https://github.com/IntersectMBO/cardano-api/issues/722).
+  (bugfix, compatible)
+  [PR 1271](https://github.com/intersectmbo/cardano-api/pull/1271)
+
 ## 11.7.0.0 -- 2026-09-04
 
 - Bumped ouroboros-consensus to address issue that affected queries `kes-period-info` and `tip`.
