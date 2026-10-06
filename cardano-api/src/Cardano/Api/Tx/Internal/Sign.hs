@@ -38,6 +38,9 @@ module Cardano.Api.Tx.Internal.Sign
   , ShelleyWitnessSigningKey (..)
   , makeShelleyKeyWitness
   , makeShelleyKeyWitness'
+  , hashTxBody
+  , makeShelleyKeyWitnessFromHash
+  , addKeyWitnesses
   , WitnessNetworkIdOrByronAddress (..)
   , makeShelleyBootstrapWitness
   , makeShelleyBasedBootstrapWitness
@@ -1222,6 +1225,43 @@ makeShelleyKeyWitness' sbe txBody wsk =
         signature = makeShelleySignature txhash sk
     ShelleyKeyWitness sbe $
       L.WitVKey vk signature
+
+-- | The hash of a transaction body, which is what key witnesses sign. Works
+-- at either transaction level: a 'Ledger.TopTx' body is an ordinary
+-- transaction, a 'Ledger.SubTx' body is a Dijkstra sub-transaction embedded in
+-- one.
+hashTxBody
+  :: Ledger.HashAnnotated (Ledger.TxBody l era) Ledger.EraIndependentTxBody
+  => Ledger.TxBody l era
+  -> Hash.Hash Ledger.HASH Ledger.EraIndependentTxBody
+hashTxBody = Ledger.extractHash . Ledger.hashAnnotated
+
+-- | Sign a transaction body hash with a Shelley key.
+makeShelleyKeyWitnessFromHash
+  :: HasCallStack
+  => Hash.Hash Ledger.HASH Ledger.EraIndependentTxBody
+  -> ShelleyWitnessSigningKey
+  -> L.WitVKey Shelley.Witness
+makeShelleyKeyWitnessFromHash txhash wsk =
+  let sk = toShelleySigningKey wsk
+      vk = getShelleyKeyWitnessVerificationKey sk
+   in L.WitVKey vk (makeShelleySignature txhash sk)
+
+-- | Add key witnesses to a transaction, keeping the witnesses it already has.
+-- Works at either transaction level, top-level transaction or Dijkstra
+-- sub-transaction.
+addKeyWitnesses
+  :: L.EraTx era
+  => [L.BootstrapWitness]
+  -> [L.WitVKey Shelley.Witness]
+  -> L.Tx l era
+  -> L.Tx l era
+addKeyWitnesses bootstrapWits shelleyKeyWits tx =
+  let keyWits =
+        L.mkBasicTxWits
+          & L.addrTxWitsL .~ Set.fromList shelleyKeyWits
+          & L.bootAddrTxWitsL .~ Set.fromList bootstrapWits
+   in tx & L.witsTxL %~ (keyWits <>)
 
 toShelleySigningKey :: ShelleyWitnessSigningKey -> ShelleySigningKey
 toShelleySigningKey key = case key of

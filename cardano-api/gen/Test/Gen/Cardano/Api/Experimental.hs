@@ -9,6 +9,8 @@ module Test.Gen.Cardano.Api.Experimental
   , genScriptWitnesssedTxVotingProcedures
   , genScriptWitnessedTxWithdrawals
   , genSimpleScriptInEra
+  , genUnsignedSubTx
+  , genSignedSubTx
   )
 where
 
@@ -30,8 +32,11 @@ import Test.Gen.Cardano.Api.Typed
   , genTxIn
   )
 
+import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
+
 import Hedgehog (Gen)
 import Hedgehog.Gen qualified as Gen
+import Hedgehog.Gen.QuickCheck qualified as Q
 
 genAnyWitness :: Gen (AnyWitness era)
 genAnyWitness =
@@ -147,3 +152,10 @@ genScriptWitnesssedTxVotingProcedures = return $ TxVotingProcedures (L.VotingPro
 
 genScriptWitnessedTxProposals :: Gen (TxProposalProcedures era)
 genScriptWitnessedTxProposals = return $ TxProposalProcedures OMap.empty
+
+-- | An arbitrary Dijkstra sub-transaction. May contain key witnesses.
+genUnsignedSubTx :: Gen UnsignedSubTx
+genUnsignedSubTx = UnsignedSubTx <$> Q.arbitrary
+
+genSignedSubTx :: Gen SignedSubTx
+genSignedSubTx = SignedSubTx <$> Q.arbitrary
