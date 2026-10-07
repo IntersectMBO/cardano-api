@@ -45,5 +45,7 @@ instance ToJSON AddressInfo where
 inspectAddressImpl :: String -> Maybe AddressInfo
 inspectAddressImpl addrStr =
   case Api.deserialiseAddress (Api.AsAddress Api.AsShelleyAddr) (Text.pack addrStr) of
-    Just (Api.ShelleyAddress network _ _) -> Just (AddressInfo network)
+    Just addr ->
+      let (network, _, _) = Api.shelleyAddressCredentials addr
+       in Just (AddressInfo network)
     Nothing -> Nothing

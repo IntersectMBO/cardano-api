@@ -122,10 +122,11 @@ matchesAddressPattern pat address =
     AddressInEra ShelleyAddressInEra{} shelleyAddress -> Just shelleyAddress
     AddressInEra ByronAddressInAnyEra _ -> Nothing
   mPaymentCredentialBytes =
-    mShelleyAddress <&> \(ShelleyAddress _ paymentCredential _) ->
-      serialisePaymentCredential $ fromShelleyPaymentCredential paymentCredential
+    mShelleyAddress <&> \addr ->
+      let (_, paymentCredential, _) = shelleyAddressCredentials addr
+       in serialisePaymentCredential $ fromShelleyPaymentCredential paymentCredential
   mStakeCredentialBytes = do
-    ShelleyAddress _ _ stakeReference <- mShelleyAddress
+    (_, _, stakeReference) <- shelleyAddressCredentials <$> mShelleyAddress
     StakeAddressByValue credential <- pure $ fromShelleyStakeReference stakeReference
     pure $ serialiseStakeCredential credential
 
@@ -337,10 +338,11 @@ matchesAddressPatternBytes pat addressBytes =
       either (const Nothing) Just $ deserialiseFromRawBytes AsAddressAny addressBytes
     pure shelley
   mPaymentCredentialBytes =
-    mShelleyAddress <&> \(ShelleyAddress _ paymentCredential _) ->
-      serialisePaymentCredential $ fromShelleyPaymentCredential paymentCredential
+    mShelleyAddress <&> \addr ->
+      let (_, paymentCredential, _) = shelleyAddressCredentials addr
+       in serialisePaymentCredential $ fromShelleyPaymentCredential paymentCredential
   mStakeCredentialBytes = do
-    ShelleyAddress _ _ stakeReference <- mShelleyAddress
+    (_, _, stakeReference) <- shelleyAddressCredentials <$> mShelleyAddress
     StakeAddressByValue credential <- pure $ fromShelleyStakeReference stakeReference
     pure $ serialiseStakeCredential credential
 

@@ -107,6 +107,10 @@ instance Eq (PlutusScriptWitness lang VotingScript era) where
   (==) (PlutusScriptWitness s1 l1 d1 r1 eu1) (PlutusScriptWitness s2 l2 d2 r2 eu2) =
     l1 == l2 && d1 == d2 && r1 == r2 && eu1 == eu2 && s1 == s2
 
+instance Eq (PlutusScriptWitness L.PlutusV4 ReceivingScript era) where
+  (==) (PlutusScriptWitness s1 l1 d1 r1 eu1) (PlutusScriptWitness s2 l2 d2 r2 eu2) =
+    l1 == l2 && d1 == d2 && r1 == r2 && eu1 == eu2 && s1 == s2
+
 getPlutusScriptWitnessLanguage :: PlutusScriptWitness lang purpose era -> L.Language
 getPlutusScriptWitnessLanguage (PlutusScriptWitness l _ _ _ _) =
   case l of
@@ -175,6 +179,8 @@ data PlutusScriptPurpose
     VotingScript
   | -- | Witnesses a guard script (Dijkstra onwards)
     GuardingScript
+  | -- | Witnesses a protected receiving script hash (Dijkstra onwards).
+    ReceivingScript
   deriving (Show, Eq, Ord)
 
 data NoScriptDatum deriving (Show, Eq)
@@ -211,6 +217,7 @@ type family PlutusScriptDatumF (lang :: L.Language) (purpose :: PlutusScriptPurp
   PlutusScriptDatumF L.PlutusV2 GuardingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV3 GuardingScript = NoScriptDatum
   PlutusScriptDatumF L.PlutusV4 GuardingScript = NoScriptDatum
+  PlutusScriptDatumF L.PlutusV4 ReceivingScript = NoScriptDatum
 
 data PlutusScriptDatum (lang :: L.Language) (purpose :: PlutusScriptPurpose) where
   SpendingScriptDatum
@@ -256,3 +263,8 @@ instance Show (PlutusScriptDatum lang purpose) where
     SpendingScriptDatum _d -> "Datum"
     InlineDatum -> "InlineDatum"
     NoScriptDatum -> "NoScriptDatum"
+
+instance Eq (PlutusScriptDatum L.PlutusV4 ReceivingScript) where
+  (==) NoScriptDatum NoScriptDatum = True
+  (==) InlineDatum InlineDatum = True
+  (==) _ _ = False

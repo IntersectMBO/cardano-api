@@ -27,6 +27,7 @@ import Cardano.Slotting.Time qualified as Slotting
 
 import Data.ByteString qualified as B
 import Data.Map.Strict qualified as Map
+import Data.Maybe (isNothing)
 import Data.Time.Clock.POSIX qualified as Time
 import GHC.Exts (fromList)
 import Lens.Micro
@@ -333,6 +334,24 @@ prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral = H.propert
   returnCollateralAda H.=== Nothing
   H.note_ "Check that all of the collateral inputs are used as total collateral"
   totalCollateralAda H.=== Just minUTxOCollateral
+
+  -- Supplying only total collateral must also leave the return absent. This
+  -- exercises the fee-size dummy body with an explicit total in Conway.
+  (_, explicitContent) <-
+    H.leftFail $
+      Exp.makeTransactionBodyAutoBalance
+        systemStart
+        epochInfo
+        ledgerPParams
+        mempty
+        mempty
+        utxo
+        (txBodyContent & Exp.setTxTotalCollateral (Exp.TxTotalCollateral minUTxOCollateral))
+        (Api.fromShelleyAddr sbe addr)
+        Nothing
+  H.assert $ isNothing $ Exp.txReturnCollateral explicitContent
+  (Exp.unTxTotalCollateral <$> Exp.txTotalCollateral explicitContent)
+    H.=== Just minUTxOCollateral
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
 --

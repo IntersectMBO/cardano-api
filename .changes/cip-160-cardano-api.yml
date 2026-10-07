@@ -1,0 +1,9 @@
+project: cardano-api
+pr: 0
+kind:
+  - breaking
+  - feature
+  - bugfix
+  - test
+description: |
+  Preserve CIP-160 protected addresses and add hash-keyed native/V4 Receiving witnesses, complete Dijkstra batch evaluation, per-body signature fee estimates and bounded final-context balancing.

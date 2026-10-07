@@ -30,6 +30,9 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent
   , SubTxBodyContent
   , defaultTxBodyContent
   , defaultSubTxBodyContent
+  , addReceivingWitnesses
+  , receivingScriptPointers
+  , validateReceivingWitnesses
 
     -- ** Fields of a top-level body
   , txIns
@@ -55,6 +58,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent
   , txTreasuryDonation
   , txSupplementalDatums
   , txGuards
+  , txReceivingWitnesses
   , txSubTransactions
   , txRequiredTopLevelGuards
   , txDirectDeposits
@@ -79,6 +83,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent
   , subTxTreasuryDonation
   , subTxSupplementalDatums
   , subTxGuards
+  , subTxReceivingWitnesses
   , subTxRequiredTopLevelGuards
   , subTxDirectDeposits
   , subTxAccountBalanceIntervals
@@ -115,6 +120,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent
   , setTxVotingProcedures
   , setTxWithdrawals
   , setTxGuards
+  , setTxReceivingWitnesses
   , setTxRequiredTopLevelGuards
   , setTxDirectDeposits
   , setTxAccountBalanceIntervals
@@ -156,6 +162,7 @@ import Cardano.Api.Experimental.Certificate qualified as Exp
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Plutus
   ( AnyIndexedPlutusScriptWitness (..)
+  , IndexedPlutusScriptWitness (..)
   , Witnessable (..)
   , WitnessableItem (..)
   , createIndexedPlutusScriptWitnesses
@@ -164,6 +171,8 @@ import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
   ( AnyWitness (..)
   , anyScriptWitnessToAnyWitness
+  , getAnyWitnessReferenceInput
+  , getAnyWitnessScript
   )
 import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
@@ -186,6 +195,7 @@ import Cardano.Api.Plutus.Internal.Script
   , ScriptLanguage (..)
   , fromAllegraTimelock
   , toAllegraTimelock
+  , toAlonzoExUnits
   )
 import Cardano.Api.Plutus.Internal.Script qualified as OldScript
 import Cardano.Api.Plutus.Internal.ScriptData qualified as Api
@@ -211,13 +221,16 @@ import Cardano.Api.Value.Internal
 
 import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Allegra.Scripts (Timelock)
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as L
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Alonzo.TxWits qualified as L
+import Cardano.Ledger.Alonzo.UTxO qualified as Alonzo
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Core qualified as L (TxLevel (..))
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
 import Cardano.Ledger.Dijkstra.TxBody qualified as L
   ( DijkstraEraTxBody
       ( accountBalanceIntervalsTxBodyL
@@ -228,6 +241,7 @@ import Cardano.Ledger.Dijkstra.TxBody qualified as L
   )
 import Cardano.Ledger.Plutus.Language (PlutusBinary (..), plutusLanguage)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
+import Cardano.Ledger.State qualified as L
 
 import Control.Monad
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
@@ -266,9 +280,14 @@ data MakeUnsignedTxError
     -- eras, so this is only detected when the body is built.
     -- The field names are those of the 'TxBodyContent' record.
     MakeUnsignedTxFieldsNotSupportedInEra (Some Era) (NonEmpty Text)
+  | MakeUnsignedTxProtectedCollateralReturn
+  | MakeUnsignedTxInvalidReceivingWitness String
   deriving (Eq, Show)
 
 instance Error MakeUnsignedTxError where
+  prettyError MakeUnsignedTxProtectedCollateralReturn =
+    "Collateral return requires an unprotected address; supply an explicit unprotected return for protected change"
+  prettyError (MakeUnsignedTxInvalidReceivingWitness err) = pretty err
   prettyError MakeUnsignedTxMissingProtocolParams =
     mconcat
       [ "Transaction uses Plutus scripts but no protocol parameters were provided. "
@@ -289,6 +308,11 @@ makeUnsignedTx
   -> TxBodyContent (LedgerEra era)
   -> Either MakeUnsignedTxError (UnsignedTx (LedgerEra era))
 makeUnsignedTx era bc = obtainCommonConstraints era $ do
+  validateReceivingWitnesses era bc
+  forM_ (txReturnCollateral bc) $ \(TxReturnCollateral output) ->
+    case output ^. L.addrTxOutL of
+      L.AddrProtected{} -> Left MakeUnsignedTxProtectedCollateralReturn
+      _ -> pure ()
   let TxScriptWitnessRequirements languages scripts datums redeemers = collectTxBodyScriptWitnessRequirements bc
 
   -- cardano-api types
@@ -357,6 +381,147 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
         & L.witsTxL .~ scriptWitnesses
         & L.auxDataTxL .~ L.maybeToStrictMaybe (toAuxiliaryData (txMetadata bc) (txAuxScripts bc))
         & L.isPhase2ValidTxL .~ scriptValidity
+
+-- | Reject mismatched metadata before constructing redeemers. References are
+-- resolved and checked against the UTxO by 'addReceivingWitnesses'.
+validateReceivingWitnesses
+  :: Era era
+  -> BodyContent l (LedgerEra era)
+  -> Either MakeUnsignedTxError ()
+validateReceivingWitnesses ConwayEra bc = do
+  unless (Map.null (bcReceivingWitnesses bc)) $
+    Left $
+      MakeUnsignedTxFieldsNotSupportedInEra (Some ConwayEra) ("txReceivingWitnesses" NonEmpty.:| [])
+  forM_ (bcOuts bc) $ \(TxOut output) ->
+    case output ^. L.addrTxOutL of
+      L.AddrProtected{} -> Left $ MakeUnsignedTxInvalidReceivingWitness "Protected outputs require the Dijkstra era"
+      _ -> pure ()
+validateReceivingWitnesses DijkstraEra bc = do
+  let body =
+        (L.mkBasicTxBody :: L.TxBody L.TopTx L.DijkstraEra)
+          & L.outputsTxBodyL .~ fromList [out | TxOut out <- bcOuts bc]
+      witnesses = bcReceivingWitnesses bc
+      invalid = Left . MakeUnsignedTxInvalidReceivingWitness
+  unless (Dijkstra.receivingScriptHashes body `Set.isSubsetOf` Map.keysSet witnesses) $
+    invalid "Receiving witnesses must cover the protected output script hashes"
+  forM_ (Map.toList witnesses) $ \(hash, witness) -> do
+    case witness of
+      AnyScriptWitnessSimple _ -> pure ()
+      AnyScriptWitnessPlutus (AnyPlutusReceivingScriptWitness _) -> pure ()
+      AnyScriptWitnessPlutus _ -> invalid "Receiving requires a V4 Receiving witness"
+    case getAnyWitnessScript (anyScriptWitnessToAnyWitness witness) of
+      Nothing -> pure ()
+      Just script ->
+        unless (L.hashScript script == hash) $
+          invalid "Receiving witness script hash does not match the protected destination"
+
+-- | Build the complete body-local Receiving index once for bulk consumers.
+-- Native scripts occupy canonical indices even though they have no redeemer.
+receivingScriptPointers
+  :: L.TxBody level L.DijkstraEra
+  -> Map L.ScriptHash (L.PlutusPurpose L.AsIx L.DijkstraEra)
+receivingScriptPointers body =
+  Map.fromDistinctAscList
+    [ (hash, L.DijkstraReceiving (L.AsIx index))
+    | L.AsIxItem index hash <- Dijkstra.receivingScriptTargets body
+    ]
+
+-- | Attach native or V4 Receiving witnesses to an unsigned, final body at
+-- either level. Redeemers are keyed by script hash, not an unstable index;
+-- pointer conversion and the grouped domain belong to the ledger. Rebuild
+-- from the body content and call this again after any output change, before
+-- estimating fees, execution units or collecting signatures.
+--
+-- This helper does not balance a transaction or estimate execution units.
+-- Reference witnesses require the corresponding existing reference or consumed
+-- input in this body. Standalone child attachment does not resolve script
+-- supplies from sibling/parent inputs; the batch evaluator uses the full supply.
+addReceivingWitnesses
+  :: L.PParams (LedgerEra DijkstraEra)
+  -> L.UTxO (LedgerEra DijkstraEra)
+  -> Map L.ScriptHash (AnyScriptWitness (LedgerEra DijkstraEra))
+  -> L.Tx level (LedgerEra DijkstraEra)
+  -> Either String (L.Tx level (LedgerEra DijkstraEra))
+addReceivingWitnesses pp utxo receivingWitnesses tx = do
+  let pointers = receivingScriptPointers body
+  unless (Map.keysSet receivingWitnesses == Map.keysSet pointers) $
+    Left "Receiving witnesses must match the final body's protected script hashes"
+  unless
+    (Set.null (tx ^. L.witsTxL . L.addrTxWitsL) && Set.null (tx ^. L.witsTxL . L.bootAddrTxWitsL))
+    $ Left "Receiving witnesses must be attached before collecting signatures"
+  receivingRedeemers <- fmap mconcat $ forM (Map.toList receivingWitnesses) $ \(hash, witness) -> do
+    pointer <-
+      maybe (Left "Receiving hash is absent from the final body") Right $
+        Map.lookup hash pointers
+    case witness of
+      AnyScriptWitnessSimple _ -> pure mempty
+      AnyScriptWitnessPlutus sw@(AnyPlutusReceivingScriptWitness _) ->
+        pure $
+          L.Redeemers $
+            Map.singleton
+              pointer
+              ( Api.toAlonzoData (getAnyPlutusScriptWitnessRedeemer sw)
+              , toAlonzoExUnits (getAnyPlutusScriptWitnessExecutionUnits sw)
+              )
+      AnyScriptWitnessPlutus _ -> Left "Receiving requires a V4 Receiving witness"
+  let witnessList = map anyScriptWitnessToAnyWitness (Map.elems receivingWitnesses)
+      supplied =
+        Map.fromList
+          [(L.hashScript script, script) | Just script <- map getAnyWitnessScript witnessList]
+      baseRedeemers =
+        L.Redeemers $
+          Map.filterWithKey
+            ( \pointer _ -> case pointer of
+                L.DijkstraReceiving _ -> False
+                _ -> True
+            )
+            (tx ^. L.witsTxL . L.rdmrsTxWitsL . L.unRedeemersL)
+      redeemers = receivingRedeemers <> baseRedeemers
+      datums = tx ^. L.witsTxL . L.datsTxWitsL
+      txWithWitnesses =
+        tx
+          & L.witsTxL . L.scriptTxWitsL %~ (<> supplied)
+          & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
+      L.ScriptsProvided scripts = L.getScriptsProvided utxo txWithWitnesses
+      needed = Alonzo.getAlonzoScriptsHashesNeeded (L.getScriptsNeeded utxo body)
+      languages =
+        Set.fromList
+          [ Alonzo.plutusScriptLanguage script
+          | hash <- Set.toList needed
+          , Just script <- [Alonzo.lookupPlutusScript hash scripts]
+          ]
+  forM_ (Map.toList receivingWitnesses) $ \(hash, witness) -> do
+    case getAnyWitnessReferenceInput (anyScriptWitnessToAnyWitness witness) of
+      Nothing -> pure ()
+      Just reference -> do
+        let referenceInput = toShelleyTxIn reference
+        unless (Set.member referenceInput ((body ^. L.referenceInputsTxBodyL) <> (body ^. L.inputsTxBodyL))) $
+          Left "Receiving reference witness must name an existing body reference input"
+        case Map.lookup referenceInput (L.unUTxO utxo) of
+          Just output -> case output ^. L.referenceScriptTxOutL of
+            SJust script | L.hashScript script == hash -> pure ()
+            _ -> Left "Receiving reference witness does not resolve to its declared script hash"
+          Nothing -> Left "Receiving reference input is absent from the UTxO"
+    case getAnyWitnessScript (anyScriptWitnessToAnyWitness witness) of
+      Just inlineScript ->
+        unless (L.hashScript inlineScript == hash) $
+          Left "Receiving witness script hash does not match the protected destination"
+      Nothing -> pure ()
+    unless (Map.member hash scripts) $
+      Left "Receiving script is missing or its hash does not match the protected destination"
+    case (witness, Alonzo.lookupPlutusScript hash scripts) of
+      (AnyScriptWitnessSimple _, Nothing) -> pure ()
+      (AnyScriptWitnessSimple _, Just _) -> Left "Native Receiving witness resolves to a Plutus script"
+      (AnyScriptWitnessPlutus _, Nothing) -> Left "V4 Receiving witness resolves to a native script"
+      (AnyScriptWitnessPlutus _, Just script) ->
+        unless (Alonzo.plutusScriptLanguage script == Plutus.PlutusV4) $
+          Left "Receiving reference script must use Plutus V4"
+  integrity <-
+    either (Left . show) Right $
+      convPParamsToScriptIntegrityHash @DijkstraEra (Just pp) redeemers datums languages
+  pure $ txWithWitnesses & L.bodyTxL . L.scriptIntegrityHashTxBodyL .~ integrity
+ where
+  body = tx ^. L.bodyTxL
 
 convTxIns :: [(TxIn, AnyWitness era)] -> Set L.TxIn
 convTxIns inputs =
@@ -587,8 +752,7 @@ txOutBaseJsonFields sbe o =
 -- | Convert a ledger 'L.Addr' to JSON using the same format as the legacy API
 -- (bech32 for Shelley addresses, base58 for Byron addresses).
 addrToJson :: L.Addr -> Aeson.Value
-addrToJson (L.Addr nw pc scr) = toJSON (ShelleyAddress nw pc scr)
-addrToJson (L.AddrBootstrap (L.BootstrapAddress addr)) = toJSON (ByronAddress addr)
+addrToJson = Aeson.String . serialiseAddress . fromShelleyAddrToAny
 
 -- | Convert a ledger 'Script' to a cardano-api 'ScriptInAnyLang' without
 -- per-era pattern matching, using 'AlonzoEraScript' methods.
@@ -668,6 +832,10 @@ txOutParseJson
   :: ShelleyBasedEra era -> Aeson.Object -> Parser (TxOut (ShelleyLedgerEra era))
 txOutParseJson sbe o = do
   addr <- addrFromJson =<< o .: "address"
+  case (sbe, addr) of
+    (ShelleyBasedEraDijkstra, _) -> pure ()
+    (_, L.AddrProtected{}) -> fail "Protected outputs require the Dijkstra era"
+    _ -> pure ()
   apiVal <- parseJSON =<< o .: "value"
   let mv = toMaryValue apiVal
   case sbe of
@@ -701,7 +869,7 @@ addrFromJson = Aeson.withText "Address" $ \txt ->
     Nothing -> fail $ "addrFromJson: invalid address: " <> show txt
     Just addrAny -> pure $ case addrAny of
       AddressByron (ByronAddress addr) -> L.AddrBootstrap (L.BootstrapAddress addr)
-      AddressShelley (ShelleyAddress nw pc scr) -> L.Addr nw pc scr
+      AddressShelley addr -> toShelleyAddr (shelleyAddressInEra ShelleyBasedEraDijkstra addr)
 
 -- | Parse a Babbage+ TxOut with datum and reference script support.
 babbageOnwardsTxOutParseJson
@@ -937,6 +1105,7 @@ data BodyContent (l :: L.TxLevel) era
   -- Fields below are new in the Dijkstra era.
   -- ------------------------------------------------------------
   , bcGuards :: OSet (L.Credential L.Guard)
+  , bcReceivingWitnesses :: Map L.ScriptHash (AnyScriptWitness era)
   , bcRequiredTopLevelGuards :: Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   , bcDirectDeposits :: L.DirectDeposits
   , bcAccountBalanceIntervals :: L.AccountBalanceIntervals era
@@ -996,6 +1165,7 @@ pattern TxBodyContent
   -> Maybe L.Coin
   -> Map L.DataHash (L.Data era)
   -> OSet (L.Credential L.Guard)
+  -> Map L.ScriptHash (AnyScriptWitness era)
   -> LOMap.OMap L.TxId (L.Tx L.SubTx era)
   -> Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   -> L.DirectDeposits
@@ -1026,6 +1196,7 @@ pattern TxBodyContent
   , txTreasuryDonation
   , txSupplementalDatums
   , txGuards
+  , txReceivingWitnesses
   , txSubTransactions
   , txRequiredTopLevelGuards
   , txDirectDeposits
@@ -1050,6 +1221,7 @@ pattern TxBodyContent
     , bcTreasuryDonation = txTreasuryDonation
     , bcSupplementalDatums = txSupplementalDatums
     , bcGuards = txGuards
+    , bcReceivingWitnesses = txReceivingWitnesses
     , bcRequiredTopLevelGuards = txRequiredTopLevelGuards
     , bcDirectDeposits = txDirectDeposits
     , bcAccountBalanceIntervals = txAccountBalanceIntervals
@@ -1087,6 +1259,7 @@ pattern SubTxBodyContent
   -> Maybe L.Coin
   -> Map L.DataHash (L.Data era)
   -> OSet (L.Credential L.Guard)
+  -> Map L.ScriptHash (AnyScriptWitness era)
   -> Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   -> L.DirectDeposits
   -> L.AccountBalanceIntervals era
@@ -1109,6 +1282,7 @@ pattern SubTxBodyContent
   , subTxTreasuryDonation
   , subTxSupplementalDatums
   , subTxGuards
+  , subTxReceivingWitnesses
   , subTxRequiredTopLevelGuards
   , subTxDirectDeposits
   , subTxAccountBalanceIntervals
@@ -1131,6 +1305,7 @@ pattern SubTxBodyContent
     , bcTreasuryDonation = subTxTreasuryDonation
     , bcSupplementalDatums = subTxSupplementalDatums
     , bcGuards = subTxGuards
+    , bcReceivingWitnesses = subTxReceivingWitnesses
     , bcRequiredTopLevelGuards = subTxRequiredTopLevelGuards
     , bcDirectDeposits = subTxDirectDeposits
     , bcAccountBalanceIntervals = subTxAccountBalanceIntervals
@@ -1177,6 +1352,7 @@ defaultBodyContent topTxOnlyFields =
     , bcTreasuryDonation = Nothing
     , bcSupplementalDatums = mempty
     , bcGuards = OSet.empty
+    , bcReceivingWitnesses = mempty
     , bcRequiredTopLevelGuards = mempty
     , bcDirectDeposits = L.DirectDeposits mempty
     , bcAccountBalanceIntervals = L.AccountBalanceIntervals mempty
@@ -1212,6 +1388,18 @@ extractAllIndexedPlutusScriptWitnesses era b = obtainCommonConstraints era $ do
       , indexedWithdrawalScriptWits
       , indexedProposalScriptWits
       , indexedVoteScriptWits
+      , case era of
+          ConwayEra -> []
+          DijkstraEra ->
+            let body =
+                  (L.mkBasicTxBody :: L.TxBody L.TopTx L.DijkstraEra)
+                    & L.outputsTxBodyL .~ fromList [out | TxOut out <- txOuts b]
+                pointers = receivingScriptPointers body
+             in [ AnyIndexedPlutusScriptWitness (IndexedPlutusScriptWitness (WitReceiving hash) pointer witness)
+                | (hash, AnyScriptWitnessPlutus witness@(AnyPlutusReceivingScriptWitness _)) <-
+                    Map.toList (txReceivingWitnesses b)
+                , Just pointer <- [Map.lookup hash pointers]
+                ]
       ]
 
 extractWitnessableTxIns
@@ -1342,6 +1530,8 @@ collectTxBodyScriptWitnessRequirements
     , bcVotingProcedures
     , bcProposalProcedures
     , bcSupplementalDatums
+    , bcReceivingWitnesses
+    , bcOuts
     } = obtainCommonConstraints (useEra @era) $ do
     let supplementaldatums =
           TxScriptWitnessRequirements
@@ -1378,7 +1568,38 @@ collectTxBodyScriptWitnessRequirements
         , txMintWits
         , txVotingWits
         , txProposalWits
+        , receivingRequirements
         ]
+   where
+    receivingRequirements :: TxScriptWitnessRequirements (LedgerEra era)
+    receivingRequirements = case useEra @era of
+      ConwayEra -> mempty
+      DijkstraEra ->
+        let body =
+              (L.mkBasicTxBody :: L.TxBody L.TopTx L.DijkstraEra)
+                & L.outputsTxBodyL .~ fromList [out | TxOut out <- bcOuts]
+            pointers = receivingScriptPointers body
+         in mconcat
+              [ TxScriptWitnessRequirements
+                  ( case witness of
+                      AnyScriptWitnessSimple _ -> mempty
+                      AnyScriptWitnessPlutus sw -> Set.singleton (getAnyPlutusScriptWitnessLanguage sw)
+                  )
+                  (maybe [] pure $ getAnyWitnessScript (anyScriptWitnessToAnyWitness witness))
+                  mempty
+                  ( case witness of
+                      AnyScriptWitnessSimple _ -> mempty
+                      AnyScriptWitnessPlutus sw ->
+                        L.Redeemers $
+                          Map.singleton
+                            pointer
+                            ( Api.toAlonzoData (getAnyPlutusScriptWitnessRedeemer sw)
+                            , toAlonzoExUnits (getAnyPlutusScriptWitnessExecutionUnits sw)
+                            )
+                  )
+              | (hash, witness) <- Map.toList bcReceivingWitnesses
+              , Just pointer <- [Map.lookup hash pointers]
+              ]
 
 obtainMonoidConstraint
   :: Era era
@@ -1471,6 +1692,11 @@ setTxSupplementalDatums v bc = bc{bcSupplementalDatums = v}
 
 setTxGuards :: OSet (L.Credential L.Guard) -> BodyContent l era -> BodyContent l era
 setTxGuards v bc = bc{bcGuards = v}
+
+-- | Native or V4 Receiving witnesses, keyed by destination script hash.
+setTxReceivingWitnesses
+  :: Map L.ScriptHash (AnyScriptWitness era) -> BodyContent l era -> BodyContent l era
+setTxReceivingWitnesses v bc = bc{bcReceivingWitnesses = v}
 
 setTxRequiredTopLevelGuards
   :: Map (L.Credential L.Guard) (StrictMaybe (L.Data era)) -> BodyContent l era -> BodyContent l era

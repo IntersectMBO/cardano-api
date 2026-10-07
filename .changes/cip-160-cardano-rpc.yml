@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 0
+kind:
+  - compatible
+description: |
+  Preserve protected full-address identity while payment/stake credential filters accept either eligible address form.

@@ -24,6 +24,7 @@ module Cardano.Api.Experimental.Tx.Internal.Fee
   , evaluateTransaction
   , TxEvaluationResult (..)
   , evaluateTransactionExecutionUnits
+  , evaluateDijkstraTransactionExecutionUnits
   , evaluateTransactionFee
   , indexWitnessedTxProposalProcedures
   , makeTransactionBodyAutoBalance
@@ -35,6 +36,7 @@ where
 
 import Cardano.Api.Address
 import Cardano.Api.Certificate.Internal
+import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Error
 import Cardano.Api.Experimental.AnyScriptWitness
@@ -72,17 +74,29 @@ import Cardano.Api.Tx.Internal.Sign
 import Cardano.Api.Tx.Internal.TxIn
 import Cardano.Api.Value.Internal
 
+import Cardano.Chain.Common qualified as Byron
+import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.Alonzo.Core qualified as Ledger
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.Alonzo.UTxO qualified as Alonzo
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
+import Cardano.Ledger.Core qualified as L (TxLevel (..))
 import Cardano.Ledger.Credential as Ledger (Credential, credKeyHashWitness)
-import Cardano.Ledger.Keys (asWitness)
+import Cardano.Ledger.Dijkstra qualified as Dijkstra
+import Cardano.Ledger.Dijkstra.Scripts qualified as DijkstraScript
+import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
+import Cardano.Ledger.Keys (asWitness, bootstrapWitKeyHash, witVKeyHash)
+import Cardano.Ledger.Shelley.Scripts qualified as Native
+import Cardano.Ledger.State qualified as L
+import Cardano.Ledger.Tools qualified as LedgerTools
 import Cardano.Ledger.Val qualified as L
 
 import Control.Monad
 import Control.Monad.Except (throwError)
 import Data.Bifunctor
+import Data.Default.Class (def)
 import Data.Function (on, (&))
 import Data.List (sortBy)
 import Data.List qualified as List
@@ -91,6 +105,7 @@ import Data.Map.Ordered.Strict qualified as OMap
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
+import Data.OMap.Strict qualified as LOMap
 import Data.OSet.Strict qualified as OSet
 import Data.Ord (Down (Down), comparing)
 import Data.Ratio
@@ -148,12 +163,14 @@ data TxBodyErrorAutoBalance era
     -- with them), or collateral was provided for a transaction that does
     -- not run Plutus scripts and so does not need it.
     TxBodyErrorCollateral CollateralError
+  | TxBodyErrorDijkstraBalance String
   | TxBodyErrorMakeUnsignedTx MakeUnsignedTxError
 
 deriving instance Show (TxBodyErrorAutoBalance era)
 
 instance Error (TxBodyErrorAutoBalance era) where
   prettyError = \case
+    TxBodyErrorDijkstraBalance err -> pretty err
     TxBodyScriptExecutionError failures ->
       mconcat
         [ "The following scripts have execution failures:\n"
@@ -230,7 +247,9 @@ estimateBalancedTxBody
   -- ^ A map of all deposits for stake credentials that are being
   --   unregistered in this transaction.
   -> Map (Ledger.PlutusPurpose Ledger.AsIx (LedgerEra era)) ExecutionUnits
-  -- ^ Plutus script execution units.
+  -- ^ Plutus script execution units. Receiving indexes use the output domain
+  -- including the prospective change address; witness metadata remains keyed
+  -- by hash when zero change is omitted from the final body.
   -> Coin
   -- ^ Total potential collateral amount. The content of the collateral
   --   inputs is not visible to this function, so they are assumed to
@@ -323,14 +342,29 @@ estimateBalancedTxBody'
     -- scripts, so collateral inputs on a transaction without them are an
     -- error: the ledger would ignore them, but they would cost fees and
     -- require the collateral UTxOs to stay unspent.
+    let prospectiveChange = TxOut $ L.mkBasicTxOut (toShelleyAddr changeaddr) (L.inject $ L.Coin 0)
     first (TxFeeEstimationBalanceError . TxBodyErrorCollateral) $
-      checkCollateralOnlyWithPlutusScripts txbodycontent
+      checkCollateralOnlyWithPlutusScripts (txbodycontent & modTxOuts (<> [prospectiveChange]))
+    when
+      ( not (null $ txInsCollateral txbodycontent)
+          && isNothing (txReturnCollateral txbodycontent)
+          && isNothing (txTotalCollateral txbodycontent)
+          && case toShelleyAddr changeaddr of L.AddrProtected{} -> True; _ -> False
+      )
+      $ Left
+      $ TxFeeEstimationMakeUnsignedTxError MakeUnsignedTxProtectedCollateralReturn
 
     -- Step 1. Substitute those execution units into the tx
 
     txbodycontent1 <-
       first TxFeeEstimationScriptExecutionError $
-        substituteExecutionUnits exUnitsMap txbodycontent
+        case useEra @era of
+          ConwayEra -> substituteExecutionUnits exUnitsMap txbodycontent
+          DijkstraEra ->
+            let domainBody =
+                  (L.mkBasicTxBody :: L.TxBody L.TopTx L.DijkstraEra)
+                    & L.outputsTxBodyL .~ fromList [out | TxOut out <- txOuts txbodycontent <> [prospectiveChange]]
+             in substituteExecutionUnitsAgainstBody domainBody exUnitsMap txbodycontent
 
     -- Step 2. We need to calculate the current balance of the tx. The user
     -- must at least provide the total value of the UTxOs they intend to spend
@@ -682,11 +716,21 @@ hasPlutusScriptWitnesses
   => TxBodyContent (LedgerEra era)
   -> Bool
 hasPlutusScriptWitnesses txbodycontent =
-  not $
-    null
-      [ ()
-      | (_, AnyScriptWitnessPlutus{}) <- collectTxBodyScriptWitnesses txbodycontent
-      ]
+  hasChildPlutus
+    || not
+      ( null
+          [ ()
+          | (_, AnyScriptWitnessPlutus{}) <- collectTxBodyScriptWitnesses txbodycontent
+          ]
+      )
+ where
+  hasChildPlutus = case useEra @era of
+    ConwayEra -> False
+    DijkstraEra ->
+      not $
+        all
+          (Map.null . L.unRedeemers . (^. L.witsTxL . L.rdmrsTxWitsL))
+          (toList $ txSubTransactions txbodycontent)
 
 -- | Fail with 'CollateralWithoutPlutusScripts' when the transaction has
 -- collateral inputs but no Plutus script witnesses.
@@ -1017,7 +1061,7 @@ maybeDummyTotalCollAndCollReturnOutput TxBodyContent{txInsCollateral, txReturnCo
        in case (txReturnCollateral, txTotalCollateral) of
             (r@Just{}, t@Just{}) -> (r, t)
             (Just retCol, Nothing) -> (Just retCol, Just dummyTotCol)
-            (Nothing, Just col) -> (Just dummyRetCol, Just col)
+            (Nothing, Just col) -> (Nothing, Just col)
             (Nothing, Nothing) -> (Just dummyRetCol, Just dummyTotCol)
 
 -- | Calculate the partial change - this does not include certificates' deposits
@@ -1056,6 +1100,11 @@ substituteExecutionUnits
     , txProposalProcedures
     , txVotingProcedures
     } = do
+    mappedReceiving <-
+      Map.fromList
+        <$> traverse
+          (\(index, hash, witness) -> (hash,) <$> substituteExecUnitsTxMint index witness)
+          (indexReceivingWitnesses txbodycontent)
     mappedTxIns <- mapScriptWitnessesTxIns txIns
     mappedWithdrawals <- mapScriptWitnessesWithdrawals txWithdrawals
     mappedMintedVals <- mapScriptWitnessesMinting txMintValue
@@ -1065,6 +1114,7 @@ substituteExecutionUnits
 
     Right $
       txbodycontent
+        & setTxReceivingWitnesses (Map.union mappedReceiving (txReceivingWitnesses txbodycontent))
         & setTxIns mappedTxIns
         & setTxCertificates mappedTxCertificates
         & setTxWithdrawals mappedWithdrawals
@@ -1220,7 +1270,7 @@ collectTxBodyScriptWitnesses
   => TxBodyContent (LedgerEra era)
   -> [(ScriptWitnessIndex, Exp.AnyScriptWitness (LedgerEra era))]
 collectTxBodyScriptWitnesses
-  TxBodyContent
+  bodyContent@TxBodyContent
     { txIns
     , txWithdrawals
     , txCertificates
@@ -1229,7 +1279,8 @@ collectTxBodyScriptWitnesses
     , txProposalProcedures
     } =
     concat
-      [ scriptWitnessesTxIns txIns
+      [ [(index, witness) | (index, _, witness) <- indexReceivingWitnesses bodyContent]
+      , scriptWitnessesTxIns txIns
       , scriptWitnessesWithdrawals txWithdrawals
       , scriptWitnessesCertificates txCertificates
       , scriptWitnessesMinting txMintValue
@@ -1295,6 +1346,24 @@ collectTxBodyScriptWitnesses
         [ (ix, wit)
         | (_, (ix, Just wit@AnyScriptWitnessPlutus{})) <-
             (fmap . fmap) toAnyScriptWitness <$> indexWitnessedTxProposalProcedures txp
+        ]
+
+-- Index the Receiving domain through the ledger, including native scripts.
+indexReceivingWitnesses
+  :: forall era
+   . IsEra era
+  => TxBodyContent (LedgerEra era)
+  -> [(ScriptWitnessIndex, L.ScriptHash, AnyScriptWitness (LedgerEra era))]
+indexReceivingWitnesses content = case useEra @era of
+  ConwayEra -> []
+  DijkstraEra ->
+    let body =
+          (L.mkBasicTxBody :: L.TxBody L.TopTx L.DijkstraEra)
+            & L.outputsTxBodyL .~ fromList [out | TxOut out <- txOuts content]
+        pointers = receivingScriptPointers body
+     in [ (toScriptIndex AlonzoEraOnwardsDijkstra pointer, hash, witness)
+        | (hash, witness) <- Map.toList (txReceivingWitnesses content)
+        , Just pointer <- [Map.lookup hash pointers]
         ]
 
 toAnyScriptWitness :: AnyWitness era -> Maybe (Exp.AnyScriptWitness era)
@@ -1435,44 +1504,67 @@ evaluateTransactionExecutionUnits systemstart epochInfo pp utxo tx =
   fromLedgerScriptExUnitsMap exmap =
     fromList
       [ ( obtainCommonConstraints (useEra @era) $ toScriptIndex (convert useEra) rdmrptr
-        , bimap fromAlonzoScriptExecutionError (second fromAlonzoExUnits) exunitsOrFailure
+        , bimap (fromAlonzoScriptExecutionError @era) (second fromAlonzoExUnits) exunitsOrFailure
         )
       | (rdmrptr, exunitsOrFailure) <- toList exmap
       ]
 
-  fromAlonzoScriptExecutionError
-    :: L.AlonzoEraScript (LedgerEra era)
-    => L.TransactionScriptFailure (LedgerEra era)
-    -> ScriptExecutionError
-  fromAlonzoScriptExecutionError =
-    \case
-      L.UnknownTxIn txin -> ScriptErrorMissingTxIn txin'
-       where
-        txin' = fromShelleyTxIn txin
-      L.InvalidTxIn txin -> ScriptErrorTxInWithoutDatum txin'
-       where
-        txin' = fromShelleyTxIn txin
-      L.MissingDatum dh -> ScriptErrorWrongDatum (ScriptDataHash dh)
-      L.ValidationFailure execUnits evalErr logs scriptWithContext ->
-        ScriptErrorEvaluationFailed $ DebugPlutusFailure evalErr scriptWithContext execUnits logs
-      L.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
-      L.RedeemerPointsToUnknownScriptHash rdmrPtr ->
-        ScriptErrorRedeemerPointsToUnknownScriptHash $
-          obtainCommonConstraints (useEra @era) $
-            toScriptIndex (convert useEra) rdmrPtr
-      -- This should not occur while using cardano-cli because we zip together
-      -- the Plutus script and the use site (txin, certificate etc). Therefore
-      -- the redeemer pointer will always point to a Plutus script.
-      L.MissingScript indexOfScriptWitnessedItem resolveable ->
-        let scriptWitnessedItemIndex = obtainCommonConstraints (useEra @era) $ toScriptIndex (convert useEra) indexOfScriptWitnessedItem
-         in ScriptErrorMissingScript
-              scriptWitnessedItemIndex
-              $ obtainCommonConstraints (useEra @era)
-              $ ResolvablePointers (convert useEra)
-              $ Map.map extractScriptBytesAndLanguage resolveable
-      L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
-      L.ContextError e ->
-        obtainCommonConstraints (useEra @era) $ ScriptErrorTranslationError e
+-- | Estimate the complete Dijkstra batch using the ledger's body-aware
+-- evaluator. SNothing identifies the top body; SJust carries the child body
+-- hash. Equal purpose indexes in different bodies remain separate entries.
+evaluateDijkstraTransactionExecutionUnits
+  :: SystemStart
+  -> LedgerEpochInfo
+  -> L.PParams (LedgerEra DijkstraEra)
+  -> L.UTxO (LedgerEra DijkstraEra)
+  -> L.Tx L.TopTx (LedgerEra DijkstraEra)
+  -> Map
+       (L.StrictMaybe TxId, ScriptWitnessIndex)
+       (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
+evaluateDijkstraTransactionExecutionUnits systemStart (LedgerEpochInfo epochInfo) pp utxo tx =
+  Map.fromList
+    [ ( (fmap fromShelleyTxId bodyId, toScriptIndex AlonzoEraOnwardsDijkstra purpose)
+      , bimap (fromAlonzoScriptExecutionError @DijkstraEra) (second fromAlonzoExUnits) result
+      )
+    | ((bodyId, purpose), result) <-
+        Map.toList $
+          Dijkstra.evalDijkstraTxExUnitsWithLogs pp tx utxo epochInfo systemStart
+    ]
+
+fromAlonzoScriptExecutionError
+  :: forall era
+   . IsEra era
+  => L.TransactionScriptFailure (LedgerEra era)
+  -> ScriptExecutionError
+fromAlonzoScriptExecutionError = obtainCommonConstraints (useEra @era) $
+  \case
+    L.UnknownTxIn txin -> ScriptErrorMissingTxIn txin'
+     where
+      txin' = fromShelleyTxIn txin
+    L.InvalidTxIn txin -> ScriptErrorTxInWithoutDatum txin'
+     where
+      txin' = fromShelleyTxIn txin
+    L.MissingDatum dh -> ScriptErrorWrongDatum (ScriptDataHash dh)
+    L.ValidationFailure execUnits evalErr logs scriptWithContext ->
+      ScriptErrorEvaluationFailed $ DebugPlutusFailure evalErr scriptWithContext execUnits logs
+    L.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
+    L.RedeemerPointsToUnknownScriptHash rdmrPtr ->
+      ScriptErrorRedeemerPointsToUnknownScriptHash $
+        obtainCommonConstraints (useEra @era) $
+          toScriptIndex (convert useEra) rdmrPtr
+    -- This should not occur while using cardano-cli because we zip together
+    -- the Plutus script and the use site (txin, certificate etc). Therefore
+    -- the redeemer pointer will always point to a Plutus script.
+    L.MissingScript indexOfScriptWitnessedItem resolveable ->
+      let scriptWitnessedItemIndex = obtainCommonConstraints (useEra @era) $ toScriptIndex (convert useEra) indexOfScriptWitnessedItem
+       in ScriptErrorMissingScript
+            scriptWitnessedItemIndex
+            $ obtainCommonConstraints (useEra @era)
+            $ ResolvablePointers (convert useEra)
+            $ Map.map extractScriptBytesAndLanguage resolveable
+    L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
+    L.ContextError e ->
+      obtainCommonConstraints (useEra @era) $ ScriptErrorTranslationError e
 
 -- | This is similar to 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
@@ -1519,7 +1611,216 @@ makeTransactionBodyAutoBalance
   -> Either
        (TxBodyErrorAutoBalance (LedgerEra era))
        (UnsignedTx (LedgerEra era), TxBodyContent (LedgerEra era))
-makeTransactionBodyAutoBalance
+makeTransactionBodyAutoBalance systemstart history pp poolids deposits utxo content changeaddr mnkeys =
+  case useEra @era of
+    ConwayEra ->
+      makeTransactionBodyAutoBalanceWithUnits
+        systemstart
+        history
+        pp
+        poolids
+        deposits
+        utxo
+        content
+        changeaddr
+        mnkeys
+        Nothing
+    DijkstraEra -> balanceDijkstra pp utxo changeaddr 0 content Nothing
+ where
+  balanceDijkstra
+    :: L.PParams L.DijkstraEra
+    -> L.UTxO L.DijkstraEra
+    -> AddressInEra DijkstraEra
+    -> Int
+    -> TxBodyContent L.DijkstraEra
+    -> Maybe (Map ScriptWitnessIndex ExecutionUnits)
+    -> Either
+         (TxBodyErrorAutoBalance L.DijkstraEra)
+         (UnsignedTx L.DijkstraEra, TxBodyContent L.DijkstraEra)
+  balanceDijkstra dijkstraPParams dijkstraUTxO dijkstraChange iterations blueprint unitsOverride
+    | iterations >= 10 =
+        Left $ TxBodyErrorDijkstraBalance "Dijkstra fees and execution units did not converge"
+    | otherwise = do
+        -- Rebuild each candidate from the unsigned blueprint; no signatures
+        -- may survive execution-unit or script-integrity hash updates.
+        (UnsignedTx candidate, finalContent) <-
+          makeTransactionBodyAutoBalanceWithUnits
+            systemstart
+            history
+            dijkstraPParams
+            poolids
+            deposits
+            dijkstraUTxO
+            blueprint
+            dijkstraChange
+            mnkeys
+            unitsOverride
+        checked <-
+          first TxBodyErrorDijkstraBalance $
+            addReceivingWitnesses
+              dijkstraPParams
+              dijkstraUTxO
+              ( Map.restrictKeys
+                  (txReceivingWitnesses finalContent)
+                  (Dijkstra.receivingScriptHashes $ candidate ^. L.bodyTxL)
+              )
+              candidate
+        allUnits <-
+          handleDijkstraExUnitsErrors (txScriptValidity blueprint) $
+            evaluateDijkstraTransactionExecutionUnits systemstart history dijkstraPParams dijkstraUTxO checked
+        let maximumUnits = fromAlonzoExUnits $ dijkstraPParams ^. L.ppMaxTxExUnitsL
+            totalSteps = sum $ map executionSteps $ Map.elems allUnits
+            totalMemory = sum $ map executionMemory $ Map.elems allUnits
+        when (totalSteps > executionSteps maximumUnits || totalMemory > executionMemory maximumUnits) $
+          Left $
+            TxBodyErrorDijkstraBalance "Estimated Dijkstra batch exceeds the transaction execution-unit limit"
+        let topUnits = Map.mapKeys snd $ Map.filterWithKey (\(bodyId, _) _ -> bodyId == L.SNothing) allUnits
+        updatedChildren <- forM (toList $ txSubTransactions blueprint) $ \child -> do
+          let childId = fromShelleyTxId $ L.txIdTx child
+              childUnits = Map.mapKeys snd $ Map.filterWithKey (\(bodyId, _) _ -> bodyId == L.SJust childId) allUnits
+          updatedChild <-
+            first TxBodyErrorDijkstraBalance $
+              substituteLedgerBodyUnits dijkstraPParams dijkstraUTxO checked childUnits child
+          unless
+            ( updatedChild == child
+                || (Set.null (child ^. L.witsTxL . L.addrTxWitsL) && Set.null (child ^. L.witsTxL . L.bootAddrTxWitsL))
+            )
+            $ Left
+            $ TxBodyErrorDijkstraBalance
+              "Dijkstra child budgets must be estimated before collecting child signatures"
+          pure updatedChild
+        updatedTop <- substituteExecutionUnitsAgainstBody (checked ^. L.bodyTxL) topUnits finalContent
+        let updatedContent = setTxSubTransactions updatedChildren updatedTop
+        rebuilt@(UnsignedTx updatedTx) <-
+          first TxBodyErrorMakeUnsignedTx $ makeUnsignedTx DijkstraEra updatedContent
+        -- The final context, including change and child IDs, must yield the
+        -- budgets that are actually in the returned transaction.
+        if updatedTx == checked
+          then pure (rebuilt, updatedContent)
+          else do
+            nextBlueprint <- substituteExecutionUnitsAgainstBody (checked ^. L.bodyTxL) topUnits blueprint
+            balanceDijkstra
+              dijkstraPParams
+              dijkstraUTxO
+              dijkstraChange
+              (iterations + 1)
+              (setTxSubTransactions updatedChildren nextBlueprint)
+              (Just topUnits)
+
+-- Decide the expected validity once for the complete batch, before splitting
+-- reports. A script-free parent and passing siblings need no failure of their own.
+handleDijkstraExUnitsErrors
+  :: ScriptValidity
+  -> Map
+       (L.StrictMaybe TxId, ScriptWitnessIndex)
+       (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
+  -> Either
+       (TxBodyErrorAutoBalance L.DijkstraEra)
+       (Map (L.StrictMaybe TxId, ScriptWitnessIndex) ExecutionUnits)
+handleDijkstraExUnitsErrors validity report =
+  let (failures, units) = Map.mapEither (fmap snd) report
+   in case validity of
+        ScriptValid | not (Map.null failures) -> Left $ TxBodyErrorDijkstraBalance $ show $ Map.toList failures
+        ScriptInvalid | Map.null failures -> Left TxBodyScriptBadScriptValidity
+        ScriptInvalid -> pure $ Map.map (const $ ExecutionUnits 0 0) failures <> units
+        ScriptValid -> pure units
+
+-- Translate the evaluated body's Receiving pointers back to destination hashes.
+-- Blueprint-only witnesses (for a future change output) are retained verbatim.
+substituteExecutionUnitsAgainstBody
+  :: L.TxBody L.TopTx L.DijkstraEra
+  -> Map ScriptWitnessIndex ExecutionUnits
+  -> TxBodyContent L.DijkstraEra
+  -> Either (TxBodyErrorAutoBalance L.DijkstraEra) (TxBodyContent L.DijkstraEra)
+substituteExecutionUnitsAgainstBody evaluatedBody units blueprint = do
+  ordinary <- substituteExecutionUnits units $ setTxReceivingWitnesses mempty blueprint
+  receiving <- Map.traverseWithKey update (txReceivingWitnesses blueprint)
+  pure $ setTxReceivingWitnesses receiving ordinary
+ where
+  pointers = receivingScriptPointers evaluatedBody
+  update _ witness@(AnyScriptWitnessSimple _) = pure witness
+  update hash witness@(AnyScriptWitnessPlutus sw) =
+    case Map.lookup hash pointers of
+      Nothing -> pure witness
+      Just pointer ->
+        AnyScriptWitnessPlutus
+          <$> updateExecUnitsPlutusScriptWitness (toScriptIndex AlonzoEraOnwardsDijkstra pointer) units sw
+
+substituteNonReceivingExecutionUnits
+  :: Map ScriptWitnessIndex ExecutionUnits
+  -> TxBodyContent L.DijkstraEra
+  -> Either (TxBodyErrorAutoBalance L.DijkstraEra) (TxBodyContent L.DijkstraEra)
+substituteNonReceivingExecutionUnits units blueprint =
+  setTxReceivingWitnesses (txReceivingWitnesses blueprint)
+    <$> substituteExecutionUnits units (setTxReceivingWitnesses mempty blueprint)
+
+-- Recompute child integrity hashes against the complete batch's script supply.
+substituteLedgerBodyUnits
+  :: L.PParams L.DijkstraEra
+  -> L.UTxO L.DijkstraEra
+  -> L.Tx L.TopTx L.DijkstraEra
+  -> Map ScriptWitnessIndex ExecutionUnits
+  -> L.Tx L.SubTx L.DijkstraEra
+  -> Either String (L.Tx L.SubTx L.DijkstraEra)
+substituteLedgerBodyUnits pp utxo parent units child = do
+  let redeemers =
+        L.Redeemers $
+          Map.mapWithKey
+            ( \pointer (datum, oldUnits) ->
+                ( datum
+                , maybe oldUnits toAlonzoExUnits $
+                    Map.lookup
+                      (toScriptIndex AlonzoEraOnwardsDijkstra pointer)
+                      units
+                )
+            )
+            (child ^. L.witsTxL . L.rdmrsTxWitsL . L.unRedeemersL)
+      L.ScriptsProvided scripts = L.getScriptsProvided utxo parent
+      needed = Alonzo.getAlonzoScriptsHashesNeeded (L.getScriptsNeeded utxo $ child ^. L.bodyTxL)
+      languages =
+        Set.fromList
+          [ Alonzo.plutusScriptLanguage script
+          | hash <- Set.toList needed
+          , Just script <- [Alonzo.lookupPlutusScript hash scripts]
+          ]
+  integrity <-
+    first show $
+      convPParamsToScriptIntegrityHash @DijkstraEra
+        (Just pp)
+        redeemers
+        (child ^. L.witsTxL . L.datsTxWitsL)
+        languages
+  pure $
+    child
+      & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
+      & L.bodyTxL . L.scriptIntegrityHashTxBodyL .~ integrity
+
+makeTransactionBodyAutoBalanceWithUnits
+  :: forall era
+   . ()
+  => HasCallStack
+  => IsEra era
+  => SystemStart
+  -> LedgerEpochInfo
+  -> L.PParams (LedgerEra era)
+  -> Set PoolId
+  -- ^ The set of registered stake pools, being
+  --   unregistered in this transaction.
+  -> Map StakeCredential L.Coin
+  -- ^ The map of all deposits for stake credentials that are being
+  --   unregistered in this transaction
+  -> L.UTxO (LedgerEra era)
+  -- ^ The transaction inputs (including reference and collateral ones), not the entire 'UTxO'.
+  -> TxBodyContent (LedgerEra era)
+  -> AddressInEra era
+  -- ^ Change address
+  -> Maybe Word
+  -- ^ Override key witnesses
+  -> Maybe (Map ScriptWitnessIndex ExecutionUnits)
+  -> Either
+       (TxBodyErrorAutoBalance (LedgerEra era))
+       (UnsignedTx (LedgerEra era), TxBodyContent (LedgerEra era))
+makeTransactionBodyAutoBalanceWithUnits
   systemstart
   history
   pp
@@ -1528,15 +1829,28 @@ makeTransactionBodyAutoBalance
   utxo
   txbodycontent
   changeaddr
-  mnkeys = do
+  mnkeys
+  unitsOverride = do
     -- The ledger requires collateral only for transactions that run Plutus
     -- scripts, so collateral inputs on a transaction without them are an
     -- error: the ledger would ignore them, but they would cost fees and
     -- require the collateral UTxOs to stay unspent. A transaction that
     -- should become invalid when some UTxO is spent can use a reference
     -- input for that purpose.
+    let prospectiveChange =
+          obtainCommonConstraints (useEra @era) $
+            TxOut $
+              L.mkBasicTxOut (toShelleyAddr changeaddr) (L.inject $ L.Coin 0)
     first TxBodyErrorCollateral $
-      checkCollateralOnlyWithPlutusScripts txbodycontent
+      checkCollateralOnlyWithPlutusScripts (txbodycontent & modTxOuts (<> [prospectiveChange]))
+    when
+      ( not (null $ txInsCollateral txbodycontent)
+          && isNothing (txReturnCollateral txbodycontent)
+          && isNothing (txTotalCollateral txbodycontent)
+          && case toShelleyAddr changeaddr of L.AddrProtected{} -> True; _ -> False
+      )
+      $ Left
+      $ TxBodyErrorMakeUnsignedTx MakeUnsignedTxProtectedCollateralReturn
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units
     -- 2. figure out the overall min fees
@@ -1581,26 +1895,34 @@ makeTransactionBodyAutoBalance
               & modTxOuts
                 (<> [initialChangeTxOut])
           )
-    let exUnitsMapWithLogs =
-          evaluateTransactionExecutionUnits
-            systemstart
-            history
-            pp
-            utxo
-            txbody
+    let exUnitsMapWithLogs
+          :: Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
+        exUnitsMapWithLogs = case useEra @era of
+          ConwayEra -> evaluateTransactionExecutionUnits systemstart history pp utxo txbody
+          DijkstraEra ->
+            Map.mapKeys snd $
+              Map.filterWithKey
+                (\(bodyId, _) _ -> bodyId == L.SNothing)
+                (evaluateDijkstraTransactionExecutionUnits systemstart history pp utxo txbody)
 
     let exUnitsMap = Map.map (fmap snd) exUnitsMapWithLogs
 
-    exUnitsMap' <-
-      case Map.mapEither id exUnitsMap of
-        (failures, exUnitsMap') ->
-          handleExUnitsErrors
-            (txScriptValidity txbodycontent)
-            failures
-            exUnitsMap'
+    exUnitsMap' <- case unitsOverride of
+      Just units -> pure units
+      Nothing -> case useEra @era of
+        ConwayEra -> case Map.mapEither id exUnitsMap of
+          (failures, units) -> handleExUnitsErrors (txScriptValidity txbodycontent) failures units
+        DijkstraEra -> do
+          units <-
+            handleDijkstraExUnitsErrors (txScriptValidity txbodycontent) $
+              evaluateDijkstraTransactionExecutionUnits systemstart history pp utxo txbody
+          pure $ Map.mapKeys snd $ Map.filterWithKey (\(bodyId, _) _ -> bodyId == L.SNothing) units
 
-    txbodycontent1 <-
-      substituteExecutionUnits exUnitsMap' txbodycontent
+    txbodycontent1 <- case useEra @era of
+      ConwayEra -> substituteExecutionUnits exUnitsMap' txbodycontent
+      DijkstraEra -> case unitsOverride of
+        Nothing -> substituteExecutionUnitsAgainstBody (txbody ^. L.bodyTxL) exUnitsMap' txbodycontent
+        Just _ -> substituteNonReceivingExecutionUnits exUnitsMap' txbodycontent
 
     -- Make a txbody that we will use for calculating the fees. For the purpose
     -- of fees we just need to make a txbody of the right size in bytes. We
@@ -1628,11 +1950,28 @@ makeTransactionBodyAutoBalance
     -- NB: This has the potential to over estimate the fees because estimateTransactionKeyWitnessCount
     -- makes the conservative assumption that all inputs are from distinct
     -- addresses.
-    let nkeys =
+    let feeContent = txbodycontent1{txOuts = txOuts txbodycontent1 <> [initialChangeTxOut]}
+        -- The public content-only estimate cannot resolve native references.
+        -- Live balancing has the complete batch script context and counts any
+        -- additional top-body Receiving signer keys. Children are measured
+        -- separately because a key used by two bodies needs two signatures.
+        receivingReferenceKeys = case useEra @era of
+          ConwayEra -> 0
+          DijkstraEra ->
+            let UnsignedTx feeTx = txbody1
+                resolved = receivingNativeKeyHashes utxo feeTx
+                inline = inlineReceivingNativeKeyHashes (txOuts feeContent) (txReceivingWitnesses feeContent)
+             in fromIntegral $ Set.size (resolved Set.\\ inline)
+        nkeys =
           fromMaybe
-            (estimateTransactionKeyWitnessCount txbodycontent1)
+            (estimateTransactionKeyWitnessCount feeContent + receivingReferenceKeys)
             mnkeys
-        fee = calculateMinTxFee pp utxo txbody1 nkeys
+        -- Dummy child witnesses affect only fee measurement. They never enter
+        -- evaluation contexts, returned children or signed transaction bodies.
+        feeSizedTx = case useEra @era of
+          ConwayEra -> txbody1
+          DijkstraEra -> let UnsignedTx tx = txbody1 in UnsignedTx $ addDijkstraChildFeeWitnesses pp utxo tx
+        fee = calculateMinTxFee pp utxo feeSizedTx nkeys
         totalPotentialCollateral =
           mconcat
             [ (txOut ^. obtainCommonConstraints (useEra @era) L.valueTxOutL :: L.MaryValue)
@@ -1730,6 +2069,82 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
   | null failuresMap = Left TxBodyScriptBadScriptValidity
   | otherwise = Right $ Map.map (\_ -> ExecutionUnits 0 0) failuresMap <> exUnitsMap
 
+-- Account for future child signatures without mutating real child witnesses.
+-- mapUnsafe is safe here: only witnesses change, so every child body ID stays
+-- unchanged. Per-body counting also preserves witness-container CBOR overhead.
+addDijkstraChildFeeWitnesses
+  :: L.PParams L.DijkstraEra
+  -> L.UTxO L.DijkstraEra
+  -> L.Tx L.TopTx L.DijkstraEra
+  -> L.Tx L.TopTx L.DijkstraEra
+addDijkstraChildFeeWitnesses pp utxo parent =
+  parent & L.bodyTxL . Dijkstra.subTransactionsTxBodyL %~ LOMap.mapUnsafe addMissing
+ where
+  L.ScriptsProvided provided = L.getScriptsProvided utxo parent
+  addMissing child =
+    let body = child ^. L.bodyTxL
+        needed = Alonzo.getAlonzoScriptsHashesNeeded $ L.getScriptsNeeded utxo body
+        nativeKeys =
+          Set.unions
+            [ receivingNativeScriptKeyHashes native
+            | hash <- Set.toList needed
+            , Just (Alonzo.NativeScript native) <- [Map.lookup hash provided]
+            ]
+        required = L.getWitsVKeyNeeded def utxo body <> nativeKeys
+        existing = Set.map witVKeyHash $ child ^. L.witsTxL . L.addrTxWitsL
+        existingBootstrap = Set.map bootstrapWitKeyHash $ child ^. L.witsTxL . L.bootAddrTxWitsL
+        bootstrapAttributes =
+          Map.fromList $
+            mapMaybe
+              ( \input -> do
+                  out <- Map.lookup input $ L.unUTxO utxo
+                  L.AddrBootstrap bootstrap@(BootstrapAddress address) <- pure $ out ^. L.addrTxOutL
+                  pure (asWitness $ bootstrapKeyHash bootstrap, Byron.addrAttributes address)
+              )
+              (Set.toList $ body ^. L.inputsTxBodyL)
+        missingNative = required Set.\\ existing Set.\\ Map.keysSet bootstrapAttributes
+        missingBootstrap = Map.withoutKeys bootstrapAttributes existingBootstrap
+     in LedgerTools.addDummyWitsTx pp child (Set.size missingNative) (Map.elems missingBootstrap)
+
+-- All signature leaves form a conservative bound, even for threshold scripts.
+-- Guard credentials are already handled by the ledger's body witness rules.
+receivingNativeScriptKeyHashes :: L.NativeScript L.DijkstraEra -> Set (L.KeyHash L.Witness)
+receivingNativeScriptKeyHashes = \case
+  Native.RequireSignature hash -> Set.singleton hash
+  Native.RequireAllOf children -> Set.unions $ map receivingNativeScriptKeyHashes $ toList children
+  Native.RequireAnyOf children -> Set.unions $ map receivingNativeScriptKeyHashes $ toList children
+  Native.RequireMOf _ children -> Set.unions $ map receivingNativeScriptKeyHashes $ toList children
+  DijkstraScript.RequireGuard _ -> mempty
+  _ -> mempty
+
+inlineReceivingNativeKeyHashes
+  :: [TxOut L.DijkstraEra]
+  -> Map L.ScriptHash (AnyScriptWitness L.DijkstraEra)
+  -> Set (L.KeyHash L.Witness)
+inlineReceivingNativeKeyHashes outputs witnesses =
+  let body =
+        (L.mkBasicTxBody :: L.TxBody L.TopTx L.DijkstraEra)
+          & L.outputsTxBodyL .~ fromList [out | TxOut out <- outputs]
+   in Set.unions
+        [ receivingNativeScriptKeyHashes script
+        | hash <- Set.toList $ Dijkstra.receivingScriptHashes body
+        , Just (AnyScriptWitnessSimple (SScript (SimpleScript script))) <- [Map.lookup hash witnesses]
+        ]
+
+receivingNativeKeyHashes
+  :: L.UTxO L.DijkstraEra
+  -> L.Tx L.TopTx L.DijkstraEra
+  -> Set (L.KeyHash L.Witness)
+receivingNativeKeyHashes utxo tx =
+  let body = tx ^. L.bodyTxL
+      hashes = Dijkstra.receivingScriptHashes body
+      L.ScriptsProvided provided = L.getScriptsProvided utxo tx
+   in Set.unions
+        [ receivingNativeScriptKeyHashes native
+        | hash <- Set.toList hashes
+        , Just (Alonzo.NativeScript native) <- [Map.lookup hash provided]
+        ]
+
 -- | Provide an approximate count of the key witnesses (i.e. signatures)
 -- required for a transaction.
 --
@@ -1750,7 +2165,7 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
 --   against it, because their key hashes are only known from the UTxO. The result stays
 --   an upper bound: the number of inputs is at least the number of input key hashes
 --   missing from that set. Use 'calculateMinTxFee' with a 'L.UTxO' in hand for an exact
---   count.
+--   count of ledger-required keys plus explicitly supplied native keys.
 --
 -- * Charging one witness per proposal procedure, even though a proposal needs no key
 --   witness of its own.
@@ -1768,6 +2183,8 @@ estimateTransactionKeyWitnessCount
     , txCertificates
     , txProposalProcedures
     , txVotingProcedures
+    , txOuts
+    , txReceivingWitnesses
     } =
     fromIntegral $
       Set.size knowableKeyHashes
@@ -1782,7 +2199,26 @@ estimateTransactionKeyWitnessCount
     -- 'Cardano.Ledger.Conway.UTxO.getConwayWitsVKeyNeeded' unions them.
     knowableKeyHashes :: Set (L.KeyHash L.Witness)
     knowableKeyHashes =
-      extraKeyHashes <> withdrawalKeyHashes <> certificateKeyHashes <> voteKeyHashes
+      extraKeyHashes
+        <> withdrawalKeyHashes
+        <> certificateKeyHashes
+        <> voteKeyHashes
+        <> receivingKeyHashes
+        <> receivingInlineNativeKeyHashes
+
+    receivingKeyHashes :: Set (L.KeyHash L.Witness)
+    receivingKeyHashes = case useEra @era of
+      ConwayEra -> mempty
+      DijkstraEra ->
+        let body =
+              (L.mkBasicTxBody :: L.TxBody L.TopTx (LedgerEra DijkstraEra))
+                & L.outputsTxBodyL .~ fromList [out | TxOut out <- txOuts]
+         in Set.map asWitness $ Dijkstra.receivingKeyHashes body
+
+    receivingInlineNativeKeyHashes :: Set (L.KeyHash L.Witness)
+    receivingInlineNativeKeyHashes = case useEra @era of
+      ConwayEra -> mempty
+      DijkstraEra -> inlineReceivingNativeKeyHashes txOuts txReceivingWitnesses
 
     extraKeyHashes :: Set (L.KeyHash L.Witness)
     extraKeyHashes = case txExtraKeyWits of
@@ -1869,7 +2305,11 @@ calculateMinTxFee
   -> L.UTxO (LedgerEra era)
   -> UnsignedTx (LedgerEra era)
   -> Word
-  -- ^ The number of Shelley key witnesses
+  -- ^ Extra key witnesses for native scripts or redundant signatures, in
+  -- addition to the body/UTxO-derived required keys. This forwards the ledger's
+  -- 'L.calcMinFeeTx' extra-witness count; supplying a total key count overestimates
+  -- the fee. Live auto-balance preserves its existing conservative total-count
+  -- default, adding resolved Receiving native keys and fee-only child witnesses.
   -> L.Coin
 calculateMinTxFee pp utxo (UnsignedTx txbody) keywitcount =
   obtainCommonConstraints (useEra @era) $

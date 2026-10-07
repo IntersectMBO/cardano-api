@@ -140,6 +140,7 @@ module Cardano.Api.Experimental.Tx
   , SubTxBodyContent
   , defaultTxBodyContent
   , defaultSubTxBodyContent
+  , addReceivingWitnesses
   , mkTxCertificates
   , mkTxVotingProcedures
   , mkTxProposalProcedures
@@ -168,6 +169,7 @@ module Cardano.Api.Experimental.Tx
   , txTreasuryDonation
   , txSupplementalDatums
   , txGuards
+  , txReceivingWitnesses
   , txSubTransactions
   , txRequiredTopLevelGuards
   , txDirectDeposits
@@ -192,6 +194,7 @@ module Cardano.Api.Experimental.Tx
   , subTxTreasuryDonation
   , subTxSupplementalDatums
   , subTxGuards
+  , subTxReceivingWitnesses
   , subTxRequiredTopLevelGuards
   , subTxDirectDeposits
   , subTxAccountBalanceIntervals
@@ -215,6 +218,7 @@ module Cardano.Api.Experimental.Tx
   , setTxVotingProcedures
   , setTxWithdrawals
   , setTxGuards
+  , setTxReceivingWitnesses
   , setTxRequiredTopLevelGuards
   , setTxDirectDeposits
   , setTxAccountBalanceIntervals
@@ -281,6 +285,7 @@ module Cardano.Api.Experimental.Tx
   , evaluateSignedTx
   , TxEvaluationResult (..)
   , evaluateTransactionExecutionUnits
+  , evaluateDijkstraTransactionExecutionUnits
 
     -- * Balancing transactions
   , calculateMinimumUTxO

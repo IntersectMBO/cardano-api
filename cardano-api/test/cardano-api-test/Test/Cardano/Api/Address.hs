@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module Test.Cardano.Api.Address
@@ -9,6 +10,8 @@ import Cardano.Api
 
 import Control.Monad (void)
 import Data.Aeson qualified as Aeson
+import Data.Bits ((.|.))
+import Data.ByteString qualified as BS
 import Data.Word (Word32)
 
 import Test.Gen.Cardano.Api.Typed (genAddressByron, genAddressShelley)
@@ -178,13 +181,51 @@ prop_roundtrip_shelley_address_JSON =
     mss <- H.forAll genAddressShelley
     H.tripping mss Aeson.encode Aeson.eitherDecode
 
+-- The expected bytes are independent of ledger serialization: six supported
+-- payment families, both network discriminants, and a fixed credential payload.
+prop_protected_address_roundtrip :: Property
+prop_protected_address_roundtrip = H.property $ do
+  family <- H.forAll $ H.element [0x00, 0x10, 0x20, 0x30, 0x60, 0x70]
+  network <- H.forAll $ H.element [0, 1]
+  let ordinaryBytes =
+        BS.cons (family .|. network) $
+          BS.replicate 28 0x11 <> if family < 0x40 then BS.replicate 28 0x22 else BS.empty
+      protectedBytes = BS.cons (family .|. network .|. 0x08) (BS.tail ordinaryBytes)
+  ordinary <- H.evalEither $ deserialiseFromRawBytes (AsAddress AsShelleyAddr) ordinaryBytes
+  protected <- H.evalEither $ protectShelleyAddress ordinary
+  serialiseToRawBytes protected H.=== protectedBytes
+  H.assert $ protected /= ordinary
+  H.tripping protected serialiseToRawBytes (deserialiseFromRawBytes (AsAddress AsShelleyAddr))
+  H.tripping protected serialiseAddress (deserialiseAddress (AsAddress AsShelleyAddr))
+  H.tripping protected Aeson.encode Aeson.eitherDecode
+  fromShelleyAddrToAny (toShelleyAddr (shelleyAddressInEra ShelleyBasedEraDijkstra protected))
+    H.=== AddressShelley protected
+  H.assert $ case anyAddressInEra ConwayEra (AddressShelley protected) of
+    Left _ -> True
+    Right _ -> False
+  H.assert $ case Aeson.eitherDecode (Aeson.encode protected) :: Either String (AddressInEra ConwayEra) of
+    Left _ -> True
+    Right _ -> False
+  shelleyPayAddrToPaymentKeyHash protected H.=== shelleyPayAddrToPaymentKeyHash ordinary
+
+prop_protected_pointer_rejected :: Property
+prop_protected_pointer_rejected = H.propertyOnce $ do
+  let pointerBytes = BS.cons 0x40 (BS.replicate 28 0x11 <> BS.pack [0, 0, 0])
+  pointer <- H.evalEither $ deserialiseFromRawBytes (AsAddress AsShelleyAddr) pointerBytes
+  protectShelleyAddress pointer H.=== Left "Pointer addresses cannot be protected"
+  H.assert $ case deserialiseFromRawBytes (AsAddress AsShelleyAddr) (BS.cons 0x48 (BS.tail pointerBytes)) of
+    Left _ -> True
+    Right _ -> False
+
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Typed.Address"
-    [ testProperty "roundtrip shelley address" prop_roundtrip_shelley_address
+    [ testProperty "protected address fixed-vector round trips" prop_protected_address_roundtrip
+    , testProperty "protected pointer rejected" prop_protected_pointer_rejected
+    , testProperty "roundtrip shelley address" prop_roundtrip_shelley_address
     , testProperty "roundtrip byron address" prop_roundtrip_byron_address
     , testProperty "roundtrip byron address JSON" prop_roundtrip_byron_address_JSON
     , testProperty "roundtrip shelley address JSON" prop_roundtrip_shelley_address_JSON

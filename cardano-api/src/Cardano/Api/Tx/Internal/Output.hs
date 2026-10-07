@@ -717,7 +717,7 @@ toByronTxOut = \case
     Byron.TxOut addr <$> (toByronLovelace value ?! classifyRangeError txout value)
   TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _)) (TxOutValueShelleyBased w _) _ _ ->
     case w of {}
-  TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress{}) _ _ _ ->
+  TxOut (AddressInEra (ShelleyAddressInEra sbe) _) _ _ _ ->
     case sbe of {}
  where
   classifyRangeError :: TxOut CtxTx ByronEra -> L.Coin -> TxOutputError

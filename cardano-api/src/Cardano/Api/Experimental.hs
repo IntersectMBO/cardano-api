@@ -14,6 +14,7 @@ module Cardano.Api.Experimental
   , SignedTx (..)
   , MakeUnsignedTxError (..)
   , makeUnsignedTx
+  , addReceivingWitnesses
   , makeKeyWitness
   , signTx
   , convertTxBodyToUnsignedTx
@@ -45,6 +46,7 @@ module Cardano.Api.Experimental
   , evaluateSignedTx
   , TxEvaluationResult (..)
   , evaluateTransactionExecutionUnits
+  , evaluateDijkstraTransactionExecutionUnits
   , evaluateTransactionExecutionUnitsShelley
 
     -- ** Transaction fee related

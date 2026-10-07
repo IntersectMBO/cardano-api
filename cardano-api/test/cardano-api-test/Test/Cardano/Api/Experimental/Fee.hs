@@ -13,6 +13,7 @@ where
 import Cardano.Api qualified as Api
 import Cardano.Api.Compatible.Tx (AnyProtocolUpdate (..), AnyVote (..), createCompatibleTx)
 import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.AnyScriptWitness qualified as Exp
 import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
@@ -20,6 +21,8 @@ import Cardano.Api.Monad.Error (failEitherWith)
 
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Dijkstra qualified as L
+import Cardano.Ledger.Dijkstra.Scripts qualified as DS
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Tools qualified as L (calcMinFeeTx)
 import Cardano.Slotting.EpochInfo qualified as Slotting
@@ -77,6 +80,12 @@ tests =
     , testGroup
         "estimateTransactionKeyWitnessCount"
         [ testProperty
+            "counts and deduplicates protected recipient key witnesses"
+            prop_estimateTransactionKeyWitnessCount_receiving
+        , testProperty
+            "counts native Receiving signature leaves with key-role deduplication"
+            prop_estimateTransactionKeyWitnessCount_receiving_native
+        , testProperty
             "counts key witnesses required by key-credentialed voters"
             prop_estimateTransactionKeyWitnessCount_counts_vote_key_witnesses
         , testProperty
@@ -1174,3 +1183,31 @@ genVotingProceduresWithKeyWitnessCount = do
   genVotedActionIds actionIdPool = do
     count <- Gen.int (Range.linear 1 (length actionIdPool))
     take count <$> Gen.shuffle actionIdPool
+
+prop_estimateTransactionKeyWitnessCount_receiving :: Property
+prop_estimateTransactionKeyWitnessCount_receiving = H.property $ do
+  key <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  let recipient = L.KeyHashObj $ Api.unPaymentKeyHash key
+      address = L.AddrProtected L.Testnet recipient L.StakeRefNull
+      output = Exp.TxOut $ L.mkBasicTxOut address (Mary.MaryValue (L.Coin 10_000_000) mempty)
+      content = Exp.defaultTxBodyContent & Exp.setTxOuts [output, output]
+  Exp.estimateTransactionKeyWitnessCount @Exp.DijkstraEra content === 1
+  Exp.estimateTransactionKeyWitnessCount @Exp.DijkstraEra
+    (content & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses [key]))
+    === 1
+
+prop_estimateTransactionKeyWitnessCount_receiving_native :: Property
+prop_estimateTransactionKeyWitnessCount_receiving_native = H.property $ do
+  keys <- H.forAll $ Gen.list (Range.singleton 5) (genVerificationKeyHash Api.AsPaymentKey)
+  let native = DS.upgradeTimelock $ Api.toAllegraTimelock $ Api.RequireAllOf $ map Api.RequireSignature keys
+      hash = L.hashScript (L.fromNativeScript native :: L.Script L.DijkstraEra)
+      address = L.AddrProtected L.Testnet (L.ScriptHashObj hash) L.StakeRefNull
+      output = Exp.TxOut $ L.mkBasicTxOut address (Mary.MaryValue (L.Coin 10_000_000) mempty)
+      content =
+        Exp.defaultTxBodyContent
+          & Exp.setTxOuts [output, output]
+          & Exp.setTxReceivingWitnesses
+            (Map.singleton hash $ Exp.AnyScriptWitnessSimple $ Exp.SScript $ Exp.SimpleScript native)
+          & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses keys)
+  Exp.estimateTransactionKeyWitnessCount @Exp.DijkstraEra content
+    === fromIntegral (Set.size $ Set.fromList keys)

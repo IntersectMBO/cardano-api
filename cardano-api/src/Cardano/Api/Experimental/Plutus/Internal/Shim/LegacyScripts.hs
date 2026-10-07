@@ -80,6 +80,7 @@ type family ToPlutusScriptPurpose witnessable = (purpose :: PlutusScriptPurpose)
   ToPlutusScriptPurpose WithdrawalItem = WithdrawingScript
   ToPlutusScriptPurpose VoterItem = VotingScript
   ToPlutusScriptPurpose ProposalItem = ProposingScript
+  ToPlutusScriptPurpose ReceivingItem = ReceivingScript
 
 convertToNewScriptWitness
   :: AlonzoEraOnwards era
@@ -131,6 +132,7 @@ createPlutusScriptDatum missingContext plutusVersion oldDatum =
     (WitProposal{}, _) -> NoScriptDatum
     (WitVote{}, _) -> NoScriptDatum
     (WitTxCert{}, _) -> NoScriptDatum
+    (WitReceiving{}, _) -> NoScriptDatum
 
 toPlutusScriptDatum
   :: Witnessable TxInItem era
@@ -180,18 +182,16 @@ toNewPlutusScriptWitness eon w l (Old.PScript (Old.PlutusScriptSerialised script
       Left $
         CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.pack . show $ pretty e)
     Right{} ->
-      return $
-        mkPlutusScriptWitness
-          eon
-          w
-          (toPlutusSLanguage l)
-          plutusScriptRunnable
-          datum
-          scriptRedeemer
-          execUnits
+      mkPlutusScriptWitness
+        eon
+        w
+        (toPlutusSLanguage l)
+        plutusScriptRunnable
+        datum
+        scriptRedeemer
+        execUnits
 toNewPlutusScriptWitness _ w l (Old.PReferenceScript refInput) scriptRedeemer execUnits datum =
-  return $
-    mkReferencePlutusScriptWitness w (toPlutusSLanguage l) refInput datum scriptRedeemer execUnits
+  mkReferencePlutusScriptWitness w (toPlutusSLanguage l) refInput datum scriptRedeemer execUnits
 
 type family PlutusScriptFor thing where
   PlutusScriptFor TxInItem = SpendingScript
@@ -200,6 +200,7 @@ type family PlutusScriptFor thing where
   PlutusScriptFor WithdrawalItem = WithdrawingScript
   PlutusScriptFor VoterItem = VotingScript
   PlutusScriptFor ProposalItem = ProposingScript
+  PlutusScriptFor ReceivingItem = ReceivingScript
 
 mkPlutusScriptWitness
   :: forall era thing plutuslang
@@ -211,7 +212,7 @@ mkPlutusScriptWitness
   -> PlutusScriptDatum plutuslang (PlutusScriptFor thing)
   -> ScriptRedeemer
   -> ExecutionUnits
-  -> AnyWitness (ShelleyLedgerEra era)
+  -> Either CBOR.DecoderError (AnyWitness (ShelleyLedgerEra era))
 mkPlutusScriptWitness eon w l plutusScriptRunnable d r e =
   let script' :: PlutusScriptOrReferenceInput plutuslang (ShelleyLedgerEra era)
       script' = (PScript $ PlutusScriptInEra plutusScriptRunnable)
@@ -224,67 +225,80 @@ mkPlutusScriptWitness eon w l plutusScriptRunnable d r e =
               -> PlutusScriptWitness plutuslang SpendingScript (ShelleyLedgerEra era)
             s _eon lang = PlutusScriptWitness lang script' d r e
            in
-            AnyPlutusScriptWitness $
-              AnyPlutusSpendingScriptWitness $
-                case l of
-                  L.SPlutusV1 ->
-                    PlutusSpendingScriptWitnessV1 (s eon l)
-                  L.SPlutusV2 ->
-                    PlutusSpendingScriptWitnessV2 (s eon l)
-                  L.SPlutusV3 ->
-                    PlutusSpendingScriptWitnessV3 (s eon l)
-                  L.SPlutusV4 ->
-                    PlutusSpendingScriptWitnessV4 (s eon l)
+            Right $
+              AnyPlutusScriptWitness $
+                AnyPlutusSpendingScriptWitness $
+                  case l of
+                    L.SPlutusV1 ->
+                      PlutusSpendingScriptWitnessV1 (s eon l)
+                    L.SPlutusV2 ->
+                      PlutusSpendingScriptWitnessV2 (s eon l)
+                    L.SPlutusV3 ->
+                      PlutusSpendingScriptWitnessV3 (s eon l)
+                    L.SPlutusV4 ->
+                      PlutusSpendingScriptWitnessV4 (s eon l)
         WitTxCert{} ->
-          AnyPlutusScriptWitness $
-            AnyPlutusCertifyingScriptWitness
-              ( PlutusScriptWitness
-                  l
-                  script'
-                  d
-                  r
-                  e
-              )
+          Right $
+            AnyPlutusScriptWitness $
+              AnyPlutusCertifyingScriptWitness
+                ( PlutusScriptWitness
+                    l
+                    script'
+                    d
+                    r
+                    e
+                )
         WitMint{} ->
-          AnyPlutusScriptWitness $
-            AnyPlutusMintingScriptWitness
-              ( PlutusScriptWitness
-                  l
-                  script'
-                  d
-                  r
-                  e
-              )
+          Right $
+            AnyPlutusScriptWitness $
+              AnyPlutusMintingScriptWitness
+                ( PlutusScriptWitness
+                    l
+                    script'
+                    d
+                    r
+                    e
+                )
         WitWithdrawal{} ->
-          AnyPlutusScriptWitness $
-            AnyPlutusWithdrawingScriptWitness
-              ( PlutusScriptWitness
-                  l
-                  (PScript $ PlutusScriptInEra plutusScriptRunnable)
-                  d
-                  r
-                  e
-              )
+          Right $
+            AnyPlutusScriptWitness $
+              AnyPlutusWithdrawingScriptWitness
+                ( PlutusScriptWitness
+                    l
+                    (PScript $ PlutusScriptInEra plutusScriptRunnable)
+                    d
+                    r
+                    e
+                )
         WitVote{} ->
-          AnyPlutusScriptWitness $
-            AnyPlutusVotingScriptWitness
-              ( PlutusScriptWitness
-                  l
-                  (PScript $ PlutusScriptInEra plutusScriptRunnable)
-                  d
-                  r
-                  e
-              )
+          Right $
+            AnyPlutusScriptWitness $
+              AnyPlutusVotingScriptWitness
+                ( PlutusScriptWitness
+                    l
+                    (PScript $ PlutusScriptInEra plutusScriptRunnable)
+                    d
+                    r
+                    e
+                )
         WitProposal{} ->
-          AnyPlutusScriptWitness $
-            AnyPlutusProposingScriptWitness
-              ( PlutusScriptWitness
-                  l
-                  (PScript $ PlutusScriptInEra plutusScriptRunnable)
-                  d
-                  r
-                  e
-              )
+          Right $
+            AnyPlutusScriptWitness $
+              AnyPlutusProposingScriptWitness
+                ( PlutusScriptWitness
+                    l
+                    (PScript $ PlutusScriptInEra plutusScriptRunnable)
+                    d
+                    r
+                    e
+                )
+        WitReceiving{} -> case l of
+          L.SPlutusV4 ->
+            Right $
+              AnyPlutusScriptWitness $
+                AnyPlutusReceivingScriptWitness $
+                  PlutusScriptWitness L.SPlutusV4 script' NoScriptDatum r e
+          _ -> Left $ CBOR.DecoderErrorCustom "Receiving" "Receiving requires Plutus V4"
 
 mkReferencePlutusScriptWitness
   :: forall thing era plutuslang
@@ -295,7 +309,7 @@ mkReferencePlutusScriptWitness
   -> PlutusScriptDatum plutuslang (PlutusScriptFor thing)
   -> ScriptRedeemer
   -> ExecutionUnits
-  -> AnyWitness (ShelleyLedgerEra era)
+  -> Either CBOR.DecoderError (AnyWitness (ShelleyLedgerEra era))
 mkReferencePlutusScriptWitness w l txIn d r e =
   case w of
     WitTxIn{} ->
@@ -303,67 +317,80 @@ mkReferencePlutusScriptWitness w l txIn d r e =
             :: L.SLanguage plutuslang
             -> PlutusScriptWitness plutuslang SpendingScript (ShelleyLedgerEra era)
           s lang = PlutusScriptWitness lang (PReferenceScript txIn) d r e
-       in AnyPlutusScriptWitness $
-            AnyPlutusSpendingScriptWitness $
-              case l of
-                L.SPlutusV1 ->
-                  PlutusSpendingScriptWitnessV1 (s l)
-                L.SPlutusV2 ->
-                  PlutusSpendingScriptWitnessV2 (s l)
-                L.SPlutusV3 ->
-                  PlutusSpendingScriptWitnessV3 (s l)
-                L.SPlutusV4 ->
-                  PlutusSpendingScriptWitnessV4 (s l)
+       in Right $
+            AnyPlutusScriptWitness $
+              AnyPlutusSpendingScriptWitness $
+                case l of
+                  L.SPlutusV1 ->
+                    PlutusSpendingScriptWitnessV1 (s l)
+                  L.SPlutusV2 ->
+                    PlutusSpendingScriptWitnessV2 (s l)
+                  L.SPlutusV3 ->
+                    PlutusSpendingScriptWitnessV3 (s l)
+                  L.SPlutusV4 ->
+                    PlutusSpendingScriptWitnessV4 (s l)
     WitTxCert{} ->
-      AnyPlutusScriptWitness $
-        AnyPlutusCertifyingScriptWitness
-          ( PlutusScriptWitness
-              l
-              (PReferenceScript txIn)
-              d
-              r
-              e
-          )
+      Right $
+        AnyPlutusScriptWitness $
+          AnyPlutusCertifyingScriptWitness
+            ( PlutusScriptWitness
+                l
+                (PReferenceScript txIn)
+                d
+                r
+                e
+            )
     WitMint{} ->
-      AnyPlutusScriptWitness $
-        AnyPlutusMintingScriptWitness
-          ( PlutusScriptWitness
-              l
-              (PReferenceScript txIn)
-              d
-              r
-              e
-          )
+      Right $
+        AnyPlutusScriptWitness $
+          AnyPlutusMintingScriptWitness
+            ( PlutusScriptWitness
+                l
+                (PReferenceScript txIn)
+                d
+                r
+                e
+            )
     WitWithdrawal{} ->
-      AnyPlutusScriptWitness $
-        AnyPlutusWithdrawingScriptWitness
-          ( PlutusScriptWitness
-              l
-              (PReferenceScript txIn)
-              d
-              r
-              e
-          )
+      Right $
+        AnyPlutusScriptWitness $
+          AnyPlutusWithdrawingScriptWitness
+            ( PlutusScriptWitness
+                l
+                (PReferenceScript txIn)
+                d
+                r
+                e
+            )
     WitVote{} ->
-      AnyPlutusScriptWitness $
-        AnyPlutusVotingScriptWitness
-          ( PlutusScriptWitness
-              l
-              (PReferenceScript txIn)
-              d
-              r
-              e
-          )
+      Right $
+        AnyPlutusScriptWitness $
+          AnyPlutusVotingScriptWitness
+            ( PlutusScriptWitness
+                l
+                (PReferenceScript txIn)
+                d
+                r
+                e
+            )
     WitProposal{} ->
-      AnyPlutusScriptWitness $
-        AnyPlutusProposingScriptWitness
-          ( PlutusScriptWitness
-              l
-              (PReferenceScript txIn)
-              d
-              r
-              e
-          )
+      Right $
+        AnyPlutusScriptWitness $
+          AnyPlutusProposingScriptWitness
+            ( PlutusScriptWitness
+                l
+                (PReferenceScript txIn)
+                d
+                r
+                e
+            )
+    WitReceiving{} -> case l of
+      L.SPlutusV4 ->
+        Right $
+          AnyPlutusScriptWitness $
+            AnyPlutusReceivingScriptWitness $
+              PlutusScriptWitness L.SPlutusV4 (PReferenceScript txIn) NoScriptDatum r e
+      _ -> Left $ CBOR.DecoderErrorCustom "Receiving" "Receiving requires Plutus V4"
 
 -- | When it comes to using plutus scripts we need to provide
 -- the following to the tx:

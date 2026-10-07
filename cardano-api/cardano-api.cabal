@@ -1,6 +1,6 @@
 cabal-version: 3.8
 name: cardano-api
-version: 11.8.0.0
+version: 11.9.0.0
 synopsis: The cardano API
 description: The cardano API.
 category:
@@ -19,6 +19,11 @@ build-type: Simple
 extra-doc-files:
   CHANGELOG.md
   README.md
+
+extra-source-files:
+  test/data/cip160/*.cbor
+  test/data/cip160/*.plutus
+  test/data/cip160/README.md
 
 common project-config
   default-language: Haskell2010
@@ -132,7 +137,7 @@ library
     bech32 >=1.1.0,
     bytestring,
     bytestring-trie,
-    cardano-addresses ^>=4.0.0,
+    cardano-addresses ^>=5.0.0,
     cardano-base ^>=0.1,
     cardano-binary,
     cardano-crypto,
@@ -140,19 +145,19 @@ library
     cardano-crypto-wrapper ^>=1.8,
     cardano-data >=1.0,
     cardano-diffusion:{api, cardano-diffusion} ^>=1.3,
-    cardano-keys ^>=11.0,
-    cardano-ledger-allegra >=1.7,
-    cardano-ledger-alonzo >=1.17,
-    cardano-ledger-api ^>=1.15,
-    cardano-ledger-babbage >=1.11,
+    cardano-keys ^>=11.0.0.1,
+    cardano-ledger-allegra >=1.11,
+    cardano-ledger-alonzo >=1.18,
+    cardano-ledger-api ^>=1.16,
+    cardano-ledger-babbage >=1.16,
     cardano-ledger-binary >=1.9.1,
     cardano-ledger-byron >=1.2,
-    cardano-ledger-conway >=1.19,
-    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.22,
-    cardano-ledger-dijkstra >=0.1,
-    cardano-ledger-mary >=1.8,
-    cardano-ledger-shelley >=1.16,
-    cardano-protocol ^>=0.2,
+    cardano-ledger-conway >=1.25,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.23,
+    cardano-ledger-dijkstra >=0.5,
+    cardano-ledger-mary >=1.12,
+    cardano-ledger-shelley >=1.21,
+    cardano-protocol ^>=0.3,
     cardano-protocol-tpraos >=1.4,
     cardano-slotting >=0.2.0.0,
     cardano-strict-containers >=0.1,
@@ -379,11 +384,11 @@ test-suite cardano-api-test
     cardano-crypto-wrapper:testlib,
     cardano-data >=1.0,
     cardano-ledger-alonzo,
-    cardano-ledger-api ^>=1.15,
+    cardano-ledger-api ^>=1.16,
     cardano-ledger-babbage,
     cardano-ledger-binary,
     cardano-ledger-conway,
-    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.22,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.23,
     cardano-ledger-dijkstra,
     cardano-ledger-mary,
     cardano-ledger-shelley,
@@ -467,7 +472,7 @@ test-suite cardano-api-golden
     cardano-crypto-class,
     cardano-data >=1.0,
     cardano-ledger-alonzo,
-    cardano-ledger-api ^>=1.15,
+    cardano-ledger-api ^>=1.16,
     cardano-ledger-binary,
     cardano-ledger-core,
     cardano-ledger-shelley,
@@ -500,3 +505,20 @@ test-suite cardano-api-golden
     Test.Golden.Cardano.Api.Tx
     Test.Golden.Cardano.Api.Value
     Test.Golden.ErrorsSpec
+
+benchmark receiving-extraction
+  import: project-config
+  type: exitcode-stdio-1.0
+  hs-source-dirs: bench
+  main-is: ReceivingExtraction.hs
+  ghc-options:
+    -O2
+    -rtsopts
+
+  build-depends:
+    cardano-api,
+    cardano-ledger-core,
+    cardano-ledger-dijkstra,
+    cardano-ledger-mary,
+    containers,
+    microlens,

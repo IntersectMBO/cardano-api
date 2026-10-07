@@ -23,6 +23,9 @@ module Cardano.Api.Address
     -- ** Shelley addresses
   , ShelleyAddr
   , makeShelleyAddress
+  , protectShelleyAddress
+  , isProtectedShelleyAddress
+  , shelleyAddressCredentials
   , PaymentCredential (..)
   , StakeAddressReference (..)
   , StakeAddressPointer (..)
@@ -109,6 +112,7 @@ import PlutusLedgerApi.V1 qualified as PlutusAPI
 
 import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData (..), deepseq)
+import Control.Monad (when)
 import Data.Aeson (FromJSON (..), ToJSON (..), withText, (.=))
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
@@ -187,6 +191,14 @@ data Address addrtype where
     -> Shelley.Credential Shelley.Payment
     -> Shelley.StakeReference
     -> Address ShelleyAddr
+  -- | Protected base or enterprise address. Creation requires payment
+  -- credential authorization in Dijkstra. Prefer 'protectShelleyAddress',
+  -- which rejects pointer addresses.
+  ShelleyProtectedAddress
+    :: Shelley.Network
+    -> Shelley.Credential Shelley.Payment
+    -> Shelley.StakeReference
+    -> Address ShelleyAddr
 
 -- Note that the two ledger credential types here are parametrised by
 -- the era, but in fact this is a phantom type parameter and they are
@@ -202,6 +214,7 @@ instance NFData (Address addrtype) where
   rnf = \case
     ByronAddress address -> deepseq address ()
     ShelleyAddress n pc sr -> deepseq (deepseq (deepseq n pc) sr) ()
+    ShelleyProtectedAddress n pc sr -> deepseq (deepseq (deepseq n pc) sr) ()
 
 instance HasTypeProxy addrtype => HasTypeProxy (Address addrtype) where
   data AsType (Address addrtype) = AsAddress (AsType addrtype)
@@ -230,12 +243,15 @@ instance SerialiseAsRawBytes (Address ByronAddr) where
     case Shelley.decodeAddr bs :: Maybe Shelley.Addr of
       Nothing -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
       Just Shelley.Addr{} -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
+      Just Shelley.AddrProtected{} -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
       Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
         Right (ByronAddress addr)
 
 instance SerialiseAsRawBytes (Address ShelleyAddr) where
   serialiseToRawBytes (ShelleyAddress nw pc scr) =
     Shelley.serialiseAddr (Shelley.Addr nw pc scr)
+  serialiseToRawBytes (ShelleyProtectedAddress nw pc scr) =
+    Shelley.serialiseAddr (Shelley.AddrProtected nw pc scr)
 
   deserialiseFromRawBytes (AsAddress AsShelleyAddr) bs =
     case Shelley.decodeAddr bs of
@@ -243,10 +259,12 @@ instance SerialiseAsRawBytes (Address ShelleyAddr) where
         Left (SerialiseAsRawBytesError "Unable to deserialise bootstrap Address ShelleyAddr")
       Just Shelley.AddrBootstrap{} -> Left (SerialiseAsRawBytesError "Unable to deserialise bootstrap Address ShelleyAddr")
       Just (Shelley.Addr nw pc scr) -> Right (ShelleyAddress nw pc scr)
+      Just (Shelley.AddrProtected nw pc scr) -> Right (ShelleyProtectedAddress nw pc scr)
 
 instance SerialiseAsBech32 (Address ShelleyAddr) where
-  bech32PrefixFor (ShelleyAddress Shelley.Mainnet _ _) = unsafeHumanReadablePartFromText "addr"
-  bech32PrefixFor (ShelleyAddress Shelley.Testnet _ _) = unsafeHumanReadablePartFromText "addr_test"
+  bech32PrefixFor addr = case shelleyAddressCredentials addr of
+    (Shelley.Mainnet, _, _) -> unsafeHumanReadablePartFromText "addr"
+    (Shelley.Testnet, _, _) -> unsafeHumanReadablePartFromText "addr_test"
 
   bech32PrefixesPermitted (AsAddress AsShelleyAddr) = unsafeHumanReadablePartFromText <$> ["addr", "addr_test"]
 
@@ -262,7 +280,7 @@ instance SerialiseAddress (Address ByronAddr) where
     rightToMaybe (deserialiseFromRawBytes (AsAddress AsByronAddr) bs)
 
 instance SerialiseAddress (Address ShelleyAddr) where
-  serialiseAddress addr@ShelleyAddress{} =
+  serialiseAddress addr =
     serialiseToBech32 addr
 
   deserialiseAddress (AsAddress AsShelleyAddr) t =
@@ -310,6 +328,26 @@ makeShelleyAddress nw pc scr =
     (toShelleyPaymentCredential pc)
     (toShelleyStakeReference scr)
 
+-- | Opt into recipient authorization without changing network or stake.
+-- Pointer addresses cannot be protected.
+protectShelleyAddress :: Address ShelleyAddr -> Either String (Address ShelleyAddr)
+protectShelleyAddress addr =
+  case shelleyAddressCredentials addr of
+    (_, _, Shelley.StakeRefPtr _) -> Left "Pointer addresses cannot be protected"
+    (nw, pc, scr) -> Right (ShelleyProtectedAddress nw pc scr)
+
+isProtectedShelleyAddress :: Address ShelleyAddr -> Bool
+isProtectedShelleyAddress ShelleyProtectedAddress{} = True
+isProtectedShelleyAddress ShelleyAddress{} = False
+
+-- | Inspect payment and stake credentials. Protection remains part of the
+-- original address and is not removed by this read-only view.
+shelleyAddressCredentials
+  :: Address ShelleyAddr
+  -> (Shelley.Network, Shelley.Credential Shelley.Payment, Shelley.StakeReference)
+shelleyAddressCredentials (ShelleyAddress nw pc scr) = (nw, pc, scr)
+shelleyAddressCredentials (ShelleyProtectedAddress nw pc scr) = (nw, pc, scr)
+
 -- ----------------------------------------------------------------------------
 -- Either type of address
 --
@@ -339,6 +377,8 @@ instance SerialiseAsRawBytes AddressAny where
         Right (AddressByron (ByronAddress addr))
       Just (Shelley.Addr nw pc scr) ->
         Right (AddressShelley (ShelleyAddress nw pc scr))
+      Just (Shelley.AddrProtected nw pc scr) ->
+        Right (AddressShelley (ShelleyProtectedAddress nw pc scr))
 
 instance SerialiseAddress AddressAny where
   serialiseAddress (AddressByron addr) = serialiseAddress addr
@@ -353,6 +393,8 @@ fromShelleyAddrToAny (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
   AddressByron $ ByronAddress addr
 fromShelleyAddrToAny (Shelley.Addr nw pc scr) =
   AddressShelley $ ShelleyAddress nw pc scr
+fromShelleyAddrToAny (Shelley.AddrProtected nw pc scr) =
+  AddressShelley $ ShelleyProtectedAddress nw pc scr
 
 -- ----------------------------------------------------------------------------
 -- Addresses in the context of a ledger era
@@ -379,7 +421,7 @@ instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
     let sbe = shelleyBasedEra @era
      in withText "AddressInEra" $ \txt -> do
           addressAny <- P.runParserFail parseAddressAny txt
-          pure $ anyAddressInShelleyBasedEra sbe addressAny
+          either fail pure $ anyAddressInEra (toCardanoEra sbe) addressAny
 
 -- | Parser for any address, supports both bech32 and base58 encodings
 parseAddressAny :: SerialiseAddress addr => P.Parser addr
@@ -495,6 +537,9 @@ anyAddressInEra era = \case
   AddressByron addr ->
     pure $ AddressInEra ByronAddressInAnyEra addr
   AddressShelley addr -> do
+    when (isProtectedShelleyAddress addr) $ case era of
+      DijkstraEra -> pure ()
+      _ -> Left "Protected addresses require Dijkstra era"
     sbe <- forEraMaybeEon era ?! "Expected Byron based era address"
     shelleyBasedEraConstraints sbe $
       pure $
@@ -502,6 +547,7 @@ anyAddressInEra era = \case
 
 toAddressAny :: Address addr -> AddressAny
 toAddressAny a@ShelleyAddress{} = AddressShelley a
+toAddressAny a@ShelleyProtectedAddress{} = AddressShelley a
 toAddressAny a@ByronAddress{} = AddressByron a
 
 makeByronAddressInEra
@@ -618,17 +664,21 @@ isKeyAddress (AddressInEra ByronAddressInAnyEra _) = True
 isKeyAddress (AddressInEra (ShelleyAddressInEra _) addr) = isJust $ shelleyPayAddrToPaymentKeyHash addr
 
 shelleyPayAddrToPaymentKeyHash :: Address ShelleyAddr -> Maybe (Hash PaymentKey)
-shelleyPayAddrToPaymentKeyHash (ShelleyAddress _ pCred _) =
+shelleyPayAddrToPaymentKeyHash addr =
   case fromShelleyPaymentCredential pCred of
     PaymentCredentialByKey key -> Just key
     PaymentCredentialByScript _ -> Nothing
+ where
+  (_, pCred, _) = shelleyAddressCredentials addr
 
 -- | Converts a Shelley payment address to a Plutus public key hash.
 shelleyPayAddrToPlutusPubKHash :: Address ShelleyAddr -> Maybe PlutusAPI.PubKeyHash
-shelleyPayAddrToPlutusPubKHash (ShelleyAddress _ payCred _) =
+shelleyPayAddrToPlutusPubKHash addr =
   case payCred of
     Shelley.ScriptHashObj _ -> Nothing
     Shelley.KeyHashObj kHash -> Just $ Plutus.transKeyHash kHash
+ where
+  (_, payCred, _) = shelleyAddressCredentials addr
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
@@ -643,6 +693,8 @@ toShelleyAddr
       (ShelleyAddress nw pc scr)
     ) =
     Shelley.Addr nw pc scr
+toShelleyAddr (AddressInEra ShelleyAddressInEra{} (ShelleyProtectedAddress nw pc scr)) =
+  Shelley.AddrProtected nw pc scr
 
 toShelleyStakeAddr :: StakeAddress -> Shelley.AccountAddress
 toShelleyStakeAddr (StakeAddress nw sc) =
@@ -682,12 +734,7 @@ fromShelleyAddrIsSbe
   => ShelleyBasedEra era
   -> Shelley.Addr
   -> AddressInEra era
-fromShelleyAddrIsSbe sbe = \case
-  Shelley.AddrBootstrap (Shelley.BootstrapAddress addr) ->
-    AddressInEra ByronAddressInAnyEra (ByronAddress addr)
-  Shelley.Addr nw pc scr ->
-    shelleyBasedEraConstraints sbe $
-      AddressInEra (ShelleyAddressInEra sbe) (ShelleyAddress nw pc scr)
+fromShelleyAddrIsSbe = fromShelleyAddr
 
 fromShelleyAddr
   :: ShelleyBasedEra era
@@ -700,6 +747,11 @@ fromShelleyAddr sbe (Shelley.Addr nw pc scr) =
     AddressInEra
       (ShelleyAddressInEra sbe)
       (ShelleyAddress nw pc scr)
+fromShelleyAddr sbe (Shelley.AddrProtected nw pc scr) =
+  shelleyBasedEraConstraints sbe $
+    AddressInEra
+      (ShelleyAddressInEra sbe)
+      (ShelleyProtectedAddress nw pc scr)
 
 fromShelleyStakeAddr :: Shelley.AccountAddress -> StakeAddress
 fromShelleyStakeAddr (Shelley.AccountAddress nw (Shelley.AccountId sc)) = StakeAddress nw sc

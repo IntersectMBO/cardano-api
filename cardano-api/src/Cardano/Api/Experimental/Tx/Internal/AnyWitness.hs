@@ -73,6 +73,7 @@ instance Eq (AnyWitness era) where
     case langTypeEquality s1 s2 of
       Just Refl -> s1 == s2
       Nothing -> False
+  (AnyPlutusScriptWitness (AnyPlutusReceivingScriptWitness s1)) == (AnyPlutusScriptWitness (AnyPlutusReceivingScriptWitness s2)) = s1 == s2
   _ == _ = False
 
 getAnyWitnessPlutusLanguage :: AnyWitness era -> Maybe L.Language

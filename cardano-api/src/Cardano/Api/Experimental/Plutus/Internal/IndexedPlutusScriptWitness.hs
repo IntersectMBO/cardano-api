@@ -98,6 +98,7 @@ data Witnessable (thing :: WitnessableItem) era where
     :: (L.ConwayEraScript era, L.EraPParams era)
     => L.ProposalProcedure era
     -> Witnessable ProposalItem era
+  WitReceiving :: L.ScriptHash -> Witnessable ReceivingItem L.DijkstraEra
 
 deriving instance Show (Witnessable thing era)
 
@@ -120,6 +121,7 @@ compareWitnesses a b =
     -- Proposals are also stored in an `OSet` and resolved positionally
     -- (`StrictSeq.findIndexL`), same as `WitTxCert` above.
     (WitProposal{}, WitProposal{}) -> EQ
+    (WitReceiving hashA, WitReceiving hashB) -> compare hashA hashB
 
 data WitnessableItem
   = TxInItem
@@ -128,6 +130,7 @@ data WitnessableItem
   | WithdrawalItem
   | VoterItem
   | ProposalItem
+  | ReceivingItem
 
 -- | To reduce boilerplate, we reuse the `PlutusPurpose` type from `cardano-ledger`.
 -- This type is utilized in constructing the redeemer pointers map, which
@@ -149,6 +152,7 @@ toPlutusScriptPurpose index WitMint{} = L.mkMintingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitTxCert{} = L.mkCertifyingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitVote{} = L.mkVotingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitProposal{} = L.mkProposingPurpose (L.AsIx index)
+toPlutusScriptPurpose index WitReceiving{} = L.DijkstraReceiving (L.AsIx index)
 
 -- | Classify a ledger redeemer pointer ('L.PlutusPurpose' 'L.AsIx') into the
 -- 'PlutusScriptPurpose' category it belongs to and the index within that
@@ -193,6 +197,7 @@ toPlutusScriptPurposeIndex = \case
     L.DijkstraVoting (L.AsIx i) -> (VotingScript, i)
     L.DijkstraProposing (L.AsIx i) -> (ProposingScript, i)
     L.DijkstraGuarding (L.AsIx i) -> (GuardingScript, i)
+    L.DijkstraReceiving (L.AsIx i) -> (ReceivingScript, i)
 
 createIndexedPlutusScriptWitness
   :: L.AlonzoEraScript era

@@ -60,6 +60,7 @@ import Cardano.Api.Experimental.Tx.Internal.BodyContent
   , subTxVotingProcedures
   , subTxWithdrawals
   , toAuxiliaryData
+  , validateReceivingWitnesses
   )
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   ( TxScriptWitnessRequirements (..)
@@ -153,6 +154,7 @@ makeUnsignedSubTx
   :: SubTxBodyContent (LedgerEra DijkstraEra)
   -> Either MakeUnsignedTxError UnsignedSubTx
 makeUnsignedSubTx st = do
+  validateReceivingWitnesses DijkstraEra st
   let TxScriptWitnessRequirements languages scripts datums redeemers =
         collectTxBodyScriptWitnessRequirements @_ @DijkstraEra st
 

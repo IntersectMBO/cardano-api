@@ -220,9 +220,8 @@ prop_extractAllIndexedPlutusScriptWitnesses =
 
 -- | 'toPlutusScriptPurposeIndex' classifies ledger redeemer pointers the same
 -- way as the older 'Api.toScriptIndex', for every purpose category the two
--- share, at every era with plutus scripts. 'GuardingScript' (Dijkstra's new
--- purpose) has no old-API counterpart -- 'Api.toScriptIndex' errors on it --
--- so it is checked separately in 'prop_toPlutusScriptPurposeIndex_guarding'.
+-- share, at every era with plutus scripts, including Dijkstra Receiving and
+-- Guarding. Guarding classification is also checked directly below.
 prop_toPlutusScriptPurposeIndex_matches_toScriptIndex :: Property
 prop_toPlutusScriptPurposeIndex_matches_toScriptIndex = property $ do
   ix <- forAll $ Gen.word32 (Range.linear 0 1000)
@@ -230,6 +229,8 @@ prop_toPlutusScriptPurposeIndex_matches_toScriptIndex = property $ do
   checkAlonzoFamily AlonzoEraOnwardsBabbage ix
   checkConwayFamily AlonzoEraOnwardsConway ix
   checkConwayFamily AlonzoEraOnwardsDijkstra ix
+  verify AlonzoEraOnwardsDijkstra (L.DijkstraReceiving $ L.AsIx ix)
+  verify AlonzoEraOnwardsDijkstra (L.DijkstraGuarding $ L.AsIx ix)
  where
   verify
     :: AlonzoEraOnwards era
@@ -265,12 +266,11 @@ prop_toPlutusScriptPurposeIndex_matches_toScriptIndex = property $ do
   toOldEquivalent (WithdrawingScript, i) = Api.ScriptWitnessIndexWithdrawal i
   toOldEquivalent (VotingScript, i) = Api.ScriptWitnessIndexVoting i
   toOldEquivalent (ProposingScript, i) = Api.ScriptWitnessIndexProposing i
-  toOldEquivalent (GuardingScript, i) =
-    error $ "no old-API equivalent for GuardingScript " <> show i
+  toOldEquivalent (GuardingScript, i) = Api.ScriptWitnessIndexGuarding i
+  toOldEquivalent (ReceivingScript, i) = Api.ScriptWitnessIndexReceiving i
 
--- | The Dijkstra-only 'GuardingScript' purpose has no 'Api.toScriptIndex'
--- counterpart ('Api.toScriptIndexDijkstra' errors on it), so it is checked
--- directly here instead of alongside the shared categories above.
+-- | Check Dijkstra Guarding classification directly as well as the public
+-- legacy/experimental index correspondence above.
 prop_toPlutusScriptPurposeIndex_guarding :: Property
 prop_toPlutusScriptPurposeIndex_guarding = property $ do
   ix <- forAll $ Gen.word32 (Range.linear 0 1000)

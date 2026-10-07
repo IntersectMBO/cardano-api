@@ -1,0 +1,6 @@
+project: cardano-api-gen
+pr: 0
+kind:
+  - breaking
+description: |
+  Re-export the protected address and Receiving witness API through the generator package.

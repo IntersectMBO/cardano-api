@@ -241,7 +241,10 @@ module Cardano.Api.Ledger.Internal.Reexport
 where
 
 import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
-import Cardano.Ledger.Address (AccountAddress (..), Addr (..))
+import Cardano.Ledger.Address
+  ( AccountAddress (..)
+  , Addr (..)
+  )
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), Timelock (..), showTimelock)
 import Cardano.Ledger.Alonzo.Core
   ( AlonzoEraScript (..)

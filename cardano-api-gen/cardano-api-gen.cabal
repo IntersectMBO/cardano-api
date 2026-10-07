@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-api-gen
-version: 10.2.0.0
+version: 10.3.0.0
 synopsis: Generators for the cardano api
 description: Generators for the cardano api.
 category:
@@ -36,7 +36,7 @@ common project-config
 
 library
   import: project-config
-  build-depends: cardano-api:gen
+  build-depends: cardano-api:gen ^>=11.9
   hs-source-dirs: src
   -- These modules should match those in cardano-api:gen
   exposed-modules: Test.Gen.Cardano.Api.Empty

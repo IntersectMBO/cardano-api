@@ -1,0 +1,6 @@
+project: cardano-wasm
+pr: 0
+kind:
+  - bugfix
+description: |
+  Inspect protected Shelley payment addresses without losing network identity.
