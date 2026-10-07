@@ -125,11 +125,11 @@ subTxProtVer = L.eraProtVerHigh @(LedgerEra DijkstraEra)
 -- The envelope types follow the @"Tx DijkstraEra"@ naming of top-level transactions.
 
 instance HasTextEnvelope UnsignedSubTx where
-  textEnvelopeTypes _ = pure $ TextEnvelopeType "Unwitnessed SubTx DijkstraEra"
+  textEnvelopeType _ = TextEnvelopeType "Unwitnessed SubTx DijkstraEra"
   textEnvelopeDefaultDescr _ = "Ledger Cddl Format"
 
 instance HasTextEnvelope SignedSubTx where
-  textEnvelopeTypes _ = pure $ TextEnvelopeType "Witnessed SubTx DijkstraEra"
+  textEnvelopeType _ = TextEnvelopeType "Witnessed SubTx DijkstraEra"
   textEnvelopeDefaultDescr _ = "Ledger Cddl Format"
 
 -- | The hash of the sub-transaction body. Unchanged by signing.
