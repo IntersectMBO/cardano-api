@@ -1,5 +1,5 @@
 project: cardano-wasm
-pr: 0
+pr: 1370
 kind:
   - bugfix
 description: |
