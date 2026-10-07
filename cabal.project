@@ -191,8 +191,8 @@ if impl(ghc >=9.14)
 source-repository-package
   type: git
   location: https://github.com/colll78/cardano-ledger.git
-  tag: 4ab1c0df3373b962c641efb4935aca0e7e68967b
-  --sha256: sha256-+EearRC1REi8n7pRvsR6AmTC/lyLYkxRdvkwUV1Ilk0=
+  tag: 4b06e253c2fee5436d57cf56669c4e8a9358717b
+  --sha256: sha256-PzoJjGuFq23OHvnDDwXnsCkxfywF41typfb7oCKefNw=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl
@@ -203,6 +203,7 @@ source-repository-package
     eras/dijkstra/impl
     eras/mary/impl
     eras/shelley/impl
+    eras/shelley/test-suite
     libs/cardano-data
     libs/cardano-ledger-api
     libs/cardano-ledger-binary
@@ -244,8 +245,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/colll78/ouroboros-consensus.git
-  tag: 0c91555c0c0dfeef6cb0ac6facd42b471630f5b0
-  --sha256: sha256-19A5YUoKnfUAc/KBPg3s25HaI+zwMGiIk4Vng3NJXH4=
+  tag: 8268ddc753096b76b1da46cd111e65555fa4077e
+  --sha256: sha256-T7ZAmIX9BJ12PCrk6qEBgVXAzCcIGqlX3f+Uj8sav9s=
 
 -- Dependency suites run in their owning repositories.
 package *

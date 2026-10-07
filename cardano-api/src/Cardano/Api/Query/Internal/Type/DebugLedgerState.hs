@@ -14,9 +14,11 @@ import Cardano.Api.Internal.Orphans ()
 import Cardano.Binary
 import Cardano.Ledger.Binary.Plain qualified as Plain
 import Cardano.Ledger.Shelley.API qualified as Shelley
+import Cardano.Ledger.Shelley.LedgerState (nesStakePoolDistrG)
 
 import Data.Aeson (ToJSON (..), object, (.=))
 import Data.Aeson qualified as Aeson
+import Lens.Micro ((^.))
 
 newtype DebugLedgerState era = DebugLedgerState
   { unDebugLedgerState :: Shelley.NewEpochState (ShelleyLedgerEra era)
@@ -49,7 +51,7 @@ toDebugLedgerStatePair sbe (DebugLedgerState newEpochS) =
         !nesBcur = Shelley.nesBcur newEpochS
         !nesEs = Shelley.nesEs newEpochS
         !nesRu = Shelley.nesRu newEpochS
-        !nesPd = Shelley.nesPd newEpochS
+        !nesPd = newEpochS ^. nesStakePoolDistrG
      in [ "lastEpoch" .= nesEL
         , "blocksBefore" .= nesBprev
         , "blocksCurrent" .= nesBcur
