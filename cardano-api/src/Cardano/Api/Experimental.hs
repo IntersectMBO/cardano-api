@@ -58,7 +58,6 @@ module Cardano.Api.Experimental
     -- ** Era-related
   , BabbageEra
   , ConwayEra
-  , DijkstraEra
   , Era (..)
   , IsEra (..)
   , Some (..)
