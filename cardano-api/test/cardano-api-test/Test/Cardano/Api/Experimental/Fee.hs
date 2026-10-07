@@ -1198,7 +1198,8 @@ prop_estimateTransactionKeyWitnessCount_receiving = H.property $ do
 
 prop_estimateTransactionKeyWitnessCount_receiving_native :: Property
 prop_estimateTransactionKeyWitnessCount_receiving_native = H.property $ do
-  keys <- H.forAll $ Gen.list (Range.singleton 5) (genVerificationKeyHash Api.AsPaymentKey)
+  keys <-
+    Set.toList <$> H.forAll (Gen.set (Range.singleton 5) (genVerificationKeyHash Api.AsPaymentKey))
   let native = DS.upgradeTimelock $ Api.toAllegraTimelock $ Api.RequireAllOf $ map Api.RequireSignature keys
       hash = L.hashScript (L.fromNativeScript native :: L.Script L.DijkstraEra)
       address = L.AddrProtected L.Testnet (L.ScriptHashObj hash) L.StakeRefNull
@@ -1207,7 +1208,7 @@ prop_estimateTransactionKeyWitnessCount_receiving_native = H.property $ do
         Exp.defaultTxBodyContent
           & Exp.setTxOuts [output, output]
           & Exp.setTxReceivingWitnesses
-            (Map.singleton hash $ Exp.AnyScriptWitnessSimple $ Exp.SScript $ Exp.SimpleScript native)
+            (Map.singleton 0 $ Exp.AnyScriptWitnessSimple $ Exp.SScript $ Exp.SimpleScript native)
           & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses keys)
   Exp.estimateTransactionKeyWitnessCount @Exp.DijkstraEra content
     === fromIntegral (Set.size $ Set.fromList keys)

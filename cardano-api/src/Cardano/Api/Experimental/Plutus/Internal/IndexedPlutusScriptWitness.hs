@@ -98,7 +98,7 @@ data Witnessable (thing :: WitnessableItem) era where
     :: (L.ConwayEraScript era, L.EraPParams era)
     => L.ProposalProcedure era
     -> Witnessable ProposalItem era
-  WitReceiving :: L.ScriptHash -> Witnessable ReceivingItem L.DijkstraEra
+  WitReceiving :: Word32 -> L.ScriptHash -> Witnessable ReceivingItem L.DijkstraEra
 
 deriving instance Show (Witnessable thing era)
 
@@ -121,7 +121,7 @@ compareWitnesses a b =
     -- Proposals are also stored in an `OSet` and resolved positionally
     -- (`StrictSeq.findIndexL`), same as `WitTxCert` above.
     (WitProposal{}, WitProposal{}) -> EQ
-    (WitReceiving hashA, WitReceiving hashB) -> compare hashA hashB
+    (WitReceiving indexA _, WitReceiving indexB _) -> compare indexA indexB
 
 data WitnessableItem
   = TxInItem
@@ -152,7 +152,7 @@ toPlutusScriptPurpose index WitMint{} = L.mkMintingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitTxCert{} = L.mkCertifyingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitVote{} = L.mkVotingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitProposal{} = L.mkProposingPurpose (L.AsIx index)
-toPlutusScriptPurpose index WitReceiving{} = L.DijkstraReceiving (L.AsIx index)
+toPlutusScriptPurpose _ (WitReceiving outputIndex _) = L.DijkstraReceiving (L.AsIx outputIndex)
 
 -- | Classify a ledger redeemer pointer ('L.PlutusPurpose' 'L.AsIx') into the
 -- 'PlutusScriptPurpose' category it belongs to and the index within that

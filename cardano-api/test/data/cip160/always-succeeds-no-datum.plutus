@@ -1,5 +1,5 @@
 {
   "type": "PlutusScriptV4",
-  "description": "Generated alwaysSucceedsNoDatum V4 test fixture",
+  "description": "Compiler-generated per-output CIP-160 V4 fixture: alwaysSucceedsNoDatum",
   "cborHex": "58590102003322232993370e90014800c880094a39900191000a4532600c00328009803800a50024928528899319801a49035054350049a930dd54c9bac001914800c8a400645001006802400a6eb8c024004244440045742ae701"
 }

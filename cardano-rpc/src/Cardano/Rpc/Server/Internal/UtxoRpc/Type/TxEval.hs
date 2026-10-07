@@ -114,10 +114,13 @@ scriptWitnessIndexToPlutusScriptPurpose = \case
   ScriptWitnessIndexWithdrawal i -> (WithdrawingScript, i)
   ScriptWitnessIndexVoting i -> (VotingScript, i)
   ScriptWitnessIndexProposing i -> (ProposingScript, i)
+  ScriptWitnessIndexGuarding i -> (GuardingScript, i)
+  ScriptWitnessIndexReceiving i -> (ReceivingScript, i)
 
 -- | Map a Plutus script purpose to the corresponding proto 'RedeemerPurpose'.
--- 'GuardingScript' (Dijkstra's new purpose) has no UTxO RPC counterpart yet,
--- so it maps to the unspecified value.
+-- Dijkstra's 'GuardingScript' and 'ReceivingScript' have no UTxO RPC enum
+-- counterparts yet, so they map to the unspecified value. Their indices remain
+-- intact, including Receiving's original body-local output positions.
 plutusScriptPurposeToRedeemerPurpose :: PlutusScriptPurpose -> Proto UtxoRpc.RedeemerPurpose
 plutusScriptPurposeToRedeemerPurpose = \case
   SpendingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_SPEND
@@ -127,6 +130,7 @@ plutusScriptPurposeToRedeemerPurpose = \case
   VotingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_VOTE
   ProposingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_PROPOSE
   GuardingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_UNSPECIFIED
+  ReceivingScript -> Proto UtxoRpc.REDEEMER_PURPOSE_UNSPECIFIED
 
 -- | Map a 'ScriptWitnessIndex' to the corresponding proto 'RedeemerPurpose'
 -- and the numeric index within that purpose.

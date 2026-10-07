@@ -112,6 +112,7 @@ import Data.Ratio
 import Data.Sequence.Strict qualified as Seq
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Word (Word32)
 import GHC.Exts (IsList (..))
 import GHC.Stack
 import Lens.Micro ((%~), (.~), (^.))
@@ -1103,7 +1104,7 @@ substituteExecutionUnits
     mappedReceiving <-
       Map.fromList
         <$> traverse
-          (\(index, hash, witness) -> (hash,) <$> substituteExecUnitsTxMint index witness)
+          (\(index, outputIndex, witness) -> (outputIndex,) <$> substituteExecUnitsTxMint index witness)
           (indexReceivingWitnesses txbodycontent)
     mappedTxIns <- mapScriptWitnessesTxIns txIns
     mappedWithdrawals <- mapScriptWitnessesWithdrawals txWithdrawals
@@ -1348,12 +1349,12 @@ collectTxBodyScriptWitnesses
             (fmap . fmap) toAnyScriptWitness <$> indexWitnessedTxProposalProcedures txp
         ]
 
--- Index the Receiving domain through the ledger, including native scripts.
+-- Resolve witnesses against original body-local output positions, including native scripts.
 indexReceivingWitnesses
   :: forall era
    . IsEra era
   => TxBodyContent (LedgerEra era)
-  -> [(ScriptWitnessIndex, L.ScriptHash, AnyScriptWitness (LedgerEra era))]
+  -> [(ScriptWitnessIndex, Word32, AnyScriptWitness (LedgerEra era))]
 indexReceivingWitnesses content = case useEra @era of
   ConwayEra -> []
   DijkstraEra ->
@@ -1361,9 +1362,9 @@ indexReceivingWitnesses content = case useEra @era of
           (L.mkBasicTxBody :: L.TxBody L.TopTx L.DijkstraEra)
             & L.outputsTxBodyL .~ fromList [out | TxOut out <- txOuts content]
         pointers = receivingScriptPointers body
-     in [ (toScriptIndex AlonzoEraOnwardsDijkstra pointer, hash, witness)
-        | (hash, witness) <- Map.toList (txReceivingWitnesses content)
-        , Just pointer <- [Map.lookup hash pointers]
+     in [ (toScriptIndex AlonzoEraOnwardsDijkstra pointer, outputIndex, witness)
+        | (outputIndex, witness) <- Map.toList (txReceivingWitnesses content)
+        , Just (_, pointer) <- [Map.lookup outputIndex pointers]
         ]
 
 toAnyScriptWitness :: AnyWitness era -> Maybe (Exp.AnyScriptWitness era)
@@ -1662,7 +1663,7 @@ makeTransactionBodyAutoBalance systemstart history pp poolids deposits utxo cont
               dijkstraUTxO
               ( Map.restrictKeys
                   (txReceivingWitnesses finalContent)
-                  (Dijkstra.receivingScriptHashes $ candidate ^. L.bodyTxL)
+                  (Map.keysSet $ receivingScriptPointers $ candidate ^. L.bodyTxL)
               )
               candidate
         allUnits <-
@@ -1725,7 +1726,7 @@ handleDijkstraExUnitsErrors validity report =
         ScriptInvalid -> pure $ Map.map (const $ ExecutionUnits 0 0) failures <> units
         ScriptValid -> pure units
 
--- Translate the evaluated body's Receiving pointers back to destination hashes.
+-- Apply the evaluated body's budgets to the same original output indices.
 -- Blueprint-only witnesses (for a future change output) are retained verbatim.
 substituteExecutionUnitsAgainstBody
   :: L.TxBody L.TopTx L.DijkstraEra
@@ -1739,10 +1740,10 @@ substituteExecutionUnitsAgainstBody evaluatedBody units blueprint = do
  where
   pointers = receivingScriptPointers evaluatedBody
   update _ witness@(AnyScriptWitnessSimple _) = pure witness
-  update hash witness@(AnyScriptWitnessPlutus sw) =
-    case Map.lookup hash pointers of
+  update outputIndex witness@(AnyScriptWitnessPlutus sw) =
+    case Map.lookup outputIndex pointers of
       Nothing -> pure witness
-      Just pointer ->
+      Just (_, pointer) ->
         AnyScriptWitnessPlutus
           <$> updateExecUnitsPlutusScriptWitness (toScriptIndex AlonzoEraOnwardsDijkstra pointer) units sw
 
@@ -1795,6 +1796,27 @@ substituteLedgerBodyUnits pp utxo parent units child = do
       & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
       & L.bodyTxL . L.scriptIntegrityHashTxBodyL .~ integrity
 
+-- Temporary fee/balance bodies may omit the prospective appended change. Only
+-- those copies drop its inactive metadata; admission validates the complete
+-- blueprint against the explicit outputs plus prospective change first.
+makeUnsignedTxForBalance
+  :: Era era
+  -> TxBodyContent (LedgerEra era)
+  -> Either MakeUnsignedTxError (UnsignedTx (LedgerEra era))
+makeUnsignedTxForBalance era = makeUnsignedTx era . restrictReceivingWitnessesToOutputs era
+
+restrictReceivingWitnessesToOutputs
+  :: Era era
+  -> TxBodyContent (LedgerEra era)
+  -> TxBodyContent (LedgerEra era)
+restrictReceivingWitnessesToOutputs ConwayEra content = content
+restrictReceivingWitnessesToOutputs DijkstraEra content =
+  let body =
+        (L.mkBasicTxBody :: L.TxBody L.TopTx L.DijkstraEra)
+          & L.outputsTxBodyL .~ fromList [out | TxOut out <- txOuts content]
+      active = Map.keysSet $ receivingScriptPointers body
+   in content & setTxReceivingWitnesses (Map.restrictKeys (txReceivingWitnesses content) active)
+
 makeTransactionBodyAutoBalanceWithUnits
   :: forall era
    . ()
@@ -1841,6 +1863,8 @@ makeTransactionBodyAutoBalanceWithUnits
           obtainCommonConstraints (useEra @era) $
             TxOut $
               L.mkBasicTxOut (toShelleyAddr changeaddr) (L.inject $ L.Coin 0)
+    first TxBodyErrorMakeUnsignedTx $
+      validateReceivingWitnesses (useEra @era) (txbodycontent & modTxOuts (<> [prospectiveChange]))
     first TxBodyErrorCollateral $
       checkCollateralOnlyWithPlutusScripts (txbodycontent & modTxOuts (<> [prospectiveChange]))
     when
@@ -1859,8 +1883,8 @@ makeTransactionBodyAutoBalanceWithUnits
 
     txbodyForChange <-
       first TxBodyErrorMakeUnsignedTx $
-        makeUnsignedTx
-          useEra
+        makeUnsignedTxForBalance
+          (useEra @era)
           txbodycontent
 
     -- Check the balance before constructing the TxOut. L.mkBasicTxOut calls toCompact, which throws an irrecoverable
@@ -1889,8 +1913,8 @@ makeTransactionBodyAutoBalanceWithUnits
     -- is where the execution units map is made
     UnsignedTx txbody <-
       first TxBodyErrorMakeUnsignedTx $
-        makeUnsignedTx
-          useEra
+        makeUnsignedTxForBalance
+          (useEra @era)
           ( txbodycontent
               & modTxOuts
                 (<> [initialChangeTxOut])
@@ -1936,8 +1960,8 @@ makeTransactionBodyAutoBalanceWithUnits
     let (maybeDummyReturnTxCollateral, maybeDummyTotalTxCollateral) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <-
       first TxBodyErrorMakeUnsignedTx $
-        makeUnsignedTx
-          useEra
+        makeUnsignedTxForBalance
+          (useEra @era)
           txbodycontent1
             { txFee = maxLovelaceFee
             , txReturnCollateral = maybeDummyReturnTxCollateral
@@ -1997,8 +2021,8 @@ makeTransactionBodyAutoBalanceWithUnits
     -- we need to calculate.
     txbody2 <-
       first TxBodyErrorMakeUnsignedTx $
-        makeUnsignedTx
-          useEra
+        makeUnsignedTxForBalance
+          (useEra @era)
           txbodycontent1
             { txFee = fee
             , txReturnCollateral = maybeReturnTxCollateral
@@ -2033,16 +2057,17 @@ makeTransactionBodyAutoBalanceWithUnits
       -- Yes this could be an over-estimate by a few bytes if the fee or change
       -- would fit within 2^16-1. That's a possible optimisation.
       let finalTxBodyContent =
-            txbodycontent1
-              { txFee = fee
-              , txOuts = finalTxOuts
-              , txReturnCollateral = maybeReturnTxCollateral
-              , txTotalCollateral = maybeTotalTxCollateral
-              }
+            restrictReceivingWitnessesToOutputs (useEra @era) $
+              txbodycontent1
+                { txFee = fee
+                , txOuts = finalTxOuts
+                , txReturnCollateral = maybeReturnTxCollateral
+                , txTotalCollateral = maybeTotalTxCollateral
+                }
       txbody3 <-
         first TxBodyErrorMakeUnsignedTx $
-          makeUnsignedTx
-            useEra
+          makeUnsignedTxForBalance
+            (useEra @era)
             finalTxBodyContent
       return
         (txbody3, finalTxBodyContent)
@@ -2119,7 +2144,7 @@ receivingNativeScriptKeyHashes = \case
 
 inlineReceivingNativeKeyHashes
   :: [TxOut L.DijkstraEra]
-  -> Map L.ScriptHash (AnyScriptWitness L.DijkstraEra)
+  -> Map Word32 (AnyScriptWitness L.DijkstraEra)
   -> Set (L.KeyHash L.Witness)
 inlineReceivingNativeKeyHashes outputs witnesses =
   let body =
@@ -2127,8 +2152,8 @@ inlineReceivingNativeKeyHashes outputs witnesses =
           & L.outputsTxBodyL .~ fromList [out | TxOut out <- outputs]
    in Set.unions
         [ receivingNativeScriptKeyHashes script
-        | hash <- Set.toList $ Dijkstra.receivingScriptHashes body
-        , Just (AnyScriptWitnessSimple (SScript (SimpleScript script))) <- [Map.lookup hash witnesses]
+        | (outputIndex, _) <- Dijkstra.receivingScriptTargets body
+        , Just (AnyScriptWitnessSimple (SScript (SimpleScript script))) <- [Map.lookup outputIndex witnesses]
         ]
 
 receivingNativeKeyHashes

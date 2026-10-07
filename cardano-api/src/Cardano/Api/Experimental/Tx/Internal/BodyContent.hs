@@ -266,6 +266,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
+import Data.Word (Word32)
 import GHC.Exts (IsList (..))
 import Lens.Micro
 
@@ -400,11 +401,21 @@ validateReceivingWitnesses DijkstraEra bc = do
   let body =
         (L.mkBasicTxBody :: L.TxBody L.TopTx L.DijkstraEra)
           & L.outputsTxBodyL .~ fromList [out | TxOut out <- bcOuts bc]
+      targets = receivingScriptPointers body
       witnesses = bcReceivingWitnesses bc
       invalid = Left . MakeUnsignedTxInvalidReceivingWitness
-  unless (Dijkstra.receivingScriptHashes body `Set.isSubsetOf` Map.keysSet witnesses) $
-    invalid "Receiving witnesses must cover the protected output script hashes"
-  forM_ (Map.toList witnesses) $ \(hash, witness) -> do
+      nativeHashes =
+        Set.fromList
+          [ hash
+          | (outputIndex, AnyScriptWitnessSimple _) <- Map.toList witnesses
+          , Just (hash, _) <- [Map.lookup outputIndex targets]
+          ]
+  forM_ (Map.toList witnesses) $ \(outputIndex, witness) -> do
+    (hash, _) <-
+      maybe
+        (invalid $ "Receiving witness names an absent or ineligible output index: " <> show outputIndex)
+        Right $
+        Map.lookup outputIndex targets
     case witness of
       AnyScriptWitnessSimple _ -> pure ()
       AnyScriptWitnessPlutus (AnyPlutusReceivingScriptWitness _) -> pure ()
@@ -413,24 +424,30 @@ validateReceivingWitnesses DijkstraEra bc = do
       Nothing -> pure ()
       Just script ->
         unless (L.hashScript script == hash) $
-          invalid "Receiving witness script hash does not match the protected destination"
+          invalid $
+            "Receiving witness script hash does not match output index " <> show outputIndex
+  forM_ (Map.toList targets) $ \(outputIndex, (hash, _)) ->
+    unless (Map.member outputIndex witnesses || Set.member hash nativeHashes) $
+      invalid $
+        "Missing Receiving witness for protected script output index " <> show outputIndex
 
--- | Build the complete body-local Receiving index once for bulk consumers.
--- Native scripts occupy canonical indices even though they have no redeemer.
+-- | Build the complete body-local Receiving target map once for bulk consumers.
+-- Keys are original output positions, including gaps occupied by ordinary,
+-- key-protected or native outputs. Repeated script hashes retain separate keys.
 receivingScriptPointers
   :: L.TxBody level L.DijkstraEra
-  -> Map L.ScriptHash (L.PlutusPurpose L.AsIx L.DijkstraEra)
+  -> Map Word32 (L.ScriptHash, L.PlutusPurpose L.AsIx L.DijkstraEra)
 receivingScriptPointers body =
   Map.fromDistinctAscList
-    [ (hash, L.DijkstraReceiving (L.AsIx index))
-    | L.AsIxItem index hash <- Dijkstra.receivingScriptTargets body
+    [ (outputIndex, (hash, L.DijkstraReceiving (L.AsIx outputIndex)))
+    | (outputIndex, hash) <- Dijkstra.receivingScriptTargets body
     ]
 
 -- | Attach native or V4 Receiving witnesses to an unsigned, final body at
--- either level. Redeemers are keyed by script hash, not an unstable index;
--- pointer conversion and the grouped domain belong to the ledger. Rebuild
--- from the body content and call this again after any output change, before
--- estimating fees, execution units or collecting signatures.
+-- either level. Each V4 witness is keyed by the original body-local output
+-- position and supplies that output's own redeemer and budget. Native scripts
+-- remain shared by hash and do not create Plutus redeemers. Rebuild from body
+-- content after an output change, before collecting signatures.
 --
 -- This helper does not balance a transaction or estimate execution units.
 -- Reference witnesses require the corresponding existing reference or consumed
@@ -439,20 +456,20 @@ receivingScriptPointers body =
 addReceivingWitnesses
   :: L.PParams (LedgerEra DijkstraEra)
   -> L.UTxO (LedgerEra DijkstraEra)
-  -> Map L.ScriptHash (AnyScriptWitness (LedgerEra DijkstraEra))
+  -> Map Word32 (AnyScriptWitness (LedgerEra DijkstraEra))
   -> L.Tx level (LedgerEra DijkstraEra)
   -> Either String (L.Tx level (LedgerEra DijkstraEra))
 addReceivingWitnesses pp utxo receivingWitnesses tx = do
-  let pointers = receivingScriptPointers body
-  unless (Map.keysSet receivingWitnesses == Map.keysSet pointers) $
-    Left "Receiving witnesses must match the final body's protected script hashes"
+  let targets = receivingScriptPointers body
+  unless (Map.keysSet receivingWitnesses `Set.isSubsetOf` Map.keysSet targets) $
+    Left "Receiving witnesses must name eligible indices in the final body's outputs"
   unless
     (Set.null (tx ^. L.witsTxL . L.addrTxWitsL) && Set.null (tx ^. L.witsTxL . L.bootAddrTxWitsL))
     $ Left "Receiving witnesses must be attached before collecting signatures"
-  receivingRedeemers <- fmap mconcat $ forM (Map.toList receivingWitnesses) $ \(hash, witness) -> do
-    pointer <-
-      maybe (Left "Receiving hash is absent from the final body") Right $
-        Map.lookup hash pointers
+  receivingRedeemers <- fmap mconcat $ forM (Map.toList receivingWitnesses) $ \(outputIndex, witness) -> do
+    (_, pointer) <-
+      maybe (Left $ "Receiving output index is absent from the final body: " <> show outputIndex) Right $
+        Map.lookup outputIndex targets
     case witness of
       AnyScriptWitnessSimple _ -> pure mempty
       AnyScriptWitnessPlutus sw@(AnyPlutusReceivingScriptWitness _) ->
@@ -490,25 +507,28 @@ addReceivingWitnesses pp utxo receivingWitnesses tx = do
           | hash <- Set.toList needed
           , Just script <- [Alonzo.lookupPlutusScript hash scripts]
           ]
-  forM_ (Map.toList receivingWitnesses) $ \(hash, witness) -> do
+  forM_ (Map.toList receivingWitnesses) $ \(outputIndex, witness) -> do
+    (hash, _) <-
+      maybe (Left "Receiving output index is absent from the final body") Right $
+        Map.lookup outputIndex targets
     case getAnyWitnessReferenceInput (anyScriptWitnessToAnyWitness witness) of
       Nothing -> pure ()
       Just reference -> do
         let referenceInput = toShelleyTxIn reference
         unless (Set.member referenceInput ((body ^. L.referenceInputsTxBodyL) <> (body ^. L.inputsTxBodyL))) $
-          Left "Receiving reference witness must name an existing body reference input"
+          Left "Receiving reference witness must name an existing body reference or consumed input"
         case Map.lookup referenceInput (L.unUTxO utxo) of
           Just output -> case output ^. L.referenceScriptTxOutL of
             SJust script | L.hashScript script == hash -> pure ()
-            _ -> Left "Receiving reference witness does not resolve to its declared script hash"
+            _ -> Left "Receiving reference witness does not resolve to its output's script hash"
           Nothing -> Left "Receiving reference input is absent from the UTxO"
     case getAnyWitnessScript (anyScriptWitnessToAnyWitness witness) of
       Just inlineScript ->
         unless (L.hashScript inlineScript == hash) $
-          Left "Receiving witness script hash does not match the protected destination"
+          Left "Receiving witness script hash does not match the protected output"
       Nothing -> pure ()
     unless (Map.member hash scripts) $
-      Left "Receiving script is missing or its hash does not match the protected destination"
+      Left "Receiving script is missing or its hash does not match the protected output"
     case (witness, Alonzo.lookupPlutusScript hash scripts) of
       (AnyScriptWitnessSimple _, Nothing) -> pure ()
       (AnyScriptWitnessSimple _, Just _) -> Left "Native Receiving witness resolves to a Plutus script"
@@ -516,6 +536,18 @@ addReceivingWitnesses pp utxo receivingWitnesses tx = do
       (AnyScriptWitnessPlutus _, Just script) ->
         unless (Alonzo.plutusScriptLanguage script == Plutus.PlutusV4) $
           Left "Receiving reference script must use Plutus V4"
+  forM_ (Map.toList targets) $ \(outputIndex, (hash, _)) -> do
+    unless (Map.member hash scripts) $
+      Left $
+        "Missing script for protected output index " <> show outputIndex
+    case Alonzo.lookupPlutusScript hash scripts of
+      Nothing -> pure ()
+      Just script -> do
+        unless (Alonzo.plutusScriptLanguage script == Plutus.PlutusV4) $
+          Left "Receiving scripts require Plutus V4"
+        case Map.lookup outputIndex receivingWitnesses of
+          Just (AnyScriptWitnessPlutus (AnyPlutusReceivingScriptWitness _)) -> pure ()
+          _ -> Left $ "Missing V4 Receiving redeemer and budget for output index " <> show outputIndex
   integrity <-
     either (Left . show) Right $
       convPParamsToScriptIntegrityHash @DijkstraEra (Just pp) redeemers datums languages
@@ -1105,7 +1137,7 @@ data BodyContent (l :: L.TxLevel) era
   -- Fields below are new in the Dijkstra era.
   -- ------------------------------------------------------------
   , bcGuards :: OSet (L.Credential L.Guard)
-  , bcReceivingWitnesses :: Map L.ScriptHash (AnyScriptWitness era)
+  , bcReceivingWitnesses :: Map Word32 (AnyScriptWitness era)
   , bcRequiredTopLevelGuards :: Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   , bcDirectDeposits :: L.DirectDeposits
   , bcAccountBalanceIntervals :: L.AccountBalanceIntervals era
@@ -1165,7 +1197,7 @@ pattern TxBodyContent
   -> Maybe L.Coin
   -> Map L.DataHash (L.Data era)
   -> OSet (L.Credential L.Guard)
-  -> Map L.ScriptHash (AnyScriptWitness era)
+  -> Map Word32 (AnyScriptWitness era)
   -> LOMap.OMap L.TxId (L.Tx L.SubTx era)
   -> Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   -> L.DirectDeposits
@@ -1259,7 +1291,7 @@ pattern SubTxBodyContent
   -> Maybe L.Coin
   -> Map L.DataHash (L.Data era)
   -> OSet (L.Credential L.Guard)
-  -> Map L.ScriptHash (AnyScriptWitness era)
+  -> Map Word32 (AnyScriptWitness era)
   -> Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   -> L.DirectDeposits
   -> L.AccountBalanceIntervals era
@@ -1395,10 +1427,11 @@ extractAllIndexedPlutusScriptWitnesses era b = obtainCommonConstraints era $ do
                   (L.mkBasicTxBody :: L.TxBody L.TopTx L.DijkstraEra)
                     & L.outputsTxBodyL .~ fromList [out | TxOut out <- txOuts b]
                 pointers = receivingScriptPointers body
-             in [ AnyIndexedPlutusScriptWitness (IndexedPlutusScriptWitness (WitReceiving hash) pointer witness)
-                | (hash, AnyScriptWitnessPlutus witness@(AnyPlutusReceivingScriptWitness _)) <-
+             in [ AnyIndexedPlutusScriptWitness
+                    (IndexedPlutusScriptWitness (WitReceiving outputIndex hash) pointer witness)
+                | (outputIndex, AnyScriptWitnessPlutus witness@(AnyPlutusReceivingScriptWitness _)) <-
                     Map.toList (txReceivingWitnesses b)
-                , Just pointer <- [Map.lookup hash pointers]
+                , Just (hash, pointer) <- [Map.lookup outputIndex pointers]
                 ]
       ]
 
@@ -1597,8 +1630,8 @@ collectTxBodyScriptWitnessRequirements
                             , toAlonzoExUnits (getAnyPlutusScriptWitnessExecutionUnits sw)
                             )
                   )
-              | (hash, witness) <- Map.toList bcReceivingWitnesses
-              , Just pointer <- [Map.lookup hash pointers]
+              | (outputIndex, witness) <- Map.toList bcReceivingWitnesses
+              , Just (_, pointer) <- [Map.lookup outputIndex pointers]
               ]
 
 obtainMonoidConstraint
@@ -1693,9 +1726,9 @@ setTxSupplementalDatums v bc = bc{bcSupplementalDatums = v}
 setTxGuards :: OSet (L.Credential L.Guard) -> BodyContent l era -> BodyContent l era
 setTxGuards v bc = bc{bcGuards = v}
 
--- | Native or V4 Receiving witnesses, keyed by destination script hash.
+-- | Native or V4 Receiving witnesses, keyed by original body-local output index.
 setTxReceivingWitnesses
-  :: Map L.ScriptHash (AnyScriptWitness era) -> BodyContent l era -> BodyContent l era
+  :: Map Word32 (AnyScriptWitness era) -> BodyContent l era -> BodyContent l era
 setTxReceivingWitnesses v bc = bc{bcReceivingWitnesses = v}
 
 setTxRequiredTopLevelGuards

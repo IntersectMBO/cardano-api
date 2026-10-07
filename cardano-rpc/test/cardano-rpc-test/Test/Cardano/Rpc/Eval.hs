@@ -23,8 +23,8 @@ import Network.GRPC.Spec (Proto (..), getProto)
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
 
--- | All six 'ScriptWitnessIndex' constructors map to the correct
--- 'RedeemerPurpose' and preserve the index.
+-- | Every 'ScriptWitnessIndex' constructor preserves its index. The wire enum
+-- has no Guarding or Receiving value, so these use its unspecified value.
 hprop_scriptWitnessIndex_to_redeemerPurpose :: Property
 hprop_scriptWitnessIndex_to_redeemerPurpose = H.propertyOnce $ do
   verify (ScriptWitnessIndexTxIn 3) U5c.REDEEMER_PURPOSE_SPEND 3
@@ -33,6 +33,8 @@ hprop_scriptWitnessIndex_to_redeemerPurpose = H.propertyOnce $ do
   verify (ScriptWitnessIndexWithdrawal 2) U5c.REDEEMER_PURPOSE_REWARD 2
   verify (ScriptWitnessIndexVoting 5) U5c.REDEEMER_PURPOSE_VOTE 5
   verify (ScriptWitnessIndexProposing 4) U5c.REDEEMER_PURPOSE_PROPOSE 4
+  verify (ScriptWitnessIndexGuarding 2) U5c.REDEEMER_PURPOSE_UNSPECIFIED 2
+  verify (ScriptWitnessIndexReceiving 4) U5c.REDEEMER_PURPOSE_UNSPECIFIED 4
  where
   verify :: (HasCallStack, MonadTest m) => ScriptWitnessIndex -> U5c.RedeemerPurpose -> Word32 -> m ()
   verify swi expectedPurpose expectedIndex = withFrozenCallStack $ do
@@ -52,6 +54,32 @@ hprop_mkProtoRedeemer = H.propertyOnce $ do
   redeemer ^. U5c.index === 2
   redeemer ^. U5c.exUnits . U5c.steps === 100
   redeemer ^. U5c.exUnits . U5c.memory === 200
+
+-- | Separate output-indexed Receiving entries survive the wire adapter with
+-- their own payloads, budgets and traces, even though its enum is unspecified.
+hprop_mkProtoTxEval_receiving_outputs :: Property
+hprop_mkProtoTxEval_receiving_outputs = H.propertyOnce $ do
+  let evalMap =
+        [ (ScriptWitnessIndexReceiving 1, Right (["output one"], ExecutionUnits 500 300))
+        , (ScriptWitnessIndexReceiving 4, Right (["output four"], ExecutionUnits 100 200))
+        ]
+      redeemerData =
+        [ (ScriptWitnessIndexReceiving 1, (ScriptDataNumber 2, "\x02"))
+        , (ScriptWitnessIndexReceiving 4, (ScriptDataNumber 4, "\x04"))
+        ]
+      txEval = getProto $ mkProtoTxEval (L.Coin 200000) evalMap redeemerData
+      redeemers = txEval ^. U5c.redeemers
+      traces = txEval ^. U5c.traces
+  map (^. U5c.index) redeemers === [1, 4]
+  map (^. U5c.purpose) redeemers
+    === [U5c.REDEEMER_PURPOSE_UNSPECIFIED, U5c.REDEEMER_PURPOSE_UNSPECIFIED]
+  map (^. U5c.originalCbor) redeemers === ["\x02", "\x04"]
+  map (^. U5c.exUnits . U5c.steps) redeemers === [500, 100]
+  map (^. U5c.exUnits . U5c.memory) redeemers === [300, 200]
+  map (^. U5c.index) traces === [1, 4]
+  map (^. U5c.msg) traces === ["output one", "output four"]
+  txEval ^. U5c.exUnits . U5c.steps === 600
+  txEval ^. U5c.exUnits . U5c.memory === 500
 
 -- | Successful evaluation with two redeemers produces correct aggregate
 -- execution units, fee, redeemers list, empty errors, and traces.
@@ -127,6 +155,11 @@ hprop_scriptExecutionError_to_evalReport = H.propertyOnce $ do
     (ScriptErrorRedeemerPointsToUnknownScriptHash $ ScriptWitnessIndexTxIn 0)
     U5c.REDEEMER_PURPOSE_MINT
     3
+  verifyError
+    (ScriptWitnessIndexReceiving 4)
+    ScriptErrorExecutionUnitsOverflow
+    U5c.REDEEMER_PURPOSE_UNSPECIFIED
+    4
  where
   verifyError
     :: (HasCallStack, MonadTest m)

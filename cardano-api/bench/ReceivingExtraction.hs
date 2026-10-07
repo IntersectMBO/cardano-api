@@ -39,14 +39,15 @@ main = do
   forM_ [200, 400, 800] $ \size -> do
     let hashes = sort [scriptHash seed | seed <- [0 .. size - 1]]
         content = fixture input hashes
-        expected = sum [fromIntegral index + 1 | index <- [1, 3 .. size - 1]]
+        expected = sum [fromIntegral index + 1 | index <- [1, 3 .. size - 1]] + fromIntegral size + 1
         body =
           (Core.mkBasicTxBody :: L.TxBody L.TopTx DijkstraEra)
             & L.outputsTxBodyL .~ fromList [out | Exp.TxOut out <- Exp.txOuts content]
-    unless (length (Dijkstra.receivingScriptTargets body) == size) $
-      fail "setup: the complete native/Plutus domain has the wrong size"
+    unless (length (Dijkstra.receivingScriptTargets body) == size + 1) $
+      fail "setup: per-output targets lost a duplicate hash"
     actual <- evaluate $ extractChecksum 0 content
-    unless (actual == expected) $ fail "setup: native gaps or grouped Receiving indices differ"
+    unless (actual == expected) $
+      fail "setup: raw native gaps or duplicate-output Receiving indices differ"
     forM_ [1 .. 10] $ \salt -> do
       _ <- evaluate $ extractChecksum salt content
       pure ()
@@ -58,9 +59,9 @@ main = do
     end <- getCPUTime
     unless (all (== expected) checksums) $ fail "timed extraction changed the Receiving pointers"
     printf
-      "hashes=%d plutus=%d iterations=500 cpu_ms=%.3f checksum=%d\n"
+      "distinct_hashes=%d plutus_outputs=%d iterations=500 cpu_ms=%.3f checksum=%d\n"
       size
-      (size `div` 2)
+      (size `div` 2 + 1)
       (fromIntegral (end - start) / 1e9 :: Double)
       actual
 
@@ -74,9 +75,12 @@ scriptHash seed =
 fixture :: Api.TxIn -> [Core.ScriptHash] -> Exp.TxBodyContent DijkstraEra
 fixture input hashes =
   Exp.defaultTxBodyContent
-    & Exp.setTxOuts (map (Exp.TxOut . output) $ hashes ++ take 1 hashes)
+    & Exp.setTxOuts (map (Exp.TxOut . output) $ hashes ++ take 1 (drop 1 hashes))
     & Exp.setTxReceivingWitnesses
-      (Map.fromList [(hash, witness) | (_, hash) <- filter (odd . fst) $ zip [0 :: Int ..] hashes])
+      ( Map.fromList $
+          [(fromIntegral outputIndex, witness) | outputIndex <- [1, 3 .. length hashes - 1]]
+            ++ [(fromIntegral $ length hashes, witness)]
+      )
  where
   output hash =
     L.mkBasicTxOut
@@ -103,7 +107,7 @@ extractChecksum salt content =
       sum
         [ fromIntegral index + 1
         | Exp.AnyIndexedPlutusScriptWitness
-            (Exp.IndexedPlutusScriptWitness (Exp.WitReceiving _) (L.DijkstraReceiving (L.AsIx index)) _) <-
+            (Exp.IndexedPlutusScriptWitness (Exp.WitReceiving _ _) (L.DijkstraReceiving (L.AsIx index)) _) <-
             indexed
         ]
  where

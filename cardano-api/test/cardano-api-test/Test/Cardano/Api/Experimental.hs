@@ -39,6 +39,7 @@ import Cardano.Api.Plutus qualified as Script
 import Cardano.Api.Tx (Tx (ShelleyTx), toShelleyTxId)
 
 import Cardano.Ledger.Address qualified as L
+import Cardano.Ledger.Alonzo.PParams qualified as L (ppMaxTxExUnitsL)
 import Cardano.Ledger.Alonzo.Scripts qualified as L
 import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as UnexportedLedger
@@ -64,8 +65,8 @@ import Control.Monad.Identity (Identity)
 import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
-import Data.Either (isRight)
-import Data.Foldable (toList)
+import Data.Either (isLeft, isRight)
+import Data.Foldable (foldl', toList)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe, isNothing)
@@ -76,6 +77,7 @@ import Data.Set qualified as Set
 import Data.Text.Encoding qualified as Text
 import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time
+import Data.Word (Word32)
 import Lens.Micro
 
 import Test.Gen.Cardano.Api.Experimental (genAnyScript, genSignedSubTx, genUnsignedSubTx)
@@ -114,13 +116,22 @@ tests =
   testGroup
     "Test.Cardano.Api.Experimental"
     [ testProperty
-        "Native Receiving occupies the canonical gap before V4"
+        "Per-output Receiving retains raw gaps, duplicate outputs and independent redeemers"
         prop_receiving_native_index_gap
+    , testProperty
+        "Repeated hashes receive their own output context and redeemer"
+        prop_receiving_output_context
+    , testProperty
+        "Equal Receiving output indices remain isolated between parent and child"
+        prop_receiving_nested_output_context
+    , testProperty
+        "Repeated-hash output budgets aggregate against the batch limit"
+        prop_receiving_per_output_budget_limit
     , testProperty
         "Unsigned child signature containers are covered by final fees"
         prop_receiving_child_signature_fees
     , testProperty
-        "Receiving change is estimated against the final hash domain"
+        "Receiving change preserves authored indices and final per-output budgets"
         prop_receiving_change_final_domain
     , testProperty
         "Native Receiving inline and reference signers are covered by fees"
@@ -1355,6 +1366,7 @@ prop_receiving_witnesses_reject_invalid_declarations :: Property
 prop_receiving_witnesses_reject_invalid_declarations = H.property $ do
   input <- H.forAll genTxIn
   oldPlutus <- H.forAll genPlutusScriptInEra
+  v4 <- H.evalEither $ Exp.deserialisePlutusScriptInEra L.SPlutusV4 receivingEvenFixture
   Api.ShelleyBootstrapWitness _ bootstrap <-
     H.forAll $ genShelleyBootstrapWitness Api.ShelleyBasedEraDijkstra
   let native = DS.upgradeTimelock $ Api.toAllegraTimelock $ Api.RequireAllOf []
@@ -1363,38 +1375,58 @@ prop_receiving_witnesses_reject_invalid_declarations = H.property $ do
       legacyScript = L.upgradeScript $ Exp.plutusScriptInEraToScript oldPlutus
       pp = exampleProtocolParamsEra Exp.DijkstraEra
       referenceWitness = Exp.AnyScriptWitnessSimple $ Exp.SReferenceScript input
-      receivingReference =
+      mkReceivingReference redeemer budget =
         Exp.AnyScriptWitnessPlutus $
           AnyPlutusReceivingScriptWitness $
             Exp.PlutusScriptWitness
               L.SPlutusV4
               (Exp.PReferenceScript input)
               Exp.NoScriptDatum
-              (Api.unsafeHashableScriptData (Api.ScriptDataNumber 0))
-              (Api.ExecutionUnits 0 0)
+              (Api.unsafeHashableScriptData (Api.ScriptDataNumber redeemer))
+              budget
+      receivingReference = mkReceivingReference 0 (Api.ExecutionUnits 0 0)
       (nativeTx, nativeUtxo) = receivingReferenceFixture input nativeScript
-      nativeHash = L.hashScript nativeScript
       (legacyTx, legacyUtxo) = receivingReferenceFixture input legacyScript
-      legacyHash = L.hashScript legacyScript
+      v4Script = Exp.plutusScriptInEraToScript v4
+      v4Hash = L.hashScript v4Script
+      (v4Tx, v4Utxo) = receivingReferenceFixture input v4Script
+      repeated =
+        v4Tx
+          & L.bodyTxL . L.outputsTxBodyL .~ [receivingFixtureOutput v4Hash 2, receivingFixtureOutput v4Hash 4]
+      budgets = [Api.ExecutionUnits 100 200, Api.ExecutionUnits 300 400]
+      declarations =
+        Map.fromList
+          [ (0, mkReceivingReference 2 $ Api.ExecutionUnits 100 200)
+          , (1, mkReceivingReference 4 $ Api.ExecutionUnits 300 400)
+          ]
   H.assert $
     isRight $
-      Exp.addReceivingWitnesses pp nativeUtxo (Map.singleton nativeHash referenceWitness) nativeTx
+      Exp.addReceivingWitnesses pp nativeUtxo (Map.singleton 0 referenceWitness) nativeTx
+  sharedReference <- H.evalEither $ Exp.addReceivingWitnesses pp v4Utxo declarations repeated
+  let actualRedeemers = sharedReference ^. L.witsTxL . L.rdmrsTxWitsL . Alonzo.unRedeemersL
+  Map.keys actualRedeemers H.=== [L.DijkstraReceiving (L.AsIx 0), L.DijkstraReceiving (L.AsIx 1)]
+  map fst (Map.elems actualRedeemers)
+    H.=== map (Api.toAlonzoData . Api.unsafeHashableScriptData . Api.ScriptDataNumber) [2, 4]
+  map snd (Map.elems actualRedeemers) H.=== map Api.toAlonzoExUnits budgets
+  Map.null (sharedReference ^. L.witsTxL . L.scriptTxWitsL) H.=== True
+  Exp.addReceivingWitnesses pp v4Utxo (Map.delete 1 declarations) repeated
+    H.=== Left "Missing V4 Receiving redeemer and budget for output index 1"
   Exp.addReceivingWitnesses
     pp
     nativeUtxo
-    (Map.singleton nativeHash (Exp.AnyScriptWitnessSimple $ Exp.SScript $ Exp.SimpleScript wrongNative))
+    (Map.singleton 0 (Exp.AnyScriptWitnessSimple $ Exp.SScript $ Exp.SimpleScript wrongNative))
     nativeTx
-    H.=== Left "Receiving witness script hash does not match the protected destination"
-  Exp.addReceivingWitnesses pp nativeUtxo (Map.singleton nativeHash receivingReference) nativeTx
+    H.=== Left "Receiving witness script hash does not match the protected output"
+  Exp.addReceivingWitnesses pp nativeUtxo (Map.singleton 0 receivingReference) nativeTx
     H.=== Left "V4 Receiving witness resolves to a native script"
-  Exp.addReceivingWitnesses pp legacyUtxo (Map.singleton legacyHash referenceWitness) legacyTx
+  Exp.addReceivingWitnesses pp legacyUtxo (Map.singleton 0 referenceWitness) legacyTx
     H.=== Left "Native Receiving witness resolves to a Plutus script"
-  Exp.addReceivingWitnesses pp legacyUtxo (Map.singleton legacyHash receivingReference) legacyTx
+  Exp.addReceivingWitnesses pp legacyUtxo (Map.singleton 0 receivingReference) legacyTx
     H.=== Left "Receiving reference script must use Plutus V4"
   Exp.addReceivingWitnesses
     pp
     nativeUtxo
-    (Map.singleton nativeHash referenceWitness)
+    (Map.singleton 0 referenceWitness)
     (nativeTx & L.witsTxL . L.bootAddrTxWitsL .~ Set.singleton bootstrap)
     H.=== Left "Receiving witnesses must be attached before collecting signatures"
 
@@ -1417,25 +1449,37 @@ receivingReferenceFixture input script =
 receivingEvenFixture :: BS.ByteString
 receivingEvenFixture =
   Base16.decodeLenient
-    "5901ec0102009800aba4aba1ab9c4888c88c8c8c8c8ca64cdc3a401d20032200264cdc3a4005200322002528664006440029149980310009805800c8c0280069404ca64006946449413233001001002229001a51914c801488ca4cdc3a40092003220025284c03cc0464006440021baa9800800c888800a4c80514a13300400400129406600490001919800800c9bac900691110022452003229001914800c8a4006452003229001914800c8a4006452003229001914800c8a4006452003229001914800c8a40064520032237580380000114800c8a0060053300400400160004c98cc021241035054350049a930dd5480248888008646002002464452003800488ca4cdc3a40052003220024cc018cdc02400400a0059900191000a4465266e1d200290019100126601266e012002008005c99b8f375c60232003220014806c888800533009337009001004002e00700100880326601266e01200200800506ea800837553001002911100249900708cc00800800488a4dd6001c8a40064520032298008034dd5802400a66014eb8c03c005008022900194004c00cc020005280124dd6000c8a4006452003228008034012005375c60140020533001001949baa0029140092328011bab0029194008dd60014a0026eb40092328011bae002a4c8022466e1d20003370c00290025281"
+    "58ce0102009800aba4aba1ab9cabd8488888c8ca64cdc3a401d20052200264cdc3a400520052200252866400a44002914c9804000ca00260120029400923004001a5019900291000a4465266e1d20049001910012942600860132003220010dd5499803240086eb0c02000644004264c6600a921035054350049a930a6600200329375400522801246500237560052328011bac00294004dd68012465002375c00549900748cdc3a400066e180052004a501baa993758003229001914800c8a00200d0048014dd718050008488880081"
 
 receivingChangeFixture :: BS.ByteString
 receivingChangeFixture =
   Base16.decodeLenient
     "59010e0102009800aba3aba1ab9c4888a64dd6000c8a40064520032232323293370e90014801c88009300149b320072200148a4cc0108004c0380064942600693023299300e33001222222222222222222201126980719800911111111111111111100793528a9469404526eb002e452003229001914800c8a4006452003229001914800c8a4006452003229001914800c8a4006452003229001914800c8a4006452003223298009bae0259800811cdd6010cdd600fcdd600ecdd580dcdd600ccdd580bcdd580acdd5809c0466eb003e6eac0366eac02e6eac0266eac01e6eb00166002007375a60660048138c0a1d680000452003280098019806800a50021baa0021326330024901035054350049a931"
 
+receivingMatchesFixture :: BS.ByteString
+receivingMatchesFixture =
+  Base16.decodeLenient
+    "5901d70102009800aba4aba1ab9c4888c88c8ca64cdc3a401d20032200252866400644002911919499b894800000a943266ebc0064cdc4001240013300800293759200d222200448a4006452003229001914800c8a4006452003229001914800c8a4006452003229001914800c8a4006452003229001914800c8a4006446eb0070000099319804a48103505436004994a13232993370e90014800c880094a19900191000a4465266e1d2002900191001294266e3cdd71807c800c88005201722220010dd500114a13293370e90024800c880094a13299800800ca4dd500148a0049194008dd580148ca0046eb000a5001375a0049194008dd7001526403d23299800800ca4dd500148a0049194008dd580148ca0046eb000a5001375a0049194008dd7001526404523370e0060034a0900b9111001a940601b2003220010dd5198011111001130dd5198009111002131149bac003914800c8a40064530010069bab00480164c0480065001375c6026002940088040060120046eb400899319802a49035054350049a930dd54800c888800926eb000645200322900191400401a0090029bae300a001032300100122239001911499b8748000016653001007800c00d00719b810054800a006919319802a4810350543700498931"
+
 receivingWitness
   :: Exp.PlutusScriptInEra 'Plutus.PlutusV4 L.DijkstraEra
   -> Exp.AnyScriptWitness L.DijkstraEra
-receivingWitness script =
+receivingWitness script = receivingWitnessWith 0 (Api.ExecutionUnits 0 0) script
+
+receivingWitnessWith
+  :: Integer
+  -> Api.ExecutionUnits
+  -> Exp.PlutusScriptInEra 'Plutus.PlutusV4 L.DijkstraEra
+  -> Exp.AnyScriptWitness L.DijkstraEra
+receivingWitnessWith redeemer budget script =
   Exp.AnyScriptWitnessPlutus $
     AnyPlutusReceivingScriptWitness $
       Exp.PlutusScriptWitness
         L.SPlutusV4
         (Exp.PScript script)
         Exp.NoScriptDatum
-        (Api.unsafeHashableScriptData $ Api.ScriptDataNumber 0)
-        (Api.ExecutionUnits 0 0)
+        (Api.unsafeHashableScriptData $ Api.ScriptDataNumber redeemer)
+        budget
 
 receivingFixtureOutput :: L.ScriptHash -> Integer -> L.TxOut L.DijkstraEra
 receivingFixtureOutput hash datum =
@@ -1478,11 +1522,21 @@ receivingAutoBalance
   -> Either
        (Exp.TxBodyErrorAutoBalance L.DijkstraEra)
        (Exp.UnsignedTx L.DijkstraEra, Exp.TxBodyContent L.DijkstraEra)
-receivingAutoBalance change utxo content =
+receivingAutoBalance = receivingAutoBalanceWithPParams (exampleProtocolParamsEra Exp.DijkstraEra)
+
+receivingAutoBalanceWithPParams
+  :: L.PParams L.DijkstraEra
+  -> Api.AddressInEra Exp.DijkstraEra
+  -> L.UTxO L.DijkstraEra
+  -> Exp.TxBodyContent L.DijkstraEra
+  -> Either
+       (Exp.TxBodyErrorAutoBalance L.DijkstraEra)
+       (Exp.UnsignedTx L.DijkstraEra, Exp.TxBodyContent L.DijkstraEra)
+receivingAutoBalanceWithPParams pp change utxo content =
   Exp.makeTransactionBodyAutoBalance
     (Api.SystemStart $ Time.posixSecondsToUTCTime 0)
     (Api.LedgerEpochInfo $ Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000))
-    (exampleProtocolParamsEra Exp.DijkstraEra)
+    pp
     mempty
     mempty
     utxo
@@ -1508,59 +1562,201 @@ receivingBalanceContent change input collateral =
       )
     & Exp.setTxTotalCollateral (Exp.TxTotalCollateral $ L.Coin 3_000_000)
 
--- Bulk extraction and construction share the complete hash domain: native
--- scripts occupy a slot, duplicates group, and ordinary outputs/inactive
--- blueprint metadata do not introduce additional Receiving invocations.
+-- Original output positions survive ordinary, protected-key and native gaps.
+-- Identical V4 outputs have independent redeemers/budgets; one native script
+-- declaration supplies both native outputs without a Plutus redeemer.
 prop_receiving_native_index_gap :: Property
 prop_receiving_native_index_gap = H.withTests 1 $ H.property $ do
   script <- H.evalEither $ Exp.deserialisePlutusScriptInEra L.SPlutusV4 receivingEvenFixture
-  inactiveScript <- H.evalEither $ Exp.deserialisePlutusScriptInEra L.SPlutusV4 receivingChangeFixture
+  Api.PaymentKeyHash keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
   let native = DS.upgradeTimelock $ Api.toAllegraTimelock $ Api.RequireMOf 0 []
       nativeScript = L.fromNativeScript native :: L.Script L.DijkstraEra
       nativeHash = L.hashScript nativeScript
       hash = L.hashScript $ Exp.plutusScriptInEraToScript script
-      inactiveHash = L.hashScript $ Exp.plutusScriptInEraToScript inactiveScript
       nativeWitness = Exp.AnyScriptWitnessSimple $ Exp.SScript $ Exp.SimpleScript native
       ordinary =
-        receivingFixtureOutput inactiveHash 2
-          & L.addrTxOutL .~ L.Addr L.Testnet (L.ScriptHashObj inactiveHash) L.StakeRefNull
+        receivingFixtureOutput hash 2
+          & L.addrTxOutL .~ L.Addr L.Testnet (L.ScriptHashObj hash) L.StakeRefNull
+      protectedKey =
+        ordinary & L.addrTxOutL .~ L.AddrProtected L.Testnet (L.KeyHashObj keyHash) L.StakeRefNull
+      witnesses =
+        Map.fromList
+          [ (1, receivingWitnessWith 10 (Api.ExecutionUnits 100 200) script)
+          , (2, nativeWitness)
+          , (3, receivingWitnessWith 20 (Api.ExecutionUnits 300 400) script)
+          ]
       content =
         Exp.defaultTxBodyContent
           & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
           & Exp.setTxOuts
             ( map
                 Exp.TxOut
-                [ receivingFixtureOutput hash 2
+                [ ordinary
+                , receivingFixtureOutput hash 2
                 , receivingFixtureOutput nativeHash 2
-                , receivingFixtureOutput hash 4
+                , receivingFixtureOutput hash 2
+                , protectedKey
                 , receivingFixtureOutput nativeHash 4
                 , ordinary
                 ]
             )
-          & Exp.setTxReceivingWitnesses
-            ( Map.fromList
-                [ (nativeHash, nativeWitness)
-                , (hash, receivingWitness script)
-                , (inactiveHash, receivingWitness inactiveScript)
-                ]
-            )
-  H.assert $ nativeHash < hash
+          & Exp.setTxReceivingWitnesses witnesses
   indexed <- H.evalEither $ Exp.extractAllIndexedPlutusScriptWitnesses Exp.DijkstraEra content
-  let actual :: [(L.ScriptHash, L.PlutusPurpose L.AsIx L.DijkstraEra)]
+  let actual :: [(Word32, L.ScriptHash, L.PlutusPurpose L.AsIx L.DijkstraEra)]
       actual =
-        [ (destination, pointer)
+        [ (outputIndex, destination, pointer)
         | Exp.AnyIndexedPlutusScriptWitness
-            (Exp.IndexedPlutusScriptWitness (Exp.WitReceiving destination) pointer _) <-
+            (Exp.IndexedPlutusScriptWitness (Exp.WitReceiving outputIndex destination) pointer _) <-
             indexed
         ]
-      expectedPointer :: L.PlutusPurpose L.AsIx L.DijkstraEra
-      expectedPointer = L.DijkstraReceiving (L.AsIx 1)
-  actual H.=== [(hash, expectedPointer)]
+  actual H.=== [(1, hash, L.DijkstraReceiving (L.AsIx 1)), (3, hash, L.DijkstraReceiving (L.AsIx 3))]
   Exp.UnsignedTx tx <- H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra content
-  Map.keys (tx ^. L.witsTxL . L.rdmrsTxWitsL . Alonzo.unRedeemersL) H.=== [expectedPointer]
+  let redeemers = tx ^. L.witsTxL . L.rdmrsTxWitsL . Alonzo.unRedeemersL
+  Map.keys redeemers H.=== [L.DijkstraReceiving (L.AsIx 1), L.DijkstraReceiving (L.AsIx 3)]
+  forM_
+    ( [(1, 10, Api.ExecutionUnits 100 200), (3, 20, Api.ExecutionUnits 300 400)]
+        :: [(Word32, Integer, Api.ExecutionUnits)]
+    )
+    $ \(outputIndex, redeemer, budget) -> do
+      (actualRedeemer, actualBudget) <-
+        H.evalMaybe $ Map.lookup (L.DijkstraReceiving $ L.AsIx outputIndex) redeemers
+      actualRedeemer H.=== Api.toAlonzoData (Api.unsafeHashableScriptData $ Api.ScriptDataNumber redeemer)
+      actualBudget H.=== Api.toAlonzoExUnits budget
+  H.assert $
+    isLeft $
+      Exp.makeUnsignedTx Exp.DijkstraEra $
+        content & Exp.setTxReceivingWitnesses (Map.delete 3 witnesses)
+  forM_ ([0, 4, 99] :: [Word32]) $ \invalidIndex ->
+    H.assert $
+      isLeft $
+        Exp.makeUnsignedTx Exp.DijkstraEra $
+          content & Exp.setTxReceivingWitnesses (Map.insert invalidIndex (receivingWitness script) witnesses)
 
--- The prospective change hash sorts before the explicit protected recipient.
--- Distinct final budgets must remain paired with their hashes after insertion.
+-- This actual compiled validator checks the redeemer against only the resolved
+-- protected output's inline datum. Swapping same-hash entries must fail both;
+-- changing one entry must leave the sibling's invocation successful.
+prop_receiving_output_context :: Property
+prop_receiving_output_context = H.withTests 3 $ H.property $ do
+  (change, input, collateral, utxo) <- receivingBalanceInputs
+  script <- H.evalEither $ Exp.deserialisePlutusScriptInEra L.SPlutusV4 receivingMatchesFixture
+  let hash = L.hashScript $ Exp.plutusScriptInEraToScript script
+      ordinary = receivingFixtureOutput hash 2 & L.addrTxOutL .~ Api.toShelleyAddr change
+      content redeemer1 redeemer3 datum3 =
+        receivingBalanceContent change input collateral
+          & Exp.setTxOuts
+            ( map
+                Exp.TxOut
+                [ordinary, receivingFixtureOutput hash 2, ordinary, receivingFixtureOutput hash datum3]
+            )
+          & Exp.setTxReceivingWitnesses
+            ( Map.fromList
+                [ (1, receivingWitnessWith redeemer1 (Api.ExecutionUnits 0 0) script)
+                , (3, receivingWitnessWith redeemer3 (Api.ExecutionUnits 0 0) script)
+                ]
+            )
+      evaluate tx =
+        Exp.evaluateDijkstraTransactionExecutionUnits
+          (Api.SystemStart $ Time.posixSecondsToUTCTime 0)
+          (Api.LedgerEpochInfo $ Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000))
+          (exampleProtocolParamsEra Exp.DijkstraEra)
+          utxo
+          tx
+  forM_
+    ( [(2, 4, 4, True, True), (4, 2, 4, False, False), (2, 99, 4, True, False), (2, 2, 2, True, True)]
+        :: [(Integer, Integer, Integer, Bool, Bool)]
+    )
+    $ \(redeemer1, redeemer3, datum3, succeeds1, succeeds3) -> do
+      Exp.UnsignedTx tx <-
+        H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra (content redeemer1 redeemer3 datum3)
+      let report = evaluate tx
+      Map.keys report
+        H.=== [(SNothing, Api.ScriptWitnessIndexReceiving 1), (SNothing, Api.ScriptWitnessIndexReceiving 3)]
+      result1 <- H.evalMaybe $ Map.lookup (SNothing, Api.ScriptWitnessIndexReceiving 1) report
+      result3 <- H.evalMaybe $ Map.lookup (SNothing, Api.ScriptWitnessIndexReceiving 3) report
+      isRight result1 H.=== succeeds1
+      isRight result3 H.=== succeeds3
+
+prop_receiving_nested_output_context :: Property
+prop_receiving_nested_output_context = H.withTests 3 $ H.property $ do
+  (change, input, collateral, initialUTxO) <- receivingBalanceInputs
+  childInput <-
+    H.forAll $ Gen.filter (\candidate -> candidate /= input && candidate /= collateral) genTxIn
+  script <- H.evalEither $ Exp.deserialisePlutusScriptInEra L.SPlutusV4 receivingMatchesFixture
+  let hash = L.hashScript $ Exp.plutusScriptInEraToScript script
+      ordinary = receivingFixtureOutput hash 2 & L.addrTxOutL .~ Api.toShelleyAddr change
+      L.UTxO initial = initialUTxO
+      funding = L.mkBasicTxOut (Api.toShelleyAddr change) (Mary.MaryValue (L.Coin 5_000_000) mempty)
+      utxo = L.UTxO $ Map.insert (Api.toShelleyTxIn childInput) funding initial
+      parent =
+        receivingBalanceContent change input collateral
+          & Exp.setTxOuts (map Exp.TxOut [ordinary, receivingFixtureOutput hash 2])
+          & Exp.setTxReceivingWitnesses
+            (Map.singleton 1 $ receivingWitnessWith 2 (Api.ExecutionUnits 0 0) script)
+  forM_ ([4, 2] :: [Integer]) $ \childRedeemer -> do
+    Exp.UnsignedSubTx child <-
+      H.evalEither $
+        Exp.makeUnsignedSubTx $
+          Exp.defaultSubTxBodyContent
+            & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
+            & Exp.setTxIns [(childInput, Exp.AnyKeyWitnessPlaceholder)]
+            & Exp.setTxOuts (map Exp.TxOut [ordinary, receivingFixtureOutput hash 4])
+            & Exp.setTxReceivingWitnesses
+              (Map.singleton 1 $ receivingWitnessWith childRedeemer (Api.ExecutionUnits 0 0) script)
+    Exp.UnsignedTx tx <-
+      H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra (parent & Exp.setTxSubTransactions [child])
+    let childId = Api.fromShelleyTxId $ L.txIdTx child
+        report =
+          Exp.evaluateDijkstraTransactionExecutionUnits
+            (Api.SystemStart $ Time.posixSecondsToUTCTime 0)
+            (Api.LedgerEpochInfo $ Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000))
+            (exampleProtocolParamsEra Exp.DijkstraEra)
+            utxo
+            tx
+    parentResult <- H.evalMaybe $ Map.lookup (SNothing, Api.ScriptWitnessIndexReceiving 1) report
+    childResult <- H.evalMaybe $ Map.lookup (SJust childId, Api.ScriptWitnessIndexReceiving 1) report
+    H.assert $ isRight parentResult
+    isRight childResult H.=== (childRedeemer == 4)
+    Map.size report H.=== 2
+
+prop_receiving_per_output_budget_limit :: Property
+prop_receiving_per_output_budget_limit = H.withTests 3 $ H.property $ do
+  (change, input, collateral, utxo) <- receivingBalanceInputs
+  script <- H.evalEither $ Exp.deserialisePlutusScriptInEra L.SPlutusV4 receivingEvenFixture
+  let hash = L.hashScript $ Exp.plutusScriptInEraToScript script
+      pp = exampleProtocolParamsEra Exp.DijkstraEra
+      content =
+        receivingBalanceContent change input collateral
+          & Exp.setTxOuts (map Exp.TxOut [receivingFixtureOutput hash 2, receivingFixtureOutput hash 2])
+          & Exp.setTxReceivingWitnesses
+            (Map.fromList [(0, receivingWitness script), (1, receivingWitness script)])
+  (Exp.UnsignedTx tx, _) <- H.evalEither $ receivingAutoBalance change utxo content
+  let budgets = map snd $ Map.elems $ tx ^. L.witsTxL . L.rdmrsTxWitsL . Alonzo.unRedeemersL
+      apiBudgets = map Api.fromAlonzoExUnits budgets
+  length apiBudgets H.=== 2
+  let memories = map Api.executionMemory apiBudgets
+      totalMemory = sum memories
+      largestMemory = foldl' max 0 memories
+      totalSteps = sum $ map Api.executionSteps apiBudgets
+  H.assert $ largestMemory < totalMemory
+  let cap = (largestMemory + totalMemory) `div` 2
+      limited =
+        pp
+          & L.ppMaxTxExUnitsL
+            .~ Api.toAlonzoExUnits
+              Api.ExecutionUnits
+                { Api.executionSteps = 2 * totalSteps
+                , Api.executionMemory = cap
+                }
+  case receivingAutoBalanceWithPParams limited change utxo (content & Exp.setTxProtocolParams limited) of
+    Left (Exp.TxBodyErrorDijkstraBalance reason) ->
+      reason H.=== "Estimated Dijkstra batch exceeds the transaction execution-unit limit"
+    other ->
+      H.annotate (either show (const "Unexpected acceptance of aggregate budget overflow") other)
+        >> H.failure
+
+-- Appended protected change gets its own raw position. Both per-output budgets
+-- must match actual evaluation of the returned final body without reindexing.
+
 prop_receiving_change_final_domain :: Property
 prop_receiving_change_final_domain = H.withTests 5 $ H.property $ do
   (ordinaryChange, input, collateral, utxo) <- receivingBalanceInputs
@@ -1571,14 +1767,13 @@ prop_receiving_change_final_domain = H.withTests 5 $ H.property $ do
       change =
         Api.fromShelleyAddr Api.ShelleyBasedEraDijkstra $
           L.AddrProtected L.Testnet (L.ScriptHashObj changeHash) L.StakeRefNull
-      witnesses = Map.fromList [(hash, receivingWitness script), (changeHash, receivingWitness changeScript)]
+      witnesses = Map.fromList [(0, receivingWitness script), (1, receivingWitness changeScript)]
       blueprint =
         receivingBalanceContent ordinaryChange input collateral
           & Exp.setTxOuts [Exp.TxOut $ receivingFixtureOutput hash 2]
           & Exp.setTxReceivingWitnesses witnesses
-  H.assert $ changeHash < hash
   (Exp.UnsignedTx tx, finalContent) <- H.evalEither $ receivingAutoBalance change utxo blueprint
-  -- Changing from a blueprint to the final domain must preserve both entries.
+  -- Appending change must preserve both original output-index entries.
   Map.keysSet (Exp.txReceivingWitnesses finalContent) H.=== Map.keysSet witnesses
   let body = tx ^. L.bodyTxL
       expected =
@@ -1589,11 +1784,11 @@ prop_receiving_change_final_domain = H.withTests 5 $ H.property $ do
           utxo
           tx
       actual = tx ^. L.witsTxL . L.rdmrsTxWitsL . Alonzo.unRedeemersL
-  budgets <- forM ([changeHash, hash] :: [L.ScriptHash]) $ \destination -> do
+  budgets <- forM ([1, 0] :: [Word32]) $ \outputIndex -> do
     pointer@(L.DijkstraReceiving (L.AsIx index)) <-
       H.evalMaybe $
         strictMaybeToMaybe $
-          L.redeemerPointer body (L.DijkstraReceiving $ L.AsItem destination)
+          L.redeemerPointer body (L.DijkstraReceiving $ L.AsItem outputIndex)
     (_, used) <- H.evalMaybe $ Map.lookup pointer actual
     Right (_, estimated) <-
       H.evalMaybe $
@@ -1611,7 +1806,7 @@ prop_receiving_change_final_domain = H.withTests 5 $ H.property $ do
   -- A script invocation that exists only in protected change is also budgeted.
   let changeOnly =
         receivingBalanceContent ordinaryChange input collateral
-          & Exp.setTxReceivingWitnesses (Map.singleton changeHash $ receivingWitness changeScript)
+          & Exp.setTxReceivingWitnesses (Map.singleton 0 $ receivingWitness changeScript)
   (Exp.UnsignedTx changeTx, _) <- H.evalEither $ receivingAutoBalance change utxo changeOnly
   Map.size (changeTx ^. L.witsTxL . L.rdmrsTxWitsL . Alonzo.unRedeemersL) H.=== 1
 
@@ -1642,7 +1837,7 @@ prop_receiving_invalid_batch = H.withTests 5 $ H.property $ do
               & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
               & Exp.setTxIns [(childInput, Exp.AnyKeyWitnessPlaceholder)]
               & Exp.setTxOuts [Exp.TxOut $ receivingFixtureOutput hash datum]
-              & Exp.setTxReceivingWitnesses (Map.singleton hash $ receivingWitness script)
+              & Exp.setTxReceivingWitnesses (Map.singleton 0 $ receivingWitness script)
       pure child
     let candidateParent =
           if null datums
@@ -1669,7 +1864,7 @@ prop_receiving_protected_collateral = H.withTests 5 $ H.property $ do
           L.AddrProtected L.Testnet (L.ScriptHashObj hash) L.StakeRefNull
       explicitReturn =
         receivingBalanceContent change input collateral
-          & Exp.setTxReceivingWitnesses (Map.singleton hash $ receivingWitness script)
+          & Exp.setTxReceivingWitnesses (Map.singleton 0 $ receivingWitness script)
       autoReturn = explicitReturn{Exp.txReturnCollateral = Nothing, Exp.txTotalCollateral = Nothing}
       protectedReturn =
         explicitReturn
@@ -1678,6 +1873,7 @@ prop_receiving_protected_collateral = H.withTests 5 $ H.property $ do
                 Exp.TxReturnCollateral $
                   L.mkBasicTxOut (Api.toShelleyAddr protectedChange) (Mary.MaryValue (L.Coin 2_000_000) mempty)
           }
+          & Exp.setTxOuts [Exp.TxOut $ receivingFixtureOutput hash 2]
   H.assert $ isRight $ receivingAutoBalance protectedChange utxo explicitReturn
   -- Explicit total collateral does not imply an automatically generated return.
   let totalOnly = explicitReturn{Exp.txReturnCollateral = Nothing}
@@ -1728,7 +1924,7 @@ prop_receiving_signed_children = H.withTests 5 $ H.property $ do
       Exp.makeUnsignedSubTx $
         childContent
           & Exp.setTxOuts [Exp.TxOut $ receivingFixtureOutput hash 2]
-          & Exp.setTxReceivingWitnesses (Map.singleton hash $ receivingWitness script)
+          & Exp.setTxReceivingWitnesses (Map.singleton 0 $ receivingWitness script)
   let signedReceiving = Exp.signSubTx [] [Exp.makeSubTxKeyWitness receiving sk] receiving
   case receivingAutoBalance change utxo (Exp.setTxSignedSubTransactions [signedReceiving] parent) of
     Left (Exp.TxBodyErrorDijkstraBalance reason) ->
@@ -1762,12 +1958,12 @@ prop_receiving_native_fees = H.withTests 5 $ H.property $ do
       inline =
         base
           & Exp.setTxReceivingWitnesses
-            (Map.singleton hash $ Exp.AnyScriptWitnessSimple $ Exp.SScript $ Exp.SimpleScript native)
+            (Map.singleton 0 $ Exp.AnyScriptWitnessSimple $ Exp.SScript $ Exp.SimpleScript native)
       byReference =
         base
           & Exp.setTxInsReference (Exp.TxInsReference [reference] Set.empty)
           & Exp.setTxReceivingWitnesses
-            (Map.singleton hash $ Exp.AnyScriptWitnessSimple $ Exp.SReferenceScript reference)
+            (Map.singleton 0 $ Exp.AnyScriptWitnessSimple $ Exp.SReferenceScript reference)
   forM_ ([inline, byReference] :: [Exp.TxBodyContent L.DijkstraEra]) $ \content -> do
     (Exp.UnsignedTx tx, _) <- H.evalEither $ receivingAutoBalance change utxo content
     let nativeHashes = Set.fromList [L.asWitness $ Api.unPaymentKeyHash key | key <- keys]

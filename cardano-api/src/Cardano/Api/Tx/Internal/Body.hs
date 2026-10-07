@@ -2106,7 +2106,7 @@ data ScriptWitnessIndex
     ScriptWitnessIndexProposing !Word32
   | -- | The guard rank in the final Dijkstra body.
     ScriptWitnessIndexGuarding !Word32
-  | -- | The receiving script hash rank in the final body, including native hashes.
+  | -- | The original zero-based output position within this transaction body.
     ScriptWitnessIndexReceiving !Word32
   deriving (Eq, Ord, Show)
 
