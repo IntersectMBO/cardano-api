@@ -1,7 +1,0 @@
-project: cardano-rpc
-pr: 1371
-kind:
-  - documentation
-description: |
-  The README now shows how to submit a transaction with grpcurl: how to turn a transaction signed with cardano-cli into the request, and how to read the transaction id from the reply.
-  The quickstart shell now also provides jq and xxd, which that example uses.
