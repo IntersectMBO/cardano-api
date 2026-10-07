@@ -7,3 +7,4 @@ kind:
   - test
 description: |
   Preserve CIP-160 protected addresses and add output-indexed native/V4 Receiving witnesses with one redeemer and budget per protected Plutus output, complete Dijkstra batch evaluation, per-body signature fee estimates and bounded final-context balancing.
+  Keep Receiving output positions stable in offline fee-estimation candidates, including appended protected change and native reference witnesses.

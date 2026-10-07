@@ -66,7 +66,8 @@ import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.Either (isLeft, isRight)
-import Data.Foldable (foldl', toList)
+import Data.Foldable (toList)
+import Data.Foldable qualified as Foldable
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe, isNothing)
@@ -1735,7 +1736,7 @@ prop_receiving_per_output_budget_limit = H.withTests 3 $ H.property $ do
   length apiBudgets H.=== 2
   let memories = map Api.executionMemory apiBudgets
       totalMemory = sum memories
-      largestMemory = foldl' max 0 memories
+      largestMemory = Foldable.foldl' max 0 memories
       totalSteps = sum $ map Api.executionSteps apiBudgets
   H.assert $ largestMemory < totalMemory
   let cap = (largestMemory + totalMemory) `div` 2

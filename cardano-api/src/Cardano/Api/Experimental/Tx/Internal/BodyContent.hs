@@ -414,8 +414,8 @@ validateReceivingWitnesses DijkstraEra bc = do
     (hash, _) <-
       maybe
         (invalid $ "Receiving witness names an absent or ineligible output index: " <> show outputIndex)
-        Right $
-        Map.lookup outputIndex targets
+        Right
+        (Map.lookup outputIndex targets)
     case witness of
       AnyScriptWitnessSimple _ -> pure ()
       AnyScriptWitnessPlutus (AnyPlutusReceivingScriptWitness _) -> pure ()

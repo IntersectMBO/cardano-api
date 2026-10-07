@@ -248,9 +248,9 @@ estimateBalancedTxBody
   -- ^ A map of all deposits for stake credentials that are being
   --   unregistered in this transaction.
   -> Map (Ledger.PlutusPurpose Ledger.AsIx (LedgerEra era)) ExecutionUnits
-  -- ^ Plutus script execution units. Receiving indexes use the output domain
-  -- including the prospective change address; witness metadata remains keyed
-  -- by hash when zero change is omitted from the final body.
+  -- ^ Plutus script execution units. Receiving indexes retain original output
+  -- positions, including appended prospective change. Metadata for omitted
+  -- zero change is removed from the final body.
   -> Coin
   -- ^ Total potential collateral amount. The content of the collateral
   --   inputs is not visible to this function, so they are assumed to
@@ -344,6 +344,8 @@ estimateBalancedTxBody'
     -- error: the ledger would ignore them, but they would cost fees and
     -- require the collateral UTxOs to stay unspent.
     let prospectiveChange = TxOut $ L.mkBasicTxOut (toShelleyAddr changeaddr) (L.inject $ L.Coin 0)
+    first TxFeeEstimationMakeUnsignedTxError $
+      validateReceivingWitnesses (useEra @era) (txbodycontent & modTxOuts (<> [prospectiveChange]))
     first (TxFeeEstimationBalanceError . TxBodyErrorCollateral) $
       checkCollateralOnlyWithPlutusScripts (txbodycontent & modTxOuts (<> [prospectiveChange]))
     when
@@ -424,9 +426,7 @@ estimateBalancedTxBody'
           useEra
           txbodycontent1
             { txFee = maxLovelaceFee
-            , txOuts =
-                TxOut changeTxOut
-                  : txOuts txbodycontent
+            , txOuts = txOuts txbodycontent <> [TxOut changeTxOut]
             , txReturnCollateral = mDummyReturnCollateral
             , txTotalCollateral = mDummyTotalCollateral
             }
@@ -456,8 +456,8 @@ estimateBalancedTxBody'
     --  3. Return and total collateral
     txbody2 <-
       first TxFeeEstimationMakeUnsignedTxError $
-        makeUnsignedTx
-          useEra
+        makeUnsignedTxForBalance
+          (useEra @era)
           txbodycontent1
             { txFee = fee
             , txReturnCollateral = maybeReturnTxCollateral
@@ -501,12 +501,13 @@ estimateBalancedTxBody'
     -- Yes this could be an over-estimate by a few bytes if the fee or change
     -- would fit within 2^16-1. That's a possible optimisation.
     let finalTxBodyContent =
-          txbodycontent1
-            { txFee = fee
-            , txOuts = finalTxOuts
-            , txReturnCollateral = maybeReturnTxCollateral
-            , txTotalCollateral = maybeTotalTxCollateral
-            }
+          restrictReceivingWitnessesToOutputs (useEra @era) $
+            txbodycontent1
+              { txFee = fee
+              , txOuts = finalTxOuts
+              , txReturnCollateral = maybeReturnTxCollateral
+              , txTotalCollateral = maybeTotalTxCollateral
+              }
 
     return finalTxBodyContent
 
@@ -1859,7 +1860,8 @@ makeTransactionBodyAutoBalanceWithUnits
     -- require the collateral UTxOs to stay unspent. A transaction that
     -- should become invalid when some UTxO is spent can use a reference
     -- input for that purpose.
-    let prospectiveChange =
+    let prospectiveChange :: TxOut (LedgerEra era)
+        prospectiveChange =
           obtainCommonConstraints (useEra @era) $
             TxOut $
               L.mkBasicTxOut (toShelleyAddr changeaddr) (L.inject $ L.Coin 0)
@@ -1911,7 +1913,7 @@ makeTransactionBodyAutoBalanceWithUnits
     -- scripts execution costs.
     -- TODO: The txbody is made (leder tx) so this
     -- is where the execution units map is made
-    UnsignedTx txbody <-
+    (UnsignedTx txbody :: UnsignedTx (LedgerEra era)) <-
       first TxBodyErrorMakeUnsignedTx $
         makeUnsignedTxForBalance
           (useEra @era)
@@ -1931,22 +1933,32 @@ makeTransactionBodyAutoBalanceWithUnits
 
     let exUnitsMap = Map.map (fmap snd) exUnitsMapWithLogs
 
-    exUnitsMap' <- case unitsOverride of
-      Just units -> pure units
-      Nothing -> case useEra @era of
-        ConwayEra -> case Map.mapEither id exUnitsMap of
-          (failures, units) -> handleExUnitsErrors (txScriptValidity txbodycontent) failures units
-        DijkstraEra -> do
-          units <-
-            handleDijkstraExUnitsErrors (txScriptValidity txbodycontent) $
-              evaluateDijkstraTransactionExecutionUnits systemstart history pp utxo txbody
-          pure $ Map.mapKeys snd $ Map.filterWithKey (\(bodyId, _) _ -> bodyId == L.SNothing) units
+    let estimatedUnits
+          :: Either
+               (TxBodyErrorAutoBalance (LedgerEra era))
+               (Map ScriptWitnessIndex ExecutionUnits)
+        estimatedUnits = case unitsOverride of
+          Just units -> pure units
+          Nothing -> case useEra @era of
+            ConwayEra -> case Map.mapEither id exUnitsMap of
+              (failures, units) -> handleExUnitsErrors (txScriptValidity txbodycontent) failures units
+            DijkstraEra -> do
+              units <-
+                handleDijkstraExUnitsErrors (txScriptValidity txbodycontent) $
+                  evaluateDijkstraTransactionExecutionUnits systemstart history pp utxo txbody
+              pure $ Map.mapKeys snd $ Map.filterWithKey (\(bodyId, _) _ -> bodyId == L.SNothing) units
+    exUnitsMap' <- estimatedUnits
 
-    txbodycontent1 <- case useEra @era of
-      ConwayEra -> substituteExecutionUnits exUnitsMap' txbodycontent
-      DijkstraEra -> case unitsOverride of
-        Nothing -> substituteExecutionUnitsAgainstBody (txbody ^. L.bodyTxL) exUnitsMap' txbodycontent
-        Just _ -> substituteNonReceivingExecutionUnits exUnitsMap' txbodycontent
+    let withExecutionUnits
+          :: Either
+               (TxBodyErrorAutoBalance (LedgerEra era))
+               (TxBodyContent (LedgerEra era))
+        withExecutionUnits = case useEra @era of
+          ConwayEra -> substituteExecutionUnits exUnitsMap' txbodycontent
+          DijkstraEra -> case unitsOverride of
+            Nothing -> substituteExecutionUnitsAgainstBody (txbody ^. L.bodyTxL) exUnitsMap' txbodycontent
+            Just _ -> substituteNonReceivingExecutionUnits exUnitsMap' txbodycontent
+    txbodycontent1 <- withExecutionUnits
 
     -- Make a txbody that we will use for calculating the fees. For the purpose
     -- of fees we just need to make a txbody of the right size in bytes. We
@@ -1974,11 +1986,13 @@ makeTransactionBodyAutoBalanceWithUnits
     -- NB: This has the potential to over estimate the fees because estimateTransactionKeyWitnessCount
     -- makes the conservative assumption that all inputs are from distinct
     -- addresses.
-    let feeContent = txbodycontent1{txOuts = txOuts txbodycontent1 <> [initialChangeTxOut]}
+    let feeContent :: TxBodyContent (LedgerEra era)
+        feeContent = txbodycontent1{txOuts = txOuts txbodycontent1 <> [initialChangeTxOut]}
         -- The public content-only estimate cannot resolve native references.
         -- Live balancing has the complete batch script context and counts any
         -- additional top-body Receiving signer keys. Children are measured
         -- separately because a key used by two bodies needs two signatures.
+        receivingReferenceKeys :: Word
         receivingReferenceKeys = case useEra @era of
           ConwayEra -> 0
           DijkstraEra ->
@@ -1992,6 +2006,7 @@ makeTransactionBodyAutoBalanceWithUnits
             mnkeys
         -- Dummy child witnesses affect only fee measurement. They never enter
         -- evaluation contexts, returned children or signed transaction bodies.
+        feeSizedTx :: UnsignedTx (LedgerEra era)
         feeSizedTx = case useEra @era of
           ConwayEra -> txbody1
           DijkstraEra -> let UnsignedTx tx = txbody1 in UnsignedTx $ addDijkstraChildFeeWitnesses pp utxo tx
