@@ -2,7 +2,7 @@
 # The Haskell example needs the repository's own dev shell instead (`.#rpc-quickstart-haskell`).
 {pkgs ? import <nixpkgs> {}}:
 pkgs.mkShell {
-  packages = with pkgs; [buf grpcurl cargo rustc gcc nodejs go python3];
+  packages = with pkgs; [buf grpcurl jq unixtools.xxd cargo rustc gcc nodejs go python3];
   # grpcio's manylinux wheel (installed by the Python example's pip install)
   # links against the host libstdc++, which a plain nixpkgs shell does not
   # otherwise put on the loader path.
