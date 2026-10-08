@@ -102,6 +102,8 @@ module Cardano.Api.Plutus.Internal.Script
   , fromShelleyMultiSig
   , toAllegraTimelock
   , fromAllegraTimelock
+  , toDijkstraNativeScript
+  , fromDijkstraNativeScript
   , toAlonzoExUnits
   , fromAlonzoExUnits
   , toShelleyScriptHash
@@ -147,6 +149,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary qualified as Binary (decCBOR, decodeFullAnnotator)
 import Cardano.Ledger.Conway.Scripts qualified as Conway
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Credential qualified as Ledger
 import Cardano.Ledger.Dijkstra.Scripts qualified as Dijkstra
 import Cardano.Ledger.Keys qualified as Shelley
 import Cardano.Ledger.Plutus.Language qualified as Plutus
@@ -1095,6 +1098,7 @@ data SimpleScript
   | RequireAllOf ![SimpleScript]
   | RequireAnyOf ![SimpleScript]
   | RequireMOf !Int ![SimpleScript]
+  | RequireGuard !(Ledger.Credential Ledger.Guard)
   deriving (Eq, Show)
 
 -- ----------------------------------------------------------------------------
@@ -1259,7 +1263,7 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript script)) =
     SimpleScriptInAlonzo -> Alonzo.NativeScript (toAllegraTimelock script)
     SimpleScriptInBabbage -> Alonzo.NativeScript (toAllegraTimelock script)
     SimpleScriptInConway -> Alonzo.NativeScript (toAllegraTimelock script)
-    SimpleScriptInDijkstra -> Alonzo.NativeScript (Dijkstra.upgradeTimelock (toAllegraTimelock script))
+    SimpleScriptInDijkstra -> Alonzo.NativeScript (toDijkstraNativeScript script)
 toShelleyScript
   ( ScriptInEra
       langInEra
@@ -1409,7 +1413,7 @@ fromShelleyBasedScript sbe script =
         Alonzo.NativeScript s ->
           ScriptInEra SimpleScriptInDijkstra
             . SimpleScript
-            $ fromAllegraTimelock s
+            $ fromDijkstraNativeScript s
 
 data MultiSigError = MultiSigErrorTimelockNotsupported deriving Show
 
@@ -1458,6 +1462,8 @@ toAllegraTimelock = go
   go (RequireMOf m s) = Shelley.RequireMOf m (fromList (map go s))
   go (RequireTimeBefore t) = Allegra.RequireTimeExpire t
   go (RequireTimeAfter t) = Allegra.RequireTimeStart t
+  go (RequireGuard _) =
+    error "toAllegraTimelock: RequireGuard is only supported from the Dijkstra era onwards"
 
 -- | Conversion for the 'Timelock.Timelock' language that is shared between the
 -- Allegra and Mary eras.
@@ -1473,6 +1479,36 @@ fromAllegraTimelock = go
   go (Shelley.RequireAnyOf s) = RequireAnyOf (map go (toList s))
   go (Shelley.RequireMOf i s) = RequireMOf i (map go (toList s))
   go _ = error "TODO Dijkstra: fromAllegraTimelock: era not supported"
+
+-- | Conversion to the Dijkstra era native script language, which extends the
+-- Allegra 'Timelock.Timelock' language with guards.
+toDijkstraNativeScript
+  :: SimpleScript -> Ledger.NativeScript (ShelleyLedgerEra DijkstraEra)
+toDijkstraNativeScript = go
+ where
+  go :: SimpleScript -> Ledger.NativeScript (ShelleyLedgerEra DijkstraEra)
+  go (RequireSignature (PaymentKeyHash kh)) =
+    Shelley.RequireSignature (Shelley.asWitness kh)
+  go (RequireAllOf s) = Shelley.RequireAllOf (fromList (map go s))
+  go (RequireAnyOf s) = Shelley.RequireAnyOf (fromList (map go s))
+  go (RequireMOf m s) = Shelley.RequireMOf m (fromList (map go s))
+  go (RequireTimeBefore t) = Allegra.RequireTimeExpire t
+  go (RequireTimeAfter t) = Allegra.RequireTimeStart t
+  go (RequireGuard cred) = Dijkstra.RequireGuard cred
+
+-- | Conversion from the Dijkstra era native script language.
+fromDijkstraNativeScript
+  :: Ledger.NativeScript (ShelleyLedgerEra DijkstraEra) -> SimpleScript
+fromDijkstraNativeScript = go
+ where
+  go (Shelley.RequireSignature kh) = RequireSignature (PaymentKeyHash (Shelley.coerceKeyRole kh))
+  go (Allegra.RequireTimeExpire t) = RequireTimeBefore t
+  go (Allegra.RequireTimeStart t) = RequireTimeAfter t
+  go (Shelley.RequireAllOf s) = RequireAllOf (map go (toList s))
+  go (Shelley.RequireAnyOf s) = RequireAnyOf (map go (toList s))
+  go (Shelley.RequireMOf i s) = RequireMOf i (map go (toList s))
+  go (Dijkstra.RequireGuard cred) = RequireGuard cred
+  go _ = error "fromDijkstraNativeScript: unexpected native script constructor"
 
 type family ToLedgerPlutusLanguage lang where
   ToLedgerPlutusLanguage PlutusScriptV1 = Plutus.PlutusV1
@@ -1556,6 +1592,11 @@ instance ToJSON SimpleScript where
       , "required" .= reqNum
       , "scripts" .= map toJSON reqScripts
       ]
+  toJSON (RequireGuard cred) =
+    object
+      [ "type" .= String "guard"
+      , "credential" .= cred
+      ]
 
 instance FromJSON SimpleScript where
   parseJSON = parseSimpleScript
@@ -1568,6 +1609,7 @@ parseSimpleScript v =
     <|> parseScriptAny v
     <|> parseScriptAll v
     <|> parseScriptAtLeast v
+    <|> parseScriptGuard v
 
 parseScriptAny :: Value -> Aeson.Parser SimpleScript
 parseScriptAny =
@@ -1648,6 +1690,14 @@ parseScriptAfter =
     case v :: Text of
       "after" -> RequireTimeAfter <$> obj .: "slot"
       _ -> fail "\"after\" script value not found"
+
+parseScriptGuard :: Value -> Aeson.Parser SimpleScript
+parseScriptGuard =
+  Aeson.withObject "guard" $ \obj -> do
+    v <- obj .: "type"
+    case v :: Text of
+      "guard" -> RequireGuard <$> obj .: "credential"
+      _ -> fail "\"guard\" script value not found"
 
 -- ----------------------------------------------------------------------------
 -- Reference scripts
