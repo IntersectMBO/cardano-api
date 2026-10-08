@@ -39,7 +39,11 @@ import Cardano.Api.Serialise.Json (JsonDecodeError (..), deserialiseFromJSON)
 import Cardano.Api.Serialise.TextEnvelope (TextEnvelope (..), TextEnvelopeType (..))
 import Cardano.Api.Serialise.TextEnvelope.Internal (textEnvelopeType)
 
-import Cardano.Ledger.Alonzo.Plutus.Context qualified as L (EraPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Plutus.Context qualified as L
+  ( EraPlutusContext (..)
+  , EraPlutusTxInfo
+  , SupportedPlutusRunnable (..)
+  )
 import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
@@ -76,7 +80,7 @@ instance Eq (AnyScript era) where
       Nothing -> False
   _ == _ = False
 
-instance L.AlonzoEraScript era => SerialiseAsCBOR (AnyScript era) where
+instance L.EraPlutusContext era => SerialiseAsCBOR (AnyScript era) where
   serialiseToCBOR (AnySimpleScript (SimpleScript ns)) =
     L.serialize' (L.eraProtVerHigh @era) (L.fromNativeScript ns :: L.Script era)
   serialiseToCBOR (AnyPlutusScript ps) =
@@ -101,10 +105,11 @@ instance L.AlonzoEraScript era => SerialiseAsCBOR (AnyScript era) where
     tryPlutusScript :: L.Script era -> Maybe (AnyScript era)
     tryPlutusScript script = do
       ps <- L.toPlutusScript script
-      L.withPlutusScript ps $ \plutus -> do
-        let plutusRunnable = Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus
-        AnyPlutusScript (PlutusScriptInEra plutusRunnable ps)
-          <$ rightToMaybe (Plutus.plutusRunnableResult plutusRunnable)
+      -- The ledger pairs the runnable with its 'L.EraPlutusTxInfo' evidence for us.
+      case L.mkSupportedPlutusRunnable (L.eraProtVerHigh @era) ps of
+        L.SupportedPlutusRunnable plutusRunnable ->
+          AnyPlutusScript (PlutusScriptInEra plutusRunnable)
+            <$ rightToMaybe (Plutus.plutusRunnableResult plutusRunnable)
 
     noParseError :: CBOR.DecoderError
     noParseError =

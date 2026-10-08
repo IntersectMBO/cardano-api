@@ -197,7 +197,7 @@ toNewPlutusScriptWitness eon w langInEra l (Old.PScript (Old.PlutusScriptSeriali
               eon
               w
               slang
-              (mkPlutusScriptInEra plutusScriptRunnable)
+              (PlutusScriptInEra plutusScriptRunnable)
               datum
               scriptRedeemer
               execUnits

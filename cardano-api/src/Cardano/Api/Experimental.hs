@@ -92,7 +92,6 @@ module Cardano.Api.Experimental
     -- ** Plutus related
   , AnyPlutusScriptLanguage (..)
   , PlutusScriptInEra (..)
-  , mkPlutusScriptInEra
   , PlutusLangInEra (..)
   , plutusLangInEra
   , plutusLangInShelleyBasedEra

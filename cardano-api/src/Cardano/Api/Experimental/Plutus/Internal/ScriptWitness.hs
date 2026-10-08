@@ -155,7 +155,7 @@ getSpendingPlutusWitnessData (PlutusScriptWitness L.SPlutusV4 _ d _ _) =
     NoScriptDatum -> mempty
 
 getPlutusScriptRunnable :: PlutusScriptWitness lang purpose era -> Maybe (L.PlutusRunnable lang)
-getPlutusScriptRunnable (PlutusScriptWitness _ (PScript (PlutusScriptInEra plutusScriptRunnable _)) _ _ _) =
+getPlutusScriptRunnable (PlutusScriptWitness _ (PScript (PlutusScriptInEra plutusScriptRunnable)) _ _ _) =
   Just plutusScriptRunnable
 getPlutusScriptRunnable (PlutusScriptWitness _ PReferenceScript{} _ _ _) = Nothing
 

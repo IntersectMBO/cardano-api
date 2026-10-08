@@ -17,7 +17,6 @@ module Cardano.Api.Experimental.Plutus.Internal.Script
   , deserialiseAnyPlutusScriptFromTextEnvelope
   , AnyPlutusScriptLanguage (..)
   , PlutusScriptInEra (..)
-  , mkPlutusScriptInEra
   , PlutusLangInEra (..)
   , plutusLangInEra
   , plutusLangInShelleyBasedEra
@@ -86,24 +85,18 @@ import Prettyprinter
 -- The serialized version of 'PlutusRunnable' encodes the script language.
 -- See `DecCBOR (PlutusRunnable l)` in cardano-ledger for more details.
 --
--- The second field is the same script as the ledger holds it. Build values with
--- 'mkPlutusScriptInEra', since only a supported language and era pairing has one.
+-- The constructor carries 'L.EraPlutusTxInfo' evidence, so a value can only exist
+-- for a language and era pairing the ledger supports. That evidence is what makes
+-- the conversion to the ledger's own script type total; see 'plutusScriptInEraToScript'.
 data PlutusScriptInEra (lang :: L.Language) era where
   PlutusScriptInEra
-    :: (L.PlutusLanguage lang, L.AlonzoEraScript era)
+    :: L.EraPlutusTxInfo lang era
     => PlutusRunnable lang
-    -> L.PlutusScript era
     -> PlutusScriptInEra lang era
 
 deriving instance Show (PlutusScriptInEra lang era)
 
 deriving instance Eq (PlutusScriptInEra lang era)
-
--- | Build a script the ledger accepts in the era.
-mkPlutusScriptInEra
-  :: L.EraPlutusTxInfo lang era => PlutusRunnable lang -> PlutusScriptInEra lang era
-mkPlutusScriptInEra runnable =
-  PlutusScriptInEra runnable $ L.mkSupportedPlutusScript (L.plutusFromRunnable runnable)
 
 instance
   (Typeable era, Typeable lang, HasTypeProxy (Plutus.SLanguage lang))
@@ -155,7 +148,7 @@ instance
   -- The 'PlutusBinary' stored in the 'PlutusRunnable' already contains
   -- CBOR-wrapped Flat-encoded UPLC bytes (see 'Cardano.Ledger.Plutus.Language'),
   -- so we extract them directly rather than re-encoding with 'L.serialize''.
-  serialiseToCBOR (PlutusScriptInEra s _) =
+  serialiseToCBOR (PlutusScriptInEra s) =
     SBS.fromShort . L.unPlutusBinary . L.plutusBinary $ L.plutusFromRunnable s
 
   deserialiseFromCBOR _ = deserialisePlutusScriptInEra
@@ -178,11 +171,11 @@ deserialisePlutusScriptInEra bs = do
     Left e ->
       Left $
         CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.show $ pretty e)
-    Right{} -> pure $ mkPlutusScriptInEra plutusRunnable
+    Right{} -> pure $ PlutusScriptInEra plutusRunnable
 
 hashPlutusScriptInEra
   :: forall era lang. IsEra era => PlutusScriptInEra lang (LedgerEra era) -> L.ScriptHash
-hashPlutusScriptInEra (PlutusScriptInEra pr _) =
+hashPlutusScriptInEra (PlutusScriptInEra pr) =
   case useEra @era of
     ConwayEra -> L.hashPlutusScript $ L.plutusFromRunnable pr
     DijkstraEra -> L.hashPlutusScript $ L.plutusFromRunnable pr
@@ -197,10 +190,12 @@ plutusScriptInEraLanguage
 plutusScriptInEraLanguage PlutusScriptInEra{} =
   L.plutusLanguage (Proxy @lang)
 
+-- | The 'L.EraPlutusTxInfo' evidence in the constructor is the proof the ledger
+-- needs, so 'L.mkSupportedPlutusScript' cannot fail here.
 plutusScriptInEraToScript
   :: forall lang era. PlutusScriptInEra lang era -> L.Script era
-plutusScriptInEraToScript (PlutusScriptInEra _ script) =
-  L.fromPlutusScript script
+plutusScriptInEraToScript (PlutusScriptInEra pr) =
+  L.fromPlutusScript $ L.mkSupportedPlutusScript (L.plutusFromRunnable pr)
 
 -- | You can provide the plutus script directly in the transaction
 -- or a reference input that points to the script in the UTxO.
