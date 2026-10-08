@@ -1524,7 +1524,7 @@ genPlutusScriptInEra = do
   v3AlwaysSucceedsPlutusScriptHex <-
     Gen.element [v3AlwaysSucceedsPlutusScript, v3AlwaysSucceedsPlutusScriptDoubleEncoded]
   let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
-  case Exp.deserialisePlutusScriptInEra L.SPlutusV3 v3ScriptBytes of
+  case Exp.deserialisePlutusScriptInEra v3ScriptBytes of
     Right p -> return p
     Left e -> error $ show e
 

@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
@@ -22,6 +23,7 @@ import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus qualified as Script
 import Cardano.Api.Serialise.Cbor (SerialiseAsCBOR (..))
 
+import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Conway qualified as L
 import Cardano.Ledger.Conway.Scripts qualified as L
 import Cardano.Ledger.Dijkstra.Scripts qualified as L
@@ -34,6 +36,7 @@ import Data.Function
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (..))
+import Data.Text qualified as Text
 import Data.Word (Word32)
 
 import Test.Gen.Cardano.Api.Experimental qualified as Exp
@@ -225,19 +228,15 @@ prop_extractAllIndexedPlutusScriptWitnesses =
 
     length allGeneratedPlutusScriptWitnesses === length extractedPlutusScriptWitnesses
 
--- | A Plutus script whose language the era does not support is representable
--- only through deserialisation, and that is where it must be rejected. V4 fails
--- in Conway. An inline witness of such a script cannot even be written, because
--- 'PlutusScriptInEra' demands 'PlutusLangInEra' at the type level.
+-- | V4 bytes must not decode in Conway when the language only arrives at runtime.
 prop_deserialise_rejects_unsupported_plutus_language :: Property
 prop_deserialise_rejects_unsupported_plutus_language = property $ do
   v3ScriptInEra <- forAll genPlutusScriptInEra
   let v4Bytes = serialiseToCBOR v3ScriptInEra
-  case deserialiseAnyPlutusScriptOfLanguage @ConwayEra v4Bytes L.SPlutusV4 of
-    Left _ -> success
-    Right _ -> do
-      annotate "PlutusV4 must not deserialise in Conway"
-      failure
+  case decodeAnyPlutusScript @L.ConwayEra v4Bytes (AnyPlutusScriptLanguage L.SPlutusV4) of
+    Left (CBOR.DecoderErrorCustom "PlutusScriptInEra" msg)
+      | "Conway" `Text.isInfixOf` msg -> success
+    other -> annotateShow other >> failure
 
 -- | A reference witness only records the language and redeemer in the body,
 -- so 'Exp.makeUnsignedTx' must accept it even where the era forbids an inline witness of that language.

@@ -5,9 +5,10 @@ module Cardano.Api.Experimental.Plutus
   , serialiseAnyPlutusScriptToTextEnvelope
   , deserialiseAnyPlutusScriptFromTextEnvelope
   , PlutusScriptInEra (..)
-  , PlutusLangInEra
-  , PlutusLangInEraEvidence (..)
-  , PlutusLangsInEra (..)
+  , mkPlutusScriptInEra
+  , PlutusLangInEra (..)
+  , plutusLangInEra
+  , plutusLangInShelleyBasedEra
   , AnyPlutusScriptLanguage (..)
   , deserialisePlutusScriptInEra
   , hashPlutusScriptInEra
