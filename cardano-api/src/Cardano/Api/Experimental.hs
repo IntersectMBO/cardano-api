@@ -99,6 +99,7 @@ module Cardano.Api.Experimental
   , PlutusScriptPurpose (..)
   , PlutusScriptDatum (..)
   , NoScriptDatum
+  , mkSpendingScriptDatum
 
     -- ** Certificate related
   , Certificate (..)
