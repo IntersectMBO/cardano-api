@@ -2602,6 +2602,8 @@ toAuxiliaryData sbe txMetadata txAuxScripts =
         ShelleyBasedEraConway ->
           guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
         ShelleyBasedEraDijkstra ->
+          -- TODO: cardano-ledger-dijkstra 0.4.0.0 reads auxiliary scripts up to eraMaxLanguage
+          -- (still PlutusV3), so PlutusV4 is dropped on read-back; fixed by ledger PR 6109.
           guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
 
 -- ----------------------------------------------------------------------------

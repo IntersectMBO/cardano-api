@@ -3,7 +3,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Experimental.AnyScriptWitness
@@ -235,8 +234,7 @@ getAnyPlutusScriptData AnyPlutusProposingScriptWitness{} = mempty
 getAnyPlutusScriptData AnyPlutusVotingScriptWitness{} = mempty
 
 getAnyPlutusWitnessPlutusScript
-  :: L.AlonzoEraScript era
-  => AnyPlutusScriptWitness lang purpose era
+  :: AnyPlutusScriptWitness lang purpose era
   -> Maybe (L.Script era)
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV1 s)) =
   resolvePlutusWitnessScript s
@@ -253,32 +251,10 @@ getAnyPlutusWitnessPlutusScript (AnyPlutusProposingScriptWitness s) = resolvePlu
 getAnyPlutusWitnessPlutusScript (AnyPlutusVotingScriptWitness s) = resolvePlutusWitnessScript s
 
 -- | A reference witness carries no script, so it resolves to 'Nothing'.
--- An inline witness always resolves: the 'PlutusScriptInEra' it holds is the
--- proof that the era supports the language.
+-- An inline witness holds the ledger script, built when its era was checked.
 resolvePlutusWitnessScript
-  :: L.AlonzoEraScript era
-  => PlutusScriptWitness lang purpose era
+  :: PlutusScriptWitness lang purpose era
   -> Maybe (L.Script era)
 resolvePlutusWitnessScript (PlutusScriptWitness _ (PScript s) _ _ _) =
-  Just . L.fromPlutusScript $ fromPlutusRunnable s
+  Just $ plutusScriptInEraToScript s
 resolvePlutusWitnessScript (PlutusScriptWitness _ PReferenceScript{} _ _ _) = Nothing
-
--- | Convert a runnable script to the era's ledger script type.
---
--- The argument type is the restriction: a 'PlutusScriptInEra' can only be
--- built for a language/era pairing in the 'PlutusLangInEra' table. Ledger's
--- 'L.mkPlutusScript' only returns 'Nothing' for a pairing outside that table,
--- so the 'Nothing' branch is unreachable and the result is total.
-fromPlutusRunnable
-  :: forall era lang
-   . L.AlonzoEraScript era
-  => PlutusScriptInEra lang era
-  -> L.PlutusScript era
-fromPlutusRunnable (PlutusScriptInEra runnable) =
-  case L.mkPlutusScript $ L.plutusFromRunnable runnable of
-    Just script -> script
-    Nothing ->
-      error $
-        "fromPlutusRunnable: unreachable, PlutusLangInEra excludes "
-          <> show (L.plutusLanguage (L.plutusSLanguage (Proxy @lang)))
-          <> " in this era"
