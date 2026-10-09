@@ -1,8 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Test.Cardano.Api.Transaction.Body.Plutus.Scripts
   ( tests
@@ -17,8 +20,10 @@ import Cardano.Api.Experimental.Plutus hiding (AnyPlutusScript (..))
 import Cardano.Api.Experimental.Plutus qualified as Plutus
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Plutus qualified as Script
 import Cardano.Api.Serialise.Cbor (SerialiseAsCBOR (..))
 
+import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Conway qualified as L
 import Cardano.Ledger.Conway.Scripts qualified as L
 import Cardano.Ledger.Dijkstra.Scripts qualified as L
@@ -31,17 +36,22 @@ import Data.Function
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (..))
+import Data.Text qualified as Text
 import Data.Word (Word32)
 
 import Test.Gen.Cardano.Api.Experimental qualified as Exp
 import Test.Gen.Cardano.Api.Typed
-  ( genIndexedPlutusScriptWitness
+  ( genAddressInEra
+  , genIndexedPlutusScriptWitness
   , genMintWitnessable
+  , genPlutusScript
   , genPlutusScriptInEra
   , genSimpleScriptMintWitness
+  , genTxIn
   , genWitnessable
   )
 
+import Test.Cardano.Api.Experimental (exampleProtocolParams)
 import Test.Cardano.Api.Orphans ()
 
 import Hedgehog
@@ -218,6 +228,72 @@ prop_extractAllIndexedPlutusScriptWitnesses =
 
     length allGeneratedPlutusScriptWitnesses === length extractedPlutusScriptWitnesses
 
+-- | V4 bytes must not decode in Conway when the language only arrives at runtime.
+prop_deserialise_rejects_unsupported_plutus_language :: Property
+prop_deserialise_rejects_unsupported_plutus_language = property $ do
+  v3ScriptInEra <- forAll genPlutusScriptInEra
+  let v4Bytes = serialiseToCBOR v3ScriptInEra
+  case decodeAnyPlutusScript @L.ConwayEra v4Bytes (AnyPlutusScriptLanguage L.SPlutusV4) of
+    Left (CBOR.DecoderErrorCustom "PlutusScriptInEra" msg)
+      | "Conway" `Text.isInfixOf` msg -> success
+    other -> annotateShow other >> failure
+
+-- | A reference witness only records the language and redeemer in the body,
+-- so 'Exp.makeUnsignedTx' must accept it even where the era forbids an inline witness of that language.
+prop_makeUnsignedTx_accepts_reference_plutus_v4_witness :: Property
+prop_makeUnsignedTx_accepts_reference_plutus_v4_witness = property $ do
+  srcTxIn <- forAll genTxIn
+  refTxIn <- forAll genTxIn
+  let dummyRedeemer = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor 0 []
+      plutusWit =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusSpendingScriptWitness $
+            PlutusSpendingScriptWitnessV4 $
+              PlutusScriptWitness
+                L.SPlutusV4
+                (PReferenceScript refTxIn)
+                NoScriptDatum
+                dummyRedeemer
+                (Script.ExecutionUnits 0 0)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxProtocolParams exampleProtocolParams
+          & Exp.setTxIns [(srcTxIn, plutusWit)]
+          & Exp.setTxFee 0
+  _ <- H.leftFail $ Exp.makeUnsignedTx ConwayEra txBodyContent
+  success
+
+-- | A PlutusV4 reference script in a Conway output must make 'createTransactionBody'
+-- fail instead of silently dropping the script from the ledger output.
+prop_createTransactionBody_rejects_unsupported_reference_script_language :: Property
+prop_createTransactionBody_rejects_unsupported_reference_script_language = property $ do
+  srcTxIn <- forAll genTxIn
+  destAddress <- forAll $ genAddressInEra Api.ShelleyBasedEraConway
+  v4PlutusScript <- forAll $ genPlutusScript Script.PlutusScriptV4
+  let v4Script = Script.PlutusScript Script.PlutusScriptV4 v4PlutusScript
+      scriptInAnyLang =
+        Script.ScriptInAnyLang (Script.PlutusScriptLanguage Script.PlutusScriptV4) v4Script
+      refScript = Script.ReferenceScript Api.BabbageEraOnwardsConway scriptInAnyLang
+      txBodyContent =
+        Api.defaultTxBodyContent Api.ShelleyBasedEraConway
+          & Api.setTxIns [(srcTxIn, Api.BuildTxWith (Api.KeyWitness Api.KeyWitnessForSpending))]
+          & Api.setTxOuts
+            [ Api.TxOut
+                destAddress
+                (Api.lovelaceToTxOutValue Api.ShelleyBasedEraConway 10_000_000)
+                Api.TxOutDatumNone
+                refScript
+            ]
+          & Api.setTxFee (Api.TxFeeExplicit Api.ShelleyBasedEraConway 2_000_000)
+
+  Api.createTransactionBody Api.ShelleyBasedEraConway txBodyContent
+    === Left
+      ( Api.TxBodyOutputError $
+          Api.TxOutputReferenceScriptLanguageNotSupportedInEra
+            scriptInAnyLang
+            (Api.AnyCardanoEra Api.ConwayEra)
+      )
+
 -- | 'toPlutusScriptPurposeIndex' classifies ledger redeemer pointers the same
 -- way as the older 'Api.toScriptIndex', for every purpose category the two
 -- share, at every era with plutus scripts. 'GuardingScript' (Dijkstra's new
@@ -307,6 +383,15 @@ tests =
     , testProperty
         "prop_extractAllIndexedPlutusScriptWitnesses"
         prop_extractAllIndexedPlutusScriptWitnesses
+    , testProperty
+        "prop_deserialise_rejects_unsupported_plutus_language"
+        prop_deserialise_rejects_unsupported_plutus_language
+    , testProperty
+        "prop_makeUnsignedTx_accepts_reference_plutus_v4_witness"
+        prop_makeUnsignedTx_accepts_reference_plutus_v4_witness
+    , testProperty
+        "prop_createTransactionBody_rejects_unsupported_reference_script_language"
+        prop_createTransactionBody_rejects_unsupported_reference_script_language
     , testProperty "prop_getAnyWitnessRedeemerPointerMap" prop_getAnyWitnessRedeemerPointerMap
     , testProperty "prop_toAnyWitness" prop_toAnyWitness
     , testProperty

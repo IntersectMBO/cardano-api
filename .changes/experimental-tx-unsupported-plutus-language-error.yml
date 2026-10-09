@@ -1,0 +1,12 @@
+project: cardano-api
+pr: 1363
+kind:
+  - breaking
+  - bugfix
+description: |
+  Plutus scripts in a language the era does not support are now rejected when decoded, with an error naming the language and the era.
+  Before, such a script was silently dropped from the witness set while its redeemer was kept, so the transaction failed on submission.
+  `PlutusScriptInEra` carries the ledger's `EraPlutusTxInfo` evidence in its constructor, so it can only be built for a pairing the ledger supports and converts to the ledger script without a partial step.
+  `deserialisePlutusScriptInEra` and `deserialiseAnyPlutusScriptOfLanguage` require `EraPlutusTxInfo lang era` and no longer take the language singleton.
+  New `PlutusLangInEra`, `plutusLangInEra` and `plutusLangInShelleyBasedEra` give that proof at runtime.
+  `decodeAnyPlutusScript` and `deserialiseAnyPlutusScriptFromTextEnvelope` now require `IsShelleyBasedEra` for the api era that matches the ledger era.
