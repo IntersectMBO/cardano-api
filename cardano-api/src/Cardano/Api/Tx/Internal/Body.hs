@@ -238,7 +238,6 @@ where
 
 import Cardano.Api.Address
 import Cardano.Api.Byron.Internal.Key
-import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
@@ -830,8 +829,8 @@ mkTxProposalProcedures proposals = do
       fromList $
         map (second pure) proposals
 
--- | Index proposal procedures by their order ('Ord').
--- | and filter out the ones that do not have a witness.
+-- | Index proposal procedures by the order they appear in the transaction,
+-- and filter out the ones that do not have a witness.
 indexTxProposalProcedures
   :: TxProposalProcedures BuildTx era
   -> [(ScriptWitnessIndex, L.ProposalProcedure (ShelleyLedgerEra era), ScriptWitness WitCtxStake era)]
@@ -840,7 +839,7 @@ indexTxProposalProcedures proposals =
   | (proposal, Just (ix, scriptWitness)) <- indexWitnessedTxProposalProcedures proposals
   ]
 
--- | Index proposal procedures by their order ('Ord').
+-- | Index proposal procedures by the order they appear in the transaction.
 indexWitnessedTxProposalProcedures
   :: TxProposalProcedures BuildTx era
   -> [ ( L.ProposalProcedure (ShelleyLedgerEra era)
@@ -1656,8 +1655,8 @@ fromLedgerTxValidityLowerBound
   -> A.LedgerTxBody era
   -> TxValidityLowerBound era
 fromLedgerTxValidityLowerBound sbe body =
-  caseShelleyEraOnlyOrAllegraEraOnwards
-    (const TxValidityNoLowerBound)
+  inEonForShelleyBasedEra
+    TxValidityNoLowerBound
     ( \w ->
         let mInvalidBefore = body ^. A.invalidBeforeTxBodyL w
          in case mInvalidBefore of
@@ -1719,8 +1718,8 @@ fromLedgerTxAuxiliaryData sbe (Just auxData) =
   metadata = if null ms then TxMetadataNone else TxMetadataInEra sbe $ TxMetadata ms
 
   auxdata =
-    caseShelleyEraOnlyOrAllegraEraOnwards
-      (const TxAuxScriptsNone)
+    inEonForShelleyBasedEra
+      TxAuxScriptsNone
       ( \w ->
           case ss of
             [] -> TxAuxScriptsNone
@@ -1780,13 +1779,14 @@ maybeFromLedgerTxUpdateProposal
   -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
   -> TxUpdateProposal era
 maybeFromLedgerTxUpdateProposal sbe body =
-  caseShelleyToBabbageOrConwayEraOnwards
+  inEonForShelleyBasedEra
+    TxUpdateProposalNone
     ( \w ->
-        case body ^. L.updateTxBodyL of
-          SNothing -> TxUpdateProposalNone
-          SJust p -> TxUpdateProposal w (fromLedgerUpdate sbe p)
+        shelleyToBabbageEraConstraints w $
+          case body ^. L.updateTxBodyL of
+            SNothing -> TxUpdateProposalNone
+            SJust p -> TxUpdateProposal w (fromLedgerUpdate sbe p)
     )
-    (const TxUpdateProposalNone)
     sbe
 
 fromLedgerTxMintValue
@@ -2384,10 +2384,8 @@ collectTxBodyScriptWitnessRequirements
             extractWitnessableMints aEon txMintValue
 
       txVotingWits <-
-        caseShelleyToBabbageOrConwayEraOnwards
-          ( \w ->
-              shelleyToBabbageEraConstraints w $ Right $ TxScriptWitnessRequirements mempty mempty mempty mempty
-          )
+        inEonForShelleyBasedEra
+          (Right $ TxScriptWitnessRequirements mempty mempty mempty mempty)
           ( \eon ->
               first TxBodyPlutusScriptDecodeError $
                 legacyWitnessToScriptRequirements aEon $
@@ -2395,8 +2393,8 @@ collectTxBodyScriptWitnessRequirements
           )
           sbe
       txProposalWits <-
-        caseShelleyToBabbageOrConwayEraOnwards
-          (const $ Right $ TxScriptWitnessRequirements mempty mempty mempty mempty)
+        inEonForShelleyBasedEra
+          (Right $ TxScriptWitnessRequirements mempty mempty mempty mempty)
           ( \eon ->
               first TxBodyPlutusScriptDecodeError $
                 legacyWitnessToScriptRequirements aEon $
@@ -2465,6 +2463,17 @@ extractWitnessableWithdrawals aeon txWithdrawals =
   getWithdrawals TxWithdrawalsNone = []
   getWithdrawals (TxWithdrawals _ txws) = txws
 
+-- | Convert every certificate to a 'Witnessable', paired with its witness.
+--
+-- Every certificate must stay in the result, witnessed or not: an
+-- unwitnessed certificate still occupies a redeemer index slot, since the
+-- ledger indexes the 'Certifying' purpose by position in the full
+-- certificate sequence, not just the witnessed subset. See
+-- 'indexCertificatesWith' for the same rule applied to the deprecated
+-- indexing path. An unwitnessed certificate is paired with the old API's
+-- inert stake witness, 'KeyWitness' 'KeyWitnessForStakeAddr' (the same
+-- default 'mkTxCertificates' uses), from which
+-- 'legacyWitnessToScriptRequirements' extracts no script requirement.
 extractWitnessableCertificates
   :: AlonzoEraOnwards era
   -> TxCertificates BuildTx era
@@ -2472,10 +2481,10 @@ extractWitnessableCertificates
 extractWitnessableCertificates aeon txCertificates =
   alonzoEraOnwardsConstraints aeon $
     List.nub
-      [ ( WitTxCert cert stakeCred
-        , BuildTxWith wit
+      [ ( WitTxCert cert
+        , BuildTxWith $ maybe (KeyWitness KeyWitnessForStakeAddr) snd mCredAndWit
         )
-      | (Exp.Certificate cert, BuildTxWith (Just (stakeCred, wit))) <- getCertificates txCertificates
+      | (Exp.Certificate cert, BuildTxWith mCredAndWit) <- getCertificates txCertificates
       ]
  where
   getCertificates TxCertificatesNone = []

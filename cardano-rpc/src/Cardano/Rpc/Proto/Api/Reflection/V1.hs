@@ -1,0 +1,20 @@
+{-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
+module Cardano.Rpc.Proto.Api.Reflection.V1
+  ( module Proto.Grpc.Reflection.V1.Reflection
+  , module Proto.Grpc.Reflection.V1.Reflection_Fields
+  )
+where
+
+import Network.GRPC.Common
+import Network.GRPC.Common.Protobuf
+
+import Proto.Grpc.Reflection.V1.Reflection
+import Proto.Grpc.Reflection.V1.Reflection_Fields
+
+type instance RequestMetadata (Protobuf ServerReflection meth) = NoMetadata
+
+type instance ResponseInitialMetadata (Protobuf ServerReflection meth) = NoMetadata
+
+type instance ResponseTrailingMetadata (Protobuf ServerReflection meth) = NoMetadata

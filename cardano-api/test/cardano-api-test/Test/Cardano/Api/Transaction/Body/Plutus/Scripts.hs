@@ -21,7 +21,6 @@ import Cardano.Api.Serialise.Cbor (SerialiseAsCBOR (..))
 
 import Cardano.Ledger.Conway qualified as L
 import Cardano.Ledger.Conway.Scripts qualified as L
-import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Dijkstra.Scripts qualified as L
 import Cardano.Ledger.Plutus.Language qualified as L
 

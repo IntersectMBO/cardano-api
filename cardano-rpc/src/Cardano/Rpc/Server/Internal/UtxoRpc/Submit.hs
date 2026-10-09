@@ -10,6 +10,7 @@
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Submit
   ( submitTxMethod
+  , readMempoolMethod
   )
 where
 
@@ -20,6 +21,8 @@ import Cardano.Rpc.Server.Internal.Error
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.Tracing
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool (txInModeToTxInMempool)
+import Cardano.Rpc.Server.NodeKernelAccess (grabNodeKernelAccess, readMempoolTxs)
 
 import Cardano.Ledger.Core qualified as L
 
@@ -28,6 +31,18 @@ import RIO hiding (toList)
 import Data.Default
 import GHC.Stack
 import Network.GRPC.Spec
+
+-- | Handle the @ReadMempool@ SubmitService RPC method: a point-in-time
+-- snapshot of the mempool's contents. Transactions added or removed after
+-- the read are not reflected.
+readMempoolMethod
+  :: MonadRpc e m
+  => Proto UtxoRpc.ReadMempoolRequest
+  -> m (Proto UtxoRpc.ReadMempoolResponse)
+readMempoolMethod _request = do
+  nodeKernelAccess <- grabNodeKernelAccess
+  txs <- readMempoolTxs nodeKernelAccess
+  pure $ def & U5c.items .~ mapMaybe (txInModeToTxInMempool . fromConsensusGenTx) txs
 
 -- | Submit a CBOR-serialised list of transactions to the node
 submitTxMethod

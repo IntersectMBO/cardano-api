@@ -866,12 +866,12 @@ instance Control.DeepSeq.NFData DumpHistoryResponse where
                 (Control.DeepSeq.deepseq (_DumpHistoryResponse'nextToken x__) ()))
 {- | Fields :
      
-         * 'Proto.Utxorpc.V1beta.Sync.Sync_Fields.ref' @:: Lens' FetchBlockRequest BlockRef@
-         * 'Proto.Utxorpc.V1beta.Sync.Sync_Fields.maybe'ref' @:: Lens' FetchBlockRequest (Prelude.Maybe BlockRef)@
+         * 'Proto.Utxorpc.V1beta.Sync.Sync_Fields.ref' @:: Lens' FetchBlockRequest [BlockRef]@
+         * 'Proto.Utxorpc.V1beta.Sync.Sync_Fields.vec'ref' @:: Lens' FetchBlockRequest (Data.Vector.Vector BlockRef)@
          * 'Proto.Utxorpc.V1beta.Sync.Sync_Fields.fieldMask' @:: Lens' FetchBlockRequest Proto.Google.Protobuf.FieldMask.FieldMask@
          * 'Proto.Utxorpc.V1beta.Sync.Sync_Fields.maybe'fieldMask' @:: Lens' FetchBlockRequest (Prelude.Maybe Proto.Google.Protobuf.FieldMask.FieldMask)@ -}
 data FetchBlockRequest
-  = FetchBlockRequest'_constructor {_FetchBlockRequest'ref :: !(Prelude.Maybe BlockRef),
+  = FetchBlockRequest'_constructor {_FetchBlockRequest'ref :: !(Data.Vector.Vector BlockRef),
                                     _FetchBlockRequest'fieldMask :: !(Prelude.Maybe Proto.Google.Protobuf.FieldMask.FieldMask),
                                     _FetchBlockRequest'_unknownFields :: !Data.ProtoLens.FieldSet}
   deriving stock (Prelude.Eq, Prelude.Ord)
@@ -881,14 +881,16 @@ instance Prelude.Show FetchBlockRequest where
         '{'
         (Prelude.showString
            (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
-instance Data.ProtoLens.Field.HasField FetchBlockRequest "ref" BlockRef where
+instance Data.ProtoLens.Field.HasField FetchBlockRequest "ref" [BlockRef] where
   fieldOf _
     = (Prelude..)
         (Lens.Family2.Unchecked.lens
            _FetchBlockRequest'ref
            (\ x__ y__ -> x__ {_FetchBlockRequest'ref = y__}))
-        (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage)
-instance Data.ProtoLens.Field.HasField FetchBlockRequest "maybe'ref" (Prelude.Maybe BlockRef) where
+        (Lens.Family2.Unchecked.lens
+           Data.Vector.Generic.toList
+           (\ _ y__ -> Data.Vector.Generic.fromList y__))
+instance Data.ProtoLens.Field.HasField FetchBlockRequest "vec'ref" (Data.Vector.Vector BlockRef) where
   fieldOf _
     = (Prelude..)
         (Lens.Family2.Unchecked.lens
@@ -915,7 +917,7 @@ instance Data.ProtoLens.Message FetchBlockRequest where
   packedMessageDescriptor _
     = "\n\
       \\DC1FetchBlockRequest\DC2/\n\
-      \\ETXref\CAN\SOH \SOH(\v2\GS.utxorpc.v1beta.sync.BlockRefR\ETXref\DC29\n\
+      \\ETXref\CAN\SOH \ETX(\v2\GS.utxorpc.v1beta.sync.BlockRefR\ETXref\DC29\n\
       \\n\
       \field_mask\CAN\STX \SOH(\v2\SUB.google.protobuf.FieldMaskR\tfieldMask"
   packedFileDescriptor _ = packedFileDescriptor
@@ -926,8 +928,8 @@ instance Data.ProtoLens.Message FetchBlockRequest where
               "ref"
               (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
                  Data.ProtoLens.FieldTypeDescriptor BlockRef)
-              (Data.ProtoLens.OptionalField
-                 (Data.ProtoLens.Field.field @"maybe'ref")) ::
+              (Data.ProtoLens.RepeatedField
+                 Data.ProtoLens.Unpacked (Data.ProtoLens.Field.field @"ref")) ::
               Data.ProtoLens.FieldDescriptor FetchBlockRequest
         fieldMask__field_descriptor
           = Data.ProtoLens.FieldDescriptor
@@ -947,18 +949,21 @@ instance Data.ProtoLens.Message FetchBlockRequest where
         (\ x__ y__ -> x__ {_FetchBlockRequest'_unknownFields = y__})
   defMessage
     = FetchBlockRequest'_constructor
-        {_FetchBlockRequest'ref = Prelude.Nothing,
+        {_FetchBlockRequest'ref = Data.Vector.Generic.empty,
          _FetchBlockRequest'fieldMask = Prelude.Nothing,
          _FetchBlockRequest'_unknownFields = []}
   parseMessage
     = let
         loop ::
           FetchBlockRequest
-          -> Data.ProtoLens.Encoding.Bytes.Parser FetchBlockRequest
-        loop x
+          -> Data.ProtoLens.Encoding.Growing.Growing Data.Vector.Vector Data.ProtoLens.Encoding.Growing.RealWorld BlockRef
+             -> Data.ProtoLens.Encoding.Bytes.Parser FetchBlockRequest
+        loop x mutable'ref
           = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
                if end then
-                   do (let missing = []
+                   do frozen'ref <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                      (Data.ProtoLens.Encoding.Growing.unsafeFreeze mutable'ref)
+                      (let missing = []
                        in
                          if Prelude.null missing then
                              Prelude.return ()
@@ -969,17 +974,22 @@ instance Data.ProtoLens.Message FetchBlockRequest where
                                   (Prelude.show (missing :: [Prelude.String]))))
                       Prelude.return
                         (Lens.Family2.over
-                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t) x)
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t)
+                           (Lens.Family2.set
+                              (Data.ProtoLens.Field.field @"vec'ref") frozen'ref x))
                else
                    do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
                       case tag of
                         10
-                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
-                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
-                                           Data.ProtoLens.Encoding.Bytes.isolate
-                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
-                                       "ref"
-                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"ref") y x)
+                          -> do !y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                        (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                            Data.ProtoLens.Encoding.Bytes.isolate
+                                              (Prelude.fromIntegral len)
+                                              Data.ProtoLens.parseMessage)
+                                        "ref"
+                                v <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                       (Data.ProtoLens.Encoding.Growing.append mutable'ref y)
+                                loop x v
                         18
                           -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
                                        (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
@@ -988,32 +998,35 @@ instance Data.ProtoLens.Message FetchBlockRequest where
                                        "field_mask"
                                 loop
                                   (Lens.Family2.set (Data.ProtoLens.Field.field @"fieldMask") y x)
+                                  mutable'ref
                         wire
                           -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
                                         wire
                                 loop
                                   (Lens.Family2.over
                                      Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+                                  mutable'ref
       in
         (Data.ProtoLens.Encoding.Bytes.<?>)
-          (do loop Data.ProtoLens.defMessage) "FetchBlockRequest"
+          (do mutable'ref <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                               Data.ProtoLens.Encoding.Growing.new
+              loop Data.ProtoLens.defMessage mutable'ref)
+          "FetchBlockRequest"
   buildMessage
     = \ _x
         -> (Data.Monoid.<>)
-             (case
-                  Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'ref") _x
-              of
-                Prelude.Nothing -> Data.Monoid.mempty
-                (Prelude.Just _v)
-                  -> (Data.Monoid.<>)
-                       (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
-                       ((Prelude..)
-                          (\ bs
-                             -> (Data.Monoid.<>)
-                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
-                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                          Data.ProtoLens.encodeMessage _v))
+             (Data.ProtoLens.Encoding.Bytes.foldMapBuilder
+                (\ _v
+                   -> (Data.Monoid.<>)
+                        (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                        ((Prelude..)
+                           (\ bs
+                              -> (Data.Monoid.<>)
+                                   (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                      (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                   (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                           Data.ProtoLens.encodeMessage _v))
+                (Lens.Family2.view (Data.ProtoLens.Field.field @"vec'ref") _x))
              ((Data.Monoid.<>)
                 (case
                      Lens.Family2.view
@@ -1042,10 +1055,10 @@ instance Control.DeepSeq.NFData FetchBlockRequest where
                 (Control.DeepSeq.deepseq (_FetchBlockRequest'fieldMask x__) ()))
 {- | Fields :
      
-         * 'Proto.Utxorpc.V1beta.Sync.Sync_Fields.block' @:: Lens' FetchBlockResponse AnyChainBlock@
-         * 'Proto.Utxorpc.V1beta.Sync.Sync_Fields.maybe'block' @:: Lens' FetchBlockResponse (Prelude.Maybe AnyChainBlock)@ -}
+         * 'Proto.Utxorpc.V1beta.Sync.Sync_Fields.block' @:: Lens' FetchBlockResponse [AnyChainBlock]@
+         * 'Proto.Utxorpc.V1beta.Sync.Sync_Fields.vec'block' @:: Lens' FetchBlockResponse (Data.Vector.Vector AnyChainBlock)@ -}
 data FetchBlockResponse
-  = FetchBlockResponse'_constructor {_FetchBlockResponse'block :: !(Prelude.Maybe AnyChainBlock),
+  = FetchBlockResponse'_constructor {_FetchBlockResponse'block :: !(Data.Vector.Vector AnyChainBlock),
                                      _FetchBlockResponse'_unknownFields :: !Data.ProtoLens.FieldSet}
   deriving stock (Prelude.Eq, Prelude.Ord)
 instance Prelude.Show FetchBlockResponse where
@@ -1054,14 +1067,16 @@ instance Prelude.Show FetchBlockResponse where
         '{'
         (Prelude.showString
            (Data.ProtoLens.showMessageShort __x) (Prelude.showChar '}' __s))
-instance Data.ProtoLens.Field.HasField FetchBlockResponse "block" AnyChainBlock where
+instance Data.ProtoLens.Field.HasField FetchBlockResponse "block" [AnyChainBlock] where
   fieldOf _
     = (Prelude..)
         (Lens.Family2.Unchecked.lens
            _FetchBlockResponse'block
            (\ x__ y__ -> x__ {_FetchBlockResponse'block = y__}))
-        (Data.ProtoLens.maybeLens Data.ProtoLens.defMessage)
-instance Data.ProtoLens.Field.HasField FetchBlockResponse "maybe'block" (Prelude.Maybe AnyChainBlock) where
+        (Lens.Family2.Unchecked.lens
+           Data.Vector.Generic.toList
+           (\ _ y__ -> Data.Vector.Generic.fromList y__))
+instance Data.ProtoLens.Field.HasField FetchBlockResponse "vec'block" (Data.Vector.Vector AnyChainBlock) where
   fieldOf _
     = (Prelude..)
         (Lens.Family2.Unchecked.lens
@@ -1074,7 +1089,7 @@ instance Data.ProtoLens.Message FetchBlockResponse where
   packedMessageDescriptor _
     = "\n\
       \\DC2FetchBlockResponse\DC28\n\
-      \\ENQblock\CAN\SOH \SOH(\v2\".utxorpc.v1beta.sync.AnyChainBlockR\ENQblock"
+      \\ENQblock\CAN\SOH \ETX(\v2\".utxorpc.v1beta.sync.AnyChainBlockR\ENQblock"
   packedFileDescriptor _ = packedFileDescriptor
   fieldsByTag
     = let
@@ -1083,8 +1098,8 @@ instance Data.ProtoLens.Message FetchBlockResponse where
               "block"
               (Data.ProtoLens.MessageField Data.ProtoLens.MessageType ::
                  Data.ProtoLens.FieldTypeDescriptor AnyChainBlock)
-              (Data.ProtoLens.OptionalField
-                 (Data.ProtoLens.Field.field @"maybe'block")) ::
+              (Data.ProtoLens.RepeatedField
+                 Data.ProtoLens.Unpacked (Data.ProtoLens.Field.field @"block")) ::
               Data.ProtoLens.FieldDescriptor FetchBlockResponse
       in
         Data.Map.fromList [(Data.ProtoLens.Tag 1, block__field_descriptor)]
@@ -1094,17 +1109,20 @@ instance Data.ProtoLens.Message FetchBlockResponse where
         (\ x__ y__ -> x__ {_FetchBlockResponse'_unknownFields = y__})
   defMessage
     = FetchBlockResponse'_constructor
-        {_FetchBlockResponse'block = Prelude.Nothing,
+        {_FetchBlockResponse'block = Data.Vector.Generic.empty,
          _FetchBlockResponse'_unknownFields = []}
   parseMessage
     = let
         loop ::
           FetchBlockResponse
-          -> Data.ProtoLens.Encoding.Bytes.Parser FetchBlockResponse
-        loop x
+          -> Data.ProtoLens.Encoding.Growing.Growing Data.Vector.Vector Data.ProtoLens.Encoding.Growing.RealWorld AnyChainBlock
+             -> Data.ProtoLens.Encoding.Bytes.Parser FetchBlockResponse
+        loop x mutable'block
           = do end <- Data.ProtoLens.Encoding.Bytes.atEnd
                if end then
-                   do (let missing = []
+                   do frozen'block <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                        (Data.ProtoLens.Encoding.Growing.unsafeFreeze mutable'block)
+                      (let missing = []
                        in
                          if Prelude.null missing then
                              Prelude.return ()
@@ -1115,43 +1133,50 @@ instance Data.ProtoLens.Message FetchBlockResponse where
                                   (Prelude.show (missing :: [Prelude.String]))))
                       Prelude.return
                         (Lens.Family2.over
-                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t) x)
+                           Data.ProtoLens.unknownFields (\ !t -> Prelude.reverse t)
+                           (Lens.Family2.set
+                              (Data.ProtoLens.Field.field @"vec'block") frozen'block x))
                else
                    do tag <- Data.ProtoLens.Encoding.Bytes.getVarInt
                       case tag of
                         10
-                          -> do y <- (Data.ProtoLens.Encoding.Bytes.<?>)
-                                       (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
-                                           Data.ProtoLens.Encoding.Bytes.isolate
-                                             (Prelude.fromIntegral len) Data.ProtoLens.parseMessage)
-                                       "block"
-                                loop (Lens.Family2.set (Data.ProtoLens.Field.field @"block") y x)
+                          -> do !y <- (Data.ProtoLens.Encoding.Bytes.<?>)
+                                        (do len <- Data.ProtoLens.Encoding.Bytes.getVarInt
+                                            Data.ProtoLens.Encoding.Bytes.isolate
+                                              (Prelude.fromIntegral len)
+                                              Data.ProtoLens.parseMessage)
+                                        "block"
+                                v <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                       (Data.ProtoLens.Encoding.Growing.append mutable'block y)
+                                loop x v
                         wire
                           -> do !y <- Data.ProtoLens.Encoding.Wire.parseTaggedValueFromWire
                                         wire
                                 loop
                                   (Lens.Family2.over
                                      Data.ProtoLens.unknownFields (\ !t -> (:) y t) x)
+                                  mutable'block
       in
         (Data.ProtoLens.Encoding.Bytes.<?>)
-          (do loop Data.ProtoLens.defMessage) "FetchBlockResponse"
+          (do mutable'block <- Data.ProtoLens.Encoding.Parser.Unsafe.unsafeLiftIO
+                                 Data.ProtoLens.Encoding.Growing.new
+              loop Data.ProtoLens.defMessage mutable'block)
+          "FetchBlockResponse"
   buildMessage
     = \ _x
         -> (Data.Monoid.<>)
-             (case
-                  Lens.Family2.view (Data.ProtoLens.Field.field @"maybe'block") _x
-              of
-                Prelude.Nothing -> Data.Monoid.mempty
-                (Prelude.Just _v)
-                  -> (Data.Monoid.<>)
-                       (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
-                       ((Prelude..)
-                          (\ bs
-                             -> (Data.Monoid.<>)
-                                  (Data.ProtoLens.Encoding.Bytes.putVarInt
-                                     (Prelude.fromIntegral (Data.ByteString.length bs)))
-                                  (Data.ProtoLens.Encoding.Bytes.putBytes bs))
-                          Data.ProtoLens.encodeMessage _v))
+             (Data.ProtoLens.Encoding.Bytes.foldMapBuilder
+                (\ _v
+                   -> (Data.Monoid.<>)
+                        (Data.ProtoLens.Encoding.Bytes.putVarInt 10)
+                        ((Prelude..)
+                           (\ bs
+                              -> (Data.Monoid.<>)
+                                   (Data.ProtoLens.Encoding.Bytes.putVarInt
+                                      (Prelude.fromIntegral (Data.ByteString.length bs)))
+                                   (Data.ProtoLens.Encoding.Bytes.putBytes bs))
+                           Data.ProtoLens.encodeMessage _v))
+                (Lens.Family2.view (Data.ProtoLens.Field.field @"vec'block") _x))
              (Data.ProtoLens.Encoding.Wire.buildFieldSet
                 (Lens.Family2.view Data.ProtoLens.unknownFields _x))
 instance Control.DeepSeq.NFData FetchBlockResponse where
@@ -1932,11 +1957,11 @@ packedFileDescriptor
     \\acardano\CAN\STX \SOH(\v2\GS.utxorpc.v1beta.cardano.BlockH\NULR\acardanoB\a\n\
     \\ENQchain\"\DEL\n\
     \\DC1FetchBlockRequest\DC2/\n\
-    \\ETXref\CAN\SOH \SOH(\v2\GS.utxorpc.v1beta.sync.BlockRefR\ETXref\DC29\n\
+    \\ETXref\CAN\SOH \ETX(\v2\GS.utxorpc.v1beta.sync.BlockRefR\ETXref\DC29\n\
     \\n\
     \field_mask\CAN\STX \SOH(\v2\SUB.google.protobuf.FieldMaskR\tfieldMask\"N\n\
     \\DC2FetchBlockResponse\DC28\n\
-    \\ENQblock\CAN\SOH \SOH(\v2\".utxorpc.v1beta.sync.AnyChainBlockR\ENQblock\"\172\SOH\n\
+    \\ENQblock\CAN\SOH \ETX(\v2\".utxorpc.v1beta.sync.AnyChainBlockR\ENQblock\"\172\SOH\n\
     \\DC2DumpHistoryRequest\DC2>\n\
     \\vstart_token\CAN\STX \SOH(\v2\GS.utxorpc.v1beta.sync.BlockRefR\n\
     \startToken\DC2\ESC\n\
@@ -1966,7 +1991,7 @@ packedFileDescriptor
     \\vDumpHistory\DC2'.utxorpc.v1beta.sync.DumpHistoryRequest\SUB(.utxorpc.v1beta.sync.DumpHistoryResponse\DC2\\\n\
     \\tFollowTip\DC2%.utxorpc.v1beta.sync.FollowTipRequest\SUB&.utxorpc.v1beta.sync.FollowTipResponse0\SOH\DC2T\n\
     \\aReadTip\DC2#.utxorpc.v1beta.sync.ReadTipRequest\SUB$.utxorpc.v1beta.sync.ReadTipResponseB\146\SOH\n\
-    \\ETBcom.utxorpc.v1beta.syncB\tSyncProtoP\SOH\162\STX\ETXUVS\170\STX\DC3Utxorpc.V1beta.Sync\202\STX\DC3Utxorpc\\V1beta\\Sync\226\STX\USUtxorpc\\V1beta\\Sync\\GPBMetadata\234\STX\NAKUtxorpc::V1beta::SyncJ\139\EM\n\
+    \\ETBcom.utxorpc.v1beta.syncB\tSyncProtoP\SOH\162\STX\ETXUVS\170\STX\DC3Utxorpc.V1beta.Sync\202\STX\DC3Utxorpc\\V1beta\\Sync\226\STX\USUtxorpc\\V1beta\\Sync\\GPBMetadata\234\STX\NAKUtxorpc::V1beta::SyncJ\173\EM\n\
     \\ACK\DC2\EOT\NUL\NULL\SOH\n\
     \\b\n\
     \\SOH\f\DC2\ETX\NUL\NUL\DC2\n\
@@ -2057,15 +2082,17 @@ packedFileDescriptor
     \\n\
     \\ETX\EOT\STX\SOH\DC2\ETX\ETB\b\EM\n\
     \(\n\
-    \\EOT\EOT\STX\STX\NUL\DC2\ETX\CAN\STX\DC3\"\ESC Block reference to fetch.\n\
+    \\EOT\EOT\STX\STX\NUL\DC2\ETX\CAN\STX\FS\"\ESC List of block references.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\NUL\ACK\DC2\ETX\CAN\STX\n\
+    \\ENQ\EOT\STX\STX\NUL\EOT\DC2\ETX\CAN\STX\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\NUL\SOH\DC2\ETX\CAN\v\SO\n\
+    \\ENQ\EOT\STX\STX\NUL\ACK\DC2\ETX\CAN\v\DC3\n\
     \\f\n\
-    \\ENQ\EOT\STX\STX\NUL\ETX\DC2\ETX\CAN\DC1\DC2\n\
+    \\ENQ\EOT\STX\STX\NUL\SOH\DC2\ETX\CAN\DC4\ETB\n\
+    \\f\n\
+    \\ENQ\EOT\STX\STX\NUL\ETX\DC2\ETX\CAN\SUB\ESC\n\
     \7\n\
     \\EOT\EOT\STX\STX\SOH\DC2\ETX\EM\STX+\"* Field mask to selectively return fields.\n\
     \\n\
@@ -2075,21 +2102,24 @@ packedFileDescriptor
     \\ENQ\EOT\STX\STX\SOH\SOH\DC2\ETX\EM\FS&\n\
     \\f\n\
     \\ENQ\EOT\STX\STX\SOH\ETX\DC2\ETX\EM)*\n\
-    \4\n\
-    \\STX\EOT\ETX\DC2\EOT\GS\NUL\US\SOH\SUB( Response containing the fetched block.\n\
+    \5\n\
+    \\STX\EOT\ETX\DC2\EOT\GS\NUL\US\SOH\SUB) Response containing the fetched blocks.\n\
     \\n\
     \\n\
     \\n\
     \\ETX\EOT\ETX\SOH\DC2\ETX\GS\b\SUB\n\
-    \!\n\
-    \\EOT\EOT\ETX\STX\NUL\DC2\ETX\RS\STX\SUB\"\DC4 The fetched block.\n\
+    \&\n\
+    \\EOT\EOT\ETX\STX\NUL\DC2\ETX\RS\STX#\"\EM List of fetched blocks.\n\
     \\n\
     \\f\n\
-    \\ENQ\EOT\ETX\STX\NUL\ACK\DC2\ETX\RS\STX\SI\n\
+    \\ENQ\EOT\ETX\STX\NUL\EOT\DC2\ETX\RS\STX\n\
+    \\n\
     \\f\n\
-    \\ENQ\EOT\ETX\STX\NUL\SOH\DC2\ETX\RS\DLE\NAK\n\
+    \\ENQ\EOT\ETX\STX\NUL\ACK\DC2\ETX\RS\v\CAN\n\
     \\f\n\
-    \\ENQ\EOT\ETX\STX\NUL\ETX\DC2\ETX\RS\CAN\EM\n\
+    \\ENQ\EOT\ETX\STX\NUL\SOH\DC2\ETX\RS\EM\RS\n\
+    \\f\n\
+    \\ENQ\EOT\ETX\STX\NUL\ETX\DC2\ETX\RS!\"\n\
     \0\n\
     \\STX\EOT\EOT\DC2\EOT\"\NUL&\SOH\SUB$ Request to dump the block history.\n\
     \\n\

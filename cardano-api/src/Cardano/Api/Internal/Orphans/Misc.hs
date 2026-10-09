@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -23,7 +22,6 @@ import Cardano.Ledger.Alonzo.PParams qualified as Ledger
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.BaseTypes qualified as Ledger
-import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.PParams qualified as Ledger
@@ -40,9 +38,7 @@ import Ouroboros.Consensus.HardFork.History.Summary
   )
 import PlutusLedgerApi.Common qualified as P
 
-import Codec.Binary.Bech32 qualified as Bech32
 import Data.Bits (Bits)
-import Data.Data (Data)
 import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -55,16 +51,6 @@ import GHC.Stack (prettyCallStack)
 import Network.Mux qualified as Mux
 import Prettyprinter (indent)
 import Text.Parsec.Error qualified as P
-
-deriving instance Data DecoderError
-
-deriving instance Data CBOR.DeserialiseFailure
-
-deriving instance Data Bech32.DecodingError
-
-deriving instance Data Bech32.CharPosition
-
-deriving instance Data T.UnicodeException
 
 -- | These instances originally existed on the Lovelace type.
 -- As the Lovelace type is deleted and we use L.Coin instead,
@@ -316,25 +302,36 @@ instance Semigroup (Ledger.DijkstraPParams StrictMaybe era) where
       , Ledger.dppRefScriptCostStride = lastMappendWithTHKD Ledger.dppRefScriptCostStride p1 p2
       , Ledger.dppRefScriptCostMultiplier =
           lastMappendWithTHKD Ledger.dppRefScriptCostMultiplier p1 p2
-      , Ledger.dppMaxPledgeLeverage = lastMappendWithTHKD Ledger.dppMaxPledgeLeverage p1 p2
-      , Ledger.dppMinPoolMargin = lastMappendWithTHKD Ledger.dppMinPoolMargin p1 p2
+      , Ledger.dppMaxPledgeLeverage =
+          lastMappendWithTHKD Ledger.dppMaxPledgeLeverage p1 p2
+      , Ledger.dppMinPoolMargin =
+          lastMappendWithTHKD Ledger.dppMinPoolMargin p1 p2
       , Ledger.dppLeiosAnnouncementPeriodLength =
           lastMappendWithTHKD Ledger.dppLeiosAnnouncementPeriodLength p1 p2
-      , Ledger.dppLeiosVotePeriodLength =
-          lastMappendWithTHKD Ledger.dppLeiosVotePeriodLength p1 p2
+      , Ledger.dppLeiosVotePeriodLength = lastMappendWithTHKD Ledger.dppLeiosVotePeriodLength p1 p2
       , Ledger.dppLeiosDiffusionPeriodLength =
           lastMappendWithTHKD Ledger.dppLeiosDiffusionPeriodLength p1 p2
       , Ledger.dppLeiosCommitteeSize = lastMappendWithTHKD Ledger.dppLeiosCommitteeSize p1 p2
-      , Ledger.dppLeiosQuorumStakeThreshold =
-          lastMappendWithTHKD Ledger.dppLeiosQuorumStakeThreshold p1 p2
+      , Ledger.dppLeiosQuorumStakeThreshold = lastMappendWithTHKD Ledger.dppLeiosQuorumStakeThreshold p1 p2
       , Ledger.dppMaxEndorserBlockReferencesSize =
           lastMappendWithTHKD Ledger.dppMaxEndorserBlockReferencesSize p1 p2
-      , Ledger.dppMaxEndorserBlockTxsSize =
-          lastMappendWithTHKD Ledger.dppMaxEndorserBlockTxsSize p1 p2
-      , Ledger.dppMaxEndorserBlockExUnits =
-          lastMappendWithTHKD Ledger.dppMaxEndorserBlockExUnits p1 p2
+      , Ledger.dppMaxEndorserBlockTxsSize = lastMappendWithTHKD Ledger.dppMaxEndorserBlockTxsSize p1 p2
+      , Ledger.dppMaxEndorserBlockExUnits = lastMappendWithTHKD Ledger.dppMaxEndorserBlockExUnits p1 p2
       , Ledger.dppMaxRefScriptSizePerEndorserBlock =
           lastMappendWithTHKD Ledger.dppMaxRefScriptSizePerEndorserBlock p1 p2
+      , Ledger.dppPerasMinCandidateBlockAge =
+          lastMappendWithTHKD Ledger.dppPerasMinCandidateBlockAge p1 p2
+      , Ledger.dppPerasHealingFactor = lastMappendWithTHKD Ledger.dppPerasHealingFactor p1 p2
+      , Ledger.dppPerasCertBoost = lastMappendWithTHKD Ledger.dppPerasCertBoost p1 p2
+      , Ledger.dppPerasTargetCommitteeSize =
+          lastMappendWithTHKD Ledger.dppPerasTargetCommitteeSize p1 p2
+      , Ledger.dppPerasBootstrapRound = lastMappendWithTHKD Ledger.dppPerasBootstrapRound p1 p2
+      , Ledger.dppPerasQuorumThresholdSafetyMargin =
+          lastMappendWithTHKD Ledger.dppPerasQuorumThresholdSafetyMargin p1 p2
+      , Ledger.dppRefInputsCostPerMultiAssetPolicy =
+          lastMappendWithTHKD Ledger.dppRefInputsCostPerMultiAssetPolicy p1 p2
+      , Ledger.dppRefInputsCostPerDatumByte =
+          lastMappendWithTHKD Ledger.dppRefInputsCostPerDatumByte p1 p2
       }
 
 lastMappendWithTHKD :: (a -> Ledger.THKD g StrictMaybe b) -> a -> a -> Ledger.THKD g StrictMaybe b

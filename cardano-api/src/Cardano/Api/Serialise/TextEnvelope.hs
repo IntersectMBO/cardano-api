@@ -1,6 +1,7 @@
 module Cardano.Api.Serialise.TextEnvelope
   ( -- * TextEnvelope Serialisation
     HasTextEnvelope (..)
+  , textEnvelopeType
   , textEnvelopeTypeInEra
   , TextEnvelope (..)
   , TextEnvelopeType (..)

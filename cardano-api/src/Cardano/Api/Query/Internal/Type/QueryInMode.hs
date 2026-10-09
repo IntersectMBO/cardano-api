@@ -71,12 +71,12 @@ import Cardano.Api.Address
 import Cardano.Api.Block
 import Cardano.Api.Certificate.Internal
 import Cardano.Api.Consensus.Internal.Mode
-import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core
-import Cardano.Api.Era.Internal.Eon.Convert (Convert (convert))
-import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards ()
+import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
+  ( ConwayEraOnwards (..)
+  , conwayEraOnwardsConstraints
+  )
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
-import Cardano.Api.Experimental.Era (obtainCommonConstraints)
 import Cardano.Api.Genesis.Internal.Parameters
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..))
 import Cardano.Api.Key.Internal
@@ -85,7 +85,7 @@ import Cardano.Api.Network.Internal.NetworkId
 import Cardano.Api.Query.Internal.Type.DebugLedgerState
 import Cardano.Api.Serialise.Cbor (SerialiseAsCBOR (deserialiseFromCBOR, serialiseToCBOR))
 import Cardano.Api.Serialise.TextEnvelope.Internal
-  ( HasTextEnvelope (textEnvelopeType)
+  ( HasTextEnvelope (textEnvelopeTypes)
   , TextEnvelopeType
   )
 import Cardano.Api.Tx.Internal.Body
@@ -132,6 +132,7 @@ import Data.Bifunctor (bimap, first)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.Either.Combinators (rightToMaybe)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
@@ -194,8 +195,8 @@ instance SerialiseAsCBOR EraHistory where
 -- @transaction calculate-plutus-script-cost@ command in @cartdano-cli and it
 -- can be obtained through the @query era-history@ command.
 instance HasTextEnvelope EraHistory where
-  textEnvelopeType :: AsType EraHistory -> TextEnvelopeType
-  textEnvelopeType _ = "EraHistory"
+  textEnvelopeTypes :: AsType EraHistory -> NonEmpty TextEnvelopeType
+  textEnvelopeTypes _ = pure "EraHistory"
 
 getProgress
   :: ()
@@ -586,15 +587,8 @@ toConsensusQueryShelleyBased sbe = \case
   QueryEpoch ->
     Some (consensusQueryInEraInMode era Consensus.GetEpochNo)
   QueryConstitution ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error
-            "toConsensusQueryShelleyBased: QueryConstitution is only available from the Conway era onwards"
-      )
-      ( \w ->
-          obtainCommonConstraints (convert w) $ Some (consensusQueryInEraInMode era Consensus.GetConstitution)
-      )
-      sbe
+    conwayEraOnwardsConstraints (conwayOnwards "QueryConstitution") $
+      Some (consensusQueryInEraInMode era Consensus.GetConstitution)
   QueryGenesisParameters ->
     Some (consensusQueryInEraInMode era Consensus.GetGenesisConfig)
   QueryProtocolParameters ->
@@ -662,127 +656,62 @@ toConsensusQueryShelleyBased sbe = \case
   QueryGovState ->
     Some (consensusQueryInEraInMode era Consensus.GetGovState)
   QueryRatifyState ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error "toConsensusQueryShelleyBased: QueryRatifyState is only available from the Conway era onwards"
-      )
-      ( \w ->
-          obtainCommonConstraints (convert w) $ Some (consensusQueryInEraInMode era Consensus.GetRatifyState)
-      )
-      sbe
+    conwayEraOnwardsConstraints (conwayOnwards "QueryRatifyState") $
+      Some (consensusQueryInEraInMode era Consensus.GetRatifyState)
   QueryFuturePParams ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error
-            "toConsensusQueryShelleyBased: QueryFuturePParams is only available from the Conway era onwards"
-      )
-      ( \w ->
-          obtainCommonConstraints (convert w) $
-            Some (consensusQueryInEraInMode era Consensus.GetFuturePParams)
-      )
-      sbe
+    conwayEraOnwardsConstraints (conwayOnwards "QueryFuturePParams") $
+      Some (consensusQueryInEraInMode era Consensus.GetFuturePParams)
   QueryDRepState creds ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error "toConsensusQueryShelleyBased: QueryDRepState is only available from the Conway era onwards"
-      )
-      ( \w ->
-          obtainCommonConstraints (convert w) $
-            Some (consensusQueryInEraInMode era (Consensus.GetDRepState creds))
-      )
-      sbe
+    conwayEraOnwardsConstraints (conwayOnwards "QueryDRepState") $
+      Some (consensusQueryInEraInMode era (Consensus.GetDRepState creds))
   QueryDRepStakeDistr dreps ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error
-            "toConsensusQueryShelleyBased: QueryDRepStakeDistr is only available from the Conway era onwards"
-      )
-      ( \w ->
-          obtainCommonConstraints (convert w) $
-            Some (consensusQueryInEraInMode era (Consensus.GetDRepStakeDistr dreps))
-      )
-      sbe
+    conwayEraOnwardsConstraints (conwayOnwards "QueryDRepStakeDistr") $
+      Some (consensusQueryInEraInMode era (Consensus.GetDRepStakeDistr dreps))
   QuerySPOStakeDistr spos ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error
-            "toConsensusQueryShelleyBased: QuerySPOStakeDistr is only available from the Conway era onwards"
-      )
-      ( \w ->
-          obtainCommonConstraints (convert w) $
-            Some (consensusQueryInEraInMode era (Consensus.GetSPOStakeDistr spos))
-      )
-      sbe
+    conwayEraOnwardsConstraints (conwayOnwards "QuerySPOStakeDistr") $
+      Some (consensusQueryInEraInMode era (Consensus.GetSPOStakeDistr spos))
   QueryCommitteeMembersState coldCreds hotCreds statuses ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error
-            "toConsensusQueryShelleyBased: QueryCommitteeMembersState is only available from the Conway era onwards"
-      )
-      ( \w ->
-          obtainCommonConstraints (convert w) $
-            Some
-              (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
-      )
-      sbe
+    conwayEraOnwardsConstraints (conwayOnwards "QueryCommitteeMembersState") $
+      Some
+        (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
   QueryStakeVoteDelegatees creds ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error
-            "toConsensusQueryShelleyBased: QueryStakeVoteDelegatees is only available from the Conway era onwards"
-      )
-      ( \w ->
-          obtainCommonConstraints (convert w) $
-            Some
-              ( consensusQueryInEraInMode
-                  era
-                  (Consensus.GetFilteredVoteDelegatees creds')
-              )
-      )
-      sbe
+    conwayEraOnwardsConstraints (conwayOnwards "QueryStakeVoteDelegatees") $
+      Some (consensusQueryInEraInMode era (Consensus.GetFilteredVoteDelegatees creds'))
    where
     creds' :: Set (Shelley.Credential Shelley.Staking)
     creds' = Set.map toShelleyStakeCredential creds
   QueryProposals govActs ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error "toConsensusQueryShelleyBased: QueryProposals is only available from the Conway era onwards"
-      )
-      ( \w ->
-          obtainCommonConstraints (convert w) $
-            Some
-              (consensusQueryInEraInMode era (Consensus.GetProposals govActs))
-      )
-      sbe
+    conwayEraOnwardsConstraints (conwayOnwards "QueryProposals") $
+      Some (consensusQueryInEraInMode era (Consensus.GetProposals govActs))
   QueryLedgerPeerSnapshot peerKind ->
     Some
       (consensusQueryInEraInMode era (Consensus.GetLedgerPeerSnapshot peerKind))
   QueryStakePoolDefaultVote govActs ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error
-            "toConsensusQueryShelleyBased: QueryStakePoolDefaultVote is only available from the Conway era onwards"
-      )
-      ( \w ->
-          obtainCommonConstraints (convert w) $
-            Some
-              (consensusQueryInEraInMode era (Consensus.QueryStakePoolDefaultVote govActs))
-      )
-      sbe
+    conwayEraOnwardsConstraints (conwayOnwards "QueryStakePoolDefaultVote") $
+      Some (consensusQueryInEraInMode era (Consensus.QueryStakePoolDefaultVote govActs))
   GetDRepDelegations dreps ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error
-            "toConsensusQueryShelleyBased: GetDRepDelegations is only available from the Conway era onwards"
-      )
-      ( \w ->
-          obtainCommonConstraints (convert w) $
-            Some
-              (consensusQueryInEraInMode era (Consensus.GetDRepDelegations dreps))
-      )
-      sbe
+    conwayEraOnwardsConstraints (conwayOnwards "GetDRepDelegations") $
+      Some (consensusQueryInEraInMode era (Consensus.GetDRepDelegations dreps))
  where
   era = toCardanoEra sbe
+
+  -- Witness that @era@ is Conway or later. Matched on 'ShelleyBasedEra',
+  -- totally: adding or retiring an era is then a compile error here rather
+  -- than a silent fall through to 'unsupported'.
+  conwayOnwards :: String -> ConwayEraOnwards era
+  conwayOnwards q = case sbe of
+    ShelleyBasedEraShelley -> unsupported
+    ShelleyBasedEraAllegra -> unsupported
+    ShelleyBasedEraMary -> unsupported
+    ShelleyBasedEraAlonzo -> unsupported
+    ShelleyBasedEraBabbage -> unsupported
+    ShelleyBasedEraConway -> ConwayEraOnwardsConway
+    ShelleyBasedEraDijkstra -> ConwayEraOnwardsDijkstra
+   where
+    unsupported :: forall a. a
+    unsupported =
+      error $
+        "toConsensusQueryShelleyBased: " <> q <> " is only available from the Conway era onwards"
 
 consensusQueryInEraInMode
   :: forall era erablock modeblock result result' fp xs
@@ -1023,7 +952,7 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryPoolState{} ->
       case q' of
         Consensus.GetCBOR Consensus.GetPoolState{} ->
-          SerialisedPoolState r'
+          SerialisedPoolState (Serialised (unSerialised r'))
         _ -> fromConsensusQueryResultMismatch
     QueryPoolDistribution{} ->
       case q' of

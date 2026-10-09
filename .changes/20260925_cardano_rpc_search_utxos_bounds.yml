@@ -1,0 +1,10 @@
+project: cardano-rpc
+pr: 1358
+kind:
+  - bugfix
+  - optimisation
+description: |
+  `SearchUtxos` now rejects a predicate that names more than 20,000 address terms, with repeated addresses counting towards the limit, returning an `INVALID_ARGUMENT` status; `ReadUtxos` already applies the same limit to its keys.
+  `SearchUtxos` pages are now produced without first building and sorting the full set of matching UTxOs, which lowers the memory and CPU cost of each request for addresses holding many UTxOs.
+  Page contents and pagination tokens are unchanged.
+  Matching each UTxO against the predicate no longer gets slower as the predicate names more addresses, so a request naming many addresses costs no more per UTxO than one naming a single address.

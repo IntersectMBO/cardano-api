@@ -32,6 +32,8 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Script
 
+import Cardano.Ledger.Api qualified as L
+
 import RIO hiding (toList)
 
 import Data.ByteString.Base16 qualified as Base16
@@ -104,11 +106,21 @@ policyAssetsToUtxoRpcMultiassets policyAssetsMap =
       & U5c.assets .~ assets
 
 txOutToUtxoRpcTxOutput
-  :: ShelleyBasedEra era
+  :: forall era
+   . ShelleyBasedEra era
   -> TxOut CtxUTxO era
   -> Proto UtxoRpc.TxOutput
-txOutToUtxoRpcTxOutput sbe (TxOut addressInEra txOutValue datum script) = do
+txOutToUtxoRpcTxOutput sbe txOut@(TxOut addressInEra txOutValue datum script) = do
   let multiAsset = policyAssetsToUtxoRpcMultiassets . valueToPolicyAssets $ txOutValueToValue txOutValue
+      -- CAVEAT: this is a canonical re-encoding, not guaranteed to be the
+      -- original on-chain bytes. The ledger does not memoise TxOut (unlike
+      -- TxBody, Data and scripts), and its decoders accept non-canonical
+      -- encodings, so decode-then-encode may differ from the submitter's
+      -- bytes for historical outputs.
+      originalCbor =
+        shelleyBasedEraConstraints sbe $
+          L.serialize' (L.eraProtVerHigh @(ShelleyLedgerEra era)) $
+            toShelleyTxOut sbe txOut
       datumRpc = case datum of
         TxOutDatumNone ->
           Nothing
@@ -131,6 +143,7 @@ txOutToUtxoRpcTxOutput sbe (TxOut addressInEra txOutValue datum script) = do
     & U5c.assets .~ multiAsset
     & U5c.maybe'datum .~ datumRpc
     & U5c.script .~ referenceScriptToUtxoRpcScript script
+    & U5c.originalCbor .~ originalCbor
 
 utxoRpcTxOutputToTxOut
   :: forall era m

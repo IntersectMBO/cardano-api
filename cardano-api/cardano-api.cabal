@@ -1,6 +1,6 @@
 cabal-version: 3.8
 name: cardano-api
-version: 11.6.0.0
+version: 11.8.0.0
 synopsis: The cardano API
 description: The cardano API.
 category:
@@ -74,6 +74,7 @@ library
     Cardano.Api.Byron
     Cardano.Api.Compatible
     Cardano.Api.Compatible.Certificate
+    Cardano.Api.Compatible.ProtocolParametersUpdate
     Cardano.Api.Compatible.Tx
     Cardano.Api.Consensus
     Cardano.Api.Crypto.Ed25519Bip32
@@ -135,22 +136,23 @@ library
     cardano-base ^>=0.1,
     cardano-binary,
     cardano-crypto,
-    cardano-crypto-class ^>=2.5,
-    cardano-crypto-wrapper ^>=1.7,
+    cardano-crypto-class ^>=2.6,
+    cardano-crypto-wrapper ^>=1.8,
     cardano-data >=1.0,
-    cardano-diffusion:{api, cardano-diffusion} ^>=1.0,
+    cardano-diffusion:{api, cardano-diffusion} ^>=1.3,
+    cardano-keys ^>=11.0,
     cardano-ledger-allegra >=1.7,
-    cardano-ledger-alonzo >=1.15,
+    cardano-ledger-alonzo >=1.17,
     cardano-ledger-api ^>=1.15,
     cardano-ledger-babbage >=1.11,
-    cardano-ledger-binary >=1.6,
+    cardano-ledger-binary >=1.9.1,
     cardano-ledger-byron >=1.2,
     cardano-ledger-conway >=1.19,
-    cardano-ledger-core >=1.20,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.22,
     cardano-ledger-dijkstra >=0.1,
     cardano-ledger-mary >=1.8,
     cardano-ledger-shelley >=1.16,
-    cardano-protocol >= 0.1,
+    cardano-protocol ^>=0.2,
     cardano-protocol-tpraos >=1.4,
     cardano-slotting >=0.2.0.0,
     cardano-strict-containers >=0.1,
@@ -178,17 +180,17 @@ library
     network-mux,
     nothunks,
     ordered-containers,
-    ouroboros-consensus:{cardano, diffusion, ouroboros-consensus, protocol} ^>=3.0,
-    ouroboros-network:{api, framework, ouroboros-network, protocols} ^>=1.1,
+    ouroboros-consensus:{cardano, diffusion, ouroboros-consensus, protocol} ^>=5.1,
+    ouroboros-network:{api, framework, ouroboros-network, protocols} ^>=1.3,
     parsec,
-    plutus-core ^>=1.68,
-    plutus-ledger-api ^>=1.68,
+    plutus-core ^>=1.71,
+    plutus-ledger-api ^>=1.71,
     pretty-simple,
     prettyprinter,
     prettyprinter-ansi-terminal,
     prettyprinter-configurable ^>=1.36,
     random,
-    resource-registry ^>=0.2,
+    resource-registry ^>=0.4,
     safe-exceptions,
     scientific,
     serialise,
@@ -217,7 +219,6 @@ library
     Cardano.Api.Consensus.Internal.Mode
     Cardano.Api.Consensus.Internal.Protocol
     Cardano.Api.Consensus.Internal.Reexport
-    Cardano.Api.Era.Internal.Case
     Cardano.Api.Era.Internal.Core
     Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
     Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
@@ -235,11 +236,12 @@ library
     Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
     Cardano.Api.Experimental.Serialise.TextEnvelope.Internal
     Cardano.Api.Experimental.Tx.Internal.AnyWitness
-    Cardano.Api.Experimental.Tx.Internal.BodyContent.New
+    Cardano.Api.Experimental.Tx.Internal.BodyContent
     Cardano.Api.Experimental.Tx.Internal.Certificate
     Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible
     Cardano.Api.Experimental.Tx.Internal.Certificate.Type
     Cardano.Api.Experimental.Tx.Internal.Fee
+    Cardano.Api.Experimental.Tx.Internal.SubTransaction
     Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
     Cardano.Api.Experimental.Tx.Internal.Type
     Cardano.Api.Genesis.Internal
@@ -330,8 +332,8 @@ library gen
     bytestring,
     cardano-api,
     cardano-binary >=1.6 && <1.10,
-    cardano-crypto-class ^>=2.5,
-    cardano-crypto-wrapper:testlib ^>=1.7,
+    cardano-crypto-class ^>=2.6,
+    cardano-crypto-wrapper:testlib ^>=1.8,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-byron:testlib,
     cardano-ledger-conway:testlib,
@@ -374,14 +376,15 @@ test-suite cardano-api-test
     cardano-api:gen,
     cardano-binary,
     cardano-crypto,
-    cardano-crypto-class:{cardano-crypto-class, testlib} ^>=2.5,
+    cardano-crypto-class:{cardano-crypto-class, testlib} ^>=2.6,
     cardano-crypto-wrapper:testlib,
+    cardano-data >=1.0,
     cardano-ledger-alonzo,
     cardano-ledger-api ^>=1.15,
     cardano-ledger-babbage,
     cardano-ledger-binary,
     cardano-ledger-conway,
-    cardano-ledger-core,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.22,
     cardano-ledger-dijkstra,
     cardano-ledger-mary,
     cardano-ledger-shelley,
@@ -396,6 +399,7 @@ test-suite cardano-api-test
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,
+    mempack,
     microlens,
     mtl,
     ouroboros-consensus:{cardano, ouroboros-consensus, protocol},
@@ -410,6 +414,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Address
     Test.Cardano.Api.Bech32
     Test.Cardano.Api.CBOR
+    Test.Cardano.Api.Certificate
     Test.Cardano.Api.Cip129
     Test.Cardano.Api.Crypto
     Test.Cardano.Api.Envelope
@@ -432,6 +437,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Orphans
     Test.Cardano.Api.RawBytes
     Test.Cardano.Api.Transaction.Autobalance
+    Test.Cardano.Api.Transaction.Body.Plutus.RedeemerIndex
     Test.Cardano.Api.Transaction.Body.Plutus.Scripts
     Test.Cardano.Api.Transaction.Collateral
     Test.Cardano.Api.Transaction.Fixtures
@@ -474,8 +480,8 @@ test-suite cardano-api-golden
     hedgehog >=1.1,
     hedgehog-extras ^>=0.10,
     microlens,
-    plutus-core ^>=1.68,
-    plutus-ledger-api ^>=1.68,
+    plutus-core ^>=1.71,
+    plutus-ledger-api ^>=1.71,
     tasty,
     tasty-discover,
     tasty-hedgehog,

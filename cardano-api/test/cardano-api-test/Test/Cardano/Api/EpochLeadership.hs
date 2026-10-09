@@ -29,7 +29,7 @@ import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
 import Ouroboros.Consensus.Protocol.TPraos (TPraosState (..))
 
 import Data.Map qualified as Map
-import Data.Maybe.Strict (StrictMaybe (SNothing))
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Ratio ((%))
 import Data.Time.Clock (secondsToNominalDiffTime)
 import GHC.Exts (IsList (..))

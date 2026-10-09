@@ -147,6 +147,7 @@ IOG_DOC_BASES=(
   "https://intersectmbo.github.io/io-sim"
   "https://intersectmbo.github.io/typed-protocols"
   "https://input-output-hk.github.io/fs-sim"
+  "https://intersectmbo.github.io"
 )
 
 # CHaP packages we've confirmed have no public Haddocks anywhere (no
@@ -165,7 +166,7 @@ KNOWN_UNDOCUMENTED=(
 # under ouroboros-network/api/, not ouroboros-network/ directly). When a
 # module page URL 404s at the flat path, the rescue logic retries under
 # each of these subdirectories.
-DOC_SUBDIRS=(api protocols framework)
+DOC_SUBDIRS=(api protocols framework cardano-keys)
 
 derive_name_candidates() {
   local name="$1"

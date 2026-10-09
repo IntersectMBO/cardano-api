@@ -1,0 +1,11 @@
+{
+  "name": "cardano-rpc-quickstart",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@grpc/grpc-js": "1.14.4",
+    "@grpc/proto-loader": "0.8.1",
+    "@meshsdk/core": "1.9.1",
+    "@meshsdk/core-cst": "1.9.1"
+  }
+}

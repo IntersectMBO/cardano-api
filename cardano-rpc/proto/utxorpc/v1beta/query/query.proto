@@ -72,6 +72,32 @@ message ReadParamsResponse {
   ChainPoint ledger_tip = 2; // The chain point that represent the ledger current position.
 }
 
+// An envelope that wraps a chain-specific ledger-state query.
+message AnyChainStateQuery {
+  oneof query {
+    utxorpc.v1beta.cardano.StateQuery cardano = 1; // A Cardano ledger-state query.
+  }
+}
+
+// An envelope that wraps a chain-specific ledger-state query result.
+message AnyChainStateData {
+  oneof result {
+    utxorpc.v1beta.cardano.StateData cardano = 1; // A Cardano ledger-state query result.
+  }
+}
+
+// Request to run a chain-specific ledger-state query against the current ledger snapshot.
+message ReadStateRequest {
+  AnyChainStateQuery query = 1; // The chain-specific query to evaluate.
+  google.protobuf.FieldMask field_mask = 2; // Field mask to selectively return fields.
+}
+
+// Response carrying the ledger-state query result.
+message ReadStateResponse {
+  AnyChainStateData result = 1; // The query result.
+  ChainPoint ledger_tip = 2; // Chain point representing the snapshot the query was evaluated against.
+}
+
 // An evenlope that holds an UTxO patterns from any of compatible chains
 message AnyUtxoPattern {
   oneof utxo_pattern {
@@ -171,7 +197,11 @@ service QueryService {
   rpc ReadParams(ReadParamsRequest) returns (ReadParamsResponse); // Get overall chain state.
   rpc ReadUtxos(ReadUtxosRequest) returns (ReadUtxosResponse); // Read specific UTxOs by reference.
   rpc SearchUtxos(SearchUtxosRequest) returns (SearchUtxosResponse); // Search for UTxO based on a pattern.
-  rpc ReadGenesis(ReadGenesisRequest) returns (ReadGenesisResponse); // Get the chain genesis config.
+  rpc ReadData(ReadDataRequest) returns (ReadDataResponse); // Read specific datum by hash
+  rpc ReadTx(ReadTxRequest) returns (ReadTxResponse); // Get Txs by chain-specific criteria.
+  rpc ReadGenesis(ReadGenesisRequest) returns (ReadGenesisResponse); // Get the genesis configuration
+  rpc ReadEraSummary(ReadEraSummaryRequest) returns (ReadEraSummaryResponse); // Get the chain era summary
+  rpc ReadState(ReadStateRequest) returns (ReadStateResponse); // Run a chain-specific ledger-state query (e.g. stake pool distribution).
 
   // TODO: decide if we want to expand the scope
   // rpc DumpUtxos(ReadUtxosRequest) returns (stream ReadUtxosResponse); // Dump all available utxos

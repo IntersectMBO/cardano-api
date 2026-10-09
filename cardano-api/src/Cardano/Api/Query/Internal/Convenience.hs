@@ -169,8 +169,8 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
               )
 
   featuredTxTreasuryValueM <-
-    caseShelleyToBabbageOrConwayEraOnwards
-      (const $ pure Nothing)
+    inEonForShelleyBasedEra
+      (pure Nothing)
       ( \cOnwards -> do
           ChainAccountState{casTreasury} <-
             lift (queryAccountState cOnwards)

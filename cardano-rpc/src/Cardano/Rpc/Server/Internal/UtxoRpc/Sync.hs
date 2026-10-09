@@ -45,27 +45,46 @@ import Network.GRPC.Spec
   )
 
 -- | Handle the @FetchBlock@ SyncService RPC method.
--- Fetches a block from ChainDB by slot and header hash.
+-- Fetches blocks from ChainDB by slot and header hash.
 -- Byron-era transactions carry no fee: Byron fees are implicit (inputs minus
 -- outputs) and computing them needs UTxO lookups this handler does not do.
--- Returns @NOT_FOUND@ if the requested block is missing.
--- Returns @INVALID_ARGUMENT@ if the block reference has an invalid hash.
+-- Returns @NOT_FOUND@ if any requested block is missing.
+-- Returns @INVALID_ARGUMENT@ if a block reference has an invalid hash.
 fetchBlockMethod
   :: MonadRpc e m
   => Proto U5c.FetchBlockRequest
-  -- ^ Request containing a block reference (slot + hash)
+  -- ^ Request containing block references (slot + hash)
   -> m (Proto U5c.FetchBlockResponse)
-  -- ^ Response containing the fetched block with raw CBOR and cardano header
+  -- ^ Response containing the fetched blocks with raw CBOR and cardano header
 fetchBlockMethod request = do
-  nodeKernelAccess@NodeKernelAccess{systemStart, readEraHistory} <- grabNodeKernelAccess
-  (slot, headerHash) <- blockRefToPoint (request ^. U5c.ref)
-  let throwNotFound =
-        throwGrpcErrorWithMessage GrpcNotFound $
-          "block not found at slot " <> tshow (unSlotNo slot)
-  (rawBytes, blockInMode) <-
-    fetchBlock nodeKernelAccess slot headerHash >>= maybe throwNotFound pure
-  timestamp <- slotTimestampOrThrow systemStart readEraHistory slot
-  pure $ defMessage & U5c.block .~ mkAnyChainBlock rawBytes blockInMode timestamp
+  let refCount = length $ request ^. U5c.ref
+  when (refCount > maxFetchBlockRefs) $
+    throwGrpcErrorWithMessage GrpcInvalidArgument $
+      "too many block references: "
+        <> tshow refCount
+        <> ", maximum "
+        <> tshow maxFetchBlockRefs
+        <> "; batch your requests"
+
+  nodeKernelAccess <- grabNodeKernelAccess
+  blocks <- forM (request ^. U5c.ref) $ \blockRef -> do
+    (slot, headerHash) <- blockRefToPoint blockRef
+    let throwNotFound =
+          throwGrpcErrorWithMessage GrpcNotFound $
+            "block not found at slot "
+              <> tshow (unSlotNo slot)
+              <> ", header hash "
+              <> serialiseToRawBytesHexText headerHash
+    (rawBytes, blockInMode) <-
+      fetchBlock nodeKernelAccess slot headerHash >>= maybe throwNotFound pure
+    timestamp <-
+      slotTimestampOrThrow (nodeKernelSystemStart nodeKernelAccess) (readEraHistory nodeKernelAccess) slot
+    pure $ mkAnyChainBlock rawBytes blockInMode timestamp
+  pure $ defMessage & U5c.block .~ blocks
+
+-- | Each ref is a ChainDB read and a full block in the non-streaming response.
+maxFetchBlockRefs :: Int
+maxFetchBlockRefs = 500
 
 -- | Handle the @ReadTip@ SyncService RPC method.
 -- Reads the current chain tip from ChainDB and returns it as slot, block
@@ -76,8 +95,11 @@ readTipMethod
   => Proto U5c.ReadTipRequest
   -> m (Proto U5c.ReadTipResponse)
 readTipMethod _request = do
-  NodeKernelAccess{chainDb, systemStart, readEraHistory} <- grabNodeKernelAccess
-  tip <- readTipBlockRef chainDb (slotTimestampOrThrow systemStart readEraHistory)
+  nodeKernelAccess <- grabNodeKernelAccess
+  tip <-
+    readTipBlockRef
+      nodeKernelAccess
+      (slotTimestampOrThrow (nodeKernelSystemStart nodeKernelAccess) (readEraHistory nodeKernelAccess))
   pure $ defMessage & U5c.maybe'tip .~ tip
 
 -- | Handle the @FollowTip@ SyncService RPC method: stream fully parsed
@@ -97,7 +119,7 @@ readTipMethod _request = do
 -- slot and hash only, like ChainSync's @MsgRollBackward@. The tracked
 -- window is sized to the node's security parameter /k/, so no rollback
 -- consensus can produce falls outside it (see
--- 'Cardano.Rpc.Server.NodeKernelAccess.Type.NodeKernelAccess').
+-- 'Cardano.Rpc.Server.NodeKernelAccess.securityParam').
 -- Every response also carries the current chain tip.
 --
 -- Errors: @INVALID_ARGUMENT@ if an intersection block ref has an invalid
@@ -113,8 +135,7 @@ followTipMethod
   -- ^ Callback used to send each streamed response
   -> m ()
 followTipMethod request send = do
-  nodeKernelAccess@NodeKernelAccess{chainDb, systemStart, readEraHistory, securityParam} <-
-    grabNodeKernelAccess
+  nodeKernelAccess <- grabNodeKernelAccess
   requestedPoints <- traverse blockRefToIntersectPoint (request ^. U5c.intersect)
   withFollower nodeKernelAccess $ \follower -> do
     -- an empty intersect list follows from the current tip; resolving it
@@ -122,19 +143,19 @@ followTipMethod request send = do
     -- for "the current tip point"), so this step stays here rather than
     -- moving into 'followTipStream', which only takes an already-resolved,
     -- non-empty point list
-    let slotTimestamp = slotTimestampOrThrow systemStart readEraHistory
+    let slotTimestamp = slotTimestampOrThrow (nodeKernelSystemStart nodeKernelAccess) (readEraHistory nodeKernelAccess)
     startPoints <-
       if null requestedPoints
         then do
-          tipHeader <- liftIO $ Consensus.getTipHeader chainDb
+          tipHeader <- readChainTipHeader nodeKernelAccess
           pure [maybe ChainPointAtGenesis tipHeaderPoint tipHeader]
         else pure requestedPoints
     followTipStream
       follower
-      (readTipBlockRef chainDb slotTimestamp)
+      (readTipBlockRef nodeKernelAccess slotTimestamp)
       slotTimestamp
       (fetchBlockByChainPoint nodeKernelAccess)
-      (fromIntegral . L.unNonZero $ Consensus.maxRollbacks securityParam)
+      (fromIntegral . L.unNonZero $ Consensus.maxRollbacks (securityParam nodeKernelAccess))
       send
       startPoints
 
@@ -244,7 +265,7 @@ followTipStream
   -> Int
   -- ^ How many applied points to track for undo re-fetch. In production
   -- this is the node's security parameter /k/
-  -- ('Cardano.Rpc.Server.NodeKernelAccess.Type.securityParam'). Consensus
+  -- ('Cardano.Rpc.Server.NodeKernelAccess.securityParam'). Consensus
   -- never rolls back more than /k/ blocks, so tracking /k/ points covers
   -- every rollback the protocol can produce, on any network. An entry
   -- costs roughly 40 bytes, so the window costs about @40 * k@ bytes per
@@ -293,7 +314,7 @@ followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp f
       ChainRollBack point -> handleRollback point floorPoint tracked
     go floorPoint' tracked'
 
-  -- \| Dispatch a rollback to undo or reset. The window floor starts as
+  -- Dispatch a rollback to undo or reset. The window floor starts as
   -- the stream's start point and only ever moves forward, to a rollback
   -- target that fell outside the window (the 'Nothing' case below). A
   -- later rollback landing on the new floor can then be served as undo
@@ -320,7 +341,7 @@ followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp f
             kept' <- undoNewestFirst point kept undone
             pure (floorPoint, kept')
 
-  -- \| Split the tracked points at the rollback target. 'Nothing' means
+  -- Split the tracked points at the rollback target. 'Nothing' means
   -- the target is outside the window: not the floor and not a tracked
   -- point. Otherwise the first half is the points strictly newer than the
   -- target, to be undone newest first, and the second half is what
@@ -335,7 +356,7 @@ followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp f
       | point == floorPoint -> Just (tracked, Seq.empty)
       | otherwise -> Nothing
 
-  -- \| Re-fetch and emit @undo@ for each pending point, newest first.
+  -- Re-fetch and emit @undo@ for each pending point, newest first.
   -- Stops at the first fetch miss (garbage collection won the race) and
   -- sends a single absolute @reset@ at the rollback point instead.
   undoNewestFirst :: ChainPoint -> TrackedPoints -> TrackedPoints -> m TrackedPoints
@@ -360,12 +381,12 @@ followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp f
 -- 'mkTipBlockRef', or 'Nothing' at origin.
 readTipBlockRef
   :: MonadIO m
-  => Consensus.ChainDB IO (Consensus.CardanoBlock Consensus.StandardCrypto)
+  => NodeKernelAccess
   -> (SlotNo -> m UTCTime)
   -- ^ Convert a slot to its wall-clock timestamp
   -> m (Maybe (Proto U5c.BlockRef))
-readTipBlockRef chainDb slotTimestamp = do
-  tipHeader <- liftIO $ Consensus.getTipHeader chainDb
+readTipBlockRef nodeKernelAccess slotTimestamp = do
+  tipHeader <- readChainTipHeader nodeKernelAccess
   forM tipHeader $ \header ->
     mkTipBlockRef header <$> slotTimestamp (Consensus.blockSlot header)
 
@@ -378,8 +399,8 @@ slotTimestampOrThrow
   -- ^ Read current era history from the ledger state
   -> SlotNo
   -> m UTCTime
-slotTimestampOrThrow systemStart readEraHistory slot = do
-  eraHistory <- readEraHistory
+slotTimestampOrThrow systemStart readEraHistoryAction slot = do
+  eraHistory <- readEraHistoryAction
   slotToUTCTime systemStart eraHistory slot
     & either (const throwPastHorizon) pure
  where

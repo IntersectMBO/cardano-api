@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1360
+kind:
+  - bugfix
+description: |
+  The IPv4 address of a stake pool relay is no longer byte-reversed in the stake pool registration certificates of transactions returned over gRPC; this is fixed by requiring cardano-ledger-binary 1.9.1.0 (IntersectMBO/cardano-cli#1442).

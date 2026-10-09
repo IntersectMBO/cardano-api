@@ -2,6 +2,7 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -44,6 +45,7 @@ module Test.Gen.Cardano.Api.Typed
 
     -- * Scripts
   , genHashableScriptData
+  , genNonCanonicalHashableScriptData
   , genReferenceScript
   , genScript
   , genValidScript
@@ -189,7 +191,7 @@ import Data.Int (Int64)
 import Data.Maybe
 import Data.Ratio (Ratio, (%))
 import Data.String
-import Data.Word (Word32, Word64)
+import Data.Word (Word32, Word64, Word8)
 import GHC.Exts (IsList (..))
 import GHC.Stack
 import Numeric.Natural (Natural)
@@ -391,6 +393,26 @@ genHashableScriptData = do
   case deserialiseFromCBOR AsHashableScriptData $ serialiseToCBOR sd of
     Left e -> error $ "genHashableScriptData: " <> show e
     Right r -> return r
+
+-- | Generate 'HashableScriptData' whose CBOR uses a definite-length array
+-- instead of the canonical indefinite-length form that Plutus normally emits.
+-- This means 'hashScriptDataBytes' of the result differs from
+-- 'hashScriptDataBytes' of its canonical re-encoding, exposing any JSON
+-- round-trip that reconstructs CBOR rather than preserving original bytes.
+genNonCanonicalHashableScriptData :: HasCallStack => Gen HashableScriptData
+genNonCanonicalHashableScriptData = do
+  constrIdx <- Gen.integral (Range.linear 0 6 :: Range.Range Int)
+  args <- Gen.list (Range.linear 1 5) (Gen.integral (Range.linear 0 23 :: Range.Range Int))
+  -- Plutus constructor n uses CBOR tag 121+n.
+  -- Canonical encoding wraps fields in an indefinite-length array (0x9f..0xff).
+  -- We use a definite-length array (0x80+len) to produce non-canonical bytes.
+  let tagBytes = [0xd8, fromIntegral (0x79 + constrIdx)] :: [Word8]
+      arrayHdr = [fromIntegral (0x80 + length args)] :: [Word8]
+      argBytes = map fromIntegral args :: [Word8]
+      bytes = BS.pack (tagBytes <> arrayHdr <> argBytes)
+  case deserialiseFromCBOR AsHashableScriptData bytes of
+    Left e -> error $ "genNonCanonicalHashableScriptData: " <> show e -- impossible case: we should always be able to deserialize cbor
+    Right r -> pure r
 
 {-# DEPRECATED genScriptData "Use genHashableScriptData" #-}
 genScriptData :: Gen ScriptData
@@ -828,58 +850,76 @@ genCertificate sbe =
 
 genStakeAddressRegistrationCertificate
   :: ShelleyBasedEra era -> Gen (Exp.Certificate (ShelleyLedgerEra era))
-genStakeAddressRegistrationCertificate =
-  caseShelleyToBabbageOrConwayEraOnwards
-    ( \w ->
-        shelleyToBabbageEraConstraints w $
-          Exp.Certificate . L.mkRegTxCert . toShelleyStakeCredential <$> genStakeCredential
-    )
-    ( \w ->
-        conwayEraOnwardsConstraints w $
-          Exp.Certificate
-            <$> ( L.mkRegDepositTxCert . toShelleyStakeCredential
-                    <$> genStakeCredential
-                    <*> genLovelace
-                )
-    )
+genStakeAddressRegistrationCertificate = \case
+  ShelleyBasedEraShelley -> preConway
+  ShelleyBasedEraAllegra -> preConway
+  ShelleyBasedEraMary -> preConway
+  ShelleyBasedEraAlonzo -> preConway
+  ShelleyBasedEraBabbage -> preConway
+  ShelleyBasedEraConway -> postConway
+  ShelleyBasedEraDijkstra -> postConway
+ where
+  preConway :: L.ShelleyEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  preConway =
+    Exp.Certificate . L.mkRegTxCert . toShelleyStakeCredential <$> genStakeCredential
+
+  postConway :: L.ConwayEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  postConway =
+    Exp.Certificate
+      <$> ( L.mkRegDepositTxCert . toShelleyStakeCredential
+              <$> genStakeCredential
+              <*> genLovelace
+          )
 
 genStakeAddressUnregistrationCertificate
   :: ShelleyBasedEra era -> Gen (Exp.Certificate (ShelleyLedgerEra era))
-genStakeAddressUnregistrationCertificate =
-  caseShelleyToBabbageOrConwayEraOnwards
-    ( \w ->
-        shelleyToBabbageEraConstraints w $
-          Exp.Certificate . L.mkUnRegTxCert . toShelleyStakeCredential <$> genStakeCredential
-    )
-    ( \w ->
-        conwayEraOnwardsConstraints w $
-          Exp.Certificate
-            <$> ( L.mkUnRegDepositTxCert . toShelleyStakeCredential
-                    <$> genStakeCredential
-                    <*> genLovelace
-                )
-    )
+genStakeAddressUnregistrationCertificate = \case
+  ShelleyBasedEraShelley -> preConway
+  ShelleyBasedEraAllegra -> preConway
+  ShelleyBasedEraMary -> preConway
+  ShelleyBasedEraAlonzo -> preConway
+  ShelleyBasedEraBabbage -> preConway
+  ShelleyBasedEraConway -> postConway
+  ShelleyBasedEraDijkstra -> postConway
+ where
+  preConway :: L.ShelleyEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  preConway =
+    Exp.Certificate . L.mkUnRegTxCert . toShelleyStakeCredential <$> genStakeCredential
+
+  postConway :: L.ConwayEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  postConway =
+    Exp.Certificate
+      <$> ( L.mkUnRegDepositTxCert . toShelleyStakeCredential
+              <$> genStakeCredential
+              <*> genLovelace
+          )
 
 genStakeAddressDelegationCertificate
   :: ShelleyBasedEra era -> Gen (Exp.Certificate (ShelleyLedgerEra era))
-genStakeAddressDelegationCertificate =
-  caseShelleyToBabbageOrConwayEraOnwards
-    ( \w ->
-        shelleyToBabbageEraConstraints w $
-          Exp.Certificate
-            <$> ( L.mkDelegStakeTxCert . toShelleyStakeCredential
-                    <$> genStakeCredential
-                    <*> (unStakePoolKeyHash <$> genVerificationKeyHash AsStakePoolKey)
-                )
-    )
-    ( \w ->
-        conwayEraOnwardsConstraints w $
-          Exp.Certificate
-            <$> ( L.mkDelegTxCert . toShelleyStakeCredential
-                    <$> genStakeCredential
-                    <*> Q.arbitrary
-                )
-    )
+genStakeAddressDelegationCertificate = \case
+  ShelleyBasedEraShelley -> preConway
+  ShelleyBasedEraAllegra -> preConway
+  ShelleyBasedEraMary -> preConway
+  ShelleyBasedEraAlonzo -> preConway
+  ShelleyBasedEraBabbage -> preConway
+  ShelleyBasedEraConway -> postConway
+  ShelleyBasedEraDijkstra -> postConway
+ where
+  preConway :: L.ShelleyEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  preConway =
+    Exp.Certificate
+      <$> ( L.mkDelegStakeTxCert . toShelleyStakeCredential
+              <$> genStakeCredential
+              <*> (unStakePoolKeyHash <$> genVerificationKeyHash AsStakePoolKey)
+          )
+
+  postConway :: L.ConwayEraTxCert ledgerera => Gen (Exp.Certificate ledgerera)
+  postConway =
+    Exp.Certificate
+      <$> ( L.mkDelegTxCert . toShelleyStakeCredential
+              <$> genStakeCredential
+              <*> Q.arbitrary
+          )
 
 genStakePoolRegistrationCertificate
   :: ShelleyBasedEra era -> Gen (Exp.Certificate (ShelleyLedgerEra era))

@@ -110,9 +110,9 @@ import Cardano.Api.Byron.Internal.Proposal as Byron
 import Cardano.Api.Certificate.Internal
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Consensus.Internal.Mode qualified as Api
-import Cardano.Api.Era.Internal.Case
 import Cardano.Api.Era.Internal.Core (forEraInEon, forEraMaybeEon, toCardanoEra)
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards (ConwayEraOnwards)
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error as Api
 import Cardano.Api.Genesis.Internal
@@ -154,10 +154,12 @@ import Cardano.Crypto.ProtocolMagic qualified
 import Cardano.Crypto.VRF qualified as Crypto
 import Cardano.Crypto.VRF.Class qualified as VRF
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import Cardano.Ledger.Api (Language (PlutusV4))
 import Cardano.Ledger.Api.Era qualified as Ledger
 import Cardano.Ledger.Api.Transition qualified as Ledger
 import Cardano.Ledger.BaseTypes
   ( Globals (..)
+  , Milliseconds32 (Milliseconds32)
   , Nonce
   , ProtVer (..)
   , natVersion
@@ -165,10 +167,12 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary (DecoderError)
+import Cardano.Ledger.Coin qualified as Coin
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Dijkstra.Tx qualified as Ledger
 import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Keys qualified as SL
+import Cardano.Ledger.Plutus (OrdExUnits (..))
 import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
 import Cardano.Ledger.Shelley.Core qualified as Core
 import Cardano.Ledger.Shelley.Genesis qualified as Ledger
@@ -276,6 +280,8 @@ import Network.Mux qualified as Mux
 import Network.TypedProtocol.Core (Nat (..))
 import System.FS.API (SomeHasFS (..))
 import System.FilePath
+
+import Test.Cardano.Ledger.Plutus (testingCostModel)
 
 data InitialLedgerStateError
   = -- | Failed to read or parse the network config file.
@@ -1580,7 +1586,36 @@ resolveShelleyInitialFunds (SomeHasFS hasFS) genesis = do
 -- | Deferring to 'dijkstraGenesisDefaults' keeps this in step with what the CLI
 -- writes and with the node's fallback genesis.
 exampleDijkstraGenesis :: Ledger.DijkstraGenesis
-exampleDijkstraGenesis = dijkstraGenesisDefaults
+exampleDijkstraGenesis =
+  Ledger.DijkstraGenesis
+    { Ledger.dgUpgradePParams =
+        Ledger.UpgradeDijkstraPParams
+          { Ledger.udppMaxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
+          , Ledger.udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
+          , Ledger.udppRefScriptCostStride = knownNonZeroBounded @25600 -- 25 KiB
+          , Ledger.udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          , Ledger.udppMaxPledgeLeverage = Core.MaxPledgeLeverage ShelleyAPI.SNothing
+          , Ledger.udppMinPoolMargin = fromJust $ boundRational 0.015
+          , Ledger.udppPlutusV4CostModel = testingCostModel PlutusV4
+          , Ledger.udppLeiosAnnouncementPeriodLength = Milliseconds32 1000 -- L_hdr
+          , Ledger.udppLeiosVotePeriodLength = Milliseconds32 4000 -- L_vote
+          , Ledger.udppLeiosDiffusionPeriodLength = Milliseconds32 7000 -- L_diff
+          , Ledger.udppLeiosCommitteeSize = 900 -- N_c
+          , Ledger.udppLeiosQuorumStakeThreshold = fromJust $ boundRational 0.75 -- tau
+          , Ledger.udppMaxEndorserBlockReferencesSize = 512 * 1024 -- 512 KiB
+          , Ledger.udppMaxEndorserBlockTxsSize = 12 * 1024 * 1024 -- 12 MiB
+          , Ledger.udppMaxEndorserBlockExUnits = OrdExUnits $ Ledger.ExUnits 7000000000 2000000000000
+          , Ledger.udppMaxRefScriptSizePerEndorserBlock = 12 * 1024 * 1024 -- 12 MiB
+          , Ledger.udppPerasMinCandidateBlockAge = Slot.SlotInterval 90
+          , Ledger.udppPerasHealingFactor = fromJust $ boundRational 0.5
+          , Ledger.udppPerasCertBoost = 15
+          , Ledger.udppPerasTargetCommitteeSize = 800
+          , Ledger.udppPerasBootstrapRound = ShelleyAPI.SJust 0
+          , Ledger.udppPerasQuorumThresholdSafetyMargin = fromJust $ boundRational 0.05
+          , Ledger.udppRefInputsCostPerMultiAssetPolicy = Ledger.Coin 0
+          , Ledger.udppRefInputsCostPerDatumByte = Ledger.CoinPerByte (Coin.CompactCoin 0)
+          }
+    }
 
 data GenesisConfigError
   = NEError !Text
@@ -2110,7 +2145,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         stabilityWindowSlots :: SlotNo
         stabilityWindowSlots = fromIntegral @Word64 $ floor $ fromRational @Double stabilityWindowR
         stableStakeDistribSlot = currentEpochLastSlot - stabilityWindowSlots
-        stabilityWindowConst = caseShelleyToBabbageOrConwayEraOnwards (const 3) (const 4) sbe
+        stabilityWindowConst = inEonForShelleyBasedEra @ConwayEraOnwards 3 (const 4) sbe
 
     case cTip of
       ChainTipAtGenesis -> Left LeaderErrGenesisSlot

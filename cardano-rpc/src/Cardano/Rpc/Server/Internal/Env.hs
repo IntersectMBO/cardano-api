@@ -10,7 +10,7 @@ where
 import Cardano.Api
 import Cardano.Rpc.Server.Config
 import Cardano.Rpc.Server.Internal.Tracing
-import Cardano.Rpc.Server.NodeKernelAccess.Type (NodeKernelAccess)
+import Cardano.Rpc.Server.NodeKernelAccess.Internal.Type (NodeKernelAccess)
 
 import Control.Tracer (Tracer)
 import Data.IORef

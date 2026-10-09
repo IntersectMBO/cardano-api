@@ -19,6 +19,8 @@ import Proto.Utxorpc.V1beta.Cardano.Cardano_Fields hiding
   , index
   , items
   , key
+  , maybe'query
+  , maybe'result
   , slot
   , timestamp
   , tx

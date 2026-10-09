@@ -12,6 +12,7 @@ import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Cbor (DecoderError)
 import Cardano.Api.Serialise.Raw (SerialiseAsRawBytesError)
 import Cardano.Api.Serialise.SerialiseUsing
+import Cardano.Rpc.Server.Config (RpcEndpoint)
 
 import Control.Exception
 import Data.Word (Word64)
@@ -24,6 +25,7 @@ data TraceRpc
   | TraceRpcNodeKernelAccess TraceRpcNodeKernelAccess
   | TraceRpcError SomeException
   | TraceRpcFatalError SomeException
+  | TraceRpcServerListening !RpcEndpoint
 
 -- | Traces used in Query service
 data TraceRpcQuery
@@ -35,6 +37,8 @@ data TraceRpcQuery
     TraceRpcQuerySearchUtxosSpan TraceSpanEvent
   | -- | Span trace marking ReadGenesis query
     TraceRpcQueryReadGenesisSpan TraceSpanEvent
+  | -- | Span trace marking ReadEraSummary query
+    TraceRpcQueryReadEraSummarySpan TraceSpanEvent
   deriving Show
 
 instance Pretty TraceRpc where
@@ -45,6 +49,7 @@ instance Pretty TraceRpc where
     TraceRpcNodeKernelAccess t -> pretty t
     TraceRpcError e -> "Exception when processing RPC request:\n" <> prettyException e
     TraceRpcFatalError e -> "RPC server fatal error: " <> prettyException e
+    TraceRpcServerListening endpoint -> "RPC server starting on " <> pretty endpoint
 
 -- | Span type
 data TraceSpanEvent
@@ -67,6 +72,8 @@ instance Pretty TraceRpcQuery where
     TraceRpcQuerySearchUtxosSpan (SpanEnd _) -> "Finished query search UTXO method"
     TraceRpcQueryReadGenesisSpan (SpanBegin _) -> "Started query read genesis method"
     TraceRpcQueryReadGenesisSpan (SpanEnd _) -> "Finished query read genesis method"
+    TraceRpcQueryReadEraSummarySpan (SpanBegin _) -> "Started query read era summary method"
+    TraceRpcQueryReadEraSummarySpan (SpanEnd _) -> "Finished query read era summary method"
 
 instance Error TraceRpcQuery where
   prettyError = pretty
@@ -85,6 +92,10 @@ data TraceRpcSubmit
     TraceRpcEvalTxDecodingError SerialiseAsRawBytesError
   | -- | Transaction evaluation span
     TraceRpcEvalTxSpan TraceSpanEvent
+  | -- | Mempool read span
+    TraceRpcReadMempoolSpan TraceSpanEvent
+  | -- | Mempool watch span
+    TraceRpcWatchMempoolSpan TraceSpanEvent
   deriving Show
 
 instance Pretty TraceRpcSubmit where
@@ -93,6 +104,10 @@ instance Pretty TraceRpcSubmit where
     TraceRpcSubmitSpan (SpanEnd _) -> "Finished submit method"
     TraceRpcEvalTxSpan (SpanBegin _) -> "Started eval tx method"
     TraceRpcEvalTxSpan (SpanEnd _) -> "Finished eval tx method"
+    TraceRpcReadMempoolSpan (SpanBegin _) -> "Started read mempool method"
+    TraceRpcReadMempoolSpan (SpanEnd _) -> "Finished read mempool method"
+    TraceRpcWatchMempoolSpan (SpanBegin _) -> "Started watch mempool method"
+    TraceRpcWatchMempoolSpan (SpanEnd _) -> "Finished watch mempool method"
     TraceRpcEvalTxDecodingError e -> "Failed to decode transaction for evaluation: " <> pshow e
     TraceRpcSubmitN2cConnectionError e -> "N2C connection error while trying to submit a transaction: " <> prettyException e
     TraceRpcSubmitTxDecodingError e -> "Failed to decode transaction: " <> pshow e

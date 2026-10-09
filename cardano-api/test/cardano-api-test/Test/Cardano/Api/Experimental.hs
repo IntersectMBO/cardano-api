@@ -17,7 +17,11 @@ where
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.AnyScriptWitness
-  ( AnyPlutusScriptWitness (AnyPlutusSpendingScriptWitness)
+  ( AnyPlutusScriptWitness
+      ( AnyPlutusCertifyingScriptWitness
+      , AnyPlutusProposingScriptWitness
+      , AnyPlutusSpendingScriptWitness
+      )
   , PlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV3)
   )
 import Cardano.Api.Experimental.Era (convert)
@@ -27,16 +31,17 @@ import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Ledger qualified as Ledger
 import Cardano.Api.Parser.Text qualified as Api
 import Cardano.Api.Plutus qualified as Script
-import Cardano.Api.Tx (Tx (ShelleyTx))
+import Cardano.Api.Tx (Tx (ShelleyTx), toShelleyTxId)
 
 import Cardano.Ledger.Address qualified as L
+import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Babbage.TxBody qualified as L
 import Cardano.Ledger.Conway qualified as L
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
+import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
 import Cardano.Ledger.Mary.Value qualified as Mary
-import Cardano.Ledger.Plutus.Data qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
@@ -45,21 +50,28 @@ import Cardano.Slotting.Time qualified as Slotting
 import Control.Monad.Identity (Identity)
 import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
+import Data.Either (isRight)
 import Data.Foldable (toList)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.OMap.Strict qualified as LOMap
 import Data.Ratio ((%))
+import Data.Set qualified as Set
 import Data.Text.Encoding qualified as Text
 import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time
 import Lens.Micro
 
-import Test.Gen.Cardano.Api.Experimental (genAnyScript)
+import Test.Gen.Cardano.Api.Experimental (genAnyScript, genSignedSubTx, genUnsignedSubTx)
 import Test.Gen.Cardano.Api.Typed
   ( genAddressInEra
   , genPlutusScriptInEra
+  , genProposal
+  , genShelleyWitnessSigningKey
   , genSimpleScript
+  , genStakeCredential
   , genTx
   , genTxIn
   )
@@ -68,6 +80,7 @@ import Hedgehog (Gen, Property)
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
+import Hedgehog.Gen.QuickCheck qualified as Q
 import Hedgehog.Internal.Property qualified as H
 import Hedgehog.Range qualified as Range
 import Test.Tasty (TestTree, testGroup)
@@ -118,10 +131,46 @@ tests =
             prop_roundtrip_read_file_any_script
         ]
     , testGroup
+        "Sub-transactions"
+        [ testProperty
+            "Roundtrip SerialiseAsCBOR UnsignedSubTx"
+            prop_roundtrip_cbor_unsigned_sub_tx
+        , testProperty
+            "Roundtrip SerialiseAsCBOR SignedSubTx"
+            prop_roundtrip_cbor_signed_sub_tx
+        , testProperty
+            "Roundtrip TextEnvelope UnsignedSubTx"
+            prop_roundtrip_text_envelope_unsigned_sub_tx
+        , testProperty
+            "Roundtrip TextEnvelope SignedSubTx"
+            prop_roundtrip_text_envelope_signed_sub_tx
+        , testProperty
+            "Sub-transaction envelope types name the era"
+            prop_sub_tx_envelope_types
+        , testProperty
+            "Signing a sub-transaction does not change its id"
+            prop_sign_sub_tx_preserves_id
+        , testProperty
+            "Sub-transaction built from content is embedded under its id"
+            prop_sub_tx_embedded_in_top_level_body
+        , testProperty
+            "Top-level body keeps required top-level guards and starting account balance intervals"
+            prop_makeUnsignedTx_dijkstra_top_level_only_fields
+        ]
+    , testGroup
         "makeUnsignedTx"
         [ testProperty
             "Plutus scripts without protocol params returns MakeUnsignedTxMissingProtocolParams"
             prop_makeUnsignedTx_plutus_without_pparams
+        , testProperty
+            "Dijkstra-only fields set on a Conway body are rejected, not dropped"
+            prop_makeUnsignedTx_conway_rejects_dijkstra_only_fields
+        , testProperty
+            "Proposal-procedure redeemer pointers follow OMap insertion order, not Ord order"
+            prop_makeUnsignedTx_proposal_redeemer_indices_follow_insertion_order
+        , testProperty
+            "Certifying redeemer indices count unwitnessed certs preceding a plutus-witnessed one"
+            prop_makeUnsignedTx_cert_redeemer_indices_count_unwitnessed_certs
         ]
     , testGroup
         "calcMinFeeRecursive"
@@ -148,6 +197,86 @@ tests =
             prop_calcMinFeeRecursive_no_tx_outs
         ]
     ]
+
+prop_roundtrip_cbor_unsigned_sub_tx :: Property
+prop_roundtrip_cbor_unsigned_sub_tx = H.property $ do
+  subTx <- H.forAll genUnsignedSubTx
+  H.tripping
+    subTx
+    Api.serialiseToCBOR
+    (Api.deserialiseFromCBOR Exp.AsUnsignedSubTx)
+
+prop_roundtrip_cbor_signed_sub_tx :: Property
+prop_roundtrip_cbor_signed_sub_tx = H.property $ do
+  subTx <- H.forAll genSignedSubTx
+  H.tripping subTx Api.serialiseToCBOR (Api.deserialiseFromCBOR Exp.AsSignedSubTx)
+
+prop_roundtrip_text_envelope_unsigned_sub_tx :: Property
+prop_roundtrip_text_envelope_unsigned_sub_tx = H.property $ do
+  subTx <- H.forAll genUnsignedSubTx
+  H.tripping subTx (Api.serialiseToTextEnvelope Nothing) Api.deserialiseFromTextEnvelope
+
+prop_roundtrip_text_envelope_signed_sub_tx :: Property
+prop_roundtrip_text_envelope_signed_sub_tx = H.property $ do
+  subTx <- H.forAll genSignedSubTx
+  H.tripping subTx (Api.serialiseToTextEnvelope Nothing) Api.deserialiseFromTextEnvelope
+
+prop_sub_tx_envelope_types :: Property
+prop_sub_tx_envelope_types = H.propertyOnce $ do
+  Api.textEnvelopeType Exp.AsUnsignedSubTx
+    H.=== Api.TextEnvelopeType "Unwitnessed SubTx DijkstraEra"
+  Api.textEnvelopeType Exp.AsSignedSubTx
+    H.=== Api.TextEnvelopeType "Witnessed SubTx DijkstraEra"
+
+prop_sign_sub_tx_preserves_id :: Property
+prop_sign_sub_tx_preserves_id = H.property $ do
+  subTx <- H.forAll genUnsignedSubTx
+  sk <- H.forAllWith (const "<ShelleyWitnessSigningKey>") genShelleyWitnessSigningKey
+  let wit = Exp.makeSubTxKeyWitness subTx sk
+      signed@(Exp.SignedSubTx ledgerTx) = Exp.signSubTx [] [wit] subTx
+  Exp.getUnsignedSubTxId subTx H.=== Exp.getSignedSubTxId signed
+  H.assert $ wit `Set.member` (ledgerTx ^. L.witsTxL . UnexportedLedger.addrTxWitsL)
+
+-- | The construction path end to end: 'Exp.SubTxBodyContent' through
+-- 'Exp.makeUnsignedSubTx', signing, and embedding in a Dijkstra top-level
+-- body, where the ledger keys the sub-transaction by its id. The setters are
+-- the ones shared with 'Exp.TxBodyContent'.
+prop_sub_tx_embedded_in_top_level_body :: Property
+prop_sub_tx_embedded_in_top_level_body = H.property $ do
+  donation <- H.forAll Q.arbitrary
+  guards <- H.forAll Q.arbitrary
+  sk <- H.forAllWith (const "<ShelleyWitnessSigningKey>") genShelleyWitnessSigningKey
+  let content =
+        Exp.defaultSubTxBodyContent
+          & Exp.setTxTreasuryDonation donation
+          & Exp.setTxGuards guards
+  unsigned <- H.evalEither $ Exp.makeUnsignedSubTx content
+  let signed@(Exp.SignedSubTx ledgerSubTx) =
+        Exp.signSubTx [] [Exp.makeSubTxKeyWitness unsigned sk] unsigned
+      subTxId = UnexportedLedger.txIdTx ledgerSubTx
+  ledgerSubTx ^. L.bodyTxL . L.treasuryDonationTxBodyL H.=== donation
+  ledgerSubTx ^. L.bodyTxL . UnexportedLedger.guardsTxBodyL H.=== guards
+  toShelleyTxId (Exp.getSignedSubTxId signed) H.=== subTxId
+  Exp.UnsignedTx tx <-
+    H.evalEither $
+      Exp.makeUnsignedTx Exp.DijkstraEra $
+        Exp.defaultTxBodyContent & Exp.setTxSignedSubTransactions [signed]
+  let subTxs = tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL
+  LOMap.lookup subTxId subTxs H.=== Just ledgerSubTx
+  length subTxs H.=== 1
+
+prop_makeUnsignedTx_dijkstra_top_level_only_fields :: Property
+prop_makeUnsignedTx_dijkstra_top_level_only_fields = H.property $ do
+  requiredGuards <- H.forAll Q.arbitrary
+  startingIntervals <- H.forAll Q.arbitrary
+  let bodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxRequiredTopLevelGuards requiredGuards
+          & Exp.setTxStartingAccountBalanceIntervals startingIntervals
+  Exp.UnsignedTx tx <- H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra bodyContent
+  let body = tx ^. L.bodyTxL
+  body ^. Dijkstra.requiredTopLevelGuardsL H.=== requiredGuards
+  body ^. Dijkstra.startingAccountBalanceIntervalsTxBodyL H.=== startingIntervals
 
 prop_roundtrip_cbor_any_script :: Property
 prop_roundtrip_cbor_any_script = H.property $ do
@@ -653,6 +782,26 @@ prop_roundtrip_serialise_as_raw_bytes_signed_tx = H.withTests (H.TestLimit 20) $
 -- Regression test for makeUnsignedTx
 -- ---------------------------------------------------------------------------
 
+-- | The body content record is shared by Conway and Dijkstra, so a Dijkstra-only
+-- field can be set on a Conway body. Building must fail, naming the field,
+-- rather than silently producing a body without it. The same content builds in
+-- Dijkstra.
+prop_makeUnsignedTx_conway_rejects_dijkstra_only_fields :: Property
+prop_makeUnsignedTx_conway_rejects_dijkstra_only_fields = H.property $ do
+  guardCredential <- H.forAll Q.arbitrary
+  let bodyContent :: Exp.TxBodyContent era
+      bodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxRequiredTopLevelGuards (Map.singleton guardCredential SNothing)
+  case Exp.makeUnsignedTx Exp.ConwayEra bodyContent of
+    Left err ->
+      err
+        H.=== Exp.MakeUnsignedTxFieldsNotSupportedInEra
+          (Exp.Some Exp.ConwayEra)
+          ("txRequiredTopLevelGuards" :| [])
+    Right _ -> H.failure
+  H.assert . isRight $ Exp.makeUnsignedTx Exp.DijkstraEra bodyContent
+
 -- | Regression test: 'makeUnsignedTx' must return 'Left MakeUnsignedTxMissingProtocolParams'
 -- when the transaction body contains a Plutus script witness but no protocol parameters.
 -- Protocol parameters are required to compute the script integrity hash (script_data_hash).
@@ -676,6 +825,136 @@ prop_makeUnsignedTx_plutus_without_pparams = H.propertyOnce $ do
           & Exp.setTxFee 0
   Exp.makeUnsignedTx Exp.ConwayEra txBodyContent
     H.=== Left Exp.MakeUnsignedTxMissingProtocolParams
+
+-- | 'makeUnsignedTx' must index plutus-witnessed governance proposals'
+-- redeemer pointers ('L.ConwayProposing') by insertion order, never by
+-- 'Ord' order. Insertion order is what the ledger's 'OSet'-backed
+-- 'proposalProceduresTxBodyL' stores them in.
+--
+-- 'propA' and 'propB' only differ in 'pProcDeposit' (the first field
+-- 'Ord' compares), chosen so 'propB' sorts before 'propA' by 'Ord' but is
+-- inserted after it. A regression to 'Ord'-sorted indexing would swap
+-- which redeemer lands at which index.
+prop_makeUnsignedTx_proposal_redeemer_indices_follow_insertion_order :: Property
+prop_makeUnsignedTx_proposal_redeemer_indices_follow_insertion_order = H.property $ do
+  scriptTxIn <- H.forAll genTxIn
+  baseA <- H.forAll (genProposal Api.ConwayEraOnwardsConway)
+  baseB <- H.forAll (genProposal Api.ConwayEraOnwardsConway)
+  let propA = baseA{L.pProcDeposit = 2_000_000}
+      propB = baseB{L.pProcDeposit = 1_000_000}
+
+      mkRedeemer :: Integer -> Script.HashableScriptData
+      mkRedeemer n = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor n []
+
+      mkProposingWitness redeemer =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusProposingScriptWitness $
+            Exp.PlutusScriptWitness
+              Plutus.SPlutusV3
+              (Exp.PReferenceScript scriptTxIn)
+              Exp.NoScriptDatum
+              redeemer
+              (Script.ExecutionUnits 0 0)
+
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxProtocolParams exampleProtocolParams
+          & Exp.setTxProposalProcedures
+            ( Exp.mkTxProposalProcedures
+                [ (propA, mkProposingWitness (mkRedeemer 1))
+                , (propB, mkProposingWitness (mkRedeemer 2))
+                ]
+            )
+          & Exp.setTxFee 0
+
+  Exp.UnsignedTx ledgerTx <- H.evalEither $ Exp.makeUnsignedTx Exp.ConwayEra txBodyContent
+
+  -- Sanity check: the body itself is in insertion order regardless of the
+  -- bug under test (the bug only affects redeemer indexing, not the body).
+  let bodyProposals = toList $ ledgerTx ^. L.bodyTxL . UnexportedLedger.proposalProceduresTxBodyL
+  bodyProposals H.=== [propA, propB]
+
+  -- The redeemer map must key 'propA''s witness to index 0 and 'propB''s
+  -- to index 1 (insertion order). 'Ord'-sorted indexing would give the
+  -- opposite, since 'propB' has the smaller deposit and sorts first.
+  let redeemers = ledgerTx ^. L.witsTxL . Alonzo.rdmrsTxWitsL
+      expectedRedeemers =
+        L.Redeemers $
+          Map.fromList
+            [
+              ( L.ConwayProposing (L.AsIx 0)
+              , (Api.toAlonzoData (mkRedeemer 1), Api.toAlonzoExUnits (Script.ExecutionUnits 0 0))
+              )
+            ,
+              ( L.ConwayProposing (L.AsIx 1)
+              , (Api.toAlonzoData (mkRedeemer 2), Api.toAlonzoExUnits (Script.ExecutionUnits 0 0))
+              )
+            ]
+  redeemers H.=== expectedRedeemers
+
+-- | 'makeUnsignedTx' must index a plutus-witnessed certificate's
+-- 'L.ConwayCertifying' redeemer pointer by its position among all
+-- certificates, witnessed and unwitnessed alike, never just among the
+-- witnessed subset.
+--
+-- 'unwitnessedCert' (a plain stake registration, which the ledger never
+-- requires a witness for) is placed before 'witnessedCert'. If unwitnessed
+-- certs were skipped when assigning indices, 'witnessedCert' would land
+-- at index 0 instead of the correct index 1.
+prop_makeUnsignedTx_cert_redeemer_indices_count_unwitnessed_certs :: Property
+prop_makeUnsignedTx_cert_redeemer_indices_count_unwitnessed_certs = H.property $ do
+  stakeCred1 <- H.forAll genStakeCredential
+  stakeCred2 <- H.forAll genStakeCredential
+  scriptTxIn <- H.forAll genTxIn
+  let shelleyCred1 = Api.toShelleyStakeCredential stakeCred1
+      shelleyCred2 = Api.toShelleyStakeCredential stakeCred2
+
+      -- Unwitnessed: a plain stake registration cert needs no witness.
+      unwitnessedCert =
+        Exp.Certificate $ L.ConwayTxCertDeleg (L.ConwayRegCert shelleyCred1 L.SNothing)
+
+      -- Plutus-witnessed: a stake delegation cert witnessed by a plutus script.
+      witnessedCert =
+        Exp.Certificate $
+          L.ConwayTxCertDeleg (L.ConwayDelegCert shelleyCred2 (L.DelegVote L.DRepAlwaysAbstain))
+
+      redeemer = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor 0 []
+
+      certWitness =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusCertifyingScriptWitness $
+            Exp.PlutusScriptWitness
+              Plutus.SPlutusV3
+              (Exp.PReferenceScript scriptTxIn)
+              Exp.NoScriptDatum
+              redeemer
+              (Script.ExecutionUnits 0 0)
+
+      certs =
+        Exp.mkTxCertificates
+          Exp.ConwayEra
+          [ (unwitnessedCert, Exp.AnyKeyWitnessPlaceholder)
+          , (witnessedCert, certWitness)
+          ]
+
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxCertificates certs
+          & Exp.setTxProtocolParams exampleProtocolParams
+          & Exp.setTxFee 0
+
+  Exp.UnsignedTx ledgerTx <- H.evalEither $ Exp.makeUnsignedTx Exp.ConwayEra txBodyContent
+
+  let redeemers = ledgerTx ^. L.witsTxL . Alonzo.rdmrsTxWitsL
+      expectedRedeemers =
+        L.Redeemers $
+          Map.fromList
+            [
+              ( L.ConwayCertifying (L.AsIx 1)
+              , (Api.toAlonzoData redeemer, Api.toAlonzoExUnits (Script.ExecutionUnits 0 0))
+              )
+            ]
+  redeemers H.=== expectedRedeemers
 
 -- ---------------------------------------------------------------------------
 -- Property tests for calcMinFeeRecursive

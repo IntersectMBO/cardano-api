@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-09-02T14:05:07Z
-  , cardano-haskell-packages 2026-09-02T08:49:12Z
+  , cardano-haskell-packages 2026-10-06T15:10:52Z
 
 packages:
     cardano-api
@@ -48,15 +48,12 @@ jobs: $ncpus
 semaphore: True
 
 constraints:
-  -- Match cardano-node's closure: memory-line crypton (see the cardano-base SRP below).
-  , any.crypton < 1.1
   -- haskell.nix patch does not work for 1.6.8
-  , any.crypton-x509-system < 1.6.8
+  , any.crypton-x509-system (< 1.6.8 || >= 1.7)
 
 allow-newer:
   , io-sim:time
   , io-classes:time
-  , cardano-crypto-class
 
 -- WASM compilation specific
 
@@ -106,6 +103,25 @@ if arch(wasm32)
     tag: ab92e48e9fdf3abe214f85fdbe5301c1280e14e9
     --sha256: sha256-U+ln/gbXoQZpNjZHydNa0FG/9GdJFgL1+T3+7KTzDWo=
 
+  source-repository-package
+    type: git
+    location: https://github.com/palas/ram
+    tag: 73125424da174adf25e607d7584014becd5fb6a7
+    --sha256: sha256-fo3MlxW+0kUdXFSJILZ6L4HFmATr8R8oytlbyyaKYn0=
+
+  source-repository-package
+    type: git
+    location: https://github.com/palas/direct-sqlite
+    tag: c7dfc6b8a1993eb1d92edbdb21ece20a1cf1cc8b
+    --sha256: sha256-RuQqcmEpvlUDa4zxiNmZJMaf/wrU2vZWoMQPm5d24RY=
+
+  -- The wasm fork of `network` above is pinned at 3.2.7.0, while
+  -- cardano-config requires ^>=3.2.8. The 3.2.8 release only adds the
+  -- IP_DONTFRAG/IP_MTU_DISCOVER and KeepInit socket options, neither of
+  -- which cardano-config uses (it only needs `PortNumber`), so relax the
+  -- lower bound rather than carrying a forked 3.2.8.
+  allow-older: cardano-config:network
+
   package cardano-crypto-praos
     flags: -external-libsodium-vrf
 
@@ -137,6 +153,8 @@ allow-newer:
   , microstache:aeson
   , monad-control:transformers
   , http-api-data:text-iso8601
+  -- cardano-addresses-4.0.x bounds crypton < 1.1 but we have 1.1.4
+  , cardano-addresses:crypton
 
 -- cabal-allow-newer begin
 if impl(ghc >=9.14)
@@ -176,18 +194,6 @@ if impl(ghc >=9.14)
 program-options
   ghc-options: -Wno-deprecations
 
--- Points to cardano-base/leios-prototype
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-base
-  tag: fbfb3f05d8092492f000264edca2d7a1a105741a
-  --sha256: sha256-jbafzBNRARCuOtb8qsaYGZ0h8o/icnjxiNoMu0EFduU=
-  subdir:
-    cardano-binary
-    cardano-crypto-class
-    cardano-crypto-leios
-    cardano-crypto-praos
-
 -- Points to nfrisby-pr93-lookahead-merge-commit tag
 source-repository-package
   type: git
@@ -197,56 +203,3 @@ source-repository-package
   subdir:
     typed-protocols
 
--- Points to ouroboros-ledger/leios-prototype
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/cardano-ledger
-  tag: daa38fec95ddba68ad4e780b933e7e094d68241d
-  -- TODO: refresh with nix-prefetch-git after pushing the tag
-  --sha256: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-  subdir:
-    libs/cardano-data
-    libs/cardano-ledger-api
-    libs/small-steps
-    libs/cardano-ledger-binary
-    libs/cardano-ledger-core
-    libs/cardano-protocol
-    libs/cardano-protocol-tpraos
-    eras/shelley/impl
-    eras/shelley/test-suite
-    eras/shelley-ma/test-suite
-    eras/mary/impl
-    eras/allegra/impl
-    eras/alonzo/impl
-    eras/alonzo/test-suite
-    eras/babbage/impl
-    eras/conway/impl
-    eras/dijkstra/impl
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/kes-agent.git
-  tag: 4e7ec7b5102a030587413f4af770e87a15c9cb9c
-  --sha256: sha256-OUnBy86ny2RHHJZoOXPHeHbYwvWBHmnXoVyQp0FZjEA=
-  subdir:
-    kes-agent
-    kes-agent-crypto
-
--- Points to ouroboros-network/leios-prototype
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 4b3ab7664f609a1aee0f0c24dcfcfd0ab899fc42
-  --sha256: sha256-fIqpI2whstetodpiONmUDVgnhTpzXeq1/gmzuHItK5A=
-  subdir:
-    ouroboros-network
-    cardano-diffusion
-    network-mux
-
--- Points to ouroboros-consensus/leios-prototype
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: e5b82026e4f3395fbb94f0af62f711655d96fec7
-  -- TODO: refresh with nix-prefetch-git after pushing the tag
-  --sha256: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=

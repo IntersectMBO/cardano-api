@@ -1,6 +1,6 @@
 cabal-version: 3.8
 name: cardano-rpc
-version: 11.2.0.0
+version: 11.4.0.0
 synopsis: A gRPC server and client for interacting with the Cardano node
 description:
   A Haskell library providing a gRPC-based RPC interface for the Cardano node,
@@ -49,6 +49,8 @@ library
   exposed-modules:
     Cardano.Rpc.Client
     Cardano.Rpc.Proto.Api.Node
+    Cardano.Rpc.Proto.Api.Reflection.V1
+    Cardano.Rpc.Proto.Api.Reflection.V1alpha
     Cardano.Rpc.Proto.Api.UtxoRpc.Query
     Cardano.Rpc.Proto.Api.UtxoRpc.Submit
     Cardano.Rpc.Proto.Api.UtxoRpc.Sync
@@ -58,9 +60,12 @@ library
     Cardano.Rpc.Server.Internal.Error
     Cardano.Rpc.Server.Internal.Monad
     Cardano.Rpc.Server.Internal.Node
+    Cardano.Rpc.Server.Internal.Reflection
+    Cardano.Rpc.Server.Internal.Reflection.DescriptorTable
     Cardano.Rpc.Server.Internal.TimedCache
     Cardano.Rpc.Server.Internal.Tracing
     Cardano.Rpc.Server.Internal.UtxoRpc.Eval
+    Cardano.Rpc.Server.Internal.UtxoRpc.Mempool
     Cardano.Rpc.Server.Internal.UtxoRpc.Predicate
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
     Cardano.Rpc.Server.Internal.UtxoRpc.Submit
@@ -71,8 +76,10 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Certificate
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.EraSummary
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Genesis
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Governance
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.ProtocolParameters
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Rational
@@ -81,10 +88,10 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
     Cardano.Rpc.Server.NodeKernelAccess
-    Cardano.Rpc.Server.NodeKernelAccess.Type
 
   other-modules:
     Cardano.Rpc.Server.Internal.Orphans
+    Cardano.Rpc.Server.NodeKernelAccess.Internal.Type
     Paths_cardano_rpc
 
   autogen-modules:
@@ -95,7 +102,7 @@ library
     base,
     base16-bytestring,
     bytestring,
-    cardano-api >=11.5,
+    cardano-api >=11.7,
     cardano-binary,
     cardano-crypto,
     cardano-crypto-class,
@@ -110,6 +117,7 @@ library
     cardano-ledger-dijkstra,
     cardano-ledger-shelley,
     cardano-rpc:gen,
+    cardano-slotting,
     containers,
     contra-tracer,
     data-default,
@@ -120,13 +128,19 @@ library
     generic-data,
     grapesy,
     grpc-spec,
-    memory,
+    iproute,
     mempack,
     microlens,
+    network,
+    ouroboros-consensus,
+    ouroboros-consensus:cardano,
     proto-lens >=0.7.1.7,
     proto-lens-protobuf-types,
+    ram,
     random,
     rio,
+    sop-extras,
+    stm,
     strict-sop-core,
     text,
     time,
@@ -140,6 +154,10 @@ library gen
   exposed-modules:
     Proto.Cardano.Rpc.Node
     Proto.Cardano.Rpc.Node_Fields
+    Proto.Grpc.Reflection.V1.Reflection
+    Proto.Grpc.Reflection.V1.Reflection_Fields
+    Proto.Grpc.Reflection.V1alpha.Reflection
+    Proto.Grpc.Reflection.V1alpha.Reflection_Fields
     Proto.Utxorpc.V1beta.Cardano.Cardano
     Proto.Utxorpc.V1beta.Cardano.Cardano_Fields
     Proto.Utxorpc.V1beta.Query.Query
@@ -176,23 +194,27 @@ test-suite cardano-rpc-test
     cardano-ledger-byron:testlib,
     cardano-ledger-conway,
     cardano-ledger-conway:testlib,
-    cardano-ledger-core >=1.19,
+    cardano-ledger-core,
     cardano-ledger-dijkstra,
     cardano-ledger-shelley,
     cardano-ledger-shelley:testlib,
     cardano-rpc,
+    cardano-slotting,
     containers,
     formatting,
     grpc-spec,
     hedgehog,
     hedgehog-extras,
     hedgehog-quickcheck,
-    memory,
     mtl,
+    ouroboros-consensus,
     ouroboros-consensus:cardano,
     proto-lens,
+    proto-lens-protobuf-types,
+    ram,
     rio,
     scientific,
+    sop-extras,
     tasty,
     tasty-hedgehog,
     text,
@@ -207,14 +229,19 @@ test-suite cardano-rpc-test
   build-tool-depends: tasty-discover:tasty-discover
   other-modules:
     Test.Cardano.Rpc.ByronTx
+    Test.Cardano.Rpc.EraSummary
     Test.Cardano.Rpc.Eval
     Test.Cardano.Rpc.FetchBlockTx
     Test.Cardano.Rpc.FollowTipStream
     Test.Cardano.Rpc.Genesis.Fixture
     Test.Cardano.Rpc.Genesis.Property
+    Test.Cardano.Rpc.Mempool
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters
+    Test.Cardano.Rpc.Reflection
+    Test.Cardano.Rpc.Reflection.DescriptorTable
     Test.Cardano.Rpc.Script
     Test.Cardano.Rpc.TxOutput
     Test.Cardano.Rpc.Type
+    Test.Cardano.Rpc.WatchMempoolStream

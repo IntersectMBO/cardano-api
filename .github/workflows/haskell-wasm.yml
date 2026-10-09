@@ -122,7 +122,7 @@ jobs:
           ${{ env.STORE }}
           dist-newstyle
         key:
-          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ hashFiles('cardano-wasm/dependencies.txt') }}
+          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ hashFiles('dependencies.txt') }}
         restore-keys: |
           wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-
 
@@ -133,10 +133,10 @@ jobs:
       run: |
         wasm32-wasi-cabal build cardano-wasm --only-dependencies
 
-    # Always store the cabal cache.
+    # Store the cabal cache only when the build succeeds, and skip if dependencies already cached (hash matches).
     - name: Cache Cabal store
       uses: actions/cache/save@v4
-      if: always()
+      if: steps.cache.outputs.cache-hit != 'true'
       with:
         path: |
           ${{ env.STORE }}
@@ -236,8 +236,15 @@ jobs:
     - name: Build wallet demo
       run: |
         cd cardano-wasm/demo
-        elm-format --validate src/
+        elm-format --validate src/ tests/
+        elm-test
         ./build.sh --wasm-dir ../lib-wrapper --out dist
+
+    - name: Demo wasm API regression tests
+      run: |
+        cd cardano-wasm/demo/tests/wasm
+        npm install
+        node api-regression.mjs
 
     - name: Upload wallet demo
       uses: actions/upload-artifact@v4

@@ -9,6 +9,7 @@ import Test.Gen.Cardano.Api.Byron qualified
 import Test.Cardano.Api.Address qualified
 import Test.Cardano.Api.Bech32 qualified
 import Test.Cardano.Api.CBOR qualified
+import Test.Cardano.Api.Certificate qualified
 import Test.Cardano.Api.Cip129 qualified
 import Test.Cardano.Api.Crypto qualified
 import Test.Cardano.Api.Envelope qualified
@@ -29,6 +30,7 @@ import Test.Cardano.Api.NodeConfig qualified
 import Test.Cardano.Api.Ord qualified
 import Test.Cardano.Api.RawBytes qualified
 import Test.Cardano.Api.Transaction.Autobalance qualified
+import Test.Cardano.Api.Transaction.Body.Plutus.RedeemerIndex qualified
 import Test.Cardano.Api.Transaction.Body.Plutus.Scripts qualified
 import Test.Cardano.Api.Transaction.Collateral qualified
 import Test.Cardano.Api.TxBody qualified
@@ -52,6 +54,7 @@ tests =
     , Test.Cardano.Api.Address.tests
     , Test.Cardano.Api.Bech32.tests
     , Test.Cardano.Api.CBOR.tests
+    , Test.Cardano.Api.Certificate.tests
     , Test.Cardano.Api.Cip129.tests
     , Test.Cardano.Api.Crypto.tests
     , Test.Cardano.Api.GovAnchorValidation.tests
@@ -71,6 +74,7 @@ tests =
     , Test.Cardano.Api.NodeConfig.tests
     , Test.Cardano.Api.Ord.tests
     , Test.Cardano.Api.RawBytes.tests
+    , Test.Cardano.Api.Transaction.Body.Plutus.RedeemerIndex.tests
     , Test.Cardano.Api.Transaction.Body.Plutus.Scripts.tests
     , Test.Cardano.Api.Transaction.Autobalance.tests
     , Test.Cardano.Api.Transaction.Collateral.tests

@@ -51,6 +51,8 @@ data StakePoolParameters
   { stakePoolId :: PoolId
   , stakePoolVRF :: Hash VrfKey
   , stakePoolBlsKey :: Maybe Ledger.BlsKey
+  -- ^ The pool's BLS voting key and its proof of possession. Only registrable
+  -- from the Dijkstra era onwards; 'Nothing' for a pool that does not vote.
   , stakePoolCost :: L.Coin
   , stakePoolMargin :: Rational
   , stakePoolRewardAccount :: StakeAddress

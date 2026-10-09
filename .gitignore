@@ -1,6 +1,8 @@
 .stack-work/
 .ghc.environment.*
 .nix-shell-cabal.project
+.direnv
+.envrc
 /cabal.project.diff
 /cabal.project.freeze
 /cabal.project.local*
@@ -88,3 +90,9 @@ cardano-wasm/examples/*/cardano_node_grpc_web_pb.js
 .ghc-wasm/
 
 .serena/
+
+/cardano-rpc/quickstart/rust/target/
+/cardano-rpc/quickstart/typescript/node_modules/
+/cardano-rpc/quickstart/go/cardano-rpc-quickstart
+/cardano-rpc/quickstart/python/venv/
+/cardano-rpc/quickstart/python/__pycache__/

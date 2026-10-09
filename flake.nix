@@ -159,20 +159,23 @@
               active-repositories: hackage.haskell.org, cardano-haskell-packages-local
             '';
 
-            shell.packages = p: [
-              # Packages in this repo
-              p.cardano-api
-              p.cardano-api-gen
-              # Work around for issue created by our inability to register sublibs.
-              # This package may need to be built and we need to make sure its dependencies
-              # are included in `ghc-pkg list` (in particular `compact`)
-              p.ouroboros-consensus
-              # cardano-binary is needed here so that its testlib sublibrary gets registered
-              # in ghc-pkg (required transitively by cardano-crypto-wrapper:testlib)
-              p.cardano-binary
-            ];
-            # tools we want in our shell, from hackage
-            shell.tools = {
+          shell.packages = p: [
+            # Packages in this repo
+            p.cardano-api
+            p.cardano-api-gen
+            p.cardano-rpc
+            p.cardano-wasm
+            # Work around for issue created by our inability to register sublibs.
+            # This package may need to be built and we need to make sure its dependencies
+            # are included in `ghc-pkg list` (in particular `compact`)
+            p.ouroboros-consensus
+            # cardano-binary is needed here so that its testlib sublibrary gets registered
+            # in ghc-pkg (required transitively by cardano-crypto-wrapper:testlib)
+            p.cardano-binary
+          ];
+          # tools we want in our shell, from hackage
+          shell.tools =
+            {
               cabal = "3.16.1.0";
             }
             // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
@@ -230,8 +233,54 @@
                     };
                   };
                 };
-              })
-              (
+              };
+            })
+            ({
+              pkgs,
+              config,
+              ...
+            }: let
+              generatedExampleFiles = map (f: "cardano-wasm/lib-wrapper/${f}") (builtins.filter (f: lib.strings.hasSuffix ".d.ts" f) (builtins.attrNames (builtins.readDir ./cardano-wasm/lib-wrapper)));
+              exportWasmPath = "export CARDANO_WASM=${config.hsPkgs.cardano-wasm.components.exes.cardano-wasm}/bin/cardano-wasm${pkgs.stdenv.hostPlatform.extensions.executable}";
+            in {
+              packages.cardano-wasm.components.tests.cardano-wasm-golden.preCheck = let
+                filteredProjectBase = inputs.incl ./. generatedExampleFiles;
+              in ''
+                ${exportWasmPath}
+                cp -r ${filteredProjectBase}/* ..
+              '';
+            })
+            {
+              # haskell.nix's windows.nix points crypton-x509-system >=1.7 at a
+              # patch path that does not exist (missing ".patch" suffix); the
+              # postPatch below already applies the same Crypt32 -> crypt32
+              # rename, so drop the broken patch list.
+              packages.crypton-x509-system.patches = lib.mkForce [];
+              packages.crypton-x509-system.postPatch = ''
+                substituteInPlace crypton-x509-system.cabal --replace 'Crypt32' 'crypt32'
+              '';
+              # cardano-addresses vendors cardano-crypto's C bits, so the two
+              # packages define 15 identical symbols (the ed25519 set, the
+              # wallet_encrypted_* wrappers, and two unprefixed helpers). The
+              # GHC RTS linker refuses the duplicates when it loads both to run
+              # Template Haskell in cross-compiled builds. Namespace the
+              # vendored copy and make the file-local helpers static.
+              packages.cardano-addresses.postPatch = ''
+                substituteInPlace cbits/ed25519/ed25519.c cbits/ed25519/ed25519.h cbits/encrypted_sign.c \
+                  --replace-fail cardano_crypto_ cardano_addresses_
+                substituteInPlace cbits/encrypted_sign.c lib/Cardano/Address/Crypto/Wallet/Encrypted.hs \
+                  --replace-fail wallet_encrypted_ addresses_wallet_encrypted_
+                substituteInPlace cbits/encrypted_sign.c \
+                  --replace-fail 'void clear(void *buf' 'static void clear(void *buf' \
+                  --replace-fail 'void scalar_add_no_overflow(' 'static void scalar_add_no_overflow('
+              '';
+            }
+            ({
+              pkgs,
+              config,
+              ...
+            }: {
+              packages =
                 {
                   pkgs,
                   config,
@@ -377,65 +426,106 @@
             ];
           };
         };
-        flakeWithWasmShell = nixpkgs.lib.recursiveUpdate flake {
-          devShells = wasmShell;
-          hydraJobs = {
-            devShells = wasmShell;
+        # cardano-rpc quickstart shells: each shell.nix already stands on its
+        # own for plain `nix-shell` users, so just import them here rather
+        # than duplicating their package lists.
+        rpcQuickstartShells = {
+          rpc-quickstart = import ./cardano-rpc/quickstart/shell.nix {pkgs = nixpkgs.unstable;};
+          rpc-quickstart-rust = import ./cardano-rpc/quickstart/rust/shell.nix {pkgs = nixpkgs.unstable;};
+          rpc-quickstart-typescript = import ./cardano-rpc/quickstart/typescript/shell.nix {pkgs = nixpkgs.unstable;};
+          rpc-quickstart-go = import ./cardano-rpc/quickstart/go/shell.nix {pkgs = nixpkgs.unstable;};
+          rpc-quickstart-python = import ./cardano-rpc/quickstart/python/shell.nix {pkgs = nixpkgs.unstable;};
+          # Haskell needs the project's own haskell.nix toolchain (GHC, cabal
+          # and the Cardano C libraries), which a plain nixpkgs mkShell can't
+          # provide, so alias the repository's own dev shell instead of a
+          # per-language shell.nix.
+          rpc-quickstart-haskell = flake.devShells.default;
+        };
+        # The Haskell quickstart is a standalone cabal project (readers copy it
+        # out of the repo), so fold it in through a derived project instead of
+        # the repository's own cabal.project.
+        quickstartProject = cabalProject.appendModule {
+          # Concatenated with the base project's cabalProjectLocal, so the CHaP
+          # repository stanza already applies here. `allow-newer` keeps the
+          # example's doc-facing `^>=` bounds from breaking the flake's solve
+          # on cardano-api/cardano-rpc version bumps.
+          cabalProjectLocal = ''
+            packages: cardano-rpc/quickstart/haskell
+            allow-newer: cardano-rpc-quickstart:cardano-rpc, cardano-rpc-quickstart:cardano-api
+          '';
+        };
+        rpc-quickstart-haskell-drv = let
+          exes = quickstartProject.hsPkgs.cardano-rpc-quickstart.components.exes;
+        in
+          nixpkgs.symlinkJoin {
+            name = "rpc-quickstart-haskell";
+            paths = [
+              exes.cardano-rpc-quickstart
+              exes.send-lovelace
+            ];
           };
-        };
-        flakeWithPlaywrightShell = nixpkgs.lib.recursiveUpdate flakeWithWasmShell {
-          devShells = playwrightShell;
-          hydraJobs = {
-            devShells = playwrightShell;
-          };
-        };
-        flakeWithDemoShell = nixpkgs.lib.recursiveUpdate flakeWithPlaywrightShell {
-          devShells = demoShell;
-          hydraJobs = {devShells = demoShell;};
-        };
+        # wasm/playwright/demo are built by Hydra too (hydraJobs.devShells);
+        # rpcQuickstartShells is interactive-only, see hydraJobs below.
+        extraDevShells = wasmShell // playwrightShell // demoShell;
+        # ciJobsAggregates doesn't forward a devShells key, and flake.hydraJobs
+        # already has its own devShells.default, so merge both explicitly.
+        hydraDevShells = (flake.hydraJobs.devShells or {}) // extraDevShells;
       in
-        nixpkgs.lib.recursiveUpdate flakeWithDemoShell rec {
+        nixpkgs.lib.recursiveUpdate flake rec {
           project = cabalProject;
           # add a required job, that's basically all hydraJobs.
           hydraJobs =
             nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates
             {
               ciJobs =
-                flakeWithDemoShell.hydraJobs
+                flake.hydraJobs
                 // {
+                  devShells = hydraDevShells;
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
                   proto-js-bundle = proto-js-bundle-drv;
                   wasm-typedoc = wasm-typedoc-drv;
+                }
+                // lib.optionalAttrs (system == "x86_64-linux") {
+                  # just x86_64-linux to save evaluation and building time
+                  rpc-quickstart-haskell = rpc-quickstart-haskell-drv;
                 };
+              # Don't block merges on RPC quickstart failures
+              nonRequiredPaths = [(lib.hasPrefix "rpc-quickstart-haskell")];
             }
             // {
-              packages = {
-                wasm-typedoc = wasm-typedoc-drv;
-                proto-js-bundle = proto-js-bundle-drv;
-              };
+              packages =
+                {
+                  wasm-typedoc = wasm-typedoc-drv;
+                  proto-js-bundle = proto-js-bundle-drv;
+                }
+                # x86_64-linux only; see comment on the ciJobs merge above.
+                // lib.optionalAttrs (system == "x86_64-linux") {
+                  rpc-quickstart-haskell = rpc-quickstart-haskell-drv;
+                };
+              devShells = hydraDevShells;
             };
-        legacyPackages = {
-          inherit cabalProject nixpkgs;
-          # also provide hydraJobs through legacyPackages to allow building without system prefix:
-          inherit hydraJobs;
-        };
-        packages = {
-          proto-js-bundle = proto-js-bundle-drv;
-          wasm-typedoc = wasm-typedoc-drv;
-        };
-        devShells =
-          let
+          legacyPackages = {
+            inherit cabalProject nixpkgs;
+            # also provide hydraJobs through legacyPackages to allow building without system prefix:
+            inherit hydraJobs;
+          };
+          packages = {
+            proto-js-bundle = proto-js-bundle-drv;
+            wasm-typedoc = wasm-typedoc-drv;
+            rpc-quickstart-haskell = rpc-quickstart-haskell-drv;
+          };
+          devShells = let
             # profiling shell
             profilingShell = p: {
               # `nix develop .#profiling` (or `.#ghc927.profiling): a shell with profiling enabled
               profiling = (p.appendModule { modules = [ { enableLibraryProfiling = true; } ]; }).shell;
             };
           in
-          profilingShell cabalProject;
-        # formatter used by nix fmt
-        formatter = nixpkgs.alejandra;
-      }
+            profilingShell cabalProject // extraDevShells // rpcQuickstartShells;
+          # formatter used by nix fmt
+          formatter = nixpkgs.alejandra;
+        }
     );
 
   nixConfig = {

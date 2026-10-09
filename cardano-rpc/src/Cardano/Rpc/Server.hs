@@ -7,11 +7,13 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Server
   ( runRpcServer
   , NodeKernelAccess
   , mkNodeKernelAccess
+  , registeredServiceNames
 
     -- * Traces
   , TraceRpc (..)
@@ -25,16 +27,25 @@ where
 
 import Cardano.Api
 import Cardano.Rpc.Proto.Api.Node qualified as Rpc
+import Cardano.Rpc.Proto.Api.Reflection.V1 qualified as ReflectionV1
+import Cardano.Rpc.Proto.Api.Reflection.V1alpha qualified as ReflectionV1alpha
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as UtxoRpc
 import Cardano.Rpc.Proto.Api.UtxoRpc.Sync qualified as UtxoRpc
 import Cardano.Rpc.Server.Config
 import Cardano.Rpc.Server.Internal.Env
+import Cardano.Rpc.Server.Internal.Error (renderRpcExceptionForClient)
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Node
 import Cardano.Rpc.Server.Internal.Orphans ()
+import Cardano.Rpc.Server.Internal.Reflection
+  ( qualifiedServiceName
+  , serverReflectionInfoMethodV1
+  , serverReflectionInfoMethodV1alpha
+  )
 import Cardano.Rpc.Server.Internal.Tracing
 import Cardano.Rpc.Server.Internal.UtxoRpc.Eval
+import Cardano.Rpc.Server.Internal.UtxoRpc.Mempool
 import Cardano.Rpc.Server.Internal.UtxoRpc.Query
 import Cardano.Rpc.Server.Internal.UtxoRpc.Submit
 import Cardano.Rpc.Server.Internal.UtxoRpc.Sync
@@ -47,6 +58,7 @@ import RIO
 
 import Control.Tracer
 import Network.GRPC.Common
+import Network.GRPC.Common.Exception (ExactException, unwrapExactException)
 import Network.GRPC.Server
 import Network.GRPC.Server.Protobuf
 import Network.GRPC.Server.Run
@@ -62,45 +74,87 @@ methodsNodeRpc =
     $ NoMoreMethods
 
 -- | gRPC method table for the UTxO RPC @QueryService@.
+-- Method order must match 'ServiceMethods': readData, readEraSummary, readGenesis, readParams,
+-- readState, readTx, readUtxos, searchUtxos.
+-- 'UnsupportedMethod' makes the server respond with the @UNIMPLEMENTED@ gRPC status.
 methodsUtxoRpc
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf UtxoRpc.QueryService)
 methodsUtxoRpc =
-  Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadGenesisSpan . readGenesisMethod)
+  UnsupportedMethod -- readData
+    . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadEraSummarySpan . readEraSummaryMethod)
+    . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadGenesisSpan . readGenesisMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryParamsSpan . readParamsMethod)
+    . UnsupportedMethod -- readState
+    . UnsupportedMethod -- readTx
     . Method (mkNonStreaming $ wrapInSpan TraceRpcQueryReadUtxosSpan . readUtxosMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcQuerySearchUtxosSpan . searchUtxosMethod)
     $ NoMoreMethods
 
 -- | gRPC method table for the UTxO RPC @SubmitService@.
+-- Method order must match 'ServiceMethods': evalTx, readMempool, submitTx, waitForTx, watchMempool.
+-- 'UnsupportedMethod' makes the server respond with the @UNIMPLEMENTED@ gRPC status.
 methodsUtxoRpcSubmit
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf UtxoRpc.SubmitService)
 methodsUtxoRpcSubmit =
   Method (mkNonStreaming $ wrapInSpan TraceRpcEvalTxSpan . evalTxMethod)
+    . Method (mkNonStreaming $ wrapInSpan TraceRpcReadMempoolSpan . readMempoolMethod)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcSubmitSpan . submitTxMethod)
+    . UnsupportedMethod -- waitForTx
+    . Method (mkServerStreaming $ \req -> wrapInSpan TraceRpcWatchMempoolSpan . watchMempoolMethod req)
     $ NoMoreMethods
 
 -- | gRPC method table for the UTxO RPC @SyncService@.
 -- Method order must match 'ServiceMethods': dumpHistory, fetchBlock, followTip, readTip.
+-- 'UnsupportedMethod' makes the server respond with the @UNIMPLEMENTED@ gRPC status.
 methodsSyncRpc
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf UtxoRpc.SyncService)
 methodsSyncRpc =
-  Method (mkNonStreaming $ const unimplemented) -- dumpHistory
+  UnsupportedMethod -- dumpHistory
     . Method (mkNonStreaming $ wrapInSpan TraceRpcFetchBlockSpan . fetchBlockMethod)
     . Method (mkServerStreaming $ \req -> wrapInSpan TraceRpcFollowTipSpan . followTipMethod req)
     . Method (mkNonStreaming $ wrapInSpan TraceRpcReadTipSpan . readTipMethod)
     $ NoMoreMethods
- where
-  unimplemented =
-    throwIO
-      GrpcException
-        { grpcError = GrpcUnimplemented
-        , grpcErrorMessage = Just "Not yet implemented"
-        , grpcErrorDetails = Nothing
-        , grpcErrorMetadata = []
-        }
+
+-- | gRPC method table for the Server Reflection API's @v1@ service.
+methodsReflectionV1
+  :: MonadIO m
+  => Methods m (ProtobufMethodsOf ReflectionV1.ServerReflection)
+methodsReflectionV1 =
+  Method
+    (mkBiDiStreaming $ serverReflectionInfoMethodV1 registeredServiceNames)
+    NoMoreMethods
+
+-- | gRPC method table for the Server Reflection API's legacy @v1alpha@ service.
+methodsReflectionV1alpha
+  :: MonadIO m
+  => Methods m (ProtobufMethodsOf ReflectionV1alpha.ServerReflection)
+methodsReflectionV1alpha =
+  Method
+    (mkBiDiStreaming $ serverReflectionInfoMethodV1alpha registeredServiceNames)
+    NoMoreMethods
+
+-- | Every service this server registers, paired with its handler methods
+-- in one list, so the name registered with grapesy and the name advertised
+-- by the Server Reflection API's @list_services@ ('registeredServiceNames')
+-- can never drift apart - unlike two hand-maintained lists, this cannot go
+-- out of sync by construction.
+registeredServices :: [(Text, [SomeRpcHandler (RIO RpcEnv)])]
+registeredServices =
+  [ (qualifiedServiceName @Rpc.Node, fromMethods methodsNodeRpc)
+  , (qualifiedServiceName @UtxoRpc.QueryService, fromMethods methodsUtxoRpc)
+  , (qualifiedServiceName @UtxoRpc.SubmitService, fromMethods methodsUtxoRpcSubmit)
+  , (qualifiedServiceName @UtxoRpc.SyncService, fromMethods methodsSyncRpc)
+  , (qualifiedServiceName @ReflectionV1.ServerReflection, fromMethods methodsReflectionV1)
+  , (qualifiedServiceName @ReflectionV1alpha.ServerReflection, fromMethods methodsReflectionV1alpha)
+  ]
+
+-- | Fully qualified names of every service this server registers, for the
+-- Server Reflection API's @list_services@.
+registeredServiceNames :: [Text]
+registeredServiceNames = map fst registeredServices
 
 -- | Start the gRPC server, registering all RPC service handlers.
 -- Does nothing when the RPC server is disabled in configuration.
@@ -117,14 +171,40 @@ runRpcServer
 runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExceptions $ do
   let RpcConfig
         { isEnabled = Identity isEnabled
-        , rpcSocketPath = Identity (File rpcSocketPathFp)
+        , rpcEndpoint = Identity rpcEndpoint
         , nodeSocketPath = Identity nodeSocketPath
         } = rpcConfig
-      config =
-        ServerConfig
-          { serverInsecure = Just $ InsecureUnix rpcSocketPathFp
-          , serverSecure = Nothing
-          }
+      config :: ServerConfig
+      config = case rpcEndpoint of
+        RpcEndpointUnixSocket (File socketPath) ->
+          ServerConfig
+            { serverInsecure = Just $ InsecureUnix socketPath
+            , serverSecure = Nothing
+            }
+        RpcEndpointHttp host port ->
+          ServerConfig
+            { serverInsecure =
+                Just
+                  InsecureConfig
+                    { insecureHost = Just $ show host
+                    , insecurePort = port
+                    }
+            , serverSecure = Nothing
+            }
+        RpcEndpointHttps host port (RpcTlsFiles certificateFile privateKeyFile chainCertificateFiles) ->
+          ServerConfig
+            { serverInsecure = Nothing
+            , serverSecure =
+                Just
+                  SecureConfig
+                    { secureHost = show host
+                    , securePort = port
+                    , securePubCert = unFile certificateFile
+                    , secureChainCerts = unFile <$> chainCertificateFiles
+                    , securePrivKey = unFile privateKeyFile
+                    , secureSslKeyLog = def
+                    }
+            }
       rpcEnv =
         RpcEnv
           { config = rpcConfig
@@ -133,19 +213,36 @@ runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExce
           , rpcNodeKernelAccess = nodeKernelAccessRef
           }
 
-  when isEnabled $
+  when isEnabled $ do
+    traceWith tracer $ TraceRpcServerListening rpcEndpoint
     runRIO rpcEnv $
       withRunInIO $ \runInIO ->
-        runServerWithHandlers serverParams config . fmap (hoistSomeRpcHandler runInIO) $
-          mconcat
-            [ fromMethods methodsNodeRpc
-            , fromMethods methodsUtxoRpc
-            , fromMethods methodsUtxoRpcSubmit
-            , fromMethods methodsSyncRpc
-            ]
+        runServer http2Settings config <=< mkGrpcServer serverParams . fmap (hoistSomeRpcHandler runInIO) $
+          mconcat (map snd registeredServices)
  where
   serverParams :: ServerParams
-  serverParams = def{serverTopLevel = topLevelHandler}
+  serverParams =
+    def
+      { serverTopLevel = topLevelHandler
+      , serverExceptionToClient = exceptionToClient
+      }
+
+  -- Clients must never see internal error detail or call stacks; full detail is
+  -- still traced server-side by 'topLevelHandler'.
+  exceptionToClient :: ExactException -> IO (Maybe Text)
+  exceptionToClient e =
+    pure . Just $
+      maybe genericErrorMessage renderRpcExceptionForClient $
+        fromException (unwrapExactException e)
+   where
+    genericErrorMessage = "Internal error while processing the request."
+
+  -- Halve grapesy's default of 128: bounds per-connection RPC parallelism.
+  -- Remaining fields keep grapesy defaults, including the HTTP/2 flood-protection
+  -- rate limits and the 256 KiB / 2 MiB flow-control windows that cap buffered
+  -- inbound request data per stream / connection.
+  http2Settings :: HTTP2Settings
+  http2Settings = def{http2MaxConcurrentStreams = 64}
 
   -- Top level hook for request handlers, handle exceptions
   topLevelHandler :: RequestHandler () -> RequestHandler ()

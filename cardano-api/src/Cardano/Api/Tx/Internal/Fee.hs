@@ -86,7 +86,8 @@ import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
-import Cardano.Ledger.Credential as Ledger (Credential)
+import Cardano.Ledger.Credential as Ledger (Credential, credKeyHashWitness)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Data.Bifunctor (bimap, first, second)
@@ -359,7 +360,7 @@ estimateBalancedTxBody
             , txTotalCollateral = reqCol
             }
 
-    let fakeUTxO = createFakeUTxO sbe txbodycontent1 $ selectLovelace availableUTxOValue
+    let fakeUTxO = createFakeUTxO sbe changeaddr txbodycontent1 $ selectLovelace availableUTxOValue
         balance =
           evaluateTransactionBalance sbe pparams poolids stakeDelegDeposits drepDelegDeposits fakeUTxO txbody2
         balanceTxOut = TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone
@@ -455,8 +456,13 @@ calculateMinTxFee sbe pp utxo txbody keywitcount =
       ShelleyTx _ tx ->
         L.calcMinFeeTx (toLedgerUTxO sbe utxo) pp tx (fromIntegral keywitcount)
 
--- | Provide and approximate count of the key witnesses (i.e. signatures)
+-- | Provide an approximate count of the key witnesses (i.e. signatures)
 -- required for a transaction.
+--
+-- Certificates, withdrawals, extra key witnesses and votes are deduplicated against
+-- each other, mirroring the key hash set ledger's @getWitsVKeyNeeded@ computes, so a
+-- key acting in several of those roles is counted once. A pool registration
+-- certificate counts one key witness for the operator and one for every owner.
 --
 -- This estimate is not exact and may overestimate the required number of witnesses.
 -- The function makes conservative assumptions, including:
@@ -465,6 +471,16 @@ calculateMinTxFee sbe pp utxo txbody keywitcount =
 --   multiple inputs may share the same address, requiring only one witness per address.
 --
 -- * Assuming regular and collateral inputs are distinct, even though they may overlap.
+--
+-- * Counting inputs and collateral inputs on top of the deduplicated set rather than
+--   against it, because their key hashes are only known from the UTxO. The result stays
+--   an upper bound: the number of inputs is at least the number of input key hashes
+--   missing from that set. Use 'calculateMinTxFee' with a 'UTxO' in hand for an exact
+--   count.
+--
+-- * Counting one witness per genesis key of a pre-Conway update proposal, on top of
+--   the deduplicated set, because the actual signers are the genesis delegate keys,
+--   which are only known from ledger state.
 --
 -- TODO: Consider implementing a more precise calculation that leverages the UTXO set
 -- to determine which inputs correspond to distinct addresses. Additionally, the
@@ -478,31 +494,64 @@ estimateTransactionKeyWitnessCount
     , txWithdrawals
     , txCertificates
     , txUpdateProposal
+    , txVotingProcedures
     } =
     fromIntegral $
-      sum (map estimateTxInWitnesses txIns)
+      Set.size knowableKeyHashes
+        + sum (map estimateTxInWitnesses txIns)
         + case txInsCollateral of
           TxInsCollateral _ txins ->
             length txins
-          _ -> 0
-        + case txExtraKeyWits of
-          TxExtraKeyWitnesses _ khs ->
-            length khs
-          _ -> 0
-        + case txWithdrawals of
-          TxWithdrawals _ withdrawals ->
-            length [() | (_, _, BuildTxWith KeyWitness{}) <- withdrawals]
-          _ -> 0
-        + case txCertificates of
-          TxCertificates _ credWits ->
-            length
-              [() | (_, BuildTxWith (Just (_, KeyWitness{}))) <- toList credWits]
           _ -> 0
         + case txUpdateProposal of
           TxUpdateProposal _ (UpdateProposal updatePerGenesisKey _) ->
             Map.size updatePerGenesisKey
           _ -> 0
    where
+    -- The roles whose key hashes the body already pins down, unioned the way ledger's
+    -- 'Cardano.Ledger.Conway.UTxO.getConwayWitsVKeyNeeded' unions them.
+    knowableKeyHashes :: Set (L.KeyHash L.Witness)
+    knowableKeyHashes =
+      extraKeyHashes <> withdrawalKeyHashes <> certificateKeyHashes <> voteKeyHashes
+
+    extraKeyHashes :: Set (L.KeyHash L.Witness)
+    extraKeyHashes = Set.map asWitness $ convExtraKeyWitnesses txExtraKeyWits
+
+    withdrawalKeyHashes :: Set (L.KeyHash L.Witness)
+    withdrawalKeyHashes = case txWithdrawals of
+      TxWithdrawalsNone -> mempty
+      TxWithdrawals _ withdrawals ->
+        Set.fromList $
+          mapMaybe (\(StakeAddress _ credential, _, _) -> credKeyHashWitness credential) withdrawals
+
+    -- The certificate itself decides who must sign, mirroring ledger's
+    -- 'getVKeyWitnessTxCert': a pool registration certificate additionally
+    -- requires every owner to sign, not just the operator.
+    certificateKeyHashes :: Set (L.KeyHash L.Witness)
+    certificateKeyHashes = case txCertificates of
+      TxCertificatesNone -> mempty
+      TxCertificates sbe credWits ->
+        shelleyBasedEraConstraints sbe $
+          Set.unions
+            [ maybe mempty Set.singleton (L.getVKeyWitnessTxCert certificate) <> ownerKeyHashes certificate
+            | (Exp.Certificate certificate, _) <- toList credWits
+            ]
+
+    -- Every owner of a pool registration certificate must also sign.
+    ownerKeyHashes :: L.EraTxCert ledgerera => L.TxCert ledgerera -> Set (L.KeyHash L.Witness)
+    ownerKeyHashes certificate = case certificate of
+      L.RegPoolTxCert poolParams -> Set.map asWitness (L.sppOwners poolParams)
+      _ -> mempty
+
+    voteKeyHashes :: Set (L.KeyHash L.Witness)
+    voteKeyHashes = case maybe TxVotingProceduresNone unFeatured txVotingProcedures of
+      TxVotingProceduresNone -> mempty
+      TxVotingProcedures votingProcedures _scriptWitnessMap ->
+        Map.foldrWithKey'
+          (\voter _ keyHashes -> maybe keyHashes (`Set.insert` keyHashes) (voterKeyHashWitness voter))
+          mempty
+          (L.unVotingProcedures votingProcedures)
+
     estimateTxInWitnesses :: (TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era)) -> Int
     estimateTxInWitnesses (_, BuildTxWith (KeyWitness _)) = 1
     estimateTxInWitnesses (_, BuildTxWith (ScriptWitness _ (SimpleScriptWitness _ (SScript simpleScript)))) = maxWitnessesInSimpleScript simpleScript
@@ -523,6 +572,13 @@ estimateTransactionKeyWitnessCount
     maxWitnessesInSimpleScript (RequireAllOf simpleScripts) = sum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (RequireAnyOf simpleScripts) = maximum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (RequireMOf n simpleScripts) = sum $ take n $ sortBy (comparing Down) (map maxWitnessesInSimpleScript simpleScripts)
+
+    -- Mirrors ledger's 'Cardano.Ledger.Conway.UTxO.voterWitnesses': a committee or
+    -- DRep voter needs a VKey witness only when its credential is key-based.
+    voterKeyHashWitness :: L.Voter -> Maybe (L.KeyHash L.Witness)
+    voterKeyHashWitness (L.CommitteeVoter credential) = credKeyHashWitness credential
+    voterKeyHashWitness (L.DRepVoter credential) = credKeyHashWitness credential
+    voterKeyHashWitness (L.StakePoolVoter poolId) = Just (asWitness poolId)
 
 -- ----------------------------------------------------------------------------
 -- Script execution units
@@ -1422,25 +1478,30 @@ calculatePartialChangeValue sbe incoming txbodycontent = do
   newUtxoValue =
     mconcat [fromLedgerValue sbe v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- txOuts txbodycontent]
 
--- | This is used in the balance calculation in the event where
--- the user does not supply the UTxO(s) they intend to spend
--- but they must supply their total balance of ADA.
--- evaluateTransactionBalance calls evalBalanceTxBody which requires a UTxO value.
--- This eventually calls getConsumedMaryValue which retrieves the balance
--- from the transaction itself. This necessitated a function to create a "fake" UTxO
--- to still use evalBalanceTxBody however this will fail for transactions
--- containing multi-assets, refunds and withdrawals.
+-- | Build a single-entry UTxO for the first input holding the declared total ADA, so the balance
+-- can be evaluated without the real UTxO set. The first output is the template, or a plain
+-- output at the change address when there are no outputs. Native assets outside the first
+-- output are not represented.
 -- TODO: Include multiassets
-createFakeUTxO :: ShelleyBasedEra era -> TxBodyContent BuildTx era -> Coin -> UTxO era
-createFakeUTxO sbe txbodycontent totalAdaInUTxO =
+createFakeUTxO
+  :: ShelleyBasedEra era
+  -> AddressInEra era
+  -- ^ The change address used when there are no outputs.
+  -> TxBodyContent BuildTx era
+  -- ^ The transaction body content.
+  -> Coin
+  -- ^ The total ADA declared by the caller.
+  -> UTxO era
+createFakeUTxO sbe changeAddress txbodycontent totalAdaInUTxO = do
   let singleTxIn = maybe [] (return . fst) $ List.uncons [txin | (txin, _) <- txIns txbodycontent]
+      changeValue = lovelaceToTxOutValue sbe totalAdaInUTxO
       singleTxOut =
-        maybe [] (return . updateTxOut sbe totalAdaInUTxO . toCtxUTxOTxOut . fst) $
-          List.uncons $
-            txOuts txbodycontent
-   in -- Take one txin and one txout. Replace the out value with totalAdaInUTxO
-      -- Return an empty UTxO if there are no txins or txouts
-      UTxO $ fromList $ zip singleTxIn singleTxOut
+        maybe
+          [TxOut changeAddress changeValue TxOutDatumNone ReferenceScriptNone]
+          (return . updateTxOut sbe totalAdaInUTxO . toCtxUTxOTxOut . fst)
+          . List.uncons
+          $ txOuts txbodycontent
+  UTxO . fromList $ zip singleTxIn singleTxOut
 
 updateTxOut :: ShelleyBasedEra era -> Coin -> TxOut CtxUTxO era -> TxOut CtxUTxO era
 updateTxOut sbe updatedValue txout =
