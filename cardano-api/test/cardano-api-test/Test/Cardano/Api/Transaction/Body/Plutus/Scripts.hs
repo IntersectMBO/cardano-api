@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -38,6 +39,8 @@ import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (..))
 import Data.Text qualified as Text
 import Data.Word (Word32)
+import GHC.Exts (IsList (..))
+import Lens.Micro ((^.))
 
 import Test.Gen.Cardano.Api.Experimental qualified as Exp
 import Test.Gen.Cardano.Api.Typed
@@ -294,6 +297,39 @@ prop_createTransactionBody_rejects_unsupported_reference_script_language = prope
             (Api.AnyCardanoEra Api.ConwayEra)
       )
 
+-- | The same PlutusV4 reference script in a Dijkstra output is accepted and
+-- kept on the ledger output.
+prop_createTransactionBody_accepts_supported_reference_script_language :: Property
+prop_createTransactionBody_accepts_supported_reference_script_language = property $ do
+  srcTxIn <- forAll genTxIn
+  destAddress <- forAll $ genAddressInEra Api.ShelleyBasedEraDijkstra
+  v4PlutusScript <- forAll $ genPlutusScript Script.PlutusScriptV4
+  let v4Script = Script.PlutusScript Script.PlutusScriptV4 v4PlutusScript
+      refScript =
+        Script.ReferenceScript Api.BabbageEraOnwardsDijkstra $
+          Script.ScriptInAnyLang (Script.PlutusScriptLanguage Script.PlutusScriptV4) v4Script
+      txBodyContent =
+        Api.defaultTxBodyContent Api.ShelleyBasedEraDijkstra
+          & Api.setTxIns [(srcTxIn, Api.BuildTxWith (Api.KeyWitness Api.KeyWitnessForSpending))]
+          & Api.setTxOuts
+            [ Api.TxOut
+                destAddress
+                (Api.lovelaceToTxOutValue Api.ShelleyBasedEraDijkstra 10_000_000)
+                Api.TxOutDatumNone
+                refScript
+            ]
+          & Api.setTxFee (Api.TxFeeExplicit Api.ShelleyBasedEraDijkstra 2_000_000)
+
+  Api.ShelleyTxBody _ ledgerBody _ _ _ _ <-
+    H.leftFail $ Api.createTransactionBody Api.ShelleyBasedEraDijkstra txBodyContent
+
+  case toList (ledgerBody ^. L.outputsTxBodyL) of
+    [ledgerTxOut] ->
+      H.assertWith (ledgerTxOut ^. L.referenceScriptTxOutL) $ \case
+        L.SJust _ -> True
+        L.SNothing -> False
+    outs -> annotateShow outs >> failure
+
 -- | 'toPlutusScriptPurposeIndex' classifies ledger redeemer pointers the same
 -- way as the older 'Api.toScriptIndex', for every purpose category the two
 -- share, at every era with plutus scripts. 'GuardingScript' (Dijkstra's new
@@ -392,6 +428,9 @@ tests =
     , testProperty
         "prop_createTransactionBody_rejects_unsupported_reference_script_language"
         prop_createTransactionBody_rejects_unsupported_reference_script_language
+    , testProperty
+        "prop_createTransactionBody_accepts_supported_reference_script_language"
+        prop_createTransactionBody_accepts_supported_reference_script_language
     , testProperty "prop_getAnyWitnessRedeemerPointerMap" prop_getAnyWitnessRedeemerPointerMap
     , testProperty "prop_toAnyWitness" prop_toAnyWitness
     , testProperty
