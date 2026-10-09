@@ -1847,7 +1847,8 @@ estimateTransactionKeyWitnessCount
     maxWitnessesInSimpleScript (Old.RequireAllOf simpleScripts) = sum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (Old.RequireAnyOf simpleScripts) = maximum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (Old.RequireMOf n simpleScripts) = sum $ take n $ sortBy (comparing Down) (map maxWitnessesInSimpleScript simpleScripts)
-    -- A key guard requires that key to sign; a script guard adds no key witness of its own.
+    -- Count the key witness directly identified by the guard credential.
+    -- Any signer requirements inside a referenced script are not inferred here.
     maxWitnessesInSimpleScript (Old.RequireGuard cred) = maybe 0 (const 1) (credKeyHashWitness cred)
 
     -- Mirrors ledger's 'Cardano.Ledger.Conway.UTxO.voterWitnesses': a committee or
