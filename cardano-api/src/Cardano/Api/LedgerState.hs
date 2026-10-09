@@ -176,6 +176,7 @@ import Cardano.Ledger.Shelley.Transition qualified as Ledger
 import Cardano.Ledger.Slot qualified as Ledger
 import Cardano.Ledger.State qualified as SL
 import Cardano.Protocol.Crypto qualified as Crypto
+import Cardano.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import Cardano.Protocol.TPraos.API qualified as TPraos
 import Cardano.Protocol.TPraos.BlockHeader (checkLeaderNatValue)
 import Cardano.Protocol.TPraos.BlockHeader qualified as TPraos
@@ -202,10 +203,10 @@ import Ouroboros.Consensus.Ledger.Extended qualified as Ledger
 import Ouroboros.Consensus.Ledger.Tables.Utils qualified as Ledger
 import Ouroboros.Consensus.Node.ProtocolInfo qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
+import Ouroboros.Consensus.Protocol.Leios qualified as Leios
 import Ouroboros.Consensus.Protocol.Praos qualified as Praos
 import Ouroboros.Consensus.Protocol.Praos.AgentClient
 import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
-import Cardano.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import Ouroboros.Consensus.Protocol.TPraos qualified as TPraos
 import Ouroboros.Consensus.Shelley.HFEras qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Block qualified as Shelley
@@ -1395,7 +1396,7 @@ pattern DijkstraLedgerState
   :: Current
        (Flip Consensus.LedgerState mk)
        ( Shelley.ShelleyBlock
-           (Praos.PraosWithLeios Ledger.StandardCrypto)
+           (Leios.PraosWithLeios Ledger.StandardCrypto)
            Consensus.DijkstraEra
        )
   -> NS (Current (Flip Consensus.LedgerState mk)) (Consensus.CardanoEras Consensus.StandardCrypto)
