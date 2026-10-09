@@ -65,6 +65,10 @@ simpleScriptToUtxoRpcNativeScript = \case
             & U5c.k .~ fromIntegral k
             & U5c.scripts .~ map simpleScriptToUtxoRpcNativeScript scripts
     defMessage & U5c.scriptNOfK .~ nScriptsOf
+  RequireGuard _credential ->
+    -- UTxORPC has no guard variant yet; match the ledger-direct converter and
+    -- retain an empty message so script-list positions remain stable (#1263).
+    defMessage
 
 utxoRpcNativeScriptToSimpleScript
   :: HasCallStack
