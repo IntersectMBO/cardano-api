@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -38,6 +39,11 @@ import Cardano.Api.Serialise.Json (JsonDecodeError (..), deserialiseFromJSON)
 import Cardano.Api.Serialise.TextEnvelope (TextEnvelope (..), TextEnvelopeType (..))
 import Cardano.Api.Serialise.TextEnvelope.Internal (textEnvelopeType)
 
+import Cardano.Ledger.Alonzo.Plutus.Context qualified as L
+  ( EraPlutusContext (..)
+  , EraPlutusTxInfo
+  , SupportedPlutusRunnable (..)
+  )
 import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
@@ -74,10 +80,7 @@ instance Eq (AnyScript era) where
       Nothing -> False
   _ == _ = False
 
-instance
-  L.AlonzoEraScript era
-  => SerialiseAsCBOR (AnyScript era)
-  where
+instance L.EraPlutusContext era => SerialiseAsCBOR (AnyScript era) where
   serialiseToCBOR (AnySimpleScript (SimpleScript ns)) =
     L.serialize' (L.eraProtVerHigh @era) (L.fromNativeScript ns :: L.Script era)
   serialiseToCBOR (AnyPlutusScript ps) =
@@ -102,10 +105,11 @@ instance
     tryPlutusScript :: L.Script era -> Maybe (AnyScript era)
     tryPlutusScript script = do
       ps <- L.toPlutusScript script
-      L.withPlutusScript ps $ \(plutus :: Plutus.Plutus l) ->
-        let plutusRunnable = Plutus.decodePlutusRunnable (L.eraProtVerHigh @era) plutus
-         in AnyPlutusScript . PlutusScriptInEra
-              <$> (plutusRunnable <$ rightToMaybe (Plutus.plutusRunnableResult plutusRunnable))
+      -- The ledger pairs the runnable with its 'L.EraPlutusTxInfo' evidence for us.
+      case L.mkSupportedPlutusRunnable (L.eraProtVerHigh @era) ps of
+        L.SupportedPlutusRunnable plutusRunnable ->
+          AnyPlutusScript (PlutusScriptInEra plutusRunnable)
+            <$ rightToMaybe (Plutus.plutusRunnableResult plutusRunnable)
 
     noParseError :: CBOR.DecoderError
     noParseError =
@@ -124,14 +128,14 @@ deserialiseAnySimpleScript
 deserialiseAnySimpleScript bs =
   AnySimpleScript <$> obtainCommonConstraints (useEra @era) (deserialiseSimpleScript bs)
 
+-- | Decode a Plutus script. The 'L.EraPlutusTxInfo' constraint fixes both the language
+-- and the era, so only malformed bytes fail.
 deserialiseAnyPlutusScriptOfLanguage
   :: forall era lang
-   . (IsEra era, Plutus.PlutusLanguage lang, HasTypeProxy (Plutus.SLanguage lang))
-  => BS.ByteString -> L.SLanguage lang -> Either CBOR.DecoderError (AnyScript (LedgerEra era))
-deserialiseAnyPlutusScriptOfLanguage bs lang = do
-  s :: (PlutusScriptInEra lang (LedgerEra era)) <-
-    obtainCommonConstraints (useEra @era) (deserialisePlutusScriptInEra lang bs)
-  return $ AnyPlutusScript s
+   . L.EraPlutusTxInfo lang (LedgerEra era)
+  => BS.ByteString -> Either CBOR.DecoderError (AnyScript (LedgerEra era))
+deserialiseAnyPlutusScriptOfLanguage bs =
+  AnyPlutusScript <$> deserialisePlutusScriptInEra @(LedgerEra era) @lang bs
 
 data AnyScriptDecodeError
   = -- | A text envelope was decoded, but its Plutus CBOR payload could not be.

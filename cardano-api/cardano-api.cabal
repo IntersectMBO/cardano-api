@@ -230,6 +230,7 @@ library
     Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
     Cardano.Api.Era.Internal.Feature
     Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
+    Cardano.Api.Experimental.Plutus.Internal.Language
     Cardano.Api.Experimental.Plutus.Internal.Script
     Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
     Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts

@@ -1,0 +1,8 @@
+project: cardano-api
+pr: 1363
+kind:
+  - breaking
+  - bugfix
+description: |
+  `createTransactionBody` now fails with `TxOutputReferenceScriptLanguageNotSupportedInEra` when a transaction output or the return collateral carries a reference script in a language the era does not support.
+  Before, the output was built without the script and no error was reported.
