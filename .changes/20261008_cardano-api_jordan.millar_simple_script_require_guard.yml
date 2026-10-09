@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1374
+kind:
+- breaking
+- feature
+description: Add a `RequireGuard` constructor to `SimpleScript` carrying a ledger `Credential Guard`, so simple scripts can express the Dijkstra native script guard case. Adds `toDijkstraNativeScript` and `fromDijkstraNativeScript`, a `"guard"` JSON tag delegating to the ledger `Credential` encoding, and guard-aware key witness estimation. Pre-Dijkstra conversion via `toAllegraTimelock` errors on a guard.

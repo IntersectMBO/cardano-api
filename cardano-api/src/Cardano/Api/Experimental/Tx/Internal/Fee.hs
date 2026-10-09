@@ -1829,8 +1829,9 @@ estimateTransactionKeyWitnessCount
     estimateTxInWitnesses (_, AnyKeyWitnessPlaceholder) = 1
     estimateTxInWitnesses (_, AnySimpleScriptWitness (SScript (SimpleScript simpleScript))) =
       maxWitnessesInSimpleScript $
-        obtainCommonConstraints (useEra @era) $
-          Old.fromAllegraTimelock simpleScript
+        case useEra @era of
+          ConwayEra -> Old.fromAllegraTimelock simpleScript
+          DijkstraEra -> Old.fromDijkstraNativeScript simpleScript
     estimateTxInWitnesses (_, AnySimpleScriptWitness (SReferenceScript _)) = 0
     estimateTxInWitnesses (_, AnyPlutusScriptWitness{}) = 0
     -- This is a rough conservative estimate of the maximum number of witnesses
@@ -1847,6 +1848,9 @@ estimateTransactionKeyWitnessCount
     maxWitnessesInSimpleScript (Old.RequireAllOf simpleScripts) = sum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (Old.RequireAnyOf simpleScripts) = maximum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (Old.RequireMOf n simpleScripts) = sum $ take n $ sortBy (comparing Down) (map maxWitnessesInSimpleScript simpleScripts)
+    -- Count the key witness directly identified by the guard credential.
+    -- Any signer requirements inside a referenced script are not inferred here.
+    maxWitnessesInSimpleScript (Old.RequireGuard cred) = maybe 0 (const 1) (credKeyHashWitness cred)
 
     -- Mirrors ledger's 'Cardano.Ledger.Conway.UTxO.voterWitnesses': a committee or
     -- DRep voter needs a VKey witness only when its credential is key-based.

@@ -151,6 +151,8 @@ prop_simple_script_witness_count = H.property $ do
   satisfyScript (RequireAllOf simpleScripts) = Set.unions <$> traverse satisfyScript simpleScripts
   satisfyScript (RequireMOf n simpleScripts) = shuffle simpleScripts >>= satisfyScript . RequireAllOf . take n
   satisfyScript (RequireAnyOf simpleScripts) = satisfyScript (RequireMOf 1 simpleScripts)
+  satisfyScript (RequireGuard (L.KeyHashObj (L.KeyHash kh))) = return $ Set.singleton (PaymentKeyHash (L.KeyHash kh))
+  satisfyScript (RequireGuard (L.ScriptHashObj _)) = return mempty
 
 -- | Regression test for: a key-credentialed voter (e.g. a key-hash DRep)
 -- requires a VKey witness to satisfy the ledger, but the legacy

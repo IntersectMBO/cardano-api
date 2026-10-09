@@ -580,6 +580,9 @@ estimateTransactionKeyWitnessCount
     maxWitnessesInSimpleScript (RequireAllOf simpleScripts) = sum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (RequireAnyOf simpleScripts) = maximum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (RequireMOf n simpleScripts) = sum $ take n $ sortBy (comparing Down) (map maxWitnessesInSimpleScript simpleScripts)
+    -- Count the key witness directly identified by the guard credential.
+    -- Any signer requirements inside a referenced script are not inferred here.
+    maxWitnessesInSimpleScript (RequireGuard cred) = maybe 0 (const 1) (credKeyHashWitness cred)
 
     -- Mirrors ledger's 'Cardano.Ledger.Conway.UTxO.voterWitnesses': a committee or
     -- DRep voter needs a VKey witness only when its credential is key-based.
