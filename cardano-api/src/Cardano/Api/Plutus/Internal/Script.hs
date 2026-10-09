@@ -465,7 +465,7 @@ instance HasTypeProxy lang => HasTypeProxy (Script lang) where
 
 instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
   serialiseToCBOR (SimpleScript s) =
-    CBOR.serialize' (toAllegraTimelock s :: Timelock.Timelock (ShelleyLedgerEra AllegraEra))
+    CBOR.serialize' (toDijkstraNativeScript s)
   serialiseToCBOR (PlutusScript PlutusScriptV1 (PlutusScriptSerialised s)) =
     SBS.fromShort s
   serialiseToCBOR (PlutusScript PlutusScriptV2 (PlutusScriptSerialised s)) =
@@ -478,8 +478,8 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
   deserialiseFromCBOR _ bs =
     case scriptLanguage :: ScriptLanguage lang of
       SimpleScriptLanguage ->
-        let version = Ledger.eraProtVerHigh @(ShelleyLedgerEra AllegraEra)
-         in SimpleScript . fromAllegraTimelock @(ShelleyLedgerEra AllegraEra)
+        let version = Ledger.eraProtVerHigh @(ShelleyLedgerEra DijkstraEra)
+         in SimpleScript . fromDijkstraNativeScript
               <$> Binary.decodeFullAnnotator version "Script" Binary.decCBOR (LBS.fromStrict bs)
       PlutusScriptLanguage PlutusScriptV1 ->
         PlutusScript PlutusScriptV1
@@ -1044,11 +1044,12 @@ parseScriptHash = do
 
 hashScript :: Script lang -> ScriptHash
 hashScript (SimpleScript s) =
-  -- We convert to the Allegra-era version specifically and hash that.
-  -- Later ledger eras have to be compatible anyway.
+  -- Dijkstra supports guards and preserves the encoding and hash prefix of
+  -- the original native script constructors.
   ScriptHash
-    . Ledger.hashScript @(ShelleyLedgerEra AllegraEra)
-    . (toAllegraTimelock :: SimpleScript -> Timelock.Timelock (ShelleyLedgerEra AllegraEra))
+    . Ledger.hashScript @(ShelleyLedgerEra DijkstraEra)
+    . Alonzo.NativeScript
+    . toDijkstraNativeScript
     $ s
 hashScript (PlutusScript PlutusScriptV1 (PlutusScriptSerialised script)) =
   -- For Plutus V1, we convert to the Alonzo-era version specifically and
