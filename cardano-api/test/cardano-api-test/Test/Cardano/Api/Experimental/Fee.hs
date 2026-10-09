@@ -32,6 +32,7 @@ import Cardano.Api.Monad.Error (failEitherWith)
 import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Ledger.Tools qualified as L (calcMinFeeTx)
@@ -101,6 +102,9 @@ tests =
         , testProperty
             "pool registration counts operator and every owner"
             prop_estimateTransactionKeyWitnessCount_counts_pool_owners
+        , testProperty
+            "Dijkstra guards count key credentials, including nested guards"
+            prop_estimateTransactionKeyWitnessCount_counts_dijkstra_guards
         ]
     , testGroup
         "createCompatibleTx"
@@ -1118,6 +1122,30 @@ prop_createCompatibleTx_preserves_all_certs = H.property $ do
       createCompatibleTx sbe (defaultCompatibleTxBodyContent sbe){compatibleTxCertificates = inputCerts}
   let bodyCerts = ledgerTx ^. L.bodyTxL . L.certsTxBodyL
   Seq.length bodyCerts === expectedCount
+
+prop_estimateTransactionKeyWitnessCount_counts_dijkstra_guards :: Property
+prop_estimateTransactionKeyWitnessCount_counts_dijkstra_guards = H.property $ do
+  txIn <- H.forAll genTxIn
+  keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  scriptHash <- H.forAll genScriptHash
+  let Api.PaymentKeyHash ledgerKeyHash = keyHash
+      keyGuard = Api.RequireGuard (L.KeyHashObj (coerceKeyRole ledgerKeyHash))
+      scriptGuard = Api.RequireGuard (L.ScriptHashObj (Api.toShelleyScriptHash scriptHash))
+      estimate script =
+        Exp.estimateTransactionKeyWitnessCount @Exp.DijkstraEra $
+          Exp.defaultTxBodyContent
+            & Exp.setTxIns
+              [
+                ( txIn
+                , Exp.AnySimpleScriptWitness $
+                    Exp.SScript $
+                      Exp.SimpleScript $
+                        Api.toDijkstraNativeScript script
+                )
+              ]
+  estimate keyGuard === 1
+  estimate scriptGuard === 0
+  estimate (Api.RequireAllOf [keyGuard, scriptGuard]) === 1
 
 -- | Regression test for: a key-credentialed voter (e.g. a key-hash DRep)
 -- requires a VKey witness to satisfy the ledger, but

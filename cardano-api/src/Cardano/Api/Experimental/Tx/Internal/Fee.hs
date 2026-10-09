@@ -1829,8 +1829,9 @@ estimateTransactionKeyWitnessCount
     estimateTxInWitnesses (_, AnyKeyWitnessPlaceholder) = 1
     estimateTxInWitnesses (_, AnySimpleScriptWitness (SScript (SimpleScript simpleScript))) =
       maxWitnessesInSimpleScript $
-        obtainCommonConstraints (useEra @era) $
-          Old.fromAllegraTimelock simpleScript
+        case useEra @era of
+          ConwayEra -> Old.fromAllegraTimelock simpleScript
+          DijkstraEra -> Old.fromDijkstraNativeScript simpleScript
     estimateTxInWitnesses (_, AnySimpleScriptWitness (SReferenceScript _)) = 0
     estimateTxInWitnesses (_, AnyPlutusScriptWitness{}) = 0
     -- This is a rough conservative estimate of the maximum number of witnesses
