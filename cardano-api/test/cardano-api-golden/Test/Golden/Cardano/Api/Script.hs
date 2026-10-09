@@ -8,6 +8,7 @@ module Test.Golden.Cardano.Api.Script
   , test_golden_SimpleScriptV2_All
   , test_golden_SimpleScriptV2_Any
   , test_golden_SimpleScriptV2_MofN
+  , test_golden_SimpleScript_Guards
   , test_golden_AlwaysSucceeds
   , test_roundtrip_SimpleScript_JSON
   , test_roundtrip_ScriptData
@@ -19,6 +20,8 @@ import Cardano.Api
 import Cardano.Api.Parser.Text qualified as P
 
 import Cardano.Ledger.Api.Era qualified as L
+import Cardano.Ledger.Credential qualified as L
+import Cardano.Ledger.Keys (coerceKeyRole)
 
 import Data.Aeson
 import Data.ByteString qualified as BS
@@ -127,6 +130,30 @@ test_golden_SimpleScriptV2_MofN :: TestTree
 test_golden_SimpleScriptV2_MofN =
   testProperty "golden SimpleScriptV2 MofN" $
     goldenTestJsonValuePretty exampleSimpleScriptV2_MofN (goldenPath </> "SimpleV2/atleast.script")
+
+test_golden_SimpleScript_Guards :: TestTree
+test_golden_SimpleScript_Guards =
+  testGroup
+    "golden SimpleScript guards"
+    [ goldenGuard "key credential" keyGuard "Dijkstra/key-guard.script"
+    , goldenGuard "script credential" scriptGuard "Dijkstra/script-guard.script"
+    ]
+ where
+  hashHex = "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a"
+  keyGuard = case either error id $ P.runParser parseRawBytesHex hashHex of
+    PaymentKeyHash keyHash -> RequireGuard (L.KeyHashObj (coerceKeyRole keyHash))
+  scriptGuard =
+    RequireGuard . L.ScriptHashObj . toShelleyScriptHash . either error id $
+      P.runParser parseRawBytesHex hashHex
+  goldenGuard name script path =
+    testGroup
+      name
+      [ testProperty "encoding" $ goldenTestJsonValuePretty script (goldenPath </> path)
+      , testProperty "decoding" $ H.propertyOnce $ do
+          jsonBytes <- H.evalIO $ BS.readFile (goldenPath </> path)
+          decoded <- H.evalEither $ eitherDecodeStrict' jsonBytes
+          decoded === script
+      ]
 
 -- | Test showing that we can correctly deserialise a Plutus script that was
 -- saved in a CBOR hex-encoded text file or in a CBOR binary file
