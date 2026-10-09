@@ -1,0 +1,1117 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.SubTransaction</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier">UnsignedSubTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier">SignedSubTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#makeUnsignedSubTx"><span class="hs-identifier">makeUnsignedSubTx</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#makeSubTxKeyWitness"><span class="hs-identifier">makeSubTxKeyWitness</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#signSubTx"><span class="hs-identifier">signSubTx</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#makeSignedSubTx"><span class="hs-identifier">makeSignedSubTx</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#getUnsignedSubTxId"><span class="hs-identifier">getUnsignedSubTxId</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#getSignedSubTxId"><span class="hs-identifier">getSignedSubTxId</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#setTxSignedSubTransactions"><span class="hs-identifier">setTxSignedSubTransactions</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Data family instances</span></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.HasTypeProxy.html#AsType"><span class="hs-identifier">AsType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html"><span class="hs-identifier">Cardano.Api.Experimental.Era</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.BodyContent</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#MakeUnsignedTxError"><span class="hs-identifier">MakeUnsignedTxError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#SubTxBodyContent"><span class="hs-identifier">SubTxBodyContent</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#TxBodyContent"><span class="hs-identifier">TxBodyContent</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#TxOut"><span class="hs-identifier">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#collectTxBodyScriptWitnessRequirements"><span class="hs-identifier">collectTxBodyScriptWitnessRequirements</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convCertificates"><span class="hs-identifier">convCertificates</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convMintValue"><span class="hs-identifier">convMintValue</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convPParamsToScriptIntegrityHash"><span class="hs-identifier">convPParamsToScriptIntegrityHash</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convProposalProcedures"><span class="hs-identifier">convProposalProcedures</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convReferenceInputs"><span class="hs-identifier">convReferenceInputs</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convTxIns"><span class="hs-identifier">convTxIns</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convVotingProcedures"><span class="hs-identifier">convVotingProcedures</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convWithdrawals"><span class="hs-identifier">convWithdrawals</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#setTxSubTransactions"><span class="hs-identifier">setTxSubTransactions</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxAccountBalanceIntervals"><span class="hs-identifier">subTxAccountBalanceIntervals</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxAuxScripts"><span class="hs-identifier">subTxAuxScripts</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxCertificates"><span class="hs-identifier">subTxCertificates</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxCurrentTreasuryValue"><span class="hs-identifier">subTxCurrentTreasuryValue</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxDirectDeposits"><span class="hs-identifier">subTxDirectDeposits</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxGuards"><span class="hs-identifier">subTxGuards</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxIns"><span class="hs-identifier">subTxIns</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxInsReference"><span class="hs-identifier">subTxInsReference</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxMetadata"><span class="hs-identifier">subTxMetadata</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxMintValue"><span class="hs-identifier">subTxMintValue</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxOuts"><span class="hs-identifier">subTxOuts</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxProposalProcedures"><span class="hs-identifier">subTxProposalProcedures</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxProtocolParams"><span class="hs-identifier">subTxProtocolParams</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxRequiredTopLevelGuards"><span class="hs-identifier">subTxRequiredTopLevelGuards</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxTreasuryDonation"><span class="hs-identifier">subTxTreasuryDonation</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxValidityLowerBound"><span class="hs-identifier">subTxValidityLowerBound</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxValidityUpperBound"><span class="hs-identifier">subTxValidityUpperBound</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxVotingProcedures"><span class="hs-identifier">subTxVotingProcedures</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxWithdrawals"><span class="hs-identifier">subTxWithdrawals</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#toAuxiliaryData"><span class="hs-identifier">toAuxiliaryData</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier">TxScriptWitnessRequirements</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html"><span class="hs-identifier">Cardano.Api.HasTypeProxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier">HasTypeProxy</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Ledger.Internal.Reexport.html"><span class="hs-identifier">Cardano.Api.Ledger.Internal.Reexport</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Cbor.html"><span class="hs-identifier">Cardano.Api.Serialise.Cbor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.Cbor.html#SerialiseAsCBOR"><span class="hs-identifier">SerialiseAsCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html"><span class="hs-identifier">Cardano.Api.Serialise.TextEnvelope.Internal</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#HasTextEnvelope"><span class="hs-identifier">HasTextEnvelope</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeType"><span class="hs-identifier">TextEnvelopeType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Sign</span></a></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier">TxId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxId"><span class="hs-identifier">fromShelleyTxId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-api-1.15.0.0-12d5d717531cb7e62f2c8ba9000570ea4c9b5122bd269b1eed77ed6806feecb6/share/doc/html/src/Cardano.Ledger.Api.html"><span class="hs-identifier">Cardano.Ledger.Api</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.10.0.0-308a84c6bb586f2560ff079236181bc8d35f2cf9c7527cb536823f9ea673824c/share/doc/html/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.TxLevel.html#TxLevel"><span class="hs-identifier">TxLevel</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-dijkstra-0.4.0.0-da63d2d2001da6d2ade73cd91067f464fba57c15da8ac1ce3d38c65f8334e2fb/share/doc/html/src/Cardano.Ledger.Dijkstra.TxBody.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.TxBody</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-dijkstra-0.4.0.0-da63d2d2001da6d2ade73cd91067f464fba57c15da8ac1ce3d38c65f8334e2fb/share/doc/html/src/Cardano.Ledger.Dijkstra.TxBody.html#DijkstraEraTxBody"><span class="hs-identifier">DijkstraEraTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-dijkstra-0.4.0.0-da63d2d2001da6d2ade73cd91067f464fba57c15da8ac1ce3d38c65f8334e2fb/share/doc/html/src/Cardano.Ledger.Dijkstra.TxBody.html#accountBalanceIntervalsTxBodyL"><span class="hs-identifier">accountBalanceIntervalsTxBodyL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-dijkstra-0.4.0.0-da63d2d2001da6d2ade73cd91067f464fba57c15da8ac1ce3d38c65f8334e2fb/share/doc/html/src/Cardano.Ledger.Dijkstra.TxBody.html#requiredTopLevelGuardsL"><span class="hs-identifier">requiredTopLevelGuardsL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#fromMaybe"><span class="hs-identifier">fromMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IsList.html#IsList"><span class="hs-identifier">IsList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Lens.Micro</span></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- Sub-transactions exist from the Dijkstra era onwards, and Dijkstra is the</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- only such era, so the types below are fixed to it rather than indexed by the</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- era. Once a second era has sub-transactions, adding the index back is</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- mechanical.</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="annot"><span class="hs-comment">-- | A sub-transaction with script witnesses but no key witnesses.</span></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">newtype</span><span> </span><span id="UnsignedSubTx"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-var">UnsignedSubTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UnsignedSubTx"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-var">UnsignedSubTx</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">L.Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.TxLevel.html#SubTx"><span class="hs-identifier hs-type">L.SubTx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683117179"><span id="local-6989586621683117184"><span class="annot"><span class="annottext">UnsignedSubTx -&gt; UnsignedSubTx -&gt; Bool
+(UnsignedSubTx -&gt; UnsignedSubTx -&gt; Bool)
+-&gt; (UnsignedSubTx -&gt; UnsignedSubTx -&gt; Bool) -&gt; Eq UnsignedSubTx
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: UnsignedSubTx -&gt; UnsignedSubTx -&gt; Bool
+== :: UnsignedSubTx -&gt; UnsignedSubTx -&gt; Bool
+$c/= :: UnsignedSubTx -&gt; UnsignedSubTx -&gt; Bool
+/= :: UnsignedSubTx -&gt; UnsignedSubTx -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683117192"><span id="local-6989586621683117197"><span id="local-6989586621683117201"><span class="annot"><span class="annottext">Int -&gt; UnsignedSubTx -&gt; ShowS
+[UnsignedSubTx] -&gt; ShowS
+UnsignedSubTx -&gt; String
+(Int -&gt; UnsignedSubTx -&gt; ShowS)
+-&gt; (UnsignedSubTx -&gt; String)
+-&gt; ([UnsignedSubTx] -&gt; ShowS)
+-&gt; Show UnsignedSubTx
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; UnsignedSubTx -&gt; ShowS
+showsPrec :: Int -&gt; UnsignedSubTx -&gt; ShowS
+$cshow :: UnsignedSubTx -&gt; String
+show :: UnsignedSubTx -&gt; String
+$cshowList :: [UnsignedSubTx] -&gt; ShowS
+showList :: [UnsignedSubTx] -&gt; ShowS
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="annot"><span class="hs-comment">-- | A sub-transaction with its key witnesses, see 'setTxSignedSubTransactions'.</span></span><span>
+</span><span id="line-99"></span><span class="hs-keyword">newtype</span><span> </span><span id="SignedSubTx"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-var">SignedSubTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SignedSubTx"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-var">SignedSubTx</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">L.Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.TxLevel.html#SubTx"><span class="hs-identifier hs-type">L.SubTx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683117207"><span id="local-6989586621683117212"><span class="annot"><span class="annottext">SignedSubTx -&gt; SignedSubTx -&gt; Bool
+(SignedSubTx -&gt; SignedSubTx -&gt; Bool)
+-&gt; (SignedSubTx -&gt; SignedSubTx -&gt; Bool) -&gt; Eq SignedSubTx
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SignedSubTx -&gt; SignedSubTx -&gt; Bool
+== :: SignedSubTx -&gt; SignedSubTx -&gt; Bool
+$c/= :: SignedSubTx -&gt; SignedSubTx -&gt; Bool
+/= :: SignedSubTx -&gt; SignedSubTx -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683117218"><span id="local-6989586621683117222"><span id="local-6989586621683117226"><span class="annot"><span class="annottext">Int -&gt; SignedSubTx -&gt; ShowS
+[SignedSubTx] -&gt; ShowS
+SignedSubTx -&gt; String
+(Int -&gt; SignedSubTx -&gt; ShowS)
+-&gt; (SignedSubTx -&gt; String)
+-&gt; ([SignedSubTx] -&gt; ShowS)
+-&gt; Show SignedSubTx
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SignedSubTx -&gt; ShowS
+showsPrec :: Int -&gt; SignedSubTx -&gt; ShowS
+$cshow :: SignedSubTx -&gt; String
+show :: SignedSubTx -&gt; String
+$cshowList :: [SignedSubTx] -&gt; ShowS
+showList :: [SignedSubTx] -&gt; ShowS
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="AsType"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.HasTypeProxy.html#AsType"><span class="hs-identifier hs-var">AsType</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AsUnsignedSubTx"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#AsUnsignedSubTx"><span class="hs-identifier hs-var">AsUnsignedSubTx</span></a></span></span><span>
+</span><span id="line-104"></span><span>  </span><span id="local-6989586621683117234"><span class="annot"><span class="annottext">proxyToAsType :: Proxy UnsignedSubTx -&gt; AsType UnsignedSubTx
+</span><a href="#local-6989586621683117234"><span class="hs-identifier hs-var hs-var hs-var">proxyToAsType</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy UnsignedSubTx
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AsType UnsignedSubTx
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#AsUnsignedSubTx"><span class="hs-identifier hs-var">AsUnsignedSubTx</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-type">SignedSubTx</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="AsType"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.HasTypeProxy.html#AsType"><span class="hs-identifier hs-var">AsType</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-type">SignedSubTx</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AsSignedSubTx"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#AsSignedSubTx"><span class="hs-identifier hs-var">AsSignedSubTx</span></a></span></span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621683117241"><span class="annot"><span class="annottext">proxyToAsType :: Proxy SignedSubTx -&gt; AsType SignedSubTx
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.HasTypeProxy.html#proxyToAsType"><span class="hs-identifier hs-var hs-var hs-var">proxyToAsType</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy SignedSubTx
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AsType SignedSubTx
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#AsSignedSubTx"><span class="hs-identifier hs-var">AsSignedSubTx</span></a></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.Cbor.html#SerialiseAsCBOR"><span class="hs-identifier hs-type">SerialiseAsCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621683117249"><span class="annot"><span class="annottext">serialiseToCBOR :: UnsignedSubTx -&gt; ByteString
+</span><a href="#local-6989586621683117249"><span class="hs-identifier hs-var hs-var hs-var">serialiseToCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span> </span><span id="local-6989586621683117251"><span class="annot"><span class="annottext">Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117251"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Tx SubTx DijkstraEra -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.10.0.0-308a84c6bb586f2560ff079236181bc8d35f2cf9c7527cb536823f9ea673824c/share/doc/html/src/Cardano.Ledger.Binary.Encoding.html#serialize%27"><span class="hs-identifier hs-var">Ledger.serialize'</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#subTxProtVer"><span class="hs-identifier hs-var">subTxProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Tx SubTx DijkstraEra
+Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117251"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-112"></span><span>  </span><span id="local-6989586621683117258"><span class="annot"><span class="annottext">deserialiseFromCBOR :: AsType UnsignedSubTx
+-&gt; ByteString -&gt; Either DecoderError UnsignedSubTx
+</span><a href="#local-6989586621683117258"><span class="hs-identifier hs-var hs-var hs-var">deserialiseFromCBOR</span></a></span></span><span> </span><span class="annot"><span class="annottext">AsType UnsignedSubTx
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621683117260"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621683117260"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">Tx SubTx DijkstraEra -&gt; UnsignedSubTx
+Tx SubTx (LedgerEra DijkstraEra) -&gt; UnsignedSubTx
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-var">UnsignedSubTx</span></a></span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><span class="annottext">(Tx SubTx DijkstraEra -&gt; UnsignedSubTx)
+-&gt; Either DecoderError (Tx SubTx DijkstraEra)
+-&gt; Either DecoderError UnsignedSubTx
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator (Tx SubTx DijkstraEra)))
+-&gt; ByteString
+-&gt; Either DecoderError (Tx SubTx DijkstraEra)
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator a))
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.10.0.0-308a84c6bb586f2560ff079236181bc8d35f2cf9c7527cb536823f9ea673824c/share/doc/html/src/Cardano.Ledger.Binary.Decoding.html#decodeFullAnnotator"><span class="hs-identifier hs-var">Ledger.decodeFullAnnotator</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#subTxProtVer"><span class="hs-identifier hs-var">subTxProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;UnsignedSubTx&quot;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Tx SubTx DijkstraEra))
+forall s. Decoder s (Annotator (Tx SubTx DijkstraEra))
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.10.0.0-308a84c6bb586f2560ff079236181bc8d35f2cf9c7527cb536823f9ea673824c/share/doc/html/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">Ledger.decCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.Internal.html#fromStrict"><span class="hs-identifier hs-var">LBS.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621683117260"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.Cbor.html#SerialiseAsCBOR"><span class="hs-identifier hs-type">SerialiseAsCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-type">SignedSubTx</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-117"></span><span>  </span><span id="local-6989586621683117272"><span class="annot"><span class="annottext">serialiseToCBOR :: SignedSubTx -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.Cbor.html#serialiseToCBOR"><span class="hs-identifier hs-var hs-var hs-var">serialiseToCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-type">SignedSubTx</span></a></span><span> </span><span id="local-6989586621683117273"><span class="annot"><span class="annottext">Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117273"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Tx SubTx DijkstraEra -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.10.0.0-308a84c6bb586f2560ff079236181bc8d35f2cf9c7527cb536823f9ea673824c/share/doc/html/src/Cardano.Ledger.Binary.Encoding.html#serialize%27"><span class="hs-identifier hs-var">Ledger.serialize'</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#subTxProtVer"><span class="hs-identifier hs-var">subTxProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Tx SubTx DijkstraEra
+Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117273"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span id="local-6989586621683117276"><span class="annot"><span class="annottext">deserialiseFromCBOR :: AsType SignedSubTx -&gt; ByteString -&gt; Either DecoderError SignedSubTx
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.Cbor.html#deserialiseFromCBOR"><span class="hs-identifier hs-var hs-var hs-var">deserialiseFromCBOR</span></a></span></span><span> </span><span class="annot"><span class="annottext">AsType SignedSubTx
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621683117277"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621683117277"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">Tx SubTx DijkstraEra -&gt; SignedSubTx
+Tx SubTx (LedgerEra DijkstraEra) -&gt; SignedSubTx
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-var">SignedSubTx</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">(Tx SubTx DijkstraEra -&gt; SignedSubTx)
+-&gt; Either DecoderError (Tx SubTx DijkstraEra)
+-&gt; Either DecoderError SignedSubTx
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator (Tx SubTx DijkstraEra)))
+-&gt; ByteString
+-&gt; Either DecoderError (Tx SubTx DijkstraEra)
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator a))
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.10.0.0-308a84c6bb586f2560ff079236181bc8d35f2cf9c7527cb536823f9ea673824c/share/doc/html/src/Cardano.Ledger.Binary.Decoding.html#decodeFullAnnotator"><span class="hs-identifier hs-var">Ledger.decodeFullAnnotator</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#subTxProtVer"><span class="hs-identifier hs-var">subTxProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SignedSubTx&quot;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Tx SubTx DijkstraEra))
+forall s. Decoder s (Annotator (Tx SubTx DijkstraEra))
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.10.0.0-308a84c6bb586f2560ff079236181bc8d35f2cf9c7527cb536823f9ea673824c/share/doc/html/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">Ledger.decCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.Internal.html#fromStrict"><span class="hs-identifier hs-var">LBS.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621683117277"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#subTxProtVer"><span class="hs-identifier hs-type">subTxProtVer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.10.0.0-308a84c6bb586f2560ff079236181bc8d35f2cf9c7527cb536823f9ea673824c/share/doc/html/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">L.Version</span></a></span><span>
+</span><span id="line-123"></span><span id="subTxProtVer"><span class="annot"><span class="annottext">subTxProtVer :: Version
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#subTxProtVer"><span class="hs-identifier hs-var hs-var">subTxProtVer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">L.eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- The envelope types follow the @&quot;Tx DijkstraEra&quot;@ naming of top-level transactions.</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-128"></span><span>  </span><span id="local-6989586621683117288"><span class="annot"><span class="annottext">textEnvelopeTypes :: AsType UnsignedSubTx -&gt; NonEmpty TextEnvelopeType
+</span><a href="#local-6989586621683117288"><span class="hs-identifier hs-var hs-var hs-var">textEnvelopeTypes</span></a></span></span><span> </span><span class="annot"><span class="annottext">AsType UnsignedSubTx
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TextEnvelopeType -&gt; NonEmpty TextEnvelopeType
+forall a. a -&gt; NonEmpty a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(TextEnvelopeType -&gt; NonEmpty TextEnvelopeType)
+-&gt; TextEnvelopeType -&gt; NonEmpty TextEnvelopeType
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; TextEnvelopeType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeType"><span class="hs-identifier hs-var">TextEnvelopeType</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unwitnessed SubTx DijkstraEra&quot;</span></span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621683117293"><span class="annot"><span class="annottext">textEnvelopeDefaultDescr :: UnsignedSubTx -&gt; TextEnvelopeDescr
+</span><a href="#local-6989586621683117293"><span class="hs-identifier hs-var hs-var hs-var">textEnvelopeDefaultDescr</span></a></span></span><span> </span><span class="annot"><span class="annottext">UnsignedSubTx
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TextEnvelopeDescr
+</span><span class="hs-string">&quot;Ledger Cddl Format&quot;</span></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-type">SignedSubTx</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-132"></span><span>  </span><span id="local-6989586621683117301"><span class="annot"><span class="annottext">textEnvelopeTypes :: AsType SignedSubTx -&gt; NonEmpty TextEnvelopeType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#textEnvelopeTypes"><span class="hs-identifier hs-var hs-var hs-var">textEnvelopeTypes</span></a></span></span><span> </span><span class="annot"><span class="annottext">AsType SignedSubTx
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TextEnvelopeType -&gt; NonEmpty TextEnvelopeType
+forall a. a -&gt; NonEmpty a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(TextEnvelopeType -&gt; NonEmpty TextEnvelopeType)
+-&gt; TextEnvelopeType -&gt; NonEmpty TextEnvelopeType
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; TextEnvelopeType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#TextEnvelopeType"><span class="hs-identifier hs-var">TextEnvelopeType</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Witnessed SubTx DijkstraEra&quot;</span></span><span>
+</span><span id="line-133"></span><span>  </span><span id="local-6989586621683117303"><span class="annot"><span class="annottext">textEnvelopeDefaultDescr :: SignedSubTx -&gt; TextEnvelopeDescr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-5cdf86cf37586b28a7873ca04d448ab55e3e47dbf96fb4f555346f73d9ca07c2/share/doc/html/src/Cardano.Keys.Serialise.TextEnvelope.html#textEnvelopeDefaultDescr"><span class="hs-identifier hs-var hs-var hs-var">textEnvelopeDefaultDescr</span></a></span></span><span> </span><span class="annot"><span class="annottext">SignedSubTx
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TextEnvelopeDescr
+</span><span class="hs-string">&quot;Ledger Cddl Format&quot;</span></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="annot"><span class="hs-comment">-- | The hash of the sub-transaction body. Unchanged by signing.</span></span><span>
+</span><span id="line-136"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#getUnsignedSubTxId"><span class="hs-identifier hs-type">getUnsignedSubTxId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-137"></span><span id="getUnsignedSubTxId"><span class="annot"><span class="annottext">getUnsignedSubTxId :: UnsignedSubTx -&gt; TxId
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#getUnsignedSubTxId"><span class="hs-identifier hs-var hs-var">getUnsignedSubTxId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span> </span><span id="local-6989586621683117304"><span class="annot"><span class="annottext">Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117304"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxId"><span class="hs-identifier hs-var">fromShelleyTxId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx SubTx DijkstraEra -&gt; TxId
+forall era (l :: TxLevel). EraTx era =&gt; Tx l era -&gt; TxId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#txIdTx"><span class="hs-identifier hs-var">L.txIdTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx SubTx DijkstraEra
+Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117304"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#getSignedSubTxId"><span class="hs-identifier hs-type">getSignedSubTxId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-type">SignedSubTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-140"></span><span id="getSignedSubTxId"><span class="annot"><span class="annottext">getSignedSubTxId :: SignedSubTx -&gt; TxId
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#getSignedSubTxId"><span class="hs-identifier hs-var hs-var">getSignedSubTxId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-type">SignedSubTx</span></a></span><span> </span><span id="local-6989586621683117306"><span class="annot"><span class="annottext">Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117306"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxId"><span class="hs-identifier hs-var">fromShelleyTxId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx SubTx DijkstraEra -&gt; TxId
+forall era (l :: TxLevel). EraTx era =&gt; Tx l era -&gt; TxId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#txIdTx"><span class="hs-identifier hs-var">L.txIdTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx SubTx DijkstraEra
+Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117306"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- | Embed signed sub-transactions in a top-level transaction body, replacing</span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- any that are already there.</span><span>
+</span><span id="line-144"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#setTxSignedSubTransactions"><span class="hs-identifier hs-type">setTxSignedSubTransactions</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-type">SignedSubTx</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#TxBodyContent"><span class="hs-identifier hs-type">TxBodyContent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#TxBodyContent"><span class="hs-identifier hs-type">TxBodyContent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span id="setTxSignedSubTransactions"><span class="annot"><span class="annottext">setTxSignedSubTransactions :: [SignedSubTx]
+-&gt; TxBodyContent (LedgerEra DijkstraEra)
+-&gt; TxBodyContent (LedgerEra DijkstraEra)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#setTxSignedSubTransactions"><span class="hs-identifier hs-var hs-var">setTxSignedSubTransactions</span></a></span></span><span> </span><span id="local-6989586621683117307"><span class="annot"><span class="annottext">[SignedSubTx]
+</span><a href="#local-6989586621683117307"><span class="hs-identifier hs-var">subTxs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Tx SubTx DijkstraEra]
+-&gt; TxBodyContent DijkstraEra -&gt; TxBodyContent DijkstraEra
+forall era.
+EraTx era =&gt;
+[Tx SubTx era] -&gt; TxBodyContent era -&gt; TxBodyContent era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#setTxSubTransactions"><span class="hs-identifier hs-var">setTxSubTransactions</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Tx SubTx DijkstraEra
+Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117308"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-type">SignedSubTx</span></a></span><span> </span><span id="local-6989586621683117308"><span class="annot"><span class="annottext">Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117308"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[SignedSubTx]
+</span><a href="#local-6989586621683117307"><span class="hs-identifier hs-var">subTxs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- | Build a sub-transaction body and its script witness set from</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- 'SubTxBodyContent'.</span><span>
+</span><span id="line-152"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#makeUnsignedSubTx"><span class="hs-identifier hs-type">makeUnsignedSubTx</span></a></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#SubTxBodyContent"><span class="hs-identifier hs-type">SubTxBodyContent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#MakeUnsignedTxError"><span class="hs-identifier hs-type">MakeUnsignedTxError</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span>
+</span><span id="line-155"></span><span id="makeUnsignedSubTx"><span class="annot"><span class="annottext">makeUnsignedSubTx :: SubTxBodyContent (LedgerEra DijkstraEra)
+-&gt; Either MakeUnsignedTxError UnsignedSubTx
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#makeUnsignedSubTx"><span class="hs-identifier hs-var hs-var">makeUnsignedSubTx</span></a></span></span><span> </span><span id="local-6989586621683117309"><span class="annot"><span class="annottext">SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements.html#TxScriptWitnessRequirements"><span class="hs-identifier hs-type">TxScriptWitnessRequirements</span></a></span><span> </span><span id="local-6989586621683117311"><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621683117311"><span class="hs-identifier hs-var hs-var">languages</span></a></span></span><span> </span><span id="local-6989586621683117312"><span class="annot"><span class="annottext">[Script (LedgerEra DijkstraEra)]
+</span><a href="#local-6989586621683117312"><span class="hs-identifier hs-var hs-var">scripts</span></a></span></span><span> </span><span id="local-6989586621683117313"><span class="annot"><span class="annottext">TxDats (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117313"><span class="hs-identifier hs-var hs-var">datums</span></a></span></span><span> </span><span id="local-6989586621683117314"><span class="annot"><span class="annottext">Redeemers (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117314"><span class="hs-identifier hs-var hs-var">redeemers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-157"></span><span>        </span><span class="annot"><span class="annottext">forall (l :: TxLevel) era.
+IsEra era =&gt;
+BodyContent l (LedgerEra era)
+-&gt; TxScriptWitnessRequirements (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#collectTxBodyScriptWitnessRequirements"><span class="hs-identifier hs-var">collectTxBodyScriptWitnessRequirements</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621683117315"><span class="annot"><a href="#local-6989586621683117315"><span class="hs-identifier hs-var">scriptIntegrityHash</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><span class="annottext">forall era.
+IsEra era =&gt;
+Maybe (PParams (LedgerEra era))
+-&gt; Redeemers (LedgerEra era)
+-&gt; TxDats (LedgerEra era)
+-&gt; Set Language
+-&gt; Either MakeUnsignedTxError (StrictMaybe ScriptIntegrityHash)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convPParamsToScriptIntegrityHash"><span class="hs-identifier hs-var">convPParamsToScriptIntegrityHash</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-161"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; Maybe (PParams DijkstraEra)
+forall era. SubTxBodyContent era -&gt; Maybe (PParams era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxProtocolParams"><span class="hs-identifier hs-var">subTxProtocolParams</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>      </span><span class="annot"><span class="annottext">Redeemers (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117314"><span class="hs-identifier hs-var">redeemers</span></a></span><span>
+</span><span id="line-163"></span><span>      </span><span class="annot"><span class="annottext">TxDats (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117313"><span class="hs-identifier hs-var">datums</span></a></span><span>
+</span><span id="line-164"></span><span>      </span><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621683117311"><span class="hs-identifier hs-var">languages</span></a></span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683117316"><span class="annot"><a href="#local-6989586621683117316"><span class="hs-identifier hs-var hs-var">txAuxData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era.
+IsEra era =&gt;
+TxMetadata
+-&gt; [SimpleScript (LedgerEra era)]
+-&gt; Maybe (TxAuxData (LedgerEra era))
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#toAuxiliaryData"><span class="hs-identifier hs-var">toAuxiliaryData</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; TxMetadata
+forall era. SubTxBodyContent era -&gt; TxMetadata
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxMetadata"><span class="hs-identifier hs-var">subTxMetadata</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; [SimpleScript DijkstraEra]
+forall era. SubTxBodyContent era -&gt; [SimpleScript era]
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxAuxScripts"><span class="hs-identifier hs-var">subTxAuxScripts</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span>      </span><span id="local-6989586621683117317"><span class="annot"><a href="#local-6989586621683117317"><span class="hs-identifier hs-var hs-var">body</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-169"></span><span>        </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+forall era (l :: TxLevel).
+(EraTxBody era, Typeable l) =&gt;
+TxBody l era
+forall (l :: TxLevel).
+Typeable l =&gt;
+TxBody l (LedgerEra DijkstraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#mkBasicTxBody"><span class="hs-identifier hs-var">L.mkBasicTxBody</span></a></span><span>
+</span><span id="line-170"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Set TxIn -&gt; Identity (Set TxIn))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+EraTxBody era =&gt;
+Lens' (TxBody l era) (Set TxIn)
+forall (l :: TxLevel).
+Lens' (TxBody l (LedgerEra DijkstraEra)) (Set TxIn)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#inputsTxBodyL"><span class="hs-identifier hs-var">L.inputsTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((Set TxIn -&gt; Identity (Set TxIn))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; Set TxIn
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[(TxIn, AnyWitness DijkstraEra)] -&gt; Set TxIn
+forall era. [(TxIn, AnyWitness era)] -&gt; Set TxIn
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convTxIns"><span class="hs-identifier hs-var">convTxIns</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; [(TxIn, AnyWitness DijkstraEra)]
+forall era. SubTxBodyContent era -&gt; [(TxIn, AnyWitness era)]
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxIns"><span class="hs-identifier hs-var">subTxIns</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Set TxIn -&gt; Identity (Set TxIn))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+BabbageEraTxBody era =&gt;
+Lens' (TxBody l era) (Set TxIn)
+forall (l :: TxLevel).
+Lens' (TxBody l (LedgerEra DijkstraEra)) (Set TxIn)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-babbage-1.15.0.0-ec8bbfb6dfc2c690d39a3193c14a51568f2fa2915984c74f7e03e6a13a0ebd45/share/doc/html/src/Cardano.Ledger.Babbage.TxBody.html#referenceInputsTxBodyL"><span class="hs-identifier hs-var">L.referenceInputsTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((Set TxIn -&gt; Identity (Set TxIn))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; Set TxIn
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">TxInsReference DijkstraEra -&gt; Set TxIn
+forall era. TxInsReference era -&gt; Set TxIn
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convReferenceInputs"><span class="hs-identifier hs-var">convReferenceInputs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; TxInsReference DijkstraEra
+forall era. SubTxBodyContent era -&gt; TxInsReference era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxInsReference"><span class="hs-identifier hs-var">subTxInsReference</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (TxOut (LedgerEra DijkstraEra))
+ -&gt; Identity (StrictSeq (TxOut (LedgerEra DijkstraEra))))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+EraTxBody era =&gt;
+Lens' (TxBody l era) (StrictSeq (TxOut era))
+forall (l :: TxLevel).
+Lens'
+  (TxBody l (LedgerEra DijkstraEra))
+  (StrictSeq (TxOut (LedgerEra DijkstraEra)))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#outputsTxBodyL"><span class="hs-identifier hs-var">L.outputsTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictSeq (TxOut (LedgerEra DijkstraEra))
+  -&gt; Identity (StrictSeq (TxOut (LedgerEra DijkstraEra))))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; StrictSeq (TxOut (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[Item (StrictSeq (TxOut (LedgerEra DijkstraEra)))]
+-&gt; StrictSeq (TxOut (LedgerEra DijkstraEra))
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Item (StrictSeq (TxOut (LedgerEra DijkstraEra)))
+TxOut DijkstraEra
+</span><a href="#local-6989586621683117324"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span id="local-6989586621683117324"><span class="annot"><span class="annottext">TxOut DijkstraEra
+</span><a href="#local-6989586621683117324"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; [TxOut DijkstraEra]
+forall era. SubTxBodyContent era -&gt; [TxOut era]
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxOuts"><span class="hs-identifier hs-var">subTxOuts</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-173"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(ValidityInterval -&gt; Identity ValidityInterval)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+AllegraEraTxBody era =&gt;
+Lens' (TxBody l era) ValidityInterval
+forall (l :: TxLevel).
+Lens' (TxBody l (LedgerEra DijkstraEra)) ValidityInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-allegra-1.10.2.0-1ab19bedc398e3aec1fb8d218768f3207d5fa88446af57f52205c181bf580b93/share/doc/html/src/Cardano.Ledger.Allegra.TxBody.html#vldtTxBodyL"><span class="hs-identifier hs-var">L.vldtTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((ValidityInterval -&gt; Identity ValidityInterval)
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; ((StrictMaybe SlotNo -&gt; Identity (StrictMaybe SlotNo))
+    -&gt; ValidityInterval -&gt; Identity ValidityInterval)
+-&gt; (StrictMaybe SlotNo -&gt; Identity (StrictMaybe SlotNo))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe SlotNo -&gt; Identity (StrictMaybe SlotNo))
+-&gt; ValidityInterval -&gt; Identity ValidityInterval
+Lens' ValidityInterval (StrictMaybe SlotNo)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-allegra-1.10.2.0-1ab19bedc398e3aec1fb8d218768f3207d5fa88446af57f52205c181bf580b93/share/doc/html/src/Cardano.Ledger.Allegra.Scripts.html#invalidBeforeL"><span class="hs-identifier hs-var">L.invalidBeforeL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictMaybe SlotNo -&gt; Identity (StrictMaybe SlotNo))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; StrictMaybe SlotNo
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Maybe SlotNo -&gt; StrictMaybe SlotNo
+forall a. Maybe a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-b5b15e62d5438d8019c3162cdd769bd804b5f58d08d16b910f1a5027f590c224/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier hs-var">L.maybeToStrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; Maybe SlotNo
+forall era. SubTxBodyContent era -&gt; Maybe SlotNo
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxValidityLowerBound"><span class="hs-identifier hs-var">subTxValidityLowerBound</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-174"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(ValidityInterval -&gt; Identity ValidityInterval)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+AllegraEraTxBody era =&gt;
+Lens' (TxBody l era) ValidityInterval
+forall (l :: TxLevel).
+Lens' (TxBody l (LedgerEra DijkstraEra)) ValidityInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-allegra-1.10.2.0-1ab19bedc398e3aec1fb8d218768f3207d5fa88446af57f52205c181bf580b93/share/doc/html/src/Cardano.Ledger.Allegra.TxBody.html#vldtTxBodyL"><span class="hs-identifier hs-var">L.vldtTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((ValidityInterval -&gt; Identity ValidityInterval)
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; ((StrictMaybe SlotNo -&gt; Identity (StrictMaybe SlotNo))
+    -&gt; ValidityInterval -&gt; Identity ValidityInterval)
+-&gt; (StrictMaybe SlotNo -&gt; Identity (StrictMaybe SlotNo))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe SlotNo -&gt; Identity (StrictMaybe SlotNo))
+-&gt; ValidityInterval -&gt; Identity ValidityInterval
+Lens' ValidityInterval (StrictMaybe SlotNo)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-allegra-1.10.2.0-1ab19bedc398e3aec1fb8d218768f3207d5fa88446af57f52205c181bf580b93/share/doc/html/src/Cardano.Ledger.Allegra.Scripts.html#invalidHereAfterL"><span class="hs-identifier hs-var">L.invalidHereAfterL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictMaybe SlotNo -&gt; Identity (StrictMaybe SlotNo))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; StrictMaybe SlotNo
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Maybe SlotNo -&gt; StrictMaybe SlotNo
+forall a. Maybe a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-b5b15e62d5438d8019c3162cdd769bd804b5f58d08d16b910f1a5027f590c224/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier hs-var">L.maybeToStrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; Maybe SlotNo
+forall era. SubTxBodyContent era -&gt; Maybe SlotNo
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxValidityUpperBound"><span class="hs-identifier hs-var">subTxValidityUpperBound</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-175"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe ScriptIntegrityHash
+ -&gt; Identity (StrictMaybe ScriptIntegrityHash))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+AlonzoEraTxBody era =&gt;
+Lens' (TxBody l era) (StrictMaybe ScriptIntegrityHash)
+forall (l :: TxLevel).
+Lens'
+  (TxBody l (LedgerEra DijkstraEra))
+  (StrictMaybe ScriptIntegrityHash)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-alonzo-1.17.0.0-e651411ddd77c3f3861981a892ec59eef70c06793b603a7c87b7cadd1cc49066/share/doc/html/src/Cardano.Ledger.Alonzo.TxBody.html#scriptIntegrityHashTxBodyL"><span class="hs-identifier hs-var">L.scriptIntegrityHashTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictMaybe ScriptIntegrityHash
+  -&gt; Identity (StrictMaybe ScriptIntegrityHash))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; StrictMaybe ScriptIntegrityHash
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe ScriptIntegrityHash
+</span><a href="#local-6989586621683117315"><span class="hs-identifier hs-var">scriptIntegrityHash</span></a></span><span>
+</span><span id="line-176"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Withdrawals -&gt; Identity Withdrawals)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+EraTxBody era =&gt;
+Lens' (TxBody l era) Withdrawals
+forall (l :: TxLevel).
+Lens' (TxBody l (LedgerEra DijkstraEra)) Withdrawals
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#withdrawalsTxBodyL"><span class="hs-identifier hs-var">L.withdrawalsTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((Withdrawals -&gt; Identity Withdrawals)
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; Withdrawals
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">TxWithdrawals DijkstraEra -&gt; Withdrawals
+forall era. TxWithdrawals era -&gt; Withdrawals
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convWithdrawals"><span class="hs-identifier hs-var">convWithdrawals</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; TxWithdrawals DijkstraEra
+forall era. SubTxBodyContent era -&gt; TxWithdrawals era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxWithdrawals"><span class="hs-identifier hs-var">subTxWithdrawals</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (TxCert (LedgerEra DijkstraEra))
+ -&gt; Identity (StrictSeq (TxCert (LedgerEra DijkstraEra))))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+EraTxBody era =&gt;
+Lens' (TxBody l era) (StrictSeq (TxCert era))
+forall (l :: TxLevel).
+Lens'
+  (TxBody l (LedgerEra DijkstraEra))
+  (StrictSeq (TxCert (LedgerEra DijkstraEra)))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#certsTxBodyL"><span class="hs-identifier hs-var">L.certsTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictSeq (TxCert (LedgerEra DijkstraEra))
+  -&gt; Identity (StrictSeq (TxCert (LedgerEra DijkstraEra))))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; StrictSeq (TxCert (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">TxCertificates (LedgerEra DijkstraEra)
+-&gt; StrictSeq (TxCert (LedgerEra DijkstraEra))
+forall era.
+TxCertificates (LedgerEra era)
+-&gt; StrictSeq (TxCert (LedgerEra era))
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convCertificates"><span class="hs-identifier hs-var">convCertificates</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent (LedgerEra DijkstraEra)
+-&gt; TxCertificates (LedgerEra DijkstraEra)
+forall era. SubTxBodyContent era -&gt; TxCertificates era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxCertificates"><span class="hs-identifier hs-var">subTxCertificates</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(MultiAsset -&gt; Identity MultiAsset)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+MaryEraTxBody era =&gt;
+Lens' (TxBody l era) MultiAsset
+forall (l :: TxLevel).
+Lens' (TxBody l (LedgerEra DijkstraEra)) MultiAsset
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-mary-1.11.1.0-501de651a00061bcccb9edf76090dadb319685fe1d296c9ae959689525ab140c/share/doc/html/src/Cardano.Ledger.Mary.TxBody.html#mintTxBodyL"><span class="hs-identifier hs-var">L.mintTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((MultiAsset -&gt; Identity MultiAsset)
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; MultiAsset
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">TxMintValue DijkstraEra -&gt; MultiAsset
+forall era. TxMintValue era -&gt; MultiAsset
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convMintValue"><span class="hs-identifier hs-var">convMintValue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; TxMintValue DijkstraEra
+forall era. SubTxBodyContent era -&gt; TxMintValue era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxMintValue"><span class="hs-identifier hs-var">subTxMintValue</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe TxAuxDataHash -&gt; Identity (StrictMaybe TxAuxDataHash))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+EraTxBody era =&gt;
+Lens' (TxBody l era) (StrictMaybe TxAuxDataHash)
+forall (l :: TxLevel).
+Lens'
+  (TxBody l (LedgerEra DijkstraEra)) (StrictMaybe TxAuxDataHash)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#auxDataHashTxBodyL"><span class="hs-identifier hs-var">L.auxDataHashTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictMaybe TxAuxDataHash
+  -&gt; Identity (StrictMaybe TxAuxDataHash))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; StrictMaybe TxAuxDataHash
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Maybe TxAuxDataHash -&gt; StrictMaybe TxAuxDataHash
+forall a. Maybe a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-b5b15e62d5438d8019c3162cdd769bd804b5f58d08d16b910f1a5027f590c224/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier hs-var">L.maybeToStrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxAuxData DijkstraEra -&gt; TxAuxDataHash
+forall era. EraTxAuxData era =&gt; TxAuxData era -&gt; TxAuxDataHash
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#hashTxAuxData"><span class="hs-identifier hs-var">L.hashTxAuxData</span></a></span><span> </span><span class="annot"><span class="annottext">(TxAuxData DijkstraEra -&gt; TxAuxDataHash)
+-&gt; Maybe (TxAuxData DijkstraEra) -&gt; Maybe TxAuxDataHash
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (TxAuxData DijkstraEra)
+Maybe (TxAuxData (LedgerEra DijkstraEra))
+</span><a href="#local-6989586621683117316"><span class="hs-identifier hs-var">txAuxData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(OSet (ProposalProcedure (LedgerEra DijkstraEra))
+ -&gt; Identity (OSet (ProposalProcedure (LedgerEra DijkstraEra))))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+ConwayEraTxBody era =&gt;
+Lens' (TxBody l era) (OSet (ProposalProcedure era))
+forall (l :: TxLevel).
+Lens'
+  (TxBody l (LedgerEra DijkstraEra))
+  (OSet (ProposalProcedure (LedgerEra DijkstraEra)))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.24.0.0-8831026e94b135907602475c84da1c7aa224382a288d8cc10672dde10a5061f5/share/doc/html/src/Cardano.Ledger.Conway.TxBody.html#proposalProceduresTxBodyL"><span class="hs-identifier hs-var">L.proposalProceduresTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((OSet (ProposalProcedure (LedgerEra DijkstraEra))
+  -&gt; Identity (OSet (ProposalProcedure (LedgerEra DijkstraEra))))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; OSet (ProposalProcedure (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Maybe (TxProposalProcedures (LedgerEra DijkstraEra))
+-&gt; OSet (ProposalProcedure (LedgerEra DijkstraEra))
+forall era.
+IsEra era =&gt;
+Maybe (TxProposalProcedures (LedgerEra era))
+-&gt; OSet (ProposalProcedure (LedgerEra era))
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convProposalProcedures"><span class="hs-identifier hs-var">convProposalProcedures</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+-&gt; Maybe (TxProposalProcedures DijkstraEra)
+forall era.
+SubTxBodyContent era -&gt; Maybe (TxProposalProcedures era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxProposalProcedures"><span class="hs-identifier hs-var">subTxProposalProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(VotingProcedures (LedgerEra DijkstraEra)
+ -&gt; Identity (VotingProcedures (LedgerEra DijkstraEra)))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+ConwayEraTxBody era =&gt;
+Lens' (TxBody l era) (VotingProcedures era)
+forall (l :: TxLevel).
+Lens'
+  (TxBody l (LedgerEra DijkstraEra))
+  (VotingProcedures (LedgerEra DijkstraEra))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.24.0.0-8831026e94b135907602475c84da1c7aa224382a288d8cc10672dde10a5061f5/share/doc/html/src/Cardano.Ledger.Conway.TxBody.html#votingProceduresTxBodyL"><span class="hs-identifier hs-var">L.votingProceduresTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((VotingProcedures (LedgerEra DijkstraEra)
+  -&gt; Identity (VotingProcedures (LedgerEra DijkstraEra)))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; VotingProcedures (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Maybe (TxVotingProcedures (LedgerEra DijkstraEra))
+-&gt; VotingProcedures (LedgerEra DijkstraEra)
+forall era.
+Maybe (TxVotingProcedures (LedgerEra era))
+-&gt; VotingProcedures (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#convVotingProcedures"><span class="hs-identifier hs-var">convVotingProcedures</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+-&gt; Maybe (TxVotingProcedures DijkstraEra)
+forall era. SubTxBodyContent era -&gt; Maybe (TxVotingProcedures era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxVotingProcedures"><span class="hs-identifier hs-var">subTxVotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Coin -&gt; Identity Coin)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+ConwayEraTxBody era =&gt;
+Lens' (TxBody l era) Coin
+forall (l :: TxLevel).
+Lens' (TxBody l (LedgerEra DijkstraEra)) Coin
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.24.0.0-8831026e94b135907602475c84da1c7aa224382a288d8cc10672dde10a5061f5/share/doc/html/src/Cardano.Ledger.Conway.TxBody.html#treasuryDonationTxBodyL"><span class="hs-identifier hs-var">L.treasuryDonationTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((Coin -&gt; Identity Coin)
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; Coin
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Maybe Coin -&gt; Coin
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">L.Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; Maybe Coin
+forall era. SubTxBodyContent era -&gt; Maybe Coin
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxTreasuryDonation"><span class="hs-identifier hs-var">subTxTreasuryDonation</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe Coin -&gt; Identity (StrictMaybe Coin))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+ConwayEraTxBody era =&gt;
+Lens' (TxBody l era) (StrictMaybe Coin)
+forall (l :: TxLevel).
+Lens' (TxBody l (LedgerEra DijkstraEra)) (StrictMaybe Coin)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-conway-1.24.0.0-8831026e94b135907602475c84da1c7aa224382a288d8cc10672dde10a5061f5/share/doc/html/src/Cardano.Ledger.Conway.TxBody.html#currentTreasuryValueTxBodyL"><span class="hs-identifier hs-var">L.currentTreasuryValueTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictMaybe Coin -&gt; Identity (StrictMaybe Coin))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; StrictMaybe Coin
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Maybe Coin -&gt; StrictMaybe Coin
+forall a. Maybe a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-b5b15e62d5438d8019c3162cdd769bd804b5f58d08d16b910f1a5027f590c224/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier hs-var">L.maybeToStrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; Maybe Coin
+forall era. SubTxBodyContent era -&gt; Maybe Coin
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxCurrentTreasuryValue"><span class="hs-identifier hs-var">subTxCurrentTreasuryValue</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-184"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(OSet (Credential Guard) -&gt; Identity (OSet (Credential Guard)))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+DijkstraEraTxBody era =&gt;
+Lens' (TxBody l era) (OSet (Credential Guard))
+forall (l :: TxLevel).
+Lens' (TxBody l (LedgerEra DijkstraEra)) (OSet (Credential Guard))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-dijkstra-0.4.0.0-da63d2d2001da6d2ade73cd91067f464fba57c15da8ac1ce3d38c65f8334e2fb/share/doc/html/src/Cardano.Ledger.Dijkstra.TxBody.html#guardsTxBodyL"><span class="hs-identifier hs-var">L.guardsTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((OSet (Credential Guard) -&gt; Identity (OSet (Credential Guard)))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; OSet (Credential Guard)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; OSet (Credential Guard)
+forall era. SubTxBodyContent era -&gt; OSet (Credential Guard)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxGuards"><span class="hs-identifier hs-var">subTxGuards</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-185"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Map
+   (Credential Guard) (StrictMaybe (Data (LedgerEra DijkstraEra)))
+ -&gt; Identity
+      (Map
+         (Credential Guard) (StrictMaybe (Data (LedgerEra DijkstraEra)))))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+DijkstraEraTxBody era =&gt;
+Lens'
+  (TxBody l era) (Map (Credential Guard) (StrictMaybe (Data era)))
+forall (l :: TxLevel).
+Lens'
+  (TxBody l (LedgerEra DijkstraEra))
+  (Map
+     (Credential Guard) (StrictMaybe (Data (LedgerEra DijkstraEra))))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-dijkstra-0.4.0.0-da63d2d2001da6d2ade73cd91067f464fba57c15da8ac1ce3d38c65f8334e2fb/share/doc/html/src/Cardano.Ledger.Dijkstra.TxBody.html#requiredTopLevelGuardsL"><span class="hs-identifier hs-var">L.requiredTopLevelGuardsL</span></a></span><span> </span><span class="annot"><span class="annottext">((Map
+    (Credential Guard) (StrictMaybe (Data (LedgerEra DijkstraEra)))
+  -&gt; Identity
+       (Map
+          (Credential Guard) (StrictMaybe (Data (LedgerEra DijkstraEra)))))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; Map
+     (Credential Guard) (StrictMaybe (Data (LedgerEra DijkstraEra)))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent (LedgerEra DijkstraEra)
+-&gt; Map
+     (Credential Guard) (StrictMaybe (Data (LedgerEra DijkstraEra)))
+forall era.
+SubTxBodyContent era
+-&gt; Map (Credential Guard) (StrictMaybe (Data era))
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxRequiredTopLevelGuards"><span class="hs-identifier hs-var">subTxRequiredTopLevelGuards</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-186"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(DirectDeposits -&gt; Identity DirectDeposits)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+DijkstraEraTxBody era =&gt;
+Lens' (TxBody l era) DirectDeposits
+forall (l :: TxLevel).
+Lens' (TxBody l (LedgerEra DijkstraEra)) DirectDeposits
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-dijkstra-0.4.0.0-da63d2d2001da6d2ade73cd91067f464fba57c15da8ac1ce3d38c65f8334e2fb/share/doc/html/src/Cardano.Ledger.Dijkstra.TxBody.html#directDepositsTxBodyL"><span class="hs-identifier hs-var">L.directDepositsTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((DirectDeposits -&gt; Identity DirectDeposits)
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; DirectDeposits
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra -&gt; DirectDeposits
+forall era. SubTxBodyContent era -&gt; DirectDeposits
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxDirectDeposits"><span class="hs-identifier hs-var">subTxDirectDeposits</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent DijkstraEra
+SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-187"></span><span>          </span><span class="annot"><span class="annottext">TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; (TxBody SubTx (LedgerEra DijkstraEra)
+    -&gt; TxBody SubTx (LedgerEra DijkstraEra))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(AccountBalanceIntervals (LedgerEra DijkstraEra)
+ -&gt; Identity (AccountBalanceIntervals (LedgerEra DijkstraEra)))
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra))
+forall era (l :: TxLevel).
+DijkstraEraTxBody era =&gt;
+Lens' (TxBody l era) (AccountBalanceIntervals era)
+forall (l :: TxLevel).
+Lens'
+  (TxBody l (LedgerEra DijkstraEra))
+  (AccountBalanceIntervals (LedgerEra DijkstraEra))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-dijkstra-0.4.0.0-da63d2d2001da6d2ade73cd91067f464fba57c15da8ac1ce3d38c65f8334e2fb/share/doc/html/src/Cardano.Ledger.Dijkstra.TxBody.html#accountBalanceIntervalsTxBodyL"><span class="hs-identifier hs-var">L.accountBalanceIntervalsTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((AccountBalanceIntervals (LedgerEra DijkstraEra)
+  -&gt; Identity (AccountBalanceIntervals (LedgerEra DijkstraEra)))
+ -&gt; TxBody SubTx (LedgerEra DijkstraEra)
+ -&gt; Identity (TxBody SubTx (LedgerEra DijkstraEra)))
+-&gt; AccountBalanceIntervals (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+-&gt; TxBody SubTx (LedgerEra DijkstraEra)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent (LedgerEra DijkstraEra)
+-&gt; AccountBalanceIntervals (LedgerEra DijkstraEra)
+forall era. SubTxBodyContent era -&gt; AccountBalanceIntervals era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#subTxAccountBalanceIntervals"><span class="hs-identifier hs-var">subTxAccountBalanceIntervals</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117309"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span>      </span><span id="local-6989586621683117345"><span class="annot"><a href="#local-6989586621683117345"><span class="hs-identifier hs-var hs-var">scriptWitnesses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-190"></span><span>        </span><span class="annot"><span class="annottext">TxWits DijkstraEra
+forall era. EraTxWits era =&gt; TxWits era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#mkBasicTxWits"><span class="hs-identifier hs-var">L.mkBasicTxWits</span></a></span><span>
+</span><span id="line-191"></span><span>          </span><span class="annot"><span class="annottext">TxWits DijkstraEra
+-&gt; (TxWits DijkstraEra -&gt; TxWits DijkstraEra) -&gt; TxWits DijkstraEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Map ScriptHash (Script DijkstraEra)
+ -&gt; Identity (Map ScriptHash (Script DijkstraEra)))
+-&gt; TxWits DijkstraEra -&gt; Identity (TxWits DijkstraEra)
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Map ScriptHash (Script era))
+Lens' (TxWits DijkstraEra) (Map ScriptHash (Script DijkstraEra))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#scriptTxWitsL"><span class="hs-identifier hs-var">L.scriptTxWitsL</span></a></span><span> </span><span class="annot"><span class="annottext">((Map ScriptHash (Script DijkstraEra)
+  -&gt; Identity (Map ScriptHash (Script DijkstraEra)))
+ -&gt; TxWits DijkstraEra -&gt; Identity (TxWits DijkstraEra))
+-&gt; Map ScriptHash (Script DijkstraEra)
+-&gt; TxWits DijkstraEra
+-&gt; TxWits DijkstraEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[Item (Map ScriptHash (Script DijkstraEra))]
+-&gt; Map ScriptHash (Script DijkstraEra)
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Script DijkstraEra -&gt; ScriptHash
+forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">L.hashScript</span></a></span><span> </span><span class="annot"><span class="annottext">Script DijkstraEra
+AlonzoScript DijkstraEra
+</span><a href="#local-6989586621683117349"><span class="hs-identifier hs-var">sw</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AlonzoScript DijkstraEra
+</span><a href="#local-6989586621683117349"><span class="hs-identifier hs-var">sw</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621683117349"><span class="annot"><span class="annottext">AlonzoScript DijkstraEra
+</span><a href="#local-6989586621683117349"><span class="hs-identifier hs-var">sw</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Script (LedgerEra DijkstraEra)]
+[AlonzoScript DijkstraEra]
+</span><a href="#local-6989586621683117312"><span class="hs-identifier hs-var">scripts</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-192"></span><span>          </span><span class="annot"><span class="annottext">TxWits DijkstraEra
+-&gt; (TxWits DijkstraEra -&gt; AlonzoTxWits DijkstraEra)
+-&gt; AlonzoTxWits DijkstraEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(TxDats DijkstraEra -&gt; Identity (TxDats DijkstraEra))
+-&gt; TxWits DijkstraEra -&gt; Identity (TxWits DijkstraEra)
+(TxDats DijkstraEra -&gt; Identity (TxDats DijkstraEra))
+-&gt; TxWits DijkstraEra -&gt; Identity (AlonzoTxWits DijkstraEra)
+forall era. AlonzoEraTxWits era =&gt; Lens' (TxWits era) (TxDats era)
+Lens' (TxWits DijkstraEra) (TxDats DijkstraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-alonzo-1.17.0.0-e651411ddd77c3f3861981a892ec59eef70c06793b603a7c87b7cadd1cc49066/share/doc/html/src/Cardano.Ledger.Alonzo.TxWits.html#datsTxWitsL"><span class="hs-identifier hs-var">L.datsTxWitsL</span></a></span><span> </span><span class="annot"><span class="annottext">((TxDats DijkstraEra -&gt; Identity (TxDats DijkstraEra))
+ -&gt; TxWits DijkstraEra -&gt; Identity (AlonzoTxWits DijkstraEra))
+-&gt; TxDats DijkstraEra
+-&gt; TxWits DijkstraEra
+-&gt; AlonzoTxWits DijkstraEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">TxDats DijkstraEra
+TxDats (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117313"><span class="hs-identifier hs-var">datums</span></a></span><span>
+</span><span id="line-193"></span><span>          </span><span class="annot"><span class="annottext">AlonzoTxWits DijkstraEra
+-&gt; (AlonzoTxWits DijkstraEra -&gt; AlonzoTxWits DijkstraEra)
+-&gt; AlonzoTxWits DijkstraEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Redeemers DijkstraEra -&gt; Identity (Redeemers DijkstraEra))
+-&gt; TxWits DijkstraEra -&gt; Identity (TxWits DijkstraEra)
+(Redeemers DijkstraEra -&gt; Identity (Redeemers DijkstraEra))
+-&gt; AlonzoTxWits DijkstraEra -&gt; Identity (AlonzoTxWits DijkstraEra)
+forall era.
+AlonzoEraTxWits era =&gt;
+Lens' (TxWits era) (Redeemers era)
+Lens' (TxWits DijkstraEra) (Redeemers DijkstraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-alonzo-1.17.0.0-e651411ddd77c3f3861981a892ec59eef70c06793b603a7c87b7cadd1cc49066/share/doc/html/src/Cardano.Ledger.Alonzo.TxWits.html#rdmrsTxWitsL"><span class="hs-identifier hs-var">L.rdmrsTxWitsL</span></a></span><span> </span><span class="annot"><span class="annottext">((Redeemers DijkstraEra -&gt; Identity (Redeemers DijkstraEra))
+ -&gt; AlonzoTxWits DijkstraEra -&gt; Identity (AlonzoTxWits DijkstraEra))
+-&gt; Redeemers DijkstraEra
+-&gt; AlonzoTxWits DijkstraEra
+-&gt; AlonzoTxWits DijkstraEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Redeemers DijkstraEra
+Redeemers (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117314"><span class="hs-identifier hs-var">redeemers</span></a></span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span>  </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-196"></span><span>    </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span>
+</span><span id="line-197"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#mkBasicTx"><span class="hs-identifier hs-type">L.mkBasicTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683117317"><span class="hs-identifier hs-type">body</span></a></span><span>
+</span><span id="line-198"></span><span>        </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-type">&amp;</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-type">L.witsTxL</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">.~</span></span><span> </span><span class="annot"><a href="#local-6989586621683117345"><span class="hs-identifier hs-type">scriptWitnesses</span></a></span><span>
+</span><span id="line-199"></span><span>        </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-type">&amp;</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#auxDataTxL"><span class="hs-identifier hs-type">L.auxDataTxL</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">.~</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-strict-containers-0.1.6.0-b5b15e62d5438d8019c3162cdd769bd804b5f58d08d16b910f1a5027f590c224/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier hs-type">L.maybeToStrictMaybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683117316"><span class="hs-identifier hs-type">txAuxData</span></a></span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span class="annot"><span class="hs-comment">-- | Sign the body of an unsigned sub-transaction with one key.</span></span><span>
+</span><span id="line-202"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#makeSubTxKeyWitness"><span class="hs-identifier hs-type">makeSubTxKeyWitness</span></a></span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleyWitnessSigningKey"><span class="hs-identifier hs-type">ShelleyWitnessSigningKey</span></a></span><span>
+</span><span id="line-205"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">L.WitVKey</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">L.Witness</span></a></span><span>
+</span><span id="line-206"></span><span id="makeSubTxKeyWitness"><span class="annot"><span class="annottext">makeSubTxKeyWitness :: UnsignedSubTx -&gt; ShelleyWitnessSigningKey -&gt; WitVKey Witness
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#makeSubTxKeyWitness"><span class="hs-identifier hs-var hs-var">makeSubTxKeyWitness</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span> </span><span id="local-6989586621683117355"><span class="annot"><span class="annottext">Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117355"><span class="hs-identifier hs-var">unsigned</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621683117356"><span class="annot"><span class="annottext">ShelleyWitnessSigningKey
+</span><a href="#local-6989586621683117356"><span class="hs-identifier hs-var">wsk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-207"></span><span>  </span><span class="annot"><span class="annottext">HasCallStack =&gt;
+Hash HASH EraIndependentTxBody
+-&gt; ShelleyWitnessSigningKey -&gt; WitVKey Witness
+Hash HASH EraIndependentTxBody
+-&gt; ShelleyWitnessSigningKey -&gt; WitVKey Witness
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#makeShelleyKeyWitnessFromHash"><span class="hs-identifier hs-var">makeShelleyKeyWitnessFromHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody SubTx DijkstraEra -&gt; Hash HASH EraIndependentTxBody
+forall (l :: TxLevel) era.
+HashAnnotated (TxBody l era) EraIndependentTxBody =&gt;
+TxBody l era -&gt; Hash HASH EraIndependentTxBody
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#hashTxBody"><span class="hs-identifier hs-var">hashTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx SubTx DijkstraEra
+Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117355"><span class="hs-identifier hs-var">unsigned</span></a></span><span> </span><span class="annot"><span class="annottext">Tx SubTx DijkstraEra
+-&gt; Getting
+     (TxBody SubTx DijkstraEra)
+     (Tx SubTx DijkstraEra)
+     (TxBody SubTx DijkstraEra)
+-&gt; TxBody SubTx DijkstraEra
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><span class="hs-operator hs-var">^.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (TxBody SubTx DijkstraEra)
+  (Tx SubTx DijkstraEra)
+  (TxBody SubTx DijkstraEra)
+forall era (l :: TxLevel).
+EraTx era =&gt;
+Lens' (Tx l era) (TxBody l era)
+forall (l :: TxLevel).
+Lens' (Tx l DijkstraEra) (TxBody l DijkstraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">L.bodyTxL</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ShelleyWitnessSigningKey
+</span><a href="#local-6989586621683117356"><span class="hs-identifier hs-var">wsk</span></a></span><span>
+</span><span id="line-208"></span><span>
+</span><span id="line-209"></span><span class="annot"><span class="hs-comment">-- | Add key witnesses to an unsigned sub-transaction.</span></span><span>
+</span><span id="line-210"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#signSubTx"><span class="hs-identifier hs-type">signSubTx</span></a></span><span>
+</span><span id="line-211"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">L.BootstrapWitness</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-212"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">L.WitVKey</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-5898b9a1e10ef5b7873634a8ed830a3152af997e9f6ec6869277a8aa937d804d/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">L.Witness</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-213"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span>
+</span><span id="line-214"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-type">SignedSubTx</span></a></span><span>
+</span><span id="line-215"></span><span id="signSubTx"><span class="annot"><span class="annottext">signSubTx :: [BootstrapWitness]
+-&gt; [WitVKey Witness] -&gt; UnsignedSubTx -&gt; SignedSubTx
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#signSubTx"><span class="hs-identifier hs-var hs-var">signSubTx</span></a></span></span><span> </span><span id="local-6989586621683117361"><span class="annot"><span class="annottext">[BootstrapWitness]
+</span><a href="#local-6989586621683117361"><span class="hs-identifier hs-var">bootstrapWits</span></a></span></span><span> </span><span id="local-6989586621683117362"><span class="annot"><span class="annottext">[WitVKey Witness]
+</span><a href="#local-6989586621683117362"><span class="hs-identifier hs-var">shelleyKeyWits</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#UnsignedSubTx"><span class="hs-identifier hs-type">UnsignedSubTx</span></a></span><span> </span><span id="local-6989586621683117363"><span class="annot"><span class="annottext">Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117363"><span class="hs-identifier hs-var">unsigned</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-216"></span><span>  </span><span class="annot"><span class="annottext">Tx SubTx (LedgerEra DijkstraEra) -&gt; SignedSubTx
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-var">SignedSubTx</span></a></span><span> </span><span class="annot"><span class="annottext">(Tx SubTx (LedgerEra DijkstraEra) -&gt; SignedSubTx)
+-&gt; Tx SubTx (LedgerEra DijkstraEra) -&gt; SignedSubTx
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[BootstrapWitness]
+-&gt; [WitVKey Witness]
+-&gt; Tx SubTx (LedgerEra DijkstraEra)
+-&gt; Tx SubTx (LedgerEra DijkstraEra)
+forall era (l :: TxLevel).
+EraTx era =&gt;
+[BootstrapWitness] -&gt; [WitVKey Witness] -&gt; Tx l era -&gt; Tx l era
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#addKeyWitnesses"><span class="hs-identifier hs-var">addKeyWitnesses</span></a></span><span> </span><span class="annot"><span class="annottext">[BootstrapWitness]
+</span><a href="#local-6989586621683117361"><span class="hs-identifier hs-var">bootstrapWits</span></a></span><span> </span><span class="annot"><span class="annottext">[WitVKey Witness]
+</span><a href="#local-6989586621683117362"><span class="hs-identifier hs-var">shelleyKeyWits</span></a></span><span> </span><span class="annot"><span class="annottext">Tx SubTx (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117363"><span class="hs-identifier hs-var">unsigned</span></a></span><span>
+</span><span id="line-217"></span><span>
+</span><span id="line-218"></span><span class="annot"><span class="hs-comment">-- | Build and sign a sub-transaction in one step.</span></span><span>
+</span><span id="line-219"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#makeSignedSubTx"><span class="hs-identifier hs-type">makeSignedSubTx</span></a></span><span>
+</span><span id="line-220"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleyWitnessSigningKey"><span class="hs-identifier hs-type">ShelleyWitnessSigningKey</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-221"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#SubTxBodyContent"><span class="hs-identifier hs-type">SubTxBodyContent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.BodyContent.html#MakeUnsignedTxError"><span class="hs-identifier hs-type">MakeUnsignedTxError</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#SignedSubTx"><span class="hs-identifier hs-type">SignedSubTx</span></a></span><span>
+</span><span id="line-223"></span><span id="makeSignedSubTx"><span class="annot"><span class="annottext">makeSignedSubTx :: [ShelleyWitnessSigningKey]
+-&gt; SubTxBodyContent (LedgerEra DijkstraEra)
+-&gt; Either MakeUnsignedTxError SignedSubTx
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#makeSignedSubTx"><span class="hs-identifier hs-var hs-var">makeSignedSubTx</span></a></span></span><span> </span><span id="local-6989586621683117365"><span class="annot"><span class="annottext">[ShelleyWitnessSigningKey]
+</span><a href="#local-6989586621683117365"><span class="hs-identifier hs-var">keys</span></a></span></span><span> </span><span id="local-6989586621683117366"><span class="annot"><span class="annottext">SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117366"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-224"></span><span>  </span><span id="local-6989586621683117367"><span class="annot"><a href="#local-6989586621683117367"><span class="hs-identifier hs-var">unsigned</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent (LedgerEra DijkstraEra)
+-&gt; Either MakeUnsignedTxError UnsignedSubTx
+</span><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#makeUnsignedSubTx"><span class="hs-identifier hs-var">makeUnsignedSubTx</span></a></span><span> </span><span class="annot"><span class="annottext">SubTxBodyContent (LedgerEra DijkstraEra)
+</span><a href="#local-6989586621683117366"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-225"></span><span>  </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#signSubTx"><span class="hs-identifier hs-type">signSubTx</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-type">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.SubTransaction.html#makeSubTxKeyWitness"><span class="hs-identifier hs-type">makeSubTxKeyWitness</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683117367"><span class="hs-identifier hs-type">unsigned</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621683117365"><span class="hs-identifier hs-type">keys</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621683117367"><span class="hs-identifier hs-type">unsigned</span></a></span><span>
+</span><span id="line-226"></span></pre></body></html>
