@@ -485,6 +485,7 @@ prop_estimate_balanced_tx_body_balances_without_outputs = H.propertyOnce $ do
         mempty
         mempty
         mempty
+        mempty
         (L.Coin 0)
         1
         0

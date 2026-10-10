@@ -1102,7 +1102,6 @@ prop_calcMinFeeRecursive_well_funded_succeeds = H.property $ do
             UnexportedLedger.evalBalanceTxBody
               exampleProtocolParams
               (const Nothing)
-              (const Nothing)
               (const False)
               utxo
               (resultLedgerTx ^. L.bodyTxL)
@@ -1122,7 +1121,6 @@ prop_calcMinFeeRecursive_well_funded_multi_asset = H.property $ do
       let balance =
             UnexportedLedger.evalBalanceTxBody
               exampleProtocolParams
-              (const Nothing)
               (const Nothing)
               (const False)
               utxo
