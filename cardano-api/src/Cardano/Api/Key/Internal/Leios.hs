@@ -26,5 +26,5 @@ toLedgerBlsKey :: SigningKey BlsKey -> Ledger.BlsKey
 toLedgerBlsKey (BlsSigningKey sk) =
   Ledger.BlsKey
     { Ledger.blsPubKey = Crypto.deriveVerKeyDSIGN sk
-    , Ledger.blsPossessionProof = Crypto.createPossessionProofDSIGN Crypto.minSigPoPDST sk
+    , Ledger.blsPossessionProof = Crypto.createPossessionProofDSIGN sk
     }
