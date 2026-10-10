@@ -12,7 +12,11 @@ where
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as U5c
 import Cardano.Rpc.Server.Internal.Monad (MonadRpc)
 import Cardano.Rpc.Server.Internal.UtxoRpc.Predicate (matchesTxPredicate)
-import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool (txInModeToTxInMempool)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool
+  ( TxInMempoolFields (..)
+  , buildTxInMempool
+  , txInModeToTxInMempoolFields
+  )
 import Cardano.Rpc.Server.NodeKernelAccess
   ( MempoolWatchSnapshot (..)
   , grabNodeKernelAccess
@@ -27,6 +31,8 @@ import RIO
 import Data.ProtoLens (defMessage)
 import Network.GRPC.Spec (NextElem (NextElem), Proto)
 
+import Proto.Google.Protobuf.FieldMask_Fields qualified as FieldMask (paths)
+
 -- | Handle the @WatchMempool@ SubmitService RPC method.
 --
 -- Streams new mempool entries matching the request's predicate, each with
@@ -37,7 +43,7 @@ import Network.GRPC.Spec (NextElem (NextElem), Proto)
 watchMempoolMethod
   :: MonadRpc e m
   => Proto U5c.WatchMempoolRequest
-  -- ^ Request containing a filter predicate
+  -- ^ Request containing a filter predicate and an optional field mask
   -> (NextElem (Proto U5c.WatchMempoolResponse) -> IO ())
   -- ^ Callback used to send each streamed response
   -> m ()
@@ -47,10 +53,12 @@ watchMempoolMethod request send = do
     (watchMempoolSnapshot nodeKernelAccess)
     (nextMempoolWatchSnapshot nodeKernelAccess)
     (request ^. U5c.predicate)
+    (request ^. U5c.fieldMask . FieldMask.paths)
     send
 
 -- | The @WatchMempool@ streaming loop. Emits every mempool entry newer than
--- the last one seen, oldest first, filtered by the predicate.
+-- the last one seen, oldest first, filtered by the predicate and pruned by
+-- the field mask.
 --
 -- Removals and slot-only changes (no new ticket) produce no message: the
 -- proto has no representation for eviction, and a max-ticket comparison
@@ -67,10 +75,13 @@ watchMempoolStream
   -- new one
   -> Proto U5c.TxPredicate
   -- ^ Predicate filtering which new entries are sent
+  -> [Text]
+  -- ^ Requested field mask paths, naming top-level 'U5c.TxInMempool'
+  -- fields; empty means no pruning
   -> (NextElem (Proto U5c.WatchMempoolResponse) -> IO ())
   -- ^ Callback used to send each streamed response
   -> m ()
-watchMempoolStream readSnapshot nextSnapshot predicate send = do
+watchMempoolStream readSnapshot nextSnapshot predicate fieldMaskPaths send = do
   initial <- readSnapshot
   go Consensus.zeroTicketNo initial
  where
@@ -78,10 +89,10 @@ watchMempoolStream readSnapshot nextSnapshot predicate send = do
   go lastSeenTicket snapshot@MempoolWatchSnapshot{mempoolWatchTxsAfter = txsAfter} = do
     let newEntries = txsAfter lastSeenTicket
     forM_ newEntries $ \(txInMode, _ticketNo) ->
-      forM_ (txInModeToTxInMempool txInMode) $ \txInMempool ->
-        when (matchesTxPredicate predicate (txInMempool ^. U5c.cardano)) $
+      forM_ (txInModeToTxInMempoolFields txInMode) $ \fields ->
+        when (matchesTxPredicate predicate (txInMempoolFieldsCardano fields)) $
           liftIO . send . NextElem $
-            defMessage & U5c.tx .~ txInMempool
+            defMessage & U5c.tx .~ buildTxInMempool fieldMaskPaths fields
     let lastSeenTicket' = case newEntries of
           [] -> lastSeenTicket
           _ -> snd (last newEntries)
