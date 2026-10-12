@@ -127,6 +127,7 @@ import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error
+import Cardano.Api.Experimental.Era qualified as Exp
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Hash
 import Cardano.Api.Key.Internal
@@ -732,10 +733,31 @@ eraOfScriptLanguageInEra = \case
 
 -- | Given a target era and a script in some language, check if the language is
 -- supported in that era, and if so return a 'ScriptInEra'.
+-- Simple scripts containing 'RequireGuard' need the Dijkstra era onwards.
 toScriptInEra :: ShelleyBasedEra era -> ScriptInAnyLang -> Maybe (ScriptInEra era)
 toScriptInEra era (ScriptInAnyLang lang s) = do
   lang' <- scriptLanguageSupportedInEra era lang
+  guard $
+    forEraInEon @Exp.Era (toCardanoEra era) (noGuards s) $
+      \case
+        Exp.ConwayEra -> noGuards s
+        Exp.DijkstraEra -> True
   return (ScriptInEra lang' s)
+ where
+  noGuards :: Script lang' -> Bool
+  noGuards = \case
+    SimpleScript ss -> not (simpleScriptHasGuard ss)
+    PlutusScript{} -> True
+
+simpleScriptHasGuard :: SimpleScript -> Bool
+simpleScriptHasGuard = \case
+  RequireGuard{} -> True
+  RequireAllOf ss -> any simpleScriptHasGuard ss
+  RequireAnyOf ss -> any simpleScriptHasGuard ss
+  RequireMOf _ ss -> any simpleScriptHasGuard ss
+  RequireSignature{} -> False
+  RequireTimeBefore{} -> False
+  RequireTimeAfter{} -> False
 
 eraOfScriptInEra :: ScriptInEra era -> ShelleyBasedEra era
 eraOfScriptInEra (ScriptInEra langInEra _) = eraOfScriptLanguageInEra langInEra
