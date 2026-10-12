@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1376
+kind:
+- bugfix
+description: Converting a simple script that contains a guard to a script for any era before Dijkstra (Shelley to Conway) now fails cleanly instead of crashing, and the script is reported as unsupported in that era, for example when it is used as a reference script. Parsing a simple script from JSON now reports the error of the script type that was given, where before any malformed script was reported as a missing `guard` script. An unknown script type now produces an error that names it and lists the valid types. Fee estimation in the experimental API now counts the signatures required by key-hash guards in the transaction body in the Dijkstra era, where before the fee was too low by one signature per such key and the ledger rejected the transaction. A key that is both a guard and an extra required signer is counted once.
