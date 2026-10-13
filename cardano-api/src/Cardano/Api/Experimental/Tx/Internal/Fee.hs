@@ -1766,6 +1766,7 @@ estimateTransactionKeyWitnessCount
     { txIns
     , txInsCollateral
     , txExtraKeyWits
+    , txGuards
     , txWithdrawals
     , txCertificates
     , txProposalProcedures
@@ -1784,7 +1785,11 @@ estimateTransactionKeyWitnessCount
     -- 'Cardano.Ledger.Conway.UTxO.getConwayWitsVKeyNeeded' unions them.
     knowableKeyHashes :: Set (L.KeyHash L.Witness)
     knowableKeyHashes =
-      extraKeyHashes <> withdrawalKeyHashes <> certificateKeyHashes <> voteKeyHashes
+      extraKeyHashes <> guardKeyHashes <> withdrawalKeyHashes <> certificateKeyHashes <> voteKeyHashes
+
+    -- Dijkstra requires a VKey witness for every key-hash credential in the body guards.
+    guardKeyHashes :: Set (L.KeyHash L.Witness)
+    guardKeyHashes = Set.fromList $ mapMaybe credKeyHashWitness $ toList txGuards
 
     extraKeyHashes :: Set (L.KeyHash L.Witness)
     extraKeyHashes = case txExtraKeyWits of

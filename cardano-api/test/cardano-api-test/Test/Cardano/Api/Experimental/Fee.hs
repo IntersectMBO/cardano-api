@@ -44,6 +44,7 @@ import Data.Default (def)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (isJust)
 import Data.Maybe.Strict (StrictMaybe (SNothing))
+import Data.OSet.Strict qualified as OSet
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
 import Data.Time.Clock.POSIX qualified as Time
@@ -105,6 +106,9 @@ tests =
         , testProperty
             "Dijkstra guards count key credentials, including nested guards"
             prop_estimateTransactionKeyWitnessCount_counts_dijkstra_guards
+        , testProperty
+            "Dijkstra body guards count key credentials once, ignoring script credentials"
+            prop_estimateTransactionKeyWitnessCount_counts_body_guards
         ]
     , testGroup
         "createCompatibleTx"
@@ -1146,6 +1150,25 @@ prop_estimateTransactionKeyWitnessCount_counts_dijkstra_guards = H.property $ do
   estimate keyGuard === 1
   estimate scriptGuard === 0
   estimate (Api.RequireAllOf [keyGuard, scriptGuard]) === 1
+
+-- | Key-hash credentials in the body guards need a VKey witness, deduplicated
+-- against extra key witnesses; script-hash credentials need none.
+prop_estimateTransactionKeyWitnessCount_counts_body_guards :: Property
+prop_estimateTransactionKeyWitnessCount_counts_body_guards = H.property $ do
+  keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  scriptHash <- H.forAll genScriptHash
+  let Api.PaymentKeyHash ledgerKeyHash = keyHash
+      keyGuard = L.KeyHashObj (coerceKeyRole ledgerKeyHash)
+      scriptGuard = L.ScriptHashObj (Api.toShelleyScriptHash scriptHash)
+      estimate guards extraKeyWits =
+        Exp.estimateTransactionKeyWitnessCount @Exp.DijkstraEra $
+          Exp.defaultTxBodyContent
+            & Exp.setTxGuards (OSet.fromList guards)
+            & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses extraKeyWits)
+      baseline = estimate [] []
+  estimate [keyGuard] [] === baseline + 1
+  estimate [keyGuard] [keyHash] === baseline + 1
+  estimate [scriptGuard] [] === baseline
 
 -- | Regression test for: a key-credentialed voter (e.g. a key-hash DRep)
 -- requires a VKey witness to satisfy the ledger, but

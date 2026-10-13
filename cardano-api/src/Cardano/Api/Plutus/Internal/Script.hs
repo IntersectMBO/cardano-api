@@ -127,6 +127,7 @@ import Cardano.Api.Era.Internal.Core
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error
+import Cardano.Api.Experimental.Era qualified as Exp
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Hash
 import Cardano.Api.Key.Internal
@@ -159,7 +160,6 @@ import PlutusCore.Version qualified as PLC
 import PlutusLedgerApi.Common (SerialisedScript, serialiseUPLC)
 
 import Codec.CBOR.Read qualified as CBOR
-import Control.Applicative
 import Control.Monad
 import Data.Aeson (Value (..), object, (.:), (.=))
 import Data.Aeson qualified as Aeson
@@ -170,11 +170,9 @@ import Data.ByteString.Short (ShortByteString)
 import Data.ByteString.Short qualified as SBS
 import Data.Either.Combinators (maybeToRight)
 import Data.Functor
-import Data.Scientific (toBoundedInteger)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import Data.Vector (Vector)
 import Formatting qualified as B
 import GHC.Exts (IsList (..))
 import Numeric.Natural (Natural)
@@ -732,10 +730,31 @@ eraOfScriptLanguageInEra = \case
 
 -- | Given a target era and a script in some language, check if the language is
 -- supported in that era, and if so return a 'ScriptInEra'.
+-- Simple scripts containing 'RequireGuard' need the Dijkstra era onwards.
 toScriptInEra :: ShelleyBasedEra era -> ScriptInAnyLang -> Maybe (ScriptInEra era)
 toScriptInEra era (ScriptInAnyLang lang s) = do
   lang' <- scriptLanguageSupportedInEra era lang
+  guard $
+    forEraInEon @Exp.Era (toCardanoEra era) (noGuards s) $
+      \case
+        Exp.ConwayEra -> noGuards s
+        Exp.DijkstraEra -> True
   return (ScriptInEra lang' s)
+ where
+  noGuards :: Script lang' -> Bool
+  noGuards = \case
+    SimpleScript ss -> not (simpleScriptHasGuard ss)
+    PlutusScript{} -> True
+
+simpleScriptHasGuard :: SimpleScript -> Bool
+simpleScriptHasGuard = \case
+  RequireGuard{} -> True
+  RequireAllOf ss -> any simpleScriptHasGuard ss
+  RequireAnyOf ss -> any simpleScriptHasGuard ss
+  RequireMOf _ ss -> any simpleScriptHasGuard ss
+  RequireSignature{} -> False
+  RequireTimeBefore{} -> False
+  RequireTimeAfter{} -> False
 
 eraOfScriptInEra :: ScriptInEra era -> ShelleyBasedEra era
 eraOfScriptInEra (ScriptInEra langInEra _) = eraOfScriptLanguageInEra langInEra
@@ -1603,102 +1622,41 @@ instance FromJSON SimpleScript where
   parseJSON = parseSimpleScript
 
 parseSimpleScript :: Value -> Aeson.Parser SimpleScript
-parseSimpleScript v =
-  parseScriptSig v
-    <|> parseScriptBefore v
-    <|> parseScriptAfter v
-    <|> parseScriptAny v
-    <|> parseScriptAll v
-    <|> parseScriptAtLeast v
-    <|> parseScriptGuard v
+parseSimpleScript = Aeson.withObject "SimpleScript" $ \obj -> do
+  t <- obj .: "type"
+  case lookup t simpleScriptParsers of
+    Just parse -> parse obj
+    Nothing ->
+      fail $
+        "Unknown simple script type "
+          <> show t
+          <> ", expected one of: "
+          <> Text.unpack (Text.intercalate ", " (map fst simpleScriptParsers))
 
-parseScriptAny :: Value -> Aeson.Parser SimpleScript
-parseScriptAny =
-  Aeson.withObject "any" $ \obj -> do
-    t <- obj .: "type"
-    case t :: Text of
-      "any" -> do
-        vs <- obj .: "scripts"
-        RequireAnyOf <$> gatherSimpleScriptTerms vs
-      _ -> fail "\"any\" script value not found"
+simpleScriptParsers :: [(Text, Aeson.Object -> Aeson.Parser SimpleScript)]
+simpleScriptParsers =
+  [ ("sig", \obj -> RequireSignature <$> obj .: "keyHash")
+  , ("before", \obj -> RequireTimeBefore <$> obj .: "slot")
+  , ("after", \obj -> RequireTimeAfter <$> obj .: "slot")
+  , ("any", \obj -> RequireAnyOf <$> obj .: "scripts")
+  , ("all", \obj -> RequireAllOf <$> obj .: "scripts")
+  , ("atLeast", parseScriptAtLeast)
+  , ("guard", \obj -> RequireGuard <$> obj .: "credential")
+  ]
 
-parseScriptAll :: Value -> Aeson.Parser SimpleScript
-parseScriptAll =
-  Aeson.withObject "all" $ \obj -> do
-    t <- obj .: "type"
-    case t :: Text of
-      "all" -> do
-        vs <- obj .: "scripts"
-        RequireAllOf <$> gatherSimpleScriptTerms vs
-      _ -> fail "\"all\" script value not found"
-
-parseScriptAtLeast :: Value -> Aeson.Parser SimpleScript
-parseScriptAtLeast =
-  Aeson.withObject "atLeast" $ \obj -> do
-    v <- obj .: "type"
-    case v :: Text of
-      "atLeast" -> do
-        r <- obj .: "required"
-        vs <- obj .: "scripts"
-        case r of
-          Number sci ->
-            case toBoundedInteger sci of
-              Just reqInt ->
-                do
-                  scripts <- gatherSimpleScriptTerms vs
-                  let numScripts = length scripts
-                  when
-                    (reqInt > numScripts)
-                    ( fail $
-                        "Required number of script signatures exceeds the number of scripts."
-                          <> " Required number: "
-                          <> show reqInt
-                          <> " Number of scripts: "
-                          <> show numScripts
-                    )
-                  return $ RequireMOf reqInt scripts
-              Nothing ->
-                fail $
-                  "Error in \"required\" key: "
-                    <> show sci
-                    <> " is not a valid Int"
-          _ -> fail "\"required\" value should be an integer"
-      _ -> fail "\"atLeast\" script value not found"
-
-gatherSimpleScriptTerms :: Vector Value -> Aeson.Parser [SimpleScript]
-gatherSimpleScriptTerms = mapM parseSimpleScript . toList
-
-parseScriptSig :: Value -> Aeson.Parser SimpleScript
-parseScriptSig =
-  Aeson.withObject "sig" $ \obj -> do
-    v <- obj .: "type"
-    case v :: Text of
-      "sig" -> RequireSignature <$> obj .: "keyHash"
-      _ -> fail "\"sig\" script value not found"
-
-parseScriptBefore :: Value -> Aeson.Parser SimpleScript
-parseScriptBefore =
-  Aeson.withObject "before" $ \obj -> do
-    v <- obj .: "type"
-    case v :: Text of
-      "before" -> RequireTimeBefore <$> obj .: "slot"
-      _ -> fail "\"before\" script value not found"
-
-parseScriptAfter :: Value -> Aeson.Parser SimpleScript
-parseScriptAfter =
-  Aeson.withObject "after" $ \obj -> do
-    v <- obj .: "type"
-    case v :: Text of
-      "after" -> RequireTimeAfter <$> obj .: "slot"
-      _ -> fail "\"after\" script value not found"
-
-parseScriptGuard :: Value -> Aeson.Parser SimpleScript
-parseScriptGuard =
-  Aeson.withObject "guard" $ \obj -> do
-    v <- obj .: "type"
-    case v :: Text of
-      "guard" -> RequireGuard <$> obj .: "credential"
-      _ -> fail "\"guard\" script value not found"
+parseScriptAtLeast :: Aeson.Object -> Aeson.Parser SimpleScript
+parseScriptAtLeast obj = do
+  required <- obj .: "required"
+  scripts <- obj .: "scripts"
+  let numScripts = length scripts
+  when (required > numScripts) $
+    fail $
+      "Required number of script signatures exceeds the number of scripts."
+        <> " Required number: "
+        <> show required
+        <> " Number of scripts: "
+        <> show numScripts
+  pure $ RequireMOf required scripts
 
 -- ----------------------------------------------------------------------------
 -- Reference scripts
