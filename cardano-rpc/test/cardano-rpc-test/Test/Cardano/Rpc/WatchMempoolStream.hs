@@ -14,14 +14,21 @@ module Test.Cardano.Rpc.WatchMempoolStream where
 import Cardano.Api
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as U5c
 import Cardano.Rpc.Server.Internal.UtxoRpc.Mempool (watchMempoolStream)
-import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool (txInModeToTxInMempool)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool
+  ( txInMempoolMaskTable
+  , txInModeToTxInMempool
+  )
 import Cardano.Rpc.Server.NodeKernelAccess (MempoolWatchSnapshot (..))
 
 import Ouroboros.Consensus.Mempool.API qualified as Consensus (TicketNo)
 
 import RIO
 
+import Data.List (sort)
+import Data.Map qualified as Map
 import Data.ProtoLens (defMessage)
+import Data.ProtoLens.Message (fieldsByTextFormatName)
+import Data.Text qualified as Text
 import GHC.Stack (withFrozenCallStack)
 import Network.GRPC.Spec (NextElem (..), Proto (..))
 
@@ -31,9 +38,9 @@ import Hedgehog as H
 import Hedgehog.Extras qualified as H
 
 -- | An empty predicate matches everything ('matchesTxPredicate's default),
--- so every mempool entry newer than the last one seen is streamed, oldest
--- first, across as many snapshot transitions as it takes to see them all -
--- one message per new entry, in ticket order.
+-- and there is no field mask, so every mempool entry newer than the last
+-- one seen is streamed, oldest first, across as many snapshot transitions
+-- as it takes to see them all - one message per new entry, in ticket order.
 hprop_watch_mempool_stream_emits_new_entries_in_order :: Property
 hprop_watch_mempool_stream_emits_new_entries_in_order = H.property $ do
   tx1 <- txInModeFixture
@@ -42,7 +49,7 @@ hprop_watch_mempool_stream_emits_new_entries_in_order = H.property $ do
         [ mkSnapshot [(tx1, ticket 1)] (SlotNo 100)
         , mkSnapshot [(tx1, ticket 1), (tx2, ticket 2)] (SlotNo 100)
         ]
-  sent <- expectScriptExhausted =<< runWatchMempoolStream script defMessage
+  sent <- expectScriptExhausted =<< runWatchMempoolStream script defMessage []
 
   expected1 <- expectedResponse tx1
   expected2 <- expectedResponse tx2
@@ -61,10 +68,32 @@ hprop_watch_mempool_stream_predicate_filters_all_entries = H.property $ do
         , mkSnapshot [(tx1, ticket 1), (tx2, ticket 2)] (SlotNo 100)
         ]
       matchesNothing = defMessage & U5c.not .~ [defMessage]
-  sent <- expectScriptExhausted =<< runWatchMempoolStream script matchesNothing
+  sent <- expectScriptExhausted =<< runWatchMempoolStream script matchesNothing []
 
   H.note_ "Nothing is ever sent: the predicate rejects every entry"
   sent === []
+
+-- | Requesting a field mask of just @stage@ prunes every other top-level
+-- field of the sent 'U5c.TxInMempool' back to its default.
+hprop_watch_mempool_stream_prunes_by_field_mask :: Property
+hprop_watch_mempool_stream_prunes_by_field_mask = H.property $ do
+  tx1 <- txInModeFixture
+  let script = [mkSnapshot [(tx1, ticket 1)] (SlotNo 100)]
+  sent <- expectScriptExhausted =<< runWatchMempoolStream script defMessage ["stage"]
+
+  H.note_ "Only 'stage' survives pruning; 'ref'/'native_bytes'/'cardano' are back to their defaults"
+  let expectedPruned = defMessage & U5c.stage .~ Proto U5c.STAGE_MEMPOOL
+  sent === [NextElem (defMessage & U5c.tx .~ expectedPruned)]
+
+-- | Field names in 'txInMempoolMaskTable' must match the proto descriptor
+-- names for 'U5c.TxInMempool', and the count must remain in sync (a new
+-- proto field becomes a compile error, not a silent omission).
+hprop_tx_in_mempool_mask_table_matches_proto :: Property
+hprop_tx_in_mempool_mask_table_matches_proto = H.propertyOnce $ do
+  let descriptorNames = Map.keys $ fieldsByTextFormatName @U5c.TxInMempool
+      tableNames = Text.unpack . fst <$> txInMempoolMaskTable
+  length tableNames === length descriptorNames
+  sort tableNames === sort descriptorNames
 
 -- | A removal-only transition (the ticket list shrinks, nothing new appears
 -- after the last seen ticket) and a slot-only transition (the ticket list
@@ -86,7 +115,7 @@ hprop_watch_mempool_stream_no_duplicates_across_removal_and_slot_only_changes = 
         , mkSnapshot [] (SlotNo 101)
         ]
 
-  sent <- expectScriptExhausted =<< runWatchMempoolStream script defMessage
+  sent <- expectScriptExhausted =<< runWatchMempoolStream script defMessage []
 
   expected1 <- expectedResponse tx1
   H.note_ "tx1 exactly once, from the initial snapshot - the later transitions send nothing"
@@ -137,8 +166,10 @@ runWatchMempoolStream
   -- ^ Script: the first snapshot is the initial read, each subsequent one
   -- is what the next blocking wait returns, in order
   -> Proto U5c.TxPredicate
+  -> [Text]
+  -- ^ Field mask paths
   -> m (Either SomeException (), [NextElem (Proto U5c.WatchMempoolResponse)])
-runWatchMempoolStream script predicate = liftIO $ do
+runWatchMempoolStream script predicate fieldMaskPaths = liftIO $ do
   scriptRef <- newIORef script
   let pop =
         readIORef scriptRef >>= \case
@@ -151,6 +182,7 @@ runWatchMempoolStream script predicate = liftIO $ do
         pop
         (const pop)
         predicate
+        fieldMaskPaths
         (\nextElem -> modifyIORef' sentRef (nextElem :))
   sent <- reverse <$> readIORef sentRef
   pure (outcome, sent)
