@@ -146,10 +146,10 @@ import Cardano.Api.Tx.Internal.Body
 import Cardano.Binary qualified as CBOR
 import Cardano.Chain.Genesis qualified
 import Cardano.Chain.Update qualified
+import Cardano.Configuration qualified as Cfg
 import Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
 import Cardano.Crypto.Hash.Blake2b qualified
 import Cardano.Crypto.Hash.Class qualified
-import Cardano.Crypto.Hashing qualified
 import Cardano.Crypto.ProtocolMagic qualified
 import Cardano.Crypto.VRF qualified as Crypto
 import Cardano.Crypto.VRF.Class qualified as VRF
@@ -233,16 +233,7 @@ import Control.Monad.Class.MonadST (MonadST)
 import Control.Monad.Class.MonadThrow (MonadThrow)
 import Control.Monad.State.Strict
 import Control.Tracer qualified as Tracer
-import Data.Aeson as Aeson
-  ( FromJSON (parseJSON)
-  , Object
-  , eitherDecodeStrict'
-  , withObject
-  , (.:)
-  , (.:?)
-  )
-import Data.Aeson qualified as A
-import Data.Aeson.Types (Parser)
+import Data.Aeson as Aeson (eitherDecodeStrict')
 import Data.Bifunctor
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray qualified
@@ -251,7 +242,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short as BSS
-import Data.Foldable (asum)
+import Data.Functor.Identity (Identity)
 import Data.IORef
 import Data.List qualified as List
 import Data.Map.Strict (Map)
@@ -273,7 +264,6 @@ import Data.Text.Lazy qualified as LT
 import Data.Text.Lazy.Builder (toLazyText)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Word
-import Data.Yaml qualified as Yaml
 import Formatting.Buildable (build)
 import GHC.Exts (IsList (..))
 import GHC.Stack (HasCallStack)
@@ -1109,24 +1099,89 @@ genesisConfigToEnv fs genCfg =
      where
       shelleyGenesis = transCfg ^. Ledger.tcShelleyGenesisL
 
+-- | Read a node configuration file through @cardano-config@, in either the flat
+-- format or the @cardano-config@ envelope. Every genesis file the
+-- configuration names is read, decoded, and checked against the hash the
+-- configuration gives for it, so a configuration without genesis hashes is
+-- rejected.
 readNodeConfig
   :: MonadError Text m
   => MonadIO m
   => NodeConfigFile 'In
   -> m NodeConfig
 readNodeConfig (File ncf) = do
-  ncfg <- liftEither . parseNodeConfig =<< readByteString ncf "node"
-  return
-    ncfg
-      { ncByronGenesisFile =
-          mapFile (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
-      , ncShelleyGenesisFile =
-          mapFile (mkAdjustPath ncf) (ncShelleyGenesisFile ncfg)
-      , ncAlonzoGenesisFile =
-          mapFile (mkAdjustPath ncf) (ncAlonzoGenesisFile ncfg)
-      , ncConwayGenesisFile =
-          mapFile (mkAdjustPath ncf) (ncConwayGenesisFile ncfg)
-      }
+  fromFile <-
+    liftEither <=< liftIO
+      $ handle
+        ( \(e :: IOException) ->
+            pure . Left $ "Cannot read the node configuration file at " <> Text.pack ncf <> ": " <> textShow e
+        )
+      $ handle (\(e :: Cfg.ConfigurationParsingError) -> pure . Left . Text.pack $ show e)
+      $ Right . fst <$> Cfg.parseConfigurationFiles ncf
+  (nc, _warnings) <-
+    liftEither . first textShow $
+      Cfg.resolveConfigurationWith [] (Cfg.defaultCliArgs ncf) fromFile
+  pure $ fromCardanoConfig ncf nc
+
+-- | The 'NodeConfig' of a configuration @cardano-config@ has read from the given
+-- file.
+--
+-- The Byron PBFT signature threshold and the Byron protocol version a node
+-- endorses are not part of a @cardano-config@ configuration: like the node, this
+-- uses the consensus default threshold and version 1.0.0. Neither affects
+-- reading or applying blocks.
+fromCardanoConfig :: FilePath -> Cfg.NodeConfiguration -> NodeConfig
+fromCardanoConfig ncf nc =
+  NodeConfig
+    { ncPBftSignatureThreshold = Nothing
+    , ncByronGenesisFile = genesisFile byronFile
+    , ncByronGenesisHash =
+        Just . GenesisHashByron . Cardano.Crypto.Hash.Class.hashToTextAsHex $ Cfg.hash byronFile
+    , ncShelleyGenesisFile = genesisFile shelleyFile
+    , ncShelleyGenesisHash = Just . GenesisHashShelley $ Cfg.hash shelleyFile
+    , ncAlonzoGenesisFile = genesisFile alonzoFile
+    , ncAlonzoGenesisHash = Just . GenesisHashAlonzo $ Cfg.hash alonzoFile
+    , ncConwayGenesisFile = genesisFile conwayFile
+    , ncConwayGenesisHash = Just . GenesisHashConway $ Cfg.hash conwayFile
+    , ncRequiresNetworkMagic =
+        case Cfg.byronReqNetworkMagic byron of
+          Ledger.SJust Cfg.RequiresMagic -> Cardano.Crypto.RequiresMagic
+          _ -> Cardano.Crypto.RequiresNoMagic
+    , ncByronProtocolVersion = Cardano.Chain.Update.ProtocolVersion 1 0 0
+    , ncHardForkTriggers = hardForkTriggers $ Cfg.testingConfiguration nc
+    , ncConfiguration = nc
+    }
+ where
+  protocol = Cfg.protocolConfiguration nc
+  byron = Cfg.byronGenesis protocol
+  byronFile = Cfg.byronGenesisFile byron
+  shelleyFile = Cfg.shelleyGenesis protocol
+  alonzoFile = Cfg.alonzoGenesis protocol
+  conwayFile = Cfg.conwayGenesis protocol
+  genesisFile :: Cfg.Hashed FilePath -> File content 'In
+  genesisFile = File . mkAdjustPath ncf . Cfg.hashed
+
+-- | The hard fork triggers of a testing configuration: for each era, the epoch
+-- the configuration gives, and otherwise the era's default protocol version.
+hardForkTriggers
+  :: Cfg.TestingConfiguration Identity
+  -> Consensus.CardanoHardForkTriggers
+hardForkTriggers testing =
+  Consensus.CardanoHardForkTriggers'
+    (atEpoch $ Cfg.testShelleyHardForkAtEpoch testing)
+    (atEpoch $ Cfg.testAllegraHardForkAtEpoch testing)
+    (atEpoch $ Cfg.testMaryHardForkAtEpoch testing)
+    (atEpoch $ Cfg.testAlonzoHardForkAtEpoch testing)
+    (atEpoch $ Cfg.testBabbageHardForkAtEpoch testing)
+    (atEpoch $ Cfg.testConwayHardForkAtEpoch testing)
+    (atEpoch $ Cfg.testDijkstraHardForkAtEpoch testing)
+ where
+  atEpoch :: Ledger.StrictMaybe Word64 -> Consensus.CardanoHardForkTrigger blk
+  atEpoch =
+    maybe
+      Consensus.CardanoTriggerHardForkAtDefaultVersion
+      (Consensus.CardanoTriggerHardForkAtEpoch . Slot.EpochNo)
+      . Ledger.strictMaybeToMaybe
 
 data NodeConfig = NodeConfig
   { ncPBftSignatureThreshold :: !(Maybe Double)
@@ -1141,119 +1196,12 @@ data NodeConfig = NodeConfig
   , ncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
   , ncByronProtocolVersion :: !Cardano.Chain.Update.ProtocolVersion
   , ncHardForkTriggers :: !Consensus.CardanoHardForkTriggers
+  , ncConfiguration :: !Cfg.NodeConfiguration
+  -- ^ The configuration as @cardano-config@ read it, genesis files included.
   }
-
-instance FromJSON NodeConfig where
-  parseJSON =
-    Aeson.withObject "NodeConfig" parse
-   where
-    parse :: Object -> Parser NodeConfig
-    parse o =
-      NodeConfig
-        <$> o .:? "PBftSignatureThreshold"
-        <*> fmap File (o .: "ByronGenesisFile")
-        <*> (fmap . fmap) GenesisHashByron (o .:? "ByronGenesisHash")
-        <*> fmap File (o .: "ShelleyGenesisFile")
-        <*> (fmap . fmap) GenesisHashShelley (o .:? "ShelleyGenesisHash")
-        <*> fmap File (o .: "AlonzoGenesisFile")
-        <*> (fmap . fmap) GenesisHashAlonzo (o .:? "AlonzoGenesisHash")
-        <*> fmap File (o .: "ConwayGenesisFile")
-        <*> (fmap . fmap) GenesisHashConway (o .:? "ConwayGenesisHash")
-        <*> o .: "RequiresNetworkMagic"
-        <*> parseByronProtocolVersion o
-        <*> parseHardForkTriggers o
-
-    parseByronProtocolVersion :: Object -> Parser Cardano.Chain.Update.ProtocolVersion
-    parseByronProtocolVersion o =
-      Cardano.Chain.Update.ProtocolVersion
-        <$> o .: "LastKnownBlockVersion-Major"
-        <*> o .: "LastKnownBlockVersion-Minor"
-        <*> o .: "LastKnownBlockVersion-Alt"
-
-    parseHardForkTriggers :: Object -> Parser Consensus.CardanoHardForkTriggers
-    parseHardForkTriggers o =
-      Consensus.CardanoHardForkTriggers'
-        <$> parseShelleyHardForkEpoch o
-        <*> parseAllegraHardForkEpoch o
-        <*> parseMaryHardForkEpoch o
-        <*> parseAlonzoHardForkEpoch o
-        <*> parseBabbageHardForkEpoch o
-        <*> parseConwayHardForkEpoch o
-        <*> parseDijkstraHardForkEpoch o
-    parseShelleyHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
-    parseShelleyHardForkEpoch o =
-      asum
-        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestShelleyHardForkAtEpoch"
-        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
-        ]
-
-    parseAllegraHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
-    parseAllegraHardForkEpoch o =
-      asum
-        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestAllegraHardForkAtEpoch"
-        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
-        ]
-
-    parseMaryHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
-    parseMaryHardForkEpoch o =
-      asum
-        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestMaryHardForkAtEpoch"
-        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
-        ]
-
-    parseAlonzoHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
-    parseAlonzoHardForkEpoch o =
-      asum
-        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestAlonzoHardForkAtEpoch"
-        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
-        ]
-    parseBabbageHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
-    parseBabbageHardForkEpoch o =
-      asum
-        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestBabbageHardForkAtEpoch"
-        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
-        ]
-
-    parseConwayHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
-    parseConwayHardForkEpoch o =
-      asum
-        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestConwayHardForkAtEpoch"
-        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
-        ]
-
-    parseDijkstraHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
-    parseDijkstraHardForkEpoch o =
-      asum
-        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestDijkstraHardForkAtEpoch"
-        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
-        ]
-
-----------------------------------------------------------------------
--- WARNING When adding new entries above, be aware that if there is an
--- intra-era fork, then the numbering is not consecutive.
-----------------------------------------------------------------------
-
-parseNodeConfig :: ByteString -> Either Text NodeConfig
-parseNodeConfig bs =
-  case Yaml.decodeEither' bs of
-    Left err -> Left $ "Error parsing node config: " <> textShow err
-    Right nc -> Right nc
 
 mkAdjustPath :: FilePath -> (FilePath -> FilePath)
 mkAdjustPath nodeConfigFilePath fp = takeDirectory nodeConfigFilePath </> fp
-
-readByteString
-  :: MonadError Text m
-  => MonadIO m
-  => FilePath
-  -> Text
-  -> m ByteString
-readByteString fp cfgType = (liftEither <=< liftIO) $
-  catch (Right <$> BS.readFile fp) $ \(_ :: IOException) ->
-    return $
-      Left $
-        mconcat
-          ["Cannot read the ", cfgType, " configuration file at : ", Text.pack fp]
 
 initLedgerStateVar :: SomeHasFS IO -> GenesisConfig -> IO LedgerState
 initLedgerStateVar fs genesisConfig = do
@@ -1533,8 +1481,8 @@ readCardanoGenesisConfig enc = do
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
   alonzoGenesis <- readAlonzoGenesisConfig enc
   conwayGenesis <- readConwayGenesisConfig enc
-  -- TODO Dijkstra: build real genesis value
-  let dijkstraGenesis = exampleDijkstraGenesis -- TODO Dijkstra: add plumbing to read genesis
+  let dijkstraGenesis =
+        Ledger.fromSMaybe exampleDijkstraGenesis . Cfg.experimentalGenesisConfig $ ncConfiguration enc
   let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
 
@@ -1666,56 +1614,43 @@ instance Error GenesisConfigError where
         , pretty err
         ]
 
+-- | The Byron genesis of a node configuration, which 'readNodeConfig' has read
+-- and checked against its hash.
 readByronGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
   -> t m Cardano.Chain.Genesis.Config
-readByronGenesisConfig enc = do
-  let file = unFile $ ncByronGenesisFile enc
-  (_, actualHash) <-
-    modifyError (NEByronConfig file . Cardano.Chain.Genesis.ConfigurationGenesisDataError) $
-      Cardano.Chain.Genesis.readGenesisData file
-  mExpectedHash <- forM (ncByronGenesisHash enc) $ \expectedHash ->
-    liftEither
-      . first NEError
-      $ Cardano.Crypto.Hashing.decodeAbstractHash (unGenesisHashByron expectedHash)
-  -- do the hash check only if the hash is present in the configuration file
-  -- otherwise `genesisHash` will always contain the actual hash
-  let genesisHash =
-        fromMaybe (Cardano.Chain.Genesis.unGenesisHash actualHash) mExpectedHash
-  modifyError (NEByronConfig file) $
-    -- note that mkConfigFromFile decodes genesis and recomputes the hash again
-    -- The genesis hash check there is mandatory, so we have to provide an actual hash of the genesis if there was not
-    -- any in the node configuration.
-    Cardano.Chain.Genesis.mkConfigFromFile (ncRequiresNetworkMagic enc) file genesisHash
+readByronGenesisConfig = pure . Cfg.byronGenesisConfig . ncConfiguration
 
+-- | The Shelley genesis of a node configuration, and its hash, which
+-- 'readNodeConfig' has read and checked.
 readShelleyGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
   -> t m ShelleyConfig
-readShelleyGenesisConfig enc = do
-  let file = ncShelleyGenesisFile enc
-  modifyError (NEShelleyConfig (unFile file) . renderShelleyGenesisError) $
-    readShelleyGenesis file (ncShelleyGenesisHash enc)
+readShelleyGenesisConfig enc =
+  pure $
+    ShelleyConfig
+      (Cfg.shelleyGenesisConfig cfg)
+      (GenesisHashShelley . Cfg.hash . Cfg.shelleyGenesis $ Cfg.protocolConfiguration cfg)
+ where
+  cfg = ncConfiguration enc
 
+-- | The Alonzo genesis of a node configuration, which 'readNodeConfig' has read
+-- and checked against its hash.
 readAlonzoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
   -> t m AlonzoGenesis
-readAlonzoGenesisConfig enc = do
-  let file = ncAlonzoGenesisFile enc
-  modifyError (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError) $
-    readAlonzoGenesis file (ncAlonzoGenesisHash enc)
+readAlonzoGenesisConfig = pure . Cfg.alonzoGenesisConfig . ncConfiguration
 
--- | If the conway genesis file does not exist we simply put in a default.
+-- | The Conway genesis of a node configuration, which 'readNodeConfig' has read
+-- and checked against its hash.
 readConwayGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
   -> t m ConwayGenesis
-readConwayGenesisConfig enc = do
-  let fp = ncConwayGenesisFile enc
-  modifyError (NEConwayConfig (unFile fp) . renderConwayGenesisError) $
-    readConwayGenesis fp (ncConwayGenesisHash enc)
+readConwayGenesisConfig = pure . Cfg.conwayGenesisConfig . ncConfiguration
 
 readShelleyGenesis
   :: forall m t
@@ -1773,117 +1708,6 @@ renderShelleyGenesisError sge =
         , " Error: "
         , err
         ]
-
-readAlonzoGenesis
-  :: forall m t
-   . MonadIOTransError AlonzoGenesisError t m
-  => File AlonzoGenesis 'In
-  -> Maybe GenesisHashAlonzo
-  -> t m AlonzoGenesis
-readAlonzoGenesis (File file) mExpectedGenesisHash = do
-  content <-
-    modifyError id $ handleIOExceptT (AlonzoGenesisReadError file . textShow) $ LBS.readFile file
-  let genesisHash = GenesisHashAlonzo . Cardano.Crypto.Hash.Class.hashWith id $ LBS.toStrict content
-  checkExpectedGenesisHash genesisHash
-  modifyError (AlonzoGenesisDecodeError file . Text.pack) . liftEither $
-    A.eitherDecode content
- where
-  checkExpectedGenesisHash :: GenesisHashAlonzo -> t m ()
-  checkExpectedGenesisHash actual = forM_ mExpectedGenesisHash $ \expectedGenesisHash ->
-    when (actual /= expectedGenesisHash) $
-      throwError (AlonzoGenesisHashMismatch actual expectedGenesisHash)
-
-data AlonzoGenesisError
-  = AlonzoGenesisReadError !FilePath !Text
-  | AlonzoGenesisHashMismatch !GenesisHashAlonzo !GenesisHashAlonzo -- actual, expected
-  | AlonzoGenesisDecodeError !FilePath !Text
-  deriving Show
-
-instance Exception AlonzoGenesisError
-
-renderAlonzoGenesisError :: AlonzoGenesisError -> Text
-renderAlonzoGenesisError sge =
-  case sge of
-    AlonzoGenesisReadError fp err ->
-      mconcat
-        [ "There was an error reading the genesis file: "
-        , Text.pack fp
-        , " Error: "
-        , err
-        ]
-    AlonzoGenesisHashMismatch actual expected ->
-      mconcat
-        [ "Wrong Alonzo genesis file: the actual hash is "
-        , renderHash (unGenesisHashAlonzo actual)
-        , ", but the expected Alonzo genesis hash given in the node "
-        , "configuration file is "
-        , renderHash (unGenesisHashAlonzo expected)
-        , "."
-        ]
-    AlonzoGenesisDecodeError fp err ->
-      mconcat
-        [ "There was an error parsing the genesis file: "
-        , Text.pack fp
-        , " Error: "
-        , err
-        ]
-
-readConwayGenesis
-  :: forall m t
-   . MonadIOTransError ConwayGenesisError t m
-  => ConwayGenesisFile 'In
-  -> Maybe GenesisHashConway
-  -> t m ConwayGenesis
-readConwayGenesis (File file) mExpectedGenesisHash = do
-  content <-
-    modifyError id $ handleIOExceptT (ConwayGenesisReadError file . textShow) $ BS.readFile file
-  let genesisHash = GenesisHashConway (Cardano.Crypto.Hash.Class.hashWith id content)
-  checkExpectedGenesisHash genesisHash
-  liftEither . first (ConwayGenesisDecodeError file . Text.pack) $ Aeson.eitherDecodeStrict' content
- where
-  checkExpectedGenesisHash :: GenesisHashConway -> t m ()
-  checkExpectedGenesisHash actual = forM_ mExpectedGenesisHash $ \expectedGenesisHash ->
-    when (actual /= expectedGenesisHash) $
-      throwError (ConwayGenesisHashMismatch actual expectedGenesisHash)
-
-data ConwayGenesisError
-  = ConwayGenesisReadError !FilePath !Text
-  | ConwayGenesisHashMismatch !GenesisHashConway !GenesisHashConway -- actual, expected
-  | ConwayGenesisFileMissing
-  | ConwayGenesisDecodeError !FilePath !Text
-  deriving Show
-
-instance Exception ConwayGenesisError
-
-renderConwayGenesisError :: ConwayGenesisError -> Text
-renderConwayGenesisError = \case
-  ConwayGenesisFileMissing ->
-    mconcat
-      [ "\"ConwayGenesisFile\" is missing from node configuration. "
-      ]
-  ConwayGenesisReadError fp err ->
-    mconcat
-      [ "There was an error reading the genesis file: "
-      , Text.pack fp
-      , " Error: "
-      , err
-      ]
-  ConwayGenesisHashMismatch actual expected ->
-    mconcat
-      [ "Wrong Conway genesis file: the actual hash is "
-      , renderHash (unGenesisHashConway actual)
-      , ", but the expected Conway genesis hash given in the node "
-      , "configuration file is "
-      , renderHash (unGenesisHashConway expected)
-      , "."
-      ]
-  ConwayGenesisDecodeError fp err ->
-    mconcat
-      [ "There was an error parsing the genesis file: "
-      , Text.pack fp
-      , " Error: "
-      , err
-      ]
 
 renderHash
   :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString -> Text

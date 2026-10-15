@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 0
+kind:
+- breaking
+description: Node configurations are read with cardano-config, so `readNodeConfig` and `initialLedgerState` accept the new configuration format, reject a configuration without genesis hashes, and use the Dijkstra genesis the configuration names, while `NodeConfig` gains `ncConfiguration` and loses its `FromJSON` instance.

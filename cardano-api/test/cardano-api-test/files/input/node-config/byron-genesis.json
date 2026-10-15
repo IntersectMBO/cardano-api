@@ -1,0 +1,60 @@
+{
+  "avvmDistr": {
+    "-0BJDi-gauylk4LptQTgjMeo7kY9lTCbZv12vwOSTZk=": "9999300000000",
+    "-0Np4pyTOWF26iXWVIvu6fhz9QupwWRS2hcCaOEYlw0=": "3760024000000",
+    "-0_pjw54ACGTrCsH3SXreedq-Cj9pFBcZDbxT9sXaqQ=": "411085000000"
+  },
+  "blockVersionData": {
+    "heavyDelThd": "300000000000",
+    "maxBlockSize": "2000000",
+    "maxHeaderSize": "2000000",
+    "maxProposalSize": "700",
+    "maxTxSize": "4096",
+    "mpcThd": "20000000000000",
+    "scriptVersion": 0,
+    "slotDuration": "20000",
+    "softforkRule": {
+      "initThd": "900000000000000",
+      "minThd": "600000000000000",
+      "thdDecrement": "50000000000000"
+    },
+    "txFeePolicy": {
+      "multiplier": "43946000000",
+      "summand": "155381000000000"
+    },
+    "unlockStakeEpoch": "18446744073709551615",
+    "updateImplicit": "10000",
+    "updateProposalThd": "100000000000000",
+    "updateVoteThd": "1000000000000"
+  },
+  "protocolConsts": {
+    "k": 2160,
+    "protocolMagic": 764824073,
+    "vssMaxTTL": 6,
+    "vssMinTTL": 2
+  },
+  "startTime": 1506203091,
+  "bootStakeholders": {
+    "1deb82908402c7ee3efeb16f369d97fba316ee621d09b32b8969e54b": 1,
+    "65904a89e6d0e5f881513d1736945e051b76f095eca138ee869d543d": 1,
+    "5411c7bf87c252609831a337a713e4859668cba7bba70a9c3ef7c398": 1
+  },
+  "heavyDelegation": {
+    "1deb82908402c7ee3efeb16f369d97fba316ee621d09b32b8969e54b": {
+      "cert": "c8b39f094dc00608acb2d20ff274cb3e0c022ccb0ce558ea7c1a2d3a32cd54b42cc30d32406bcfbb7f2f86d05d2032848be15b178e3ad776f8b1bc56a671400d",
+      "delegatePk": "6MA6A8Cy3b6kGVyvOfQeZp99JR7PIh+7LydcCl1+BdGQ3MJG9WyOM6wANwZuL2ZN2qmF6lKECCZDMI3eT1v+3w==",
+      "issuerPk": "UHMxYf2vtsjLb64OJb35VVEFs2eO+wjxd1uekN5PXHe8yM7/+NkBHLJ4so/dyG2bqwmWVtd6eFbHYZEIy/ZXUg==",
+      "omega": 0
+    },
+    "65904a89e6d0e5f881513d1736945e051b76f095eca138ee869d543d": {
+      "cert": "552741f728196e62f218047b944b24ce4d374300d04b9b281426f55aa000d53ded66989ad5ea0908e6ff6492001ff18ece6c7040a934060759e9ae09863bf203",
+      "delegatePk": "X93u2t4nFNbbL54RBHQ9LY2Bjs3cMG4XYQjbFMqt1EG0V9WEDGD4hAuZyPeMKQriKdT4Qx5ni6elRcNWB7lN2w==",
+      "issuerPk": "C9sfXvPZlAN1k/ImYlXxNKVkZYuy34FLO5zvuW2jT6nIiFkchbdw/TZybV89mRxmiCiv/Hu+CHL9aZE25mTZ2A==",
+      "omega": 0
+    }
+  },
+  "nonAvvmBalances": {
+    "2cWKMJemoBajGgvgVVziaKmUFa4LwJnAHffmuaSJBMDqethwJVQsyBsTSfFhp5jFpkVQM": "5428571428571429",
+    "37btjrVyb4KEg6anTcJ9E4EAvYtNV9xXL6LNpA15YLhgvm9zJ1D2jwme574HikZ36rKdTwaUmpEicCoL1bDw4CtH5PNcFnTRGQNaFd5ai6Wvo6CZsi": "19999999999999"
+  }
+}
