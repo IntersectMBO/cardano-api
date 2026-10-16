@@ -8,9 +8,11 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Script
   ( ledgerNativeScriptToUtxoRpcNativeScript
   , ledgerScriptToUtxoRpcScript
   , scriptToUtxoRpcScript
+  , simpleScriptToUtxoRpcNativeScript
   )
 
 import Cardano.Ledger.Dijkstra.Scripts qualified as L
+import Cardano.Ledger.Hashes qualified as L (ScriptHash (..))
 import Cardano.Ledger.Shelley.Scripts qualified as L
 
 import RIO
@@ -58,6 +60,22 @@ hprop_dijkstra_guard_script_converts_to_empty_native_script = H.propertyOnce $ d
   let guardScript = L.RequireGuard (L.KeyHashObj (L.KeyHash rawHash))
 
   ledgerNativeScriptToUtxoRpcNativeScript ShelleyBasedEraDijkstra guardScript === defMessage
+
+hprop_simple_script_guards_preserve_rpc_list_positions :: Property
+hprop_simple_script_guards_preserve_rpc_list_positions = H.propertyOnce $ do
+  rawKeyHash <- H.nothingFail $ L.hashFromBytes (BS.replicate 28 0)
+  rawScriptHash <- H.nothingFail $ L.hashFromBytes (BS.replicate 28 1)
+  let keyGuard = RequireGuard (L.KeyHashObj (L.KeyHash rawKeyHash))
+      scriptGuard = RequireGuard (L.ScriptHashObj (L.ScriptHash rawScriptHash))
+      scripts = [keyGuard, RequireTimeAfter (L.SlotNo 42), scriptGuard]
+      expected = [defMessage, defMessage & U5c.invalidBefore .~ 42, defMessage]
+      encodeScript = simpleScriptToUtxoRpcNativeScript
+  encodeScript keyGuard === defMessage
+  encodeScript scriptGuard === defMessage
+  encodeScript (RequireAllOf scripts) ^. U5c.scriptAll . U5c.items === expected
+  encodeScript (RequireAnyOf scripts) ^. U5c.scriptAny . U5c.items === expected
+  encodeScript (RequireMOf 2 scripts) ^. U5c.scriptNOfK . U5c.scripts === expected
+  encodeScript (RequireMOf 2 scripts) ^. U5c.scriptNOfK . U5c.k === 2
 
 -- | A Dijkstra native script that isn't a guard script still converts via the
 -- classic view patterns shared with earlier eras.

@@ -20,6 +20,9 @@ import Cardano.Api.Experimental.Certificate
 import Cardano.Api.Ledger qualified as Ledger
 
 import Cardano.Binary qualified as CBOR
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Keys (coerceKeyRole)
 
 import Codec.CBOR.Read qualified as CBOR
 import Codec.CBOR.Term (Term (..), encodeTerm)
@@ -31,7 +34,9 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
+import Data.Foldable (forM_)
 import Data.List (sortBy)
+import Data.Maybe (isJust)
 import Data.Text qualified as T
 import GHC.Stack qualified as GHC
 
@@ -273,6 +278,78 @@ prop_roundtrip_script_SimpleScriptV2_CBOR :: Property
 prop_roundtrip_script_SimpleScriptV2_CBOR = H.property $ do
   x <- H.forAll $ genScript SimpleScriptLanguage
   H.trippingCbor (AsScript AsSimpleScript) x
+
+prop_simple_script_legacy_compatibility :: Property
+prop_simple_script_legacy_compatibility = H.property $ do
+  s <- H.forAll genSimpleScript
+  let script = SimpleScript s
+      legacy = toAllegraTimelock s :: Ledger.NativeScript (ShelleyLedgerEra AllegraEra)
+      legacyBytes = CBOR.serialize' legacy
+  serialiseToCBOR script === legacyBytes
+  hashScript script
+    === fromShelleyScriptHash (Ledger.hashScript @(ShelleyLedgerEra AllegraEra) legacy)
+  deserialiseFromCBOR (AsScript AsSimpleScript) legacyBytes === Right script
+
+prop_simple_script_guards :: Property
+prop_simple_script_guards = H.property $ do
+  PaymentKeyHash keyHash <- H.forAll $ genVerificationKeyHash AsPaymentKey
+  scriptHash <- H.forAll genScriptHash
+  let keyGuard = RequireGuard (Ledger.KeyHashObj (coerceKeyRole keyHash))
+      scriptGuard = RequireGuard (Ledger.ScriptHashObj (toShelleyScriptHash scriptHash))
+      scripts =
+        [ keyGuard
+        , scriptGuard
+        , RequireAllOf [RequireTimeAfter (SlotNo 1), keyGuard, scriptGuard]
+        , RequireAnyOf [keyGuard, scriptGuard]
+        , RequireMOf 1 [keyGuard, scriptGuard]
+        ]
+  mapM_ check scripts
+ where
+  check s = do
+    let script = SimpleScript s
+        nativeScript = toDijkstraNativeScript s
+        ledgerScript = Alonzo.NativeScript nativeScript
+    H.trippingCbor (AsScript AsSimpleScript) script
+    H.tripping
+      script
+      (serialiseToTextEnvelope Nothing)
+      deserialiseFromTextEnvelope
+    serialiseToCBOR script === CBOR.serialize' nativeScript
+    hashScript script
+      === fromShelleyScriptHash (Ledger.hashScript @(ShelleyLedgerEra DijkstraEra) ledgerScript)
+
+prop_simple_script_guards_need_dijkstra :: Property
+prop_simple_script_guards_need_dijkstra = H.property $ do
+  PaymentKeyHash keyHash <- H.forAll $ genVerificationKeyHash AsPaymentKey
+  scriptHash <- H.forAll genScriptHash
+  plain <- H.forAll genSimpleScript
+  let keyGuard = RequireGuard (Ledger.KeyHashObj (coerceKeyRole keyHash))
+      scriptGuard = RequireGuard (Ledger.ScriptHashObj (toShelleyScriptHash scriptHash))
+      guards =
+        [ keyGuard
+        , scriptGuard
+        , RequireAllOf [RequireTimeAfter (SlotNo 1), keyGuard]
+        , RequireAnyOf [RequireAllOf [scriptGuard]]
+        , RequireMOf 1 [RequireTimeBefore (SlotNo 1), keyGuard]
+        ]
+  mapM_ (checkGuard . SimpleScript) guards
+  mapM_ checkPlain [SimpleScript plain | not (hasGuard plain)]
+ where
+  hasGuard = \case
+    RequireGuard{} -> True
+    RequireAllOf ss -> any hasGuard ss
+    RequireAnyOf ss -> any hasGuard ss
+    RequireMOf _ ss -> any hasGuard ss
+    RequireSignature{} -> False
+    RequireTimeBefore{} -> False
+    RequireTimeAfter{} -> False
+  checkGuard script =
+    forM_ [minBound .. maxBound] $ \(AnyShelleyBasedEra sbe) ->
+      isJust (toScriptInEra sbe (ScriptInAnyLang SimpleScriptLanguage script))
+        === (AnyShelleyBasedEra sbe == AnyShelleyBasedEra ShelleyBasedEraDijkstra)
+  checkPlain script =
+    forM_ [minBound .. maxBound] $ \(AnyShelleyBasedEra sbe) ->
+      H.assert $ isJust (toScriptInEra sbe (ScriptInAnyLang SimpleScriptLanguage script))
 
 {-
 Plutus CBOR Encoding tests - Double decoding fix
@@ -601,6 +678,15 @@ tests =
     , testProperty
         "roundtrip script SimpleScriptV2 CBOR"
         prop_roundtrip_script_SimpleScriptV2_CBOR
+    , testProperty
+        "simple script legacy bytes and hashes are preserved"
+        prop_simple_script_legacy_compatibility
+    , testProperty
+        "simple script guards roundtrip and match ledger hashes"
+        prop_simple_script_guards
+    , testProperty
+        "simple script guards are only supported in Dijkstra"
+        prop_simple_script_guards_need_dijkstra
     , testProperty
         "roundtrip non double encoded always succeeds plutus V3 CBOR"
         prop_roundtrip_non_double_encoded_always_succeeds_plutus_V3_CBOR

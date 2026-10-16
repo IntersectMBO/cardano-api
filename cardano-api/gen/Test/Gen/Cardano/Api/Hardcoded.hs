@@ -7,6 +7,8 @@ module Test.Gen.Cardano.Api.Hardcoded
   , v2EcdsaLoopPlutusScriptHexDoubleEncoded
   , v3AlwaysSucceedsPlutusScript
   , v3AlwaysSucceedsPlutusScriptDoubleEncoded
+  , v4AlwaysSucceedsPlutusScript
+  , v4AlwaysSucceedsPlutusScriptDoubleEncoded
   )
 where
 
@@ -45,3 +47,12 @@ v3AlwaysSucceedsPlutusScriptDoubleEncoded =
 
 v3AlwaysSucceedsPlutusScript :: ByteString
 v3AlwaysSucceedsPlutusScript = BS.drop 6 v3AlwaysSucceedsPlutusScriptDoubleEncoded
+
+-- | Compiled against PlutusLedgerApi.V4 with plutus-tx-plugin 1.70.0.0, from plinth-template's V4TestValidators.hs.
+-- Byte-identical to the V3 build, since the term ignores its argument.
+v4AlwaysSucceedsPlutusScriptDoubleEncoded :: ByteString
+v4AlwaysSucceedsPlutusScriptDoubleEncoded =
+  "46450101002499"
+
+v4AlwaysSucceedsPlutusScript :: ByteString
+v4AlwaysSucceedsPlutusScript = BS.drop 2 v4AlwaysSucceedsPlutusScriptDoubleEncoded

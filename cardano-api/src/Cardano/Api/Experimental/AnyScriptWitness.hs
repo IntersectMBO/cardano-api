@@ -234,49 +234,27 @@ getAnyPlutusScriptData AnyPlutusProposingScriptWitness{} = mempty
 getAnyPlutusScriptData AnyPlutusVotingScriptWitness{} = mempty
 
 getAnyPlutusWitnessPlutusScript
-  :: L.AlonzoEraScript era
-  => AnyPlutusScriptWitness lang purpose era
+  :: AnyPlutusScriptWitness lang purpose era
   -> Maybe (L.Script era)
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV1 s)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable L.SPlutusV1 =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript s
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV2 s)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable L.SPlutusV2 =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript s
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV3 s)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable L.SPlutusV3 =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript s
 getAnyPlutusWitnessPlutusScript (AnyPlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV4 s)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable L.SPlutusV4 =<< plutusScriptRunnable)
-getAnyPlutusWitnessPlutusScript (AnyPlutusMintingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable l =<< plutusScriptRunnable)
-getAnyPlutusWitnessPlutusScript (AnyPlutusWithdrawingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable l =<< plutusScriptRunnable)
-getAnyPlutusWitnessPlutusScript (AnyPlutusCertifyingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable l =<< plutusScriptRunnable)
-getAnyPlutusWitnessPlutusScript (AnyPlutusProposingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable l =<< plutusScriptRunnable)
-getAnyPlutusWitnessPlutusScript (AnyPlutusVotingScriptWitness s@(PlutusScriptWitness l _ _ _ _)) =
-  let plutusScriptRunnable = getPlutusScriptRunnable s
-   in L.fromPlutusScript <$> (fromPlutusRunnable l =<< plutusScriptRunnable)
+  resolvePlutusWitnessScript s
+getAnyPlutusWitnessPlutusScript (AnyPlutusMintingScriptWitness s) = resolvePlutusWitnessScript s
+getAnyPlutusWitnessPlutusScript (AnyPlutusWithdrawingScriptWitness s) = resolvePlutusWitnessScript s
+getAnyPlutusWitnessPlutusScript (AnyPlutusCertifyingScriptWitness s) = resolvePlutusWitnessScript s
+getAnyPlutusWitnessPlutusScript (AnyPlutusProposingScriptWitness s) = resolvePlutusWitnessScript s
+getAnyPlutusWitnessPlutusScript (AnyPlutusVotingScriptWitness s) = resolvePlutusWitnessScript s
 
--- It should be noted that 'PlutusRunnable' is constructed via deserialization. The deserialization
--- instance lives in ledger and will fail for an invalid script language/era pairing.
-fromPlutusRunnable
-  :: L.AlonzoEraScript era
-  => L.SLanguage lang
-  -> L.PlutusRunnable lang
-  -> Maybe (L.PlutusScript era)
-fromPlutusRunnable L.SPlutusV1 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
-fromPlutusRunnable L.SPlutusV2 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
-fromPlutusRunnable L.SPlutusV3 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
-fromPlutusRunnable L.SPlutusV4 runnable =
-  L.mkPlutusScript $ L.plutusFromRunnable runnable
+-- | A reference witness carries no script, so it resolves to 'Nothing'.
+-- An inline witness holds the ledger script, built when its era was checked.
+resolvePlutusWitnessScript
+  :: PlutusScriptWitness lang purpose era
+  -> Maybe (L.Script era)
+resolvePlutusWitnessScript (PlutusScriptWitness _ (PScript s) _ _ _) =
+  Just $ plutusScriptInEraToScript s
+resolvePlutusWitnessScript (PlutusScriptWitness _ PReferenceScript{} _ _ _) = Nothing

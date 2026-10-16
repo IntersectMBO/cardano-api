@@ -1,5 +1,42 @@
 # Changelog for cardano-api
 
+## 11.9.0.0 -- 2026-10-13
+
+- Converting a simple script that contains a guard to a script for any era before Dijkstra (Shelley to Conway) now fails cleanly instead of crashing, and the script is reported as unsupported in that era, for example when it is used as a reference script. Parsing a simple script from JSON now reports the error of the script type that was given, where before any malformed script was reported as a missing `guard` script. An unknown script type now produces an error that names it and lists the valid types. Fee estimation in the experimental API now counts the signatures required by key-hash guards in the transaction body in the Dijkstra era, where before the fee was too low by one signature per such key and the ledger rejected the transaction. A key that is both a guard and an extra required signer is counted once.
+  (bugfix)
+  [PR 1376](https://github.com/intersectmbo/cardano-api/pull/1376)
+
+- Add a `RequireGuard` constructor to `SimpleScript` carrying a ledger `Credential Guard`, so simple scripts can express the Dijkstra native script guard case. Adds `toDijkstraNativeScript` and `fromDijkstraNativeScript`, a `"guard"` JSON tag delegating to the ledger `Credential` encoding, and guard-aware key witness estimation. Pre-Dijkstra conversion via `toAllegraTimelock` errors on a guard.
+  (breaking, feature)
+  [PR 1374](https://github.com/intersectmbo/cardano-api/pull/1374)
+
+- `estimateBalancedTxBody` (in both `Cardano.Api` and `Cardano.Api.Experimental`) now accounts for native assets in the declared total UTxO value: the change output keeps the tokens that are not sent to other outputs, so `cardano-cli transaction build-estimate` with a multi-asset `--total-utxo-value` balances correctly; tokens present in outputs but missing from the declared total now fail with a negative balance error instead of being silently ignored or aborting with an "Illegal Value in TxOut" exception; the same exception no longer escapes when the balance has zero ADA with a negative token quantity, or when deposits exceed the declared ADA in the legacy `estimateBalancedTxBody`.
+  (bugfix)
+  [PR 1366](https://github.com/intersectmbo/cardano-api/pull/1366)
+
+- Plutus scripts in a language the era does not support are now rejected when decoded, with an error naming the language and the era.
+  Before, such a script was silently dropped from the witness set while its redeemer was kept, so the transaction failed on submission.
+  `PlutusScriptInEra` carries the ledger's `EraPlutusTxInfo` evidence in its constructor, so it can only be built for a pairing the ledger supports and converts to the ledger script without a partial step.
+  `deserialisePlutusScriptInEra` and `deserialiseAnyPlutusScriptOfLanguage` require `EraPlutusTxInfo lang era` and no longer take the language singleton.
+  New `PlutusLangInEra`, `plutusLangInEra` and `plutusLangInShelleyBasedEra` give that proof at runtime.
+  `decodeAnyPlutusScript` and `deserialiseAnyPlutusScriptFromTextEnvelope` now require `IsShelleyBasedEra` for the api era that matches the ledger era.
+  (breaking, bugfix)
+  [PR 1363](https://github.com/intersectmbo/cardano-api/pull/1363)
+
+- `createTransactionBody` now fails with `TxOutputReferenceScriptLanguageNotSupportedInEra` when a transaction output or the return collateral carries a reference script in a language the era does not support.
+  Before, the output was built without the script and no error was reported.
+  (breaking, bugfix)
+  [PR 1363](https://github.com/intersectmbo/cardano-api/pull/1363)
+
+- `scriptLanguageSupportedInEra` and `toScriptInEra` now accept Plutus V4 in the Dijkstra era.
+  Plutus V4 scripts can be used as reference scripts in transaction outputs and as auxiliary scripts.
+  (feature, compatible)
+  [PR 1359](https://github.com/intersectmbo/cardano-api/pull/1359)
+
+- Add plutus spending script support to createCompatibleTx. Breaking: it now takes all transaction content as a single CompatibleTxBodyContent record and fails with the new CompatibleTxError. Export mkSpendingScriptDatum. Fix certificate, proposal and vote script witnesses missing from the witness set, and proposal reference inputs being overwritten.
+  (feature, breaking, bugfix)
+  [PR 1282](https://github.com/intersectmbo/cardano-api/pull/1282)
+
 ## 11.8.0.0 -- 2026-10-06
 
 - `estimateBalancedTxBody` (in both `Cardano.Api` and `Cardano.Api.Experimental`) now balances a transaction that has no outputs by producing a single change output, instead of failing with "The transaction balance is negative"; this also fixes `cardano-cli transaction build-estimate` when no `--tx-out` is given (IntersectMBO/cardano-cli#1199, https://github.com/IntersectMBO/cardano-cli/issues/1199).

@@ -5,6 +5,9 @@ module Cardano.Api.Experimental.Plutus
   , serialiseAnyPlutusScriptToTextEnvelope
   , deserialiseAnyPlutusScriptFromTextEnvelope
   , PlutusScriptInEra (..)
+  , PlutusLangInEra (..)
+  , plutusLangInEra
+  , plutusLangInShelleyBasedEra
   , AnyPlutusScriptLanguage (..)
   , deserialisePlutusScriptInEra
   , hashPlutusScriptInEra
@@ -31,6 +34,7 @@ module Cardano.Api.Experimental.Plutus
   , PlutusScriptPurpose (..)
   , PlutusScriptDatum (..)
   , NoScriptDatum
+  , mkSpendingScriptDatum
   , getPlutusScriptWitnessLanguage
 
     -- ** Constuct an indexed plutus script witness.

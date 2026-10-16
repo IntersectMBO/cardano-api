@@ -11,31 +11,49 @@ module Test.Cardano.Api.Experimental.Fee
 where
 
 import Cardano.Api qualified as Api
-import Cardano.Api.Compatible.Tx (AnyProtocolUpdate (..), AnyVote (..), createCompatibleTx)
+import Cardano.Api.Compatible.Tx
+  ( AnyVote (..)
+  , CompatibleTxBodyContent (..)
+  , CompatibleTxError (..)
+  , createCompatibleTx
+  , defaultCompatibleTxBodyContent
+  )
 import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.AnyScriptWitness
+  ( AnyPlutusScriptWitness (AnyPlutusSpendingScriptWitness, AnyPlutusVotingScriptWitness)
+  , PlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV3)
+  )
 import Cardano.Api.Experimental.Era (convert)
+import Cardano.Api.Experimental.Plutus (plutusScriptInEraToScript)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Monad.Error (failEitherWith)
 
+import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Mary.Value qualified as Mary
+import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Ledger.Tools qualified as L (calcMinFeeTx)
 import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
 import Data.Default (def)
-import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
+import Data.Maybe (isJust)
+import Data.Maybe.Strict (StrictMaybe (SNothing))
+import Data.OSet.Strict qualified as OSet
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
 import Data.Time.Clock.POSIX qualified as Time
+import GHC.Exts (IsList (..))
 import Lens.Micro
 
 import Test.Gen.Cardano.Api.Typed
   ( genAddressInEra
+  , genPlutusScriptInEra
   , genScriptHash
   , genStakeCredential
   , genTxId
@@ -85,12 +103,33 @@ tests =
         , testProperty
             "pool registration counts operator and every owner"
             prop_estimateTransactionKeyWitnessCount_counts_pool_owners
+        , testProperty
+            "Dijkstra guards count key credentials, including nested guards"
+            prop_estimateTransactionKeyWitnessCount_counts_dijkstra_guards
+        , testProperty
+            "Dijkstra body guards count key credentials once, ignoring script credentials"
+            prop_estimateTransactionKeyWitnessCount_counts_body_guards
         ]
     , testGroup
         "createCompatibleTx"
         [ testProperty
             "all certs (witnessed and unwitnessed) appear in the ledger tx"
             prop_createCompatibleTx_preserves_all_certs
+        , testProperty
+            "spending redeemer indices follow sorted input order, not argument order"
+            prop_createCompatibleTx_redeemer_indices_follow_sorted_inputs
+        , testProperty
+            "an inline plutus spending script witness lands in the tx witness set"
+            prop_createCompatibleTx_inline_plutus_script_in_witness_set
+        , testProperty
+            "an inline plutus vote script witness lands in the tx witness set"
+            prop_createCompatibleTx_inline_plutus_vote_script_in_witness_set
+        , testProperty
+            "plutus witnesses without protocol parameters are rejected"
+            prop_createCompatibleTx_missing_pparams_with_plutus_witness
+        , testProperty
+            "collateral, validity upper bound and metadata are threaded through"
+            prop_createCompatibleTx_extra_content_is_threaded_through
         ]
     , testGroup
         "calcMinFeeRecursive"
@@ -130,6 +169,9 @@ tests =
         [ testProperty
             "underfunded transaction fails with TxBodyErrorBalanceNegative"
             prop_makeTransactionBodyAutoBalance_balance_negative
+        , testProperty
+            "zero ada balance with negative assets fails with TxBodyErrorBalanceNegative"
+            prop_makeTransactionBodyAutoBalance_fails_on_zero_ada_negative_assets
         ]
     , testGroup
         "evaluateTransaction"
@@ -148,6 +190,12 @@ tests =
         [ testProperty
             "balances a transaction with no outputs"
             prop_estimateBalancedTxBody_balances_without_outputs
+        , testProperty
+            "keeps native assets in the change output"
+            prop_estimateBalancedTxBody_keeps_native_assets_in_change
+        , testProperty
+            "fails when an output spends undeclared native assets"
+            prop_estimateBalancedTxBody_fails_on_undeclared_native_assets
         ]
     ]
 
@@ -533,6 +581,39 @@ genAutoBalanceNegativeTx era = do
           & Exp.setTxFee 0
   return (txBodyContent, utxo, changeAddr)
 
+-- | A UTxO whose ADA exactly matches the output, which also spends 3 tokens the UTxO lacks.
+genAutoBalanceZeroAdaNegativeAssetsTx
+  :: Exp.Era era
+  -> Gen
+       ( Exp.TxBodyContent (Exp.LedgerEra era)
+       , L.UTxO (Exp.LedgerEra era)
+       , Api.AddressInEra era
+       )
+genAutoBalanceZeroAdaNegativeAssetsTx era = do
+  let sbe = convert era
+  txIn <- genTxIn
+  addr <- genAddressInEra sbe
+  changeAddr <- genAddressInEra sbe
+  coin <- L.Coin <$> Gen.integral (Range.linear 2_000_000 10_000_000)
+  let policyId = L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
+      multiAsset = L.MultiAsset $ Map.singleton policyId (Map.singleton (Mary.AssetName "testtoken") 3)
+      ledgerTxIn = Api.toShelleyTxIn txIn
+      shelleyAddr = Api.toShelleyAddr addr
+      fundingTxOut =
+        Exp.obtainCommonConstraints era $
+          L.mkBasicTxOut shelleyAddr (L.MaryValue coin mempty)
+      utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
+      sendTxOut =
+        Exp.obtainCommonConstraints era $
+          Exp.TxOut $
+            L.mkBasicTxOut shelleyAddr (L.MaryValue coin multiAsset)
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [sendTxOut]
+          & Exp.setTxFee 0
+  return (txBodyContent, utxo, changeAddr)
+
 -- | Like 'genWithdrawalFundedTx' but with a tiny input (100 lovelace), well
 -- below the minimum transaction fee, and no surplus over @output - input@.
 -- Initial @change = input + withdrawal - output = input = 100@ (fee is still
@@ -774,6 +855,40 @@ prop_makeTransactionBodyAutoBalance_balance_negative = H.property $ do
       H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
         >> H.failure
 
+-- | A zero-ADA balance with a negative token quantity is a balance error, not a ledger exception.
+prop_makeTransactionBodyAutoBalance_fails_on_zero_ada_negative_assets :: Property
+prop_makeTransactionBodyAutoBalance_fails_on_zero_ada_negative_assets = H.property $ do
+  (txBodyContent, utxo, changeAddr) <-
+    H.forAllWith (const "<TxBodyContent, UTxO, AddressInEra>") $
+      genAutoBalanceZeroAdaNegativeAssetsTx Exp.ConwayEra
+  let systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
+      epochInfo =
+        Api.LedgerEpochInfo $
+          Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+  let result =
+        Exp.makeTransactionBodyAutoBalance
+          systemStart
+          epochInfo
+          exampleProtocolParams
+          mempty
+          mempty
+          utxo
+          txBodyContent
+          changeAddr
+          Nothing
+  case result of
+    Left err@(Exp.TxBodyErrorBalanceNegative coin _multiAsset) -> do
+      -- force the error fully: the pre-fix code embeds a thunk here that
+      -- throws a ledger error only when evaluated, not when merely matched
+      _ <- H.evalNF $ show err
+      coin === L.Coin 0
+    Left err -> do
+      _ <- H.evalNF $ show err
+      H.failure
+    Right _ ->
+      H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
+        >> H.failure
+
 -- | A well-funded transaction returns a positive fee from 'evaluateTransaction'.
 prop_evaluateTransaction_positive_fee :: Property
 prop_evaluateTransaction_positive_fee = H.property $ do
@@ -857,6 +972,94 @@ prop_estimateBalancedTxBody_balances_without_outputs = H.propertyOnce $ do
       H.annotate "Expected exactly one output"
       H.failure
 
+-- | 'estimateBalancedTxBody' folds surplus native assets into the change output
+-- alongside the surplus ada, rather than discarding them.
+prop_estimateBalancedTxBody_keeps_native_assets_in_change :: Property
+prop_estimateBalancedTxBody_keeps_native_assets_in_change = H.propertyOnce $ do
+  let era = Exp.ConwayEra
+      sbe = convert era
+      txIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      addr =
+        L.Addr
+          L.Testnet
+          (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+          L.StakeRefNull
+      policy = L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
+      tokens n = L.MultiAsset $ fromList [(policy, fromList [(Mary.AssetName "testtoken", n)])]
+      explicitOut = Exp.TxOut $ L.mkBasicTxOut addr (L.MaryValue (L.Coin 10_000_000) (tokens 3))
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [explicitOut]
+
+  balancedContent <-
+    H.leftFail $
+      Exp.estimateBalancedTxBody
+        era
+        txBodyContent
+        exampleProtocolParams
+        mempty
+        mempty
+        mempty
+        (L.Coin 0)
+        1
+        0
+        0
+        (Api.fromShelleyAddr sbe addr)
+        (L.MaryValue (L.Coin 150_000_000) (tokens 10))
+
+  case Exp.txOuts balancedContent of
+    [_, Exp.TxOut changeOut] -> do
+      changeOut ^. L.addrTxOutL === addr
+      let fee = Exp.txFee balancedContent
+          L.MaryValue changeCoin changeAssets = changeOut ^. L.valueTxOutL
+      H.assertWith fee (> L.Coin 0)
+      changeCoin === L.Coin 150_000_000 - 10_000_000 - fee
+      changeAssets === tokens 7
+    outs -> do
+      H.annotateShow outs
+      H.annotate "Expected exactly two outputs"
+      H.failure
+
+-- | 'estimateBalancedTxBody' rejects a transaction whose outputs spend native
+-- assets that are not present in the declared available value.
+prop_estimateBalancedTxBody_fails_on_undeclared_native_assets :: Property
+prop_estimateBalancedTxBody_fails_on_undeclared_native_assets = H.propertyOnce $ do
+  let era = Exp.ConwayEra
+      sbe = convert era
+      txIn = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
+      addr =
+        L.Addr
+          L.Testnet
+          (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+          L.StakeRefNull
+      policy = L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
+      tokens n = L.MultiAsset $ fromList [(policy, fromList [(Mary.AssetName "testtoken", n)])]
+      explicitOut = Exp.TxOut $ L.mkBasicTxOut addr (L.MaryValue (L.Coin 10_000_000) (tokens 3))
+      txBodyContent =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [explicitOut]
+
+  case Exp.estimateBalancedTxBody
+    era
+    txBodyContent
+    exampleProtocolParams
+    mempty
+    mempty
+    mempty
+    (L.Coin 0)
+    1
+    0
+    0
+    (Api.fromShelleyAddr sbe addr)
+    (L.MaryValue (L.Coin 150_000_000) mempty) of
+    Left (Exp.TxFeeEstimationBalanceError (Exp.TxBodyErrorBalanceNegative _ _)) -> H.success
+    Left err -> H.annotateShow err >> H.failure
+    Right _ ->
+      H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
+        >> H.failure
+
 -- | Evaluate a simple signed transaction, returning the result and UTxO.
 evalSimpleTx
   :: Gen
@@ -923,9 +1126,53 @@ prop_createCompatibleTx_preserves_all_certs = H.property $ do
   let sbe = convert Exp.ConwayEra
       inputCerts = Exp.mkTxCertificates Exp.ConwayEra allCerts
   Api.ShelleyTx _ ledgerTx <-
-    H.evalEither $ createCompatibleTx sbe [] [] mempty 0 (NoPParamsUpdate sbe) NoVotes inputCerts
+    H.evalEither $
+      createCompatibleTx sbe (defaultCompatibleTxBodyContent sbe){compatibleTxCertificates = inputCerts}
   let bodyCerts = ledgerTx ^. L.bodyTxL . L.certsTxBodyL
   Seq.length bodyCerts === expectedCount
+
+prop_estimateTransactionKeyWitnessCount_counts_dijkstra_guards :: Property
+prop_estimateTransactionKeyWitnessCount_counts_dijkstra_guards = H.property $ do
+  txIn <- H.forAll genTxIn
+  keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  scriptHash <- H.forAll genScriptHash
+  let Api.PaymentKeyHash ledgerKeyHash = keyHash
+      keyGuard = Api.RequireGuard (L.KeyHashObj (coerceKeyRole ledgerKeyHash))
+      scriptGuard = Api.RequireGuard (L.ScriptHashObj (Api.toShelleyScriptHash scriptHash))
+      estimate script =
+        Exp.estimateTransactionKeyWitnessCount @Exp.DijkstraEra $
+          Exp.defaultTxBodyContent
+            & Exp.setTxIns
+              [
+                ( txIn
+                , Exp.AnySimpleScriptWitness $
+                    Exp.SScript $
+                      Exp.SimpleScript $
+                        Api.toDijkstraNativeScript script
+                )
+              ]
+  estimate keyGuard === 1
+  estimate scriptGuard === 0
+  estimate (Api.RequireAllOf [keyGuard, scriptGuard]) === 1
+
+-- | Key-hash credentials in the body guards need a VKey witness, deduplicated
+-- against extra key witnesses; script-hash credentials need none.
+prop_estimateTransactionKeyWitnessCount_counts_body_guards :: Property
+prop_estimateTransactionKeyWitnessCount_counts_body_guards = H.property $ do
+  keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  scriptHash <- H.forAll genScriptHash
+  let Api.PaymentKeyHash ledgerKeyHash = keyHash
+      keyGuard = L.KeyHashObj (coerceKeyRole ledgerKeyHash)
+      scriptGuard = L.ScriptHashObj (Api.toShelleyScriptHash scriptHash)
+      estimate guards extraKeyWits =
+        Exp.estimateTransactionKeyWitnessCount @Exp.DijkstraEra $
+          Exp.defaultTxBodyContent
+            & Exp.setTxGuards (OSet.fromList guards)
+            & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses extraKeyWits)
+      baseline = estimate [] []
+  estimate [keyGuard] [] === baseline + 1
+  estimate [keyGuard] [keyHash] === baseline + 1
+  estimate [scriptGuard] [] === baseline
 
 -- | Regression test for: a key-credentialed voter (e.g. a key-hash DRep)
 -- requires a VKey witness to satisfy the ledger, but
@@ -1032,6 +1279,233 @@ prop_estimateTransactionKeyWitnessCount_counts_pool_owners = H.property $ do
         )
     )
     === 4
+
+-- | 'createCompatibleTx' must index spending redeemer pointers by the
+-- input's position in the final, sorted ledger input set, never by the
+-- order the caller supplied inputs in. The ledger stores tx inputs in a
+-- 'Data.Set.Set', not a list, so swapping the argument order of two
+-- plutus-witnessed inputs must not change which redeemer lands at which
+-- index.
+prop_createCompatibleTx_redeemer_indices_follow_sorted_inputs :: Property
+prop_createCompatibleTx_redeemer_indices_follow_sorted_inputs = H.property $ do
+  txIn1@(Api.TxIn txId (Api.TxIx txIx)) <- H.forAll genTxIn
+  let txIn2 = Api.TxIn txId (Api.TxIx (txIx + 1))
+
+      sbe = convert Exp.ConwayEra
+
+      mkRedeemer :: Integer -> Api.HashableScriptData
+      mkRedeemer n = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor n []
+
+      mkSpendingWitness redeemer =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusSpendingScriptWitness $
+            PlutusSpendingScriptWitnessV3 $
+              Exp.PlutusScriptWitness
+                Plutus.SPlutusV3
+                (Exp.PReferenceScript txIn1)
+                Exp.NoScriptDatum
+                redeemer
+                (Api.ExecutionUnits 0 0)
+
+      ins =
+        [ (txIn1, mkSpendingWitness (mkRedeemer 1))
+        , (txIn2, mkSpendingWitness (mkRedeemer 2))
+        ]
+
+      baseContent =
+        (defaultCompatibleTxBodyContent sbe)
+          { compatibleTxProtocolParams = Just exampleProtocolParams
+          , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
+          }
+
+      build orderedIns = createCompatibleTx sbe baseContent{compatibleTxIns = orderedIns}
+
+  Api.ShelleyTx _ forwardTx <- H.evalEither $ build ins
+  Api.ShelleyTx _ reversedTx <- H.evalEither $ build (reverse ins)
+
+  let forwardRedeemers = forwardTx ^. L.witsTxL . Alonzo.rdmrsTxWitsL
+      reversedRedeemers = reversedTx ^. L.witsTxL . Alonzo.rdmrsTxWitsL
+
+  -- Order-invariance is the core claim: if indices were derived from
+  -- argument-list position instead of sorted 'TxIn' order, reversing the
+  -- argument order would swap which redeemer lands at which index.
+  forwardRedeemers H.=== reversedRedeemers
+
+  -- Pin down the exact mapping too, so a different bug (e.g. always
+  -- indexing everything to 0) cannot slip through the check above.
+  --
+  -- 'txIn1' and 'txIn2' share a 'TxId' and only differ by 'TxIx' ('ix' vs
+  -- 'ix + 1'), so 'txIn1' sorts first: its redeemer must land at index 0,
+  -- 'txIn2''s at index 1.
+  let expectedRedeemers =
+        L.Redeemers $
+          Map.fromList
+            [
+              ( L.ConwaySpending (L.AsIx 0)
+              , (Api.toAlonzoData (mkRedeemer 1), Api.toAlonzoExUnits (Api.ExecutionUnits 0 0))
+              )
+            ,
+              ( L.ConwaySpending (L.AsIx 1)
+              , (Api.toAlonzoData (mkRedeemer 2), Api.toAlonzoExUnits (Api.ExecutionUnits 0 0))
+              )
+            ]
+
+  forwardRedeemers H.=== expectedRedeemers
+
+-- | An inline (non-reference) plutus spending script witness must land in
+-- the resulting ledger transaction's witness set ('L.scriptTxWitsL').
+prop_createCompatibleTx_inline_plutus_script_in_witness_set :: Property
+prop_createCompatibleTx_inline_plutus_script_in_witness_set = H.property $ do
+  txIn <- H.forAll genTxIn
+  scriptInEra <- H.forAll genPlutusScriptInEra
+  let sbe = convert Exp.ConwayEra
+
+      redeemer = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor 0 []
+
+      witness =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusSpendingScriptWitness $
+            PlutusSpendingScriptWitnessV3 $
+              Exp.PlutusScriptWitness
+                Plutus.SPlutusV3
+                (Exp.PScript scriptInEra)
+                Exp.NoScriptDatum
+                redeemer
+                (Api.ExecutionUnits 0 0)
+
+  Api.ShelleyTx _ ledgerTx <-
+    H.evalEither $
+      createCompatibleTx sbe $
+        (defaultCompatibleTxBodyContent sbe)
+          { compatibleTxIns = [(txIn, witness)]
+          , compatibleTxProtocolParams = Just exampleProtocolParams
+          , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
+          }
+
+  let scriptWits = ledgerTx ^. L.witsTxL . L.scriptTxWitsL
+      expectedHash = L.hashScript $ plutusScriptInEraToScript scriptInEra
+
+  H.assertWith scriptWits (not . null)
+  H.assertWith scriptWits (Map.member expectedHash)
+
+-- | A plutus-witnessed vote's script must land in the resulting ledger
+-- transaction's witness set, just like a plutus-witnessed certificate or
+-- spending input does. Regression test: 'createCompatibleTx' used to
+-- discard 'AnyVote''s witness map entirely, so a script-witnessed vote's
+-- script never made it into the tx.
+prop_createCompatibleTx_inline_plutus_vote_script_in_witness_set :: Property
+prop_createCompatibleTx_inline_plutus_vote_script_in_witness_set = H.property $ do
+  scriptInEra <- H.forAll genPlutusScriptInEra
+  voterKeyHash <- H.forAll $ Api.unDRepKeyHash <$> genVerificationKeyHash Api.AsDRepKey
+  L.TxIn govActionTxId _ <- Api.toShelleyTxIn <$> H.forAll genTxIn
+  let sbe = convert Exp.ConwayEra
+
+      voter = L.DRepVoter (L.KeyHashObj voterKeyHash)
+      govActionId = L.GovActionId govActionTxId (L.GovActionIx 0)
+      votingProcedure = L.VotingProcedure L.VoteYes SNothing
+      votingProcedures = L.VotingProcedures (Map.singleton voter (Map.singleton govActionId votingProcedure))
+
+      redeemer = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor 0 []
+
+      witness =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusVotingScriptWitness $
+            Exp.PlutusScriptWitness
+              Plutus.SPlutusV3
+              (Exp.PScript scriptInEra)
+              Exp.NoScriptDatum
+              redeemer
+              (Api.ExecutionUnits 0 0)
+
+  txVotingProcedures <-
+    H.leftFail $ Exp.mkTxVotingProcedures [(votingProcedures, witness)]
+
+  Api.ShelleyTx _ ledgerTx <-
+    H.evalEither $
+      createCompatibleTx sbe $
+        (defaultCompatibleTxBodyContent sbe)
+          { compatibleTxVotingProcedures = VotingProcedures Api.ConwayEraOnwardsConway txVotingProcedures
+          , compatibleTxProtocolParams = Just exampleProtocolParams
+          }
+
+  let scriptWits = ledgerTx ^. L.witsTxL . L.scriptTxWitsL
+      expectedHash = L.hashScript $ plutusScriptInEraToScript scriptInEra
+      redeemers = ledgerTx ^. L.witsTxL . Alonzo.rdmrsTxWitsL
+      expectedRedeemers =
+        L.Redeemers $
+          Map.singleton
+            (L.ConwayVoting (L.AsIx 0))
+            (Api.toAlonzoData redeemer, Api.toAlonzoExUnits (Api.ExecutionUnits 0 0))
+
+  H.assertWith scriptWits (not . null)
+  H.assertWith scriptWits (Map.member expectedHash)
+  redeemers H.=== expectedRedeemers
+  H.assertWith
+    (ledgerTx ^. L.bodyTxL . UnexportedLedger.scriptIntegrityHashTxBodyL)
+    (isJust . L.strictMaybeToMaybe)
+
+-- | 'createCompatibleTx' must reject plutus script witnesses when no
+-- protocol parameters were supplied, since those are required to compute
+-- the script integrity hash.
+prop_createCompatibleTx_missing_pparams_with_plutus_witness :: Property
+prop_createCompatibleTx_missing_pparams_with_plutus_witness = H.property $ do
+  txIn <- H.forAll genTxIn
+  let sbe = convert Exp.ConwayEra
+
+      redeemer = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor 0 []
+
+      witness =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusSpendingScriptWitness $
+            PlutusSpendingScriptWitnessV3 $
+              Exp.PlutusScriptWitness
+                Plutus.SPlutusV3
+                (Exp.PReferenceScript txIn)
+                Exp.NoScriptDatum
+                redeemer
+                (Api.ExecutionUnits 0 0)
+
+  case createCompatibleTx sbe $
+    (defaultCompatibleTxBodyContent sbe)
+      { compatibleTxIns = [(txIn, witness)]
+      , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
+      } of
+    Left CompatibleTxMissingScriptIntegrityPParams -> H.success
+    Right _ ->
+      H.annotate "Expected CompatibleTxMissingScriptIntegrityPParams but tx was built successfully"
+        >> H.failure
+
+-- | 'createCompatibleTx' must thread the collateral inputs, the validity
+-- interval's upper bound, and metadata parts of 'CompatibleTxBodyContent'
+-- into the resulting transaction (both the aux data hash on the body and
+-- the aux data itself on the tx).
+prop_createCompatibleTx_extra_content_is_threaded_through :: Property
+prop_createCompatibleTx_extra_content_is_threaded_through = H.property $ do
+  collateralTxIn <- H.forAll genTxIn
+  let sbe = convert Exp.ConwayEra
+
+      upperBound = Slotting.SlotNo 100
+
+      metadata = Api.TxMetadata $ Map.fromList [(1, Api.TxMetaText "createCompatibleTx")]
+
+  Api.ShelleyTx _ ledgerTx <-
+    H.evalEither $
+      createCompatibleTx sbe $
+        (defaultCompatibleTxBodyContent sbe)
+          { compatibleTxInsCollateral = [collateralTxIn]
+          , compatibleTxValidityUpperBound = Just upperBound
+          , compatibleTxMetadata = Api.TxMetadataInEra sbe metadata
+          , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
+          }
+
+  let ledgerBody = ledgerTx ^. L.bodyTxL
+
+  ledgerBody ^. UnexportedLedger.collateralInputsTxBodyL
+    H.=== Set.singleton (Api.toShelleyTxIn collateralTxIn)
+  ledgerBody ^. UnexportedLedger.vldtTxBodyL . UnexportedLedger.invalidHereAfterL
+    H.=== L.SJust upperBound
+  H.assertWith (ledgerBody ^. UnexportedLedger.auxDataHashTxBodyL) (isJust . L.strictMaybeToMaybe)
+  H.assertWith (ledgerTx ^. UnexportedLedger.auxDataTxL) (isJust . L.strictMaybeToMaybe)
 
 -- ---------------------------------------------------------------------------
 -- Shared cert generators

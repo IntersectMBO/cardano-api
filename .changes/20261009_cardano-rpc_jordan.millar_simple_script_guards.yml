@@ -1,0 +1,5 @@
+project: cardano-rpc
+pr: 1374
+kind:
+- bugfix
+description: Handle `RequireGuard` in the legacy simple script to UTxORPC converter, matching the ledger-direct converter by emitting an empty native script message until UTxORPC supports guards. Preserve the positions of guards nested in script lists.

@@ -50,6 +50,7 @@ module Cardano.Api.Tx.Internal.Output
 
     -- ** Utilities
   , validateTxOuts
+  , validateTxOutsReferenceScripts
   , prettyRenderTxOut
 
     -- ** Error types
@@ -246,6 +247,34 @@ validateTxOuts sbe txOuts = do
           outputDoesNotExceedMax era (txOutValueToValue v) txout
       | txout@(TxOut _ v _ _) <- txOuts
       ]
+
+-- | Rejects any output whose reference-script language the era does not
+-- support, instead of letting the ledger conversion drop it silently.
+validateTxOutsReferenceScripts
+  :: ()
+  => ShelleyBasedEra era
+  -> [TxOut CtxTx era]
+  -> Either TxOutputError ()
+validateTxOutsReferenceScripts sbe txOuts =
+  sequence_
+    [ referenceScriptLanguageSupported sbe refScript
+    | TxOut _ _ _ refScript <- txOuts
+    ]
+
+referenceScriptLanguageSupported
+  :: ()
+  => ShelleyBasedEra era
+  -> ReferenceScript era
+  -> Either TxOutputError ()
+referenceScriptLanguageSupported _ ReferenceScriptNone = Right ()
+referenceScriptLanguageSupported sbe (ReferenceScript _ script) =
+  case toScriptInEra sbe script of
+    Just _ -> Right ()
+    Nothing ->
+      Left $
+        TxOutputReferenceScriptLanguageNotSupportedInEra
+          script
+          (anyCardanoEra (toCardanoEra sbe))
 
 outputDoesNotExceedMax
   :: ()
@@ -1090,6 +1119,7 @@ binaryDataToScriptData BabbageEraOnwardsDijkstra d =
 data TxOutputError
   = TxOutputNegative !Quantity !TxOutInAnyEra
   | TxOutputOverflow !Quantity !TxOutInAnyEra
+  | TxOutputReferenceScriptLanguageNotSupportedInEra !ScriptInAnyLang !AnyCardanoEra
   deriving (Eq, Show)
 
 instance Error TxOutputError where
@@ -1104,3 +1134,12 @@ instance Error TxOutputError where
         <> pretty q
         <> " >= 2^64) in transaction output: "
         <> pretty txout
+    TxOutputReferenceScriptLanguageNotSupportedInEra (ScriptInAnyLang lang _) era ->
+      "Reference script language "
+        <> ( case lang of
+               PlutusScriptLanguage v -> pshow (toAlonzoLanguage (AnyPlutusScriptVersion v))
+               SimpleScriptLanguage -> "SimpleScript"
+           )
+        <> " is not supported in the "
+        <> pretty era
+        <> " era."

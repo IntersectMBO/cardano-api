@@ -1,5 +1,26 @@
 # Changelog for cardano-rpc
 
+## 11.5.0.0 -- 2026-10-07
+
+- The IPv4 address of a stake pool relay is no longer byte-reversed in the stake pool registration certificates of transactions returned over gRPC; this is fixed by requiring cardano-ledger-binary 1.9.1.0 (IntersectMBO/cardano-cli#1442).
+  (bugfix)
+  [PR 1360](https://github.com/intersectmbo/cardano-api/pull/1360)
+
+- `SearchUtxos` now rejects a predicate that names more than 20,000 address terms, with repeated addresses counting towards the limit, returning an `INVALID_ARGUMENT` status; `ReadUtxos` already applies the same limit to its keys.
+  `SearchUtxos` pages are now produced without first building and sorting the full set of matching UTxOs, which lowers the memory and CPU cost of each request for addresses holding many UTxOs.
+  Page contents and pagination tokens are unchanged.
+  Matching each UTxO against the predicate no longer gets slower as the predicate names more addresses, so a request naming many addresses costs no more per UTxO than one naming a single address.
+  (bugfix, optimisation)
+  [PR 1358](https://github.com/intersectmbo/cardano-api/pull/1358)
+
+- Add the `WatchMempool` method to the UTxO RPC submit service, which streams transactions entering the node's mempool, optionally filtered by a transaction predicate.
+  (feature, breaking)
+  [PR 1350](https://github.com/intersectmbo/cardano-api/pull/1350)
+
+- Add the `ReadMempool` method to the UTxO RPC submit service, which returns the transactions currently in the node's mempool.
+  (feature)
+  [PR 1348](https://github.com/intersectmbo/cardano-api/pull/1348)
+
 ## 11.4.0.0 -- 2026-09-16
 
 - The cardano-rpc gRPC server now implements the gRPC Server Reflection Protocol (grpc.reflection.v1 and grpc.reflection.v1alpha), so tools such as grpcurl, Postman and buf can list and describe the server's available services and message schemas without needing local .proto files.

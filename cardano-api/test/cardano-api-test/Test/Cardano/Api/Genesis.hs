@@ -21,6 +21,7 @@ import Codec.CBOR.Decoding qualified as CBOR
 import Codec.CBOR.Encoding qualified as CBOR
 import Codec.CBOR.Write qualified as CBOR
 import Control.Monad
+import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy qualified as LBS
 import Data.Int (Int64)
 import Data.Map.Strict qualified as M
@@ -90,6 +91,11 @@ prop_check_default_alonzo_genesis_roundtrips = H.propertyOnce $ do
     defaultCostModels' <- H.leftFail $ decodeCborInEraCostModels aeo defaultCostModelsBs
     H.note_ $ "Check that the default genesis is CBOR encoding roundtripping for era " <> show aeo
     defaultCostModels' === defaultCostModels
+
+prop_check_default_dijkstra_genesis_roundtrips :: Property
+prop_check_default_dijkstra_genesis_roundtrips = H.propertyOnce $ do
+  dijkstraGenesis <- H.leftFail . Aeson.eitherDecode $ Aeson.encode dijkstraGenesisDefaults
+  dijkstraGenesis === dijkstraGenesisDefaults
 
 -- * Utilities
 
@@ -175,6 +181,9 @@ tests =
   testGroup
     "Test.Cardano.Api.Genesis"
     [ testProperty "Default Alonzo Genesis roundtrips CBOR" prop_check_default_alonzo_genesis_roundtrips
+    , testProperty
+        "Default Dijkstra Genesis roundtrips JSON"
+        prop_check_default_dijkstra_genesis_roundtrips
     , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 175 params - Babbage" $
         prop_reading_plutus_v2_costmodel_cbor_roundtrip_era_sensitive BabbageEra Map175
     , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 175 params - Conway" $

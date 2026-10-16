@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -361,13 +360,12 @@ genPlutusV3Script = do
   let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
   return . PlutusScript PlutusScriptV3 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
 
--- TODO: This is not generating v4 scripts.
 genPlutusV4Script :: Gen (Script PlutusScriptV4)
 genPlutusV4Script = do
-  v3AlwaysSucceedsPlutusScriptHex <-
-    Gen.element [v3AlwaysSucceedsPlutusScriptDoubleEncoded, v3AlwaysSucceedsPlutusScript]
-  let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
-  return . PlutusScript PlutusScriptV4 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
+  v4AlwaysSucceedsPlutusScriptHex <-
+    Gen.element [v4AlwaysSucceedsPlutusScriptDoubleEncoded, v4AlwaysSucceedsPlutusScript]
+  let v4ScriptBytes = Base16.decodeLenient v4AlwaysSucceedsPlutusScriptHex
+  return . PlutusScript PlutusScriptV4 . PlutusScriptSerialised $ SBS.toShort v4ScriptBytes
 
 genValidPlutusV3Script :: Gen (Script PlutusScriptV3)
 genValidPlutusV3Script = do
@@ -376,13 +374,12 @@ genValidPlutusV3Script = do
   let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
   return . PlutusScript PlutusScriptV3 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
 
--- TODO: This is not generating v4 scripts.
 genValidPlutusV4Script :: Gen (Script PlutusScriptV4)
 genValidPlutusV4Script = do
-  v3AlwaysSucceedsPlutusScriptHex <-
-    Gen.element [v3AlwaysSucceedsPlutusScript]
-  let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
-  return . PlutusScript PlutusScriptV4 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
+  v4AlwaysSucceedsPlutusScriptHex <-
+    Gen.element [v4AlwaysSucceedsPlutusScript]
+  let v4ScriptBytes = Base16.decodeLenient v4AlwaysSucceedsPlutusScriptHex
+  return . PlutusScript PlutusScriptV4 . PlutusScriptSerialised $ SBS.toShort v4ScriptBytes
 
 genScriptDataSchema :: Gen ScriptDataJsonSchema
 genScriptDataSchema = Gen.element [ScriptDataJsonNoSchema, ScriptDataJsonDetailedSchema]
@@ -1527,7 +1524,7 @@ genPlutusScriptInEra = do
   v3AlwaysSucceedsPlutusScriptHex <-
     Gen.element [v3AlwaysSucceedsPlutusScript, v3AlwaysSucceedsPlutusScriptDoubleEncoded]
   let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
-  case Exp.deserialisePlutusScriptInEra L.SPlutusV3 v3ScriptBytes of
+  case Exp.deserialisePlutusScriptInEra v3ScriptBytes of
     Right p -> return p
     Left e -> error $ show e
 
@@ -1600,27 +1597,9 @@ genScriptWitnessForStake sbe = do
         scriptRedeemer
         <$> genExecutionUnits
 
-genAnyPlutusScriptVersion :: Gen AnyPlutusScriptVersion
-genAnyPlutusScriptVersion = do
-  Gen.element [minBound .. maxBound]
-
-plutusScriptLangaugeInEra
-  :: Exp.Era era -> PlutusScriptVersion lang -> ScriptLanguageInEra lang era
-plutusScriptLangaugeInEra Exp.DijkstraEra l =
-  case l of
-    PlutusScriptV1 -> PlutusScriptV1InDijkstra
-    PlutusScriptV2 -> PlutusScriptV2InDijkstra
-    PlutusScriptV3 -> PlutusScriptV3InDijkstra
-    PlutusScriptV4 -> PlutusScriptV4InDijkstra
-plutusScriptLangaugeInEra Exp.ConwayEra l =
-  case l of
-    PlutusScriptV1 -> PlutusScriptV1InConway
-    PlutusScriptV2 -> PlutusScriptV2InConway
-    PlutusScriptV3 -> PlutusScriptV3InConway
-    PlutusScriptV4 -> case undefined :: ScriptLanguageInEra PlutusScriptV4 ConwayEra of {}
-
 genApiPlutusScriptWitness
-  :: WitCtx witctx -> Exp.Era era -> Gen (Api.ScriptWitness witctx era)
+  :: forall witctx era
+   . WitCtx witctx -> Exp.Era era -> Gen (Api.ScriptWitness witctx era)
 genApiPlutusScriptWitness witCtx era = do
   dat <- case witCtx of
     WitCtxTxIn -> do
@@ -1632,24 +1611,36 @@ genApiPlutusScriptWitness witCtx era = do
     WitCtxStake -> do
       pure NoScriptDatumForStake
 
-  AnyPlutusScriptVersion lang <- genAnyPlutusScriptVersion
-  PlutusScript plutusScriptVersion' plutusScript <-
-    PlutusScript lang <$> genValidPlutusScript lang
+  let genFor
+        :: forall lang
+         . IsPlutusScriptLanguage lang
+        => PlutusScriptVersion lang
+        -> ScriptLanguageInEra lang era
+        -> Gen (Api.ScriptWitness witctx era)
+      genFor lang langInEra = do
+        PlutusScript plutusScriptVersion' plutusScript <-
+          PlutusScript lang <$> genValidPlutusScript lang
 
-  plutusScriptOrReferenceInput <-
-    Gen.choice
-      [ pure $ PScript plutusScript
-      , PReferenceScript <$> genTxIn
-      ]
+        plutusScriptOrReferenceInput <-
+          Gen.choice
+            [ pure $ PScript plutusScript
+            , PReferenceScript <$> genTxIn
+            ]
 
-  scriptRedeemer <- genHashableScriptData
-  PlutusScriptWitness
-    (plutusScriptLangaugeInEra era lang)
-    plutusScriptVersion'
-    plutusScriptOrReferenceInput
-    dat
-    scriptRedeemer
-    <$> genExecutionUnits
+        scriptRedeemer <- genHashableScriptData
+        PlutusScriptWitness
+          langInEra
+          plutusScriptVersion'
+          plutusScriptOrReferenceInput
+          dat
+          scriptRedeemer
+          <$> genExecutionUnits
+
+  Gen.choice
+    [ genFor lang langInEra
+    | AnyPlutusScriptVersion lang <- [minBound .. maxBound]
+    , Just langInEra <- [scriptLanguageSupportedInEra (convert era) (PlutusScriptLanguage lang)]
+    ]
 
 genScriptWitnessForMint :: ShelleyBasedEra era -> Gen (Api.ScriptWitness WitCtxMint era)
 genScriptWitnessForMint sbe = do

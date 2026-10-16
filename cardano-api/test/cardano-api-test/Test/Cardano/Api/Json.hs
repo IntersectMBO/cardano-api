@@ -12,6 +12,7 @@ import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Ledger.Core qualified as L
 
 import Data.Aeson (eitherDecode, encode)
+import Data.List (isInfixOf)
 
 import Test.Gen.Cardano.Api (genAlonzoGenesis)
 import Test.Gen.Cardano.Api.Typed
@@ -28,6 +29,31 @@ prop_json_roundtrip_alonzo_genesis :: Property
 prop_json_roundtrip_alonzo_genesis = H.property $ do
   genesis <- forAll genAlonzoGenesis
   tripping genesis encode eitherDecode
+
+prop_json_simple_script_atleast_error :: Property
+prop_json_simple_script_atleast_error = H.property $ do
+  case eitherDecode "{\"type\":\"atLeast\",\"required\":5,\"scripts\":[]}" :: Either String SimpleScript of
+    Left err -> do
+      H.assert $ "Required number of script signatures exceeds" `isInfixOf` err
+      H.assert $ not ("guard" `isInfixOf` err)
+    Right s -> H.annotateShow s >> H.failure
+
+prop_json_simple_script_unknown_type :: Property
+prop_json_simple_script_unknown_type = H.property $ do
+  case eitherDecode "{\"type\":\"bogus\"}" :: Either String SimpleScript of
+    Left err -> do
+      H.assert $ "Unknown simple script type \"bogus\"" `isInfixOf` err
+      H.assert $ "atLeast" `isInfixOf` err
+    Right s -> H.annotateShow s >> H.failure
+
+prop_json_simple_script_nested_atleast_error :: Property
+prop_json_simple_script_nested_atleast_error = H.property $ do
+  case eitherDecode "{\"type\":\"all\",\"scripts\":[{\"type\":\"atLeast\",\"required\":2,\"scripts\":[]}]}"
+         :: Either String SimpleScript of
+    Left err -> do
+      H.assert $ "Required number of script signatures exceeds" `isInfixOf` err
+      H.assert $ not ("Unknown simple script type" `isInfixOf` err)
+    Right s -> H.annotateShow s >> H.failure
 
 prop_json_roundtrip_utxo :: Property
 prop_json_roundtrip_utxo = H.property $ do
@@ -145,6 +171,13 @@ tests =
     , testProperty "json roundtrip utxo" prop_json_roundtrip_utxo
     , testProperty "json roundtrip reference scripts" prop_json_roundtrip_reference_scripts
     , testProperty "json roundtrip txoutvalue" prop_json_roundtrip_txoutvalue
+    , testProperty
+        "json simple script atLeast reports its own error"
+        prop_json_simple_script_atleast_error
+    , testProperty "json simple script unknown type" prop_json_simple_script_unknown_type
+    , testProperty
+        "json simple script nested atLeast reports its own error"
+        prop_json_simple_script_nested_atleast_error
     , testProperty "json roundtrip txout tx context" prop_json_roundtrip_txout_tx_context
     , testProperty "json roundtrip txout utxo context" prop_json_roundtrip_txout_utxo_context
     , testProperty

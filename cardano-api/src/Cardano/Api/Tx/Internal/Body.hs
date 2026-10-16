@@ -1263,6 +1263,12 @@ createTransactionBody
   -> Either TxBodyError (TxBody era)
 createTransactionBody sbe bc =
   shelleyBasedEraConstraints sbe $ do
+    -- Checked up front so a reference script with an unsupported language is
+    -- never silently dropped by the ledger 'TxOut' conversion further down.
+    first TxBodyOutputError $
+      validateTxOutsReferenceScripts sbe $
+        txOuts bc
+          <> [txout | TxReturnCollateral _ txout <- [txReturnCollateral bc]]
     (sData, mScriptIntegrityHash, scripts) <-
       forEraInEon
         (convert sbe)
@@ -1333,7 +1339,7 @@ createTransactionBody sbe bc =
 
     setReqSignerHashes <-
       let keyWits = convExtraKeyWitnesses apiExtraKeyWitnesses
-       in monoidForEraInEonA era $ \w -> case w of
+       in monoidForEraInEonA era $ \case
             -- Dijkstra replaced required signer hashes with guards, and a key-hash
             -- guard makes the ledger demand that key's signature: translate, appending
             -- so any other guards stay intact.
@@ -2596,6 +2602,8 @@ toAuxiliaryData sbe txMetadata txAuxScripts =
         ShelleyBasedEraConway ->
           guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
         ShelleyBasedEraDijkstra ->
+          -- TODO: cardano-ledger-dijkstra 0.4.0.0 reads auxiliary scripts up to eraMaxLanguage
+          -- (still PlutusV3), so PlutusV4 is dropped on read-back; fixed by ledger PR 6109.
           guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
 
 -- ----------------------------------------------------------------------------

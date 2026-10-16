@@ -249,7 +249,7 @@ estimateBalancedTxBody
   -> AddressInEra era
   -- ^ Change address.
   -> L.Value (LedgerEra era)
-  -- ^ Total value of UTXOs being spent.
+  -- ^ Total value of the UTxOs being spent, including native assets.
   -> Either (TxFeeEstimationError era) (TxBodyContent (LedgerEra era))
 estimateBalancedTxBody
   w
@@ -313,7 +313,7 @@ estimateBalancedTxBody'
   -> AddressInEra era
   -- ^ Change address.
   -> L.MaryValue
-  -- ^ Total value of UTXOs being spent.
+  -- ^ Total value of the UTxOs being spent, including native assets.
   -> Either (TxFeeEstimationError era) (TxBodyContent (LedgerEra era))
 estimateBalancedTxBody'
   txbodycontent
@@ -381,6 +381,15 @@ estimateBalancedTxBody'
     let
       partialChange =
         calculatePartialChangeValue availableUTxOValue txbodycontent1
+
+    -- Check the asset balance before building the change output: the ledger compacts
+    -- outputs eagerly and errors on negative quantities.
+    let L.MaryValue partialCoin partialMultiAsset = partialChange
+    unless (L.pointwise (>=) (L.MaryValue (L.Coin 0) partialMultiAsset) mempty) $
+      Left . TxFeeEstimationBalanceError $
+        TxBodyErrorBalanceNegative partialCoin partialMultiAsset
+
+    let
       maxLovelaceChange = L.Coin (2 ^ (64 :: Integer)) - 1
       changeWithMaxLovelace = L.modifyCoin (const maxLovelaceChange) partialChange
       changeTxOut :: L.TxOut (LedgerEra era)
@@ -439,8 +448,7 @@ estimateBalancedTxBody'
             }
 
     let fakeUTxO =
-          createFakeUTxO (toShelleyAddr changeaddr) txbodycontent1 $
-            L.coin availableUTxOValue
+          createFakeUTxO (toShelleyAddr changeaddr) txbodycontent1 availableUTxOValue
         balance :: Ledger.Value (LedgerEra era) =
           evaluateTransactionBalance pparams poolids stakeDelegDeposits drepDelegDeposits fakeUTxO txbody2
 
@@ -499,6 +507,9 @@ checkNonNegative bpparams txout@(TxOut balance) = do
       isPositiveValue = L.pointwise (>) outValue mempty
   if
     | L.isZero outValue -> pure Empty -- empty TxOut - ok, it's removed at the end
+    -- Negative asset quantities must be rejected before calculateMinimumUTxO compacts the value.
+    | not (L.pointwise (>=) (L.MaryValue (L.Coin 0) multiAsset) mempty) ->
+        Left $ TxBodyErrorBalanceNegative coin multiAsset
     | L.isZero coin ->
         -- no ADA, just non-ADA assets: positive lovelace is required in such case
         Left $
@@ -666,29 +677,20 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits _drepDelegDeposits utxo
   lookupDelegDeposit stakeCred =
     Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
 
--- | Build a single-entry UTxO for the first input holding the declared total ADA, so the balance
--- can be evaluated without the real UTxO set. The first output is the template, or a plain
--- output at the change address when there are no outputs. Native assets outside the first
--- output are not represented.
--- TODO: Include multiassets
+-- | Build a single-entry UTxO for the first input holding the declared available value at the
+-- change address, so the balance can be evaluated without the real UTxO set.
 createFakeUTxO
   :: L.EraTxOut era
   => L.Addr
-  -- ^ The change address used when there are no outputs.
+  -- ^ The change address, used as the address of the fake entry.
   -> TxBodyContent era
   -- ^ The transaction body content.
-  -> Coin
-  -- ^ The total ADA declared by the caller.
+  -> L.Value era
+  -- ^ The value available at the inputs, as declared by the caller.
   -> L.UTxO era
-createFakeUTxO changeAddress txbodycontent totalAdaInUTxO = do
-  let singleTxIn = maybe [] (return . toShelleyTxIn . fst) $ List.uncons [txin | (txin, _) <- txIns txbodycontent]
-      singleTxOut =
-        maybe
-          [L.mkBasicTxOut changeAddress (L.inject totalAdaInUTxO)]
-          (\(TxOut firstOut, _rest) -> return $ firstOut & L.coinTxOutL .~ totalAdaInUTxO)
-          . List.uncons
-          $ txOuts txbodycontent
-  L.UTxO . fromList $ zip singleTxIn singleTxOut
+createFakeUTxO changeAddress txbodycontent availableValue = do
+  let fakeTxOut = L.mkBasicTxOut changeAddress availableValue
+  L.UTxO $ Map.fromList [(toShelleyTxIn txin, fakeTxOut) | (txin, _) <- take 1 $ txIns txbodycontent]
 
 -- | Whether the transaction contains any Plutus script witness. The ledger
 -- requires collateral only for transactions that run Plutus scripts.
@@ -1787,6 +1789,7 @@ estimateTransactionKeyWitnessCount
     { txIns
     , txInsCollateral
     , txExtraKeyWits
+    , txGuards
     , txWithdrawals
     , txCertificates
     , txProposalProcedures
@@ -1805,7 +1808,11 @@ estimateTransactionKeyWitnessCount
     -- 'Cardano.Ledger.Conway.UTxO.getConwayWitsVKeyNeeded' unions them.
     knowableKeyHashes :: Set (L.KeyHash L.Witness)
     knowableKeyHashes =
-      extraKeyHashes <> withdrawalKeyHashes <> certificateKeyHashes <> voteKeyHashes
+      extraKeyHashes <> guardKeyHashes <> withdrawalKeyHashes <> certificateKeyHashes <> voteKeyHashes
+
+    -- Dijkstra requires a VKey witness for every key-hash credential in the body guards.
+    guardKeyHashes :: Set (L.KeyHash L.Witness)
+    guardKeyHashes = Set.fromList $ mapMaybe credKeyHashWitness $ toList txGuards
 
     extraKeyHashes :: Set (L.KeyHash L.Witness)
     extraKeyHashes = case txExtraKeyWits of
@@ -1850,8 +1857,9 @@ estimateTransactionKeyWitnessCount
     estimateTxInWitnesses (_, AnyKeyWitnessPlaceholder) = 1
     estimateTxInWitnesses (_, AnySimpleScriptWitness (SScript (SimpleScript simpleScript))) =
       maxWitnessesInSimpleScript $
-        obtainCommonConstraints (useEra @era) $
-          Old.fromAllegraTimelock simpleScript
+        case useEra @era of
+          ConwayEra -> Old.fromAllegraTimelock simpleScript
+          DijkstraEra -> Old.fromDijkstraNativeScript simpleScript
     estimateTxInWitnesses (_, AnySimpleScriptWitness (SReferenceScript _)) = 0
     estimateTxInWitnesses (_, AnyPlutusScriptWitness{}) = 0
     -- This is a rough conservative estimate of the maximum number of witnesses
@@ -1868,6 +1876,9 @@ estimateTransactionKeyWitnessCount
     maxWitnessesInSimpleScript (Old.RequireAllOf simpleScripts) = sum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (Old.RequireAnyOf simpleScripts) = maximum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (Old.RequireMOf n simpleScripts) = sum $ take n $ sortBy (comparing Down) (map maxWitnessesInSimpleScript simpleScripts)
+    -- Count the key witness directly identified by the guard credential.
+    -- Any signer requirements inside a referenced script are not inferred here.
+    maxWitnessesInSimpleScript (Old.RequireGuard cred) = maybe 0 (const 1) (credKeyHashWitness cred)
 
     -- Mirrors ledger's 'Cardano.Ledger.Conway.UTxO.voterWitnesses': a committee or
     -- DRep voter needs a VKey witness only when its credential is key-based.

@@ -82,6 +82,8 @@ module Cardano.Api.Plutus
   , fromShelleyMultiSig
   , toAllegraTimelock
   , fromAllegraTimelock
+  , toDijkstraNativeScript
+  , fromDijkstraNativeScript
   , toAlonzoExUnits
   , fromAlonzoExUnits
   , toShelleyScriptHash

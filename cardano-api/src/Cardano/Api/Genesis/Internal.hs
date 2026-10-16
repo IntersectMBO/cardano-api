@@ -212,7 +212,7 @@ dijkstraGenesisDefaults =
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
           , udppMaxPledgeLeverage = MaxPledgeLeverage SNothing
           , udppMinPoolMargin = fromJust $ boundRational 0.015
-          , udppPlutusV4CostModel = testingCostModel PlutusV4
+          , udppPlutusV4CostModel = plutusV4CostModel
           , -- Feasible values from CIP-164 Table 7
             udppLeiosAnnouncementPeriodLength = Milliseconds32 1_000 -- L_hdr
           , udppLeiosVotePeriodLength = Milliseconds32 4_000 -- L_vote
@@ -235,6 +235,15 @@ dijkstraGenesisDefaults =
           , udppRefInputsCostPerDatumByte = CoinPerByte (L.CompactCoin 0)
           }
     }
+ where
+  -- Genesis files must have exactly the starting number of cost model parameters
+  plutusV4CostModel :: L.CostModel
+  plutusV4CostModel =
+    either (error . show) id
+      . L.mkCostModel PlutusV4
+      . take (L.costModelInitParamCount PlutusV4)
+      . L.getCostModelParams
+      $ testingCostModel PlutusV4
 
 -- | Some reasonable starting defaults for constructing a 'ConwayGenesis'.
 -- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs

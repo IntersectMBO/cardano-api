@@ -91,7 +91,7 @@ nix-shell cardano-rpc/quickstart/shell.nix
 or fetch them ad hoc:
 
 ```bash
-nix shell nixpkgs#buf nixpkgs#grpcurl
+nix shell nixpkgs#buf nixpkgs#grpcurl nixpkgs#jq nixpkgs#unixtools.xxd
 ```
 
 The server supports gRPC reflection, so it can describe its own services and methods; none of the commands below need local schema files (the `.proto` files describing the API).
@@ -133,6 +133,27 @@ buf curl \
   --protocol grpc --http2-prior-knowledge -d '{}' \
   http://localhost:50051/utxorpc.v1beta.query.QueryService/ReadParams
 ```
+
+#### Submit a transaction
+
+To submit, you need a signed transaction.
+Build and sign one with `cardano-cli` as usual; the file it writes is a text envelope whose `cborHex` field holds the CBOR bytes.
+grpcurl encodes `bytes` fields as base64 in JSON, so wrap the CBOR in a `raw` field and send it:
+
+```bash
+jq -n --arg tx "$(jq -r .cborHex tx.signed | xxd -r -p | base64 | tr -d '\n')" '{tx: {raw: $tx}}' | \
+  grpcurl -plaintext -d @ localhost:50051 utxorpc.v1beta.submit.SubmitService/SubmitTx
+```
+
+The reply's `ref` field is the transaction id, base64 encoded.
+Decode it to the usual hex form:
+
+```bash
+echo '<ref value from the reply>' | base64 -d | xxd -p -c 32
+```
+
+The server decodes the transaction for the node's current era, so it must be built for that era.
+A rejected transaction comes back as a gRPC error whose message carries the reason.
 
 grpcurl and buf alone are enough to explore every implemented method; the language quickstarts below are only needed if you want to call the API from code.
 
