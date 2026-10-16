@@ -275,6 +275,20 @@
                   proto-lens-protobuf-types.components.library.build-tools = [pkgs.buildPackages.protobuf];
                 };
             })
+            ({
+              lib,
+              pkgs,
+              ...
+            }:
+              lib.mkIf pkgs.stdenv.hostPlatform.isWindows {
+                # unix-compat, which cardano-config brings in through trace-dispatcher,
+                # asks for msvcrt on Windows, but the toolchain links ucrt: the two C
+                # runtimes define the same symbols (__getmainargs, _onexit, tzset, ...),
+                # so no executable links. cardano-node carries the same fix.
+                packages.unix-compat.postPatch = ''
+                  sed -i 's/msvcrt//g' unix-compat.cabal
+                '';
+              })
           ];
         });
         # ... and construct a flake from the cabal project
