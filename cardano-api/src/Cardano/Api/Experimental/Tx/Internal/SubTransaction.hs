@@ -78,7 +78,7 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
 import Cardano.Ledger.Core qualified as L (TxLevel (..))
 import Cardano.Ledger.Dijkstra.TxBody qualified as L
-  ( DijkstraEraTxBody (accountBalanceIntervalsTxBodyL, requiredTopLevelGuardsL)
+  ( DijkstraEraTxBody (accountBalanceIntervalsTxBodyL, requiredTopLevelGuardsTxBodyL)
   )
 
 import Data.ByteString.Lazy qualified as LBS
@@ -182,7 +182,7 @@ makeUnsignedSubTx st = do
           & L.treasuryDonationTxBodyL .~ fromMaybe (L.Coin 0) (subTxTreasuryDonation st)
           & L.currentTreasuryValueTxBodyL .~ L.maybeToStrictMaybe (subTxCurrentTreasuryValue st)
           & L.guardsTxBodyL .~ subTxGuards st
-          & L.requiredTopLevelGuardsL .~ subTxRequiredTopLevelGuards st
+          & L.requiredTopLevelGuardsTxBodyL .~ subTxRequiredTopLevelGuards st
           & L.directDepositsTxBodyL .~ subTxDirectDeposits st
           & L.accountBalanceIntervalsTxBodyL .~ subTxAccountBalanceIntervals st
 
