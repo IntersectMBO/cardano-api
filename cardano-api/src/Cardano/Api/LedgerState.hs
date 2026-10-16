@@ -68,6 +68,18 @@ module Cardano.Api.LedgerState
 
     -- * Node Config
   , NodeConfig (..)
+  , ncPBftSignatureThreshold
+  , ncByronGenesisFile
+  , ncByronGenesisHash
+  , ncShelleyGenesisFile
+  , ncShelleyGenesisHash
+  , ncAlonzoGenesisFile
+  , ncAlonzoGenesisHash
+  , ncConwayGenesisFile
+  , ncConwayGenesisHash
+  , ncRequiresNetworkMagic
+  , ncByronProtocolVersion
+  , ncHardForkTriggers
 
     -- ** Network Config
   , NodeConfigFile
@@ -1118,48 +1130,14 @@ readNodeConfig (File ncf) = do
         )
       $ handle (\(e :: Cfg.ConfigurationParsingError) -> pure . Left . Text.pack $ show e)
       $ Right . fst <$> Cfg.parseConfigurationFiles ncf
+  -- No consistency checks: 'Cfg.defaultConfigChecks' are about running a node
+  -- (gRPC, connection limits, peer targets, snapshots), not about the genesis
+  -- files and hard fork settings read here, and some of them depend on the
+  -- node's command line, which is not given here.
   (nc, _warnings) <-
     liftEither . first textShow $
       Cfg.resolveConfigurationWith [] (Cfg.defaultCliArgs ncf) fromFile
-  pure $ fromCardanoConfig ncf nc
-
--- | The 'NodeConfig' of a configuration @cardano-config@ has read from the given
--- file.
---
--- The Byron PBFT signature threshold and the Byron protocol version a node
--- endorses are not part of a @cardano-config@ configuration: like the node, this
--- uses the consensus default threshold and version 1.0.0. Neither affects
--- reading or applying blocks.
-fromCardanoConfig :: FilePath -> Cfg.NodeConfiguration -> NodeConfig
-fromCardanoConfig ncf nc =
-  NodeConfig
-    { ncPBftSignatureThreshold = Nothing
-    , ncByronGenesisFile = genesisFile byronFile
-    , ncByronGenesisHash =
-        Just . GenesisHashByron . Cardano.Crypto.Hash.Class.hashToTextAsHex $ Cfg.hash byronFile
-    , ncShelleyGenesisFile = genesisFile shelleyFile
-    , ncShelleyGenesisHash = Just . GenesisHashShelley $ Cfg.hash shelleyFile
-    , ncAlonzoGenesisFile = genesisFile alonzoFile
-    , ncAlonzoGenesisHash = Just . GenesisHashAlonzo $ Cfg.hash alonzoFile
-    , ncConwayGenesisFile = genesisFile conwayFile
-    , ncConwayGenesisHash = Just . GenesisHashConway $ Cfg.hash conwayFile
-    , ncRequiresNetworkMagic =
-        case Cfg.byronReqNetworkMagic byron of
-          Ledger.SJust Cfg.RequiresMagic -> Cardano.Crypto.RequiresMagic
-          _ -> Cardano.Crypto.RequiresNoMagic
-    , ncByronProtocolVersion = Cardano.Chain.Update.ProtocolVersion 1 0 0
-    , ncHardForkTriggers = hardForkTriggers $ Cfg.testingConfiguration nc
-    , ncConfiguration = nc
-    }
- where
-  protocol = Cfg.protocolConfiguration nc
-  byron = Cfg.byronGenesis protocol
-  byronFile = Cfg.byronGenesisFile byron
-  shelleyFile = Cfg.shelleyGenesis protocol
-  alonzoFile = Cfg.alonzoGenesis protocol
-  conwayFile = Cfg.conwayGenesis protocol
-  genesisFile :: Cfg.Hashed FilePath -> File content 'In
-  genesisFile = File . mkAdjustPath ncf . Cfg.hashed
+  pure $ NodeConfig nc
 
 -- | The hard fork triggers of a testing configuration: for each era, the epoch
 -- the configuration gives, and otherwise the era's default protocol version.
@@ -1183,22 +1161,102 @@ hardForkTriggers testing =
       (Consensus.CardanoTriggerHardForkAtEpoch . Slot.EpochNo)
       . Ledger.strictMaybeToMaybe
 
-data NodeConfig = NodeConfig
-  { ncPBftSignatureThreshold :: !(Maybe Double)
-  , ncByronGenesisFile :: !(File ByronGenesisConfig 'In)
-  , ncByronGenesisHash :: !(Maybe GenesisHashByron)
-  , ncShelleyGenesisFile :: !(File ShelleyGenesisConfig 'In)
-  , ncShelleyGenesisHash :: !(Maybe GenesisHashShelley)
-  , ncAlonzoGenesisFile :: !(File AlonzoGenesis 'In)
-  , ncAlonzoGenesisHash :: !(Maybe GenesisHashAlonzo)
-  , ncConwayGenesisFile :: !(File ConwayGenesisConfig 'In)
-  , ncConwayGenesisHash :: !(Maybe GenesisHashConway)
-  , ncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
-  , ncByronProtocolVersion :: !Cardano.Chain.Update.ProtocolVersion
-  , ncHardForkTriggers :: !Consensus.CardanoHardForkTriggers
-  , ncConfiguration :: !Cfg.NodeConfiguration
+-- | A node configuration, as @cardano-config@ read it. The functions below give
+-- the parts of it this library uses.
+newtype NodeConfig = NodeConfig
+  { ncConfiguration :: Cfg.NodeConfiguration
   -- ^ The configuration as @cardano-config@ read it, genesis files included.
   }
+
+-- | The Byron PBFT signature threshold: always 'Nothing', so the consensus
+-- default applies. A @cardano-config@ configuration has no such setting (reading
+-- a flat configuration drops its @PBftSignatureThreshold@), and the node uses
+-- the default too for a configuration in the @cardano-config@ format. It does
+-- not affect reading or applying blocks.
+ncPBftSignatureThreshold :: NodeConfig -> Maybe Double
+ncPBftSignatureThreshold _ = Nothing
+
+-- | The Byron protocol version a node endorses: always 1.0.0. A
+-- @cardano-config@ configuration has no such setting (reading a flat
+-- configuration drops its @LastKnownBlockVersion-Major@, @-Minor@ and @-Alt@),
+-- and the node uses 1.0.0 too for a configuration in the @cardano-config@
+-- format. It does not affect reading or applying blocks.
+ncByronProtocolVersion :: NodeConfig -> Cardano.Chain.Update.ProtocolVersion
+ncByronProtocolVersion _ = Cardano.Chain.Update.ProtocolVersion 1 0 0
+
+-- | The Byron genesis file, relative to the directory of the configuration file
+-- if the configuration names a relative path.
+ncByronGenesisFile :: NodeConfig -> File ByronGenesisConfig 'In
+ncByronGenesisFile = genesisFile (Cfg.byronGenesisFile . Cfg.byronGenesis)
+
+-- | The hash of the Byron genesis file, which 'readNodeConfig' has checked.
+-- Always present.
+ncByronGenesisHash :: NodeConfig -> Maybe GenesisHashByron
+ncByronGenesisHash =
+  Just
+    . GenesisHashByron
+    . Cardano.Crypto.Hash.Class.hashToTextAsHex
+    . Cfg.hash
+    . genesisReference (Cfg.byronGenesisFile . Cfg.byronGenesis)
+
+-- | The Shelley genesis file, relative to the directory of the configuration
+-- file if the configuration names a relative path.
+ncShelleyGenesisFile :: NodeConfig -> File ShelleyGenesisConfig 'In
+ncShelleyGenesisFile = genesisFile Cfg.shelleyGenesis
+
+-- | The hash of the Shelley genesis file, which 'readNodeConfig' has checked.
+-- Always present.
+ncShelleyGenesisHash :: NodeConfig -> Maybe GenesisHashShelley
+ncShelleyGenesisHash = Just . GenesisHashShelley . Cfg.hash . genesisReference Cfg.shelleyGenesis
+
+-- | The Alonzo genesis file, relative to the directory of the configuration file
+-- if the configuration names a relative path.
+ncAlonzoGenesisFile :: NodeConfig -> File AlonzoGenesis 'In
+ncAlonzoGenesisFile = genesisFile Cfg.alonzoGenesis
+
+-- | The hash of the Alonzo genesis file, which 'readNodeConfig' has checked.
+-- Always present.
+ncAlonzoGenesisHash :: NodeConfig -> Maybe GenesisHashAlonzo
+ncAlonzoGenesisHash = Just . GenesisHashAlonzo . Cfg.hash . genesisReference Cfg.alonzoGenesis
+
+-- | The Conway genesis file, relative to the directory of the configuration file
+-- if the configuration names a relative path.
+ncConwayGenesisFile :: NodeConfig -> File ConwayGenesisConfig 'In
+ncConwayGenesisFile = genesisFile Cfg.conwayGenesis
+
+-- | The hash of the Conway genesis file, which 'readNodeConfig' has checked.
+-- Always present.
+ncConwayGenesisHash :: NodeConfig -> Maybe GenesisHashConway
+ncConwayGenesisHash = Just . GenesisHashConway . Cfg.hash . genesisReference Cfg.conwayGenesis
+
+-- | Whether the Byron genesis requires the network magic in addresses and
+-- transactions. A configuration that does not say requires none.
+ncRequiresNetworkMagic :: NodeConfig -> Cardano.Crypto.RequiresNetworkMagic
+ncRequiresNetworkMagic enc =
+  case Cfg.byronReqNetworkMagic . Cfg.byronGenesis . Cfg.protocolConfiguration $ ncConfiguration enc of
+    Ledger.SJust Cfg.RequiresMagic -> Cardano.Crypto.RequiresMagic
+    _ -> Cardano.Crypto.RequiresNoMagic
+
+-- | The hard fork triggers of the configuration's @Testing@ section.
+ncHardForkTriggers :: NodeConfig -> Consensus.CardanoHardForkTriggers
+ncHardForkTriggers = hardForkTriggers . Cfg.testingConfiguration . ncConfiguration
+
+-- | A genesis file reference of the configuration: the path and its hash.
+genesisReference
+  :: (Cfg.ProtocolConfiguration Identity -> Cfg.Hashed FilePath)
+  -> NodeConfig
+  -> Cfg.Hashed FilePath
+genesisReference ref = ref . Cfg.protocolConfiguration . ncConfiguration
+
+-- | A genesis file of the configuration, relative to the directory of the
+-- configuration file if the configuration names a relative path.
+genesisFile
+  :: (Cfg.ProtocolConfiguration Identity -> Cfg.Hashed FilePath)
+  -> NodeConfig
+  -> File content 'In
+genesisFile ref enc =
+  File . mkAdjustPath (Cfg.configFilePath (ncConfiguration enc)) . Cfg.hashed $
+    genesisReference ref enc
 
 mkAdjustPath :: FilePath -> (FilePath -> FilePath)
 mkAdjustPath nodeConfigFilePath fp = takeDirectory nodeConfigFilePath </> fp

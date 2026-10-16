@@ -6,7 +6,7 @@ module Test.Cardano.Api.NodeConfig
 where
 
 import Cardano.Api (EpochNo (..), File (..))
-import Cardano.Api.LedgerState (NodeConfig (..), readNodeConfig)
+import Cardano.Api.LedgerState (NodeConfig, ncHardForkTriggers, readNodeConfig)
 
 import Ouroboros.Consensus.Cardano.Node qualified as Consensus
 
