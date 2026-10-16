@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 0
+kind:
+  - maintenance
+description: Adapt guard and stake distribution accessors to the ledger revision containing PR 6189.
