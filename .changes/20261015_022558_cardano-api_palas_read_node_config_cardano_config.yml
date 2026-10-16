@@ -1,0 +1,8 @@
+project: cardano-api
+pr: 1379
+kind:
+- breaking
+description: |
+  Node configurations are read with cardano-config, so `readNodeConfig` and `initialLedgerState` accept the new configuration format, reject a configuration without genesis hashes, and use the Dijkstra genesis the configuration names.
+  `NodeConfig` is now a newtype around cardano-config's `NodeConfiguration` (`ncConfiguration`); its other fields are now functions of it, and it no longer has a `FromJSON` instance.
+  The Byron settings `PBftSignatureThreshold` and `LastKnownBlockVersion-Major`/`-Minor`/`-Alt` are no longer read (cardano-config drops them without a warning), so `ncPBftSignatureThreshold` is always `Nothing` (the consensus default) and `ncByronProtocolVersion` is always 1.0.0, as in the node for a configuration in the cardano-config format. Neither affects reading or applying blocks.
