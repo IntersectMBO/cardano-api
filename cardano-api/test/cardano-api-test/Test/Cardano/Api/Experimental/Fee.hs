@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -20,11 +21,16 @@ import Cardano.Api.Compatible.Tx
   )
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.AnyScriptWitness
-  ( AnyPlutusScriptWitness (AnyPlutusSpendingScriptWitness, AnyPlutusVotingScriptWitness)
+  ( AnyPlutusScriptWitness
+      ( AnyPlutusGuardingScriptWitness
+      , AnyPlutusSpendingScriptWitness
+      , AnyPlutusVotingScriptWitness
+      )
   , PlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV3)
   )
 import Cardano.Api.Experimental.Era (convert)
 import Cardano.Api.Experimental.Plutus (plutusScriptInEraToScript)
+import Cardano.Api.Experimental.Plutus qualified as P
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Monad.Error (failEitherWith)
@@ -32,6 +38,7 @@ import Cardano.Api.Monad.Error (failEitherWith)
 import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Plutus.Language qualified as Plutus
@@ -40,6 +47,7 @@ import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
+import Data.ByteString.Base16 qualified as Base16
 import Data.Default (def)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (isJust)
@@ -81,6 +89,22 @@ tests =
   testGroup
     "Test.Cardano.Api.Experimental.Fee"
     [ testGroup
+        "guard witnesses"
+        [ testProperty
+            "preserves guard order and substitutes only guarding budgets"
+            prop_guard_execution_units
+        , testProperty
+            "rejects a guard witness with the wrong purpose or credential"
+            prop_guard_invalid_witness
+        , testProperty "counts native guard signing keys" prop_guard_native_key_estimate
+        , testProperty
+            "automatically evaluates and balances an inline Plutus V4 guard"
+            (prop_guard_auto_balance False)
+        , testProperty
+            "automatically evaluates and balances a reference Plutus V4 guard"
+            (prop_guard_auto_balance True)
+        ]
+    , testGroup
         "substituteExecutionUnits"
         [ testProperty
             "all certificates are preserved after execution unit substitution"
@@ -1648,3 +1672,177 @@ genVotingProceduresWithKeyWitnessCount = do
   genVotedActionIds actionIdPool = do
     count <- Gen.int (Range.linear 1 (length actionIdPool))
     take count <$> Gen.shuffle actionIdPool
+
+-- Key and native guard entries occupy positions even though they have no redeemer.
+-- Explicit guard order must win over the ordering of the witness map.
+prop_guard_execution_units :: Property
+prop_guard_execution_units = H.property $ do
+  input <- H.forAll genTxIn
+  keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  firstHash <- H.forAll genScriptHash
+  secondHash <- H.forAll $ Gen.filter (/= firstHash) genScriptHash
+  let Api.PaymentKeyHash key = keyHash
+      keyGuard = L.KeyHashObj (coerceKeyRole key)
+      first = L.ScriptHashObj (Api.toShelleyScriptHash firstHash)
+      second = L.ScriptHashObj (Api.toShelleyScriptHash secondHash)
+      datum = Api.unsafeHashableScriptData $ Api.ScriptDataNumber 42
+      witness =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusGuardingScriptWitness $
+            Exp.PlutusScriptWitness
+              Plutus.SPlutusV4
+              (Exp.PReferenceScript input)
+              Exp.NoScriptDatum
+              datum
+              (Api.ExecutionUnits 0 0)
+      guards = [keyGuard, second, first]
+      content =
+        Exp.defaultTxBodyContent
+          & Exp.setTxGuards (OSet.fromList guards)
+          & Exp.setTxGuardWitnesses
+            (Map.fromList [(first, witness), (second, Exp.AnySimpleScriptWitness $ Exp.SReferenceScript input)])
+          & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
+      units = Api.ExecutionUnits 300 400
+  map fst (Exp.collectTxBodyScriptWitnesses @Exp.DijkstraEra content)
+    === [Api.ScriptWitnessIndexGuarding 1, Api.ScriptWitnessIndexGuarding 2]
+  balanced <-
+    H.evalEither $
+      Exp.substituteExecutionUnits (Map.singleton (Api.ScriptWitnessIndexGuarding 2) units) content
+  Exp.UnsignedTx tx <- H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra balanced
+  toList (tx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === guards
+  Alonzo.unRedeemers (tx ^. L.witsTxL . L.rdmrsTxWitsL)
+    === Map.singleton
+      (L.DijkstraGuarding (L.AsIx 2))
+      (Api.toAlonzoData datum, Api.toAlonzoExUnits units)
+  -- A missing result must fail, rather than silently retain the zero budget.
+  case Exp.substituteExecutionUnits Map.empty content of
+    Left _ -> H.success
+    Right _ -> H.failure
+
+prop_guard_invalid_witness :: Property
+prop_guard_invalid_witness = H.property $ do
+  input <- H.forAll genTxIn
+  keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  hash <- H.forAll genScriptHash
+  let Api.PaymentKeyHash key = keyHash
+      keyGuard = L.KeyHashObj (coerceKeyRole key)
+      scriptGuard = L.ScriptHashObj (Api.toShelleyScriptHash hash)
+      datum = Api.unsafeHashableScriptData $ Api.ScriptDataNumber 0
+      voting =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusVotingScriptWitness $
+            Exp.PlutusScriptWitness
+              Plutus.SPlutusV3
+              (Exp.PReferenceScript input)
+              Exp.NoScriptDatum
+              datum
+              (Api.ExecutionUnits 1 2)
+      oldGuard =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusGuardingScriptWitness $
+            Exp.PlutusScriptWitness
+              Plutus.SPlutusV3
+              (Exp.PReferenceScript input)
+              Exp.NoScriptDatum
+              datum
+              (Api.ExecutionUnits 1 2)
+      invalid =
+        [ (keyGuard, voting)
+        , (scriptGuard, voting)
+        , (scriptGuard, oldGuard)
+        , (scriptGuard, Exp.AnyKeyWitnessPlaceholder)
+        ]
+  mapM_
+    ( \entry -> case Exp.makeUnsignedTx Exp.DijkstraEra $
+        Exp.defaultTxBodyContent
+          & Exp.setTxGuardWitnesses (Map.fromList [entry])
+          & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra) of
+        Left Exp.MakeUnsignedTxInvalidGuardWitness{} -> H.success
+        other -> H.annotateShow other >> H.failure
+    )
+    invalid
+
+prop_guard_native_key_estimate :: Property
+prop_guard_native_key_estimate = H.property $ do
+  keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  let native = Exp.SimpleScript $ Api.toDijkstraNativeScript $ Api.RequireSignature keyHash
+      credential = L.ScriptHashObj $ Exp.hashSimpleScript native
+      content =
+        Exp.defaultTxBodyContent
+          & Exp.setTxGuardWitnesses (Map.singleton credential $ Exp.AnySimpleScriptWitness $ Exp.SScript native)
+  Exp.estimateTransactionKeyWitnessCount @Exp.DijkstraEra content === 1
+  Exp.UnsignedTx tx <- H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra content
+  toList (tx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === [credential]
+  Map.keys (tx ^. L.witsTxL . L.scriptTxWitsL) === [Exp.hashSimpleScript native]
+
+-- Exercise the same API path as CLI transaction build. No script input, only a
+-- guard; its measured budget must be substituted before computing the final fee.
+prop_guard_auto_balance :: Bool -> Property
+prop_guard_auto_balance useReference = H.withTests 10 $ H.property $ do
+  input <- H.forAll genTxIn
+  let Api.TxIn inputId (Api.TxIx inputIx) = input
+      collateral = Api.TxIn inputId (Api.TxIx (inputIx + 1))
+      reference = Api.TxIn inputId (Api.TxIx (inputIx + 2))
+  address <- H.forAll $ genAddressInEra Api.ShelleyBasedEraDijkstra
+  script <-
+    H.evalEither $
+      P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4 $
+        Base16.decodeLenient "46450101002499"
+  let credential = L.ScriptHashObj $ P.hashPlutusScriptInEra script
+      datum = Api.unsafeHashableScriptData $ Api.ScriptDataNumber 42
+      witness =
+        Exp.AnyPlutusScriptWitness $
+          AnyPlutusGuardingScriptWitness $
+            Exp.PlutusScriptWitness
+              Plutus.SPlutusV4
+              (if useReference then Exp.PReferenceScript reference else Exp.PScript script)
+              Exp.NoScriptDatum
+              datum
+              (Api.ExecutionUnits 0 0)
+      params =
+        exampleProtocolParamsEra Exp.DijkstraEra
+          & L.ppProtocolVersionL .~ L.ProtVer (L.eraProtVerLow @(Exp.LedgerEra Exp.DijkstraEra)) 0
+      content =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxInsCollateral [collateral]
+          & Exp.setTxInsReference (Exp.TxInsReference [reference | useReference] Set.empty)
+          & Exp.setTxGuardWitnesses (Map.singleton credential witness)
+          & Exp.setTxProtocolParams params
+      funding = L.mkBasicTxOut (Api.toShelleyAddr address) (L.MaryValue (L.Coin 100_000_000) mempty)
+      utxo =
+        L.UTxO $
+          Map.fromList
+            [ (Api.toShelleyTxIn input, funding)
+            , (Api.toShelleyTxIn collateral, funding)
+            ,
+              ( Api.toShelleyTxIn reference
+              , funding & L.referenceScriptTxOutL .~ L.SJust (plutusScriptInEraToScript script)
+              )
+            ]
+      systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
+      epochInfo =
+        Api.LedgerEpochInfo $ Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+  (Exp.UnsignedTx tx, _) <-
+    H.evalEither $
+      Exp.makeTransactionBodyAutoBalance
+        systemStart
+        epochInfo
+        params
+        mempty
+        mempty
+        utxo
+        content
+        address
+        Nothing
+  (actualDatum, units) <-
+    H.evalMaybe $
+      Map.lookup (L.DijkstraGuarding $ L.AsIx 0) $
+        Alonzo.unRedeemers $
+          tx ^. L.witsTxL . L.rdmrsTxWitsL
+  actualDatum === Api.toAlonzoData datum
+  H.assert $ L.exUnitsMem units > 0 && L.exUnitsSteps units > 0
+  H.assert $ tx ^. L.bodyTxL . L.feeTxBodyL > L.Coin 0
+  Map.size (tx ^. L.witsTxL . L.scriptTxWitsL) === if useReference then 0 else 1
+  tx ^. L.bodyTxL . L.referenceInputsTxBodyL
+    === Set.fromList [Api.toShelleyTxIn reference | useReference]

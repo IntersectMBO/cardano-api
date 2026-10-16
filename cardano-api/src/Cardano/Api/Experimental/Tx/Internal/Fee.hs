@@ -1064,6 +1064,13 @@ substituteExecutionUnits
     mappedTxCertificates <- mapScriptWitnessesCertificates txCertificates
     mappedVotes <- mapScriptWitnessesVotes txVotingProcedures
     mappedProposals <- mapScriptWitnessesProposals txProposalProcedures
+    mappedGuards <-
+      Map.fromList
+        <$> sequence
+          [ (credential,) <$> substituteExecUnits (ScriptWitnessIndexGuarding index) witness
+          | (index, credential) <- zip [0 ..] (toList (bodyGuardCredentials txbodycontent))
+          , Just witness <- [Map.lookup credential (txGuardWitnesses txbodycontent)]
+          ]
 
     Right $
       txbodycontent
@@ -1073,6 +1080,7 @@ substituteExecutionUnits
         & setTxMintValue mappedMintedVals
         & setTxVotingProcedures mappedVotes
         & setTxProposalProcedures mappedProposals
+        & setTxGuardWitnesses mappedGuards
    where
     substituteExecUnitsTxMint
       :: ScriptWitnessIndex
@@ -1222,7 +1230,7 @@ collectTxBodyScriptWitnesses
   => TxBodyContent (LedgerEra era)
   -> [(ScriptWitnessIndex, Exp.AnyScriptWitness (LedgerEra era))]
 collectTxBodyScriptWitnesses
-  TxBodyContent
+  body@TxBodyContent
     { txIns
     , txWithdrawals
     , txCertificates
@@ -1237,6 +1245,11 @@ collectTxBodyScriptWitnesses
       , scriptWitnessesMinting txMintValue
       , maybe [] scriptWitnessesVoting txVotingProcedures
       , maybe [] scriptWitnessesProposing txProposalProcedures
+      , [ (ScriptWitnessIndexGuarding index, witness)
+        | (index, credential) <- zip [0 ..] (toList (bodyGuardCredentials body))
+        , Just anyWitness <- [Map.lookup credential (txGuardWitnesses body)]
+        , Just witness <- [toAnyScriptWitness anyWitness]
+        ]
       ]
    where
     scriptWitnessesTxIns
@@ -1762,11 +1775,10 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
 -- estimate can be refined by distinguishing between Shelley and Byron-style witnesses.
 estimateTransactionKeyWitnessCount :: forall era. IsEra era => TxBodyContent (LedgerEra era) -> Word
 estimateTransactionKeyWitnessCount
-  TxBodyContent
+  body@TxBodyContent
     { txIns
     , txInsCollateral
     , txExtraKeyWits
-    , txGuards
     , txWithdrawals
     , txCertificates
     , txProposalProcedures
@@ -1774,8 +1786,10 @@ estimateTransactionKeyWitnessCount
     } =
     fromIntegral $
       Set.size knowableKeyHashes
-        + sum (map estimateTxInWitnesses txIns)
+        + sum (map (estimateWitness . snd) txIns)
         + length txInsCollateral
+        + sum
+          [estimateWitness witness | witness@AnySimpleScriptWitness{} <- Map.elems (txGuardWitnesses body)]
         + case txProposalProcedures of
           Just (TxProposalProcedures m) ->
             OMap.size m
@@ -1789,7 +1803,7 @@ estimateTransactionKeyWitnessCount
 
     -- Dijkstra requires a VKey witness for every key-hash credential in the body guards.
     guardKeyHashes :: Set (L.KeyHash L.Witness)
-    guardKeyHashes = Set.fromList $ mapMaybe credKeyHashWitness $ toList txGuards
+    guardKeyHashes = Set.fromList $ mapMaybe credKeyHashWitness $ toList (bodyGuardCredentials body)
 
     extraKeyHashes :: Set (L.KeyHash L.Witness)
     extraKeyHashes = case txExtraKeyWits of
@@ -1830,15 +1844,15 @@ estimateTransactionKeyWitnessCount
           mempty
           (L.unVotingProcedures procedures)
 
-    estimateTxInWitnesses :: (TxIn, AnyWitness (LedgerEra era)) -> Int
-    estimateTxInWitnesses (_, AnyKeyWitnessPlaceholder) = 1
-    estimateTxInWitnesses (_, AnySimpleScriptWitness (SScript (SimpleScript simpleScript))) =
+    estimateWitness :: AnyWitness (LedgerEra era) -> Int
+    estimateWitness AnyKeyWitnessPlaceholder = 1
+    estimateWitness (AnySimpleScriptWitness (SScript (SimpleScript simpleScript))) =
       maxWitnessesInSimpleScript $
         case useEra @era of
           ConwayEra -> Old.fromAllegraTimelock simpleScript
           DijkstraEra -> Old.fromDijkstraNativeScript simpleScript
-    estimateTxInWitnesses (_, AnySimpleScriptWitness (SReferenceScript _)) = 0
-    estimateTxInWitnesses (_, AnyPlutusScriptWitness{}) = 0
+    estimateWitness (AnySimpleScriptWitness (SReferenceScript _)) = 0
+    estimateWitness AnyPlutusScriptWitness{} = 0
     -- This is a rough conservative estimate of the maximum number of witnesses
     -- needed for a simple script to be satisfied. It is conservative because it
     -- assumes that each key hash only appears once, and it assumes the worst

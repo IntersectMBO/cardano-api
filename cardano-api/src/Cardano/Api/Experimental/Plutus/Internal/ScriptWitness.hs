@@ -108,6 +108,10 @@ instance Eq (PlutusScriptWitness lang VotingScript era) where
   (==) (PlutusScriptWitness s1 l1 d1 r1 eu1) (PlutusScriptWitness s2 l2 d2 r2 eu2) =
     l1 == l2 && d1 == d2 && r1 == r2 && eu1 == eu2 && s1 == s2
 
+instance Eq (PlutusScriptWitness lang GuardingScript era) where
+  (==) (PlutusScriptWitness s1 l1 d1 r1 eu1) (PlutusScriptWitness s2 l2 d2 r2 eu2) =
+    l1 == l2 && d1 == d2 && r1 == r2 && eu1 == eu2 && s1 == s2
+
 getPlutusScriptWitnessLanguage :: PlutusScriptWitness lang purpose era -> L.Language
 getPlutusScriptWitnessLanguage (PlutusScriptWitness l _ _ _ _) =
   case l of
@@ -257,6 +261,11 @@ instance Eq (PlutusScriptDatum lang ProposingScript) where
   (==) _ _ = False
 
 instance Eq (PlutusScriptDatum lang VotingScript) where
+  (==) InlineDatum InlineDatum = True
+  (==) NoScriptDatum NoScriptDatum = True
+  (==) _ _ = False
+
+instance Eq (PlutusScriptDatum lang GuardingScript) where
   (==) InlineDatum InlineDatum = True
   (==) NoScriptDatum NoScriptDatum = True
   (==) _ _ = False

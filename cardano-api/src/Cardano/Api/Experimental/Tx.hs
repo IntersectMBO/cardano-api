@@ -168,6 +168,7 @@ module Cardano.Api.Experimental.Tx
   , txTreasuryDonation
   , txSupplementalDatums
   , txGuards
+  , txGuardWitnesses
   , txSubTransactions
   , txRequiredTopLevelGuards
   , txDirectDeposits
@@ -192,6 +193,7 @@ module Cardano.Api.Experimental.Tx
   , subTxTreasuryDonation
   , subTxSupplementalDatums
   , subTxGuards
+  , subTxGuardWitnesses
   , subTxRequiredTopLevelGuards
   , subTxDirectDeposits
   , subTxAccountBalanceIntervals
@@ -215,6 +217,7 @@ module Cardano.Api.Experimental.Tx
   , setTxVotingProcedures
   , setTxWithdrawals
   , setTxGuards
+  , setTxGuardWitnesses
   , setTxRequiredTopLevelGuards
   , setTxDirectDeposits
   , setTxAccountBalanceIntervals
