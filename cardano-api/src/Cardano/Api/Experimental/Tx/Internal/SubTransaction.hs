@@ -30,6 +30,7 @@ import Cardano.Api.Experimental.Tx.Internal.BodyContent
   , SubTxBodyContent
   , TxBodyContent
   , TxOut (..)
+  , bodyGuardCredentials
   , collectTxBodyScriptWitnessRequirements
   , convCertificates
   , convMintValue
@@ -45,7 +46,6 @@ import Cardano.Api.Experimental.Tx.Internal.BodyContent
   , subTxCertificates
   , subTxCurrentTreasuryValue
   , subTxDirectDeposits
-  , subTxGuards
   , subTxIns
   , subTxInsReference
   , subTxMetadata
@@ -60,6 +60,7 @@ import Cardano.Api.Experimental.Tx.Internal.BodyContent
   , subTxVotingProcedures
   , subTxWithdrawals
   , toAuxiliaryData
+  , validateGuardWitnesses
   )
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   ( TxScriptWitnessRequirements (..)
@@ -153,6 +154,7 @@ makeUnsignedSubTx
   :: SubTxBodyContent (LedgerEra DijkstraEra)
   -> Either MakeUnsignedTxError UnsignedSubTx
 makeUnsignedSubTx st = do
+  validateGuardWitnesses st
   let TxScriptWitnessRequirements languages scripts datums redeemers =
         collectTxBodyScriptWitnessRequirements @_ @DijkstraEra st
 
@@ -181,7 +183,7 @@ makeUnsignedSubTx st = do
           & L.votingProceduresTxBodyL .~ convVotingProcedures (subTxVotingProcedures st)
           & L.treasuryDonationTxBodyL .~ fromMaybe (L.Coin 0) (subTxTreasuryDonation st)
           & L.currentTreasuryValueTxBodyL .~ L.maybeToStrictMaybe (subTxCurrentTreasuryValue st)
-          & L.guardsTxBodyL .~ subTxGuards st
+          & L.guardsTxBodyL .~ bodyGuardCredentials st
           & L.requiredTopLevelGuardsL .~ subTxRequiredTopLevelGuards st
           & L.directDepositsTxBodyL .~ subTxDirectDeposits st
           & L.accountBalanceIntervalsTxBodyL .~ subTxAccountBalanceIntervals st

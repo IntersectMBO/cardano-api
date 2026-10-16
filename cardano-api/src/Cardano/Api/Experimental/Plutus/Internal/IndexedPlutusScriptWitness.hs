@@ -42,6 +42,7 @@ import Cardano.Api.Value.Internal
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Conway.Scripts qualified as L
+import Cardano.Ledger.Dijkstra.Scripts qualified as L
 
 import Data.Function
 import Data.List qualified as List
@@ -98,6 +99,10 @@ data Witnessable (thing :: WitnessableItem) era where
     :: (L.ConwayEraScript era, L.EraPParams era)
     => L.ProposalProcedure era
     -> Witnessable ProposalItem era
+  WitGuard
+    :: L.DijkstraEraScript era
+    => L.Credential L.Guard
+    -> Witnessable GuardItem era
 
 deriving instance Show (Witnessable thing era)
 
@@ -120,6 +125,7 @@ compareWitnesses a b =
     -- Proposals are also stored in an `OSet` and resolved positionally
     -- (`StrictSeq.findIndexL`), same as `WitTxCert` above.
     (WitProposal{}, WitProposal{}) -> EQ
+    (WitGuard{}, WitGuard{}) -> EQ
 
 data WitnessableItem
   = TxInItem
@@ -128,6 +134,7 @@ data WitnessableItem
   | WithdrawalItem
   | VoterItem
   | ProposalItem
+  | GuardItem
 
 -- | To reduce boilerplate, we reuse the `PlutusPurpose` type from `cardano-ledger`.
 -- This type is utilized in constructing the redeemer pointers map, which
@@ -149,6 +156,7 @@ toPlutusScriptPurpose index WitMint{} = L.mkMintingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitTxCert{} = L.mkCertifyingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitVote{} = L.mkVotingPurpose (L.AsIx index)
 toPlutusScriptPurpose index WitProposal{} = L.mkProposingPurpose (L.AsIx index)
+toPlutusScriptPurpose index WitGuard{} = L.mkGuardingPurpose (L.AsIx index)
 
 -- | Classify a ledger redeemer pointer ('L.PlutusPurpose' 'L.AsIx') into the
 -- 'PlutusScriptPurpose' category it belongs to and the index within that

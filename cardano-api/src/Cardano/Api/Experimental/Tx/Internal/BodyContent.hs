@@ -55,6 +55,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent
   , txTreasuryDonation
   , txSupplementalDatums
   , txGuards
+  , txGuardWitnesses
   , txSubTransactions
   , txRequiredTopLevelGuards
   , txDirectDeposits
@@ -79,6 +80,7 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent
   , subTxTreasuryDonation
   , subTxSupplementalDatums
   , subTxGuards
+  , subTxGuardWitnesses
   , subTxRequiredTopLevelGuards
   , subTxDirectDeposits
   , subTxAccountBalanceIntervals
@@ -115,6 +117,10 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent
   , setTxVotingProcedures
   , setTxWithdrawals
   , setTxGuards
+  , setTxGuardWitnesses
+  , validateGuardWitnesses
+  , bodyGuardCredentials
+  , extractWitnessableGuards
   , setTxRequiredTopLevelGuards
   , setTxDirectDeposits
   , setTxAccountBalanceIntervals
@@ -164,6 +170,7 @@ import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
   ( AnyWitness (..)
   , anyScriptWitnessToAnyWitness
+  , getAnyWitnessScript
   )
 import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
@@ -261,6 +268,7 @@ data MakeUnsignedTxError
     -- parameters were provided. Protocol parameters are required to
     -- compute the script integrity hash (script_data_hash).
     MakeUnsignedTxMissingProtocolParams
+  | MakeUnsignedTxInvalidGuardWitness (L.Credential L.Guard) Text
   | -- | Fields were set on the body content that the ledger body of the
     -- target era has no slot for. The body content record is shared by all
     -- eras, so this is only detected when the body is built.
@@ -275,6 +283,8 @@ instance Error MakeUnsignedTxError where
       , "Protocol parameters are required to compute the script integrity hash "
       , "(script_data_hash) from the cost models."
       ]
+  prettyError (MakeUnsignedTxInvalidGuardWitness credential reason) =
+    "Invalid guard witness for " <> pshow credential <> ": " <> pretty reason
   prettyError (MakeUnsignedTxFieldsNotSupportedInEra (Some era) fields) =
     mconcat
       [ "Transaction body content sets fields that do not exist in the "
@@ -289,6 +299,7 @@ makeUnsignedTx
   -> TxBodyContent (LedgerEra era)
   -> Either MakeUnsignedTxError (UnsignedTx (LedgerEra era))
 makeUnsignedTx era bc = obtainCommonConstraints era $ do
+  validateGuardWitnesses bc
   let TxScriptWitnessRequirements languages scripts datums redeemers = collectTxBodyScriptWitnessRequirements bc
 
   -- cardano-api types
@@ -470,7 +481,7 @@ eraSpecificLedgerTxBody era ledgerbody bc =
       Right $
         ledgerbody
           & L.guardsTxBodyL
-            .~ (txGuards bc <> OSet.fromSet (Set.map L.KeyHashObj reqSignerHashes))
+            .~ bodyGuardCredentials bc
           & L.subTransactionsTxBodyL .~ txSubTransactions bc
           & L.requiredTopLevelGuardsL .~ txRequiredTopLevelGuards bc
           & L.directDepositsTxBodyL .~ txDirectDeposits bc
@@ -485,6 +496,7 @@ eraSpecificLedgerTxBody era ledgerbody bc =
     [ name
     | (name, isPresent) <-
         [ ("txGuards", present (txGuards bc))
+        , ("txGuardWitnesses", present (txGuardWitnesses bc))
         , ("txSubTransactions", present (txSubTransactions bc))
         , ("txRequiredTopLevelGuards", present (txRequiredTopLevelGuards bc))
         , ("txDirectDeposits", present (L.unDirectDeposits (txDirectDeposits bc)))
@@ -936,6 +948,7 @@ data BodyContent (l :: L.TxLevel) era
   -- ------------------------------------------------------------
   -- Fields below are new in the Dijkstra era.
   -- ------------------------------------------------------------
+  , bcGuardWitnesses :: Map (L.Credential L.Guard) (AnyWitness era)
   , bcGuards :: OSet (L.Credential L.Guard)
   , bcRequiredTopLevelGuards :: Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   , bcDirectDeposits :: L.DirectDeposits
@@ -996,6 +1009,7 @@ pattern TxBodyContent
   -> Maybe L.Coin
   -> Map L.DataHash (L.Data era)
   -> OSet (L.Credential L.Guard)
+  -> Map (L.Credential L.Guard) (AnyWitness era)
   -> LOMap.OMap L.TxId (L.Tx L.SubTx era)
   -> Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   -> L.DirectDeposits
@@ -1026,6 +1040,7 @@ pattern TxBodyContent
   , txTreasuryDonation
   , txSupplementalDatums
   , txGuards
+  , txGuardWitnesses
   , txSubTransactions
   , txRequiredTopLevelGuards
   , txDirectDeposits
@@ -1049,6 +1064,7 @@ pattern TxBodyContent
     , bcCurrentTreasuryValue = txCurrentTreasuryValue
     , bcTreasuryDonation = txTreasuryDonation
     , bcSupplementalDatums = txSupplementalDatums
+    , bcGuardWitnesses = txGuardWitnesses
     , bcGuards = txGuards
     , bcRequiredTopLevelGuards = txRequiredTopLevelGuards
     , bcDirectDeposits = txDirectDeposits
@@ -1087,6 +1103,7 @@ pattern SubTxBodyContent
   -> Maybe L.Coin
   -> Map L.DataHash (L.Data era)
   -> OSet (L.Credential L.Guard)
+  -> Map (L.Credential L.Guard) (AnyWitness era)
   -> Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   -> L.DirectDeposits
   -> L.AccountBalanceIntervals era
@@ -1109,6 +1126,7 @@ pattern SubTxBodyContent
   , subTxTreasuryDonation
   , subTxSupplementalDatums
   , subTxGuards
+  , subTxGuardWitnesses
   , subTxRequiredTopLevelGuards
   , subTxDirectDeposits
   , subTxAccountBalanceIntervals
@@ -1130,6 +1148,7 @@ pattern SubTxBodyContent
     , bcCurrentTreasuryValue = subTxCurrentTreasuryValue
     , bcTreasuryDonation = subTxTreasuryDonation
     , bcSupplementalDatums = subTxSupplementalDatums
+    , bcGuardWitnesses = subTxGuardWitnesses
     , bcGuards = subTxGuards
     , bcRequiredTopLevelGuards = subTxRequiredTopLevelGuards
     , bcDirectDeposits = subTxDirectDeposits
@@ -1176,6 +1195,7 @@ defaultBodyContent topTxOnlyFields =
     , bcCurrentTreasuryValue = Nothing
     , bcTreasuryDonation = Nothing
     , bcSupplementalDatums = mempty
+    , bcGuardWitnesses = mempty
     , bcGuards = OSet.empty
     , bcRequiredTopLevelGuards = mempty
     , bcDirectDeposits = L.DirectDeposits mempty
@@ -1212,6 +1232,7 @@ extractAllIndexedPlutusScriptWitnesses era b = obtainCommonConstraints era $ do
       , indexedWithdrawalScriptWits
       , indexedProposalScriptWits
       , indexedVoteScriptWits
+      , createIndexedPlutusScriptWitnesses (extractWitnessableGuards b)
       ]
 
 extractWitnessableTxIns
@@ -1333,7 +1354,7 @@ collectTxBodyScriptWitnessRequirements
   => BodyContent l (LedgerEra era)
   -> TxScriptWitnessRequirements (LedgerEra era)
 collectTxBodyScriptWitnessRequirements
-  BodyContent
+  body@BodyContent
     { bcIns
     , bcInsReference
     , bcCertificates
@@ -1378,6 +1399,7 @@ collectTxBodyScriptWitnessRequirements
         , txMintWits
         , txVotingWits
         , txProposalWits
+        , getTxScriptWitnessesRequirements (extractWitnessableGuards body)
         ]
 
 obtainMonoidConstraint
@@ -1468,6 +1490,66 @@ setTxTreasuryDonation v bc = bc{bcTreasuryDonation = Just v}
 
 setTxSupplementalDatums :: Map L.DataHash (L.Data era) -> BodyContent l era -> BodyContent l era
 setTxSupplementalDatums v bc = bc{bcSupplementalDatums = v}
+
+-- | Guard scripts must agree with their credential and use the Guarding purpose.
+validateGuardWitnesses
+  :: forall l era
+   . IsEra era
+  => BodyContent l (LedgerEra era)
+  -> Either MakeUnsignedTxError ()
+validateGuardWitnesses bc =
+  obtainCommonConstraints (useEra @era) $
+    mapM_ validate (Map.toList (bcGuardWitnesses bc))
+ where
+  validate (credential, witness) = do
+    let invalid = Left . MakeUnsignedTxInvalidGuardWitness credential
+    case (credential, witness) of
+      (L.KeyHashObj _, AnyKeyWitnessPlaceholder) -> pure ()
+      (L.ScriptHashObj _, AnySimpleScriptWitness _) -> pure ()
+      (L.ScriptHashObj _, AnyPlutusScriptWitness psw@AnyPlutusGuardingScriptWitness{}) ->
+        if getAnyPlutusScriptWitnessLanguage psw == Plutus.PlutusV4
+          then pure ()
+          else invalid "Plutus guarding witnesses must use Plutus V4"
+      _ -> invalid "witness kind does not match the guard credential or purpose"
+    case (credential, getAnyWitnessScript witness) of
+      (L.ScriptHashObj expected, Just script) ->
+        if expected == L.hashScript script
+          then pure ()
+          else invalid "script hash does not match the guard credential"
+      _ -> pure ()
+
+-- | All guard credentials in ledger order, including witness-only entries and
+-- legacy required signers. Key and native guards still occupy redeemer slots.
+bodyGuardCredentials :: BodyContent l era -> OSet (L.Credential L.Guard)
+bodyGuardCredentials bc =
+  bcGuards bc <> OSet.fromList (Map.keys (bcGuardWitnesses bc)) <> extraKeys
+ where
+  extraKeys = case bcTopTxOnlyFields bc of
+    AbsentInSubTx -> mempty
+    TopTxFields{tlExtraKeyWits} -> OSet.fromSet (Set.map L.KeyHashObj (convExtraKeyWitnesses tlExtraKeyWits))
+
+extractWitnessableGuards
+  :: forall l era
+   . IsEra era
+  => BodyContent l (LedgerEra era)
+  -> [(Witnessable GuardItem (LedgerEra era), AnyWitness (LedgerEra era))]
+extractWitnessableGuards bc = case useEra @era of
+  ConwayEra -> []
+  DijkstraEra ->
+    [ (WitGuard credential, Map.findWithDefault AnyKeyWitnessPlaceholder credential (bcGuardWitnesses bc))
+    | credential <- toList (bodyGuardCredentials bc)
+    ]
+
+-- | Supply witnesses for Dijkstra guards. Their credentials are added to the
+-- body automatically. Use 'setTxGuards' to control their order; any remaining
+-- witness credentials follow in map order, followed by extra required signers.
+-- Plutus witnesses must use the Guarding purpose and Plutus V4. Reference-script
+-- inputs must also be included with 'setTxInsReference', as for other witnesses.
+setTxGuardWitnesses
+  :: Map (L.Credential L.Guard) (AnyWitness era)
+  -> BodyContent l era
+  -> BodyContent l era
+setTxGuardWitnesses witnesses bc = bc{bcGuardWitnesses = witnesses}
 
 setTxGuards :: OSet (L.Credential L.Guard) -> BodyContent l era -> BodyContent l era
 setTxGuards v bc = bc{bcGuards = v}
