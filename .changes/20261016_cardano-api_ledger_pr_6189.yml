@@ -1,5 +1,5 @@
 project: cardano-api
-pr: 0
+pr: 1380
 kind:
   - breaking
 description: Pin cardano-ledger to PR 6189 to fix Plutus data and required top-level guard decoding, with a compatible ouroboros-consensus pin; downstream users must adopt the updated ledger types, use requiredTopLevelGuardsTxBodyL and nesStakePoolDistrG, and account for Dijkstra's Praos2 protocol and the crypto parameter on PraosState.
