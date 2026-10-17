@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 0
+kind:
+  - feature
+  - breaking
+description: |
+  Add `queryStakePoolState` and `queryLeiosCommittee`, backed by the new `QueryStakePoolState` and `QueryLeiosCommittee` constructors of `QueryInShelleyBasedEra`.
