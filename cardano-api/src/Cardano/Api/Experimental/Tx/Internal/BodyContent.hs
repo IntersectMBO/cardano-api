@@ -221,7 +221,7 @@ import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Dijkstra.TxBody qualified as L
   ( DijkstraEraTxBody
       ( accountBalanceIntervalsTxBodyL
-      , requiredTopLevelGuardsL
+      , requiredTopLevelGuardsTxBodyL
       , startingAccountBalanceIntervalsTxBodyL
       , subTransactionsTxBodyL
       )
@@ -472,7 +472,7 @@ eraSpecificLedgerTxBody era ledgerbody bc =
           & L.guardsTxBodyL
             .~ (txGuards bc <> OSet.fromSet (Set.map L.KeyHashObj reqSignerHashes))
           & L.subTransactionsTxBodyL .~ txSubTransactions bc
-          & L.requiredTopLevelGuardsL .~ txRequiredTopLevelGuards bc
+          & L.requiredTopLevelGuardsTxBodyL .~ txRequiredTopLevelGuards bc
           & L.directDepositsTxBodyL .~ txDirectDeposits bc
           & L.accountBalanceIntervalsTxBodyL .~ txAccountBalanceIntervals bc
           & L.startingAccountBalanceIntervalsTxBodyL .~ txStartingAccountBalanceIntervals bc
