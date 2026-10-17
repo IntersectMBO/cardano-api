@@ -43,6 +43,8 @@ module Cardano.Api.Query.Internal.Expr
   , queryStakePoolDefaultVote
   , queryLedgerConfig
   , queryDRepDelegations
+  , queryStakePoolState
+  , queryLeiosCommittee
   )
 where
 
@@ -541,6 +543,41 @@ queryDRepDelegations
            (Either EraMismatch (Map L.DRep (Set (L.Credential L.Staking))))
        )
 queryDRepDelegations eon = querySbe eon . GetDRepDelegations
+
+-- | The state of all registered stake pools, or of the given ones, with their
+-- delegators only when asked for.
+queryStakePoolState
+  :: forall era block point r
+   . ShelleyBasedEra era
+  -> Maybe (Set (L.KeyHash L.StakePool))
+  -> Bool
+  -> LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       ( Either
+           UnsupportedNtcVersionError
+           ( Either
+               EraMismatch
+               (Map (L.KeyHash L.StakePool) (L.QueryResultStakePoolState (ShelleyLedgerEra era)))
+           )
+       )
+queryStakePoolState eon poolIds = querySbe eon . QueryStakePoolState poolIds
+
+-- | The Leios voting committees of the current and the next epoch.
+queryLeiosCommittee
+  :: forall era block point r
+   . ShelleyBasedEra era
+  -> LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       (Either UnsupportedNtcVersionError (Either EraMismatch L.QueryResultLeiosCommittee))
+queryLeiosCommittee eon = querySbe eon QueryLeiosCommittee
 
 querySbe
   :: Convert eon ShelleyBasedEra
