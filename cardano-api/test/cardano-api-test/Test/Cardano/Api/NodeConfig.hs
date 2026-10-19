@@ -66,7 +66,7 @@ withConfig mkConfig expect = withFrozenCallStack $ do
   H.moduleWorkspace "node-config" $ \ws -> do
     let file = ws </> "config.json"
     H.evalIO . Aeson.encodeFile file $ mkConfig dir
-    H.evalIO (runExceptT . readNodeConfig $ File file) >>= expect
+    H.evalIO (runExceptT . fmap fst . readNodeConfig $ File file) >>= expect
 
 -- | A configuration in the flat format, with the given extra keys.
 flatConfig :: [(Aeson.Key, Aeson.Value)] -> FilePath -> Aeson.Value

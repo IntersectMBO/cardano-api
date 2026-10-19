@@ -85,7 +85,6 @@ module Cardano.Api.LedgerState
     -- ** Network Config
   , NodeConfigFile
   , readNodeConfig
-  , readNodeConfigWithWarnings
 
     -- ** Genesis Config
   , GenesisConfig (..)
@@ -377,7 +376,8 @@ initialLedgerState fs nodeConfigFile = do
   -- TODO Once support for querying the ledger config is added to the node, we
   -- can remove the nodeConfigFile argument and much of the code in this
   -- module.
-  config <- modifyError (ILSEConfigFile . docToText . prettyError) (readNodeConfig nodeConfigFile)
+  (config, _warnings) <-
+    modifyError (ILSEConfigFile . docToText . prettyError) (readNodeConfig nodeConfigFile)
   genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig config)
   env <- hoistIOEither (first ILSELedgerConsensusConfig <$> genesisConfigToEnv fs genesisConfig)
   ledgerState <- liftIO (initLedgerStateVar fs genesisConfig)
@@ -1142,22 +1142,16 @@ instance Error NodeConfigError where
 -- configuration names is read, decoded, and checked against the hash the
 -- configuration gives for it, so a configuration without genesis hashes is
 -- rejected.
+--
+-- Also returns the warnings @cardano-config@ raised while reading the
+-- configuration, for example about keys it does not know, or a configuration in
+-- an older format. 'Cfg.renderConfigWarning' renders them.
 readNodeConfig
   :: MonadError NodeConfigError m
   => MonadIO m
   => NodeConfigFile 'In
-  -> m NodeConfig
-readNodeConfig = fmap fst . readNodeConfigWithWarnings
-
--- | 'readNodeConfig', also returning the warnings @cardano-config@ raised while
--- reading the configuration, for example about keys it does not know, or a
--- configuration in an older format. 'Cfg.renderConfigWarning' renders them.
-readNodeConfigWithWarnings
-  :: MonadError NodeConfigError m
-  => MonadIO m
-  => NodeConfigFile 'In
   -> m (NodeConfig, [Cfg.ConfigWarning])
-readNodeConfigWithWarnings (File ncf) = do
+readNodeConfig (File ncf) = do
   (fromFile, fileWarnings) <-
     liftEither . first readError <=< liftIO . tryAny $
       Cfg.parseConfigurationFiles ncf

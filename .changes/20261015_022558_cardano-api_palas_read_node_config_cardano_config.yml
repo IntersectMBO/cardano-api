@@ -8,7 +8,7 @@ description: |
   A configuration is also rejected if it sets `ExperimentalHardForksEnabled` without a `DijkstraGenesisFile`, or if its tracing section cannot be read.
   With `ExperimentalHardForksEnabled`, the Dijkstra genesis that is used is the one that the configuration specifies, instead of the example one.
   `readNodeConfig` now fails with a `NodeConfigError` instead of `Text`; it carries cardano-config's errors.
-  New `readNodeConfigWithWarnings` also returns cardano-config's warnings, such as unknown keys.
+  `readNodeConfig` now also returns cardano-config's warnings, such as unknown keys.
   `NodeConfig` is now a newtype around cardano-config's `NodeConfiguration` (`ncConfiguration`); its old fields are now functions with the same names.
   `NodeConfig` no longer has a `FromJSON` instance: use `readNodeConfig`.
   `PBftSignatureThreshold` and `LastKnownBlockVersion-Major`/`-Minor`/`-Alt` are no longer read, so `ncPBftSignatureThreshold` is always `Nothing` (the consensus default) and `ncByronProtocolVersion` is always 1.0.0; both are deprecated. `cardano-api` does not use these two values when reading or applying blocks.
