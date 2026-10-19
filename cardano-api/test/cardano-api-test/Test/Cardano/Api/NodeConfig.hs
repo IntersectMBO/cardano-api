@@ -6,17 +6,24 @@ module Test.Cardano.Api.NodeConfig
 where
 
 import Cardano.Api (EpochNo (..), File (..))
-import Cardano.Api.LedgerState (NodeConfig, ncHardForkTriggers, readNodeConfig)
+import Cardano.Api.LedgerState
+  ( NodeConfig
+  , NodeConfigError (..)
+  , ncHardForkTriggers
+  , readNodeConfig
+  )
 
+import Cardano.Configuration qualified as Cfg
 import Ouroboros.Consensus.Cardano.Node qualified as Consensus
 
 import Control.Monad.Except (runExceptT)
 import Data.Aeson qualified as Aeson
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Stack
 import System.Directory (makeAbsolute)
-import System.FilePath ((</>))
+import System.FilePath (takeFileName, (</>))
 
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
@@ -52,7 +59,7 @@ withConfig
   :: HasCallStack
   => (FilePath -> Aeson.Value)
   -- ^ The configuration, given the absolute path of 'genesisDir'.
-  -> (Either Text NodeConfig -> H.Integration ())
+  -> (Either NodeConfigError NodeConfig -> H.Integration ())
   -> H.Integration ()
 withConfig mkConfig expect = withFrozenCallStack $ do
   dir <- H.evalIO $ makeAbsolute genesisDir
@@ -66,7 +73,7 @@ flatConfig :: [(Aeson.Key, Aeson.Value)] -> FilePath -> Aeson.Value
 flatConfig extra dir = Aeson.object $ genesisKeys dir <> extra
 
 -- | The configuration reads, and its Dijkstra hard fork is at epoch 5.
-expectDijkstraAtEpoch5 :: HasCallStack => Either Text NodeConfig -> H.Integration ()
+expectDijkstraAtEpoch5 :: HasCallStack => Either NodeConfigError NodeConfig -> H.Integration ()
 expectDijkstraAtEpoch5 result = withFrozenCallStack $ do
   nc <- H.evalEither result
   case ncHardForkTriggers nc of
@@ -75,14 +82,18 @@ expectDijkstraAtEpoch5 result = withFrozenCallStack $ do
         Consensus.CardanoTriggerHardForkAtEpoch (EpochNo 5) -> H.success
         other -> H.annotateShow other >> H.failure
 
--- | The configuration does not read, and the error contains the given text.
-expectRejectedWith :: HasCallStack => Text -> Either Text NodeConfig -> H.Integration ()
-expectRejectedWith expected result = withFrozenCallStack $
+-- | The configuration does not read: cardano-config rejects it with an error
+-- that passes the given check.
+expectRejectedWith
+  :: HasCallStack
+  => (Cfg.ConfigurationParsingError -> H.Integration ())
+  -> Either NodeConfigError NodeConfig
+  -> H.Integration ()
+expectRejectedWith checkError result = withFrozenCallStack $
   case result of
     Right _ -> H.annotate "the configuration was read" >> H.failure
-    Left err -> do
-      H.annotate $ Text.unpack err
-      H.assert $ expected `Text.isInfixOf` err
+    Left (NodeConfigParsingError err) -> H.annotateShow err >> checkError err
+    Left err -> H.annotateShow err >> H.failure
 
 prop_read_dijkstra_hard_fork_at_epoch :: Property
 prop_read_dijkstra_hard_fork_at_epoch =
@@ -113,7 +124,10 @@ prop_read_enveloped_config = H.propertyOnce $ withConfig envelopedConfig expectD
 
 prop_reject_config_without_genesis_hashes :: Property
 prop_reject_config_without_genesis_hashes =
-  H.propertyOnce $ withConfig withoutHashes (expectRejectedWith "ByronGenesisHash")
+  H.propertyOnce . withConfig withoutHashes . expectRejectedWith $ \err -> do
+    -- The protocol section of the configuration itself, not a genesis file.
+    Cfg.errFile err H.=== SNothing
+    Cfg.errSection err H.=== SJust "Protocol"
  where
   withoutHashes dir =
     Aeson.object
@@ -124,7 +138,8 @@ prop_reject_config_without_genesis_hashes =
 
 prop_reject_wrong_genesis_hash :: Property
 prop_reject_wrong_genesis_hash =
-  H.propertyOnce $ withConfig wrongShelleyHash (expectRejectedWith "GenesisHashMismatch")
+  H.propertyOnce . withConfig wrongShelleyHash . expectRejectedWith $ \err ->
+    (takeFileName <$> Cfg.errFile err) H.=== SJust "shelley-genesis.json"
  where
   wrongShelleyHash dir =
     Aeson.object

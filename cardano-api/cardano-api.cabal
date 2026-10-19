@@ -374,6 +374,7 @@ test-suite cardano-api-test
     cardano-api,
     cardano-api:gen,
     cardano-binary,
+    cardano-config,
     cardano-crypto,
     cardano-crypto-class:{cardano-crypto-class, testlib} ^>=2.6,
     cardano-crypto-wrapper:testlib,

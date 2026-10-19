@@ -59,6 +59,7 @@ module Cardano.Api.LedgerState
   , FoldBlocksError (..)
   , GenesisConfigError (..)
   , InitialLedgerStateError (..)
+  , NodeConfigError (..)
 
     -- * Leadership schedule
   , LeadershipError (..)
@@ -375,7 +376,7 @@ initialLedgerState fs nodeConfigFile = do
   -- TODO Once support for querying the ledger config is added to the node, we
   -- can remove the nodeConfigFile argument and much of the code in this
   -- module.
-  config <- modifyError ILSEConfigFile (readNodeConfig nodeConfigFile)
+  config <- modifyError (ILSEConfigFile . docToText . prettyError) (readNodeConfig nodeConfigFile)
   genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig config)
   env <- hoistIOEither (first ILSELedgerConsensusConfig <$> genesisConfigToEnv fs genesisConfig)
   ledgerState <- liftIO (initLedgerStateVar fs genesisConfig)
@@ -1111,33 +1112,58 @@ genesisConfigToEnv fs genCfg =
      where
       shelleyGenesis = transCfg ^. Ledger.tcShelleyGenesisL
 
+-- | Why 'readNodeConfig' could not read a node configuration.
+data NodeConfigError
+  = -- | @cardano-config@ could not read, decode or check the configuration or a
+    -- genesis file it names. The error says which file, section and key are at
+    -- fault.
+    NodeConfigParsingError Cfg.ConfigurationParsingError
+  | -- | @cardano-config@ read the configuration, but could not resolve it.
+    NodeConfigResolutionError Cfg.ConfigResolutionError
+  | -- | Any other failure while reading the configuration. @trace-dispatcher@,
+    -- which reads the tracing section, throws its own exceptions, and reading a
+    -- file can fail with an IO error.
+    NodeConfigOtherError SomeException
+  deriving Show
+
+instance Exception NodeConfigError
+
+instance Error NodeConfigError where
+  prettyError = \case
+    NodeConfigParsingError err -> prettyException err
+    NodeConfigResolutionError err -> prettyException err
+    -- The inner exception: GHC 9.10 adds a backtrace when displaying a
+    -- 'SomeException'.
+    NodeConfigOtherError (SomeException err) -> prettyException err
+
 -- | Read a node configuration file through @cardano-config@, in either the flat
 -- format or the @cardano-config@ envelope. Every genesis file the
 -- configuration names is read, decoded, and checked against the hash the
 -- configuration gives for it, so a configuration without genesis hashes is
 -- rejected.
 readNodeConfig
-  :: MonadError Text m
+  :: MonadError NodeConfigError m
   => MonadIO m
   => NodeConfigFile 'In
   -> m NodeConfig
 readNodeConfig (File ncf) = do
   fromFile <-
-    liftEither <=< liftIO
-      $ handle
-        ( \(e :: IOException) ->
-            pure . Left $ "Cannot read the node configuration file at " <> Text.pack ncf <> ": " <> textShow e
-        )
-      $ handle (\(e :: Cfg.ConfigurationParsingError) -> pure . Left . Text.pack $ show e)
-      $ Right . fst <$> Cfg.parseConfigurationFiles ncf
+    liftEither . first readError <=< liftIO . tryAny $
+      fst <$> Cfg.parseConfigurationFiles ncf
   -- No consistency checks: 'Cfg.defaultConfigChecks' are about running a node
   -- (gRPC, connection limits, peer targets, snapshots), not about the genesis
   -- files and hard fork settings read here, and some of them depend on the
   -- node's command line, which is not given here.
   (nc, _warnings) <-
-    liftEither . first textShow $
+    liftEither . first NodeConfigResolutionError $
       Cfg.resolveConfigurationWith [] (Cfg.defaultCliArgs ncf) fromFile
   pure $ NodeConfig nc
+ where
+  -- cardano-config throws a 'Cfg.ConfigurationParsingError', but it hands the
+  -- tracing section to trace-dispatcher, which throws yaml's @ParseException@ or
+  -- an 'ErrorCall' instead, and reading a file can fail with an IO error.
+  readError :: SomeException -> NodeConfigError
+  readError e = maybe (NodeConfigOtherError e) NodeConfigParsingError $ fromException e
 
 -- | The hard fork triggers of a testing configuration: for each era, the epoch
 -- the configuration gives, and otherwise the era's default protocol version.
