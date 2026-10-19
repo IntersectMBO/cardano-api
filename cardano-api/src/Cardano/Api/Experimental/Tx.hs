@@ -241,6 +241,14 @@ module Cardano.Api.Experimental.Tx
   , getSignedSubTxId
   , AsType (AsUnsignedSubTx, AsSignedSubTx)
 
+    -- * Ordered guard witnesses
+  , TxGuards
+  , GuardWitness (..)
+  , TxGuardsError (..)
+  , mkTxGuards
+  , emptyTxGuards
+  , txGuardsToList
+
     -- * TxBodyContent sub type
   , TxCertificates (..)
   , TxMintValue (..)
@@ -308,6 +316,7 @@ import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Experimental.Tx.Internal.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.Fee
+import Cardano.Api.Experimental.Tx.Internal.Guards
 import Cardano.Api.Experimental.Tx.Internal.SubTransaction
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Experimental.Tx.Internal.Type

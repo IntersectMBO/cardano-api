@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -81,6 +82,12 @@ tests =
   testGroup
     "Test.Cardano.Api.Experimental.Fee"
     [ testGroup
+        "guard constructor"
+        [ testProperty "preserves ordered credentials and optional witnesses" prop_mkTxGuards_order
+        , testProperty "rejects duplicate credentials" prop_mkTxGuards_duplicates
+        , testProperty "checks credential kinds and inline script hashes" prop_mkTxGuards_validation
+        ]
+    , testGroup
         "substituteExecutionUnits"
         [ testProperty
             "all certificates are preserved after execution unit substitution"
@@ -1648,3 +1655,58 @@ genVotingProceduresWithKeyWitnessCount = do
   genVotedActionIds actionIdPool = do
     count <- Gen.int (Range.linear 1 (length actionIdPool))
     take count <$> Gen.shuffle actionIdPool
+
+prop_mkTxGuards_order :: Property
+prop_mkTxGuards_order = H.property $ do
+  input <- H.forAll genTxIn
+  keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  firstHash <- H.forAll genScriptHash
+  secondHash <- H.forAll $ Gen.filter (/= firstHash) genScriptHash
+  let Api.PaymentKeyHash key = keyHash
+      plutus =
+        Exp.PlutusGuardWitness $
+          Exp.PlutusScriptWitness
+            Plutus.SPlutusV4
+            (Exp.PReferenceScript input)
+            Exp.NoScriptDatum
+            (Api.unsafeHashableScriptData $ Api.ScriptDataNumber 42)
+            (Api.ExecutionUnits 3 4)
+      entries =
+        [ (L.ScriptHashObj (Api.toShelleyScriptHash secondHash), Just plutus)
+        , (L.KeyHashObj (coerceKeyRole key), Nothing)
+        ,
+          ( L.ScriptHashObj (Api.toShelleyScriptHash firstHash)
+          , Just $ Exp.NativeGuardWitness $ Exp.SReferenceScript input
+          )
+        ]
+  guards <- H.evalEither $ Exp.mkTxGuards @(Exp.LedgerEra Exp.DijkstraEra) entries
+  Exp.txGuardsToList guards === entries
+  Exp.txGuardsToList (Exp.emptyTxGuards @(Exp.LedgerEra Exp.DijkstraEra)) === []
+
+prop_mkTxGuards_duplicates :: Property
+prop_mkTxGuards_duplicates = H.property $ do
+  input <- H.forAll genTxIn
+  hash <- H.forAll genScriptHash
+  let credential = L.ScriptHashObj $ Api.toShelleyScriptHash hash
+      witness = Exp.NativeGuardWitness $ Exp.SReferenceScript input
+      construct = Exp.mkTxGuards @(Exp.LedgerEra Exp.DijkstraEra)
+  construct [(credential, Nothing), (credential, Just witness)]
+    === Left (Exp.DuplicateGuardCredential credential)
+  construct [(credential, Just witness), (credential, Just witness)]
+    === Left (Exp.DuplicateGuardCredential credential)
+
+prop_mkTxGuards_validation :: Property
+prop_mkTxGuards_validation = H.property $ do
+  keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  let Api.PaymentKeyHash key = keyHash
+      credential = L.KeyHashObj $ coerceKeyRole key
+      native = Exp.SimpleScript $ Api.toDijkstraNativeScript $ Api.RequireSignature keyHash
+      scriptHash = Exp.hashSimpleScript native
+      witness = Exp.NativeGuardWitness $ Exp.SScript native
+      construct = Exp.mkTxGuards @(Exp.LedgerEra Exp.DijkstraEra)
+  wrongHash <- H.forAll $ Gen.filter ((/= scriptHash) . Api.toShelleyScriptHash) genScriptHash
+  construct [(credential, Just witness)] === Left (Exp.GuardWitnessForKeyCredential credential)
+  construct [(L.ScriptHashObj (Api.toShelleyScriptHash wrongHash), Just witness)]
+    === Left (Exp.GuardScriptHashMismatch (Api.toShelleyScriptHash wrongHash) scriptHash)
+  guards <- H.evalEither $ construct [(L.ScriptHashObj scriptHash, Just witness)]
+  Exp.txGuardsToList guards === [(L.ScriptHashObj scriptHash, Just witness)]

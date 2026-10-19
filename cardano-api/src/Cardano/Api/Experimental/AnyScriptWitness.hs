@@ -63,6 +63,10 @@ instance Eq (AnyScriptWitness era) where
     case langTypeEquality s1 s2 of
       Just Refl -> s1 == s2
       Nothing -> False
+  (AnyScriptWitnessPlutus (AnyPlutusGuardingScriptWitness s1)) == (AnyScriptWitnessPlutus (AnyPlutusGuardingScriptWitness s2)) =
+    case langTypeEquality s1 s2 of
+      Just Refl -> s1 == s2
+      Nothing -> False
   _ == _ = False
 
 langTypeEquality
@@ -106,6 +110,9 @@ data AnyPlutusScriptWitness lang purpose era where
   AnyPlutusVotingScriptWitness
     :: Typeable lang
     => PlutusScriptWitness lang VotingScript era -> AnyPlutusScriptWitness lang VotingScript era
+  AnyPlutusGuardingScriptWitness
+    :: Typeable lang
+    => PlutusScriptWitness lang GuardingScript era -> AnyPlutusScriptWitness lang GuardingScript era
 
 deriving instance Show (AnyPlutusScriptWitness lang purpose era)
 
@@ -124,6 +131,7 @@ getAnyPlutusScriptWitnessExecutionUnits (AnyPlutusWithdrawingScriptWitness (Plut
 getAnyPlutusScriptWitnessExecutionUnits (AnyPlutusCertifyingScriptWitness (PlutusScriptWitness _ _ _ _ eu)) = eu
 getAnyPlutusScriptWitnessExecutionUnits (AnyPlutusProposingScriptWitness (PlutusScriptWitness _ _ _ _ eu)) = eu
 getAnyPlutusScriptWitnessExecutionUnits (AnyPlutusVotingScriptWitness (PlutusScriptWitness _ _ _ _ eu)) = eu
+getAnyPlutusScriptWitnessExecutionUnits (AnyPlutusGuardingScriptWitness (PlutusScriptWitness _ _ _ _ eu)) = eu
 
 getAnyPlutusScriptWitnessRedeemer
   :: AnyPlutusScriptWitness lang purpose era
@@ -139,6 +147,7 @@ getAnyPlutusScriptWitnessRedeemer (AnyPlutusWithdrawingScriptWitness (PlutusScri
 getAnyPlutusScriptWitnessRedeemer (AnyPlutusCertifyingScriptWitness (PlutusScriptWitness _ _ _ redeemer _)) = redeemer
 getAnyPlutusScriptWitnessRedeemer (AnyPlutusProposingScriptWitness (PlutusScriptWitness _ _ _ redeemer _)) = redeemer
 getAnyPlutusScriptWitnessRedeemer (AnyPlutusVotingScriptWitness (PlutusScriptWitness _ _ _ redeemer _)) = redeemer
+getAnyPlutusScriptWitnessRedeemer (AnyPlutusGuardingScriptWitness (PlutusScriptWitness _ _ _ redeemer _)) = redeemer
 
 updatePlutusScriptWitnessExecutionUnits
   :: ExecutionUnits -> AnyPlutusScriptWitness lang purpose era -> AnyPlutusScriptWitness lang purpose era
@@ -166,6 +175,8 @@ updatePlutusScriptWitnessExecutionUnits eu (AnyPlutusProposingScriptWitness (Plu
   AnyPlutusProposingScriptWitness (PlutusScriptWitness lang script dat redeemer eu)
 updatePlutusScriptWitnessExecutionUnits eu (AnyPlutusVotingScriptWitness (PlutusScriptWitness lang script dat redeemer _)) =
   AnyPlutusVotingScriptWitness (PlutusScriptWitness lang script dat redeemer eu)
+updatePlutusScriptWitnessExecutionUnits eu (AnyPlutusGuardingScriptWitness (PlutusScriptWitness lang script dat redeemer _)) =
+  AnyPlutusGuardingScriptWitness (PlutusScriptWitness lang script dat redeemer eu)
 
 getAnyPlutusScriptWitnessLanguage
   :: AnyPlutusScriptWitness lang purpose era -> L.Language
@@ -180,6 +191,7 @@ getAnyPlutusScriptWitnessLanguage (AnyPlutusWithdrawingScriptWitness s) = getPlu
 getAnyPlutusScriptWitnessLanguage (AnyPlutusCertifyingScriptWitness s) = getPlutusScriptWitnessLanguage s
 getAnyPlutusScriptWitnessLanguage (AnyPlutusProposingScriptWitness s) = getPlutusScriptWitnessLanguage s
 getAnyPlutusScriptWitnessLanguage (AnyPlutusVotingScriptWitness s) = getPlutusScriptWitnessLanguage s
+getAnyPlutusScriptWitnessLanguage (AnyPlutusGuardingScriptWitness s) = getPlutusScriptWitnessLanguage s
 
 getAnyScriptWitnessReferenceInput
   :: AnyScriptWitness era
@@ -216,6 +228,8 @@ getAnyPlutusScriptWitnessReferenceInput psw =
     AnyPlutusProposingScriptWitness (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
     AnyPlutusVotingScriptWitness (PlutusScriptWitness _ (PReferenceScript txin) _ _ _) -> Just txin
     AnyPlutusVotingScriptWitness (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
+    AnyPlutusGuardingScriptWitness (PlutusScriptWitness _ (PReferenceScript txin) _ _ _) -> Just txin
+    AnyPlutusGuardingScriptWitness (PlutusScriptWitness _ PScript{} _ _ _) -> Nothing
 
 getAnyPlutusScriptData
   :: L.Era era
@@ -232,6 +246,7 @@ getAnyPlutusScriptData AnyPlutusWithdrawingScriptWitness{} = mempty
 getAnyPlutusScriptData AnyPlutusCertifyingScriptWitness{} = mempty
 getAnyPlutusScriptData AnyPlutusProposingScriptWitness{} = mempty
 getAnyPlutusScriptData AnyPlutusVotingScriptWitness{} = mempty
+getAnyPlutusScriptData AnyPlutusGuardingScriptWitness{} = mempty
 
 getAnyPlutusWitnessPlutusScript
   :: AnyPlutusScriptWitness lang purpose era
@@ -249,6 +264,7 @@ getAnyPlutusWitnessPlutusScript (AnyPlutusWithdrawingScriptWitness s) = resolveP
 getAnyPlutusWitnessPlutusScript (AnyPlutusCertifyingScriptWitness s) = resolvePlutusWitnessScript s
 getAnyPlutusWitnessPlutusScript (AnyPlutusProposingScriptWitness s) = resolvePlutusWitnessScript s
 getAnyPlutusWitnessPlutusScript (AnyPlutusVotingScriptWitness s) = resolvePlutusWitnessScript s
+getAnyPlutusWitnessPlutusScript (AnyPlutusGuardingScriptWitness s) = resolvePlutusWitnessScript s
 
 -- | A reference witness carries no script, so it resolves to 'Nothing'.
 -- An inline witness holds the ledger script, built when its era was checked.

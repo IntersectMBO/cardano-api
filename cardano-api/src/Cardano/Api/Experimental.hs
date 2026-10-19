@@ -27,6 +27,14 @@ module Cardano.Api.Experimental
   , getAnchorDataFromCertificate
   , mkTxCertificates
 
+    -- ** Ordered guard witnesses
+  , TxGuards
+  , GuardWitness (..)
+  , TxGuardsError (..)
+  , mkTxGuards
+  , emptyTxGuards
+  , txGuardsToList
+
     -- ** Sub-transactions (Dijkstra era onwards)
   , SubTxBodyContent
   , defaultSubTxBodyContent
