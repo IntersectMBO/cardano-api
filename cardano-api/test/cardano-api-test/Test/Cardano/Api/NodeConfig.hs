@@ -136,14 +136,22 @@ prop_reject_config_without_genesis_hashes =
       , k `notElem` ["ByronGenesisHash", "ShelleyGenesisHash", "AlonzoGenesisHash", "ConwayGenesisHash"]
       ]
 
-prop_reject_wrong_genesis_hash :: Property
-prop_reject_wrong_genesis_hash =
-  H.propertyOnce . withConfig wrongShelleyHash . expectRejectedWith $ \err ->
-    (takeFileName <$> Cfg.errFile err) H.=== SJust "shelley-genesis.json"
+-- | A configuration whose hash for one genesis file is wrong is rejected, and the
+-- error names that file. The Byron hash is checked differently from the others
+-- (over canonical JSON rather than the raw bytes).
+prop_reject_wrong_genesis_hash
+  :: Aeson.Key
+  -- ^ The hash to break.
+  -> FilePath
+  -- ^ The genesis file it is the hash of.
+  -> Property
+prop_reject_wrong_genesis_hash hashKey genesisFile =
+  H.propertyOnce . withConfig wrongHash . expectRejectedWith $ \err ->
+    (takeFileName <$> Cfg.errFile err) H.=== SJust genesisFile
  where
-  wrongShelleyHash dir =
+  wrongHash dir =
     Aeson.object
-      [ if k == "ShelleyGenesisHash" then (k, Aeson.toJSON (Text.replicate 64 "0")) else (k, v)
+      [ if k == hashKey then (k, Aeson.toJSON (Text.replicate 64 "0")) else (k, v)
       | (k, v) <- genesisKeys dir
       ]
 
@@ -157,5 +165,12 @@ tests =
     , testProperty
         "reject a configuration without genesis hashes"
         prop_reject_config_without_genesis_hashes
-    , testProperty "reject a wrong genesis hash" prop_reject_wrong_genesis_hash
+    , testProperty "reject a wrong Byron genesis hash" $
+        prop_reject_wrong_genesis_hash "ByronGenesisHash" "byron-genesis.json"
+    , testProperty "reject a wrong Shelley genesis hash" $
+        prop_reject_wrong_genesis_hash "ShelleyGenesisHash" "shelley-genesis.json"
+    , testProperty "reject a wrong Alonzo genesis hash" $
+        prop_reject_wrong_genesis_hash "AlonzoGenesisHash" "alonzo-genesis.json"
+    , testProperty "reject a wrong Conway genesis hash" $
+        prop_reject_wrong_genesis_hash "ConwayGenesisHash" "conway-genesis.json"
     ]

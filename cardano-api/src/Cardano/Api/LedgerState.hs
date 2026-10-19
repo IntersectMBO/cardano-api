@@ -85,6 +85,7 @@ module Cardano.Api.LedgerState
     -- ** Network Config
   , NodeConfigFile
   , readNodeConfig
+  , readNodeConfigWithWarnings
 
     -- ** Genesis Config
   , GenesisConfig (..)
@@ -1146,18 +1147,28 @@ readNodeConfig
   => MonadIO m
   => NodeConfigFile 'In
   -> m NodeConfig
-readNodeConfig (File ncf) = do
-  fromFile <-
+readNodeConfig = fmap fst . readNodeConfigWithWarnings
+
+-- | 'readNodeConfig', also returning the warnings @cardano-config@ raised while
+-- reading the configuration, for example about keys it does not know, or a
+-- configuration in an older format. 'Cfg.renderConfigWarning' renders them.
+readNodeConfigWithWarnings
+  :: MonadError NodeConfigError m
+  => MonadIO m
+  => NodeConfigFile 'In
+  -> m (NodeConfig, [Cfg.ConfigWarning])
+readNodeConfigWithWarnings (File ncf) = do
+  (fromFile, fileWarnings) <-
     liftEither . first readError <=< liftIO . tryAny $
-      fst <$> Cfg.parseConfigurationFiles ncf
+      Cfg.parseConfigurationFiles ncf
   -- No consistency checks: 'Cfg.defaultConfigChecks' are about running a node
   -- (gRPC, connection limits, peer targets, snapshots), not about the genesis
   -- files and hard fork settings read here, and some of them depend on the
   -- node's command line, which is not given here.
-  (nc, _warnings) <-
+  (nc, resolutionWarnings) <-
     liftEither . first NodeConfigResolutionError $
       Cfg.resolveConfigurationWith [] (Cfg.defaultCliArgs ncf) fromFile
-  pure $ NodeConfig nc
+  pure (NodeConfig nc, fileWarnings <> resolutionWarnings)
  where
   -- cardano-config throws a 'Cfg.ConfigurationParsingError', but it hands the
   -- tracing section to trace-dispatcher, which throws yaml's @ParseException@ or
@@ -1196,19 +1207,27 @@ newtype NodeConfig = NodeConfig
 
 -- | The Byron PBFT signature threshold: always 'Nothing', so the consensus
 -- default applies. A @cardano-config@ configuration has no such setting (reading
--- a flat configuration drops its @PBftSignatureThreshold@), and the node uses
--- the default too for a configuration in the @cardano-config@ format. It does
--- not affect reading or applying blocks.
+-- a flat configuration drops its @PBftSignatureThreshold@). It does not affect
+-- reading or applying blocks.
 ncPBftSignatureThreshold :: NodeConfig -> Maybe Double
 ncPBftSignatureThreshold _ = Nothing
+{-# DEPRECATED
+  ncPBftSignatureThreshold
+  "No longer read from the configuration: always Nothing, the consensus default"
+  #-}
 
 -- | The Byron protocol version a node endorses: always 1.0.0. A
 -- @cardano-config@ configuration has no such setting (reading a flat
--- configuration drops its @LastKnownBlockVersion-Major@, @-Minor@ and @-Alt@),
--- and the node uses 1.0.0 too for a configuration in the @cardano-config@
--- format. It does not affect reading or applying blocks.
+-- configuration drops its @LastKnownBlockVersion-Major@, @-Minor@ and @-Alt@).
+-- It does not affect reading or applying blocks.
 ncByronProtocolVersion :: NodeConfig -> Cardano.Chain.Update.ProtocolVersion
-ncByronProtocolVersion _ = Cardano.Chain.Update.ProtocolVersion 1 0 0
+ncByronProtocolVersion _ = fixedByronProtocolVersion
+{-# DEPRECATED ncByronProtocolVersion "No longer read from the configuration: always 1.0.0" #-}
+
+-- | The Byron protocol version given to consensus, as a @cardano-config@
+-- configuration does not set one.
+fixedByronProtocolVersion :: Cardano.Chain.Update.ProtocolVersion
+fixedByronProtocolVersion = Cardano.Chain.Update.ProtocolVersion 1 0 0
 
 -- | The Byron genesis file, relative to the directory of the configuration file
 -- if the configuration names a relative path.
@@ -1216,11 +1235,9 @@ ncByronGenesisFile :: NodeConfig -> File ByronGenesisConfig 'In
 ncByronGenesisFile = genesisFile (Cfg.byronGenesisFile . Cfg.byronGenesis)
 
 -- | The hash of the Byron genesis file, which 'readNodeConfig' has checked.
--- Always present.
-ncByronGenesisHash :: NodeConfig -> Maybe GenesisHashByron
+ncByronGenesisHash :: NodeConfig -> GenesisHashByron
 ncByronGenesisHash =
-  Just
-    . GenesisHashByron
+  GenesisHashByron
     . Cardano.Crypto.Hash.Class.hashToTextAsHex
     . Cfg.hash
     . genesisReference (Cfg.byronGenesisFile . Cfg.byronGenesis)
@@ -1231,9 +1248,8 @@ ncShelleyGenesisFile :: NodeConfig -> File ShelleyGenesisConfig 'In
 ncShelleyGenesisFile = genesisFile Cfg.shelleyGenesis
 
 -- | The hash of the Shelley genesis file, which 'readNodeConfig' has checked.
--- Always present.
-ncShelleyGenesisHash :: NodeConfig -> Maybe GenesisHashShelley
-ncShelleyGenesisHash = Just . GenesisHashShelley . Cfg.hash . genesisReference Cfg.shelleyGenesis
+ncShelleyGenesisHash :: NodeConfig -> GenesisHashShelley
+ncShelleyGenesisHash = GenesisHashShelley . Cfg.hash . genesisReference Cfg.shelleyGenesis
 
 -- | The Alonzo genesis file, relative to the directory of the configuration file
 -- if the configuration names a relative path.
@@ -1241,9 +1257,8 @@ ncAlonzoGenesisFile :: NodeConfig -> File AlonzoGenesis 'In
 ncAlonzoGenesisFile = genesisFile Cfg.alonzoGenesis
 
 -- | The hash of the Alonzo genesis file, which 'readNodeConfig' has checked.
--- Always present.
-ncAlonzoGenesisHash :: NodeConfig -> Maybe GenesisHashAlonzo
-ncAlonzoGenesisHash = Just . GenesisHashAlonzo . Cfg.hash . genesisReference Cfg.alonzoGenesis
+ncAlonzoGenesisHash :: NodeConfig -> GenesisHashAlonzo
+ncAlonzoGenesisHash = GenesisHashAlonzo . Cfg.hash . genesisReference Cfg.alonzoGenesis
 
 -- | The Conway genesis file, relative to the directory of the configuration file
 -- if the configuration names a relative path.
@@ -1251,17 +1266,20 @@ ncConwayGenesisFile :: NodeConfig -> File ConwayGenesisConfig 'In
 ncConwayGenesisFile = genesisFile Cfg.conwayGenesis
 
 -- | The hash of the Conway genesis file, which 'readNodeConfig' has checked.
--- Always present.
-ncConwayGenesisHash :: NodeConfig -> Maybe GenesisHashConway
-ncConwayGenesisHash = Just . GenesisHashConway . Cfg.hash . genesisReference Cfg.conwayGenesis
+ncConwayGenesisHash :: NodeConfig -> GenesisHashConway
+ncConwayGenesisHash = GenesisHashConway . Cfg.hash . genesisReference Cfg.conwayGenesis
 
 -- | Whether the Byron genesis requires the network magic in addresses and
 -- transactions. A configuration that does not say requires none.
 ncRequiresNetworkMagic :: NodeConfig -> Cardano.Crypto.RequiresNetworkMagic
 ncRequiresNetworkMagic enc =
-  case Cfg.byronReqNetworkMagic . Cfg.byronGenesis . Cfg.protocolConfiguration $ ncConfiguration enc of
-    Ledger.SJust Cfg.RequiresMagic -> Cardano.Crypto.RequiresMagic
-    _ -> Cardano.Crypto.RequiresNoMagic
+  case Ledger.fromSMaybe Cfg.RequiresNoMagic
+    . Cfg.byronReqNetworkMagic
+    . Cfg.byronGenesis
+    . Cfg.protocolConfiguration
+    $ ncConfiguration enc of
+    Cfg.RequiresMagic -> Cardano.Crypto.RequiresMagic
+    Cfg.RequiresNoMagic -> Cardano.Crypto.RequiresNoMagic
 
 -- | The hard fork triggers of the configuration's @Testing@ section.
 ncHardForkTriggers :: NodeConfig -> Consensus.CardanoHardForkTriggers
@@ -1533,9 +1551,10 @@ mkProtocolInfoCardano fs (GenesisCardano dnc byronGenesis shelleyGenesisHash tra
       { Consensus.byronProtocolParams =
           Consensus.ProtocolParamsByron
             { Consensus.byronGenesis = byronGenesis
-            , Consensus.byronPbftSignatureThreshold =
-                Consensus.PBftSignatureThreshold <$> ncPBftSignatureThreshold dnc
-            , Consensus.byronProtocolVersion = ncByronProtocolVersion dnc
+            , -- Neither is set by a cardano-config configuration (see
+              -- 'ncPBftSignatureThreshold' and 'ncByronProtocolVersion').
+              Consensus.byronPbftSignatureThreshold = Nothing
+            , Consensus.byronProtocolVersion = fixedByronProtocolVersion
             , Consensus.byronSoftwareVersion = Byron.softwareVersion
             , Consensus.byronLeaderCredentials = Nothing
             }
@@ -1561,13 +1580,13 @@ readCardanoGenesisConfig
   => NodeConfig
   -> t m GenesisConfig
 readCardanoGenesisConfig enc = do
-  byronGenesis <- readByronGenesisConfig enc
-  ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
-  alonzoGenesis <- readAlonzoGenesisConfig enc
-  conwayGenesis <- readConwayGenesisConfig enc
-  let dijkstraGenesis =
+  let byronGenesis = readByronGenesisConfig enc
+      ShelleyConfig shelleyGenesis shelleyGenesisHash = readShelleyGenesisConfig enc
+      alonzoGenesis = readAlonzoGenesisConfig enc
+      conwayGenesis = readConwayGenesisConfig enc
+      dijkstraGenesis =
         Ledger.fromSMaybe exampleDijkstraGenesis . Cfg.experimentalGenesisConfig $ ncConfiguration enc
-  let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
+      transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
 
 -- | Resolve a Shelley genesis' 'Ledger.sgInitialFunds' against its
@@ -1649,48 +1668,14 @@ exampleDijkstraGenesis =
           }
     }
 
-data GenesisConfigError
-  = NEError !Text
-  | NEByronConfig !FilePath !Cardano.Chain.Genesis.ConfigurationError
-  | NEShelleyConfig !FilePath !Text
-  | NEAlonzoConfig !FilePath !Text
-  | NEConwayConfig !FilePath !Text
-  | NECardanoConfig !Text
+newtype GenesisConfigError
+  = NECardanoConfig Text
   deriving Show
 
 instance Exception GenesisConfigError
 
 instance Error GenesisConfigError where
   prettyError = \case
-    NEError t -> "Error:" <+> pretty t
-    NEByronConfig fp ce ->
-      mconcat
-        [ "Failed reading Byron genesis file "
-        , pretty fp
-        , ": "
-        , pshow ce
-        ]
-    NEShelleyConfig fp txt ->
-      mconcat
-        [ "Failed reading Shelley genesis file "
-        , pretty fp
-        , ": "
-        , pretty txt
-        ]
-    NEAlonzoConfig fp txt ->
-      mconcat
-        [ "Failed reading Alonzo genesis file "
-        , pretty fp
-        , ": "
-        , pretty txt
-        ]
-    NEConwayConfig fp txt ->
-      mconcat
-        [ "Failed reading Conway genesis file "
-        , pretty fp
-        , ": "
-        , pretty txt
-        ]
     NECardanoConfig err ->
       mconcat
         [ "With Cardano protocol, Byron/Shelley config mismatch:\n"
@@ -1700,41 +1685,24 @@ instance Error GenesisConfigError where
 
 -- | The Byron genesis of a node configuration, which 'readNodeConfig' has read
 -- and checked against its hash.
-readByronGenesisConfig
-  :: MonadIOTransError GenesisConfigError t m
-  => NodeConfig
-  -> t m Cardano.Chain.Genesis.Config
-readByronGenesisConfig = pure . Cfg.byronGenesisConfig . ncConfiguration
+readByronGenesisConfig :: NodeConfig -> Cardano.Chain.Genesis.Config
+readByronGenesisConfig = Cfg.byronGenesisConfig . ncConfiguration
 
 -- | The Shelley genesis of a node configuration, and its hash, which
 -- 'readNodeConfig' has read and checked.
-readShelleyGenesisConfig
-  :: MonadIOTransError GenesisConfigError t m
-  => NodeConfig
-  -> t m ShelleyConfig
+readShelleyGenesisConfig :: NodeConfig -> ShelleyConfig
 readShelleyGenesisConfig enc =
-  pure $
-    ShelleyConfig
-      (Cfg.shelleyGenesisConfig cfg)
-      (GenesisHashShelley . Cfg.hash . Cfg.shelleyGenesis $ Cfg.protocolConfiguration cfg)
- where
-  cfg = ncConfiguration enc
+  ShelleyConfig (Cfg.shelleyGenesisConfig $ ncConfiguration enc) (ncShelleyGenesisHash enc)
 
 -- | The Alonzo genesis of a node configuration, which 'readNodeConfig' has read
 -- and checked against its hash.
-readAlonzoGenesisConfig
-  :: MonadIOTransError GenesisConfigError t m
-  => NodeConfig
-  -> t m AlonzoGenesis
-readAlonzoGenesisConfig = pure . Cfg.alonzoGenesisConfig . ncConfiguration
+readAlonzoGenesisConfig :: NodeConfig -> AlonzoGenesis
+readAlonzoGenesisConfig = Cfg.alonzoGenesisConfig . ncConfiguration
 
 -- | The Conway genesis of a node configuration, which 'readNodeConfig' has read
 -- and checked against its hash.
-readConwayGenesisConfig
-  :: MonadIOTransError GenesisConfigError t m
-  => NodeConfig
-  -> t m ConwayGenesis
-readConwayGenesisConfig = pure . Cfg.conwayGenesisConfig . ncConfiguration
+readConwayGenesisConfig :: NodeConfig -> ConwayGenesis
+readConwayGenesisConfig = Cfg.conwayGenesisConfig . ncConfiguration
 
 readShelleyGenesis
   :: forall m t
