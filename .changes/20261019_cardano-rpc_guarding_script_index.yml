@@ -1,0 +1,5 @@
+project: cardano-rpc
+pr: 1381
+kind:
+  - bugfix
+description: Handle guarding script witness indices in transaction evaluation, preserving the index and reporting the unspecified redeemer purpose until UTxORPC supports guarding scripts.

@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TupleSections #-}
 
 module Cardano.Api.Experimental.Tx.Internal.Guards
   ( TxGuards
@@ -8,6 +10,7 @@ module Cardano.Api.Experimental.Tx.Internal.Guards
   , emptyTxGuards
   , txGuardsToList
   , guardWitnessToAnyWitness
+  , traverseTxGuardsExecutionUnits
   )
 where
 
@@ -16,6 +19,7 @@ import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
+import Cardano.Api.Plutus.Internal.Script (ExecutionUnits)
 import Cardano.Api.Pretty
 
 import Cardano.Ledger.Core qualified as L
@@ -26,6 +30,7 @@ import Control.Monad (foldM_, unless)
 import Data.Map.Ordered.Strict (OMap)
 import Data.Map.Ordered.Strict qualified as OMap
 import Data.Set qualified as Set
+import Data.Word (Word32)
 import GHC.Exts (toList)
 
 -- | A supplied guard script witness. Key signatures are supplied when signing.
@@ -93,3 +98,19 @@ guardWitnessToAnyWitness :: GuardWitness era -> AnyWitness era
 guardWitnessToAnyWitness (NativeGuardWitness witness) = AnySimpleScriptWitness witness
 guardWitnessToAnyWitness (PlutusGuardWitness witness) =
   AnyPlutusScriptWitness $ AnyPlutusGuardingScriptWitness witness
+
+-- | Update only Plutus budgets, preserving credentials, scripts, and insertion
+-- order. Native and witnessless guards occupy indices but need no budget.
+traverseTxGuardsExecutionUnits
+  :: Applicative f
+  => (Word32 -> ExecutionUnits -> f ExecutionUnits)
+  -> TxGuards era
+  -> f (TxGuards era)
+traverseTxGuardsExecutionUnits update guards =
+  TxGuards . OMap.fromList <$> traverse updateEntry (zip [0 ..] (txGuardsToList guards))
+ where
+  updateEntry (index, (credential, witness)) =
+    (credential,) <$> traverse (updateWitness index) witness
+  updateWitness index (PlutusGuardWitness (PlutusScriptWitness lang script dat redeemer units)) =
+    PlutusGuardWitness . PlutusScriptWitness lang script dat redeemer <$> update index units
+  updateWitness _ witness@NativeGuardWitness{} = pure witness

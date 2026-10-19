@@ -79,6 +79,7 @@ type family ToPlutusScriptPurpose witnessable = (purpose :: PlutusScriptPurpose)
   ToPlutusScriptPurpose WithdrawalItem = WithdrawingScript
   ToPlutusScriptPurpose VoterItem = VotingScript
   ToPlutusScriptPurpose ProposalItem = ProposingScript
+  ToPlutusScriptPurpose GuardItem = GuardingScript
 
 convertToNewScriptWitness
   :: AlonzoEraOnwards era
@@ -131,6 +132,7 @@ createPlutusScriptDatum missingContext plutusVersion oldDatum =
     (WitProposal{}, _) -> NoScriptDatum
     (WitVote{}, _) -> NoScriptDatum
     (WitTxCert{}, _) -> NoScriptDatum
+    (WitGuard{}, _) -> NoScriptDatum
 
 toPlutusScriptDatum
   :: Witnessable TxInItem era
@@ -211,6 +213,7 @@ type family PlutusScriptFor thing where
   PlutusScriptFor WithdrawalItem = WithdrawingScript
   PlutusScriptFor VoterItem = VotingScript
   PlutusScriptFor ProposalItem = ProposingScript
+  PlutusScriptFor GuardItem = GuardingScript
 
 mkPlutusScriptWitness
   :: forall era thing plutuslang
@@ -286,6 +289,7 @@ mkPlutusScriptWitness eon w l script d r e =
                   r
                   e
               )
+        WitGuard{} -> AnyPlutusScriptWitness $ AnyPlutusGuardingScriptWitness (PlutusScriptWitness l script' d r e)
         WitProposal{} ->
           AnyPlutusScriptWitness $
             AnyPlutusProposingScriptWitness
@@ -309,6 +313,9 @@ mkReferencePlutusScriptWitness
   -> AnyWitness (ShelleyLedgerEra era)
 mkReferencePlutusScriptWitness w l txIn d r e =
   case w of
+    WitGuard{} ->
+      AnyPlutusScriptWitness $
+        AnyPlutusGuardingScriptWitness (PlutusScriptWitness l (PReferenceScript txIn) d r e)
     WitTxIn{} ->
       let s
             :: L.SLanguage plutuslang

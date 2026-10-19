@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1381
+kind:
+  - breaking
+description: Add opaque, insertion-ordered TxGuards with smart-constructor validation for native and Plutus V4 guarding witnesses in experimental transactions and sub-transactions, including redeemer indexing, execution-unit evaluation and substitution, script integrity hashes, and fee estimation.

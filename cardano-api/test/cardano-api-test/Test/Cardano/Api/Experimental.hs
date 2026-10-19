@@ -246,10 +246,11 @@ prop_sub_tx_embedded_in_top_level_body = H.property $ do
   donation <- H.forAll Q.arbitrary
   guards <- H.forAll Q.arbitrary
   sk <- H.forAllWith (const "<ShelleyWitnessSigningKey>") genShelleyWitnessSigningKey
+  txGuards <- H.evalEither $ Exp.mkTxGuards [(credential, Nothing) | credential <- toList guards]
   let content =
         Exp.defaultSubTxBodyContent
           & Exp.setTxTreasuryDonation donation
-          & Exp.setTxGuards guards
+          & Exp.setTxGuards txGuards
   unsigned <- H.evalEither $ Exp.makeUnsignedSubTx content
   let signed@(Exp.SignedSubTx ledgerSubTx) =
         Exp.signSubTx [] [Exp.makeSubTxKeyWitness unsigned sk] unsigned
