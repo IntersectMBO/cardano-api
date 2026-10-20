@@ -52,19 +52,16 @@ watchMempoolMethod request send = do
 -- | The @WatchMempool@ streaming loop. Emits every mempool entry newer than
 -- the last one seen, oldest first, filtered by the predicate.
 --
--- Removals and slot-only changes (no new ticket) produce no message: the
--- proto has no representation for eviction, and a max-ticket comparison
--- upstream would otherwise miss exactly these transitions (see
--- 'Cardano.Rpc.Server.NodeKernelAccess.nextMempoolWatchSnapshot').
+-- Removals produce no message: the proto has no representation for eviction.
 watchMempoolStream
   :: forall m
    . MonadIO m
   => m MempoolWatchSnapshot
   -- ^ Read the current mempool watch snapshot, without blocking - used
   -- once, for the initial baseline
-  -> (MempoolWatchSnapshot -> m MempoolWatchSnapshot)
-  -- ^ Block until the snapshot differs from the given one, then return the
-  -- new one
+  -> (Consensus.TicketNo -> m MempoolWatchSnapshot)
+  -- ^ Block until an entry newer than the given ticket exists, then return
+  -- the snapshot
   -> Proto U5c.TxPredicate
   -- ^ Predicate filtering which new entries are sent
   -> (NextElem (Proto U5c.WatchMempoolResponse) -> IO ())
@@ -75,7 +72,7 @@ watchMempoolStream readSnapshot nextSnapshot predicate send = do
   go Consensus.zeroTicketNo initial
  where
   go :: Consensus.TicketNo -> MempoolWatchSnapshot -> m ()
-  go lastSeenTicket snapshot@MempoolWatchSnapshot{mempoolWatchTxsAfter = txsAfter} = do
+  go lastSeenTicket MempoolWatchSnapshot{mempoolWatchTxsAfter = txsAfter} = do
     let newEntries = txsAfter lastSeenTicket
     forM_ newEntries $ \(txInMode, _ticketNo) ->
       forM_ (txInModeToTxInMempool txInMode) $ \txInMempool ->
@@ -85,4 +82,4 @@ watchMempoolStream readSnapshot nextSnapshot predicate send = do
     let lastSeenTicket' = case newEntries of
           [] -> lastSeenTicket
           _ -> snd (last newEntries)
-    nextSnapshot snapshot >>= go lastSeenTicket'
+    nextSnapshot lastSeenTicket' >>= go lastSeenTicket'
