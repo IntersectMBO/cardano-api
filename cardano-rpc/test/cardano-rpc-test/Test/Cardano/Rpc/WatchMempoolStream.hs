@@ -39,8 +39,8 @@ hprop_watch_mempool_stream_emits_new_entries_in_order = H.property $ do
   tx1 <- txInModeFixture
   tx2 <- txInModeFixture
   let script =
-        [ mkSnapshot [(tx1, ticket 1)] (SlotNo 100)
-        , mkSnapshot [(tx1, ticket 1), (tx2, ticket 2)] (SlotNo 100)
+        [ mkSnapshot [(tx1, ticket 1)]
+        , mkSnapshot [(tx1, ticket 1), (tx2, ticket 2)]
         ]
   sent <- expectScriptExhausted =<< runWatchMempoolStream script defMessage
 
@@ -57,8 +57,8 @@ hprop_watch_mempool_stream_predicate_filters_all_entries = H.property $ do
   tx1 <- txInModeFixture
   tx2 <- txInModeFixture
   let script =
-        [ mkSnapshot [(tx1, ticket 1)] (SlotNo 100)
-        , mkSnapshot [(tx1, ticket 1), (tx2, ticket 2)] (SlotNo 100)
+        [ mkSnapshot [(tx1, ticket 1)]
+        , mkSnapshot [(tx1, ticket 1), (tx2, ticket 2)]
         ]
       matchesNothing = defMessage & U5c.not .~ [defMessage]
   sent <- expectScriptExhausted =<< runWatchMempoolStream script matchesNothing
@@ -66,24 +66,16 @@ hprop_watch_mempool_stream_predicate_filters_all_entries = H.property $ do
   H.note_ "Nothing is ever sent: the predicate rejects every entry"
   sent === []
 
--- | A removal-only transition (the ticket list shrinks, nothing new appears
--- after the last seen ticket) and a slot-only transition (the ticket list
--- is unchanged, only 'mempoolWatchSlotNo' differs) both count as "changed"
--- for 'nextMempoolWatchSnapshot' to unblock on, but neither produces a
--- message: the proto has no representation for removal, and nothing newer
--- than the last seen ticket exists in either case. This also proves no
--- entry is re-sent across the transitions - the loop only ever sees tx1
--- once, from the initial snapshot.
-hprop_watch_mempool_stream_no_duplicates_across_removal_and_slot_only_changes :: Property
-hprop_watch_mempool_stream_no_duplicates_across_removal_and_slot_only_changes = H.property $ do
+-- | A removal (nothing newer than the last seen ticket) produces no message,
+-- and no entry is re-sent across it: the loop only ever sees tx1 once, from
+-- the initial snapshot.
+hprop_watch_mempool_stream_no_duplicates_across_removal :: Property
+hprop_watch_mempool_stream_no_duplicates_across_removal = H.property $ do
   tx1 <- txInModeFixture
-  -- snapshot 2 is removal only: the ticket list [ticket 1] -> [] changes,
-  -- but nothing is newer than 'ticket 1'. snapshot 3 is slot only: the
-  -- ticket list is unchanged ([] -> []), only the slot number differs.
   let script =
-        [ mkSnapshot [(tx1, ticket 1)] (SlotNo 100)
-        , mkSnapshot [] (SlotNo 100)
-        , mkSnapshot [] (SlotNo 101)
+        [ mkSnapshot [(tx1, ticket 1)]
+        , mkSnapshot []
+        , mkSnapshot []
         ]
 
   sent <- expectScriptExhausted =<< runWatchMempoolStream script defMessage
@@ -110,17 +102,13 @@ expectedResponse txInMode = do
   txInMempool <- H.nothingFail $ txInModeToTxInMempool txInMode
   pure $ defMessage & U5c.tx .~ txInMempool
 
--- | Build a scripted snapshot: 'mempoolWatchTicketNumbers' is the entries'
--- own tickets, and 'mempoolWatchTxsAfter' filters the same list - exactly
--- what a real mempool snapshot's 'Ouroboros.Consensus.Mempool.API.snapshotTxs'
--- \/ 'snapshotTxsAfter' pair would give after conversion, per
--- 'Cardano.Rpc.Server.NodeKernelAccess.toMempoolWatchSnapshot'.
-mkSnapshot :: [(TxInMode, Consensus.TicketNo)] -> SlotNo -> MempoolWatchSnapshot
-mkSnapshot entries slotNo =
+-- | Build a scripted snapshot whose 'mempoolWatchTxsAfter' filters the given
+-- entries, like a real 'Ouroboros.Consensus.Mempool.API.snapshotTxsAfter'
+-- after conversion.
+mkSnapshot :: [(TxInMode, Consensus.TicketNo)] -> MempoolWatchSnapshot
+mkSnapshot entries =
   MempoolWatchSnapshot
-    { mempoolWatchTicketNumbers = map snd entries
-    , mempoolWatchSlotNo = slotNo
-    , mempoolWatchTxsAfter = \lastSeenTicket -> filter ((> lastSeenTicket) . snd) entries
+    { mempoolWatchTxsAfter = \lastSeenTicket -> filter ((> lastSeenTicket) . snd) entries
     }
 
 -- | A ticket number built via the 'Enum' instance derived from 'Word64' -
