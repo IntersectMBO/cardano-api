@@ -135,6 +135,7 @@ library
     cardano-addresses ^>=4.0.0,
     cardano-base ^>=0.1,
     cardano-binary,
+    cardano-config ^>=2.2.2,
     cardano-crypto,
     cardano-crypto-class ^>=2.6,
     cardano-crypto-wrapper ^>=1.8,
@@ -204,7 +205,6 @@ library
     transformers-except ^>=0.1.3,
     typed-protocols ^>=1.2,
     validation,
-    yaml,
 
   other-modules:
     Cardano.Api.Byron.Internal.Key
@@ -374,6 +374,7 @@ test-suite cardano-api-test
     cardano-api,
     cardano-api:gen,
     cardano-binary,
+    cardano-config,
     cardano-crypto,
     cardano-crypto-class:{cardano-crypto-class, testlib} ^>=2.6,
     cardano-crypto-wrapper:testlib,
@@ -382,6 +383,7 @@ test-suite cardano-api-test
     cardano-ledger-api ^>=1.15,
     cardano-ledger-babbage,
     cardano-ledger-binary,
+    cardano-ledger-byron,
     cardano-ledger-conway,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.22,
     cardano-ledger-dijkstra,
@@ -395,6 +397,7 @@ test-suite cardano-api-test
     data-default,
     directory,
     filepath,
+    fs-api,
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,

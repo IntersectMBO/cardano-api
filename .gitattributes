@@ -1,3 +1,6 @@
 cardano-rpc/gen/** linguist-generated=true
 cardano-rpc/gen/** no-prettify
 
+# Genesis hashes are taken over the raw file bytes, so a CRLF checkout on
+# Windows would not match the hashes the node configuration tests pin.
+cardano-api/test/cardano-api-test/files/input/node-config/*.json text eol=lf
