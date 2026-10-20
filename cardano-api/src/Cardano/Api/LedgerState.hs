@@ -255,7 +255,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short as BSS
-import Data.Functor.Identity (Identity)
+import Data.Functor.Identity (Identity, runIdentity)
 import Data.IORef
 import Data.List qualified as List
 import Data.Map.Strict (Map)
@@ -1133,8 +1133,6 @@ instance Error NodeConfigError where
   prettyError = \case
     NodeConfigParsingError err -> prettyException err
     NodeConfigResolutionError err -> prettyException err
-    -- The inner exception: GHC 9.10 adds a backtrace when displaying a
-    -- 'SomeException'.
     NodeConfigOtherError (SomeException err) -> prettyException err
 
 -- | Read a node configuration file through @cardano-config@, in either the flat
@@ -1155,10 +1153,11 @@ readNodeConfig (File ncf) = do
   (fromFile, fileWarnings) <-
     liftEither . first readError <=< liftIO . tryAny $
       Cfg.parseConfigurationFiles ncf
-  -- No consistency checks: 'Cfg.defaultConfigChecks' are about running a node
-  -- (gRPC, connection limits, peer targets, snapshots), not about the genesis
-  -- files and hard fork settings read here, and some of them depend on the
-  -- node's command line, which is not given here.
+  -- The first argument of 'Cfg.resolveConfigurationWith' is the list of
+  -- consistency checks to run ('Cfg.resolveConfiguration' runs cardano-config's
+  -- default list, 'Cfg.defaultConfigChecks'). We run none: those checks are
+  -- about running a node (gRPC, connection limits, peer targets, snapshots),
+  -- and some need the node's command line, which we don't have here.
   (nc, resolutionWarnings) <-
     liftEither . first NodeConfigResolutionError $
       Cfg.resolveConfigurationWith [] (Cfg.defaultCliArgs ncf) fromFile
@@ -1172,6 +1171,8 @@ readNodeConfig (File ncf) = do
 
 -- | The hard fork triggers of a testing configuration: for each era, the epoch
 -- the configuration gives, and otherwise the era's default protocol version.
+-- Like the node, it ignores the Dijkstra epoch unless
+-- @ExperimentalHardForksEnabled@ is true.
 hardForkTriggers
   :: Cfg.TestingConfiguration Identity
   -> Consensus.CardanoHardForkTriggers
@@ -1183,8 +1184,11 @@ hardForkTriggers testing =
     (atEpoch $ Cfg.testAlonzoHardForkAtEpoch testing)
     (atEpoch $ Cfg.testBabbageHardForkAtEpoch testing)
     (atEpoch $ Cfg.testConwayHardForkAtEpoch testing)
-    (atEpoch $ Cfg.testDijkstraHardForkAtEpoch testing)
+    (atEpoch dijkstraEpoch)
  where
+  dijkstraEpoch
+    | runIdentity (Cfg.experimentalHardForksEnabled testing) = Cfg.testDijkstraHardForkAtEpoch testing
+    | otherwise = Ledger.SNothing
   atEpoch :: Ledger.StrictMaybe Word64 -> Consensus.CardanoHardForkTrigger blk
   atEpoch =
     maybe
@@ -1578,6 +1582,10 @@ readCardanoGenesisConfig enc = do
       ShelleyConfig shelleyGenesis shelleyGenesisHash = readShelleyGenesisConfig enc
       alonzoGenesis = readAlonzoGenesisConfig enc
       conwayGenesis = readConwayGenesisConfig enc
+      -- The ledger always needs a Dijkstra genesis, even when Dijkstra is not
+      -- used, but cardano-config only reads one when
+      -- @ExperimentalHardForksEnabled@ is true. Otherwise this placeholder fills
+      -- the slot, and 'hardForkTriggers' ignores the Dijkstra epoch.
       dijkstraGenesis =
         Ledger.fromSMaybe exampleDijkstraGenesis . Cfg.experimentalGenesisConfig $ ncConfiguration enc
       transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis

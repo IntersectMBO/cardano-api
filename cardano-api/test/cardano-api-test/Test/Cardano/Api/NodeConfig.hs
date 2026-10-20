@@ -132,6 +132,18 @@ expectDijkstraAtEpoch5 result = withFrozenCallStack $ do
         Consensus.CardanoTriggerHardForkAtEpoch (EpochNo 5) -> H.success
         other -> H.annotateShow other >> H.failure
 
+-- | The configuration reads, and its Dijkstra hard fork is at the default
+-- protocol version.
+expectDijkstraAtDefaultVersion
+  :: HasCallStack => Either NodeConfigError NodeConfig -> H.Integration ()
+expectDijkstraAtDefaultVersion result = withFrozenCallStack $ do
+  nc <- H.evalEither result
+  case ncHardForkTriggers nc of
+    Consensus.CardanoHardForkTriggers'{Consensus.triggerHardForkDijkstra = trigger} ->
+      case trigger of
+        Consensus.CardanoTriggerHardForkAtDefaultVersion -> H.success
+        other -> H.annotateShow other >> H.failure
+
 -- | The maximum reference script size per transaction of the Dijkstra genesis
 -- that 'readCardanoGenesisConfig' gives for the configuration.
 readMaxRefScriptSizePerTx :: HasCallStack => NodeConfig -> H.Integration Word32
@@ -155,18 +167,21 @@ expectRejectedWith checkError result = withFrozenCallStack $
     Left err -> H.annotateShow err >> H.failure
 
 prop_read_dijkstra_hard_fork_at_epoch :: Property
-prop_read_dijkstra_hard_fork_at_epoch =
+prop_read_dijkstra_hard_fork_at_epoch = H.propertyOnce $ withConfig config expectDijkstraAtEpoch5
+ where
+  config dir =
+    flatConfig (dijkstraKeys True dir <> ["TestDijkstraHardForkAtEpoch" Aeson..= (5 :: Int)]) dir
+
+prop_ignore_dijkstra_hard_fork_without_experimental_hard_forks :: Property
+prop_ignore_dijkstra_hard_fork_without_experimental_hard_forks =
   H.propertyOnce $
-    withConfig (flatConfig ["TestDijkstraHardForkAtEpoch" Aeson..= (5 :: Int)]) expectDijkstraAtEpoch5
+    withConfig
+      (flatConfig ["TestDijkstraHardForkAtEpoch" Aeson..= (5 :: Int)])
+      expectDijkstraAtDefaultVersion
 
 prop_read_dijkstra_hard_fork_default :: Property
-prop_read_dijkstra_hard_fork_default = H.propertyOnce . withConfig (flatConfig []) $ \result -> do
-  nc <- H.evalEither result
-  case ncHardForkTriggers nc of
-    Consensus.CardanoHardForkTriggers'{Consensus.triggerHardForkDijkstra = trigger} ->
-      case trigger of
-        Consensus.CardanoTriggerHardForkAtDefaultVersion -> H.success
-        other -> H.annotateShow other >> H.failure
+prop_read_dijkstra_hard_fork_default =
+  H.propertyOnce $ withConfig (flatConfig []) expectDijkstraAtDefaultVersion
 
 prop_read_enveloped_config :: Property
 prop_read_enveloped_config = H.propertyOnce $ withConfig envelopedConfig expectDijkstraAtEpoch5
@@ -177,7 +192,9 @@ prop_read_enveloped_config = H.propertyOnce $ withConfig envelopedConfig expectD
       , "Configuration"
           Aeson..= Aeson.object
             [ "Protocol" Aeson..= Aeson.object (genesisKeys dir)
-            , "Testing" Aeson..= Aeson.object ["TestDijkstraHardForkAtEpoch" Aeson..= (5 :: Int)]
+            , "Testing"
+                Aeson..= Aeson.object
+                  (dijkstraKeys True dir <> ["TestDijkstraHardForkAtEpoch" Aeson..= (5 :: Int)])
             ]
       ]
 
@@ -279,7 +296,12 @@ tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.NodeConfig"
-    [ testProperty "read TestDijkstraHardForkAtEpoch" prop_read_dijkstra_hard_fork_at_epoch
+    [ testProperty
+        "read TestDijkstraHardForkAtEpoch with experimental hard forks"
+        prop_read_dijkstra_hard_fork_at_epoch
+    , testProperty
+        "ignore TestDijkstraHardForkAtEpoch without experimental hard forks"
+        prop_ignore_dijkstra_hard_fork_without_experimental_hard_forks
     , testProperty "read Dijkstra hard fork default" prop_read_dijkstra_hard_fork_default
     , testProperty "read an enveloped configuration" prop_read_enveloped_config
     , testProperty
