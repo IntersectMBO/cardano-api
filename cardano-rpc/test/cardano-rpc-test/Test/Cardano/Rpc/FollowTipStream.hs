@@ -294,7 +294,7 @@ hprop_follow_tip_stream_rollback_beyond_cap_falls_back_to_reset = H.propertyOnce
 -- as well as "these messages were sent, in this order".
 runFollowTipStream
   :: MonadIO m
-  => [ChainChange]
+  => [ChainChange (ByteString, BlockInMode)]
   -- ^ Script 'scriptedFollower's @nextChange@ plays back
   -> Maybe ChainPoint
   -- ^ Fixed @findIntersect@ result
@@ -340,11 +340,16 @@ expectScriptExhausted (outcome, sent) = withFrozenCallStack $ do
   pure sent
 
 -- | A 'ChainFollower' whose @nextChange@ pops messages off the given script
--- in order, held in a mutable ref, and whose @findIntersect@ always returns
+-- in order, held in a mutable ref (@tryNextChange@ pops the same script,
+-- with 'Nothing' once it is empty), and whose @findIntersect@ always returns
 -- the given fixed result regardless of the points it is asked about - the
 -- properties below assert on the points passed to 'followTipStream' and on
 -- the streamed messages, not on what @findIntersect@ does with its argument.
-scriptedFollower :: MonadIO m => [ChainChange] -> Maybe ChainPoint -> m ChainFollower
+scriptedFollower
+  :: MonadIO m
+  => [ChainChange (ByteString, BlockInMode)]
+  -> Maybe ChainPoint
+  -> m (ChainFollower (ByteString, BlockInMode))
 scriptedFollower script intersectResult = do
   scriptRef <- liftIO $ newIORef script
   pure
@@ -354,6 +359,11 @@ scriptedFollower script intersectResult = do
             readIORef scriptRef >>= \case
               [] -> throwIO ScriptExhausted
               change : rest -> writeIORef scriptRef rest $> change
+      , tryNextChange =
+          liftIO $
+            readIORef scriptRef >>= \case
+              [] -> pure Nothing
+              change : rest -> writeIORef scriptRef rest $> Just change
       , findIntersect = const $ pure intersectResult
       }
 
