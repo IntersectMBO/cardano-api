@@ -1,5 +1,0 @@
-project: cardano-api
-pr: 1378
-kind:
-- bugfix
-description: The PlutusV4 cost model in `dijkstraGenesisDefaults` now has `costModelInitParamCount PlutusV4` parameters instead of all of them.
