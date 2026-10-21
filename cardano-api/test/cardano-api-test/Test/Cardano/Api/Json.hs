@@ -12,6 +12,7 @@ import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Ledger.Core qualified as L
 
 import Data.Aeson (eitherDecode, encode)
+import Data.Aeson qualified as Aeson
 import Data.List (isInfixOf)
 
 import Test.Gen.Cardano.Api (genAlonzoGenesis)
@@ -24,6 +25,17 @@ import Hedgehog qualified as H
 import Hedgehog.Gen qualified as Gen
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
+
+-- | Pin the public JSON representation and rendered text of a guard index.
+unit_guarding_script_witness_index :: Property
+unit_guarding_script_witness_index = H.withTests 1 $ H.property $ do
+  let index = ScriptWitnessIndexGuarding 3
+  toJSON index
+    === Aeson.object
+      [ "kind" Aeson..= Aeson.String "ScriptWitnessIndexGuarding"
+      , "value" Aeson..= Aeson.Number 3
+      ]
+  renderScriptWitnessIndex index === "guard 3 (in the ordered guard set)"
 
 prop_json_roundtrip_alonzo_genesis :: Property
 prop_json_roundtrip_alonzo_genesis = H.property $ do
@@ -168,6 +180,7 @@ tests =
   testGroup
     "Test.Cardano.Api.Json"
     [ testProperty "json roundtrip alonzo genesis" prop_json_roundtrip_alonzo_genesis
+    , testProperty "guarding script witness index JSON and rendering" unit_guarding_script_witness_index
     , testProperty "json roundtrip utxo" prop_json_roundtrip_utxo
     , testProperty "json roundtrip reference scripts" prop_json_roundtrip_reference_scripts
     , testProperty "json roundtrip txoutvalue" prop_json_roundtrip_txoutvalue

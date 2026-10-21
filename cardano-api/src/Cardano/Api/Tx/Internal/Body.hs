@@ -2110,6 +2110,8 @@ data ScriptWitnessIndex
     ScriptWitnessIndexVoting !Word32
   | -- | The n'th proposal, in the order of the proposals.
     ScriptWitnessIndexProposing !Word32
+  | -- | The guard position in the complete ordered guard set (Dijkstra onwards).
+    ScriptWitnessIndexGuarding !Word32
   deriving (Eq, Ord, Show)
 
 instance ToJSON ScriptWitnessIndex where
@@ -2139,6 +2141,8 @@ instance ToJSON ScriptWitnessIndex where
         [ "kind" .= Aeson.String "ScriptWitnessIndexVoting"
         , "value" .= n
         ]
+    ScriptWitnessIndexGuarding n ->
+      object ["kind" .= Aeson.String "ScriptWitnessIndexGuarding", "value" .= n]
     ScriptWitnessIndexProposing n ->
       object
         [ "kind" .= Aeson.String "ScriptWitnessIndexProposing"
@@ -2158,6 +2162,8 @@ renderScriptWitnessIndex (ScriptWitnessIndexVoting index) =
   "vote " <> show index <> " (in ascending order of the votes)"
 renderScriptWitnessIndex (ScriptWitnessIndexProposing index) =
   "proposal " <> show index <> " (in ascending order of the proposals)"
+renderScriptWitnessIndex (ScriptWitnessIndexGuarding index) =
+  "guard " <> show index <> " (in the ordered guard set)"
 
 fromScriptWitnessIndex
   :: AlonzoEraOnwards era
@@ -2200,6 +2206,7 @@ fromScriptWitnessIndexConway i =
     ScriptWitnessIndexWithdrawal n -> Just $ L.ConwayWithdrawing (L.AsIx n)
     ScriptWitnessIndexVoting n -> Just $ L.ConwayVoting (L.AsIx n)
     ScriptWitnessIndexProposing n -> Just $ L.ConwayProposing (L.AsIx n)
+    ScriptWitnessIndexGuarding _ -> Nothing
 
 fromScriptWitnessIndexDijkstra
   :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIx (ShelleyLedgerEra DijkstraEra))
@@ -2211,6 +2218,7 @@ fromScriptWitnessIndexDijkstra i =
     ScriptWitnessIndexWithdrawal n -> Just $ L.DijkstraWithdrawing (L.AsIx n)
     ScriptWitnessIndexVoting n -> Just $ L.DijkstraVoting (L.AsIx n)
     ScriptWitnessIndexProposing n -> Just $ L.DijkstraProposing (L.AsIx n)
+    ScriptWitnessIndexGuarding n -> Just $ L.DijkstraGuarding (L.AsIx n)
 
 toScriptIndex
   :: AlonzoEraOnwards era
@@ -2256,7 +2264,7 @@ toScriptIndexDijkstra scriptPurposeIndex =
     L.DijkstraWithdrawing (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
     L.DijkstraVoting (L.AsIx i) -> ScriptWitnessIndexVoting i
     L.DijkstraProposing (L.AsIx i) -> ScriptWitnessIndexProposing i
-    L.DijkstraGuarding (L.AsIx i) -> error $ "toScriptIndexDijkstra: unexpected DijkstraGuarding at index " <> show i
+    L.DijkstraGuarding (L.AsIx i) -> ScriptWitnessIndexGuarding i
 
 collectTxBodyScriptWitnesses
   :: forall era

@@ -44,6 +44,7 @@ import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Experimental.Tx.Internal.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
+import Cardano.Api.Experimental.Tx.Internal.Guard
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.Key.Internal qualified as Api
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
@@ -1064,6 +1065,9 @@ substituteExecutionUnits
     mappedTxCertificates <- mapScriptWitnessesCertificates txCertificates
     mappedVotes <- mapScriptWitnessesVotes txVotingProcedures
     mappedProposals <- mapScriptWitnessesProposals txProposalProcedures
+    -- Extra required signers are appended after explicit guards and have no
+    -- script budgets, so the explicit collection retains its ledger indices.
+    mappedGuards <- traverseTxGuardsExecutionUnits substituteGuardUnits (txGuards txbodycontent)
 
     Right $
       txbodycontent
@@ -1073,7 +1077,13 @@ substituteExecutionUnits
         & setTxMintValue mappedMintedVals
         & setTxVotingProcedures mappedVotes
         & setTxProposalProcedures mappedProposals
+        & setTxGuards mappedGuards
    where
+    substituteGuardUnits index _ = do
+      let idx = ScriptWitnessIndexGuarding index
+      maybe (Left $ TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap idx exUnitsMap) Right $
+        Map.lookup idx exUnitsMap
+
     substituteExecUnitsTxMint
       :: ScriptWitnessIndex
       -> AnyScriptWitness (LedgerEra era)
@@ -1222,7 +1232,7 @@ collectTxBodyScriptWitnesses
   => TxBodyContent (LedgerEra era)
   -> [(ScriptWitnessIndex, Exp.AnyScriptWitness (LedgerEra era))]
 collectTxBodyScriptWitnesses
-  TxBodyContent
+  body@TxBodyContent
     { txIns
     , txWithdrawals
     , txCertificates
@@ -1237,6 +1247,7 @@ collectTxBodyScriptWitnesses
       , scriptWitnessesMinting txMintValue
       , maybe [] scriptWitnessesVoting txVotingProcedures
       , maybe [] scriptWitnessesProposing txProposalProcedures
+      , scriptWitnessesGuarding (bodyGuardEntries body)
       ]
    where
     scriptWitnessesTxIns
@@ -1298,6 +1309,15 @@ collectTxBodyScriptWitnesses
         | (_, (ix, Just wit@AnyScriptWitnessPlutus{})) <-
             (fmap . fmap) toAnyScriptWitness <$> indexWitnessedTxProposalProcedures txp
         ]
+
+    scriptWitnessesGuarding
+      :: [(L.Credential L.Guard, Maybe (ScriptGuardWitness (LedgerEra era)))]
+      -> [(ScriptWitnessIndex, Exp.AnyScriptWitness (LedgerEra era))]
+    scriptWitnessesGuarding guards =
+      [ (ScriptWitnessIndexGuarding index, witness)
+      | (index, (_, Just guardWitness)) <- zip [0 ..] guards
+      , Just witness <- [toAnyScriptWitness (scriptGuardWitnessToAnyWitness guardWitness)]
+      ]
 
 toAnyScriptWitness :: AnyWitness era -> Maybe (Exp.AnyScriptWitness era)
 toAnyScriptWitness AnyKeyWitnessPlaceholder = Nothing
@@ -1762,11 +1782,10 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
 -- estimate can be refined by distinguishing between Shelley and Byron-style witnesses.
 estimateTransactionKeyWitnessCount :: forall era. IsEra era => TxBodyContent (LedgerEra era) -> Word
 estimateTransactionKeyWitnessCount
-  TxBodyContent
+  body@TxBodyContent
     { txIns
     , txInsCollateral
     , txExtraKeyWits
-    , txGuards
     , txWithdrawals
     , txCertificates
     , txProposalProcedures
@@ -1774,8 +1793,12 @@ estimateTransactionKeyWitnessCount
     } =
     fromIntegral $
       Set.size knowableKeyHashes
-        + sum (map estimateTxInWitnesses txIns)
+        + sum (map (estimateWitness . snd) txIns)
         + length txInsCollateral
+        + sum
+          [ estimateWitness (scriptGuardWitnessToAnyWitness witness)
+          | (_, Just witness@NativeGuardWitness{}) <- bodyGuardEntries body
+          ]
         + case txProposalProcedures of
           Just (TxProposalProcedures m) ->
             OMap.size m
@@ -1789,7 +1812,7 @@ estimateTransactionKeyWitnessCount
 
     -- Dijkstra requires a VKey witness for every key-hash credential in the body guards.
     guardKeyHashes :: Set (L.KeyHash L.Witness)
-    guardKeyHashes = Set.fromList $ mapMaybe credKeyHashWitness $ toList txGuards
+    guardKeyHashes = Set.fromList $ mapMaybe credKeyHashWitness $ toList (bodyGuardCredentials body)
 
     extraKeyHashes :: Set (L.KeyHash L.Witness)
     extraKeyHashes = case txExtraKeyWits of
@@ -1830,15 +1853,15 @@ estimateTransactionKeyWitnessCount
           mempty
           (L.unVotingProcedures procedures)
 
-    estimateTxInWitnesses :: (TxIn, AnyWitness (LedgerEra era)) -> Int
-    estimateTxInWitnesses (_, AnyKeyWitnessPlaceholder) = 1
-    estimateTxInWitnesses (_, AnySimpleScriptWitness (SScript (SimpleScript simpleScript))) =
+    estimateWitness :: AnyWitness (LedgerEra era) -> Int
+    estimateWitness AnyKeyWitnessPlaceholder = 1
+    estimateWitness (AnySimpleScriptWitness (SScript (SimpleScript simpleScript))) =
       maxWitnessesInSimpleScript $
         case useEra @era of
           ConwayEra -> Old.fromAllegraTimelock simpleScript
           DijkstraEra -> Old.fromDijkstraNativeScript simpleScript
-    estimateTxInWitnesses (_, AnySimpleScriptWitness (SReferenceScript _)) = 0
-    estimateTxInWitnesses (_, AnyPlutusScriptWitness{}) = 0
+    estimateWitness (AnySimpleScriptWitness (SReferenceScript _)) = 0
+    estimateWitness AnyPlutusScriptWitness{} = 0
     -- This is a rough conservative estimate of the maximum number of witnesses
     -- needed for a simple script to be satisfied. It is conservative because it
     -- assumes that each key hash only appears once, and it assumes the worst

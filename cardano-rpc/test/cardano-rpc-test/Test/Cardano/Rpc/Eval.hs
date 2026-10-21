@@ -23,7 +23,7 @@ import Network.GRPC.Spec (Proto (..), getProto)
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
 
--- | All six 'ScriptWitnessIndex' constructors map to the correct
+-- | All 'ScriptWitnessIndex' constructors map to the correct
 -- 'RedeemerPurpose' and preserve the index.
 hprop_scriptWitnessIndex_to_redeemerPurpose :: Property
 hprop_scriptWitnessIndex_to_redeemerPurpose = H.propertyOnce $ do
@@ -33,6 +33,7 @@ hprop_scriptWitnessIndex_to_redeemerPurpose = H.propertyOnce $ do
   verify (ScriptWitnessIndexWithdrawal 2) U5c.REDEEMER_PURPOSE_REWARD 2
   verify (ScriptWitnessIndexVoting 5) U5c.REDEEMER_PURPOSE_VOTE 5
   verify (ScriptWitnessIndexProposing 4) U5c.REDEEMER_PURPOSE_PROPOSE 4
+  verify (ScriptWitnessIndexGuarding 6) U5c.REDEEMER_PURPOSE_UNSPECIFIED 6
  where
   verify :: (HasCallStack, MonadTest m) => ScriptWitnessIndex -> U5c.RedeemerPurpose -> Word32 -> m ()
   verify swi expectedPurpose expectedIndex = withFrozenCallStack $ do

@@ -115,6 +115,9 @@ module Cardano.Api.Experimental.Tx.Internal.BodyContent
   , setTxVotingProcedures
   , setTxWithdrawals
   , setTxGuards
+  , bodyGuardCredentials
+  , bodyGuardEntries
+  , extractWitnessableGuards
   , setTxRequiredTopLevelGuards
   , setTxDirectDeposits
   , setTxAccountBalanceIntervals
@@ -166,6 +169,7 @@ import Cardano.Api.Experimental.Tx.Internal.AnyWitness
   , anyScriptWitnessToAnyWitness
   )
 import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
+import Cardano.Api.Experimental.Tx.Internal.Guard
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   ( TxScriptWitnessRequirements (..)
   , getTxScriptWitnessesRequirements
@@ -470,7 +474,7 @@ eraSpecificLedgerTxBody era ledgerbody bc =
       Right $
         ledgerbody
           & L.guardsTxBodyL
-            .~ (txGuards bc <> OSet.fromSet (Set.map L.KeyHashObj reqSignerHashes))
+            .~ bodyGuardCredentials bc
           & L.subTransactionsTxBodyL .~ txSubTransactions bc
           & L.requiredTopLevelGuardsL .~ txRequiredTopLevelGuards bc
           & L.directDepositsTxBodyL .~ txDirectDeposits bc
@@ -484,7 +488,7 @@ eraSpecificLedgerTxBody era ledgerbody bc =
   dijkstraOnlyFieldsSet =
     [ name
     | (name, isPresent) <-
-        [ ("txGuards", present (txGuards bc))
+        [ ("txGuards", present (toList (txGuards bc)))
         , ("txSubTransactions", present (txSubTransactions bc))
         , ("txRequiredTopLevelGuards", present (txRequiredTopLevelGuards bc))
         , ("txDirectDeposits", present (L.unDirectDeposits (txDirectDeposits bc)))
@@ -936,7 +940,7 @@ data BodyContent (l :: L.TxLevel) era
   -- ------------------------------------------------------------
   -- Fields below are new in the Dijkstra era.
   -- ------------------------------------------------------------
-  , bcGuards :: OSet (L.Credential L.Guard)
+  , bcGuards :: TxGuards era
   , bcRequiredTopLevelGuards :: Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   , bcDirectDeposits :: L.DirectDeposits
   , bcAccountBalanceIntervals :: L.AccountBalanceIntervals era
@@ -995,7 +999,7 @@ pattern TxBodyContent
   -> Maybe L.Coin
   -> Maybe L.Coin
   -> Map L.DataHash (L.Data era)
-  -> OSet (L.Credential L.Guard)
+  -> TxGuards era
   -> LOMap.OMap L.TxId (L.Tx L.SubTx era)
   -> Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   -> L.DirectDeposits
@@ -1086,7 +1090,7 @@ pattern SubTxBodyContent
   -> Maybe L.Coin
   -> Maybe L.Coin
   -> Map L.DataHash (L.Data era)
-  -> OSet (L.Credential L.Guard)
+  -> TxGuards era
   -> Map (L.Credential L.Guard) (StrictMaybe (L.Data era))
   -> L.DirectDeposits
   -> L.AccountBalanceIntervals era
@@ -1176,7 +1180,7 @@ defaultBodyContent topTxOnlyFields =
     , bcCurrentTreasuryValue = Nothing
     , bcTreasuryDonation = Nothing
     , bcSupplementalDatums = mempty
-    , bcGuards = OSet.empty
+    , bcGuards = emptyTxGuards
     , bcRequiredTopLevelGuards = mempty
     , bcDirectDeposits = L.DirectDeposits mempty
     , bcAccountBalanceIntervals = L.AccountBalanceIntervals mempty
@@ -1212,6 +1216,7 @@ extractAllIndexedPlutusScriptWitnesses era b = obtainCommonConstraints era $ do
       , indexedWithdrawalScriptWits
       , indexedProposalScriptWits
       , indexedVoteScriptWits
+      , createIndexedPlutusScriptWitnesses (extractWitnessableGuards b)
       ]
 
 extractWitnessableTxIns
@@ -1333,7 +1338,7 @@ collectTxBodyScriptWitnessRequirements
   => BodyContent l (LedgerEra era)
   -> TxScriptWitnessRequirements (LedgerEra era)
 collectTxBodyScriptWitnessRequirements
-  BodyContent
+  body@BodyContent
     { bcIns
     , bcInsReference
     , bcCertificates
@@ -1378,6 +1383,7 @@ collectTxBodyScriptWitnessRequirements
         , txMintWits
         , txVotingWits
         , txProposalWits
+        , getTxScriptWitnessesRequirements (extractWitnessableGuards body)
         ]
 
 obtainMonoidConstraint
@@ -1469,8 +1475,45 @@ setTxTreasuryDonation v bc = bc{bcTreasuryDonation = Just v}
 setTxSupplementalDatums :: Map L.DataHash (L.Data era) -> BodyContent l era -> BodyContent l era
 setTxSupplementalDatums v bc = bc{bcSupplementalDatums = v}
 
-setTxGuards :: OSet (L.Credential L.Guard) -> BodyContent l era -> BodyContent l era
-setTxGuards v bc = bc{bcGuards = v}
+-- | All guard credentials in ledger order. Redeemer indices refer to positions
+-- in this full sequence, including guards without a Plutus redeemer.
+bodyGuardCredentials :: BodyContent l era -> OSet (L.Credential L.Guard)
+bodyGuardCredentials = OSet.fromList . map fst . bodyGuardEntries
+
+-- | This body's explicit key and script guards, for either transaction level.
+-- Only top-level bodies append extra required signers not already present;
+-- sub-transactions have no separate extra-signers field. Use this same order
+-- for the ledger body and redeemer indices.
+bodyGuardEntries :: BodyContent l era -> [(L.Credential L.Guard, Maybe (ScriptGuardWitness era))]
+bodyGuardEntries bc =
+  explicit
+    <> [(credential, Nothing) | credential <- Set.toList extraKeys, Set.notMember credential present]
+ where
+  explicit = toList (bcGuards bc)
+  present = Set.fromList (map fst explicit)
+  extraKeys = case bcTopTxOnlyFields bc of
+    AbsentInSubTx -> mempty
+    TopTxFields{tlExtraKeyWits} -> Set.map L.KeyHashObj (convExtraKeyWitnesses tlExtraKeyWits)
+
+extractWitnessableGuards
+  :: forall l era
+   . IsEra era
+  => BodyContent l (LedgerEra era)
+  -> [(Witnessable GuardItem (LedgerEra era), AnyWitness (LedgerEra era))]
+extractWitnessableGuards bc = case useEra @era of
+  ConwayEra -> []
+  DijkstraEra ->
+    -- Placeholders reserve the position of entries without a supplied script
+    -- witness; the credential itself still determines whether a key is needed.
+    [ (WitGuard credential, maybe AnyKeyWitnessPlaceholder scriptGuardWitnessToAnyWitness witness)
+    | (credential, witness) <- bodyGuardEntries bc
+    ]
+
+-- | Replace the ordered guards and their optional witnesses together.
+-- Build the collection with 'mkTxGuards'. Reference-script inputs must also
+-- be included with 'setTxInsReference', as for other witnesses.
+setTxGuards :: TxGuards era -> BodyContent l era -> BodyContent l era
+setTxGuards guards bc = bc{bcGuards = guards}
 
 setTxRequiredTopLevelGuards
   :: Map (L.Credential L.Guard) (StrictMaybe (L.Data era)) -> BodyContent l era -> BodyContent l era

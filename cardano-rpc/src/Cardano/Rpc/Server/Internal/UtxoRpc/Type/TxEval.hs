@@ -114,6 +114,7 @@ scriptWitnessIndexToPlutusScriptPurpose = \case
   ScriptWitnessIndexWithdrawal i -> (WithdrawingScript, i)
   ScriptWitnessIndexVoting i -> (VotingScript, i)
   ScriptWitnessIndexProposing i -> (ProposingScript, i)
+  ScriptWitnessIndexGuarding i -> (GuardingScript, i)
 
 -- | Map a Plutus script purpose to the corresponding proto 'RedeemerPurpose'.
 -- 'GuardingScript' (Dijkstra's new purpose) has no UTxO RPC counterpart yet,
