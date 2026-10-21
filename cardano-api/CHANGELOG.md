@@ -1,5 +1,27 @@
 # Changelog for cardano-api
 
+## 11.10.0.0 -- 2026-10-21
+
+- `readNodeConfig` and `initialLedgerState` now read node configurations with cardano-config. They accept both the old flat format and the new cardano-config format.
+  `readNodeConfig` now also reads the genesis files, and genesis hashes are now required.
+  A configuration is also rejected if it sets `ExperimentalHardForksEnabled` without a `DijkstraGenesisFile`, or if its tracing section cannot be read.
+  With `ExperimentalHardForksEnabled`, the Dijkstra genesis that is used is the one that the configuration specifies, instead of the example one.
+  Without `ExperimentalHardForksEnabled`, `TestDijkstraHardForkAtEpoch` is now ignored, as in the node.
+  `readNodeConfig` now fails with a `NodeConfigError` instead of `Text`; it carries cardano-config's errors.
+  `readNodeConfig` now also returns cardano-config's warnings, such as unknown keys.
+  `NodeConfig` is now a newtype around cardano-config's `NodeConfiguration` (`ncConfiguration`); its old fields are now functions with the same names.
+  `NodeConfig` no longer has a `FromJSON` instance: use `readNodeConfig`.
+  `PBftSignatureThreshold` and `LastKnownBlockVersion-Major`/`-Minor`/`-Alt` are no longer read, so `ncPBftSignatureThreshold` is always `Nothing` (the consensus default) and `ncByronProtocolVersion` is always 1.0.0; both are deprecated. `cardano-api` does not use these two values when reading or applying blocks.
+  `readByronGenesisConfig`, `readShelleyGenesisConfig`, `readAlonzoGenesisConfig` and `readConwayGenesisConfig` are now plain functions of `NodeConfig`.
+  `ncByronGenesisHash`, `ncShelleyGenesisHash`, `ncAlonzoGenesisHash` and `ncConwayGenesisHash` now return the hash, not a `Maybe`.
+  `GenesisConfigError` keeps only `NECardanoConfig`.
+  (breaking)
+  [PR 1379](https://github.com/intersectmbo/cardano-api/pull/1379)
+
+- The PlutusV4 cost model in `dijkstraGenesisDefaults` now has `costModelInitParamCount PlutusV4` parameters instead of all of them.
+  (bugfix)
+  [PR 1378](https://github.com/intersectmbo/cardano-api/pull/1378)
+
 ## 11.9.0.0 -- 2026-10-13
 
 - Converting a simple script that contains a guard to a script for any era before Dijkstra (Shelley to Conway) now fails cleanly instead of crashing, and the script is reported as unsupported in that era, for example when it is used as a reference script. Parsing a simple script from JSON now reports the error of the script type that was given, where before any malformed script was reported as a missing `guard` script. An unknown script type now produces an error that names it and lists the valid types. Fee estimation in the experimental API now counts the signatures required by key-hash guards in the transaction body in the Dijkstra era, where before the fee was too low by one signature per such key and the ledger rejected the transaction. A key that is both a guard and an extra required signer is counted once.
