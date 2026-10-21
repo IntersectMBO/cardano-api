@@ -243,11 +243,10 @@ module Cardano.Api.Experimental.Tx
 
     -- * Ordered guard witnesses
   , TxGuards
-  , GuardWitness (..)
+  , ScriptGuardWitness (..)
   , TxGuardsError (..)
   , mkTxGuards
   , emptyTxGuards
-  , txGuardsToList
 
     -- * TxBodyContent sub type
   , TxCertificates (..)
@@ -316,7 +315,7 @@ import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Experimental.Tx.Internal.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.Fee
-import Cardano.Api.Experimental.Tx.Internal.Guards
+import Cardano.Api.Experimental.Tx.Internal.Guard
 import Cardano.Api.Experimental.Tx.Internal.SubTransaction
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Experimental.Tx.Internal.Type

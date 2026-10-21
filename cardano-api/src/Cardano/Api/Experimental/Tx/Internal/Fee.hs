@@ -44,7 +44,7 @@ import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Experimental.Tx.Internal.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
-import Cardano.Api.Experimental.Tx.Internal.Guards
+import Cardano.Api.Experimental.Tx.Internal.Guard
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.Key.Internal qualified as Api
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
@@ -1079,11 +1079,10 @@ substituteExecutionUnits
         & setTxProposalProcedures mappedProposals
         & setTxGuards mappedGuards
    where
-    substituteGuardUnits index _ =
+    substituteGuardUnits index _ = do
       let idx = ScriptWitnessIndexGuarding index
-       in case Map.lookup idx exUnitsMap of
-            Nothing -> Left $ TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap idx exUnitsMap
-            Just units -> Right units
+      maybe (Left $ TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap idx exUnitsMap) Right $
+        Map.lookup idx exUnitsMap
 
     substituteExecUnitsTxMint
       :: ScriptWitnessIndex
@@ -1312,12 +1311,12 @@ collectTxBodyScriptWitnesses
         ]
 
     scriptWitnessesGuarding
-      :: [(L.Credential L.Guard, Maybe (GuardWitness (LedgerEra era)))]
+      :: [(L.Credential L.Guard, Maybe (ScriptGuardWitness (LedgerEra era)))]
       -> [(ScriptWitnessIndex, Exp.AnyScriptWitness (LedgerEra era))]
     scriptWitnessesGuarding guards =
       [ (ScriptWitnessIndexGuarding index, witness)
       | (index, (_, Just guardWitness)) <- zip [0 ..] guards
-      , Just witness <- [toAnyScriptWitness (guardWitnessToAnyWitness guardWitness)]
+      , Just witness <- [toAnyScriptWitness (scriptGuardWitnessToAnyWitness guardWitness)]
       ]
 
 toAnyScriptWitness :: AnyWitness era -> Maybe (Exp.AnyScriptWitness era)
@@ -1797,7 +1796,7 @@ estimateTransactionKeyWitnessCount
         + sum (map (estimateWitness . snd) txIns)
         + length txInsCollateral
         + sum
-          [ estimateWitness (guardWitnessToAnyWitness witness)
+          [ estimateWitness (scriptGuardWitnessToAnyWitness witness)
           | (_, Just witness@NativeGuardWitness{}) <- bodyGuardEntries body
           ]
         + case txProposalProcedures of

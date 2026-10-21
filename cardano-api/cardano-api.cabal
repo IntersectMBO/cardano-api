@@ -240,7 +240,7 @@ library
     Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible
     Cardano.Api.Experimental.Tx.Internal.Certificate.Type
     Cardano.Api.Experimental.Tx.Internal.Fee
-    Cardano.Api.Experimental.Tx.Internal.Guards
+    Cardano.Api.Experimental.Tx.Internal.Guard
     Cardano.Api.Experimental.Tx.Internal.SubTransaction
     Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
     Cardano.Api.Experimental.Tx.Internal.Type

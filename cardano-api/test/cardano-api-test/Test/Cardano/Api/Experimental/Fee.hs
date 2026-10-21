@@ -61,6 +61,8 @@ import Lens.Micro
 
 import Test.Gen.Cardano.Api.Typed
   ( genAddressInEra
+  , genExecutionUnits
+  , genHashableScriptData
   , genPlutusScriptInEra
   , genScriptHash
   , genStakeCredential
@@ -91,6 +93,7 @@ tests =
     [ testGroup
         "guard constructor"
         [ testProperty "preserves ordered credentials and optional witnesses" prop_mkTxGuards_order
+        , testProperty "empty guards contain no entries" unit_emptyTxGuards
         , testProperty "rejects duplicate credentials" prop_mkTxGuards_duplicates
         , testProperty "checks credential kinds and inline script hashes" prop_mkTxGuards_validation
         ]
@@ -1685,10 +1688,12 @@ genVotingProceduresWithKeyWitnessCount = do
     count <- Gen.int (Range.linear 1 (length actionIdPool))
     take count <$> Gen.shuffle actionIdPool
 
--- Both builders use bodyGuardCredentials; only the top-level body adds signers.
+-- | Both builders preserve guard order; only the top-level body adds extra signers,
+-- without duplicating existing key guards.
 prop_bodyGuardCredentials :: Property
 prop_bodyGuardCredentials = H.property $ do
   (keys, entries) <- H.forAll genGuardEntries
+  coverGuardWitnesses entries
   additionalKeys <- H.forAll $ Gen.set (Range.linear 0 6) (genVerificationKeyHash Api.AsPaymentKey)
   -- Include repeated signers that are already explicit guards.
   extraKeys <- H.forAll $ Gen.shuffle (keys <> Set.toList additionalKeys <> keys)
@@ -1700,26 +1705,33 @@ prop_bodyGuardCredentials = H.property $ do
   Exp.UnsignedSubTx subTx <-
     H.evalEither $
       Exp.makeUnsignedSubTx $
-        Exp.defaultSubTxBodyContent & Exp.setTxGuards guards
+        Exp.defaultSubTxBodyContent
+          & Exp.setTxGuards guards
+          & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
   Exp.UnsignedTx tx <-
     H.evalEither $
       Exp.makeUnsignedTx Exp.DijkstraEra $
         Exp.defaultTxBodyContent
           & Exp.setTxGuards guards
           & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses extraKeys)
+          & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
   toList (subTx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === credentials
   toList (tx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === List.nub (credentials <> signers)
 
+-- | Embedding a signed sub-transaction preserves each body's own guard order.
 prop_guard_embedding :: Property
 prop_guard_embedding = H.property $ do
   (_, topEntries) <- H.forAll genGuardEntries
   (_, subEntries) <- H.forAll genGuardEntries
+  coverGuardWitnesses (topEntries <> subEntries)
   topGuards <- H.evalEither $ Exp.mkTxGuards topEntries
   subGuards <- H.evalEither $ Exp.mkTxGuards subEntries
   unsignedSub <-
     H.evalEither $
       Exp.makeUnsignedSubTx $
-        Exp.defaultSubTxBodyContent & Exp.setTxGuards subGuards
+        Exp.defaultSubTxBodyContent
+          & Exp.setTxGuards subGuards
+          & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
   let signedSub@(Exp.SignedSubTx subTx) = Exp.signSubTx [] [] unsignedSub
   Exp.UnsignedTx tx <-
     H.evalEither $
@@ -1727,12 +1739,13 @@ prop_guard_embedding = H.property $ do
         Exp.defaultTxBodyContent
           & Exp.setTxGuards topGuards
           & Exp.setTxSignedSubTransactions [signedSub]
+          & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
   toList (tx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === map fst topEntries
   toList (subTx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === map fst subEntries
   toList (tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL) === [subTx]
 
--- Native, key, and witnessless guards occupy positions even without redeemers.
--- Explicit order must survive budget substitution and legacy signer merging.
+-- | Budget substitution preserves guard order and redeemer indices at both
+-- transaction levels, updates only Plutus budgets, and rejects missing budgets.
 prop_guard_execution_units :: Property
 prop_guard_execution_units = H.property $ do
   input <- H.forAll genTxIn
@@ -1772,7 +1785,7 @@ prop_guard_execution_units = H.property $ do
   balanced <-
     H.evalEither $
       Exp.substituteExecutionUnits (Map.singleton (Api.ScriptWitnessIndexGuarding 3) units) content
-  Exp.txGuardsToList (Exp.txGuards balanced) === entries units
+  toList (Exp.txGuards balanced) === entries units
   Exp.UnsignedTx tx <- H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra balanced
   let body = tx ^. L.bodyTxL
   toList (body ^. Dijkstra.guardsTxBodyL) === map fst (entries units) <> [extraKeyGuard]
@@ -1794,6 +1807,7 @@ prop_guard_execution_units = H.property $ do
     Left _ -> H.success
     Right _ -> H.failure
 
+-- | A native signature guard contributes one signing key and embeds its script.
 prop_guard_native_key_estimate :: Property
 prop_guard_native_key_estimate = H.property $ do
   keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
@@ -1809,8 +1823,8 @@ prop_guard_native_key_estimate = H.property $ do
   toList (tx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === [credential]
   Map.keys (tx ^. L.witsTxL . L.scriptTxWitsL) === [Exp.hashSimpleScript native]
 
--- Exercise the same API path as CLI transaction build. No script input, only a
--- guard; its measured budget must be substituted before computing the final fee.
+-- | Auto-balancing evaluates an inline or reference Plutus V4 guard and sets
+-- a fee that covers the final transaction's ledger minimum.
 prop_guard_auto_balance :: Bool -> Property
 prop_guard_auto_balance useReference = H.withTests 10 $ H.property $ do
   input <- H.forAll genTxIn
@@ -1875,8 +1889,10 @@ prop_guard_auto_balance useReference = H.withTests 10 $ H.property $ do
         Alonzo.unRedeemers $
           tx ^. L.witsTxL . L.rdmrsTxWitsL
   actualDatum === Api.toAlonzoData datum
-  H.assert $ L.exUnitsMem units > 0 && L.exUnitsSteps units > 0
-  H.assert $ tx ^. L.bodyTxL . L.feeTxBodyL > L.Coin 0
+  H.assertWith units $ \u -> L.exUnitsMem u > 0 && L.exUnitsSteps u > 0
+  let minFee = L.calcMinFeeTx utxo params tx 0
+  H.annotateShow minFee
+  H.assertWith (tx ^. L.bodyTxL . L.feeTxBodyL) (>= minFee)
   Map.size (tx ^. L.witsTxL . L.scriptTxWitsL) === if useReference then 0 else 1
   tx ^. L.bodyTxL . L.referenceInputsTxBodyL
     === Set.fromList [Api.toShelleyTxIn reference | useReference]
@@ -1887,49 +1903,90 @@ paymentGuardCredential (Api.PaymentKeyHash key) = L.KeyHashObj (coerceKeyRole ke
 genGuardEntries
   :: Gen
        ( [Api.Hash Api.PaymentKey]
-       , [(L.Credential L.Guard, Maybe (Exp.GuardWitness (Exp.LedgerEra Exp.DijkstraEra)))]
+       , [(L.Credential L.Guard, Maybe (Exp.ScriptGuardWitness (Exp.LedgerEra Exp.DijkstraEra)))]
        )
 genGuardEntries = Gen.frequency [(1, pure ([], [])), (4, mixedGuards)]
  where
   mixedGuards = do
     keys <- Set.toList <$> Gen.set (Range.linear 1 6) (genVerificationKeyHash Api.AsPaymentKey)
-    scripts <- Set.toList <$> Gen.set (Range.linear 1 6) genScriptHash
-    input <- genTxIn
-    scriptEntries <- traverse (scriptEntry input) scripts
+    scriptEntries <- Map.toList <$> Gen.map (Range.linear 1 6) scriptEntry
     entries <- Gen.shuffle ([(paymentGuardCredential key, Nothing) | key <- keys] <> scriptEntries)
     pure (keys, entries)
 
-  scriptEntry input scriptHash = do
-    witness <- Gen.maybe $ pure $ Exp.NativeGuardWitness $ Exp.SReferenceScript input
-    pure (L.ScriptHashObj (Api.toShelleyScriptHash scriptHash), witness)
+  scriptEntry = do
+    witness <- Gen.frequency [(1, pure Nothing), (4, Just <$> scriptWitness)]
+    scriptHash <- case witness of
+      Just (Exp.NativeGuardWitness (Exp.SScript script)) -> pure $ Exp.hashSimpleScript script
+      Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ (Exp.PScript script) _ _ _)) ->
+        pure $ P.hashPlutusScriptInEra script
+      _ -> Api.toShelleyScriptHash <$> genScriptHash
+    pure (L.ScriptHashObj scriptHash, witness)
 
+  scriptWitness =
+    Gen.choice
+      [ do
+          key <- genVerificationKeyHash Api.AsPaymentKey
+          let script = Exp.SimpleScript $ Api.toDijkstraNativeScript $ Api.RequireSignature key
+          pure $ Exp.NativeGuardWitness $ Exp.SScript script
+      , Exp.NativeGuardWitness . Exp.SReferenceScript <$> genTxIn
+      , case P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4 $
+          Base16.decodeLenient "46450101002499" of
+          Left err -> error $ show err
+          Right script -> plutusWitness (Exp.PScript script)
+      , genTxIn >>= plutusWitness . Exp.PReferenceScript
+      ]
+
+  plutusWitness script =
+    Exp.PlutusGuardWitness
+      <$> ( Exp.PlutusScriptWitness Plutus.SPlutusV4 script Exp.NoScriptDatum
+              <$> genHashableScriptData
+              <*> genExecutionUnits
+          )
+
+coverGuardWitnesses
+  :: [(L.Credential L.Guard, Maybe (Exp.ScriptGuardWitness (Exp.LedgerEra Exp.DijkstraEra)))]
+  -> H.PropertyT IO ()
+coverGuardWitnesses entries = do
+  let witnesses = map snd entries
+  H.cover 5 "inline native guards" $
+    not $
+      null [() | Just (Exp.NativeGuardWitness Exp.SScript{}) <- witnesses]
+  H.cover 5 "reference native guards" $
+    not $
+      null [() | Just (Exp.NativeGuardWitness Exp.SReferenceScript{}) <- witnesses]
+  H.cover 5 "inline Plutus V4 guards" $
+    not $
+      null
+        [() | Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ Exp.PScript{} _ _ _)) <- witnesses]
+  H.cover 5 "reference Plutus V4 guards" $
+    not $
+      null
+        [ ()
+        | Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ Exp.PReferenceScript{} _ _ _)) <- witnesses
+        ]
+  H.cover 5 "script guards without witnesses" $
+    not $
+      null [() | (L.ScriptHashObj _, Nothing) <- entries]
+
+-- | Guard construction and list conversion preserve entry order and witnesses.
 prop_mkTxGuards_order :: Property
 prop_mkTxGuards_order = H.property $ do
-  input <- H.forAll genTxIn
-  keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
-  firstHash <- H.forAll genScriptHash
-  secondHash <- H.forAll $ Gen.filter (/= firstHash) genScriptHash
-  let Api.PaymentKeyHash key = keyHash
-      plutus =
-        Exp.PlutusGuardWitness $
-          Exp.PlutusScriptWitness
-            Plutus.SPlutusV4
-            (Exp.PReferenceScript input)
-            Exp.NoScriptDatum
-            (Api.unsafeHashableScriptData $ Api.ScriptDataNumber 42)
-            (Api.ExecutionUnits 3 4)
-      entries =
-        [ (L.ScriptHashObj (Api.toShelleyScriptHash secondHash), Just plutus)
-        , (L.KeyHashObj (coerceKeyRole key), Nothing)
-        ,
-          ( L.ScriptHashObj (Api.toShelleyScriptHash firstHash)
-          , Just $ Exp.NativeGuardWitness $ Exp.SReferenceScript input
-          )
-        ]
+  (_, entries) <- H.forAll genGuardEntries
+  coverGuardWitnesses entries
+  let count = length entries
+  H.cover 10 "empty guards" $ count == 0
+  H.cover 10 "two or three guards" $ count == 2 || count == 3
+  H.cover 10 "more than three guards" $ count > 3
   guards <- H.evalEither $ Exp.mkTxGuards @(Exp.LedgerEra Exp.DijkstraEra) entries
-  Exp.txGuardsToList guards === entries
-  Exp.txGuardsToList (Exp.emptyTxGuards @(Exp.LedgerEra Exp.DijkstraEra)) === []
+  toList guards === entries
+  fromList entries === guards
 
+-- | The empty guard collection contains no entries.
+unit_emptyTxGuards :: Property
+unit_emptyTxGuards = H.withTests 1 $ H.property $ do
+  toList (Exp.emptyTxGuards @(Exp.LedgerEra Exp.DijkstraEra)) === []
+
+-- | Duplicate credentials are rejected for every combination of witness presence.
 prop_mkTxGuards_duplicates :: Property
 prop_mkTxGuards_duplicates = H.property $ do
   input <- H.forAll genTxIn
@@ -1937,11 +1994,18 @@ prop_mkTxGuards_duplicates = H.property $ do
   let credential = L.ScriptHashObj $ Api.toShelleyScriptHash hash
       witness = Exp.NativeGuardWitness $ Exp.SReferenceScript input
       construct = Exp.mkTxGuards @(Exp.LedgerEra Exp.DijkstraEra)
-  construct [(credential, Nothing), (credential, Just witness)]
-    === Left (Exp.DuplicateGuardCredential credential)
-  construct [(credential, Just witness), (credential, Just witness)]
+  firstWitness <- H.forAll $ Gen.element [Nothing, Just witness]
+  secondWitness <- H.forAll $ Gen.element [Nothing, Just witness]
+  let presence = (isJust firstWitness, isJust secondWitness)
+  H.cover 10 "neither entry witnessed" $ presence == (False, False)
+  H.cover 10 "only first entry witnessed" $ presence == (True, False)
+  H.cover 10 "only second entry witnessed" $ presence == (False, True)
+  H.cover 10 "both entries witnessed" $ presence == (True, True)
+  construct [(credential, firstWitness), (credential, secondWitness)]
     === Left (Exp.DuplicateGuardCredential credential)
 
+-- | Reject script witnesses for key credentials and mismatched native or Plutus
+-- script hashes, while accepting a matching native script.
 prop_mkTxGuards_validation :: Property
 prop_mkTxGuards_validation = H.property $ do
   keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
@@ -1956,4 +2020,20 @@ prop_mkTxGuards_validation = H.property $ do
   construct [(L.ScriptHashObj (Api.toShelleyScriptHash wrongHash), Just witness)]
     === Left (Exp.GuardScriptHashMismatch (Api.toShelleyScriptHash wrongHash) scriptHash)
   guards <- H.evalEither $ construct [(L.ScriptHashObj scriptHash, Just witness)]
-  Exp.txGuardsToList guards === [(L.ScriptHashObj scriptHash, Just witness)]
+  toList guards === [(L.ScriptHashObj scriptHash, Just witness)]
+  plutusScript <-
+    H.evalEither $
+      P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4 $
+        Base16.decodeLenient "46450101002499"
+  let plutusHash = P.hashPlutusScriptInEra plutusScript
+      plutusWitness =
+        Exp.PlutusGuardWitness $
+          Exp.PlutusScriptWitness
+            Plutus.SPlutusV4
+            (Exp.PScript plutusScript)
+            Exp.NoScriptDatum
+            (Api.unsafeHashableScriptData $ Api.ScriptDataNumber 42)
+            (Api.ExecutionUnits 0 0)
+  wrongPlutusHash <- H.forAll $ Gen.filter ((/= plutusHash) . Api.toShelleyScriptHash) genScriptHash
+  construct [(L.ScriptHashObj (Api.toShelleyScriptHash wrongPlutusHash), Just plutusWitness)]
+    === Left (Exp.GuardScriptHashMismatch (Api.toShelleyScriptHash wrongPlutusHash) plutusHash)

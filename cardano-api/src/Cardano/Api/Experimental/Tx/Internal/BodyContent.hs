@@ -169,7 +169,7 @@ import Cardano.Api.Experimental.Tx.Internal.AnyWitness
   , anyScriptWitnessToAnyWitness
   )
 import Cardano.Api.Experimental.Tx.Internal.Certificate.Compatible (getTxCertWitness)
-import Cardano.Api.Experimental.Tx.Internal.Guards
+import Cardano.Api.Experimental.Tx.Internal.Guard
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   ( TxScriptWitnessRequirements (..)
   , getTxScriptWitnessesRequirements
@@ -488,7 +488,7 @@ eraSpecificLedgerTxBody era ledgerbody bc =
   dijkstraOnlyFieldsSet =
     [ name
     | (name, isPresent) <-
-        [ ("txGuards", present (txGuardsToList (txGuards bc)))
+        [ ("txGuards", present (toList (txGuards bc)))
         , ("txSubTransactions", present (txSubTransactions bc))
         , ("txRequiredTopLevelGuards", present (txRequiredTopLevelGuards bc))
         , ("txDirectDeposits", present (L.unDirectDeposits (txDirectDeposits bc)))
@@ -1484,12 +1484,12 @@ bodyGuardCredentials = OSet.fromList . map fst . bodyGuardEntries
 -- Only top-level bodies append extra required signers not already present;
 -- sub-transactions have no separate extra-signers field. Use this same order
 -- for the ledger body and redeemer indices.
-bodyGuardEntries :: BodyContent l era -> [(L.Credential L.Guard, Maybe (GuardWitness era))]
+bodyGuardEntries :: BodyContent l era -> [(L.Credential L.Guard, Maybe (ScriptGuardWitness era))]
 bodyGuardEntries bc =
   explicit
     <> [(credential, Nothing) | credential <- Set.toList extraKeys, Set.notMember credential present]
  where
-  explicit = txGuardsToList (bcGuards bc)
+  explicit = toList (bcGuards bc)
   present = Set.fromList (map fst explicit)
   extraKeys = case bcTopTxOnlyFields bc of
     AbsentInSubTx -> mempty
@@ -1505,7 +1505,7 @@ extractWitnessableGuards bc = case useEra @era of
   DijkstraEra ->
     -- Placeholders reserve the position of entries without a supplied script
     -- witness; the credential itself still determines whether a key is needed.
-    [ (WitGuard credential, maybe AnyKeyWitnessPlaceholder guardWitnessToAnyWitness witness)
+    [ (WitGuard credential, maybe AnyKeyWitnessPlaceholder scriptGuardWitnessToAnyWitness witness)
     | (credential, witness) <- bodyGuardEntries bc
     ]
 

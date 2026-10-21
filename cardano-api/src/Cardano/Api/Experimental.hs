@@ -29,11 +29,10 @@ module Cardano.Api.Experimental
 
     -- ** Ordered guard witnesses
   , TxGuards
-  , GuardWitness (..)
+  , ScriptGuardWitness (..)
   , TxGuardsError (..)
   , mkTxGuards
   , emptyTxGuards
-  , txGuardsToList
 
     -- ** Sub-transactions (Dijkstra era onwards)
   , SubTxBodyContent
