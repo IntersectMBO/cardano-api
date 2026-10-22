@@ -114,7 +114,21 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Install gRPC system dependencies
-      uses: input-output-hk/cardano-dev/actions/grpc-deps@grpc-deps-0.0.1.0
+      uses: input-output-hk/cardano-dev/actions/grpc-deps@grpc-deps-0.0.2.0
+
+    - name: Configure Windows Snappy discovery
+      if: runner.os == 'Windows'
+      # Keep MSYS2's include/library paths scoped to snappy-c. The global paths
+      # from grpc-deps also override GHC's C++ runtime during Template Haskell,
+      # causing unresolved stack-protector symbols in MSYS2's static libc++.
+      run: |
+        cat <<'EOF' >> cabal.project.local
+        package snappy-c
+          flags: +pkg-config
+        EOF
+        echo 'LIBRARY_PATH=' >> "$GITHUB_ENV"
+        echo 'CPATH=' >> "$GITHUB_ENV"
+        pkg-config --cflags --libs snappy
 
     - name: Cache and install Cabal dependencies
       uses: input-output-hk/cardano-dev/actions/cabal-cache@cabal-cache-0.0.1.0
@@ -132,6 +146,32 @@ jobs:
         TMP: ${{ runner.temp }}
         KEEP_WORKSPACE: 1
       run: cabal test all --enable-tests --test-show-details=direct
+
+    - name: Collect Windows build failure diagnostics
+      if: failure() && runner.os == 'Windows'
+      id: windows-diagnostics
+      shell: pwsh
+      run: |
+        $logs = (cabal path --logs-dir | Select-Object -Last 1).Trim()
+        "logs=$logs" >> $env:GITHUB_OUTPUT
+        Get-ChildItem $logs -Recurse -Filter 'plutus-core-*.log' | ForEach-Object {
+          Write-Output "::group::$($_.Name)"
+          Get-Content $_.FullName -Tail 200
+          Write-Output '::endgroup::'
+        }
+        Get-WinEvent -FilterHashtable @{
+          LogName = 'Application'
+          Id = 1000, 1001
+          StartTime = (Get-Date).AddHours(-2)
+        } -ErrorAction SilentlyContinue | Format-List TimeCreated, Message
+
+    - name: Upload Windows Cabal logs
+      if: failure() && runner.os == 'Windows'
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-cabal-logs-ghc-${{ matrix.ghc }}
+        path: ${{ steps.windows-diagnostics.outputs.logs }}
+        if-no-files-found: warn
 
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
     # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
