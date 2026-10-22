@@ -1,0 +1,5 @@
+project: cardano-rpc
+pr: 1389
+kind:
+  - maintenance
+description: cardano-rpc now requires grapesy 1.2.1 or newer.

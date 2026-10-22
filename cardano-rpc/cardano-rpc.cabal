@@ -126,7 +126,7 @@ library
     formatting,
     fs-api ^>=0.4,
     generic-data,
-    grapesy,
+    grapesy >=1.2.1,
     grpc-spec,
     iproute,
     mempack,
