@@ -18,26 +18,23 @@ permissions:
 
 jobs:
   build:
-    runs-on: ${{ matrix.sys.os }}
+    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
         ghc: [&ghc-stable "9.6", "9.10", &ghc-latest "9.12", "9.14"]
         cabal: [&cabal-version "3.16"]
-        sys:
-          - { os: ubuntu-latest }
+        os: [ubuntu-latest]
         include:
           # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
           # We want a single job, because macOS runners are scarce.
           - ghc: *ghc-stable
             cabal: *cabal-version
-            sys:
-              os: macos-latest
+            os: macos-latest
           - ghc: *ghc-latest
             cabal: *cabal-version
-            sys:
-              os: windows-latest
+            os: windows-latest
 
     defaults:
         run:
@@ -54,7 +51,7 @@ jobs:
         c+${{ github.job }}
         d+${{ matrix.ghc }}
         e+${{ matrix.cabal }}
-        f+${{ matrix.sys.os }}
+        f+${{ matrix.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
 
@@ -67,7 +64,7 @@ jobs:
         c+${{ github.job }}
         d+${{ matrix.ghc }}
         e+${{ matrix.cabal }}
-        f+${{ matrix.sys.os }}
+        f+${{ matrix.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
 
     - name: "[macOS] Use the default Xcode's toolchain and SDK"
