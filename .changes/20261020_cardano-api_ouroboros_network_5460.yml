@@ -1,5 +1,0 @@
-project: cardano-api
-pr: 1384
-kind:
-- maintenance
-description: Require ouroboros-network 2.0 for miniprotocol filtering and use the CHaP releases of ouroboros-network, cardano-diffusion and network-mux.
