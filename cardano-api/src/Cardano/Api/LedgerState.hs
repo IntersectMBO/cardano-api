@@ -1573,6 +1573,14 @@ shelleyPraosNonce :: GenesisHashShelley -> Ledger.Nonce
 shelleyPraosNonce genesisHash =
   Ledger.Nonce (Cardano.Crypto.Hash.Class.castHash $ unGenesisHashShelley genesisHash)
 
+-- | The genesis configuration of a node configuration, built from the genesis
+-- files that 'readNodeConfig' has read and checked.
+--
+-- The ledger always needs a Dijkstra genesis, even when Dijkstra is not used,
+-- but @cardano-config@ only reads the @DijkstraGenesisFile@ when
+-- @ExperimentalHardForksEnabled@ is true. When it is false, this function
+-- supplies a placeholder Dijkstra genesis with example values instead, and
+-- 'ncHardForkTriggers' ignores @TestDijkstraHardForkAtEpoch@.
 readCardanoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
@@ -1582,10 +1590,6 @@ readCardanoGenesisConfig enc = do
       ShelleyConfig shelleyGenesis shelleyGenesisHash = readShelleyGenesisConfig enc
       alonzoGenesis = readAlonzoGenesisConfig enc
       conwayGenesis = readConwayGenesisConfig enc
-      -- The ledger always needs a Dijkstra genesis, even when Dijkstra is not
-      -- used, but cardano-config only reads one when
-      -- @ExperimentalHardForksEnabled@ is true. Otherwise this placeholder fills
-      -- the slot, and 'hardForkTriggers' ignores the Dijkstra epoch.
       dijkstraGenesis =
         Ledger.fromSMaybe exampleDijkstraGenesis . Cfg.experimentalGenesisConfig $ ncConfiguration enc
       transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis

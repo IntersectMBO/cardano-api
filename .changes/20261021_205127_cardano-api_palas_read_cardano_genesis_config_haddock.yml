@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1387
+kind:
+- documentation
+description: The Haddock of `readCardanoGenesisConfig` now explains when and why it uses a placeholder Dijkstra genesis.
