@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 0
+kind:
+  - maintenance
+description: Remove the temporary network dependency bound overrides so project builds respect the published bounds of cardano-config, kes-agent, and ouroboros-consensus.
