@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 11.11.0.0 -- 2026-10-22
+
+- Add ScriptGuardWitness for native and Plutus V4 guards in experimental Dijkstra transactions and sub-transactions, with balancing and fee estimation accounting for guard scripts. The guard fields and getters (bcGuards, txGuards, subTxGuards), setTxGuards, and the TxBodyContent and SubTxBodyContent pattern constructors now use opaque, insertion-ordered TxGuards era instead of OSet (Credential Guard). Migrate existing credentials by passing ordered (credential, Nothing) pairs to mkTxGuards, or supply Just (NativeGuardWitness witness) or Just (PlutusGuardWitness witness) for script guards. Handle its Either TxGuardsError (TxGuards era) result for duplicate credentials, script witnesses supplied for key credentials, and mismatching inline script hashes. Use emptyTxGuards for no guards and GHC.Exts.toList to inspect ordered credential/witness pairs via the derived IsList instance; fromList constructs guards without mkTxGuards validation. Update exhaustive pattern matches for the new AnyPlutusGuardingScriptWitness, WitGuard, GuardItem, and ScriptWitnessIndexGuarding constructors; ScriptWitnessIndexGuarding is also exported through the stable Cardano.Api module.
+  (breaking)
+  [PR 1381](https://github.com/intersectmbo/cardano-api/pull/1381)
+
 ## 11.10.0.0 -- 2026-10-21
 
 - `readNodeConfig` and `initialLedgerState` now read node configurations with cardano-config. They accept both the old flat format and the new cardano-config format.
