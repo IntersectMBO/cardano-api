@@ -15,6 +15,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   ( readParamsMethod
   , readParamsFill
   , readUtxosMethod
+  , readUtxosFill
   , searchUtxosMethod
   , readGenesisMethod
   , readEraSummaryMethod
@@ -88,6 +89,8 @@ readParamsFill doQueryPParams doQueryTip =
 -- along with the ledger tip.
 -- Returns an empty response when no keys are provided, matching other
 -- UTxO RPC implementations (Dolos, cardano-node-api, Dingo).
+-- Honours the field mask: the UTxO query runs only for @items@, the chain tip
+-- queries only for @ledger_tip@, and each item is built only from the fields selected.
 readUtxosMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadUtxosRequest
@@ -107,24 +110,29 @@ readUtxosMethod req
       utxoFilter <- QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. U5c.keys)
 
       nodeConnInfo <- grab
-      AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-      eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
-
-      let target = VolatileTip
-      (utxo, ledgerTip) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-        utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-        ledgerTip <- queryLedgerTip
-        pure (utxo, ledgerTip)
-
-      pure $
-        defMessage
-          & U5c.ledgerTip .~ Proto ledgerTip
-          & U5c.items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
+      let doQueryUtxoFields :: LocalQuery [UtxoFields]
+          doQueryUtxoFields = queryInCurrentEra $ \eon -> do
+            utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
+            pure $ obtainCommonConstraints eon (utxoToUtxoFields utxo)
+      let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+      fmap Proto . runFill (runLocalQuery nodeConnInfo) fieldMask $
+        readUtxosFill doQueryUtxoFields queryLedgerTip
  where
   txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
   txoRefToTxIn r = do
     txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. U5c.hash
     pure $ TxIn txId' (TxIx . fromIntegral $ r ^. U5c.index)
+
+-- | The fields of a @ReadUtxos@ response, each from the query that obtains it.
+readUtxosFill
+  :: Monad m
+  => m [UtxoFields]
+  -- ^ Queries the UTxO entries of the requested keys
+  -> m UtxoRpc.ChainPoint
+  -- ^ Queries the chain tip
+  -> FieldFill m UtxoRpc.ReadUtxosResponse
+readUtxosFill doQueryUtxoFields doQueryTip =
+  fillEach @"items" doQueryUtxoFields (`fillFrom` utxoFill) <> fill @"ledgerTip" doQueryTip
 
 -- | Bounds per-request UTxO lookups the node performs: ReadUtxos keys and
 -- SearchUtxos predicate address terms. SearchUtxos pagination caps at 10_000 per page.
