@@ -1,11 +1,18 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Normal form of @google.protobuf.FieldMask@ paths, ported from
 -- @addFieldPath@ and @toFieldMask@ of protobuf Java's @FieldMaskTree@.
 module Cardano.Rpc.Server.Internal.FieldMask
   ( FieldPath
+  , FieldMaskTree (..)
   , PathTree (..)
   , normalise
+  , resolve
   , toPaths
   )
 where
@@ -13,6 +20,12 @@ where
 import RIO hiding (toList)
 
 import Data.Map qualified as Map
+import Data.ProtoLens.Message
+  ( FieldAccessor (..)
+  , FieldDescriptor (..)
+  , FieldTypeDescriptor (..)
+  , Message (..)
+  )
 import Data.Text qualified as T
 import GHC.Exts (IsList (toList))
 
@@ -65,3 +78,57 @@ addSegments (segment : rest) (PathTree children) =
   extend child@(PathTree grandchildren)
     | null grandchildren = child
     | otherwise = addSegments rest child
+
+-- | A field mask resolved against the descriptors of @msg@.
+data FieldMaskTree msg
+  = -- | An absent or empty mask, or a @*@ path.
+    SelectAll
+  | -- | The paths that resolved. May be empty, which selects nothing.
+    Select PathTree
+  deriving (Eq, Show)
+
+type role FieldMaskTree nominal
+
+-- | Resolve field mask paths, rooted at @msg@, against its proto descriptors.
+-- A path that does not name a field is dropped whole.
+resolve
+  :: forall msg
+   . Message msg
+  => [FieldPath]
+  -- ^ Field mask paths, rooted at @msg@
+  -> FieldMaskTree msg
+resolve paths
+  | null paths || "*" `elem` paths = SelectAll
+  | otherwise = Select . prune @msg $ normalise paths
+
+-- | Keep the paths that resolve against the fields of @msg@. A branch whose
+-- sub-paths all drop is dropped too.
+prune
+  :: forall msg
+   . Message msg
+  => PathTree
+  -- ^ Normalised paths, rooted at @msg@
+  -> PathTree
+prune (PathTree children) = PathTree $ Map.mapMaybeWithKey keepField children
+ where
+  keepField :: Text -> PathTree -> Maybe PathTree
+  keepField name child =
+    keepResolved child =<< Map.lookup (T.unpack name) (fieldsByTextFormatName @msg)
+
+  keepResolved :: PathTree -> FieldDescriptor msg -> Maybe PathTree
+  keepResolved child@(PathTree grandchildren) (FieldDescriptor _ fieldType accessor)
+    | null grandchildren = Just child
+    | MessageField _ <- fieldType
+    , hasSubfields accessor =
+        nonEmptyTree $ pruneBelow fieldType child
+    | otherwise = Nothing
+
+  nonEmptyTree tree@(PathTree remaining) = if null remaining then Nothing else Just tree
+
+  hasSubfields = \case
+    MapField{} -> False
+    _ -> True
+
+  pruneBelow :: forall value. Message value => FieldTypeDescriptor value -> PathTree -> PathTree
+  -- The descriptor argument only pins @value@.
+  pruneBelow _ = prune @value
