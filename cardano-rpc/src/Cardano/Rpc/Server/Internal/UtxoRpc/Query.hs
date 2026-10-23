@@ -13,7 +13,13 @@
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   ( readParamsMethod
+  , mkReadParamsResponse
+  , readParamsFieldMask
+  , mkReadUtxosResponse
+  , readUtxosFieldMask
   , readUtxosMethod
+  , mkSearchUtxosResponse
+  , searchUtxosFieldMask
   , searchUtxosMethod
   , readGenesisMethod
   , readEraSummaryMethod
@@ -27,6 +33,7 @@ import Cardano.Api.Parser.Text qualified as P
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
+import Cardano.Rpc.Server.Internal.FieldMask
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.TimedCache (readThroughCache)
@@ -35,12 +42,12 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type
 import Cardano.Rpc.Server.NodeKernelAccess
 
 import Cardano.Crypto.Hash.Class qualified as Crypto (hashToBytes)
+import Cardano.Ledger.BaseTypes (WithOrigin)
 import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis, sgNetworkMagic)
 
 import RIO hiding (toList)
 
 import Control.Error.Util (hush)
-import Data.Default
 import Data.Map.Strict qualified as Map
 import Data.ProtoLens (defMessage)
 import Data.Text qualified as Text (pack)
@@ -51,43 +58,85 @@ import System.FS.API (MountPoint (..), SomeHasFS (..))
 import System.FS.IO (ioHasFS)
 import System.FilePath (takeDirectory)
 
+import Proto.Google.Protobuf.FieldMask_Fields qualified as FieldMask (paths)
+
 -- | Handle the @ReadParams@ RPC method.
--- Queries the node for current protocol parameters and returns them
--- along with the ledger tip.
+-- Honours the field mask: protocol parameters and the era are queried only for @values@,
+-- chain tip queries only for @ledger_tip@.
 readParamsMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadParamsRequest
   -> m (Proto UtxoRpc.ReadParamsResponse)
-readParamsMethod _req = do
-  -- TODO: implement field masks - they are ignored for now
-  -- they need to be normalised beforehand, see: https://github.com/protocolbuffers/protobuf/blob/main/java/util/src/main/java/com/google/protobuf/util/FieldMaskTree.java#L76
-  -- let fieldMask :: [Text] = req ^. #fieldMask . #paths
+readParamsMethod req = do
+  let fieldMask = readParamsFieldMask req
   nodeConnInfo <- grab
-  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
-  let sbe = convert eon
+  mAnyEra <- whenSelected @"values" fieldMask . liftIO . throwExceptT $ determineEra nodeConnInfo
 
   let target = VolatileTip
-  (pparams, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-    pparams <- throwEither =<< throwEither =<< queryProtocolParameters sbe
-    chainPoint <- throwEither =<< queryChainPoint
-    chainBlockNo <- throwEither =<< queryChainBlockNo
-    systemStart <- throwEither =<< querySystemStart
-    eraHistory <- throwEither =<< queryEraHistory
-    pure (pparams, chainPoint, chainBlockNo, systemStart, eraHistory)
+  (mPParams, mTipInputs) <-
+    if isSelected @"values" fieldMask || isSelected @"ledgerTip" fieldMask
+      then liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+        mPParams <- for mAnyEra $ \(AnyCardanoEra era) -> do
+          eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+          pparams <- throwEither =<< throwEither =<< queryProtocolParameters (convert eon)
+          pure . getProto $ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
+        mTipInputs <- whenSelected @"ledgerTip" fieldMask queryLedgerTip
+        pure (mPParams, mTipInputs)
+      else pure (Nothing, Nothing)
 
+  mTip <- for mTipInputs $ fmap getProto . mkLedgerTip
+
+  pure . Proto $ mkReadParamsResponse fieldMask mPParams mTip
+
+-- | The field mask of a @ReadParams@ request, rooted at the response.
+readParamsFieldMask :: Proto UtxoRpc.ReadParamsRequest -> FieldMaskTree UtxoRpc.ReadParamsResponse
+readParamsFieldMask req = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+
+-- | Query what the @ledger_tip@ chain point is built from, inside a local state query.
+queryLedgerTip
+  :: LocalStateQueryExpr
+       BlockInMode
+       ChainPoint
+       QueryInMode
+       ()
+       IO
+       (ChainPoint, WithOrigin BlockNo, SystemStart, EraHistory)
+queryLedgerTip = do
+  chainPoint <- throwEither =<< queryChainPoint
+  chainBlockNo <- throwEither =<< queryChainBlockNo
+  systemStart <- throwEither =<< querySystemStart
+  eraHistory <- throwEither =<< queryEraHistory
+  pure (chainPoint, chainBlockNo, systemStart, eraHistory)
+
+-- | Build the @ledger_tip@ chain point message from the results of 'queryLedgerTip'.
+mkLedgerTip
+  :: MonadIO m
+  => (ChainPoint, WithOrigin BlockNo, SystemStart, EraHistory)
+  -> m (Proto UtxoRpc.ChainPoint)
+mkLedgerTip (chainPoint, chainBlockNo, systemStart, eraHistory) = do
   timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+  pure $ mkChainPointMsg chainPoint chainBlockNo timestamp
 
-  pure $
-    def
-      & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
-      & U5c.values . U5c.cardano .~ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
+-- | Assemble the response, then trim it to the mask. An input the mask does not
+-- select is never evaluated.
+mkReadParamsResponse
+  :: FieldMaskTree UtxoRpc.ReadParamsResponse
+  -> Maybe UtxoRpc.PParams
+  -> Maybe UtxoRpc.ChainPoint
+  -> UtxoRpc.ReadParamsResponse
+mkReadParamsResponse fieldMask mPParams mTip =
+  applyFieldMask fieldMask $
+    defMessage
+      & maybe id (\pparams -> maskedSet @"values" fieldMask $ defMessage & U5c.cardano .~ pparams) mPParams
+      & maybe id (maskedSet @"ledgerTip" fieldMask) mTip
 
 -- | Handle the @ReadUtxos@ RPC method.
 -- Looks up specific UTxO entries by their 'TxIn' keys and returns them
 -- along with the ledger tip.
 -- Returns an empty response when no keys are provided, matching other
 -- UTxO RPC implementations (Dolos, cardano-node-api, Dingo).
+-- Honours the field mask: the UTxO query runs only for @items@, the chain tip
+-- queries only for @ledger_tip@, and each item is built only from the fields selected.
 readUtxosMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadUtxosRequest
@@ -96,6 +145,7 @@ readUtxosMethod req
   | null $ req ^. U5c.keys = pure defMessage
   | otherwise = do
       let keyCount = length $ req ^. U5c.keys
+          fieldMask = readUtxosFieldMask req
       when (keyCount > maxUtxoQueryKeys) $
         throwGrpcErrorWithMessage GrpcInvalidArgument $
           "too many keys: "
@@ -107,29 +157,47 @@ readUtxosMethod req
       utxoFilter <- QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. U5c.keys)
 
       nodeConnInfo <- grab
-      AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-      eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+      mAnyEra <- whenSelected @"items" fieldMask . liftIO . throwExceptT $ determineEra nodeConnInfo
 
       let target = VolatileTip
-      (utxo, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-        utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-        chainPoint <- throwEither =<< queryChainPoint
-        chainBlockNo <- throwEither =<< queryChainBlockNo
-        systemStart <- throwEither =<< querySystemStart
-        eraHistory <- throwEither =<< queryEraHistory
-        pure (utxo, chainPoint, chainBlockNo, systemStart, eraHistory)
+      (mItems, mTipInputs) <-
+        if isSelected @"items" fieldMask || isSelected @"ledgerTip" fieldMask
+          then liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+            mItems <- for mAnyEra $ \(AnyCardanoEra era) -> do
+              eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+              utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
+              pure $ obtainCommonConstraints eon (utxoToUtxoFields utxo)
+            mTipInputs <- whenSelected @"ledgerTip" fieldMask queryLedgerTip
+            pure (mItems, mTipInputs)
+          else pure (Nothing, Nothing)
 
-      timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+      mTip <- for mTipInputs $ fmap getProto . mkLedgerTip
 
-      pure $
-        defMessage
-          & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
-          & U5c.items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
+      pure . Proto $ mkReadUtxosResponse fieldMask mItems mTip
  where
   txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
   txoRefToTxIn r = do
     txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. U5c.hash
     pure $ TxIn txId' (TxIx . fromIntegral $ r ^. U5c.index)
+
+-- | The field mask of a @ReadUtxos@ request, rooted at the response.
+readUtxosFieldMask :: Proto UtxoRpc.ReadUtxosRequest -> FieldMaskTree UtxoRpc.ReadUtxosResponse
+readUtxosFieldMask req = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+
+-- | Assemble the response, then trim it to the mask. An input the mask does not
+-- select is never evaluated.
+mkReadUtxosResponse
+  :: FieldMaskTree UtxoRpc.ReadUtxosResponse
+  -> Maybe [UtxoFields]
+  -> Maybe UtxoRpc.ChainPoint
+  -> UtxoRpc.ReadUtxosResponse
+mkReadUtxosResponse fieldMask mItems mTip =
+  applyFieldMask fieldMask $
+    defMessage
+      & maybe id (maskedSet @"items" fieldMask . map (mkAnyUtxoData itemMask)) mItems
+      & maybe id (maskedSet @"ledgerTip" fieldMask) mTip
+ where
+  itemMask = subMaskEach @"items" fieldMask
 
 -- | Bounds per-request UTxO lookups the node performs: ReadUtxos keys and
 -- SearchUtxos predicate address terms. SearchUtxos pagination caps at 10_000 per page.
@@ -140,13 +208,16 @@ maxUtxoQueryKeys = 20_000
 -- Filters the UTxO set by a predicate and returns a paginated result.
 -- The predicate must contain exact address matches so the query can be
 -- narrowed; broad predicates are rejected with @INVALID_ARGUMENT@.
+-- Honours the field mask: the UTxO query runs only for @items@ or @next_token@,
+-- the chain tip queries only for @ledger_tip@, and each item is built only from
+-- the fields selected.
 searchUtxosMethod
   :: MonadRpc e m
   => Proto UtxoRpc.SearchUtxosRequest
   -> m (Proto UtxoRpc.SearchUtxosResponse)
 searchUtxosMethod req = do
-  -- TODO: field masks are ignored for now (same as readParamsMethod)
-  let maxItems = req ^. U5c.maxItems
+  let fieldMask = searchUtxosFieldMask req
+      maxItems = req ^. U5c.maxItems
       startToken = req ^. U5c.maybe'startToken
 
   (compiledPredicate, utxoFilter) <- case req ^. U5c.maybe'predicate of
@@ -166,29 +237,52 @@ searchUtxosMethod req = do
         "predicate too broad: must contain exact address match to avoid fetching the entire UTxO set"
 
   nodeConnInfo <- grab
-  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+  let isPageSelected = isSelected @"items" fieldMask || isSelected @"nextToken" fieldMask
+  mAnyEra <-
+    if isPageSelected
+      then Just <$> liftIO (throwExceptT $ determineEra nodeConnInfo)
+      else pure Nothing
 
   let target = VolatileTip
-  (utxo, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-    utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-    chainPoint <- throwEither =<< queryChainPoint
-    chainBlockNo <- throwEither =<< queryChainBlockNo
-    systemStart <- throwEither =<< querySystemStart
-    eraHistory <- throwEither =<< queryEraHistory
-    pure (utxo, chainPoint, chainBlockNo, systemStart, eraHistory)
+  (mPage, mTipInputs) <-
+    if isPageSelected || isSelected @"ledgerTip" fieldMask
+      then liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+        mPage <- for mAnyEra $ \(AnyCardanoEra era) -> do
+          eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+          utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
+          let (page, nextTok) =
+                obtainCommonConstraints eon $
+                  paginateByTxIn (matchesCompiledPredicate compiledPredicate) (unUTxO utxo) startToken maxItems
+          pure (obtainCommonConstraints eon $ map (uncurry txInTxOutToUtxoFields) page, nextTok)
+        mTipInputs <- whenSelected @"ledgerTip" fieldMask queryLedgerTip
+        pure (mPage, mTipInputs)
+      else pure (Nothing, Nothing)
 
-  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+  mTip <- for mTipInputs $ fmap getProto . mkLedgerTip
 
-  obtainCommonConstraints eon $ do
-    let (page, nextTok) =
-          paginateByTxIn (matchesCompiledPredicate compiledPredicate) (unUTxO utxo) startToken maxItems
+  pure . Proto $ mkSearchUtxosResponse fieldMask (fst <$> mPage) (snd <$> mPage) mTip
 
-    pure $
-      defMessage
-        & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
-        & U5c.items .~ map (uncurry txInTxOutToAnyUtxoData) page
-        & U5c.maybe'nextToken .~ nextTok
+-- | The field mask of a @SearchUtxos@ request, rooted at the response.
+searchUtxosFieldMask
+  :: Proto UtxoRpc.SearchUtxosRequest -> FieldMaskTree UtxoRpc.SearchUtxosResponse
+searchUtxosFieldMask req = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+
+-- | Assemble the response, then trim it to the mask. An input the mask does not
+-- select is never evaluated.
+mkSearchUtxosResponse
+  :: FieldMaskTree UtxoRpc.SearchUtxosResponse
+  -> Maybe [UtxoFields]
+  -> Maybe (Maybe Text)
+  -> Maybe UtxoRpc.ChainPoint
+  -> UtxoRpc.SearchUtxosResponse
+mkSearchUtxosResponse fieldMask mItems mNextToken mTip =
+  applyFieldMask fieldMask $
+    defMessage
+      & maybe id (maskedSet @"items" fieldMask . map (mkAnyUtxoData itemMask)) mItems
+      & maybe id (maskedSet @"maybe'nextToken" fieldMask) mNextToken
+      & maybe id (maskedSet @"ledgerTip" fieldMask) mTip
+ where
+  itemMask = subMaskEach @"items" fieldMask
 
 -- | Handle the @ReadGenesis@ RPC method.
 -- Returns the chain's identity - the Shelley genesis hash and the CAIP-2 chain
@@ -206,7 +300,7 @@ readGenesisMethod
   => Proto UtxoRpc.ReadGenesisRequest
   -> m (Proto UtxoRpc.ReadGenesisResponse)
 readGenesisMethod _req = do
-  -- TODO: field masks are ignored for now (same as readParamsMethod)
+  -- TODO: field masks are ignored for now
   nodeKernelAccess <- grabNodeKernelAccess
   let genesisBundle@GenesisBundle
         { shelleyGenesisHash
@@ -279,7 +373,7 @@ readEraSummaryMethod
   => Proto UtxoRpc.ReadEraSummaryRequest
   -> m (Proto UtxoRpc.ReadEraSummaryResponse)
 readEraSummaryMethod _req = do
-  -- TODO: field masks are ignored for now (same as readParamsMethod)
+  -- TODO: field masks are ignored for now
   nodeKernelAccess <- grabNodeKernelAccess
   summary <- readHardForkSummary nodeKernelAccess
   pure $
