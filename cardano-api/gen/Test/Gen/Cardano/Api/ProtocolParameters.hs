@@ -175,6 +175,16 @@ genIntroducedInDijkstraPParams =
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
 
 genDijkstraEraBasedProtocolParametersUpdate
   :: MonadGen m => m (EraBasedProtocolParametersUpdate DijkstraEra)
