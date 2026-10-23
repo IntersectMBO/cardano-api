@@ -248,6 +248,7 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.Reflection
     Test.Cardano.Rpc.Reflection.DescriptorTable
     Test.Cardano.Rpc.Script
+    Test.Cardano.Rpc.SearchUtxos
     Test.Cardano.Rpc.TxOutput
     Test.Cardano.Rpc.Type
     Test.Cardano.Rpc.WaitForTxStream

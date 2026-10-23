@@ -8,6 +8,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   , eraSummariesToProto
   , UtxoFields (..)
   , utxoToUtxoFields
+  , txInTxOutToUtxoFields
   , mkAnyUtxoData
   , utxoToUtxoRpcAnyUtxoData
   , txInTxOutToAnyUtxoData

@@ -18,6 +18,8 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   , mkReadUtxosResponse
   , readUtxosFieldMask
   , readUtxosMethod
+  , mkSearchUtxosResponse
+  , searchUtxosFieldMask
   , searchUtxosMethod
   , readGenesisMethod
   , readEraSummaryMethod
@@ -206,13 +208,16 @@ maxUtxoQueryKeys = 20_000
 -- Filters the UTxO set by a predicate and returns a paginated result.
 -- The predicate must contain exact address matches so the query can be
 -- narrowed; broad predicates are rejected with @INVALID_ARGUMENT@.
+-- Honours the field mask: the UTxO query runs only for @items@ or @next_token@,
+-- the chain tip queries only for @ledger_tip@, and each item is built only from
+-- the fields selected.
 searchUtxosMethod
   :: MonadRpc e m
   => Proto UtxoRpc.SearchUtxosRequest
   -> m (Proto UtxoRpc.SearchUtxosResponse)
 searchUtxosMethod req = do
-  -- TODO: field masks are ignored for now
-  let maxItems = req ^. U5c.maxItems
+  let fieldMask = searchUtxosFieldMask req
+      maxItems = req ^. U5c.maxItems
       startToken = req ^. U5c.maybe'startToken
 
   (compiledPredicate, utxoFilter) <- case req ^. U5c.maybe'predicate of
@@ -232,26 +237,52 @@ searchUtxosMethod req = do
         "predicate too broad: must contain exact address match to avoid fetching the entire UTxO set"
 
   nodeConnInfo <- grab
-  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+  let isPageSelected = isSelected @"items" fieldMask || isSelected @"nextToken" fieldMask
+  mAnyEra <-
+    if isPageSelected
+      then Just <$> liftIO (throwExceptT $ determineEra nodeConnInfo)
+      else pure Nothing
 
   let target = VolatileTip
-  (utxo, tipInputs) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-    utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-    tipInputs <- queryLedgerTip
-    pure (utxo, tipInputs)
+  (mPage, mTipInputs) <-
+    if isPageSelected || isSelected @"ledgerTip" fieldMask
+      then liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+        mPage <- for mAnyEra $ \(AnyCardanoEra era) -> do
+          eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+          utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
+          let (page, nextTok) =
+                obtainCommonConstraints eon $
+                  paginateByTxIn (matchesCompiledPredicate compiledPredicate) (unUTxO utxo) startToken maxItems
+          pure (obtainCommonConstraints eon $ map (uncurry txInTxOutToUtxoFields) page, nextTok)
+        mTipInputs <- whenSelected @"ledgerTip" fieldMask queryLedgerTip
+        pure (mPage, mTipInputs)
+      else pure (Nothing, Nothing)
 
-  ledgerTip <- mkLedgerTip tipInputs
+  mTip <- for mTipInputs $ fmap getProto . mkLedgerTip
 
-  obtainCommonConstraints eon $ do
-    let (page, nextTok) =
-          paginateByTxIn (matchesCompiledPredicate compiledPredicate) (unUTxO utxo) startToken maxItems
+  pure . Proto $ mkSearchUtxosResponse fieldMask (fst <$> mPage) (snd <$> mPage) mTip
 
-    pure $
-      defMessage
-        & U5c.ledgerTip .~ ledgerTip
-        & U5c.items .~ map (uncurry txInTxOutToAnyUtxoData) page
-        & U5c.maybe'nextToken .~ nextTok
+-- | The field mask of a @SearchUtxos@ request, rooted at the response.
+searchUtxosFieldMask
+  :: Proto UtxoRpc.SearchUtxosRequest -> FieldMaskTree UtxoRpc.SearchUtxosResponse
+searchUtxosFieldMask req = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+
+-- | Assemble the response, then trim it to the mask. An input the mask does not
+-- select is never evaluated.
+mkSearchUtxosResponse
+  :: FieldMaskTree UtxoRpc.SearchUtxosResponse
+  -> Maybe [UtxoFields]
+  -> Maybe (Maybe Text)
+  -> Maybe UtxoRpc.ChainPoint
+  -> UtxoRpc.SearchUtxosResponse
+mkSearchUtxosResponse fieldMask mItems mNextToken mTip =
+  applyFieldMask fieldMask $
+    defMessage
+      & maybe id (maskedSet @"items" fieldMask . map (mkAnyUtxoData itemMask)) mItems
+      & maybe id (maskedSet @"maybe'nextToken" fieldMask) mNextToken
+      & maybe id (maskedSet @"ledgerTip" fieldMask) mTip
+ where
+  itemMask = subMaskEach @"items" fieldMask
 
 -- | Handle the @ReadGenesis@ RPC method.
 -- Returns the chain's identity - the Shelley genesis hash and the CAIP-2 chain
