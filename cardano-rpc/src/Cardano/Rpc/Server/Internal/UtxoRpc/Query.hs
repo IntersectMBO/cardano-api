@@ -65,20 +65,12 @@ readParamsMethod req = do
   nodeConnInfo <- grab
   let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
   fmap Proto . runFill (runLocalQuery nodeConnInfo) fieldMask $
-    readParamsFill doQueryPParams doQueryTip
+    readParamsFill doQueryPParams queryLedgerTip
  where
   doQueryPParams :: LocalQuery UtxoRpc.PParams
   doQueryPParams = queryInCurrentEra $ \eon -> do
     pparams <- throwEither =<< throwEither =<< queryProtocolParameters (convert eon)
     pure . getProto $ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
-  doQueryTip :: LocalQuery UtxoRpc.ChainPoint
-  doQueryTip = do
-    chainPoint <- throwEither =<< queryChainPoint
-    chainBlockNo <- throwEither =<< queryChainBlockNo
-    systemStart <- throwEither =<< querySystemStart
-    eraHistory <- throwEither =<< queryEraHistory
-    timestamp <- slotToTimestamp systemStart eraHistory chainPoint
-    pure . getProto $ mkChainPointMsg chainPoint chainBlockNo timestamp
 
 -- | The fields of a @ReadParams@ response, each from the query that obtains it.
 readParamsFill
@@ -119,19 +111,14 @@ readUtxosMethod req
       eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
 
       let target = VolatileTip
-      (utxo, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+      (utxo, ledgerTip) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
         utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-        chainPoint <- throwEither =<< queryChainPoint
-        chainBlockNo <- throwEither =<< queryChainBlockNo
-        systemStart <- throwEither =<< querySystemStart
-        eraHistory <- throwEither =<< queryEraHistory
-        pure (utxo, chainPoint, chainBlockNo, systemStart, eraHistory)
-
-      timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+        ledgerTip <- queryLedgerTip
+        pure (utxo, ledgerTip)
 
       pure $
         defMessage
-          & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
+          & U5c.ledgerTip .~ Proto ledgerTip
           & U5c.items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
  where
   txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
@@ -178,15 +165,10 @@ searchUtxosMethod req = do
   eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
 
   let target = VolatileTip
-  (utxo, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+  (utxo, ledgerTip) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
     utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-    chainPoint <- throwEither =<< queryChainPoint
-    chainBlockNo <- throwEither =<< queryChainBlockNo
-    systemStart <- throwEither =<< querySystemStart
-    eraHistory <- throwEither =<< queryEraHistory
-    pure (utxo, chainPoint, chainBlockNo, systemStart, eraHistory)
-
-  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+    ledgerTip <- queryLedgerTip
+    pure (utxo, ledgerTip)
 
   obtainCommonConstraints eon $ do
     let (page, nextTok) =
@@ -194,7 +176,7 @@ searchUtxosMethod req = do
 
     pure $
       defMessage
-        & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
+        & U5c.ledgerTip .~ Proto ledgerTip
         & U5c.items .~ map (uncurry txInTxOutToAnyUtxoData) page
         & U5c.maybe'nextToken .~ nextTok
 
@@ -364,6 +346,16 @@ queryInCurrentEra query = do
   AnyCardanoEra era <- throwEither =<< queryCurrentEra
   eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
   query eon
+
+-- | Query the @ledger_tip@ chain point.
+queryLedgerTip :: LocalQuery UtxoRpc.ChainPoint
+queryLedgerTip = do
+  chainPoint <- throwEither =<< queryChainPoint
+  chainBlockNo <- throwEither =<< queryChainBlockNo
+  systemStart <- throwEither =<< querySystemStart
+  eraHistory <- throwEither =<< queryEraHistory
+  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+  pure . getProto $ mkChainPointMsg chainPoint chainBlockNo timestamp
 
 slotToTimestamp
   :: HasCallStack
