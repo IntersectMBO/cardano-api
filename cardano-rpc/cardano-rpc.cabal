@@ -58,6 +58,7 @@ library
     Cardano.Rpc.Server.Config
     Cardano.Rpc.Server.Internal.Env
     Cardano.Rpc.Server.Internal.Error
+    Cardano.Rpc.Server.Internal.FieldMask
     Cardano.Rpc.Server.Internal.Monad
     Cardano.Rpc.Server.Internal.Node
     Cardano.Rpc.Server.Internal.Reflection
@@ -234,6 +235,7 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.EraSummary
     Test.Cardano.Rpc.Eval
     Test.Cardano.Rpc.FetchBlockTx
+    Test.Cardano.Rpc.FieldMask
     Test.Cardano.Rpc.FollowTipStream
     Test.Cardano.Rpc.Genesis.Fixture
     Test.Cardano.Rpc.Genesis.Property
