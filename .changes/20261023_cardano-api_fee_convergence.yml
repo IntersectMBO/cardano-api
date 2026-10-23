@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1120
+kind:
+- bugfix
+description: Prevent recursive fee calculation from oscillating at CBOR integer width boundaries by accepting a sufficient fee while requiring a fully balanced transaction and valid minimum UTxO values.

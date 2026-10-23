@@ -37,6 +37,7 @@ import Cardano.Api.Monad.Error (failEitherWith)
 import Cardano.Ledger.Alonzo.Scripts qualified as L (AsItem (..))
 import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as UnexportedLedger
+import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
 import Cardano.Ledger.Keys (coerceKeyRole)
@@ -173,6 +174,12 @@ tests =
         , testProperty
             "well-funded multi-asset transaction always succeeds"
             prop_calcMinFeeRecursive_well_funded_multi_asset
+        , testProperty
+            "Conway fee calculation converges at a CBOR integer width boundary"
+            (prop_calcMinFeeRecursive_cbor_boundary Exp.ConwayEra)
+        , testProperty
+            "Dijkstra fee calculation converges at a CBOR integer width boundary"
+            (prop_calcMinFeeRecursive_cbor_boundary Exp.DijkstraEra)
         , testProperty
             "fee calculation is idempotent"
             prop_calcMinFeeRecursive_fee_fixpoint
@@ -731,6 +738,57 @@ prop_calcMinFeeRecursive_well_funded_multi_asset = H.property $ do
           utxo
           (resultLedgerTx ^. L.bodyTxL)
   balance === mempty
+
+-- | Force a fee oscillation at the 2^32 lovelace CBOR width boundary.
+-- With the higher fee, change fits in a five-byte integer. Lowering the fee
+-- to that transaction's exact minimum pushes change into a nine-byte integer,
+-- which requires the higher fee again. A sufficient fee must be retained.
+prop_calcMinFeeRecursive_cbor_boundary :: Exp.Era era -> Property
+prop_calcMinFeeRecursive_cbor_boundary era = Exp.obtainCommonConstraints era $ H.property $ do
+  (Exp.UnsignedTx templateTx, L.UTxO templateUtxo, changeAddr) <- H.forAll $ genFundedSimpleTx era
+  let pparams =
+        exampleProtocolParamsEra era
+          & L.ppTxFeePerByteL .~ L.CoinPerByte (L.CompactCoin 44)
+          & L.ppTxFeeFixedL .~ L.Coin 155_381
+      boundary = L.Coin (2 ^ (32 :: Int))
+      changeOut = L.mkBasicTxOut changeAddr (L.MaryValue boundary mempty)
+      largeTx =
+        templateTx
+          & L.bodyTxL . L.outputsTxBodyL .~ Seq.singleton changeOut
+          & L.bodyTxL . L.feeTxBodyL .~ L.Coin 200_000
+      highFee = L.calcMinFeeTx (L.UTxO templateUtxo) pparams largeTx 0
+      smallTx =
+        largeTx
+          & L.bodyTxL . L.outputsTxBodyL .~ Seq.singleton (changeOut & L.coinTxOutL .~ (boundary - 1))
+          & L.bodyTxL . L.feeTxBodyL .~ highFee
+      lowFee = L.calcMinFeeTx (L.UTxO templateUtxo) pparams smallTx 0
+      utxo = L.UTxO $ Map.map (L.coinTxOutL .~ (boundary - 1 + highFee)) templateUtxo
+      initialTx = Exp.UnsignedTx $ largeTx & L.bodyTxL . L.feeTxBodyL .~ lowFee
+  H.assertWith (highFee - lowFee) (> 1)
+  -- Check the fixture really crosses the boundary when the fee is lowered.
+  let lowFeeTx =
+        smallTx
+          & L.bodyTxL . L.feeTxBodyL .~ lowFee
+          & L.bodyTxL . L.outputsTxBodyL
+            .~ Seq.singleton (changeOut & L.coinTxOutL .~ (boundary - 1 + highFee - lowFee))
+  L.calcMinFeeTx utxo pparams lowFeeTx 0 === highFee
+  resultTx@(Exp.UnsignedTx resultLedgerTx) <-
+    H.leftFail $ Exp.calcMinFeeRecursive changeAddr initialTx utxo pparams mempty mempty 0
+  resultLedgerTx ^. L.bodyTxL . L.feeTxBodyL === highFee
+  H.assert $ highFee >= L.calcMinFeeTx utxo pparams resultLedgerTx 0
+  UnexportedLedger.evalBalanceTxBody
+    pparams
+    (const Nothing)
+    (const False)
+    utxo
+    (resultLedgerTx ^. L.bodyTxL)
+    === mempty
+  mapM_
+    (\out -> H.assert $ out ^. L.coinTxOutL >= L.getMinCoinTxOut pparams out)
+    (toList $ resultLedgerTx ^. L.bodyTxL . L.outputsTxBodyL)
+  secondResult <-
+    H.leftFail $ Exp.calcMinFeeRecursive changeAddr resultTx utxo pparams mempty mempty 0
+  resultTx === secondResult
 
 -- | 'calcMinFeeRecursive' is idempotent: applying it to its own result
 -- yields the same 'UnsignedTx'.  This confirms the fee has reached a
