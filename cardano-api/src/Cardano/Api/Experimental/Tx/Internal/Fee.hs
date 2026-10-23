@@ -883,8 +883,14 @@ instance Error FeeCalculationError where
 -- * __Case 3 – Fee has not converged__: The fee field is set to the newly
 --   computed minimum fee and the function recurses.
 --
+-- The fee has converged when it lies between the minimum fee and the minimum
+-- fee plus @4 * txFeePerByte@; a fee outside that range is reset to the
+-- minimum (Case 3). The slack stops the minimum fee from alternating when the
+-- change output crosses a CBOR integer width boundary (for example 2^32
+-- lovelace).
+--
 -- A maximum iteration limit (currently 50) guards against non-termination.
--- In practice convergence occurs within 2–3 iterations.
+-- If the limit is reached, 'FeeCalculationDidNotConverge' is returned.
 calcMinFeeRecursive
   :: forall era
    . HasCallStack
@@ -926,6 +932,14 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
       not (L.pointwise (>=) (L.MaryValue (L.Coin 0) multiAssets) mempty)
   maxIterations :: Int
   maxIterations = 50
+  feePerByte :: L.Coin
+  feePerByte =
+    obtainCommonConstraints (useEra @era) $
+      L.fromCompact . L.unCoinPerByte $
+        pparams ^. L.ppTxFeePerByteL
+  -- The change coin's CBOR encoding shrinks by at most 4 bytes (9 to 5 at 2^32).
+  feeTolerance :: L.Coin
+  feeTolerance = 4 * feePerByte
 
   go
     :: Int
@@ -933,12 +947,12 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
     -> Either FeeCalculationError (UnsignedTx (LedgerEra era))
   go 0 _ = Left FeeCalculationDidNotConverge
   go n unSignTx@(UnsignedTx ledgerTx)
-    | minFee == txBodyFee && L.isZero txBalanceValue = do
+    | isFeeAccepted && L.isZero txBalanceValue = do
         -- Case 1
         let outs = toList $ ledgerTx ^. L.bodyTxL . L.outputsTxBodyL
         mapM_ (checkOutputMinUTxO pparams) outs
         return unSignTx
-    | minFee == txBodyFee = do
+    | isFeeAccepted = do
         -- Case 2
         balancedOuts <- balanceTxOuts @era changeAddr txBalanceValue unSignTx
         let updatedTx = UnsignedTx (ledgerTx & L.bodyTxL . L.outputsTxBodyL .~ balancedOuts)
@@ -950,6 +964,7 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
    where
     minFee = obtainCommonConstraints (useEra @era) $ L.calcMinFeeTx utxo pparams ledgerTx nExtraWitnesses
     txBodyFee = ledgerTx ^. L.bodyTxL . L.feeTxBodyL
+    isFeeAccepted = txBodyFee >= minFee && txBodyFee <= minFee + feeTolerance
     txBalanceValue =
       evaluateTransactionBalance pparams poolids stakeDelegDeposits utxo unSignTx
 

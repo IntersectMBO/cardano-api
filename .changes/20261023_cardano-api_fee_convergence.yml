@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1120
+kind:
+- bugfix
+description: |
+  `calcMinFeeRecursive` in `Cardano.Api.Experimental` no longer fails with `FeeCalculationDidNotConverge` when the change output's lovelace amount sits near a CBOR integer width boundary, such as 2^32 lovelace. It now returns a balanced transaction in that case. The returned fee can be above the minimum fee by up to `4 * txFeePerByte` lovelace (176 lovelace with mainnet parameters). A supplied fee above that range is still reset to the minimum fee. The signature and exports are unchanged.
