@@ -7,14 +7,14 @@ module Test.Cardano.Rpc.RecordedQuery where
 import Cardano.Api (ChainPoint (..))
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Server.Internal.FieldMask (FieldFill, FieldPath, resolve, runFill)
-import Cardano.Rpc.Server.Internal.UtxoRpc.Type (mkChainPointMsg)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type (UtxoFields (..), mkChainPointMsg)
 
 import Cardano.Slotting.Slot (WithOrigin (..))
 
 import RIO
 import RIO.Writer (Writer, runWriter, tell)
 
-import Data.ProtoLens (Message)
+import Data.ProtoLens (Message, defMessage)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Network.GRPC.Spec (getProto)
 
@@ -47,3 +47,18 @@ session = (tell ["session"] *>)
 -- | The chain tip that the recorded tip queries return.
 realTip :: U5c.ChainPoint
 realTip = getProto $ mkChainPointMsg ChainPointAtGenesis Origin (posixSecondsToUTCTime 1)
+
+-- | The UTxO entries that the recorded UTxO queries return.
+realFields :: [UtxoFields]
+realFields =
+  [ UtxoFields
+      { utxoFieldsRef = defMessage & U5c.hash .~ "tx-1" & U5c.index .~ 0
+      , utxoFieldsNativeBytes = "native-1"
+      , utxoFieldsCardano = defMessage & U5c.address .~ "address-1"
+      }
+  , UtxoFields
+      { utxoFieldsRef = defMessage & U5c.hash .~ "tx-2" & U5c.index .~ 1
+      , utxoFieldsNativeBytes = "native-2"
+      , utxoFieldsCardano = defMessage & U5c.address .~ "address-2"
+      }
+  ]
