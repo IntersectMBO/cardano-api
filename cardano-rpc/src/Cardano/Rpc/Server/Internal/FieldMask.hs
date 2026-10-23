@@ -11,15 +11,24 @@ module Cardano.Rpc.Server.Internal.FieldMask
   ( FieldMaskTree (..)
   , PathTree (..)
   , applyFieldMask
+  , isSelected
+  , lensLabel
+  , maskedSet
   , normalise
   , resolve
+  , subMask
   , toPaths
+  , whenSelected
   )
 where
 
 import RIO hiding (toList)
 
+import Data.Char (isUpper)
+import Data.List (find)
 import Data.Map qualified as Map
+import Data.ProtoLens.Field (HasField)
+import Data.ProtoLens.Field qualified as Field (field)
 import Data.ProtoLens.Message
   ( FieldAccessor (..)
   , FieldDefault (..)
@@ -30,6 +39,7 @@ import Data.ProtoLens.Message
   )
 import Data.Text qualified as T
 import GHC.Exts (IsList (toList))
+import GHC.TypeLits (KnownSymbol, symbolVal)
 
 -- | Normalised field mask paths. An empty map at a non-root node selects that
 -- whole field.
@@ -148,3 +158,117 @@ trimField subtree accessor message = case accessor of
 -- replace the whole oneof, so touching an inactive member wipes the active one.
 whenActive :: Maybe value -> msg -> msg -> msg
 whenActive member message update = maybe message (const update) member
+
+-- | Set the field that the proto-lens lens label names only when the mask needs
+-- it, so an unselected value is never evaluated.
+maskedSet
+  :: forall label msg a
+   . (HasField msg label a, KnownSymbol label, Message msg)
+  => FieldMaskTree msg
+  -> a
+  -> msg
+  -> msg
+maskedSet fieldMask value
+  | isSelected @label fieldMask = Field.field @label .~ value
+  | otherwise = id
+
+-- | Run an action only when the mask needs the field that the lens label names.
+whenSelected
+  :: forall label msg a f b
+   . (HasField msg label a, KnownSymbol label, Message msg, Applicative f)
+  => FieldMaskTree msg
+  -> f b
+  -> f (Maybe b)
+whenSelected fieldMask action
+  | isSelected @label fieldMask = Just <$> action
+  | otherwise = pure Nothing
+
+-- | Whether the mask needs the field that the lens label names: the field or a
+-- field below it is selected. A label that names no field is selected only under 'SelectAll'.
+isSelected
+  :: forall label msg a
+   . (HasField msg label a, KnownSymbol label, Message msg)
+  => FieldMaskTree msg
+  -> Bool
+isSelected fieldMask = case subMask @label fieldMask of
+  SelectAll -> True
+  Select (PathTree children) -> not $ null children
+
+-- | The part of a mask below the singular message field that the lens label
+-- names, for building that field on its own.
+subMask
+  :: forall label msg sub
+   . (HasField msg label sub, KnownSymbol label, Message msg)
+  => FieldMaskTree msg
+  -> FieldMaskTree sub
+subMask = fieldSubMask $ labelledFieldName @label @msg
+
+-- | The part of a mask below a top-level field; 'Nothing' names no field.
+fieldSubMask :: Maybe Text -> FieldMaskTree msg -> FieldMaskTree sub
+fieldSubMask _ SelectAll = SelectAll
+fieldSubMask name (Select (PathTree roots)) =
+  maybe (Select $ PathTree mempty) wholeOrPart $ (`Map.lookup` roots) =<< name
+ where
+  -- A field selected without sub-paths is selected whole.
+  wholeOrPart (PathTree children)
+    | null children = SelectAll
+    | otherwise = Select $ PathTree children
+
+-- | The proto name of the field whose 'lensLabel' is the label. A @maybe'@ label
+-- names the same field as the plain one.
+labelledFieldName
+  :: forall label msg a
+   . (HasField msg label a, KnownSymbol label, Message msg)
+  => Maybe Text
+labelledFieldName =
+  find ((== label) . lensLabel) . map T.pack . Map.keys $ fieldsByTextFormatName @msg
+ where
+  symbol = T.pack $ symbolVal (Proxy @label)
+  label = fromMaybe symbol $ T.stripPrefix "maybe'" symbol
+  -- Uses the 'HasField' constraint, which rejects labels that name no lens of @msg@.
+  _lens = Field.field @label @msg @a @Identity
+
+-- | The label proto-lens gives the lenses of a proto field, for example
+-- @ledger_tip@ to @ledgerTip@ or @plutus_v1@ to @plutusV1@.
+lensLabel :: Text -> Text
+lensLabel name
+  | camelCased `elem` reservedKeywords = camelCased <> "'"
+  | otherwise = camelCased
+ where
+  (underscores, rest) = T.span (== '_') name
+  camelCased =
+    underscores <> T.concat (zipWith ($) (lowerInitials : repeat capitalise) $ T.splitOn "_" rest)
+  lowerInitials word = T.toLower (T.takeWhile isUpper word) <> T.dropWhile isUpper word
+  capitalise word = T.toUpper (T.take 1 word) <> T.drop 1 word
+
+-- | Haskell keywords, which proto-lens suffixes with @'@ in lens labels.
+reservedKeywords :: [Text]
+reservedKeywords =
+  [ "case"
+  , "class"
+  , "data"
+  , "default"
+  , "deriving"
+  , "do"
+  , "else"
+  , "forall"
+  , "foreign"
+  , "if"
+  , "import"
+  , "in"
+  , "infix"
+  , "infixl"
+  , "infixr"
+  , "instance"
+  , "let"
+  , "module"
+  , "newtype"
+  , "of"
+  , "then"
+  , "type"
+  , "where"
+  , "mdo"
+  , "rec"
+  , "pattern"
+  , "proc"
+  ]
