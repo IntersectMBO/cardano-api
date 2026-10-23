@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -12,15 +14,29 @@ module Cardano.Rpc.Server.Internal.FieldMask
   , FieldMaskTree (..)
   , PathTree (..)
   , applyFieldMask
+  , FieldFill
+  , runFill
+  , runFillPure
+  , fill
+  , fillSub
+  , fillFrom
+  , isSelected
+  , lensLabel
   , normalise
   , resolve
+  , subMask
   , toPaths
   )
 where
 
 import RIO hiding (toList)
 
+import Data.Char (isUpper)
+import Data.List (find)
 import Data.Map qualified as Map
+import Data.Monoid (Ap (..), Endo (..))
+import Data.ProtoLens.Field (HasField)
+import Data.ProtoLens.Field qualified as Field (field)
 import Data.ProtoLens.Message
   ( FieldAccessor (..)
   , FieldDefault (..)
@@ -31,6 +47,7 @@ import Data.ProtoLens.Message
   )
 import Data.Text qualified as T
 import GHC.Exts (IsList (toList))
+import GHC.TypeLits (KnownSymbol, symbolVal)
 
 -- | A dot-separated field mask path, as in @google.protobuf.FieldMask.paths@ (e.g. @values.cardano@).
 type FieldPath = Text
@@ -205,3 +222,192 @@ whenActive
   -- ^ The message after the update
   -> msg
 whenActive member message update = maybe message (const update) member
+
+-- | Effects that fill the fields a mask selects; 'Nothing' when it selects none
+-- of them. Effects run left to right.
+--
+-- The type, from the outside in:
+--
+-- * @FieldMaskTree msg ->@: each fill sees the part of the mask that applies to @msg@.
+-- * @Maybe@: 'Nothing' when the mask selects none of the fill's fields, so 'runFill' never
+--   calls its runner (no node session) for an empty selection.
+-- * @Ap m@: the effect that obtains the selected values. 'Ap' gives @m (Endo msg)@ the
+--   'Semigroup' that the 'Monoid' of 'Maybe' needs, and runs combined effects left to right.
+-- * @Endo msg@: the setters for the selected fields; '(<>)' composes them and 'runFill'
+--   applies them to @defMessage@.
+newtype FieldFill m msg = FieldFill (FieldMaskTree msg -> Maybe (Ap m (Endo msg)))
+  deriving (Semigroup, Monoid) via (FieldMaskTree msg -> Maybe (Ap m (Endo msg)))
+
+-- | Run the effects of the fields the mask selects, then trim the message to the
+-- mask. When the mask selects no field, the runner is never called.
+runFill
+  :: (Applicative n, Message msg)
+  => (forall x. m x -> n x)
+  -- ^ Runs the effects, for example in one node session
+  -> FieldMaskTree msg
+  -- ^ Selects the fields to fill
+  -> FieldFill m msg
+  -- ^ Fills the fields
+  -> n msg
+runFill runEffects fieldMask = fmap (applyFieldMask fieldMask) . fillMessage runEffects fieldMask
+
+-- | 'runFill' for fills without effects.
+runFillPure
+  :: Message msg
+  => FieldMaskTree msg
+  -- ^ Selects the fields to fill
+  -> FieldFill Identity msg
+  -- ^ Fills the fields
+  -> msg
+runFillPure fieldMask = runIdentity . runFill id fieldMask
+
+-- | Fill the field that the lens label names with the result of the action.
+-- When the mask does not select the field, the action never runs and its value is never evaluated.
+fill
+  :: forall label msg a m
+   . (HasField msg label a, KnownSymbol label, Message msg, Functor m)
+  => m a
+  -- ^ Obtains the value of the field
+  -> FieldFill m msg
+fill doValue = FieldFill $ \fieldMask -> do
+  guard $ isSelected @label fieldMask
+  pure . Ap $ Endo . (Field.field @label .~) <$> doValue
+
+-- | Fill the singular message field that the lens label names from fills of its
+-- own fields, against the part of the mask below it.
+fillSub
+  :: forall label msg sub m
+   . (HasField msg label sub, KnownSymbol label, Message msg, Message sub, Applicative m)
+  => FieldFill m sub
+  -- ^ Fills the fields of the sub-message
+  -> FieldFill m msg
+fillSub subFill = FieldFill $ \fieldMask -> do
+  guard $ isSelected @label fieldMask
+  pure . Ap $ Endo . (Field.field @label .~) <$> fillMessage id (subMask @label fieldMask) subFill
+
+-- | Fill several fields from one value that is already at hand, reading each
+-- field with a function of it. A field the mask does not select never reads it.
+fillFrom
+  :: Applicative m
+  => shared
+  -- ^ The value the fields are read from
+  -> FieldFill ((->) shared) msg
+  -- ^ Reads each field from the value
+  -> FieldFill m msg
+fillFrom shared (FieldFill readFrom) = FieldFill $ \fieldMask ->
+  Ap . pure . flip getAp shared <$> readFrom fieldMask
+
+-- | Run the effects of the fields the mask selects and set them on 'defMessage',
+-- untrimmed. When the mask selects no field, the runner is never called.
+fillMessage
+  :: (Applicative n, Message msg)
+  => (forall x. m x -> n x)
+  -- ^ Runs the effects
+  -> FieldMaskTree msg
+  -- ^ Selects the fields to fill
+  -> FieldFill m msg
+  -- ^ Fills the fields
+  -> n msg
+fillMessage runEffects fieldMask (FieldFill fieldFill) =
+  (`appEndo` defMessage) . fold <$> traverse (runEffects . getAp) (fieldFill fieldMask)
+
+-- | Whether the mask needs the field that the lens label names: the field or a
+-- field below it is selected. A label that names no field is selected only under 'SelectAll'.
+isSelected
+  :: forall label msg a
+   . (HasField msg label a, KnownSymbol label, Message msg)
+  => FieldMaskTree msg
+  -- ^ The mask, rooted at @msg@
+  -> Bool
+isSelected fieldMask = case subMask @label fieldMask of
+  SelectAll -> True
+  Select (PathTree children) -> not $ null children
+
+-- | The part of a mask below the singular message field that the lens label
+-- names, for building that field on its own.
+subMask
+  :: forall label msg sub
+   . (HasField msg label sub, KnownSymbol label, Message msg)
+  => FieldMaskTree msg
+  -- ^ The mask, rooted at @msg@
+  -> FieldMaskTree sub
+subMask = fieldSubMask $ labelledFieldName @label @msg
+
+-- | The part of a mask below a top-level field; 'Nothing' names no field.
+fieldSubMask
+  :: Maybe Text
+  -- ^ The proto name of the field
+  -> FieldMaskTree msg
+  -- ^ The mask, rooted at the message holding the field
+  -> FieldMaskTree sub
+fieldSubMask _ SelectAll = SelectAll
+fieldSubMask name (Select (PathTree roots)) =
+  maybe (Select $ PathTree mempty) wholeOrPart $ (`Map.lookup` roots) =<< name
+ where
+  -- A field selected without sub-paths is selected whole.
+  wholeOrPart (PathTree children)
+    | null children = SelectAll
+    | otherwise = Select $ PathTree children
+
+-- | The proto name of the field whose 'lensLabel' is the label. A @maybe'@ label
+-- names the same field as the plain one.
+labelledFieldName
+  :: forall label msg a
+   . (HasField msg label a, KnownSymbol label, Message msg)
+  => Maybe Text
+labelledFieldName =
+  find ((== label) . lensLabel) . map T.pack . Map.keys $ fieldsByTextFormatName @msg
+ where
+  symbol = T.pack $ symbolVal (Proxy @label)
+  label = fromMaybe symbol $ T.stripPrefix "maybe'" symbol
+  -- Uses the 'HasField' constraint, which rejects labels that name no lens of @msg@.
+  _lens = Field.field @label @msg @a @Identity
+
+-- | The label proto-lens gives the lenses of a proto field, for example
+-- @ledger_tip@ to @ledgerTip@ or @plutus_v1@ to @plutusV1@.
+lensLabel
+  :: Text
+  -- ^ The proto name of the field
+  -> Text
+lensLabel name
+  | camelCased `elem` reservedKeywords = camelCased <> "'"
+  | otherwise = camelCased
+ where
+  (underscores, rest) = T.span (== '_') name
+  camelCased =
+    underscores <> T.concat (zipWith ($) (lowerInitials : repeat capitalise) $ T.splitOn "_" rest)
+  lowerInitials word = T.toLower (T.takeWhile isUpper word) <> T.dropWhile isUpper word
+  capitalise word = T.toUpper (T.take 1 word) <> T.drop 1 word
+
+-- | Haskell keywords, which proto-lens suffixes with @'@ in lens labels.
+-- Mirrors @reservedKeywords@ in proto-lens-protoc's @app/Data/ProtoLens/Compiler/Definitions.hs@.
+reservedKeywords :: [Text]
+reservedKeywords =
+  [ "case"
+  , "class"
+  , "data"
+  , "default"
+  , "deriving"
+  , "do"
+  , "else"
+  , "forall"
+  , "foreign"
+  , "if"
+  , "import"
+  , "in"
+  , "infix"
+  , "infixl"
+  , "infixr"
+  , "instance"
+  , "let"
+  , "module"
+  , "newtype"
+  , "of"
+  , "then"
+  , "type"
+  , "where"
+  , "mdo"
+  , "rec"
+  , "pattern"
+  , "proc"
+  ]
