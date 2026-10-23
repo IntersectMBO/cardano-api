@@ -14,6 +14,7 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Query
   ( ReadGenesisResponse
   , ReadParamsResponse
   , ReadUtxosResponse
+  , SearchUtxosResponse
   )
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as Submit
@@ -626,6 +627,32 @@ hprop_field_mask_fill_each_keeps_elements_without_filled_fields = H.propertyOnce
   let response = runFillPure (resolve ["items.block_ref"]) . itemsFill $ pure itemInputs
   response ^. U5c.items === [defMessage, defMessage]
 
+hprop_field_mask_fill_shared_runs_action_once_for_all_its_fields :: Property
+hprop_field_mask_fill_shared_runs_action_once_for_all_its_fields = H.propertyOnce $ do
+  let (response, ran) = runWriter . runFill id SelectAll . pageFill $ recorded "page" (itemInputs, Just "next")
+  ran === ["page"]
+  length (response ^. U5c.items) === 2
+  response ^. U5c.maybe'nextToken === Just "next"
+
+hprop_field_mask_fill_shared_fills_only_selected_fields :: Property
+hprop_field_mask_fill_shared_fills_only_selected_fields = H.propertyOnce $ do
+  let run inputs page = runWriter . runFill id (resolve inputs) . pageFill $ recorded "page" page
+  (tokenOnly, ranForToken) <- H.evalNF $ run ["next_token"] (error "forced", Just "next")
+  ranForToken === ["page"]
+  tokenOnly === (defMessage & U5c.nextToken .~ "next")
+  (itemsOnly, ranForItems) <- H.evalNF $ run ["items.txo_ref"] (itemInputs, error "forced")
+  ranForItems === ["page"]
+  itemsOnly ^. U5c.items === [defMessage & U5c.txoRef .~ ref | (ref, _) <- itemInputs]
+  itemsOnly ^. U5c.maybe'nextToken === Nothing
+
+hprop_field_mask_fill_shared_never_runs_action_for_unselected_fields :: Property
+hprop_field_mask_fill_shared_never_runs_action_for_unselected_fields = H.propertyOnce $ do
+  let (response, ran) =
+        runWriter . runFill session (resolve ["ledger_tip"]) . pageFill . recorded "page" $
+          error "forced"
+  response === defMessage
+  ran === []
+
 tipAndValuesFill :: FieldFill ((->) (U5c.ChainPoint, U5c.AnyChainParams)) ReadParamsResponse
 tipAndValuesFill = fill @"ledgerTip" fst <> fill @"values" snd
 
@@ -720,6 +747,14 @@ itemsFill
   -- ^ Obtains the inputs of the elements
   -> FieldFill m ReadUtxosResponse
 itemsFill doInputs = fillEach @"items" doInputs (`fillFrom` itemFill)
+
+-- | Fill @items@ and @next_token@ from one page query.
+pageFill
+  :: Functor m
+  => m ([(U5c.TxoRef, ByteString)], Maybe Text)
+  -- ^ Obtains the page
+  -> FieldFill m SearchUtxosResponse
+pageFill doPage = fillShared doPage $ fillEach @"items" fst (`fillFrom` itemFill) <> fill @"maybe'nextToken" snd
 
 -- | Fill @items@ from the inputs, recording the effect of each element.
 recordedItemsFill
