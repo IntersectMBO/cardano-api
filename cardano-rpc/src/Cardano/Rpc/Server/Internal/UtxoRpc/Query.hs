@@ -38,6 +38,7 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type
 import Cardano.Rpc.Server.NodeKernelAccess
 
 import Cardano.Crypto.Hash.Class qualified as Crypto (hashToBytes)
+import Cardano.Ledger.BaseTypes (WithOrigin)
 import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis, sgNetworkMagic)
 
 import RIO hiding (toList)
@@ -75,24 +76,42 @@ readParamsMethod req = do
           eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
           pparams <- throwEither =<< throwEither =<< queryProtocolParameters (convert eon)
           pure . getProto $ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
-        mTipInputs <- whenSelected @"ledgerTip" fieldMask $ do
-          chainPoint <- throwEither =<< queryChainPoint
-          chainBlockNo <- throwEither =<< queryChainBlockNo
-          systemStart <- throwEither =<< querySystemStart
-          eraHistory <- throwEither =<< queryEraHistory
-          pure (chainPoint, chainBlockNo, systemStart, eraHistory)
+        mTipInputs <- whenSelected @"ledgerTip" fieldMask queryLedgerTip
         pure (mPParams, mTipInputs)
       else pure (Nothing, Nothing)
 
-  mTip <- for mTipInputs $ \(chainPoint, chainBlockNo, systemStart, eraHistory) -> do
-    timestamp <- slotToTimestamp systemStart eraHistory chainPoint
-    pure . getProto $ mkChainPointMsg chainPoint chainBlockNo timestamp
+  mTip <- for mTipInputs $ fmap getProto . mkLedgerTip
 
   pure . Proto $ mkReadParamsResponse fieldMask mPParams mTip
 
 -- | The field mask of a @ReadParams@ request, rooted at the response.
 readParamsFieldMask :: Proto UtxoRpc.ReadParamsRequest -> FieldMaskTree UtxoRpc.ReadParamsResponse
 readParamsFieldMask req = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+
+-- | Query what the @ledger_tip@ chain point is built from, inside a local state query.
+queryLedgerTip
+  :: LocalStateQueryExpr
+       BlockInMode
+       ChainPoint
+       QueryInMode
+       ()
+       IO
+       (ChainPoint, WithOrigin BlockNo, SystemStart, EraHistory)
+queryLedgerTip = do
+  chainPoint <- throwEither =<< queryChainPoint
+  chainBlockNo <- throwEither =<< queryChainBlockNo
+  systemStart <- throwEither =<< querySystemStart
+  eraHistory <- throwEither =<< queryEraHistory
+  pure (chainPoint, chainBlockNo, systemStart, eraHistory)
+
+-- | Build the @ledger_tip@ chain point message from the results of 'queryLedgerTip'.
+mkLedgerTip
+  :: MonadIO m
+  => (ChainPoint, WithOrigin BlockNo, SystemStart, EraHistory)
+  -> m (Proto UtxoRpc.ChainPoint)
+mkLedgerTip (chainPoint, chainBlockNo, systemStart, eraHistory) = do
+  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+  pure $ mkChainPointMsg chainPoint chainBlockNo timestamp
 
 -- | Assemble the response, then trim it to the mask. An input the mask does not
 -- select is never evaluated.
@@ -135,19 +154,16 @@ readUtxosMethod req
       eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
 
       let target = VolatileTip
-      (utxo, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+      (utxo, tipInputs) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
         utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-        chainPoint <- throwEither =<< queryChainPoint
-        chainBlockNo <- throwEither =<< queryChainBlockNo
-        systemStart <- throwEither =<< querySystemStart
-        eraHistory <- throwEither =<< queryEraHistory
-        pure (utxo, chainPoint, chainBlockNo, systemStart, eraHistory)
+        tipInputs <- queryLedgerTip
+        pure (utxo, tipInputs)
 
-      timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+      ledgerTip <- mkLedgerTip tipInputs
 
       pure $
         defMessage
-          & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
+          & U5c.ledgerTip .~ ledgerTip
           & U5c.items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
  where
   txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
@@ -194,15 +210,12 @@ searchUtxosMethod req = do
   eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
 
   let target = VolatileTip
-  (utxo, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+  (utxo, tipInputs) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
     utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-    chainPoint <- throwEither =<< queryChainPoint
-    chainBlockNo <- throwEither =<< queryChainBlockNo
-    systemStart <- throwEither =<< querySystemStart
-    eraHistory <- throwEither =<< queryEraHistory
-    pure (utxo, chainPoint, chainBlockNo, systemStart, eraHistory)
+    tipInputs <- queryLedgerTip
+    pure (utxo, tipInputs)
 
-  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+  ledgerTip <- mkLedgerTip tipInputs
 
   obtainCommonConstraints eon $ do
     let (page, nextTok) =
@@ -210,7 +223,7 @@ searchUtxosMethod req = do
 
     pure $
       defMessage
-        & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
+        & U5c.ledgerTip .~ ledgerTip
         & U5c.items .~ map (uncurry txInTxOutToAnyUtxoData) page
         & U5c.maybe'nextToken .~ nextTok
 
