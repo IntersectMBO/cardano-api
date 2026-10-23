@@ -10,6 +10,7 @@
 module Cardano.Rpc.Server.Internal.FieldMask
   ( FieldMaskTree (..)
   , PathTree (..)
+  , applyFieldMask
   , normalise
   , resolve
   , toPaths
@@ -21,9 +22,11 @@ import RIO hiding (toList)
 import Data.Map qualified as Map
 import Data.ProtoLens.Message
   ( FieldAccessor (..)
+  , FieldDefault (..)
   , FieldDescriptor (..)
   , FieldTypeDescriptor (..)
   , Message (..)
+  , WireDefault (..)
   )
 import Data.Text qualified as T
 import GHC.Exts (IsList (toList))
@@ -105,3 +108,43 @@ prune (PathTree children) = PathTree $ Map.mapMaybeWithKey keepField children
   pruneBelow :: forall value. Message value => FieldTypeDescriptor value -> PathTree -> PathTree
   -- The descriptor argument only pins @value@.
   pruneBelow _ = prune @value
+
+-- | Keep only the selected fields and reset the rest to defaults. Required and
+-- unknown fields stay.
+applyFieldMask :: forall msg. Message msg => FieldMaskTree msg -> msg -> msg
+applyFieldMask SelectAll = id
+applyFieldMask (Select tree) = applyTree tree
+
+applyTree :: forall msg. Message msg => PathTree -> msg -> msg
+applyTree (PathTree selected) message =
+  foldl' step message . toList $ fieldsByTextFormatName @msg
+ where
+  step current (name, FieldDescriptor _ fieldType accessor) =
+    case Map.lookup (T.pack name) selected of
+      Nothing -> resetField accessor current
+      Just subtree@(PathTree children)
+        | null children -> current
+        | MessageField _ <- fieldType -> trimField subtree accessor current
+        | otherwise -> current
+
+-- | Reset a field to its default. Required fields stay.
+resetField :: FieldAccessor msg value -> msg -> msg
+resetField accessor message = case accessor of
+  PlainField Optional field -> message & field .~ fieldDefault
+  PlainField Required _ -> message
+  RepeatedField _ field -> message & field .~ []
+  MapField _ _ field -> message & field .~ mempty
+  OptionalField field -> whenActive (message ^. field) message $ message & field .~ Nothing
+
+-- | Apply the subtree to the message or messages held by a field.
+trimField :: Message value => PathTree -> FieldAccessor msg value -> msg -> msg
+trimField subtree accessor message = case accessor of
+  OptionalField field -> whenActive (message ^. field) message $ message & field %~ fmap (applyTree subtree)
+  PlainField _ field -> message & field %~ applyTree subtree
+  RepeatedField _ field -> message & field %~ map (applyTree subtree)
+  MapField{} -> message
+
+-- | Update only when the oneof member is active: proto-lens oneof setters
+-- replace the whole oneof, so touching an inactive member wipes the active one.
+whenActive :: Maybe value -> msg -> msg -> msg
+whenActive member message update = maybe message (const update) member

@@ -13,13 +13,16 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Query
   , ReadParamsResponse
   , ReadUtxosResponse
   )
+import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
+import Cardano.Rpc.Proto.Api.UtxoRpc.Sync qualified as Sync
 import Cardano.Rpc.Server.Internal.FieldMask
 
 import RIO
 
 import Data.List (isPrefixOf, nub, sort)
-import Data.ProtoLens.Message (Message)
+import Data.ProtoLens.Message (Message, defMessage)
 import Data.Text qualified as T
+import GHC.Exts (fromList)
 
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
@@ -183,6 +186,184 @@ hprop_field_mask_resolve_idempotent = H.property $ do
       let resolvedPaths = toPaths tree
       unless (null resolvedPaths) $
         resolve @ReadParamsResponse resolvedPaths === Select tree
+
+hprop_field_mask_apply_select_all_is_identity :: Property
+hprop_field_mask_apply_select_all_is_identity = H.propertyOnce $ do
+  applyFieldMask SelectAll readParamsFixture === readParamsFixture
+  applyFieldMask SelectAll followApplyFixture === followApplyFixture
+  applyFieldMask SelectAll readGenesisFixture === readGenesisFixture
+
+hprop_field_mask_apply_selecting_nothing_resets_everything :: Property
+hprop_field_mask_apply_selecting_nothing_resets_everything = H.propertyOnce $ do
+  applyFieldMask selectsNothing readParamsFixture === defMessage
+  applyFieldMask selectsNothing followApplyFixture === defMessage
+  applyFieldMask selectsNothing readUtxosFixture === defMessage
+  applyFieldMask selectsNothing readGenesisFixture === defMessage
+  applyFieldMask (resolve ["zzz"]) readParamsFixture === (defMessage :: ReadParamsResponse)
+
+hprop_field_mask_apply_keeps_selected_leaf :: Property
+hprop_field_mask_apply_keeps_selected_leaf = H.propertyOnce $ do
+  applyFieldMask (resolve ["ledger_tip"]) readParamsFixture
+    === (defMessage & U5c.ledgerTip .~ chainPointFixture :: ReadParamsResponse)
+
+hprop_field_mask_apply_keeps_selected_nested_field :: Property
+hprop_field_mask_apply_keeps_selected_nested_field = H.propertyOnce $ do
+  let expected :: ReadParamsResponse
+      expected =
+        defMessage
+          & U5c.values
+            .~ ( defMessage
+                   & U5c.cardano .~ (defMessage & U5c.maxTxSize .~ 16384)
+               )
+  applyFieldMask (resolve ["values.cardano.max_tx_size"]) readParamsFixture === expected
+
+hprop_field_mask_apply_keeps_active_oneof_member :: Property
+hprop_field_mask_apply_keeps_active_oneof_member = H.propertyOnce $ do
+  let expected :: Sync.FollowTipResponse
+      expected = defMessage & Sync.apply .~ blockFixture
+  applyFieldMask (resolve ["apply"]) followApplyFixture === expected
+
+-- | A mask naming an inactive member of the active member's oneof must not
+-- wipe the active one.
+hprop_field_mask_apply_inactive_oneof_member_keeps_active :: Property
+hprop_field_mask_apply_inactive_oneof_member_keeps_active = H.propertyOnce $ do
+  let expected :: Sync.FollowTipResponse
+      expected = defMessage & Sync.apply .~ blockFixture
+  applyFieldMask (resolve ["apply", "undo.native_bytes"]) followApplyFixture === expected
+  applyFieldMask (resolve ["apply", "reset.slot"]) followApplyFixture === expected
+
+hprop_field_mask_apply_clears_unselected_oneof :: Property
+hprop_field_mask_apply_clears_unselected_oneof = H.propertyOnce $ do
+  applyFieldMask (resolve ["undo"]) followApplyFixture === defMessage
+  applyFieldMask (resolve ["undo.native_bytes"]) followApplyFixture === defMessage
+  applyFieldMask (resolve ["tip"]) followApplyFixture
+    === (defMessage & Sync.tip .~ blockRefFixture :: Sync.FollowTipResponse)
+
+hprop_field_mask_apply_trims_each_repeated_element :: Property
+hprop_field_mask_apply_trims_each_repeated_element = H.propertyOnce $ do
+  let expected :: ReadUtxosResponse
+      expected =
+        defMessage
+          & U5c.items
+            .~ [ defMessage & U5c.nativeBytes .~ "first"
+               , defMessage & U5c.nativeBytes .~ "second"
+               ]
+  applyFieldMask (resolve ["items.native_bytes"]) readUtxosFixture === expected
+  applyFieldMask (resolve ["ledger_tip"]) readUtxosFixture
+    === (defMessage & U5c.ledgerTip .~ chainPointFixture :: ReadUtxosResponse)
+
+hprop_field_mask_apply_keeps_selected_map :: Property
+hprop_field_mask_apply_keeps_selected_map = H.propertyOnce $ do
+  let expected :: ReadGenesisResponse
+      expected =
+        defMessage
+          & U5c.cardano .~ (defMessage & U5c.avvmDistr .~ avvmDistrFixture)
+  applyFieldMask (resolve ["cardano.avvm_distr"]) readGenesisFixture === expected
+
+hprop_field_mask_apply_empties_unselected_map :: Property
+hprop_field_mask_apply_empties_unselected_map = H.propertyOnce $ do
+  let expected :: ReadGenesisResponse
+      expected = defMessage & U5c.caip2 .~ "cardano-mainnet"
+  applyFieldMask (resolve ["caip2"]) readGenesisFixture === expected
+
+-- | Trimming by a sub-mask after trimming by a mask that covers it is the same
+-- as trimming by the sub-mask alone.
+hprop_field_mask_apply_composes :: Property
+hprop_field_mask_apply_composes = H.property $ do
+  extra <- H.forAll $ Gen.list (Range.linear 0 4) genTreePath
+  inner <- H.forAll $ Gen.list (Range.linear 1 4) (Gen.filter (/= "*") genTreePath)
+  let trimmed = applyFieldMask (resolve @ReadParamsResponse (extra <> inner)) readParamsFixture
+  applyFieldMask (resolve inner) trimmed === applyFieldMask (resolve inner) readParamsFixture
+
+hprop_field_mask_apply_trims_message_inside_repeated_element :: Property
+hprop_field_mask_apply_trims_message_inside_repeated_element = H.propertyOnce $ do
+  let expected :: ReadUtxosResponse
+      expected =
+        defMessage
+          & U5c.items
+            .~ [ defMessage & U5c.txoRef .~ (defMessage & U5c.index .~ 0)
+               , defMessage & U5c.txoRef .~ (defMessage & U5c.index .~ 1)
+               ]
+  applyFieldMask (resolve ["items.txo_ref.index"]) readUtxosFixture === expected
+
+hprop_field_mask_apply_keeps_repeated_field_selected_as_leaf :: Property
+hprop_field_mask_apply_keeps_repeated_field_selected_as_leaf = H.propertyOnce $ do
+  let expected :: ReadUtxosResponse
+      expected = defMessage & U5c.items .~ (readUtxosFixture ^. U5c.items)
+  applyFieldMask (resolve ["items"]) readUtxosFixture === expected
+
+chainPointFixture :: U5c.ChainPoint
+chainPointFixture =
+  defMessage
+    & U5c.slot .~ 5
+    & U5c.hash .~ "point-hash"
+    & U5c.height .~ 3
+    & U5c.timestamp .~ 9
+
+blockRefFixture :: Sync.BlockRef
+blockRefFixture =
+  defMessage
+    & Sync.slot .~ 7
+    & Sync.hash .~ "block-hash"
+    & Sync.height .~ 4
+    & Sync.timestamp .~ 11
+
+blockFixture :: Sync.AnyChainBlock
+blockFixture = defMessage & Sync.nativeBytes .~ "block"
+
+readParamsFixture :: ReadParamsResponse
+readParamsFixture =
+  defMessage
+    & U5c.ledgerTip .~ chainPointFixture
+    & U5c.values
+      .~ ( defMessage
+             & U5c.cardano
+               .~ ( defMessage
+                      & U5c.maxTxSize .~ 16384
+                      & U5c.maxBlockBodySize .~ 90112
+                      & U5c.poolInfluence
+                        .~ (defMessage & U5c.numerator .~ 3 & U5c.denominator .~ 10)
+                      & U5c.protocolVersion
+                        .~ (defMessage & U5c.major .~ 10 & U5c.minor .~ 1)
+                  )
+         )
+
+followApplyFixture :: Sync.FollowTipResponse
+followApplyFixture =
+  defMessage
+    & Sync.apply .~ blockFixture
+    & Sync.tip .~ blockRefFixture
+
+readUtxosFixture :: ReadUtxosResponse
+readUtxosFixture =
+  defMessage
+    & U5c.ledgerTip .~ chainPointFixture
+    & U5c.items
+      .~ [ utxo "first" "tx-a" 0
+         , utxo "second" "tx-b" 1
+         ]
+ where
+  utxo :: ByteString -> ByteString -> Word32 -> U5c.AnyUtxoData
+  utxo bytes txHash index =
+    defMessage
+      & U5c.nativeBytes .~ bytes
+      & U5c.txoRef .~ (defMessage & U5c.hash .~ txHash & U5c.index .~ index)
+      & U5c.blockRef .~ chainPointFixture
+
+avvmDistrFixture :: Map Text Text
+avvmDistrFixture = fromList [("key-a", "1"), ("key-b", "2")]
+
+readGenesisFixture :: ReadGenesisResponse
+readGenesisFixture =
+  defMessage
+    & U5c.genesis .~ "genesis-hash"
+    & U5c.caip2 .~ "cardano-mainnet"
+    & U5c.cardano
+      .~ ( defMessage
+             & U5c.avvmDistr .~ avvmDistrFixture
+             & U5c.epochLength .~ 432000
+             & U5c.networkMagic .~ 764824073
+         )
 
 -- | Resolving against nothing that exists keeps no paths, unlike 'SelectAll'.
 selectsNothing :: FieldMaskTree msg
