@@ -861,7 +861,7 @@ instance Error FeeCalculationError where
 -- and the minimum fee via @calcMinFeeTx@. The function then proceeds based
 -- on the following cases, evaluated in order:
 --
--- * __Case 1 – Fee converged, balance is zero__: The transaction is fully
+-- * __Case 1 – Fee sufficient, balance is zero__: The transaction is fully
 --   balanced. Before returning, all outputs are checked against the minimum
 --   UTxO requirement ('MinUTxONotMet'). Note: a 'MinUTxONotMet' error at
 --   this point typically means that Case 2 distributed surplus multi-assets
@@ -869,7 +869,7 @@ instance Error FeeCalculationError where
 --   to satisfy the increased @coinPerUTxOByte@ requirement for that output.
 --   The remedy is to provide additional ADA inputs.
 --
--- * __Case 2 – Fee converged, non-zero balance__: There is surplus or
+-- * __Case 2 – Fee sufficient, non-zero balance__: There is surplus or
 --   deficit ADA, excess multi-assets (e.g. from minting), or both. A new
 --   change output is created at the provided change address with the
 --   balance and appended to the end of the existing outputs; if a change
@@ -880,11 +880,21 @@ instance Error FeeCalculationError where
 --   required fee, and must also satisfy the minimum UTxO
 --   (@coinPerUTxOByte@) constraint.
 --
--- * __Case 3 – Fee has not converged__: The fee field is set to the newly
---   computed minimum fee and the function recurses.
+-- * __Case 3 – Fee too low__: The fee field is set to the newly computed
+--   minimum fee and the function recurses.
+--
+-- Cases 1 and 2 accept any fee at or above the minimum rather than requiring
+-- exact equality, matching the ledger's @fee >= minFee@ requirement. An
+-- initially sufficient fee is preserved; use an initial fee of zero to calculate
+-- a fee from scratch. Subsequent adjustments only increase the fee. This avoids
+-- oscillation when shrinking the change output reduces
+-- the minimum fee. Requiring equality can oscillate when the change output's
+-- lovelace sits at a CBOR integer width boundary (e.g. 2^32,
+-- where the encoding grows from 5 to 9 bytes): lowering the fee pushes the
+-- change back across the boundary, raising the minimum fee again.
 --
 -- A maximum iteration limit (currently 50) guards against non-termination.
--- In practice convergence occurs within 2–3 iterations.
+-- If the limit is reached, 'FeeCalculationDidNotConverge' is returned.
 calcMinFeeRecursive
   :: forall era
    . HasCallStack
@@ -933,12 +943,12 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
     -> Either FeeCalculationError (UnsignedTx (LedgerEra era))
   go 0 _ = Left FeeCalculationDidNotConverge
   go n unSignTx@(UnsignedTx ledgerTx)
-    | minFee == txBodyFee && L.isZero txBalanceValue = do
+    | txBodyFee >= minFee && L.isZero txBalanceValue = do
         -- Case 1
         let outs = toList $ ledgerTx ^. L.bodyTxL . L.outputsTxBodyL
         mapM_ (checkOutputMinUTxO pparams) outs
         return unSignTx
-    | minFee == txBodyFee = do
+    | txBodyFee >= minFee = do
         -- Case 2
         balancedOuts <- balanceTxOuts @era changeAddr txBalanceValue unSignTx
         let updatedTx = UnsignedTx (ledgerTx & L.bodyTxL . L.outputsTxBodyL .~ balancedOuts)

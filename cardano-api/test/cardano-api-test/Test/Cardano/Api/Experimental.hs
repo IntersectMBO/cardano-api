@@ -436,11 +436,14 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
             SNothing
 
       dummyUTxO = L.UTxO $ Map.singleton dummyTxIn dummyLargeTxOut
+  -- Start from zero to calculate a fee; a sufficient supplied fee is preserved.
+  txForFeeCalculation <-
+    H.evalEither $ Exp.makeUnsignedTx era (newTxBodyContent & Exp.setTxFee 0)
   Exp.UnsignedTx recFeeTx <-
     H.evalEither $
       Exp.calcMinFeeRecursive
         initialFundedAddress
-        unSignTx
+        txForFeeCalculation
         dummyUTxO
         exampleProtocolParams
         mempty
