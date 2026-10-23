@@ -182,7 +182,13 @@ library testlib
 
   build-depends:
     base,
+    cardano-api,
+    cardano-rpc,
+    cardano-slotting,
+    grpc-spec,
+    proto-lens,
     rio,
+    time,
 
 test-suite cardano-rpc-test
   import: project-config
@@ -254,6 +260,7 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters
+    Test.Cardano.Rpc.ReadParams
     Test.Cardano.Rpc.Reflection
     Test.Cardano.Rpc.Reflection.DescriptorTable
     Test.Cardano.Rpc.Script

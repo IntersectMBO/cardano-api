@@ -1,11 +1,32 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | Actions that record their name when they run, for testing which queries a
--- field fill runs.
+-- | Actions that record their name when they run, and the values they return,
+-- for testing which queries a field fill runs.
 module Test.Cardano.Rpc.RecordedQuery where
 
+import Cardano.Api (ChainPoint (..))
+import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
+import Cardano.Rpc.Server.Internal.FieldMask (FieldFill, FieldPath, resolve, runFill)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type (mkChainPointMsg)
+
+import Cardano.Slotting.Slot (WithOrigin (..))
+
 import RIO
-import RIO.Writer (Writer, tell)
+import RIO.Writer (Writer, runWriter, tell)
+
+import Data.ProtoLens (Message)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Network.GRPC.Spec (getProto)
+
+-- | Run a fill for the mask paths, recording the session and each query it runs.
+runRecordedFill
+  :: Message msg
+  => [FieldPath]
+  -- ^ Field mask paths, rooted at the response
+  -> FieldFill (Writer [Text]) msg
+  -- ^ Fills the response from recorded actions
+  -> (msg, [Text])
+runRecordedFill paths = runWriter . runFill session (resolve paths)
 
 -- | An action that records its name when it runs.
 recorded
@@ -22,3 +43,7 @@ session
   -- ^ The actions to run in the session
   -> Writer [Text] a
 session = (tell ["session"] *>)
+
+-- | The chain tip that the recorded tip queries return.
+realTip :: U5c.ChainPoint
+realTip = getProto $ mkChainPointMsg ChainPointAtGenesis Origin (posixSecondsToUTCTime 1)
