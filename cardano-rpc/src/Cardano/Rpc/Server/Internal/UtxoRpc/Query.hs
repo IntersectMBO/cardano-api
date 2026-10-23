@@ -13,6 +13,8 @@
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   ( readParamsMethod
+  , mkReadParamsResponse
+  , readParamsFieldMask
   , readUtxosMethod
   , searchUtxosMethod
   , readGenesisMethod
@@ -27,6 +29,7 @@ import Cardano.Api.Parser.Text qualified as P
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
+import Cardano.Rpc.Server.Internal.FieldMask
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.TimedCache (readThroughCache)
@@ -40,7 +43,6 @@ import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis, sgNetworkM
 import RIO hiding (toList)
 
 import Control.Error.Util (hush)
-import Data.Default
 import Data.Map.Strict qualified as Map
 import Data.ProtoLens (defMessage)
 import Data.Text qualified as Text (pack)
@@ -51,37 +53,59 @@ import System.FS.API (MountPoint (..), SomeHasFS (..))
 import System.FS.IO (ioHasFS)
 import System.FilePath (takeDirectory)
 
+import Proto.Google.Protobuf.FieldMask_Fields qualified as FieldMask (paths)
+
 -- | Handle the @ReadParams@ RPC method.
--- Queries the node for current protocol parameters and returns them
--- along with the ledger tip.
+-- Honours the field mask: protocol parameters and the era are queried only for @values@,
+-- chain tip queries only for @ledger_tip@.
 readParamsMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadParamsRequest
   -> m (Proto UtxoRpc.ReadParamsResponse)
-readParamsMethod _req = do
-  -- TODO: implement field masks - they are ignored for now
-  -- they need to be normalised beforehand, see: https://github.com/protocolbuffers/protobuf/blob/main/java/util/src/main/java/com/google/protobuf/util/FieldMaskTree.java#L76
-  -- let fieldMask :: [Text] = req ^. #fieldMask . #paths
+readParamsMethod req = do
+  let fieldMask = readParamsFieldMask req
   nodeConnInfo <- grab
-  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
-  let sbe = convert eon
+  mAnyEra <- whenSelected @"values" fieldMask . liftIO . throwExceptT $ determineEra nodeConnInfo
 
   let target = VolatileTip
-  (pparams, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-    pparams <- throwEither =<< throwEither =<< queryProtocolParameters sbe
-    chainPoint <- throwEither =<< queryChainPoint
-    chainBlockNo <- throwEither =<< queryChainBlockNo
-    systemStart <- throwEither =<< querySystemStart
-    eraHistory <- throwEither =<< queryEraHistory
-    pure (pparams, chainPoint, chainBlockNo, systemStart, eraHistory)
+  (mPParams, mTipInputs) <-
+    if isSelected @"values" fieldMask || isSelected @"ledgerTip" fieldMask
+      then liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+        mPParams <- for mAnyEra $ \(AnyCardanoEra era) -> do
+          eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+          pparams <- throwEither =<< throwEither =<< queryProtocolParameters (convert eon)
+          pure . getProto $ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
+        mTipInputs <- whenSelected @"ledgerTip" fieldMask $ do
+          chainPoint <- throwEither =<< queryChainPoint
+          chainBlockNo <- throwEither =<< queryChainBlockNo
+          systemStart <- throwEither =<< querySystemStart
+          eraHistory <- throwEither =<< queryEraHistory
+          pure (chainPoint, chainBlockNo, systemStart, eraHistory)
+        pure (mPParams, mTipInputs)
+      else pure (Nothing, Nothing)
 
-  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+  mTip <- for mTipInputs $ \(chainPoint, chainBlockNo, systemStart, eraHistory) -> do
+    timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+    pure . getProto $ mkChainPointMsg chainPoint chainBlockNo timestamp
 
-  pure $
-    def
-      & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
-      & U5c.values . U5c.cardano .~ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
+  pure . Proto $ mkReadParamsResponse fieldMask mPParams mTip
+
+-- | The field mask of a @ReadParams@ request, rooted at the response.
+readParamsFieldMask :: Proto UtxoRpc.ReadParamsRequest -> FieldMaskTree UtxoRpc.ReadParamsResponse
+readParamsFieldMask req = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+
+-- | Assemble the response, then trim it to the mask. An input the mask does not
+-- select is never evaluated.
+mkReadParamsResponse
+  :: FieldMaskTree UtxoRpc.ReadParamsResponse
+  -> Maybe UtxoRpc.PParams
+  -> Maybe UtxoRpc.ChainPoint
+  -> UtxoRpc.ReadParamsResponse
+mkReadParamsResponse fieldMask mPParams mTip =
+  applyFieldMask fieldMask $
+    defMessage
+      & maybe id (\pparams -> maskedSet @"values" fieldMask $ defMessage & U5c.cardano .~ pparams) mPParams
+      & maybe id (maskedSet @"ledgerTip" fieldMask) mTip
 
 -- | Handle the @ReadUtxos@ RPC method.
 -- Looks up specific UTxO entries by their 'TxIn' keys and returns them
@@ -145,7 +169,7 @@ searchUtxosMethod
   => Proto UtxoRpc.SearchUtxosRequest
   -> m (Proto UtxoRpc.SearchUtxosResponse)
 searchUtxosMethod req = do
-  -- TODO: field masks are ignored for now (same as readParamsMethod)
+  -- TODO: field masks are ignored for now
   let maxItems = req ^. U5c.maxItems
       startToken = req ^. U5c.maybe'startToken
 
@@ -206,7 +230,7 @@ readGenesisMethod
   => Proto UtxoRpc.ReadGenesisRequest
   -> m (Proto UtxoRpc.ReadGenesisResponse)
 readGenesisMethod _req = do
-  -- TODO: field masks are ignored for now (same as readParamsMethod)
+  -- TODO: field masks are ignored for now
   nodeKernelAccess <- grabNodeKernelAccess
   let genesisBundle@GenesisBundle
         { shelleyGenesisHash
@@ -279,7 +303,7 @@ readEraSummaryMethod
   => Proto UtxoRpc.ReadEraSummaryRequest
   -> m (Proto UtxoRpc.ReadEraSummaryResponse)
 readEraSummaryMethod _req = do
-  -- TODO: field masks are ignored for now (same as readParamsMethod)
+  -- TODO: field masks are ignored for now
   nodeKernelAccess <- grabNodeKernelAccess
   summary <- readHardForkSummary nodeKernelAccess
   pure $

@@ -243,6 +243,7 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters
+    Test.Cardano.Rpc.ReadParams
     Test.Cardano.Rpc.Reflection
     Test.Cardano.Rpc.Reflection.DescriptorTable
     Test.Cardano.Rpc.Script

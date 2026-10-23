@@ -7,6 +7,11 @@
 
 -- | Normal form of @google.protobuf.FieldMask@ paths, ported from
 -- @addFieldPath@ and @toFieldMask@ of protobuf Java's @FieldMaskTree@.
+--
+-- Paths start at the response message. A path may continue through repeated
+-- message fields and then applies to each element. Paths that do not resolve
+-- are dropped whole. An absent or empty mask, or a @*@ path, selects everything.
+-- A mask whose paths all drop selects nothing.
 module Cardano.Rpc.Server.Internal.FieldMask
   ( FieldMaskTree (..)
   , PathTree (..)
