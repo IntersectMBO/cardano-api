@@ -59,7 +59,7 @@ import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.Dijkstra.PParams qualified as Ledger
 import Cardano.Ledger.Shelley.API qualified as Ledger
-import Cardano.Slotting.Slot (EpochNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), SlotInterval)
 
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -196,7 +196,12 @@ data IntroducedInDijkstraPParams era
   , idMaxRefScriptSizePerTx :: StrictMaybe Word32
   , idRefScriptCostStride :: StrictMaybe (Ledger.NonZero Word32)
   , idRefScriptCostMultiplier :: StrictMaybe Ledger.PositiveInterval
-  , idLeiosAnnouncementPeriodLength :: StrictMaybe Ledger.Milliseconds32
+  , idMinPoolMargin :: StrictMaybe Ledger.UnitInterval
+  -- ^ Minimum stake pool profit margin.
+  , idMaxPledgeLeverage :: StrictMaybe Ledger.MaxPledgeLeverage
+  -- ^ Maximum pledge leverage used when calculating stake pool rewards.
+  , -- Leios protocol parameters
+    idLeiosAnnouncementPeriodLength :: StrictMaybe Ledger.Milliseconds32
   , idLeiosVotePeriodLength :: StrictMaybe Ledger.Milliseconds32
   , idLeiosDiffusionPeriodLength :: StrictMaybe Ledger.Milliseconds32
   , idLeiosCommitteeSize :: StrictMaybe Word16
@@ -205,6 +210,23 @@ data IntroducedInDijkstraPParams era
   , idMaxEndorserBlockTxsSize :: StrictMaybe Word32
   , idMaxEndorserBlockExUnits :: StrictMaybe Alonzo.OrdExUnits
   , idMaxRefScriptSizePerEndorserBlock :: StrictMaybe Word32
+  , -- Peras protocol parameters
+    idPerasMinCandidateBlockAge :: StrictMaybe SlotInterval
+  -- ^ Minimum age of a Peras candidate block, in slots.
+  , idPerasHealingFactor :: StrictMaybe Ledger.PositiveInterval
+  -- ^ Peras healing factor.
+  , idPerasCertBoost :: StrictMaybe Word16
+  -- ^ Peras certificate boost.
+  , idPerasTargetCommitteeSize :: StrictMaybe Word16
+  -- ^ Target size of the Peras committee.
+  , idPerasBootstrapRound :: StrictMaybe (StrictMaybe Word32)
+  -- ^ Peras bootstrap round.
+  , idPerasQuorumThresholdSafetyMargin :: StrictMaybe Ledger.UnitInterval
+  -- ^ Safety margin for the Peras quorum threshold.
+  , idRefInputsCostPerMultiAssetPolicy :: StrictMaybe Ledger.Coin
+  -- ^ Reference-input cost per multi-asset policy.
+  , idRefInputsCostPerDatumByte :: StrictMaybe Ledger.CoinPerByte
+  -- ^ Reference-input cost per datum byte.
   }
   deriving (Eq, Show)
 
@@ -218,6 +240,8 @@ createIntroducedInDijkstraPParams IntroducedInDijkstraPParams{..} =
     & Ledger.ppuMaxRefScriptSizePerTxL .~ idMaxRefScriptSizePerTx
     & Ledger.ppuRefScriptCostStrideL .~ idRefScriptCostStride
     & Ledger.ppuRefScriptCostMultiplierL .~ idRefScriptCostMultiplier
+    & Ledger.ppuMinPoolMarginL .~ idMinPoolMargin
+    & Ledger.ppuMaxPledgeLeverageL .~ idMaxPledgeLeverage
     & Ledger.ppuLeiosAnnouncementPeriodLengthL .~ idLeiosAnnouncementPeriodLength
     & Ledger.ppuLeiosVotePeriodLengthL .~ idLeiosVotePeriodLength
     & Ledger.ppuLeiosDiffusionPeriodLengthL .~ idLeiosDiffusionPeriodLength
@@ -227,6 +251,14 @@ createIntroducedInDijkstraPParams IntroducedInDijkstraPParams{..} =
     & Ledger.ppuMaxEndorserBlockTxsSizeL .~ idMaxEndorserBlockTxsSize
     & Ledger.ppuMaxEndorserBlockExUnitsL .~ idMaxEndorserBlockExUnits
     & Ledger.ppuMaxRefScriptSizePerEndorserBlockL .~ idMaxRefScriptSizePerEndorserBlock
+    & Ledger.ppuPerasMinCandidateBlockAgeL .~ idPerasMinCandidateBlockAge
+    & Ledger.ppuPerasHealingFactorL .~ idPerasHealingFactor
+    & Ledger.ppuPerasCertBoostL .~ idPerasCertBoost
+    & Ledger.ppuPerasTargetCommitteeSizeL .~ idPerasTargetCommitteeSize
+    & Ledger.ppuPerasBootstrapRoundL .~ idPerasBootstrapRound
+    & Ledger.ppuPerasQuorumThresholdSafetyMarginL .~ idPerasQuorumThresholdSafetyMargin
+    & Ledger.ppuRefInputsCostPerMultiAssetPolicyL .~ idRefInputsCostPerMultiAssetPolicy
+    & Ledger.ppuRefInputsCostPerDatumByteL .~ idRefInputsCostPerDatumByte
 
 pparamsUpdateToIntroducedInDijkstraPParams
   :: Ledger.DijkstraEraPParams ledgerera
@@ -238,6 +270,8 @@ pparamsUpdateToIntroducedInDijkstraPParams ppupdate =
     , idMaxRefScriptSizePerTx = ppupdate ^. Ledger.ppuMaxRefScriptSizePerTxL
     , idRefScriptCostStride = ppupdate ^. Ledger.ppuRefScriptCostStrideL
     , idRefScriptCostMultiplier = ppupdate ^. Ledger.ppuRefScriptCostMultiplierL
+    , idMinPoolMargin = ppupdate ^. Ledger.ppuMinPoolMarginL
+    , idMaxPledgeLeverage = ppupdate ^. Ledger.ppuMaxPledgeLeverageL
     , idLeiosAnnouncementPeriodLength = ppupdate ^. Ledger.ppuLeiosAnnouncementPeriodLengthL
     , idLeiosVotePeriodLength = ppupdate ^. Ledger.ppuLeiosVotePeriodLengthL
     , idLeiosDiffusionPeriodLength = ppupdate ^. Ledger.ppuLeiosDiffusionPeriodLengthL
@@ -247,6 +281,14 @@ pparamsUpdateToIntroducedInDijkstraPParams ppupdate =
     , idMaxEndorserBlockTxsSize = ppupdate ^. Ledger.ppuMaxEndorserBlockTxsSizeL
     , idMaxEndorserBlockExUnits = ppupdate ^. Ledger.ppuMaxEndorserBlockExUnitsL
     , idMaxRefScriptSizePerEndorserBlock = ppupdate ^. Ledger.ppuMaxRefScriptSizePerEndorserBlockL
+    , idPerasMinCandidateBlockAge = ppupdate ^. Ledger.ppuPerasMinCandidateBlockAgeL
+    , idPerasHealingFactor = ppupdate ^. Ledger.ppuPerasHealingFactorL
+    , idPerasCertBoost = ppupdate ^. Ledger.ppuPerasCertBoostL
+    , idPerasTargetCommitteeSize = ppupdate ^. Ledger.ppuPerasTargetCommitteeSizeL
+    , idPerasBootstrapRound = ppupdate ^. Ledger.ppuPerasBootstrapRoundL
+    , idPerasQuorumThresholdSafetyMargin = ppupdate ^. Ledger.ppuPerasQuorumThresholdSafetyMarginL
+    , idRefInputsCostPerMultiAssetPolicy = ppupdate ^. Ledger.ppuRefInputsCostPerMultiAssetPolicyL
+    , idRefInputsCostPerDatumByte = ppupdate ^. Ledger.ppuRefInputsCostPerDatumByteL
     }
 
 createEraBasedProtocolParamUpdate

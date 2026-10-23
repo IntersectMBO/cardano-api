@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1388
+kind:
+  - breaking
+description: Extend `IntroducedInDijkstraPParams` with minimum pool margin, maximum pledge leverage, all six Peras parameters, and reference-input costs per multi-asset policy and datum byte, preserving these updates in ledger conversion and CBOR serialisation. Re-export `MaxPledgeLeverage(..)` and `SlotInterval(..)` from `Cardano.Api.Ledger`. Callers constructing the record must supply all ten new fields; use `SNothing` for unchanged parameters and `SJust (MaxPledgeLeverage SNothing)` to remove the pledge leverage limit.

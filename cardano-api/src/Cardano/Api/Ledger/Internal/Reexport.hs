@@ -66,6 +66,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , TxOut
   , Value
   , MaryValue (..)
+  , MaxPledgeLeverage (..)
   , MultiAsset (..)
   , ScriptsNeeded
   , UTxO (..)
@@ -231,6 +232,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , ADDRHASH
   -- Slotting
   , EpochNo (..)
+  , SlotInterval (..)
   -- SafeHash
   , SafeHash
   , unsafeMakeSafeHash
@@ -389,6 +391,7 @@ import Cardano.Ledger.Core
   , EraTxAuxData (metadataTxAuxDataL)
   , EraTxBody (..)
   , EraTxOut (addrTxOutL, valueTxOutL)
+  , MaxPledgeLeverage (..)
   , PParams (..)
   , PoolCert (..)
   , TopTx
@@ -469,4 +472,4 @@ import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val
 import Cardano.Protocol.Crypto (Crypto, StandardCrypto)
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), SlotInterval (..), SlotNo (..))
