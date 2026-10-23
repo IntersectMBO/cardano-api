@@ -17,6 +17,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   , readUtxosMethod
   , readUtxosFill
   , searchUtxosMethod
+  , searchUtxosFill
   , readGenesisMethod
   , readEraSummaryMethod
   , paginateByTxIn
@@ -143,12 +144,14 @@ maxUtxoQueryKeys = 20_000
 -- Filters the UTxO set by a predicate and returns a paginated result.
 -- The predicate must contain exact address matches so the query can be
 -- narrowed; broad predicates are rejected with @INVALID_ARGUMENT@.
+-- Honours the field mask: the UTxO query runs only for @items@ or @next_token@,
+-- the chain tip queries only for @ledger_tip@, and each item is built only from
+-- the fields selected.
 searchUtxosMethod
   :: MonadRpc e m
   => Proto UtxoRpc.SearchUtxosRequest
   -> m (Proto UtxoRpc.SearchUtxosResponse)
 searchUtxosMethod req = do
-  -- TODO: field masks are ignored for now
   let maxItems = req ^. U5c.maxItems
       startToken = req ^. U5c.maybe'startToken
 
@@ -169,24 +172,28 @@ searchUtxosMethod req = do
         "predicate too broad: must contain exact address match to avoid fetching the entire UTxO set"
 
   nodeConnInfo <- grab
-  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+  let doQueryPage :: LocalQuery ([UtxoFields], Maybe Text)
+      doQueryPage = queryInCurrentEra $ \eon -> obtainCommonConstraints eon $ do
+        utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
+        let (page, nextTok) =
+              paginateByTxIn (matchesCompiledPredicate compiledPredicate) (unUTxO utxo) startToken maxItems
+        pure (map (uncurry txInTxOutToUtxoFields) page, nextTok)
+  let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+  fmap Proto . runFill (runLocalQuery nodeConnInfo) fieldMask $
+    searchUtxosFill doQueryPage queryLedgerTip
 
-  let target = VolatileTip
-  (utxo, ledgerTip) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-    utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-    ledgerTip <- queryLedgerTip
-    pure (utxo, ledgerTip)
-
-  obtainCommonConstraints eon $ do
-    let (page, nextTok) =
-          paginateByTxIn (matchesCompiledPredicate compiledPredicate) (unUTxO utxo) startToken maxItems
-
-    pure $
-      defMessage
-        & U5c.ledgerTip .~ Proto ledgerTip
-        & U5c.items .~ map (uncurry txInTxOutToAnyUtxoData) page
-        & U5c.maybe'nextToken .~ nextTok
+-- | The fields of a @SearchUtxos@ response, each from the query that obtains it.
+-- The page query runs once for @items@ and @next_token@ together.
+searchUtxosFill
+  :: Applicative m
+  => m ([UtxoFields], Maybe Text)
+  -- ^ Queries one page of matching UTxO entries and the token of the next page
+  -> m UtxoRpc.ChainPoint
+  -- ^ Queries the chain tip
+  -> FieldFill m UtxoRpc.SearchUtxosResponse
+searchUtxosFill doQueryPage doQueryTip =
+  fillShared doQueryPage (fillEach @"items" fst (`fillFrom` utxoFill) <> fill @"maybe'nextToken" snd)
+    <> fill @"ledgerTip" doQueryTip
 
 -- | Handle the @ReadGenesis@ RPC method.
 -- Returns the chain's identity - the Shelley genesis hash and the CAIP-2 chain
