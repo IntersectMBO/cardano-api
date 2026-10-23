@@ -432,6 +432,66 @@ hprop_field_mask_sub_mask_keeps_nested_paths = H.propertyOnce $ do
   subMask @"cardano" valuesMask === Select (normalise ["max_tx_size", "pool_influence.numerator"])
   subMask @"poolInfluence" (subMask @"cardano" valuesMask) === Select (normalise ["numerator"])
 
+hprop_field_mask_sub_mask_each_select_all :: Property
+hprop_field_mask_sub_mask_each_select_all = H.propertyOnce $ do
+  let itemMask = subMaskEach @"items" (SelectAll :: FieldMaskTree ReadUtxosResponse)
+  itemMask === SelectAll
+  subMask @"blockRef" itemMask === SelectAll
+
+hprop_field_mask_sub_mask_each_selects_field_below_repeated_field :: Property
+hprop_field_mask_sub_mask_each_selects_field_below_repeated_field = H.propertyOnce $ do
+  let fieldMask = resolve @ReadUtxosResponse ["items.txo_ref"]
+  subMaskEach @"items" fieldMask === Select (normalise ["txo_ref"])
+
+hprop_field_mask_sub_mask_each_of_selected_leaf_selects_all :: Property
+hprop_field_mask_sub_mask_each_of_selected_leaf_selects_all = H.propertyOnce $ do
+  subMaskEach @"items" (resolve @ReadUtxosResponse ["items"]) === SelectAll
+  subMask @"blockRef" (subMaskEach @"items" $ resolve @ReadUtxosResponse ["items"]) === SelectAll
+  subMask @"blockRef" (subMaskEach @"items" $ resolve @ReadUtxosResponse ["items.block_ref"])
+    === SelectAll
+
+hprop_field_mask_sub_mask_each_of_unselected_field_selects_nothing :: Property
+hprop_field_mask_sub_mask_each_of_unselected_field_selects_nothing = H.propertyOnce $ do
+  subMaskEach @"items" (resolve @ReadUtxosResponse ["ledger_tip"]) === selectsNothing
+  subMask @"txoRef" (subMaskEach @"items" $ resolve @ReadUtxosResponse ["items.native_bytes"])
+    === selectsNothing
+
+hprop_field_mask_sub_mask_each_keeps_nested_paths :: Property
+hprop_field_mask_sub_mask_each_keeps_nested_paths = H.propertyOnce $ do
+  let fieldMask = resolve @ReadUtxosResponse ["items.cardano.coin", "items.cardano.address", "items.txo_ref"]
+      itemMask = subMaskEach @"items" fieldMask
+  itemMask === Select (normalise ["cardano.coin", "cardano.address", "txo_ref"])
+  subMask @"cardano" itemMask === Select (normalise ["coin", "address"])
+  subMask @"txoRef" itemMask === SelectAll
+
+-- | A mask needs a field exactly when it has no paths, or one of its paths is a
+-- segment prefix of the field's path or starts with it.
+hprop_field_mask_is_selected_matches_path_prefix_oracle :: Property
+hprop_field_mask_is_selected_matches_path_prefix_oracle = H.property $ do
+  inputs <- H.forAll . Gen.list (Range.linear 0 4) $ Gen.element utxoMaskPaths
+  let fieldMask = resolve @ReadUtxosResponse inputs
+      itemMask = subMaskEach @"items" fieldMask
+      isExpected path =
+        null inputs || any (\input -> isSegmentPrefix input path || isSegmentPrefix path input) inputs
+  isSelected @"items" fieldMask === isExpected "items"
+  isSelected @"ledgerTip" fieldMask === isExpected "ledger_tip"
+  isSelected @"txoRef" itemMask === isExpected "items.txo_ref"
+  isSelected @"cardano" itemMask === isExpected "items.cardano"
+  isSelected @"blockRef" itemMask === isExpected "items.block_ref"
+  isSelected @"nativeBytes" itemMask === isExpected "items.native_bytes"
+
+-- | Trimming each element of a repeated field by its sub-mask is the same as
+-- trimming the whole response, once the response mask selects the field.
+hprop_field_mask_sub_mask_trims_elements_like_whole_message :: Property
+hprop_field_mask_sub_mask_trims_elements_like_whole_message = H.property $ do
+  inputs <- H.forAll . Gen.list (Range.linear 0 4) $ Gen.element utxoMaskPaths
+  let fieldMask = resolve @ReadUtxosResponse inputs
+      trimmedItems = applyFieldMask fieldMask readUtxosFixture ^. U5c.items
+  H.cover 30 "items selected" $ isSelected @"items" fieldMask
+  when (isSelected @"items" fieldMask) $
+    trimmedItems
+      === map (applyFieldMask (subMaskEach @"items" fieldMask)) (readUtxosFixture ^. U5c.items)
+
 chainPointFixture :: U5c.ChainPoint
 chainPointFixture =
   defMessage
@@ -628,6 +688,19 @@ genResolvePaths = Gen.list (Range.linear 0 8) $ do
     1 -> ["cardano", "slot", "hash", "height"]
     2 -> ["max_tx_size", "pool_influence", "cost_models", "protocol_version"]
     _ -> ["numerator", "denominator", "major", "plutus_v1"]
+
+-- | Real paths below 'ReadUtxosResponse', at several depths.
+utxoMaskPaths :: [Text]
+utxoMaskPaths =
+  [ "items"
+  , "items.native_bytes"
+  , "items.txo_ref"
+  , "items.txo_ref.hash"
+  , "items.cardano"
+  , "items.cardano.coin"
+  , "items.block_ref.slot"
+  , "ledger_tip"
+  ]
 
 paths :: [Text] -> [Text]
 paths = toPaths . normalise

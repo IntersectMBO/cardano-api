@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RoleAnnotations #-}
@@ -22,6 +23,7 @@ module Cardano.Rpc.Server.Internal.FieldMask
   , normalise
   , resolve
   , subMask
+  , subMaskEach
   , toPaths
   , whenSelected
   )
@@ -207,6 +209,15 @@ subMask
   => FieldMaskTree msg
   -> FieldMaskTree sub
 subMask = fieldSubMask $ labelledFieldName @label @msg
+
+-- | The part of a mask below the repeated message field that the lens label
+-- names, for building each element of it on its own.
+subMaskEach
+  :: forall label msg sub
+   . (HasField msg label [sub], KnownSymbol label, Message msg)
+  => FieldMaskTree msg
+  -> FieldMaskTree sub
+subMaskEach = fieldSubMask $ labelledFieldName @label @msg
 
 -- | The part of a mask below a top-level field; 'Nothing' names no field.
 fieldSubMask :: Maybe Text -> FieldMaskTree msg -> FieldMaskTree sub
