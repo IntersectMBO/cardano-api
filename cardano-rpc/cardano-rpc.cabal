@@ -87,7 +87,9 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
+    Cardano.Rpc.Server.Internal.UtxoRpc.WaitForTx
     Cardano.Rpc.Server.NodeKernelAccess
+    Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower
 
   other-modules:
     Cardano.Rpc.Server.Internal.Orphans
@@ -244,4 +246,5 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.Script
     Test.Cardano.Rpc.TxOutput
     Test.Cardano.Rpc.Type
+    Test.Cardano.Rpc.WaitForTxStream
     Test.Cardano.Rpc.WatchMempoolStream

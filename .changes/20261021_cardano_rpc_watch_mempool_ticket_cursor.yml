@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1351
+kind:
+  - breaking
+description: |
+  `MempoolWatchSnapshot` in `Cardano.Rpc.Server.NodeKernelAccess` no longer has the `mempoolWatchTicketNumbers` and `mempoolWatchSlotNo` fields; only `mempoolWatchTxsAfter` remains, so read new entries through it. `nextMempoolWatchSnapshot` and the next-snapshot callback of `watchMempoolStream` now take the last seen `TicketNo` instead of the previous snapshot, and return once the mempool holds an entry newer than that ticket. A waiting `WatchMempool` stream therefore wakes only when a transaction newer than the last one it sent arrives, so removals and slot-only changes no longer wake it. Its messages are unchanged.

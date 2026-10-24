@@ -94,6 +94,8 @@ data TraceRpcSubmit
     TraceRpcEvalTxSpan TraceSpanEvent
   | -- | Mempool read span
     TraceRpcReadMempoolSpan TraceSpanEvent
+  | -- | Transaction confirmation wait span
+    TraceRpcWaitForTxSpan TraceSpanEvent
   | -- | Mempool watch span
     TraceRpcWatchMempoolSpan TraceSpanEvent
   deriving Show
@@ -106,6 +108,8 @@ instance Pretty TraceRpcSubmit where
     TraceRpcEvalTxSpan (SpanEnd _) -> "Finished eval tx method"
     TraceRpcReadMempoolSpan (SpanBegin _) -> "Started read mempool method"
     TraceRpcReadMempoolSpan (SpanEnd _) -> "Finished read mempool method"
+    TraceRpcWaitForTxSpan (SpanBegin _) -> "Started wait for tx method"
+    TraceRpcWaitForTxSpan (SpanEnd _) -> "Finished wait for tx method"
     TraceRpcWatchMempoolSpan (SpanBegin _) -> "Started watch mempool method"
     TraceRpcWatchMempoolSpan (SpanEnd _) -> "Finished watch mempool method"
     TraceRpcEvalTxDecodingError e -> "Failed to decode transaction for evaluation: " <> pshow e
