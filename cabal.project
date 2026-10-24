@@ -141,12 +141,6 @@ if arch(wasm32)
 
 -- Needed for all ghc versions due to added aeson >= 2.3 bound.
 allow-newer:
-  -- Pending dependency-bound updates for ouroboros-network 2.0 and network-mux 1.0.
-  , cardano-config:ouroboros-network
-  , kes-agent:network-mux
-  , kes-agent:ouroboros-network
-  , ouroboros-consensus:network-mux
-  , ouroboros-consensus:ouroboros-network
   , cborg-json:aeson
   , criterion-measurement:aeson
   , deriving-aeson:aeson
