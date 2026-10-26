@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1395
+kind:
+  - maintenance
+description: |
+  Do not set the LIBRARY_PATH environment variable on Windows

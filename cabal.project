@@ -47,6 +47,9 @@ write-ghc-environment-files: always
 jobs: $ncpus
 semaphore: True
 
+if os(windows)
+  package snappy-c
+    flags: +pkg-config
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
