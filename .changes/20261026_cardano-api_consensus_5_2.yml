@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1396
+kind:
+  - maintenance
+description: Update ouroboros-consensus to 5.2, refresh the CHaP dependency pins, and remove temporary dependency bound overrides.
