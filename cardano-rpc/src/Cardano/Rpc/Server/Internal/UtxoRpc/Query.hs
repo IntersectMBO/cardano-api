@@ -19,6 +19,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   , searchUtxosMethod
   , searchUtxosFill
   , readGenesisMethod
+  , readGenesisFill
   , readEraSummaryMethod
   , paginateByTxIn
   )
@@ -206,25 +207,44 @@ searchUtxosFill doQueryPage doQueryTip =
 -- changed since the node started is therefore raised on cache misses only: a
 -- file edited while the cache is warm goes unnoticed until the cache next
 -- empties, which is at most five idle minutes later.
+-- Honours the field mask: the Shelley genesis is read only for @caip2@ or @cardano@,
+-- and 'genesisBundleToProto' runs only for @cardano@.
 readGenesisMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadGenesisRequest
   -> m (Proto UtxoRpc.ReadGenesisResponse)
-readGenesisMethod _req = do
-  -- TODO: field masks are ignored for now
+readGenesisMethod req = do
   nodeKernelAccess <- grabNodeKernelAccess
   let genesisBundle@GenesisBundle
         { shelleyGenesisHash
         , shelleyGenesis = (shelleyGenesisFile, shelleyGenesisCache)
         } = genesisConfig nodeKernelAccess
-  shelleyGenesis <-
-    readThroughCache shelleyGenesisCache $
-      readShelleyGenesisWithInitialFunds shelleyGenesisFile shelleyGenesisHash
-  pure $
-    defMessage
-      & U5c.genesis .~ Crypto.hashToBytes (unGenesisHashShelley shelleyGenesisHash)
-      & U5c.caip2 .~ networkMagicToCaip2 (L.sgNetworkMagic shelleyGenesis)
-      & U5c.cardano .~ genesisBundleToProto genesisBundle shelleyGenesis
+      doReadShelley =
+        readThroughCache shelleyGenesisCache $
+          readShelleyGenesisWithInitialFunds shelleyGenesisFile shelleyGenesisHash
+  let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+  fmap Proto . runFill id fieldMask $
+    readGenesisFill
+      (Crypto.hashToBytes $ unGenesisHashShelley shelleyGenesisHash)
+      doReadShelley
+      (getProto . genesisBundleToProto genesisBundle)
+
+-- | The fields of a @ReadGenesis@ response. The Shelley genesis is read once, and
+-- only when @caip2@ or @cardano@ is selected; the conversion runs only for @cardano@.
+readGenesisFill
+  :: Applicative m
+  => ByteString
+  -- ^ The Blake2b-256 hash of the Shelley genesis file
+  -> m L.ShelleyGenesis
+  -- ^ Reads the Shelley genesis with its initial funds
+  -> (L.ShelleyGenesis -> UtxoRpc.Genesis)
+  -- ^ Converts the Shelley genesis and the rest of the bundle to the @cardano@ field
+  -> FieldFill m UtxoRpc.ReadGenesisResponse
+readGenesisFill genesisHash doReadShelley toCardano =
+  fill @"genesis" (pure genesisHash)
+    <> fillShared
+      doReadShelley
+      (fill @"caip2" (networkMagicToCaip2 . L.sgNetworkMagic) <> fill @"cardano" toCardano)
 
 -- | Re-read the Shelley genesis file to recover the network's initial funds.
 --
