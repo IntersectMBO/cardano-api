@@ -18,21 +18,14 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block (mkAnyChainBlock)
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint (chainPointToBlockRef)
 import Cardano.Rpc.Server.NodeKernelAccess (ChainChange (..), ChainFollower (..))
 
-import Cardano.Chain.Epoch.File (mainnetEpochSlots)
-import Ouroboros.Consensus.Byron.Ledger (mkByronBlock)
-
 import RIO
 
-import Codec.Compression.GZip qualified as GZip
-import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Data.ProtoLens (defMessage)
-import Data.Time.Clock (UTCTime)
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Stack (withFrozenCallStack)
 import Network.GRPC.Spec (GrpcError (GrpcNotFound), GrpcException (..), NextElem (..), Proto)
 
-import Test.Cardano.Rpc.ByronTx (decodeBlockOrBoundaryFixture)
+import Test.Cardano.Rpc.FixtureBlock (boundaryBlockInMode, mainBlockInMode, stubTimestamp)
 
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
@@ -393,40 +386,10 @@ fetchKnownBlocks table point = pure $ lookup point table
 stubTip :: Proto U5c.BlockRef
 stubTip = defMessage & U5c.slot .~ 999 & U5c.hash .~ SBS.fromShort (SBS.replicate 32 0x99)
 
--- | A fixed stub slot timestamp, returned regardless of the slot asked for.
-stubTimestamp :: UTCTime
-stubTimestamp = posixSecondsToUTCTime 1700000000
-
 -- | A tracking cap comfortably above the two-block scripts used below, for
 -- tests that are not themselves about cap-overflow behaviour.
 testUndoWindow :: Int
 testUndoWindow = 100
-
--- | A genuine Byron 'BlockInMode' decoded from the mainnet main-block golden
--- fixture also used by 'Test.Cardano.Rpc.ByronTx'. 'followTipStream'
--- assembles the full @AnyChainBlock@ via 'mkAnyChainBlock' for every
--- 'ChainApply', so the scripted blocks must be real, valid blocks rather
--- than placeholders; decoding an existing fixture through the same
--- 'mkByronBlock' smart constructor the node's ChainDB uses is the cheapest
--- way to get one, and reuses a fixture already checked in for this purpose.
-mainBlockInMode :: HasCallStack => MonadTest m => MonadIO m => m (ByteString, BlockInMode)
-mainBlockInMode = do
-  rawBytes <-
-    liftIO $ LBS.toStrict <$> LBS.readFile "test/cardano-rpc-test/files/golden/byron-main-block.cbor"
-  blockOrBoundary <- decodeBlockOrBoundaryFixture (LBS.fromStrict rawBytes)
-  pure (rawBytes, BlockInMode ByronEra (ByronBlock (mkByronBlock mainnetEpochSlots blockOrBoundary)))
-
--- | A genuine Byron 'BlockInMode' decoded from the mainnet epoch-boundary
--- golden fixture also used by 'Test.Cardano.Rpc.ByronTx'; see
--- 'mainBlockInMode'. Distinct from it (a boundary block instead of a main
--- block, at a different slot and hash), so a two-block script has two
--- genuinely different blocks to distinguish, for free.
-boundaryBlockInMode :: HasCallStack => MonadTest m => MonadIO m => m (ByteString, BlockInMode)
-boundaryBlockInMode = do
-  compressedBytes <- liftIO $ LBS.readFile "test/cardano-rpc-test/files/golden/byron-ebb.cbor.gz"
-  let rawBytes = LBS.toStrict $ GZip.decompress compressedBytes
-  blockOrBoundary <- decodeBlockOrBoundaryFixture (LBS.fromStrict rawBytes)
-  pure (rawBytes, BlockInMode ByronEra (ByronBlock (mkByronBlock mainnetEpochSlots blockOrBoundary)))
 
 -- | Sentinel exception 'scriptedFollower's @nextChange@ throws once its
 -- script is exhausted. 'followTipStream' loops via 'forever' and never
