@@ -1,0 +1,10 @@
+project: cardano-rpc
+pr: 1394
+kind:
+  - feature
+description: |
+  The gRPC server now honours the `field_mask` of the Sync service methods `FetchBlock` and `FollowTip`, which previously accepted the mask and ignored it. Each response, and each message streamed by `FollowTip`, contains only the selected fields, and the server reads from the node only the parts of a block that the mask needs: the raw bytes for `native_bytes`, only the header for `cardano.header` without the body, and the parsed block for `cardano.body`. `FollowTip` reads the chain tip only when `tip` is selected. The mask rules are the same as for `ReadParams` and `WatchMempool`.
+
+  `FetchBlock` still returns `NOT_FOUND` for a missing block under any mask, but it now checks the hash of every reference before it reads any block, so an invalid hash in a later reference is reported before a missing block in an earlier one. `FollowTip` still sends one message per chain event, and a mask never changes which action (apply, undo or reset) a message carries; a message whose action the mask leaves out arrives without it.
+
+  For library users, `Cardano.Rpc.Server.NodeKernelAccess` adds `fetchBlockReading` and `withFollowerReading`, which read only the chosen parts of each block, and the internal `followTipStream` now also takes a slot-to-timestamp action and the field mask, with a different follower payload type.
