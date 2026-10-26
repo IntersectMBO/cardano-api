@@ -19,12 +19,13 @@ import Cardano.Api.Tx
 import Cardano.Rpc.Proto.Api.UtxoRpc.Sync qualified as U5c
 import Cardano.Rpc.Server.Internal.FieldMask
   ( FieldFill
-  , FieldMaskTree
+  , FieldMaskTree (SelectAll)
   , fill
   , fillShared
   , fillSub
   , isSelected
   , runFill
+  , runFillPure
   , subMask
   )
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron (byronBlockTxs)
@@ -50,26 +51,14 @@ mkAnyChainBlock
   -- ^ Slot wall-clock time; encoded as milliseconds since the Unix epoch
   -> Proto U5c.AnyChainBlock
   -- ^ Message carrying the native bytes, the parsed cardano block and the timestamp
-mkAnyChainBlock rawBytes (BlockInMode _ block) timestamp =
-  let BlockHeader slot headerHash (BlockNo height) = getBlockHeader block
-      -- Byron transactions are not representable as cardano-api's 'Tx era',
-      -- so they are converted straight from the Byron ledger types
-      txs = case block of
-        ByronBlock consensusBlock ->
-          byronBlockTxs (byronBlockRaw consensusBlock)
-        ShelleyBlock sbe _ ->
-          anyEraTxConstraints sbe $
-            getBlockTxs block <&> \(ShelleyTx _ ledgerTx) -> txToUtxoRpcTx ledgerTx
-      blockHeader =
-        defMessage
-          & U5c.slot .~ unSlotNo slot
-          & U5c.hash .~ serialiseToRawBytes headerHash
-          & U5c.height .~ height
-   in defMessage
-        & U5c.nativeBytes .~ rawBytes
-        & U5c.cardano . U5c.header .~ blockHeader
-        & U5c.cardano . U5c.body . U5c.tx .~ txs
-        & U5c.cardano . U5c.timestamp .~ utcTimeToMs timestamp
+mkAnyChainBlock rawBytes block timestamp =
+  Proto . runFillPure SelectAll $
+    fill @"nativeBytes" (pure rawBytes)
+      <> fillSub @"cardano"
+        ( fill @"header" (pure . blockHeaderToUtxoRpc $ blockInModeHeader block)
+            <> fillSub @"body" (fill @"tx" . pure $ blockTxsToUtxoRpc block)
+            <> fill @"timestamp" (pure $ utcTimeToMs timestamp)
+        )
 
 -- | Components of a Cardano block that ChainDB reads together, for example the
 -- raw bytes and the parsed block.

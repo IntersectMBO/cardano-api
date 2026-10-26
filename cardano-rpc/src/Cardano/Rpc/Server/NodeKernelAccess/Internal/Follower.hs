@@ -9,6 +9,7 @@ module Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower
   , ChainFollower (..)
   , withFollower
   , withBlockFollower
+  , withFollowerReading
   , positionFollowerAtCurrentTip
   , readChainTipPoint
   )
@@ -84,12 +85,16 @@ withBlockFollower
   -> m a
 withBlockFollower = withFollowerReading $ fromConsensusBlock <$> Consensus.GetBlock
 
--- | Run an action with a follower that reads the given block component.
+-- | Run an action with a follower whose 'ChainApply' payload is the given block
+-- components, so the follower reads only what the caller uses.
 withFollowerReading
   :: MonadUnliftIO m
   => Consensus.BlockComponent (Consensus.CardanoBlock Consensus.StandardCrypto) b
+  -- ^ The block components to read for each applied block
   -> Type.NodeKernelAccess
+  -- ^ Node kernel access handle
   -> (ChainFollower b -> m a)
+  -- ^ The action to run with the follower
   -> m a
 withFollowerReading component Type.NodeKernelAccess{Type.chainDb = chainDb} action =
   withRunInIO $ \runInIO ->

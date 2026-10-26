@@ -11,6 +11,8 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Sync
   ( fetchBlockMethod
   , fetchBlockResponse
   , followTipMethod
+  , followTipAppliedRead
+  , followTipUndoneRead
   , followTipStream
   , readTipMethod
   )
@@ -20,14 +22,18 @@ import Cardano.Api
 import Cardano.Api.Consensus qualified as Consensus
 import Cardano.Rpc.Proto.Api.UtxoRpc.Sync qualified as U5c
 import Cardano.Rpc.Server.Internal.Error
-import Cardano.Rpc.Server.Internal.FieldMask (FieldMaskTree, fill, resolve, runFill, subMaskEach)
+import Cardano.Rpc.Server.Internal.FieldMask
+  ( FieldFill
+  , FieldMaskTree
+  , fill
+  , resolve
+  , runFill
+  , subMask
+  , subMaskEach
+  )
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Tracing ()
-import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block
-  ( CardanoBlockComponent
-  , anyChainBlockRead
-  , mkAnyChainBlock
-  )
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block (CardanoBlockComponent, anyChainBlockRead)
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
   ( chainPointToBlockRef
   , mkTipBlockRef
@@ -39,7 +45,7 @@ import Cardano.Ledger.BaseTypes qualified as L
 
 import RIO
 
-import Control.Error (MaybeT (..), maybeT)
+import Control.Error (MaybeT (..), maybeT, runMaybeT)
 import Data.ByteString qualified as BS
 import Data.ProtoLens (defMessage)
 import Data.Sequence qualified as Seq
@@ -160,11 +166,14 @@ readTipMethod _request = do
 -- 'Cardano.Rpc.Server.NodeKernelAccess.securityParam').
 -- Every response also carries the current chain tip.
 --
+-- Honours the field mask on every response: a block reads only the components its
+-- selected fields need (see 'followTipAppliedRead'), and the tip is read only for @tip@.
+--
 -- Errors: @INVALID_ARGUMENT@ if an intersection block ref has an invalid
 -- hash, @NOT_FOUND@ if none of the intersection points are on the chain.
 --
 -- Runs until the client disconnects or the stream is otherwise closed;
--- 'withFollower' closes the follower on every exit path.
+-- 'withFollowerReading' closes the follower on every exit path.
 followTipMethod
   :: MonadRpc e m
   => Proto U5c.FollowTipRequest
@@ -175,13 +184,14 @@ followTipMethod
 followTipMethod request send = do
   nodeKernelAccess <- grabNodeKernelAccess
   requestedPoints <- traverse blockRefToIntersectPoint (request ^. U5c.intersect)
-  withFollower nodeKernelAccess $ \follower -> do
+  let fieldMask = resolve $ getProto request ^. U5c.fieldMask . FieldMask.paths
+      slotTimestamp = slotTimestampOrThrow (nodeKernelSystemStart nodeKernelAccess) (readEraHistory nodeKernelAccess)
+  withFollowerReading (followTipAppliedRead slotTimestamp fieldMask) nodeKernelAccess $ \follower -> do
     -- an empty intersect list follows from the current tip; resolving it
     -- reaches into ChainDB directly (there is no 'ChainFollower' operation
     -- for "the current tip point"), so this step stays here rather than
     -- moving into 'followTipStream', which only takes an already-resolved,
     -- non-empty point list
-    let slotTimestamp = slotTimestampOrThrow (nodeKernelSystemStart nodeKernelAccess) (readEraHistory nodeKernelAccess)
     startPoints <-
       if null requestedPoints
         then do
@@ -190,12 +200,40 @@ followTipMethod request send = do
         else pure requestedPoints
     followTipStream
       follower
-      (readTipBlockRef nodeKernelAccess slotTimestamp)
-      slotTimestamp
-      (fetchBlockByChainPoint nodeKernelAccess)
+      (fmap getProto <$> readTipBlockRef nodeKernelAccess slotTimestamp)
+      (fetchBlockByChainPoint nodeKernelAccess $ followTipUndoneRead slotTimestamp fieldMask)
       (fromIntegral . L.unNonZero $ Consensus.maxRollbacks (securityParam nodeKernelAccess))
+      fieldMask
       send
       startPoints
+
+-- | What a @FollowTip@ stream reads of each block it applies: the block's point,
+-- which the stream tracks for undo, and the components its @apply@ payload needs.
+followTipAppliedRead
+  :: Applicative m
+  => (SlotNo -> m UTCTime)
+  -- ^ Convert a slot to its wall-clock timestamp
+  -> FieldMaskTree U5c.FollowTipResponse
+  -- ^ The field mask of the request
+  -> CardanoBlockComponent ((SlotNo, Hash BlockHeader), m U5c.AnyChainBlock)
+followTipAppliedRead doSlotTimestamp fieldMask =
+  (,) <$> blockPointRead <*> anyChainBlockRead doSlotTimestamp (subMask @"apply" fieldMask)
+
+-- | What a @FollowTip@ stream re-reads of each block it undoes: the components its
+-- @undo@ payload needs. With @undo@ unselected, ChainDB still checks the block is there.
+followTipUndoneRead
+  :: Applicative m
+  => (SlotNo -> m UTCTime)
+  -- ^ Convert a slot to its wall-clock timestamp
+  -> FieldMaskTree U5c.FollowTipResponse
+  -- ^ The field mask of the request
+  -> CardanoBlockComponent (m U5c.AnyChainBlock)
+followTipUndoneRead doSlotTimestamp = anyChainBlockRead doSlotTimestamp . subMask @"undo"
+
+-- | The slot and header hash of a block, which ChainDB keeps in its index.
+blockPointRead :: CardanoBlockComponent (SlotNo, Hash BlockHeader)
+blockPointRead =
+  (,) <$> Consensus.GetSlot <*> (HeaderHash . Consensus.getOneEraHash <$> Consensus.GetHash)
 
 -- | Convert an intersection @BlockRef@ to a 'ChainPoint'. A block ref with
 -- an empty hash denotes origin, so clients can append it to the intersect
@@ -227,30 +265,33 @@ blockRefToPoint blockRef = do
       & either (const throwInvalidHash) pure
   pure (slot, headerHash)
 
--- | Adapt 'fetchBlock', which takes a slot and a hash, to the point-based
+-- | Adapt 'fetchBlockReading', which takes a slot and a hash, to the point-based
 -- re-fetch parameter of 'followTipStream', which uses it to rebuild @undo@
 -- payloads.
 --
 -- The genesis arm returns 'Nothing' only to keep the function total; it
 -- cannot actually be reached. 'followTipStream' re-fetches only points
--- from its applied-points window, and every entry there comes from a
--- decoded block's header, which always has a real slot and hash (see
--- 'TrackedPoints').
+-- from its applied-points window, and every entry there is the slot and
+-- hash of an applied block, which are always real (see 'TrackedPoints').
 fetchBlockByChainPoint
   :: MonadIO m
   => NodeKernelAccess
+  -- ^ Node kernel access handle
+  -> CardanoBlockComponent b
+  -- ^ The block components to read
   -> ChainPoint
-  -> m (Maybe (ByteString, BlockInMode))
-fetchBlockByChainPoint _nodeKernelAccess ChainPointAtGenesis = pure Nothing
-fetchBlockByChainPoint nodeKernelAccess (ChainPoint slot headerHash) =
-  fetchBlock nodeKernelAccess slot headerHash
+  -- ^ The point of the block
+  -> m (Maybe b)
+fetchBlockByChainPoint _nodeKernelAccess _component ChainPointAtGenesis = pure Nothing
+fetchBlockByChainPoint nodeKernelAccess component (ChainPoint slot headerHash) =
+  fetchBlockReading nodeKernelAccess component slot headerHash
 
 -- | The applied points 'followTipStream' tracks for undo re-fetch, newest
 -- first.
 --
 -- The entries are raw @(slot, header hash)@ pairs, not 'ChainPoint's.
--- Every entry comes from 'getBlockHeader' on a decoded 'ChainApply'
--- payload, so it always has a real slot and hash. The pair type turns
+-- Every entry is the slot and header hash the follower reads with each
+-- 'ChainApply' payload, so it is always a real point. The pair type turns
 -- "an applied point is never genesis" from a convention into a fact of
 -- the type: a @Seq ChainPoint@ would admit 'ChainPointAtGenesis' even
 -- though it could never legitimately occur here.
@@ -280,22 +321,22 @@ type TrackedPoints = Seq.Seq (SlotNo, Hash BlockHeader)
 --    initial rollback-to-intersection when nothing is tracked yet: a
 --    single @reset@, as in 2.
 --
--- Every emitted message, apply or undo or reset, carries the current tip.
+-- Every emitted message, apply or undo or reset, carries the current tip, and is
+-- trimmed to the field mask.
 --
 -- Throws @NOT_FOUND@ if none of the intersection points are on the chain.
 -- Runs until the client disconnects or the stream is otherwise closed;
--- follower cleanup is the caller's responsibility (see 'withFollower').
+-- follower cleanup is the caller's responsibility (see 'withFollowerReading').
 followTipStream
   :: forall m
    . HasCallStack
   => MonadIO m
-  => ChainFollower (ByteString, BlockInMode)
-  -- ^ Follower to stream changes from
-  -> m (Maybe (Proto U5c.BlockRef))
+  => ChainFollower ((SlotNo, Hash BlockHeader), m U5c.AnyChainBlock)
+  -- ^ Follower to stream changes from. Each applied block comes with its point
+  -- and the action that builds its @apply@ payload.
+  -> m (Maybe U5c.BlockRef)
   -- ^ Read the current chain tip, projected into a @BlockRef@
-  -> (SlotNo -> m UTCTime)
-  -- ^ Convert a slot to its wall-clock timestamp
-  -> (ChainPoint -> m (Maybe (ByteString, BlockInMode)))
+  -> (ChainPoint -> m (Maybe (m U5c.AnyChainBlock)))
   -- ^ Re-fetch a block by point, to reconstruct @undo@ payloads on
   -- rollback. 'Nothing' means the block is no longer available (e.g. the
   -- VolatileDB has garbage-collected it past the immutable tip); the loop
@@ -309,12 +350,14 @@ followTipStream
   -- costs roughly 40 bytes, so the window costs about @40 * k@ bytes per
   -- stream: around 86 KB on mainnet, where /k/ = 2160. A rollback deeper
   -- than the cap degrades to @reset@.
+  -> FieldMaskTree U5c.FollowTipResponse
+  -- ^ Selects the fields of every streamed response
   -> (NextElem (Proto U5c.FollowTipResponse) -> IO ())
   -- ^ Callback used to send each streamed response
   -> [ChainPoint]
   -- ^ Resolved, non-empty intersection points, in client preference order
   -> m ()
-followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp fetchBlockByPoint trackingCap send startPoints =
+followTipStream ChainFollower{nextChange, findIntersect} doReadTip fetchBlockByPoint trackingCap fieldMask send startPoints =
   -- freezes the caller's call stack (e.g. 'followTipMethod's) so the
   -- @NOT_FOUND@ thrown below, and any exception raised by the collaborator
   -- actions threaded through the loop, points at the real call site rather
@@ -336,19 +379,21 @@ followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp f
     -- initial window floor and nothing has been applied yet)
     go startPoint Seq.empty
  where
-  sendMessage action = do
-    tip <- readTip
-    liftIO . send . NextElem $ action & U5c.maybe'tip .~ tip
+  sendResponse :: FieldFill m U5c.FollowTipResponse -> m ()
+  sendResponse actionFill =
+    runFill id fieldMask (actionFill <> fill @"maybe'tip" doReadTip)
+      >>= liftIO . send . NextElem . Proto
+
+  resetFill :: ChainPoint -> FieldFill m U5c.FollowTipResponse
+  resetFill = fill @"reset" . pure . getProto . chainPointToBlockRef
 
   go :: ChainPoint -> TrackedPoints -> m ()
   go floorPoint tracked = do
     change <- nextChange
     (floorPoint', tracked') <- case change of
-      ChainApply (rawBytes, blockInMode@(BlockInMode _ block)) -> do
-        let BlockHeader slot headerHash _ = getBlockHeader block
-        timestamp <- slotTimestamp slot
-        sendMessage $ defMessage & U5c.apply .~ mkAnyChainBlock rawBytes blockInMode timestamp
-        pure (floorPoint, trackApplied trackingCap (slot, headerHash) tracked)
+      ChainApply (point, doBuildBlock) -> do
+        sendResponse $ fill @"apply" doBuildBlock
+        pure (floorPoint, trackApplied trackingCap point tracked)
       ChainRollBack point -> handleRollback point floorPoint tracked
     go floorPoint' tracked'
 
@@ -365,7 +410,7 @@ followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp f
         -- rollback-to-intersection with nothing tracked yet: today's
         -- unchanged fallback, which also preserves the first-message-reset
         -- invariant. The target becomes the new floor.
-        sendMessage $ defMessage & U5c.reset .~ chainPointToBlockRef point
+        sendResponse $ resetFill point
         pure (point, Seq.empty)
       Just (undone, kept)
         | Seq.null undone ->
@@ -373,8 +418,7 @@ followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp f
             -- rollback, or a rollback that is a no-op against the current
             -- position): reset communicates the position, with nothing to
             -- undo
-            sendMessage (defMessage & U5c.reset .~ chainPointToBlockRef point)
-              $> (floorPoint, kept)
+            sendResponse (resetFill point) $> (floorPoint, kept)
         | otherwise -> do
             kept' <- undoNewestFirst point kept undone
             pure (floorPoint, kept')
@@ -398,19 +442,12 @@ followTipStream ChainFollower{nextChange, findIntersect} readTip slotTimestamp f
   -- Stops at the first fetch miss (garbage collection won the race) and
   -- sends a single absolute @reset@ at the rollback point instead.
   undoNewestFirst :: ChainPoint -> TrackedPoints -> TrackedPoints -> m TrackedPoints
-  undoNewestFirst point kept = loop
-   where
-    loop pending = case Seq.viewl pending of
-      Seq.EmptyL -> pure kept
-      (slot, headerHash) Seq.:< rest -> do
-        fetched <- fetchBlockByPoint (ChainPoint slot headerHash)
-        case fetched of
-          Just (rawBytes, blockInMode) -> do
-            timestamp <- slotTimestamp slot
-            sendMessage $ defMessage & U5c.undo .~ mkAnyChainBlock rawBytes blockInMode timestamp
-            loop rest
-          Nothing ->
-            sendMessage (defMessage & U5c.reset .~ chainPointToBlockRef point) $> kept
+  undoNewestFirst point kept undone = do
+    isEveryBlockUndone <- fmap isJust . runMaybeT . forM_ undone $ \(slot, headerHash) -> do
+      doBuildBlock <- MaybeT . fetchBlockByPoint $ ChainPoint slot headerHash
+      lift . sendResponse $ fill @"undo" doBuildBlock
+    unless isEveryBlockUndone . sendResponse $ resetFill point
+    pure kept
 
   trackApplied :: Int -> (SlotNo, Hash BlockHeader) -> TrackedPoints -> TrackedPoints
   trackApplied cap entry tracked = Seq.take cap (entry Seq.<| tracked)
