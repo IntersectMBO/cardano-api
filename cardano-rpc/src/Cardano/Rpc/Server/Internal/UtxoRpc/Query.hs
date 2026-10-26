@@ -21,6 +21,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   , readGenesisMethod
   , readGenesisFill
   , readEraSummaryMethod
+  , readEraSummaryFill
   , paginateByTxIn
   )
 where
@@ -41,6 +42,8 @@ import Cardano.Rpc.Server.NodeKernelAccess
 
 import Cardano.Crypto.Hash.Class qualified as Crypto (hashToBytes)
 import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis, sgNetworkMagic)
+import Ouroboros.Consensus.Cardano.Block (CardanoEras)
+import Ouroboros.Consensus.HardFork.History qualified as History
 
 import RIO hiding (toList)
 
@@ -299,16 +302,30 @@ readShelleyGenesisWithInitialFunds shelleyGenesisFile@(File path) bootGenesisHas
 -- Returns the node's hard-fork era summary: one entry per era the node's
 -- ledger state has seen so far, with name and start/end boundaries. See
 -- 'eraSummariesToProto' for exactly which fields are populated.
+-- Honours the field mask: the era history is read only for @cardano@, and each
+-- era's name, start and end are converted only when selected.
 readEraSummaryMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadEraSummaryRequest
   -> m (Proto UtxoRpc.ReadEraSummaryResponse)
-readEraSummaryMethod _req = do
-  -- TODO: field masks are ignored for now
+readEraSummaryMethod req = do
   nodeKernelAccess <- grabNodeKernelAccess
-  summary <- readHardForkSummary nodeKernelAccess
-  pure $
-    defMessage & U5c.cardano .~ eraSummariesToProto (nodeKernelSystemStart nodeKernelAccess) summary
+  let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+  fmap Proto . runFill id fieldMask $
+    readEraSummaryFill (readHardForkSummary nodeKernelAccess) (nodeKernelSystemStart nodeKernelAccess)
+
+-- | The fields of a @ReadEraSummary@ response. The era history is read only when
+-- the mask selects @cardano@, and each era's fields are converted only when selected.
+readEraSummaryFill
+  :: Monad m
+  => m (History.Summary (CardanoEras StandardCrypto))
+  -- ^ Reads the node's hard-fork era summary
+  -> SystemStart
+  -- ^ The system start of the chain
+  -> FieldFill m UtxoRpc.ReadEraSummaryResponse
+readEraSummaryFill doReadSummary systemStart =
+  fillSub @"cardano" $
+    fillEach @"summaries" (eraSummaryEntries <$> doReadSummary) (`fillFrom` eraSummaryFill systemStart)
 
 -- | The CAIP-2 chain identifier for a Cardano network, keyed on the Shelley
 -- network magic.

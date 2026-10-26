@@ -6,6 +6,9 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type
   ( utxoRpcPParamsToProtocolParams
   , genesisBundleToProto
   , eraSummariesToProto
+  , EraSummaryEntry
+  , eraSummaryEntries
+  , eraSummaryFill
   , UtxoFields (..)
   , utxoToUtxoFields
   , txInTxOutToUtxoFields
