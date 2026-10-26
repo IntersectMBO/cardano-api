@@ -19,7 +19,12 @@ import Data.ProtoLens (defMessage)
 import GHC.Stack (withFrozenCallStack)
 import Network.GRPC.Spec (GrpcError (GrpcNotFound), GrpcException (..), Proto, getProto)
 
-import Test.Cardano.Rpc.FixtureBlock (boundaryBlockInMode, mainBlockInMode, stubTimestamp)
+import Test.Cardano.Rpc.FixtureBlock
+  ( boundaryBlockInMode
+  , mainBlockInMode
+  , oldAnyChainBlock
+  , stubTimestamp
+  )
 import Test.Cardano.Rpc.RecordedQuery
 
 import Hedgehog as H
@@ -38,6 +43,14 @@ hprop_field_mask_fetch_block_select_all_equals_unmasked_response = H.propertyOnc
   ran
     === concat (replicate 2 ["lookup", "GetRawBlock", "GetBlock", "GetSlot"]) <> replicate 2 "slotTimestamp"
   response === (defMessage & U5c.block .~ map unmaskedBlock blocks)
+
+-- | 'mkAnyChainBlock' still assembles the message it assembled before field masks.
+hprop_field_mask_fetch_block_mk_any_chain_block_keeps_its_result :: Property
+hprop_field_mask_fetch_block_mk_any_chain_block_keeps_its_result = H.propertyOnce $ do
+  blocks <- fixtureBlocks
+  for_ blocks $ \(rawBytes, blockInMode) ->
+    mkAnyChainBlock rawBytes blockInMode stubTimestamp
+      === oldAnyChainBlock rawBytes blockInMode stubTimestamp
 
 -- | The native bytes alone read only the raw block and never evaluate the parsed one.
 hprop_field_mask_fetch_block_native_bytes_reads_only_the_raw_block :: Property
@@ -204,7 +217,7 @@ requestWithMask paths = defMessage & U5c.fieldMask . FieldMask.paths .~ paths
 
 -- | The block the response held before field masks, with the stub timestamp.
 unmaskedBlock :: (ByteString, BlockInMode) -> U5c.AnyChainBlock
-unmaskedBlock (rawBytes, blockInMode) = getProto $ mkAnyChainBlock rawBytes blockInMode stubTimestamp
+unmaskedBlock (rawBytes, blockInMode) = getProto $ oldAnyChainBlock rawBytes blockInMode stubTimestamp
 
 -- | The two Byron fixture blocks: a main block with transactions and a boundary block.
 fixtureBlocks :: HasCallStack => MonadTest m => MonadIO m => m [(ByteString, BlockInMode)]
