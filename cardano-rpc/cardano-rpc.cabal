@@ -147,6 +147,7 @@ library
     strict-sop-core,
     text,
     time,
+    transformers,
 
 -- this should be replaced by utxorpc package from hackage
 -- ideally we should upstream whatever is implemented in Proto.Cardano.Rpc.Node

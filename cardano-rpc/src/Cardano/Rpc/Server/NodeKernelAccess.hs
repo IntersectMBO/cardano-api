@@ -44,6 +44,7 @@ module Cardano.Rpc.Server.NodeKernelAccess
   , ChainFollower (..)
   , withFollower
   , withBlockFollower
+  , withFollowerReading
   , positionFollowerAtCurrentTip
   )
 where
