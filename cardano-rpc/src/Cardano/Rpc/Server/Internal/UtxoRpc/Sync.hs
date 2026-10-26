@@ -9,6 +9,7 @@
 -- (fetching blocks, dumping history, following the tip).
 module Cardano.Rpc.Server.Internal.UtxoRpc.Sync
   ( fetchBlockMethod
+  , fetchBlockResponse
   , followTipMethod
   , followTipStream
   , readTipMethod
@@ -19,9 +20,14 @@ import Cardano.Api
 import Cardano.Api.Consensus qualified as Consensus
 import Cardano.Rpc.Proto.Api.UtxoRpc.Sync qualified as U5c
 import Cardano.Rpc.Server.Internal.Error
+import Cardano.Rpc.Server.Internal.FieldMask (FieldMaskTree, fill, resolve, runFill, subMaskEach)
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Tracing ()
-import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block (mkAnyChainBlock)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block
+  ( CardanoBlockComponent
+  , anyChainBlockRead
+  , mkAnyChainBlock
+  )
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint
   ( chainPointToBlockRef
   , mkTipBlockRef
@@ -33,6 +39,7 @@ import Cardano.Ledger.BaseTypes qualified as L
 
 import RIO
 
+import Control.Error (MaybeT (..), maybeT)
 import Data.ByteString qualified as BS
 import Data.ProtoLens (defMessage)
 import Data.Sequence qualified as Seq
@@ -41,15 +48,19 @@ import GHC.Stack (withFrozenCallStack)
 import Network.GRPC.Spec
   ( GrpcError (GrpcInternal, GrpcInvalidArgument, GrpcNotFound)
   , NextElem (NextElem)
-  , Proto
+  , Proto (..)
+  , getProto
   )
+
+import Proto.Google.Protobuf.FieldMask_Fields qualified as FieldMask (paths)
 
 -- | Handle the @FetchBlock@ SyncService RPC method.
 -- Fetches blocks from ChainDB by slot and header hash.
 -- Byron-era transactions carry no fee: Byron fees are implicit (inputs minus
 -- outputs) and computing them needs UTxO lookups this handler does not do.
--- Returns @NOT_FOUND@ if any requested block is missing.
+-- Returns @NOT_FOUND@ if any requested block is missing, whatever the field mask selects.
 -- Returns @INVALID_ARGUMENT@ if a block reference has an invalid hash.
+-- Honours the field mask: see 'fetchBlockResponse'.
 fetchBlockMethod
   :: MonadRpc e m
   => Proto U5c.FetchBlockRequest
@@ -65,22 +76,49 @@ fetchBlockMethod request = do
         <> ", maximum "
         <> tshow maxFetchBlockRefs
         <> "; batch your requests"
+  points <- traverse blockRefToPoint $ request ^. U5c.ref
 
   nodeKernelAccess <- grabNodeKernelAccess
-  blocks <- forM (request ^. U5c.ref) $ \blockRef -> do
-    (slot, headerHash) <- blockRefToPoint blockRef
-    let throwNotFound =
-          throwGrpcErrorWithMessage GrpcNotFound $
-            "block not found at slot "
-              <> tshow (unSlotNo slot)
-              <> ", header hash "
-              <> serialiseToRawBytesHexText headerHash
-    (rawBytes, blockInMode) <-
-      fetchBlock nodeKernelAccess slot headerHash >>= maybe throwNotFound pure
-    timestamp <-
-      slotTimestampOrThrow (nodeKernelSystemStart nodeKernelAccess) (readEraHistory nodeKernelAccess) slot
-    pure $ mkAnyChainBlock rawBytes blockInMode timestamp
-  pure $ defMessage & U5c.block .~ blocks
+  let fieldMask = resolve $ getProto request ^. U5c.fieldMask . FieldMask.paths
+  Proto
+    <$> fetchBlockResponse
+      (fetchBlockReading nodeKernelAccess)
+      (slotTimestampOrThrow (nodeKernelSystemStart nodeKernelAccess) (readEraHistory nodeKernelAccess))
+      fieldMask
+      points
+
+-- | The @FetchBlock@ response for the requested blocks. Each block reads only the
+-- components its selected fields need (see 'anyChainBlockRead'). A missing block
+-- is reported whatever the mask selects: with no @block@ field selected, ChainDB
+-- only checks that the block exists.
+fetchBlockResponse
+  :: MonadIO m
+  => ( CardanoBlockComponent (m U5c.AnyChainBlock)
+       -> SlotNo
+       -> Hash BlockHeader
+       -> m (Maybe (m U5c.AnyChainBlock))
+     )
+  -- ^ Read block components from ChainDB by slot and header hash, 'Nothing'
+  -- when the block is missing
+  -> (SlotNo -> m UTCTime)
+  -- ^ Convert a slot to its wall-clock timestamp
+  -> FieldMaskTree U5c.FetchBlockResponse
+  -- ^ Selects the fields to fill
+  -> [(SlotNo, Hash BlockHeader)]
+  -- ^ The slot and header hash of each requested block
+  -> m U5c.FetchBlockResponse
+fetchBlockResponse doReadBlock doSlotTimestamp fieldMask points = do
+  actions <- forM points $ \(slot, headerHash) ->
+    maybeT (throwNotFound slot headerHash) pure . MaybeT $ doReadBlock blockComponent slot headerHash
+  runFill id fieldMask . fill @"block" $ sequence actions
+ where
+  blockComponent = anyChainBlockRead doSlotTimestamp $ subMaskEach @"block" fieldMask
+  throwNotFound slot headerHash =
+    throwGrpcErrorWithMessage GrpcNotFound $
+      "block not found at slot "
+        <> tshow (unSlotNo slot)
+        <> ", header hash "
+        <> serialiseToRawBytesHexText headerHash
 
 -- | Each ref is a ChainDB read and a full block in the non-streaming response.
 maxFetchBlockRefs :: Int
