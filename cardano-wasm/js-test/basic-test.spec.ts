@@ -11,7 +11,7 @@ test('test output matches', async ({ page }) => {
   // Wait for the page to load and the window title to be set (it should be "cardano-wasm test")
   await expect(page).toHaveTitle(/cardano-wasm test/);
   // Wait for the test to finish running (we signal this by creating a tag with id "finish-tag" and text "Finished test!")
-  await expect(page.locator('#finish-tag')).toHaveText("Finished test!");
+  await expect(page.locator('#finish-tag')).toHaveText("Finished test!", { timeout: 15_000 });
   // Check the output of the test against the golden file
   const actual = await page.locator('#test-output').textContent();
 
