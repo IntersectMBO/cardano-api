@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1351
+kind:
+  - feature
+description: |
+  Add the `WaitForTx` method to the UTxO RPC submit service, which streams the progress of the given transactions until they are confirmed on chain. A `WaitForTx` stream that sends no update for 10 minutes ends with `DEADLINE_EXCEEDED`. Clients can reopen it, but the new stream does not report confirmations that occurred before it opened. A request with more than 500 transaction references is rejected with `INVALID_ARGUMENT`.

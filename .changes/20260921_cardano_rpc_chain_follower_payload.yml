@@ -1,0 +1,8 @@
+project: cardano-rpc
+pr: 1351
+kind:
+  - breaking
+description: |
+  `ChainChange` and `ChainFollower` in `Cardano.Rpc.Server.NodeKernelAccess` now take the type of the per-block payload as a parameter. `withFollower` keeps giving the raw block bytes together with the parsed block, as `ChainFollower (ByteString, BlockInMode)`, and the new `withBlockFollower` gives only the parsed block, as `ChainFollower BlockInMode`. Code that names the old unparameterised `ChainChange` or `ChainFollower` types must add the payload type. The follower API now lives in the internal module `Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower` and is re-exported from `Cardano.Rpc.Server.NodeKernelAccess`.
+
+  `ChainFollower` also has a new `tryNextChange` field that returns the next change without blocking, and `NodeKernelAccess` now also exports the STM reads `readChainTipPoint`, `readMempoolSnapshot` and `readCurrentEra`, so callers can wait for the chain tip or mempool to change. The new `positionFollowerAtCurrentTip` moves a freshly opened follower to the current chain tip and returns that point.
