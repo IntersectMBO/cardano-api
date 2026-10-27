@@ -1,0 +1,568 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TupleSections #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- | Guards add required key signatures or script checks to Dijkstra transactions</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- and sub-transactions independently of spending inputs. Key guards are satisfied</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- by signatures supplied when signing; script guards use native or Plutus V4</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- witnesses, supplied inline or through reference inputs.</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- 'TxGuards' associates guard credentials with optional script witnesses and</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- preserves insertion order, which determines Plutus guard redeemer indices.</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- Use 'mkTxGuards' to validate the supplied entries before building a transaction.</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.Guard</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuards"><span class="hs-identifier">TxGuards</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#ScriptGuardWitness"><span class="hs-identifier">ScriptGuardWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuardsError"><span class="hs-identifier">TxGuardsError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#mkTxGuards"><span class="hs-identifier">mkTxGuards</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#emptyTxGuards"><span class="hs-identifier">emptyTxGuards</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#scriptGuardWitnessToAnyWitness"><span class="hs-identifier">scriptGuardWitnessToAnyWitness</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#traverseTxGuardsExecutionUnits"><span class="hs-identifier">traverseTxGuardsExecutionUnits</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html"><span class="hs-identifier">Cardano.Api.Error</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.AnyScriptWitness.html"><span class="hs-identifier">Cardano.Api.Experimental.AnyScriptWitness</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html"><span class="hs-identifier">Cardano.Api.Experimental.Plutus.Internal.ScriptWitness</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Simple.Script.html"><span class="hs-identifier">Cardano.Api.Experimental.Simple.Script</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.AnyWitness</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html"><span class="hs-identifier">Cardano.Api.Plutus.Internal.Script</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ExecutionUnits"><span class="hs-identifier">ExecutionUnits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Pretty.html"><span class="hs-identifier">Cardano.Api.Pretty</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.html#foldM_"><span class="hs-identifier">foldM_</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.html#unless"><span class="hs-identifier">unless</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#for_"><span class="hs-identifier">for_</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Ordered.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">OMap</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Ordered.Strict</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">OMap</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Word.html#Word32"><span class="hs-identifier">Word32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IsList.html#IsList"><span class="hs-identifier">IsList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- | A supplied guard script witness. Key signatures are supplied when signing.</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- The Plutus constructor fixes both the language and the script purpose.</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">data</span><span> </span><span id="ScriptGuardWitness"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#ScriptGuardWitness"><span class="hs-identifier hs-var">ScriptGuardWitness</span></a></span></span><span> </span><span id="local-6989586621683058189"><span class="annot"><a href="#local-6989586621683058189"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="NativeGuardWitness"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#NativeGuardWitness"><span class="hs-identifier hs-var">NativeGuardWitness</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Simple.Script.html#SimpleScriptOrReferenceInput"><span class="hs-identifier hs-type">SimpleScriptOrReferenceInput</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058189"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="PlutusGuardWitness"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#PlutusGuardWitness"><span class="hs-identifier hs-var">PlutusGuardWitness</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#PlutusScriptWitness"><span class="hs-identifier hs-type">PlutusScriptWitness</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#PlutusV4"><span class="hs-identifier hs-type">L.PlutusV4</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#GuardingScript"><span class="hs-identifier hs-type">GuardingScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058189"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683058204"><span id="local-6989586621683058213"><span class="annot"><span class="annottext">ScriptGuardWitness era -&gt; ScriptGuardWitness era -&gt; Bool
+(ScriptGuardWitness era -&gt; ScriptGuardWitness era -&gt; Bool)
+-&gt; (ScriptGuardWitness era -&gt; ScriptGuardWitness era -&gt; Bool)
+-&gt; Eq (ScriptGuardWitness era)
+forall era.
+ScriptGuardWitness era -&gt; ScriptGuardWitness era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era.
+ScriptGuardWitness era -&gt; ScriptGuardWitness era -&gt; Bool
+== :: ScriptGuardWitness era -&gt; ScriptGuardWitness era -&gt; Bool
+$c/= :: forall era.
+ScriptGuardWitness era -&gt; ScriptGuardWitness era -&gt; Bool
+/= :: ScriptGuardWitness era -&gt; ScriptGuardWitness era -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683058218"><span id="local-6989586621683058227"><span id="local-6989586621683058231"><span class="annot"><span class="annottext">Int -&gt; ScriptGuardWitness era -&gt; ShowS
+[ScriptGuardWitness era] -&gt; ShowS
+ScriptGuardWitness era -&gt; String
+(Int -&gt; ScriptGuardWitness era -&gt; ShowS)
+-&gt; (ScriptGuardWitness era -&gt; String)
+-&gt; ([ScriptGuardWitness era] -&gt; ShowS)
+-&gt; Show (ScriptGuardWitness era)
+forall era. Int -&gt; ScriptGuardWitness era -&gt; ShowS
+forall era. [ScriptGuardWitness era] -&gt; ShowS
+forall era. ScriptGuardWitness era -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall era. Int -&gt; ScriptGuardWitness era -&gt; ShowS
+showsPrec :: Int -&gt; ScriptGuardWitness era -&gt; ShowS
+$cshow :: forall era. ScriptGuardWitness era -&gt; String
+show :: ScriptGuardWitness era -&gt; String
+$cshowList :: forall era. [ScriptGuardWitness era] -&gt; ShowS
+showList :: [ScriptGuardWitness era] -&gt; ShowS
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | Guard credentials and their optional witnesses, in ledger insertion order.</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- Construct with 'mkTxGuards' so credentials are unique and witnesses agree</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- with them. Key credentials must have 'Nothing' as their script witness;</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- 'mkTxGuards' rejects a 'Just' witness for a key credential. Key signatures</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- are supplied separately when signing.</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- 'Nothing' means no script witness was supplied; it does not</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- imply that the credential is a key credential or that no witness is required.</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- Use 'toList' to inspect entries in insertion order. The derived 'IsList'</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- instance constructs the underlying ordered map without the validation</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- performed by 'mkTxGuards'.</span><span>
+</span><span id="line-64"></span><span class="hs-keyword">newtype</span><span> </span><span id="TxGuards"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuards"><span class="hs-identifier hs-var">TxGuards</span></a></span></span><span> </span><span id="local-6989586621683058136"><span class="annot"><a href="#local-6989586621683058136"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxGuards"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuards"><span class="hs-identifier hs-var">TxGuards</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">OMap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">L.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#Guard"><span class="hs-identifier hs-type">L.Guard</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#ScriptGuardWitness"><span class="hs-identifier hs-type">ScriptGuardWitness</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058136"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683058236"><span id="local-6989586621683058243"><span class="annot"><span class="annottext">TxGuards era -&gt; TxGuards era -&gt; Bool
+(TxGuards era -&gt; TxGuards era -&gt; Bool)
+-&gt; (TxGuards era -&gt; TxGuards era -&gt; Bool) -&gt; Eq (TxGuards era)
+forall era. TxGuards era -&gt; TxGuards era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era. TxGuards era -&gt; TxGuards era -&gt; Bool
+== :: TxGuards era -&gt; TxGuards era -&gt; Bool
+$c/= :: forall era. TxGuards era -&gt; TxGuards era -&gt; Bool
+/= :: TxGuards era -&gt; TxGuards era -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683058255"><span id="local-6989586621683058262"><span id="local-6989586621683058266"><span class="annot"><span class="annottext">Int -&gt; TxGuards era -&gt; ShowS
+[TxGuards era] -&gt; ShowS
+TxGuards era -&gt; String
+(Int -&gt; TxGuards era -&gt; ShowS)
+-&gt; (TxGuards era -&gt; String)
+-&gt; ([TxGuards era] -&gt; ShowS)
+-&gt; Show (TxGuards era)
+forall era. Int -&gt; TxGuards era -&gt; ShowS
+forall era. [TxGuards era] -&gt; ShowS
+forall era. TxGuards era -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall era. Int -&gt; TxGuards era -&gt; ShowS
+showsPrec :: Int -&gt; TxGuards era -&gt; ShowS
+$cshow :: forall era. TxGuards era -&gt; String
+show :: TxGuards era -&gt; String
+$cshowList :: forall era. [TxGuards era] -&gt; ShowS
+showList :: [TxGuards era] -&gt; ShowS
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683058272"><span id="local-6989586621683058279"><span id="local-6989586621683058285"><span class="annot"><span class="annottext">Int -&gt; [Item (TxGuards era)] -&gt; TxGuards era
+[Item (TxGuards era)] -&gt; TxGuards era
+TxGuards era -&gt; [Item (TxGuards era)]
+([Item (TxGuards era)] -&gt; TxGuards era)
+-&gt; (Int -&gt; [Item (TxGuards era)] -&gt; TxGuards era)
+-&gt; (TxGuards era -&gt; [Item (TxGuards era)])
+-&gt; IsList (TxGuards era)
+forall era. Int -&gt; [Item (TxGuards era)] -&gt; TxGuards era
+forall era. [Item (TxGuards era)] -&gt; TxGuards era
+forall era. TxGuards era -&gt; [Item (TxGuards era)]
+forall l.
+([Item l] -&gt; l)
+-&gt; (Int -&gt; [Item l] -&gt; l) -&gt; (l -&gt; [Item l]) -&gt; IsList l
+$cfromList :: forall era. [Item (TxGuards era)] -&gt; TxGuards era
+fromList :: [Item (TxGuards era)] -&gt; TxGuards era
+$cfromListN :: forall era. Int -&gt; [Item (TxGuards era)] -&gt; TxGuards era
+fromListN :: Int -&gt; [Item (TxGuards era)] -&gt; TxGuards era
+$ctoList :: forall era. TxGuards era -&gt; [Item (TxGuards era)]
+toList :: TxGuards era -&gt; [Item (TxGuards era)]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IsList.html#IsList"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">IsList</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><span class="hs-comment">-- | Validation errors returned by 'mkTxGuards'.</span></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">data</span><span> </span><span id="TxGuardsError"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuardsError"><span class="hs-identifier hs-var">TxGuardsError</span></a></span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | The same guard credential occurs more than once in the supplied entries.</span></span><span>
+</span><span id="line-70"></span><span>    </span><span id="DuplicateGuardCredential"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#DuplicateGuardCredential"><span class="hs-identifier hs-var">DuplicateGuardCredential</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">L.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#Guard"><span class="hs-identifier hs-type">L.Guard</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | A script witness was supplied for a key credential, which must have 'Nothing'.</span></span><span>
+</span><span id="line-72"></span><span>    </span><span id="GuardWitnessForKeyCredential"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#GuardWitnessForKeyCredential"><span class="hs-identifier hs-var">GuardWitnessForKeyCredential</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">L.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#Guard"><span class="hs-identifier hs-type">L.Guard</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | An inline native or Plutus script does not match its guard credential.</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-comment">-- The first hash is the expected credential hash; the second is the actual</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-comment">-- script hash. Reference-script hashes are not checked by 'mkTxGuards'.</span><span>
+</span><span id="line-76"></span><span>    </span><span id="GuardScriptHashMismatch"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#GuardScriptHashMismatch"><span class="hs-identifier hs-var">GuardScriptHashMismatch</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">L.ScriptHash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">L.ScriptHash</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683058297"><span id="local-6989586621683058306"><span class="annot"><span class="annottext">TxGuardsError -&gt; TxGuardsError -&gt; Bool
+(TxGuardsError -&gt; TxGuardsError -&gt; Bool)
+-&gt; (TxGuardsError -&gt; TxGuardsError -&gt; Bool) -&gt; Eq TxGuardsError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TxGuardsError -&gt; TxGuardsError -&gt; Bool
+== :: TxGuardsError -&gt; TxGuardsError -&gt; Bool
+$c/= :: TxGuardsError -&gt; TxGuardsError -&gt; Bool
+/= :: TxGuardsError -&gt; TxGuardsError -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683058310"><span id="local-6989586621683058320"><span id="local-6989586621683058324"><span class="annot"><span class="annottext">Int -&gt; TxGuardsError -&gt; ShowS
+[TxGuardsError] -&gt; ShowS
+TxGuardsError -&gt; String
+(Int -&gt; TxGuardsError -&gt; ShowS)
+-&gt; (TxGuardsError -&gt; String)
+-&gt; ([TxGuardsError] -&gt; ShowS)
+-&gt; Show TxGuardsError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TxGuardsError -&gt; ShowS
+showsPrec :: Int -&gt; TxGuardsError -&gt; ShowS
+$cshow :: TxGuardsError -&gt; String
+show :: TxGuardsError -&gt; String
+$cshowList :: [TxGuardsError] -&gt; ShowS
+showList :: [TxGuardsError] -&gt; ShowS
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuardsError"><span class="hs-identifier hs-type">TxGuardsError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621683058344"><span class="annot"><span class="annottext">prettyError :: forall ann. TxGuardsError -&gt; Doc ann
+</span><a href="#local-6989586621683058344"><span class="hs-identifier hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#DuplicateGuardCredential"><span class="hs-identifier hs-type">DuplicateGuardCredential</span></a></span><span> </span><span id="local-6989586621683058346"><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058346"><span class="hs-identifier hs-var">credential</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Duplicate guard credential: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Guard -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058346"><span class="hs-identifier hs-var">credential</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#GuardWitnessForKeyCredential"><span class="hs-identifier hs-type">GuardWitnessForKeyCredential</span></a></span><span> </span><span id="local-6989586621683058348"><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058348"><span class="hs-identifier hs-var">credential</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Script witness supplied for key guard credential: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Guard -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058348"><span class="hs-identifier hs-var">credential</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#GuardScriptHashMismatch"><span class="hs-identifier hs-type">GuardScriptHashMismatch</span></a></span><span> </span><span id="local-6989586621683058349"><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621683058349"><span class="hs-identifier hs-var">expected</span></a></span></span><span> </span><span id="local-6989586621683058350"><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621683058350"><span class="hs-identifier hs-var">actual</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Guard script hash &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621683058350"><span class="hs-identifier hs-var">actual</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot; does not match credential hash &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621683058349"><span class="hs-identifier hs-var">expected</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- | Preserve the supplied order and reject duplicate credentials, script</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- witnesses for key credentials, and mismatching inline script hashes.</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- Reference-script hashes must be checked against the referenced UTxO later.</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- Constructing this collection does not check whether the transaction's era</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- supports guards, or whether all required witnesses have been supplied.</span><span>
+</span><span id="line-92"></span><span id="local-6989586621683058118"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#mkTxGuards"><span class="hs-identifier hs-type">mkTxGuards</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">L.EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058118"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">L.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#Guard"><span class="hs-identifier hs-type">L.Guard</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#ScriptGuardWitness"><span class="hs-identifier hs-type">ScriptGuardWitness</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058118"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuardsError"><span class="hs-identifier hs-type">TxGuardsError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuards"><span class="hs-identifier hs-type">TxGuards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058118"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-96"></span><span id="mkTxGuards"><span class="annot"><span class="annottext">mkTxGuards :: forall era.
+EraScript era =&gt;
+[(Credential Guard, Maybe (ScriptGuardWitness era))]
+-&gt; Either TxGuardsError (TxGuards era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#mkTxGuards"><span class="hs-identifier hs-var hs-var">mkTxGuards</span></a></span></span><span> </span><span id="local-6989586621683058361"><span class="annot"><span class="annottext">[(Credential Guard, Maybe (ScriptGuardWitness era))]
+</span><a href="#local-6989586621683058361"><span class="hs-identifier hs-var">guards</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><span class="annottext">(Set (Credential Guard)
+ -&gt; (Credential Guard, Maybe (ScriptGuardWitness era))
+ -&gt; Either TxGuardsError (Set (Credential Guard)))
+-&gt; Set (Credential Guard)
+-&gt; [(Credential Guard, Maybe (ScriptGuardWitness era))]
+-&gt; Either TxGuardsError ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) b a.
+(Foldable t, Monad m) =&gt;
+(b -&gt; a -&gt; m b) -&gt; b -&gt; t a -&gt; m ()
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.html#foldM_"><span class="hs-identifier hs-var">foldM_</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Credential Guard)
+-&gt; (Credential Guard, Maybe (ScriptGuardWitness era))
+-&gt; Either TxGuardsError (Set (Credential Guard))
+forall era.
+EraScript era =&gt;
+Set (Credential Guard)
+-&gt; (Credential Guard, Maybe (ScriptGuardWitness era))
+-&gt; Either TxGuardsError (Set (Credential Guard))
+</span><a href="#local-6989586621683058362"><span class="hs-identifier hs-var">validate</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Credential Guard)
+forall a. Set a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#empty"><span class="hs-identifier hs-var">Set.empty</span></a></span><span> </span><span class="annot"><span class="annottext">[(Credential Guard, Maybe (ScriptGuardWitness era))]
+</span><a href="#local-6989586621683058361"><span class="hs-identifier hs-var">guards</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">TxGuards era -&gt; Either TxGuardsError (TxGuards era)
+forall a. a -&gt; Either TxGuardsError a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(TxGuards era -&gt; Either TxGuardsError (TxGuards era))
+-&gt; TxGuards era -&gt; Either TxGuardsError (TxGuards era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+-&gt; TxGuards era
+forall era.
+OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+-&gt; TxGuards era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuards"><span class="hs-identifier hs-var">TxGuards</span></a></span><span> </span><span class="annot"><span class="annottext">(OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+ -&gt; TxGuards era)
+-&gt; OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+-&gt; TxGuards era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[(Credential Guard, Maybe (ScriptGuardWitness era))]
+-&gt; OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+forall k v. Ord k =&gt; [(k, v)] -&gt; OMap k v
+</span><span class="hs-identifier hs-var">OMap.fromList</span></span><span> </span><span class="annot"><span class="annottext">[(Credential Guard, Maybe (ScriptGuardWitness era))]
+</span><a href="#local-6989586621683058361"><span class="hs-identifier hs-var">guards</span></a></span><span>
+</span><span id="line-99"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-100"></span><span>  </span><span id="local-6989586621683058128"><span class="annot"><a href="#local-6989586621683058362"><span class="hs-identifier hs-type">validate</span></a></span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">L.EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058128"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">L.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#Guard"><span class="hs-identifier hs-type">L.Guard</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">L.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#Guard"><span class="hs-identifier hs-type">L.Guard</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#ScriptGuardWitness"><span class="hs-identifier hs-type">ScriptGuardWitness</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058128"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuardsError"><span class="hs-identifier hs-type">TxGuardsError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">L.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#Guard"><span class="hs-identifier hs-type">L.Guard</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621683058362"><span class="annot"><span class="annottext">validate :: forall era.
+EraScript era =&gt;
+Set (Credential Guard)
+-&gt; (Credential Guard, Maybe (ScriptGuardWitness era))
+-&gt; Either TxGuardsError (Set (Credential Guard))
+</span><a href="#local-6989586621683058362"><span class="hs-identifier hs-var hs-var">validate</span></a></span></span><span> </span><span id="local-6989586621683058380"><span class="annot"><span class="annottext">Set (Credential Guard)
+</span><a href="#local-6989586621683058380"><span class="hs-identifier hs-var">seen</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621683058381"><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058381"><span class="hs-identifier hs-var">credential</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683058382"><span class="annot"><span class="annottext">Maybe (ScriptGuardWitness era)
+</span><a href="#local-6989586621683058382"><span class="hs-identifier hs-var">witness</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Either TxGuardsError () -&gt; Either TxGuardsError ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Credential Guard -&gt; Set (Credential Guard) -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#notMember"><span class="hs-identifier hs-var">Set.notMember</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058381"><span class="hs-identifier hs-var">credential</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Credential Guard)
+</span><a href="#local-6989586621683058380"><span class="hs-identifier hs-var">seen</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either TxGuardsError () -&gt; Either TxGuardsError ())
+-&gt; Either TxGuardsError () -&gt; Either TxGuardsError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxGuardsError -&gt; Either TxGuardsError ()
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(TxGuardsError -&gt; Either TxGuardsError ())
+-&gt; TxGuardsError -&gt; Either TxGuardsError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Guard -&gt; TxGuardsError
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#DuplicateGuardCredential"><span class="hs-identifier hs-var">DuplicateGuardCredential</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058381"><span class="hs-identifier hs-var">credential</span></a></span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058381"><span class="hs-identifier hs-var">credential</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (ScriptGuardWitness era)
+</span><a href="#local-6989586621683058382"><span class="hs-identifier hs-var">witness</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html#KeyHashObj"><span class="hs-identifier hs-type">L.KeyHashObj</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash Guard
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptGuardWitness era
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxGuardsError -&gt; Either TxGuardsError ()
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(TxGuardsError -&gt; Either TxGuardsError ())
+-&gt; TxGuardsError -&gt; Either TxGuardsError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Guard -&gt; TxGuardsError
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#GuardWitnessForKeyCredential"><span class="hs-identifier hs-var">GuardWitnessForKeyCredential</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058381"><span class="hs-identifier hs-var">credential</span></a></span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html#ScriptHashObj"><span class="hs-identifier hs-type">L.ScriptHashObj</span></a></span><span> </span><span id="local-6989586621683058386"><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621683058386"><span class="hs-identifier hs-var">expected</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621683058387"><span class="annot"><span class="annottext">ScriptGuardWitness era
+</span><a href="#local-6989586621683058387"><span class="hs-identifier hs-var">scriptWitness</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-110"></span><span>        </span><span class="annot"><span class="annottext">Maybe (Script era)
+-&gt; (Script era -&gt; Either TxGuardsError ())
+-&gt; Either TxGuardsError ()
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Foldable t, Applicative f) =&gt;
+t a -&gt; (a -&gt; f b) -&gt; f ()
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Foldable.html#for_"><span class="hs-identifier hs-var">for_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AnyWitness era -&gt; Maybe (Script era)
+forall era. AnyWitness era -&gt; Maybe (Script era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#getAnyWitnessScript"><span class="hs-identifier hs-var">getAnyWitnessScript</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScriptGuardWitness era -&gt; AnyWitness era
+forall era. ScriptGuardWitness era -&gt; AnyWitness era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#scriptGuardWitnessToAnyWitness"><span class="hs-identifier hs-var">scriptGuardWitnessToAnyWitness</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptGuardWitness era
+</span><a href="#local-6989586621683058387"><span class="hs-identifier hs-var">scriptWitness</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Script era -&gt; Either TxGuardsError ())
+ -&gt; Either TxGuardsError ())
+-&gt; (Script era -&gt; Either TxGuardsError ())
+-&gt; Either TxGuardsError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621683058389"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621683058389"><span class="hs-identifier hs-var">script</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-111"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621683058390"><span class="annot"><span class="annottext">actual :: ScriptHash
+</span><a href="#local-6989586621683058390"><span class="hs-identifier hs-var hs-var">actual</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Script era -&gt; ScriptHash
+forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">L.hashScript</span></a></span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621683058389"><span class="hs-identifier hs-var">script</span></a></span><span>
+</span><span id="line-112"></span><span>          </span><span class="annot"><span class="annottext">Bool -&gt; Either TxGuardsError () -&gt; Either TxGuardsError ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621683058386"><span class="hs-identifier hs-var">expected</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; ScriptHash -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621683058390"><span class="hs-identifier hs-var">actual</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either TxGuardsError () -&gt; Either TxGuardsError ())
+-&gt; Either TxGuardsError () -&gt; Either TxGuardsError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxGuardsError -&gt; Either TxGuardsError ()
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(TxGuardsError -&gt; Either TxGuardsError ())
+-&gt; TxGuardsError -&gt; Either TxGuardsError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; ScriptHash -&gt; TxGuardsError
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#GuardScriptHashMismatch"><span class="hs-identifier hs-var">GuardScriptHashMismatch</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621683058386"><span class="hs-identifier hs-var">expected</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash
+</span><a href="#local-6989586621683058390"><span class="hs-identifier hs-var">actual</span></a></span><span>
+</span><span id="line-113"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html#KeyHashObj"><span class="hs-identifier hs-type">L.KeyHashObj</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash Guard
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (ScriptGuardWitness era)
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; Either TxGuardsError ()
+forall a. a -&gt; Either TxGuardsError a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.22.0.0-d3cfaedc0496420faa2f40695f76d573054c1e38679a0faf12030a4f6a244397/share/doc/html/src/Cardano.Ledger.Credential.html#ScriptHashObj"><span class="hs-identifier hs-type">L.ScriptHashObj</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptHash
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (ScriptGuardWitness era)
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; Either TxGuardsError ()
+forall a. a -&gt; Either TxGuardsError a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><span class="annottext">Set (Credential Guard)
+-&gt; Either TxGuardsError (Set (Credential Guard))
+forall a. a -&gt; Either TxGuardsError a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Set (Credential Guard)
+ -&gt; Either TxGuardsError (Set (Credential Guard)))
+-&gt; Set (Credential Guard)
+-&gt; Either TxGuardsError (Set (Credential Guard))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Guard
+-&gt; Set (Credential Guard) -&gt; Set (Credential Guard)
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/containers-0.8-inplace/src/Data.Set.Internal.html#insert"><span class="hs-identifier hs-var">Set.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058381"><span class="hs-identifier hs-var">credential</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Credential Guard)
+</span><a href="#local-6989586621683058380"><span class="hs-identifier hs-var">seen</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><span class="hs-comment">-- | An empty guard collection, containing no credentials or script witnesses.</span></span><span>
+</span><span id="line-118"></span><span id="local-6989586621683058155"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#emptyTxGuards"><span class="hs-identifier hs-type">emptyTxGuards</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuards"><span class="hs-identifier hs-type">TxGuards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058155"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-119"></span><span id="emptyTxGuards"><span class="annot"><span class="annottext">emptyTxGuards :: forall era. TxGuards era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#emptyTxGuards"><span class="hs-identifier hs-var hs-var">emptyTxGuards</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+-&gt; TxGuards era
+forall era.
+OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+-&gt; TxGuards era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuards"><span class="hs-identifier hs-var">TxGuards</span></a></span><span> </span><span class="annot"><span class="annottext">OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+forall k v. OMap k v
+</span><span class="hs-identifier hs-var">OMap.empty</span></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span id="local-6989586621683058152"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#scriptGuardWitnessToAnyWitness"><span class="hs-identifier hs-type">scriptGuardWitnessToAnyWitness</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#ScriptGuardWitness"><span class="hs-identifier hs-type">ScriptGuardWitness</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058152"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#AnyWitness"><span class="hs-identifier hs-type">AnyWitness</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058152"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-122"></span><span id="scriptGuardWitnessToAnyWitness"><span class="annot"><span class="annottext">scriptGuardWitnessToAnyWitness :: forall era. ScriptGuardWitness era -&gt; AnyWitness era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#scriptGuardWitnessToAnyWitness"><span class="hs-identifier hs-var hs-var">scriptGuardWitnessToAnyWitness</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#NativeGuardWitness"><span class="hs-identifier hs-type">NativeGuardWitness</span></a></span><span> </span><span id="local-6989586621683058395"><span class="annot"><span class="annottext">SimpleScriptOrReferenceInput era
+</span><a href="#local-6989586621683058395"><span class="hs-identifier hs-var">witness</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SimpleScriptOrReferenceInput era -&gt; AnyWitness era
+forall era. SimpleScriptOrReferenceInput era -&gt; AnyWitness era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#AnySimpleScriptWitness"><span class="hs-identifier hs-var">AnySimpleScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">SimpleScriptOrReferenceInput era
+</span><a href="#local-6989586621683058395"><span class="hs-identifier hs-var">witness</span></a></span><span>
+</span><span id="line-123"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#scriptGuardWitnessToAnyWitness"><span class="hs-identifier hs-var">scriptGuardWitnessToAnyWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#PlutusGuardWitness"><span class="hs-identifier hs-type">PlutusGuardWitness</span></a></span><span> </span><span id="local-6989586621683058397"><span class="annot"><span class="annottext">PlutusScriptWitness 'PlutusV4 'GuardingScript era
+</span><a href="#local-6989586621683058397"><span class="hs-identifier hs-var">witness</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><span class="annottext">AnyPlutusScriptWitness 'PlutusV4 'GuardingScript era
+-&gt; AnyWitness era
+forall (lang :: Language) (purpose :: PlutusScriptPurpose) era.
+AnyPlutusScriptWitness lang purpose era -&gt; AnyWitness era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#AnyPlutusScriptWitness"><span class="hs-identifier hs-var">AnyPlutusScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">(AnyPlutusScriptWitness 'PlutusV4 'GuardingScript era
+ -&gt; AnyWitness era)
+-&gt; AnyPlutusScriptWitness 'PlutusV4 'GuardingScript era
+-&gt; AnyWitness era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusScriptWitness 'PlutusV4 'GuardingScript era
+-&gt; AnyPlutusScriptWitness 'PlutusV4 'GuardingScript era
+forall (lang :: Language) era.
+Typeable lang =&gt;
+PlutusScriptWitness lang 'GuardingScript era
+-&gt; AnyPlutusScriptWitness lang 'GuardingScript era
+</span><a href="Cardano.Api.Experimental.AnyScriptWitness.html#AnyPlutusGuardingScriptWitness"><span class="hs-identifier hs-var">AnyPlutusGuardingScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusScriptWitness 'PlutusV4 'GuardingScript era
+</span><a href="#local-6989586621683058397"><span class="hs-identifier hs-var">witness</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- | Update only Plutus budgets, preserving credentials, scripts, and insertion</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- order. Native and witnessless guards occupy indices but need no budget.</span><span>
+</span><span id="line-128"></span><span id="local-6989586621683058166"><span id="local-6989586621683058168"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#traverseTxGuardsExecutionUnits"><span class="hs-identifier hs-type">traverseTxGuardsExecutionUnits</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058166"><span class="hs-identifier hs-type">f</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ExecutionUnits"><span class="hs-identifier hs-type">ExecutionUnits</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621683058166"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ExecutionUnits"><span class="hs-identifier hs-type">ExecutionUnits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-comment">-- ^ Update a Plutus guard's budget using its zero-based index in the complete</span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-comment">-- guard collection and its current execution units. Native and witnessless</span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-comment">-- guards count towards the index but do not invoke this callback.</span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuards"><span class="hs-identifier hs-type">TxGuards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058168"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Guard credentials and optional witnesses in insertion order.</span></span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621683058166"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuards"><span class="hs-identifier hs-type">TxGuards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683058168"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-137"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Guards with updated Plutus budgets, preserving all other contents and order.</span></span><span>
+</span><span id="line-138"></span><span id="traverseTxGuardsExecutionUnits"><span class="annot"><span class="annottext">traverseTxGuardsExecutionUnits :: forall (f :: * -&gt; *) era.
+Applicative f =&gt;
+(Word32 -&gt; ExecutionUnits -&gt; f ExecutionUnits)
+-&gt; TxGuards era -&gt; f (TxGuards era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#traverseTxGuardsExecutionUnits"><span class="hs-identifier hs-var hs-var">traverseTxGuardsExecutionUnits</span></a></span></span><span> </span><span id="local-6989586621683058419"><span class="annot"><span class="annottext">Word32 -&gt; ExecutionUnits -&gt; f ExecutionUnits
+</span><a href="#local-6989586621683058419"><span class="hs-identifier hs-var">update</span></a></span></span><span> </span><span id="local-6989586621683058420"><span class="annot"><span class="annottext">TxGuards era
+</span><a href="#local-6989586621683058420"><span class="hs-identifier hs-var">guards</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-139"></span><span>  </span><span class="annot"><span class="annottext">OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+-&gt; TxGuards era
+forall era.
+OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+-&gt; TxGuards era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#TxGuards"><span class="hs-identifier hs-var">TxGuards</span></a></span><span> </span><span class="annot"><span class="annottext">(OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+ -&gt; TxGuards era)
+-&gt; ([(Credential Guard, Maybe (ScriptGuardWitness era))]
+    -&gt; OMap (Credential Guard) (Maybe (ScriptGuardWitness era)))
+-&gt; [(Credential Guard, Maybe (ScriptGuardWitness era))]
+-&gt; TxGuards era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[(Credential Guard, Maybe (ScriptGuardWitness era))]
+-&gt; OMap (Credential Guard) (Maybe (ScriptGuardWitness era))
+forall k v. Ord k =&gt; [(k, v)] -&gt; OMap k v
+</span><span class="hs-identifier hs-var">OMap.fromList</span></span><span> </span><span class="annot"><span class="annottext">([(Credential Guard, Maybe (ScriptGuardWitness era))]
+ -&gt; TxGuards era)
+-&gt; f [(Credential Guard, Maybe (ScriptGuardWitness era))]
+-&gt; f (TxGuards era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">((Word32, (Credential Guard, Maybe (ScriptGuardWitness era)))
+ -&gt; f (Credential Guard, Maybe (ScriptGuardWitness era)))
+-&gt; [(Word32, (Credential Guard, Maybe (ScriptGuardWitness era)))]
+-&gt; f [(Credential Guard, Maybe (ScriptGuardWitness era))]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">(Word32, (Credential Guard, Maybe (ScriptGuardWitness era)))
+-&gt; f (Credential Guard, Maybe (ScriptGuardWitness era))
+</span><a href="#local-6989586621683058424"><span class="hs-identifier hs-var">updateEntry</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Word32]
+-&gt; [(Credential Guard, Maybe (ScriptGuardWitness era))]
+-&gt; [(Word32, (Credential Guard, Maybe (ScriptGuardWitness era)))]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.List.html#zip"><span class="hs-identifier hs-var">zip</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxGuards era -&gt; [Item (TxGuards era)]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.IsList.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">TxGuards era
+</span><a href="#local-6989586621683058420"><span class="hs-identifier hs-var">guards</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-141"></span><span>  </span><span id="local-6989586621683058424"><span class="annot"><span class="annottext">updateEntry :: (Word32, (Credential Guard, Maybe (ScriptGuardWitness era)))
+-&gt; f (Credential Guard, Maybe (ScriptGuardWitness era))
+</span><a href="#local-6989586621683058424"><span class="hs-identifier hs-var hs-var">updateEntry</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621683058425"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621683058425"><span class="hs-identifier hs-var">index</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621683058426"><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058426"><span class="hs-identifier hs-var">credential</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621683058427"><span class="annot"><span class="annottext">Maybe (ScriptGuardWitness era)
+</span><a href="#local-6989586621683058427"><span class="hs-identifier hs-var">witness</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Credential Guard
+</span><a href="#local-6989586621683058426"><span class="hs-identifier hs-var">credential</span></a></span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe (ScriptGuardWitness era)
+ -&gt; (Credential Guard, Maybe (ScriptGuardWitness era)))
+-&gt; f (Maybe (ScriptGuardWitness era))
+-&gt; f (Credential Guard, Maybe (ScriptGuardWitness era))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptGuardWitness era -&gt; f (ScriptGuardWitness era))
+-&gt; Maybe (ScriptGuardWitness era)
+-&gt; f (Maybe (ScriptGuardWitness era))
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Maybe a -&gt; f (Maybe b)
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; ScriptGuardWitness era -&gt; f (ScriptGuardWitness era)
+</span><a href="#local-6989586621683058428"><span class="hs-identifier hs-var">updateWitness</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621683058425"><span class="hs-identifier hs-var">index</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe (ScriptGuardWitness era)
+</span><a href="#local-6989586621683058427"><span class="hs-identifier hs-var">witness</span></a></span><span>
+</span><span id="line-143"></span><span>  </span><span id="local-6989586621683058428"><span class="annot"><span class="annottext">updateWitness :: Word32 -&gt; ScriptGuardWitness era -&gt; f (ScriptGuardWitness era)
+</span><a href="#local-6989586621683058428"><span class="hs-identifier hs-var hs-var">updateWitness</span></a></span></span><span> </span><span id="local-6989586621683058429"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621683058429"><span class="hs-identifier hs-var">index</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#PlutusGuardWitness"><span class="hs-identifier hs-type">PlutusGuardWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#PlutusScriptWitness"><span class="hs-identifier hs-type">PlutusScriptWitness</span></a></span><span> </span><span id="local-6989586621683058431"><span class="annot"><span class="annottext">SLanguage 'PlutusV4
+</span><a href="#local-6989586621683058431"><span class="hs-identifier hs-var">lang</span></a></span></span><span> </span><span id="local-6989586621683058432"><span class="annot"><span class="annottext">PlutusScriptOrReferenceInput 'PlutusV4 era
+</span><a href="#local-6989586621683058432"><span class="hs-identifier hs-var">script</span></a></span></span><span> </span><span id="local-6989586621683058433"><span class="annot"><span class="annottext">PlutusScriptDatum 'PlutusV4 'GuardingScript
+</span><a href="#local-6989586621683058433"><span class="hs-identifier hs-var">dat</span></a></span></span><span> </span><span id="local-6989586621683058434"><span class="annot"><span class="annottext">ScriptRedeemer
+</span><a href="#local-6989586621683058434"><span class="hs-identifier hs-var">redeemer</span></a></span></span><span> </span><span id="local-6989586621683058435"><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621683058435"><span class="hs-identifier hs-var">units</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><span class="annottext">PlutusScriptWitness 'PlutusV4 'GuardingScript era
+-&gt; ScriptGuardWitness era
+forall era.
+PlutusScriptWitness 'PlutusV4 'GuardingScript era
+-&gt; ScriptGuardWitness era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#PlutusGuardWitness"><span class="hs-identifier hs-var">PlutusGuardWitness</span></a></span><span> </span><span class="annot"><span class="annottext">(PlutusScriptWitness 'PlutusV4 'GuardingScript era
+ -&gt; ScriptGuardWitness era)
+-&gt; (ExecutionUnits
+    -&gt; PlutusScriptWitness 'PlutusV4 'GuardingScript era)
+-&gt; ExecutionUnits
+-&gt; ScriptGuardWitness era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage 'PlutusV4
+-&gt; PlutusScriptOrReferenceInput 'PlutusV4 era
+-&gt; PlutusScriptDatum 'PlutusV4 'GuardingScript
+-&gt; ScriptRedeemer
+-&gt; ExecutionUnits
+-&gt; PlutusScriptWitness 'PlutusV4 'GuardingScript era
+forall (lang :: Language) era (purpose :: PlutusScriptPurpose).
+SLanguage lang
+-&gt; PlutusScriptOrReferenceInput lang era
+-&gt; PlutusScriptDatum lang purpose
+-&gt; ScriptRedeemer
+-&gt; ExecutionUnits
+-&gt; PlutusScriptWitness lang purpose era
+</span><a href="Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#PlutusScriptWitness"><span class="hs-identifier hs-var">PlutusScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage 'PlutusV4
+</span><a href="#local-6989586621683058431"><span class="hs-identifier hs-var">lang</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusScriptOrReferenceInput 'PlutusV4 era
+</span><a href="#local-6989586621683058432"><span class="hs-identifier hs-var">script</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusScriptDatum 'PlutusV4 'GuardingScript
+</span><a href="#local-6989586621683058433"><span class="hs-identifier hs-var">dat</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptRedeemer
+</span><a href="#local-6989586621683058434"><span class="hs-identifier hs-var">redeemer</span></a></span><span> </span><span class="annot"><span class="annottext">(ExecutionUnits -&gt; ScriptGuardWitness era)
+-&gt; f ExecutionUnits -&gt; f (ScriptGuardWitness era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; ExecutionUnits -&gt; f ExecutionUnits
+</span><a href="#local-6989586621683058419"><span class="hs-identifier hs-var">update</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621683058429"><span class="hs-identifier hs-var">index</span></a></span><span> </span><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621683058435"><span class="hs-identifier hs-var">units</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><a href="#local-6989586621683058428"><span class="hs-identifier hs-var">updateWitness</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621683058436"><span class="annot"><span class="annottext">witness :: ScriptGuardWitness era
+</span><a href="#local-6989586621683058436"><span class="hs-identifier hs-var">witness</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Guard.html#NativeGuardWitness"><span class="hs-identifier hs-type">NativeGuardWitness</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptGuardWitness era -&gt; f (ScriptGuardWitness era)
+forall a. a -&gt; f a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptGuardWitness era
+</span><a href="#local-6989586621683058436"><span class="hs-identifier hs-var">witness</span></a></span><span>
+</span><span id="line-146"></span></pre></body></html>
