@@ -1,5 +1,5 @@
 project: cardano-wasm
-pr: 0
+pr: 1399
 kind:
   - test
 description: Increase the browser test completion wait from 5 to 15 seconds to tolerate slower CI runners.
