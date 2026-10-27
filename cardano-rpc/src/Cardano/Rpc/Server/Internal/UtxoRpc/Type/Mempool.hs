@@ -2,15 +2,20 @@
 {-# LANGUAGE LambdaCase #-}
 
 -- | Conversion of a mempool transaction to the UTxO RPC @TxInMempool@
--- message.
+-- message, and field-mask-aware building of it from a lazily computed set
+-- of per-transaction fields.
 module Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool
   ( txInModeToTxInMempool
+  , txInModeToTxInMempoolFields
+  , TxInMempoolFields (..)
+  , txInMempoolMaskTable
+  , buildTxInMempool
   )
 where
 
 import Cardano.Api
+import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as U5c
-import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron (byronTxToUtxoRpcTx)
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx (anyEraTxConstraints, txToUtxoRpcTx)
 
@@ -23,8 +28,17 @@ import RIO
 import Data.ProtoLens (defMessage)
 import Network.GRPC.Spec
 
--- | Convert a transaction read from the mempool to the UTxO RPC
--- 'UtxoRpc.TxInMempool' message, always at 'U5c.STAGE_MEMPOOL'.
+-- | Per-transaction inputs to 'buildTxInMempool', one field per top-level
+-- 'U5c.TxInMempool' field. Fields are deliberately non-strict: a field
+-- excluded by a field mask must never be computed.
+data TxInMempoolFields = TxInMempoolFields
+  { txInMempoolFieldsRef :: ByteString
+  , txInMempoolFieldsNativeBytes :: ByteString
+  , txInMempoolFieldsCardano :: Proto UtxoRpc.Tx
+  }
+
+-- | Convert a transaction read from the mempool into the per-field inputs
+-- of a UTxO RPC 'U5c.TxInMempool' message (see 'buildTxInMempool').
 --
 -- @native_bytes@ fidelity differs by era: the Shelley-onwards ledger @Tx@ is
 -- not 'SafeToHash'-backed, so its @native_bytes@ is a canonical
@@ -38,24 +52,60 @@ import Network.GRPC.Spec
 -- and cannot occur on any network still running today, since Byron
 -- transitioned to Shelley years before any currently live Cardano network
 -- started.
-txInModeToTxInMempool :: TxInMode -> Maybe (Proto UtxoRpc.TxInMempool)
-txInModeToTxInMempool = \case
+txInModeToTxInMempoolFields :: TxInMode -> Maybe TxInMempoolFields
+txInModeToTxInMempoolFields = \case
   TxInMode sbe tx@(ShelleyTx _ ledgerTx) ->
     Just $
       anyEraTxConstraints sbe $
-        defMessage
-          & U5c.ref .~ serialiseToRawBytes (fromShelleyTxId (L.txIdTx ledgerTx))
-          & U5c.nativeBytes .~ serialiseToCBOR tx
-          & U5c.stage .~ Proto U5c.STAGE_MEMPOOL
-          & U5c.cardano .~ txToUtxoRpcTx ledgerTx
+        TxInMempoolFields
+          { txInMempoolFieldsRef = serialiseToRawBytes (fromShelleyTxId (L.txIdTx ledgerTx))
+          , txInMempoolFieldsNativeBytes = serialiseToCBOR tx
+          , txInMempoolFieldsCardano = txToUtxoRpcTx ledgerTx
+          }
   TxInByronSpecial genTx -> case genTx of
     ByronTx byronTxId aTxAux ->
-      Just $
-        defMessage
-          & U5c.ref .~ Byron.hashToBytes byronTxId
-          & U5c.nativeBytes .~ CBOR.recoverBytes aTxAux
-          & U5c.stage .~ Proto U5c.STAGE_MEMPOOL
-          & U5c.cardano .~ byronTxToUtxoRpcTx aTxAux
+      Just
+        TxInMempoolFields
+          { txInMempoolFieldsRef = Byron.hashToBytes byronTxId
+          , txInMempoolFieldsNativeBytes = CBOR.recoverBytes aTxAux
+          , txInMempoolFieldsCardano = byronTxToUtxoRpcTx aTxAux
+          }
     ByronDlg{} -> Nothing
     ByronUpdateProposal{} -> Nothing
     ByronUpdateVote{} -> Nothing
+
+-- | Convert a transaction read from the mempool to the full UTxO RPC
+-- 'U5c.TxInMempool' message, always at 'U5c.STAGE_MEMPOOL'. See
+-- 'txInModeToTxInMempoolFields' for the per-field conversion and its
+-- fidelity caveats.
+txInModeToTxInMempool :: TxInMode -> Maybe (Proto U5c.TxInMempool)
+txInModeToTxInMempool = fmap (buildTxInMempool []) . txInModeToTxInMempoolFields
+
+-- | Field-mask table for 'U5c.TxInMempool': proto field name paired with a
+-- builder that sets that field on a message from 'TxInMempoolFields'. A
+-- tripwire test asserts the names stay in sync with the generated proto
+-- descriptors.
+txInMempoolMaskTable
+  :: [(Text, TxInMempoolFields -> Proto U5c.TxInMempool -> Proto U5c.TxInMempool)]
+txInMempoolMaskTable =
+  [ ("ref", \fields -> U5c.ref .~ txInMempoolFieldsRef fields)
+  , ("native_bytes", \fields -> U5c.nativeBytes .~ txInMempoolFieldsNativeBytes fields)
+  , ("stage", \_ -> U5c.stage .~ Proto U5c.STAGE_MEMPOOL)
+  , ("cardano", \fields -> U5c.cardano .~ txInMempoolFieldsCardano fields)
+  ]
+
+-- | Build a 'U5c.TxInMempool' message from field-mask paths and
+-- 'TxInMempoolFields', computing only the fields the mask selects - an
+-- excluded field's 'TxInMempoolFields' thunk is never forced. An empty mask
+-- (matching an absent field mask) selects every field. There is no
+-- established field-mask convention elsewhere in cardano-rpc to follow (the
+-- only prior art, 'Cardano.Rpc.Server.Internal.UtxoRpc.Query.readParamsMethod',
+-- ignores its field mask outright), so this deliberately does not attempt
+-- nested paths (e.g. into the @cardano@ payload) - an unrecognised or
+-- nested path simply contributes nothing.
+buildTxInMempool :: [Text] -> TxInMempoolFields -> Proto U5c.TxInMempool
+buildTxInMempool paths fields = foldl' apply defMessage txInMempoolMaskTable
+ where
+  apply acc (name, builder)
+    | null paths || name `elem` paths = builder fields acc
+    | otherwise = acc
