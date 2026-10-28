@@ -1,6 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | Unit coverage for 'followTipStream', the @FollowTip@ streaming loop
@@ -13,29 +15,42 @@ module Test.Cardano.Rpc.FollowTipStream where
 
 import Cardano.Api
 import Cardano.Rpc.Proto.Api.UtxoRpc.Sync qualified as U5c
-import Cardano.Rpc.Server.Internal.UtxoRpc.Sync (followTipStream)
-import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block (mkAnyChainBlock)
+import Cardano.Rpc.Server.Internal.FieldMask (FieldPath, resolve)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Sync
+  ( followTipAppliedRead
+  , followTipStream
+  , followTipUndoneRead
+  )
+import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block (CardanoBlockComponent)
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint (chainPointToBlockRef)
 import Cardano.Rpc.Server.NodeKernelAccess (ChainChange (..), ChainFollower (..))
 
-import Cardano.Chain.Epoch.File (mainnetEpochSlots)
-import Ouroboros.Consensus.Byron.Ledger (mkByronBlock)
-
 import RIO
+import RIO.Writer (runWriter)
 
-import Codec.Compression.GZip qualified as GZip
-import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Data.ProtoLens (defMessage)
-import Data.Time.Clock (UTCTime)
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Stack (withFrozenCallStack)
-import Network.GRPC.Spec (GrpcError (GrpcNotFound), GrpcException (..), NextElem (..), Proto)
+import Network.GRPC.Spec
+  ( GrpcError (GrpcNotFound)
+  , GrpcException (..)
+  , NextElem (..)
+  , Proto
+  , getProto
+  )
 
-import Test.Cardano.Rpc.ByronTx (decodeBlockOrBoundaryFixture)
+import Test.Cardano.Rpc.FixtureBlock
+  ( boundaryBlockInMode
+  , mainBlockInMode
+  , oldAnyChainBlock
+  , stubTimestamp
+  )
+import Test.Cardano.Rpc.RecordedQuery
 
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
+
+import Proto.Google.Protobuf.FieldMask_Fields qualified as FieldMask (paths)
 
 -- | The current 'followTipMethod' semantics: the stream opens with the
 -- follower's initial rollback reported as a @reset@, then streams 'ChainApply'
@@ -59,11 +74,11 @@ hprop_follow_tip_stream_reset_then_applies_in_order = H.propertyOnce $ do
         defMessage & U5c.reset .~ chainPointToBlockRef ChainPointAtGenesis & U5c.tip .~ stubTip
       expectedApply1 =
         defMessage
-          & U5c.apply .~ mkAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
+          & U5c.apply .~ oldAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
           & U5c.tip .~ stubTip
       expectedApply2 =
         defMessage
-          & U5c.apply .~ mkAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
+          & U5c.apply .~ oldAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
           & U5c.tip .~ stubTip
   sent === (NextElem <$> [expectedReset, expectedApply1, expectedApply2])
 
@@ -115,10 +130,9 @@ hprop_follow_tip_stream_not_found_before_any_send = H.propertyOnce $ do
 -- | A rollback whose target is a tracked applied point is delivered as a
 -- single @undo@ carrying the re-fetched block, not a @reset@:
 -- 'followTipStream' prefers undo delivery whenever the target is within the
--- tracked window. The undo payload is built from the same
--- @mkAnyChainBlock@ call as the original @apply@, so it is identical to it
--- by construction - deterministic re-assembly from the same raw bytes and
--- block.
+-- tracked window. The undo payload is built by the same block read as the
+-- original @apply@, so it is identical to it by construction - deterministic
+-- re-assembly from the same raw bytes and block.
 hprop_follow_tip_stream_rollback_within_window_undoes_via_refetch :: Property
 hprop_follow_tip_stream_rollback_within_window_undoes_via_refetch = H.propertyOnce $ do
   block1@(rawBytes1, blockInMode1@(BlockInMode _ rawBlock1)) <- mainBlockInMode
@@ -144,12 +158,12 @@ hprop_follow_tip_stream_rollback_within_window_undoes_via_refetch = H.propertyOn
         [ChainPointAtGenesis]
 
   H.note_ "reset(origin), apply(b1), apply(b2), undo(b2) - b2 re-fetched successfully"
-  let block2Payload = mkAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
+  let block2Payload = oldAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
       expectedReset =
         defMessage & U5c.reset .~ chainPointToBlockRef ChainPointAtGenesis & U5c.tip .~ stubTip
       expectedApply1 =
         defMessage
-          & U5c.apply .~ mkAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
+          & U5c.apply .~ oldAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
           & U5c.tip .~ stubTip
       expectedApply2 = defMessage & U5c.apply .~ block2Payload & U5c.tip .~ stubTip
       expectedUndo2 = defMessage & U5c.undo .~ block2Payload & U5c.tip .~ stubTip
@@ -183,11 +197,11 @@ hprop_follow_tip_stream_rollback_fetch_miss_falls_back_to_reset = H.propertyOnce
         defMessage & U5c.reset .~ chainPointToBlockRef ChainPointAtGenesis & U5c.tip .~ stubTip
       expectedApply1 =
         defMessage
-          & U5c.apply .~ mkAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
+          & U5c.apply .~ oldAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
           & U5c.tip .~ stubTip
       expectedApply2 =
         defMessage
-          & U5c.apply .~ mkAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
+          & U5c.apply .~ oldAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
           & U5c.tip .~ stubTip
       expectedRollbackReset =
         defMessage & U5c.reset .~ chainPointToBlockRef point1 & U5c.tip .~ stubTip
@@ -227,19 +241,19 @@ hprop_follow_tip_stream_rollback_to_start_undoes_all_newest_first = H.propertyOn
         defMessage & U5c.reset .~ chainPointToBlockRef ChainPointAtGenesis & U5c.tip .~ stubTip
       expectedApply1 =
         defMessage
-          & U5c.apply .~ mkAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
+          & U5c.apply .~ oldAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
           & U5c.tip .~ stubTip
       expectedApply2 =
         defMessage
-          & U5c.apply .~ mkAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
+          & U5c.apply .~ oldAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
           & U5c.tip .~ stubTip
       expectedUndo2 =
         defMessage
-          & U5c.undo .~ mkAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
+          & U5c.undo .~ oldAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
           & U5c.tip .~ stubTip
       expectedUndo1 =
         defMessage
-          & U5c.undo .~ mkAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
+          & U5c.undo .~ oldAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
           & U5c.tip .~ stubTip
   sent
     === (NextElem <$> [expectedReset, expectedApply1, expectedApply2, expectedUndo2, expectedUndo1])
@@ -275,15 +289,147 @@ hprop_follow_tip_stream_rollback_beyond_cap_falls_back_to_reset = H.propertyOnce
         defMessage & U5c.reset .~ chainPointToBlockRef ChainPointAtGenesis & U5c.tip .~ stubTip
       expectedApply1 =
         defMessage
-          & U5c.apply .~ mkAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
+          & U5c.apply .~ oldAnyChainBlock rawBytes1 blockInMode1 stubTimestamp
           & U5c.tip .~ stubTip
       expectedApply2 =
         defMessage
-          & U5c.apply .~ mkAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
+          & U5c.apply .~ oldAnyChainBlock rawBytes2 blockInMode2 stubTimestamp
           & U5c.tip .~ stubTip
       expectedRollbackReset =
         defMessage & U5c.reset .~ chainPointToBlockRef point1 & U5c.tip .~ stubTip
   sent === (NextElem <$> [expectedReset, expectedApply1, expectedApply2, expectedRollbackReset])
+
+-- | An absent mask reads the raw and the parsed block of each applied block, and
+-- its point, but no separate header.
+hprop_field_mask_follow_tip_select_all_reads_no_separate_header :: Property
+hprop_field_mask_follow_tip_select_all_reads_no_separate_header = H.propertyOnce $ do
+  block1 <- mainBlockInMode
+  (_, ran) <- followMasked [] [ChainApply block1] fetchNever
+  ran === ["GetSlot", "GetHash", "GetRawBlock", "GetBlock", "GetSlot", "slotTimestamp", "readTip"]
+
+-- | A mask of just the tip keeps one message per change, each with only the tip, and
+-- reads each applied block's point alone. The undo re-fetch only checks that the block is there.
+hprop_field_mask_follow_tip_tip_only_keeps_every_message_and_reads_no_block :: Property
+hprop_field_mask_follow_tip_tip_only_keeps_every_message_and_reads_no_block = H.propertyOnce $ do
+  block1 <- mainBlockInMode
+  block2 <- boundaryBlockInMode
+  let script =
+        [ ChainRollBack ChainPointAtGenesis
+        , ChainApply block1
+        , ChainApply block2
+        , ChainRollBack $ blockPoint block1
+        ]
+  (sent, ran) <- followMasked ["tip"] script $ fetchKnownBlocks [(blockPoint block2, block2)]
+  sent === replicate 4 (NextElem $ defMessage & U5c.tip .~ stubTip)
+  ran
+    === [ "readTip"
+        , "GetSlot"
+        , "GetHash"
+        , "readTip"
+        , "GetSlot"
+        , "GetHash"
+        , "readTip"
+        , "lookup"
+        , "readTip"
+        ]
+
+-- | With @undo@ unselected, a block the undo can no longer re-fetch still turns the
+-- rollback into a @reset@, and a block it can re-fetch still gives an @undo@ message.
+hprop_field_mask_follow_tip_unselected_undo_keeps_the_reset_fallback :: Property
+hprop_field_mask_follow_tip_unselected_undo_keeps_the_reset_fallback = H.propertyOnce $ do
+  block1 <- mainBlockInMode
+  block2 <- boundaryBlockInMode
+  let point1 = blockPoint block1
+      script =
+        [ChainRollBack ChainPointAtGenesis, ChainApply block1, ChainApply block2, ChainRollBack point1]
+      resetTo :: ChainPoint -> NextElem (Proto U5c.FollowTipResponse)
+      resetTo point = NextElem $ defMessage & U5c.reset .~ chainPointToBlockRef point
+      emptied = NextElem defMessage
+  (missed, _) <- followMasked ["reset"] script fetchNever
+  missed === [resetTo ChainPointAtGenesis, emptied, emptied, resetTo point1]
+  (found, _) <- followMasked ["reset"] script $ fetchKnownBlocks [(blockPoint block2, block2)]
+  found === [resetTo ChainPointAtGenesis, emptied, emptied, emptied]
+
+-- | The native bytes of applied blocks read only the raw blocks and their points,
+-- and leave the @reset@ message empty.
+hprop_field_mask_follow_tip_apply_native_bytes_reads_only_raw_blocks :: Property
+hprop_field_mask_follow_tip_apply_native_bytes_reads_only_raw_blocks = H.propertyOnce $ do
+  block1 <- mainBlockInMode
+  block2 <- boundaryBlockInMode
+  (sent, ran) <-
+    followMasked
+      ["apply.native_bytes"]
+      [ChainRollBack ChainPointAtGenesis, ChainApply block1, ChainApply block2]
+      fetchNever
+  let applied :: (ByteString, BlockInMode) -> NextElem (Proto U5c.FollowTipResponse)
+      applied (rawBytes, _) = NextElem $ defMessage & U5c.apply . U5c.nativeBytes .~ rawBytes
+  sent === [NextElem defMessage, applied block1, applied block2]
+  ran === concat (replicate 2 ["GetSlot", "GetHash", "GetRawBlock"])
+
+-- | A path below @undo@ decides what the undo re-fetch reads, and the follower reads
+-- only the points of applied blocks.
+hprop_field_mask_follow_tip_undo_mask_drives_the_refetch :: Property
+hprop_field_mask_follow_tip_undo_mask_drives_the_refetch = H.propertyOnce $ do
+  block1 <- mainBlockInMode
+  block2 <- boundaryBlockInMode
+  let script =
+        [ ChainRollBack ChainPointAtGenesis
+        , ChainApply block1
+        , ChainApply block2
+        , ChainRollBack ChainPointAtGenesis
+        ]
+      fetchBlockByPoint = fetchKnownBlocks [(blockPoint block1, block1), (blockPoint block2, block2)]
+  (sent, ran) <- followMasked ["undo.cardano.header"] script fetchBlockByPoint
+  let undone :: (ByteString, BlockInMode) -> NextElem (Proto U5c.FollowTipResponse)
+      undone (rawBytes, blockInMode) =
+        NextElem $
+          defMessage
+            & U5c.undo . U5c.cardano . U5c.header
+              .~ oldAnyChainBlock rawBytes blockInMode stubTimestamp ^. U5c.cardano . U5c.header
+      emptied = NextElem defMessage
+  sent === [emptied, emptied, emptied, undone block2, undone block1]
+  ran === ["GetSlot", "GetHash", "GetSlot", "GetHash", "lookup", "GetHeader", "lookup", "GetHeader"]
+
+-- | Nested paths trim every message, and keep which action it is.
+hprop_field_mask_follow_tip_nested_paths_trim_every_message :: Property
+hprop_field_mask_follow_tip_nested_paths_trim_every_message = H.propertyOnce $ do
+  block1@(rawBytes1, blockInMode1) <- mainBlockInMode
+  (sent, _) <-
+    followMasked
+      ["apply.cardano.header.height", "reset.hash", "tip.slot"]
+      [ChainRollBack ChainPointAtGenesis, ChainApply block1]
+      fetchNever
+  let tipSlot :: Proto U5c.BlockRef
+      tipSlot = defMessage & U5c.slot .~ stubTip ^. U5c.slot
+      height = oldAnyChainBlock rawBytes1 blockInMode1 stubTimestamp ^. U5c.cardano . U5c.header . U5c.height
+  H.assertWith height (/= 0)
+  sent
+    === [ NextElem $ defMessage & U5c.reset .~ defMessage & U5c.tip .~ tipSlot
+        , NextElem $
+            defMessage
+              & U5c.apply . U5c.cardano . U5c.header . U5c.height .~ height
+              & U5c.tip .~ tipSlot
+        ]
+
+-- | The parts of a block that the mask leaves out are never evaluated.
+hprop_field_mask_follow_tip_unselected_block_parts_are_not_evaluated :: Property
+hprop_field_mask_follow_tip_unselected_block_parts_are_not_evaluated = H.propertyOnce $ do
+  stored <- toStoredBlock <$> mainBlockInMode
+  let unparsed = stored{storedBlockInMode = error "forced"}
+      unread = unparsed{storedBlockRawBytes = error "forced"}
+      fieldMask = resolve $ getProto (followTipRequest ["apply.native_bytes"]) ^. U5c.fieldMask . FieldMask.paths
+      doSlotTimestamp = const $ pure @Identity stubTimestamp
+      ((point, doBuildApplied), appliedRan) =
+        runWriter . readRecordedComponent unparsed $ followTipAppliedRead doSlotTimestamp fieldMask
+      (doBuildUndone, undoneRan) =
+        runWriter . readRecordedComponent unread $ followTipUndoneRead doSlotTimestamp fieldMask
+  appliedRan === ["GetSlot", "GetHash", "GetRawBlock"]
+  point === storedBlockPoint stored
+  applied <- H.evalNF $ runIdentity doBuildApplied
+  applied === (defMessage & U5c.nativeBytes .~ storedBlockRawBytes stored)
+  undoneRan === []
+  undone <- H.evalNF $ runIdentity doBuildUndone
+  undone === defMessage
 
 -- | Run 'followTipStream' against a 'scriptedFollower' and the stub tip and
 -- timestamp above, capturing every message sent until the run ends - either
@@ -306,21 +452,81 @@ runFollowTipStream
   -> [ChainPoint]
   -- ^ Start points passed to 'followTipStream'
   -> m (Either SomeException (), [NextElem (Proto U5c.FollowTipResponse)])
-runFollowTipStream script intersectResult fetchBlockByPoint trackingCap startPoints = liftIO $ do
-  follower <- scriptedFollower script intersectResult
+runFollowTipStream script intersectResult fetchBlockByPoint trackingCap startPoints = do
+  (outcome, sent, _) <-
+    runMaskedFollowTipStream [] script intersectResult fetchBlockByPoint trackingCap startPoints
+  pure (outcome, sent)
+
+-- | 'runFollowTipStream' for a request with the mask paths, from origin, asserting
+-- that the script ran out, and returning the messages sent and the log.
+followMasked
+  :: HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => [FieldPath]
+  -- ^ Field mask paths, rooted at each response
+  -> [ChainChange (ByteString, BlockInMode)]
+  -- ^ Script 'scriptedFollower's @nextChange@ plays back
+  -> (ChainPoint -> IO (Maybe (ByteString, BlockInMode)))
+  -- ^ Block-by-point fetch stub for undo re-fetch
+  -> m ([NextElem (Proto U5c.FollowTipResponse)], [Text])
+followMasked paths script fetchBlockByPoint = withFrozenCallStack $ do
+  (outcome, sent, ran) <-
+    runMaskedFollowTipStream
+      paths
+      script
+      (Just ChainPointAtGenesis)
+      fetchBlockByPoint
+      testUndoWindow
+      [ChainPointAtGenesis]
+  sentUntilExhausted <- expectScriptExhausted (outcome, sent)
+  pure (sentUntilExhausted, ran)
+
+-- | 'runFollowTipStream' for a request with the mask paths, reading each block
+-- through the handler's own block reads. Also returns the log of each ChainDB
+-- lookup, block component read, timestamp conversion and tip read.
+runMaskedFollowTipStream
+  :: MonadIO m
+  => [FieldPath]
+  -- ^ Field mask paths, rooted at each response
+  -> [ChainChange (ByteString, BlockInMode)]
+  -- ^ Script 'scriptedFollower's @nextChange@ plays back
+  -> Maybe ChainPoint
+  -- ^ Fixed @findIntersect@ result
+  -> (ChainPoint -> IO (Maybe (ByteString, BlockInMode)))
+  -- ^ Block-by-point fetch stub for undo re-fetch
+  -> Int
+  -- ^ Tracking cap passed to 'followTipStream'
+  -> [ChainPoint]
+  -- ^ Start points passed to 'followTipStream'
+  -> m (Either SomeException (), [NextElem (Proto U5c.FollowTipResponse)], [Text])
+runMaskedFollowTipStream paths script intersectResult fetchBlockByPoint trackingCap startPoints = liftIO $ do
+  logRef <- newIORef []
+  let fieldMask = resolve $ getProto (followTipRequest paths) ^. U5c.fieldMask . FieldMask.paths
+      doSlotTimestamp = const . logRecorded logRef $ recorded "slotTimestamp" stubTimestamp
+      doRefetch point = do
+        logRecorded logRef $ recorded "lookup" ()
+        fetched <- fetchBlockByPoint point
+        forM fetched . readFixture logRef $ followTipUndoneRead doSlotTimestamp fieldMask
+  follower <-
+    scriptedFollower
+      (readFixture logRef $ followTipAppliedRead doSlotTimestamp fieldMask)
+      script
+      intersectResult
   sentRef <- newIORef []
   outcome <-
     try @IO @SomeException $
       followTipStream
         follower
-        (pure (Just stubTip))
-        (const (pure stubTimestamp))
-        fetchBlockByPoint
+        (logRecorded logRef . recorded "readTip" . Just $ getProto stubTip)
+        doRefetch
         trackingCap
+        fieldMask
         (\nextElem -> modifyIORef' sentRef (nextElem :))
         startPoints
   sent <- reverse <$> readIORef sentRef
-  pure (outcome, sent)
+  ran <- readIORef logRef
+  pure (outcome, sent, ran)
 
 -- | Assert that a 'runFollowTipStream' outcome ended because the script was
 -- exhausted - the expected, clean termination for a script that runs out
@@ -341,16 +547,19 @@ expectScriptExhausted (outcome, sent) = withFrozenCallStack $ do
 
 -- | A 'ChainFollower' whose @nextChange@ pops messages off the given script
 -- in order, held in a mutable ref (@tryNextChange@ pops the same script,
--- with 'Nothing' once it is empty), and whose @findIntersect@ always returns
+-- with 'Nothing' once it is empty), reading the payload of each popped
+-- 'ChainApply' with the given action, and whose @findIntersect@ always returns
 -- the given fixed result regardless of the points it is asked about - the
 -- properties below assert on the points passed to 'followTipStream' and on
 -- the streamed messages, not on what @findIntersect@ does with its argument.
 scriptedFollower
   :: MonadIO m
-  => [ChainChange (ByteString, BlockInMode)]
+  => (fixture -> IO a)
+  -- ^ Read the payload of an applied block from its fixture
+  -> [ChainChange fixture]
   -> Maybe ChainPoint
-  -> m (ChainFollower (ByteString, BlockInMode))
-scriptedFollower script intersectResult = do
+  -> m (ChainFollower a)
+scriptedFollower doReadPayload script intersectResult = do
   scriptRef <- liftIO $ newIORef script
   pure
     ChainFollower
@@ -358,14 +567,37 @@ scriptedFollower script intersectResult = do
           liftIO $
             readIORef scriptRef >>= \case
               [] -> throwIO ScriptExhausted
-              change : rest -> writeIORef scriptRef rest $> change
+              change : rest -> writeIORef scriptRef rest >> readChangePayload doReadPayload change
       , tryNextChange =
           liftIO $
             readIORef scriptRef >>= \case
               [] -> pure Nothing
-              change : rest -> writeIORef scriptRef rest $> Just change
+              change : rest ->
+                writeIORef scriptRef rest >> Just <$> readChangePayload doReadPayload change
       , findIntersect = const $ pure intersectResult
       }
+
+-- | Read the payload of a 'ChainApply' with the given action.
+readChangePayload
+  :: Applicative f
+  => (fixture -> f a)
+  -- ^ Read the payload of an applied block from its fixture
+  -> ChainChange fixture
+  -> f (ChainChange a)
+readChangePayload doReadPayload = \case
+  ChainApply fixture -> ChainApply <$> doReadPayload fixture
+  ChainRollBack point -> pure $ ChainRollBack point
+
+-- | Read block components from a fixture block, appending each component read to the log.
+readFixture
+  :: IORef [Text]
+  -- ^ The log
+  -> CardanoBlockComponent a
+  -- ^ The components to read
+  -> (ByteString, BlockInMode)
+  -- ^ The raw block and the same block parsed
+  -> IO a
+readFixture logRef component = logRecorded logRef . (`readRecordedComponent` component) . toStoredBlock
 
 -- | A block-by-point fetch stub that never finds anything - the simplest
 -- 'followTipStream' fetch parameter for scripts that either never roll back
@@ -393,40 +625,21 @@ fetchKnownBlocks table point = pure $ lookup point table
 stubTip :: Proto U5c.BlockRef
 stubTip = defMessage & U5c.slot .~ 999 & U5c.hash .~ SBS.fromShort (SBS.replicate 32 0x99)
 
--- | A fixed stub slot timestamp, returned regardless of the slot asked for.
-stubTimestamp :: UTCTime
-stubTimestamp = posixSecondsToUTCTime 1700000000
-
 -- | A tracking cap comfortably above the two-block scripts used below, for
 -- tests that are not themselves about cap-overflow behaviour.
 testUndoWindow :: Int
 testUndoWindow = 100
 
--- | A genuine Byron 'BlockInMode' decoded from the mainnet main-block golden
--- fixture also used by 'Test.Cardano.Rpc.ByronTx'. 'followTipStream'
--- assembles the full @AnyChainBlock@ via 'mkAnyChainBlock' for every
--- 'ChainApply', so the scripted blocks must be real, valid blocks rather
--- than placeholders; decoding an existing fixture through the same
--- 'mkByronBlock' smart constructor the node's ChainDB uses is the cheapest
--- way to get one, and reuses a fixture already checked in for this purpose.
-mainBlockInMode :: HasCallStack => MonadTest m => MonadIO m => m (ByteString, BlockInMode)
-mainBlockInMode = do
-  rawBytes <-
-    liftIO $ LBS.toStrict <$> LBS.readFile "test/cardano-rpc-test/files/golden/byron-main-block.cbor"
-  blockOrBoundary <- decodeBlockOrBoundaryFixture (LBS.fromStrict rawBytes)
-  pure (rawBytes, BlockInMode ByronEra (ByronBlock (mkByronBlock mainnetEpochSlots blockOrBoundary)))
+-- | A @FollowTip@ request carrying the mask paths.
+followTipRequest
+  :: [FieldPath]
+  -- ^ Field mask paths, rooted at each response
+  -> Proto U5c.FollowTipRequest
+followTipRequest paths = defMessage & U5c.fieldMask . FieldMask.paths .~ paths
 
--- | A genuine Byron 'BlockInMode' decoded from the mainnet epoch-boundary
--- golden fixture also used by 'Test.Cardano.Rpc.ByronTx'; see
--- 'mainBlockInMode'. Distinct from it (a boundary block instead of a main
--- block, at a different slot and hash), so a two-block script has two
--- genuinely different blocks to distinguish, for free.
-boundaryBlockInMode :: HasCallStack => MonadTest m => MonadIO m => m (ByteString, BlockInMode)
-boundaryBlockInMode = do
-  compressedBytes <- liftIO $ LBS.readFile "test/cardano-rpc-test/files/golden/byron-ebb.cbor.gz"
-  let rawBytes = LBS.toStrict $ GZip.decompress compressedBytes
-  blockOrBoundary <- decodeBlockOrBoundaryFixture (LBS.fromStrict rawBytes)
-  pure (rawBytes, BlockInMode ByronEra (ByronBlock (mkByronBlock mainnetEpochSlots blockOrBoundary)))
+-- | The chain point of a fixture block.
+blockPoint :: (ByteString, BlockInMode) -> ChainPoint
+blockPoint = uncurry ChainPoint . storedBlockPoint . toStoredBlock
 
 -- | Sentinel exception 'scriptedFollower's @nextChange@ throws once its
 -- script is exhausted. 'followTipStream' loops via 'forever' and never

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -8,8 +9,12 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
   , txOutToUtxoRpcTxOutput
   , utxoRpcTxOutputToTxOut
   , txoRefUtxoRpcToTxIn
+  , UtxoFields (..)
   , utxoToUtxoRpcAnyUtxoData
   , txInTxOutToAnyUtxoData
+  , utxoToUtxoFields
+  , txInTxOutToUtxoFields
+  , utxoFill
   , anyUtxoDataUtxoRpcToUtxo
   )
 where
@@ -27,6 +32,13 @@ import Cardano.Api.Tx
 import Cardano.Api.Value
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
+import Cardano.Rpc.Server.Internal.FieldMask
+  ( FieldFill
+  , FieldMaskTree (..)
+  , fill
+  , fillFrom
+  , runFillPure
+  )
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.BigInt
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
@@ -42,21 +54,51 @@ import Data.ProtoLens (defMessage)
 import GHC.IsList
 import Network.GRPC.Spec
 
+-- | Per-UTxO inputs of 'utxoFill'. The fields are lazy: a field the mask
+-- does not select is never computed.
+data UtxoFields = UtxoFields
+  { utxoFieldsRef :: UtxoRpc.TxoRef
+  , utxoFieldsNativeBytes :: ByteString
+  , utxoFieldsCardano :: UtxoRpc.TxOutput
+  }
+
 utxoToUtxoRpcAnyUtxoData :: forall era. IsEra era => UTxO era -> [Proto UtxoRpc.AnyUtxoData]
 utxoToUtxoRpcAnyUtxoData = map (uncurry txInTxOutToAnyUtxoData) . toList
 
 txInTxOutToAnyUtxoData
   :: forall era. IsEra era => TxIn -> TxOut CtxUTxO era -> Proto UtxoRpc.AnyUtxoData
-txInTxOutToAnyUtxoData txIn txOut = do
+txInTxOutToAnyUtxoData txIn = Proto . runFillPure SelectAll . (`fillFrom` utxoFill) . txInTxOutToUtxoFields txIn
+
+utxoToUtxoFields :: forall era. IsEra era => UTxO era -> [UtxoFields]
+utxoToUtxoFields = map (uncurry txInTxOutToUtxoFields) . toList
+
+-- | The lazy per-field inputs of the @AnyUtxoData@ message of a UTxO entry.
+txInTxOutToUtxoFields
+  :: forall era
+   . IsEra era
+  => TxIn
+  -- ^ The input of the UTxO entry
+  -> TxOut CtxUTxO era
+  -- ^ The output of the UTxO entry
+  -> UtxoFields
+txInTxOutToUtxoFields txIn txOut = do
   let era = useEra @era
-      txOutCbor =
+  UtxoFields
+    { utxoFieldsRef = getProto $ inject txIn
+    , utxoFieldsNativeBytes =
         obtainCommonConstraints era $
           L.serialize' (Exp.eraProtVerHigh era) $
             toShelleyTxOut (convert era) txOut
-  defMessage
-    & U5c.nativeBytes .~ txOutCbor
-    & U5c.txoRef .~ inject txIn
-    & U5c.cardano .~ txOutToUtxoRpcTxOutput (convert era) txOut
+    , utxoFieldsCardano = getProto $ txOutToUtxoRpcTxOutput (convert era) txOut
+    }
+
+-- | Fill the fields of the @AnyUtxoData@ message that a mask selects, each from
+-- the matching field of the 'UtxoFields' of a UTxO entry.
+utxoFill :: FieldFill ((->) UtxoFields) UtxoRpc.AnyUtxoData
+utxoFill =
+  fill @"nativeBytes" utxoFieldsNativeBytes
+    <> fill @"txoRef" utxoFieldsRef
+    <> fill @"cardano" utxoFieldsCardano
 
 anyUtxoDataUtxoRpcToUtxo
   :: forall era m

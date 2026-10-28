@@ -178,17 +178,26 @@ library testlib
   import: project-config
   hs-source-dirs: testlib
   exposed-modules:
+    Test.Cardano.Rpc.FixtureBlock
     Test.Cardano.Rpc.RecordedQuery
 
   build-depends:
     base,
+    bytestring,
     cardano-api,
+    cardano-ledger-binary,
+    cardano-ledger-byron,
     cardano-rpc,
     cardano-slotting,
     grpc-spec,
+    hedgehog,
+    hedgehog-extras,
+    ouroboros-consensus,
+    ouroboros-consensus:cardano,
     proto-lens,
     rio,
     time,
+    zlib,
 
 test-suite cardano-rpc-test
   import: project-config
@@ -229,6 +238,7 @@ test-suite cardano-rpc-test
     mtl,
     ouroboros-consensus,
     ouroboros-consensus:cardano,
+    ouroboros-consensus:unstable-cardano-testlib,
     proto-lens,
     proto-lens-protobuf-types,
     ram,
@@ -251,6 +261,7 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.ByronTx
     Test.Cardano.Rpc.EraSummary
     Test.Cardano.Rpc.Eval
+    Test.Cardano.Rpc.FetchBlock
     Test.Cardano.Rpc.FetchBlockTx
     Test.Cardano.Rpc.FieldMask
     Test.Cardano.Rpc.FollowTipStream
@@ -260,10 +271,14 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters
+    Test.Cardano.Rpc.ReadEraSummary
+    Test.Cardano.Rpc.ReadGenesis
     Test.Cardano.Rpc.ReadParams
+    Test.Cardano.Rpc.ReadUtxos
     Test.Cardano.Rpc.Reflection
     Test.Cardano.Rpc.Reflection.DescriptorTable
     Test.Cardano.Rpc.Script
+    Test.Cardano.Rpc.SearchUtxos
     Test.Cardano.Rpc.TxOutput
     Test.Cardano.Rpc.Type
     Test.Cardano.Rpc.WaitForTxStream
