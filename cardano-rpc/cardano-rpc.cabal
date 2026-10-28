@@ -58,6 +58,7 @@ library
     Cardano.Rpc.Server.Config
     Cardano.Rpc.Server.Internal.Env
     Cardano.Rpc.Server.Internal.Error
+    Cardano.Rpc.Server.Internal.FieldMask
     Cardano.Rpc.Server.Internal.Monad
     Cardano.Rpc.Server.Internal.Node
     Cardano.Rpc.Server.Internal.Reflection
@@ -173,6 +174,22 @@ library gen
     proto-lens-protobuf-types,
     proto-lens-runtime,
 
+library testlib
+  import: project-config
+  hs-source-dirs: testlib
+  exposed-modules:
+    Test.Cardano.Rpc.RecordedQuery
+
+  build-depends:
+    base,
+    cardano-api,
+    cardano-rpc,
+    cardano-slotting,
+    grpc-spec,
+    proto-lens,
+    rio,
+    time,
+
 test-suite cardano-rpc-test
   import: project-config
   hs-source-dirs: test/cardano-rpc-test
@@ -201,6 +218,7 @@ test-suite cardano-rpc-test
     cardano-ledger-shelley,
     cardano-ledger-shelley:testlib,
     cardano-rpc,
+    cardano-rpc:testlib,
     cardano-slotting,
     containers,
     formatting,
@@ -234,6 +252,7 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.EraSummary
     Test.Cardano.Rpc.Eval
     Test.Cardano.Rpc.FetchBlockTx
+    Test.Cardano.Rpc.FieldMask
     Test.Cardano.Rpc.FollowTipStream
     Test.Cardano.Rpc.Genesis.Fixture
     Test.Cardano.Rpc.Genesis.Property
@@ -241,6 +260,7 @@ test-suite cardano-rpc-test
     Test.Cardano.Rpc.Pagination
     Test.Cardano.Rpc.Predicate
     Test.Cardano.Rpc.ProtocolParameters
+    Test.Cardano.Rpc.ReadParams
     Test.Cardano.Rpc.Reflection
     Test.Cardano.Rpc.Reflection.DescriptorTable
     Test.Cardano.Rpc.Script

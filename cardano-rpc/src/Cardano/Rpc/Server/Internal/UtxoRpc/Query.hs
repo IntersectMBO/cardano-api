@@ -13,6 +13,7 @@
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   ( readParamsMethod
+  , readParamsFill
   , readUtxosMethod
   , searchUtxosMethod
   , readGenesisMethod
@@ -27,6 +28,7 @@ import Cardano.Api.Parser.Text qualified as P
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
+import Cardano.Rpc.Server.Internal.FieldMask
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.TimedCache (readThroughCache)
@@ -40,7 +42,6 @@ import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis, sgNetworkM
 import RIO hiding (toList)
 
 import Control.Error.Util (hush)
-import Data.Default
 import Data.Map.Strict qualified as Map
 import Data.ProtoLens (defMessage)
 import Data.Text qualified as Text (pack)
@@ -51,37 +52,44 @@ import System.FS.API (MountPoint (..), SomeHasFS (..))
 import System.FS.IO (ioHasFS)
 import System.FilePath (takeDirectory)
 
+import Proto.Google.Protobuf.FieldMask_Fields qualified as FieldMask (paths)
+
 -- | Handle the @ReadParams@ RPC method.
--- Queries the node for current protocol parameters and returns them
--- along with the ledger tip.
+-- Honours the field mask: protocol parameters and the era are queried only for @values@,
+-- chain tip queries only for @ledger_tip@.
 readParamsMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadParamsRequest
   -> m (Proto UtxoRpc.ReadParamsResponse)
-readParamsMethod _req = do
-  -- TODO: implement field masks - they are ignored for now
-  -- they need to be normalised beforehand, see: https://github.com/protocolbuffers/protobuf/blob/main/java/util/src/main/java/com/google/protobuf/util/FieldMaskTree.java#L76
-  -- let fieldMask :: [Text] = req ^. #fieldMask . #paths
+readParamsMethod req = do
   nodeConnInfo <- grab
-  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
-  let sbe = convert eon
-
-  let target = VolatileTip
-  (pparams, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-    pparams <- throwEither =<< throwEither =<< queryProtocolParameters sbe
+  let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+  fmap Proto . runFill (runLocalQuery nodeConnInfo) fieldMask $
+    readParamsFill doQueryPParams doQueryTip
+ where
+  doQueryPParams :: LocalQuery UtxoRpc.PParams
+  doQueryPParams = queryInCurrentEra $ \eon -> do
+    pparams <- throwEither =<< throwEither =<< queryProtocolParameters (convert eon)
+    pure . getProto $ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
+  doQueryTip :: LocalQuery UtxoRpc.ChainPoint
+  doQueryTip = do
     chainPoint <- throwEither =<< queryChainPoint
     chainBlockNo <- throwEither =<< queryChainBlockNo
     systemStart <- throwEither =<< querySystemStart
     eraHistory <- throwEither =<< queryEraHistory
-    pure (pparams, chainPoint, chainBlockNo, systemStart, eraHistory)
+    timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+    pure . getProto $ mkChainPointMsg chainPoint chainBlockNo timestamp
 
-  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
-
-  pure $
-    def
-      & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
-      & U5c.values . U5c.cardano .~ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
+-- | The fields of a @ReadParams@ response, each from the query that obtains it.
+readParamsFill
+  :: Applicative m
+  => m UtxoRpc.PParams
+  -- ^ Queries the protocol parameters
+  -> m UtxoRpc.ChainPoint
+  -- ^ Queries the chain tip
+  -> FieldFill m UtxoRpc.ReadParamsResponse
+readParamsFill doQueryPParams doQueryTip =
+  fillSub @"values" (fill @"cardano" doQueryPParams) <> fill @"ledgerTip" doQueryTip
 
 -- | Handle the @ReadUtxos@ RPC method.
 -- Looks up specific UTxO entries by their 'TxIn' keys and returns them
@@ -145,7 +153,7 @@ searchUtxosMethod
   => Proto UtxoRpc.SearchUtxosRequest
   -> m (Proto UtxoRpc.SearchUtxosResponse)
 searchUtxosMethod req = do
-  -- TODO: field masks are ignored for now (same as readParamsMethod)
+  -- TODO: field masks are ignored for now
   let maxItems = req ^. U5c.maxItems
       startToken = req ^. U5c.maybe'startToken
 
@@ -206,7 +214,7 @@ readGenesisMethod
   => Proto UtxoRpc.ReadGenesisRequest
   -> m (Proto UtxoRpc.ReadGenesisResponse)
 readGenesisMethod _req = do
-  -- TODO: field masks are ignored for now (same as readParamsMethod)
+  -- TODO: field masks are ignored for now
   nodeKernelAccess <- grabNodeKernelAccess
   let genesisBundle@GenesisBundle
         { shelleyGenesisHash
@@ -279,7 +287,7 @@ readEraSummaryMethod
   => Proto UtxoRpc.ReadEraSummaryRequest
   -> m (Proto UtxoRpc.ReadEraSummaryResponse)
 readEraSummaryMethod _req = do
-  -- TODO: field masks are ignored for now (same as readParamsMethod)
+  -- TODO: field masks are ignored for now
   nodeKernelAccess <- grabNodeKernelAccess
   summary <- readHardForkSummary nodeKernelAccess
   pure $
@@ -333,12 +341,37 @@ paginateByTxIn keep items startToken maxItems = (page, nextToken)
   defaultPageSize = 100
   maxPageSize = 10_000
 
+-- | A local state query session at the volatile tip.
+type LocalQuery = LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO
+
+-- | Run a local state query session at the volatile tip.
+runLocalQuery
+  :: MonadIO m
+  => LocalNodeConnectInfo
+  -- ^ Connects to the node
+  -> LocalQuery a
+  -- ^ The queries to run in the session
+  -> m a
+runLocalQuery nodeConnInfo =
+  liftIO . (throwEither <=< executeLocalStateQueryExpr nodeConnInfo VolatileTip)
+
+-- | Run a query in the node's current era, which must be Conway or later.
+queryInCurrentEra
+  :: (forall era. Era era -> LocalQuery a)
+  -- ^ Builds the query for the current era
+  -> LocalQuery a
+queryInCurrentEra query = do
+  AnyCardanoEra era <- throwEither =<< queryCurrentEra
+  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+  query eon
+
 slotToTimestamp
   :: HasCallStack
   => MonadIO m
   => SystemStart -> EraHistory -> ChainPoint -> m UTCTime
 slotToTimestamp systemStart eraHistory = \case
-  ChainPointAtGenesis ->
-    let SystemStart t = systemStart in pure t
+  ChainPointAtGenesis -> do
+    let SystemStart t = systemStart
+    pure t
   ChainPoint slotNo _ ->
     throwEither $ slotToUTCTime systemStart eraHistory slotNo

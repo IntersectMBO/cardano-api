@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1394
+kind:
+  - feature
+description: |
+  The gRPC server now honours the `field_mask` of `ReadParams` (Query service) and `WatchMempool` (Submit service), which previously accepted the mask and ignored it. `ReadParams` returns only the selected fields and skips the node queries it does not need: the protocol parameters query when `values` is not selected, and the chain tip queries when `ledger_tip` is not selected. `WatchMempool` returns only the selected fields of each streamed transaction, for example `tx.native_bytes`, and serialises and converts a transaction only when the mask or the request predicate needs it. Paths start at the response message and may continue through repeated fields, where they apply to every element. Paths that do not name a field are ignored without an error. An absent or empty mask, or a `*` path, returns every field, and a mask whose paths are all ignored returns an empty response. The masks of the other methods (`ReadGenesis`, `ReadEraSummary`, `ReadUtxos`, `SearchUtxos`, `FetchBlock` and `FollowTip`) are still ignored.
