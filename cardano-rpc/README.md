@@ -235,7 +235,7 @@ A predicate naming more than 20,000 address terms (repeated addresses count) is 
 |--------|--------|
 | [SubmitTx](https://utxorpc.org/submit/spec/#submittx) | ✅ Supported |
 | [EvalTx](https://utxorpc.org/submit/spec/#evaltx) | ✅ Supported |
-| [WaitForTx](https://utxorpc.org/submit/spec/#waitfortx) | ⬜ Not supported |
+| [WaitForTx](https://utxorpc.org/submit/spec/#waitfortx) | ✅ Supported |
 | [ReadMempool](https://utxorpc.org/submit/spec/#readmempool) | ✅ Supported |
 | [WatchMempool](https://utxorpc.org/submit/spec/#watchmempool) | ✅ Supported |
 

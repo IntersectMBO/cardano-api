@@ -24,13 +24,16 @@ module Cardano.Rpc.Server.NodeKernelAccess
     -- * Era history
   , readHardForkSummary
   , readEraHistory
+  , readCurrentEra
 
     -- * Chain reads
   , readChainTipHeader
+  , readChainTipPoint
   , fetchBlock
 
     -- * Mempool
   , readMempoolTxs
+  , readMempoolSnapshot
   , MempoolWatchSnapshot (..)
   , watchMempoolSnapshot
   , nextMempoolWatchSnapshot
@@ -39,6 +42,8 @@ module Cardano.Rpc.Server.NodeKernelAccess
   , ChainChange (..)
   , ChainFollower (..)
   , withFollower
+  , withBlockFollower
+  , positionFollowerAtCurrentTip
   )
 where
 
@@ -47,21 +52,27 @@ import Cardano.Api.Consensus qualified as Consensus
 import Cardano.Rpc.Server.Internal.Monad (MonadRpc, grab)
 import Cardano.Rpc.Server.Internal.TimedCache (newTimedCache)
 import Cardano.Rpc.Server.Internal.Tracing
+import Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower
 import Cardano.Rpc.Server.NodeKernelAccess.Internal.Type (GenesisBundle (..))
 import Cardano.Rpc.Server.NodeKernelAccess.Internal.Type qualified as Type
 
 import Ouroboros.Consensus.Cardano.Block (CardanoEras)
+import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
+  ( LedgerState (hardForkLedgerStatePerEra)
+  , eraIndexFromNS
+  )
+import Ouroboros.Consensus.HardFork.Combinator.State qualified as HardForkState (tip)
 import Ouroboros.Consensus.HardFork.History qualified as History
 import Ouroboros.Consensus.Ledger.SupportsMempool qualified as Consensus (txForgetValidated)
 import Ouroboros.Consensus.Mempool.API qualified as Consensus
-  ( MempoolSnapshot (snapshotSlotNo, snapshotTxs, snapshotTxsAfter)
+  ( MempoolSnapshot (snapshotTxs, snapshotTxsAfter)
   , TicketNo
   , getSnapshot
   )
 
-import RIO (MonadUnliftIO, atomically, bracket, throwIO, withRunInIO)
+import RIO (atomically, throwIO)
 
-import Control.Monad.STM (check)
+import Control.Monad.STM (STM, check)
 import Control.Tracer (Tracer, traceWith)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
@@ -223,6 +234,17 @@ readHardForkSummary Type.NodeKernelAccess{Type.readHardForkSummary = action} = a
 readEraHistory :: MonadIO m => Type.NodeKernelAccess -> m EraHistory
 readEraHistory access = EraHistory . Consensus.mkInterpreter <$> readHardForkSummary access
 
+-- | Read the era of the current ledger state, the era the mempool stores
+-- transactions in. An STM read, so a caller can combine it with others.
+readCurrentEra :: Type.NodeKernelAccess -> STM AnyCardanoEra
+readCurrentEra Type.NodeKernelAccess{Type.chainDb = chainDb} =
+  fromConsensusEraIndex
+    . Consensus.eraIndexFromNS
+    . HardForkState.tip
+    . Consensus.hardForkLedgerStatePerEra
+    . Consensus.ledgerState
+    <$> Consensus.getCurrentLedger chainDb
+
 -- | Read the current chain tip header from ChainDB, or 'Nothing' at origin.
 readChainTipHeader
   :: MonadIO m
@@ -255,41 +277,23 @@ readMempoolTxs
   :: MonadIO m
   => Type.NodeKernelAccess
   -> m [Consensus.GenTx (Consensus.CardanoBlock Consensus.StandardCrypto)]
-readMempoolTxs Type.NodeKernelAccess{Type.mempool = mempool} = do
-  snapshot <- atomically $ Consensus.getSnapshot mempool
+readMempoolTxs nodeKernelAccess = do
+  snapshot <- atomically $ readMempoolSnapshot nodeKernelAccess
   pure
     [Consensus.txForgetValidated tx | (tx, _ticketNo, _txMeasure) <- Consensus.snapshotTxs snapshot]
 
--- | The change-detection key for a mempool snapshot: every current entry's
--- ticket number, oldest to newest, plus the virtual block's slot number.
--- Computed inside 'toMempoolWatchSnapshot', whose stored fields
--- 'nextMempoolWatchSnapshot' compares to decide whether the mempool changed.
-mempoolObservationKey
-  :: Consensus.MempoolSnapshot (Consensus.CardanoBlock Consensus.StandardCrypto)
-  -> ([Consensus.TicketNo], SlotNo)
-mempoolObservationKey snapshot =
-  ( [ticketNo | (_, ticketNo, _) <- Consensus.snapshotTxs snapshot]
-  , Consensus.snapshotSlotNo snapshot
-  )
+-- | Read the current mempool snapshot. An STM read, so a caller can wait for
+-- the mempool to change.
+readMempoolSnapshot
+  :: Type.NodeKernelAccess
+  -> STM (Consensus.MempoolSnapshot (Consensus.CardanoBlock Consensus.StandardCrypto))
+readMempoolSnapshot Type.NodeKernelAccess{Type.mempool = mempool} = Consensus.getSnapshot mempool
 
--- | A point-in-time view of the mempool for @WatchMempool@: every current
--- entry's ticket number (for change detection), the virtual block's slot
--- number, and a pure projection of entries newer than a given ticket,
--- already unwrapped out of 'Consensus.Validated' into 'TxInMode' - a plain
--- value that test code can construct directly with 'TxInMode' fixtures,
--- with no need to fabricate a genuine 'Consensus.Validated' value or run
--- mempool validation.
-data MempoolWatchSnapshot = MempoolWatchSnapshot
-  { mempoolWatchTicketNumbers :: [Consensus.TicketNo]
-  -- ^ Every current entry's ticket number, oldest to newest: half of the
-  -- change-detection key 'nextMempoolWatchSnapshot' compares (see
-  -- 'mempoolObservationKey'). A max-ticket comparison alone would miss
-  -- removal-only changes, which is why the full list is kept rather than
-  -- just its length or maximum.
-  , mempoolWatchSlotNo :: SlotNo
-  -- ^ The virtual block's slot number: the other half of the
-  -- change-detection key.
-  , mempoolWatchTxsAfter :: Consensus.TicketNo -> [(TxInMode, Consensus.TicketNo)]
+-- | A point-in-time view of the mempool for @WatchMempool@: a pure projection
+-- of the entries newer than a given ticket, already unwrapped into 'TxInMode'
+-- so tests can build one from 'TxInMode' fixtures without a real mempool.
+newtype MempoolWatchSnapshot = MempoolWatchSnapshot
+  { mempoolWatchTxsAfter :: Consensus.TicketNo -> [(TxInMode, Consensus.TicketNo)]
   -- ^ Entries with a ticket number greater than the given one, oldest to
   -- newest.
   }
@@ -299,120 +303,30 @@ watchMempoolSnapshot
   :: MonadIO m
   => Type.NodeKernelAccess
   -> m MempoolWatchSnapshot
-watchMempoolSnapshot Type.NodeKernelAccess{Type.mempool = mempool} =
-  toMempoolWatchSnapshot <$> atomically (Consensus.getSnapshot mempool)
+watchMempoolSnapshot nodeKernelAccess =
+  toMempoolWatchSnapshot <$> atomically (readMempoolSnapshot nodeKernelAccess)
 
--- | Block until the mempool snapshot's ticket list or slot number differs
--- from the given one, then return the new snapshot.
+-- | Block until the mempool holds an entry newer than the given ticket, then
+-- return the snapshot. Tickets are never reused, so this sees every addition;
+-- removals and slot changes do not wake the caller.
 nextMempoolWatchSnapshot
   :: MonadIO m
   => Type.NodeKernelAccess
-  -> MempoolWatchSnapshot
+  -> Consensus.TicketNo
   -> m MempoolWatchSnapshot
-nextMempoolWatchSnapshot
-  Type.NodeKernelAccess{Type.mempool = mempool}
-  MempoolWatchSnapshot
-    { mempoolWatchTicketNumbers = previousTicketNumbers
-    , mempoolWatchSlotNo = previousSlotNo
-    } =
-    atomically $ do
-      candidate <- Consensus.getSnapshot mempool
-      let watchSnapshot@MempoolWatchSnapshot
-            { mempoolWatchTicketNumbers = ticketNumbers
-            , mempoolWatchSlotNo = slotNo
-            } = toMempoolWatchSnapshot candidate
-      check $ (ticketNumbers, slotNo) /= (previousTicketNumbers, previousSlotNo)
-      pure watchSnapshot
+nextMempoolWatchSnapshot nodeKernelAccess lastSeenTicket =
+  atomically $ do
+    candidate <- readMempoolSnapshot nodeKernelAccess
+    check . not . null $ Consensus.snapshotTxsAfter candidate lastSeenTicket
+    pure $ toMempoolWatchSnapshot candidate
 
 toMempoolWatchSnapshot
   :: Consensus.MempoolSnapshot (Consensus.CardanoBlock Consensus.StandardCrypto)
   -> MempoolWatchSnapshot
 toMempoolWatchSnapshot snapshot =
   MempoolWatchSnapshot
-    { mempoolWatchTicketNumbers = ticketNumbers
-    , mempoolWatchSlotNo = slotNo
-    , mempoolWatchTxsAfter = \ticketNo ->
+    { mempoolWatchTxsAfter = \ticketNo ->
         [ (fromConsensusGenTx (Consensus.txForgetValidated tx), ticketNo')
         | (tx, ticketNo', _txMeasure) <- Consensus.snapshotTxsAfter snapshot ticketNo
         ]
     }
- where
-  (ticketNumbers, slotNo) = mempoolObservationKey snapshot
-
--- | A single instruction produced by a chain follower.
---
--- 'ChainApply' carries the raw CBOR block bytes together with the same block
--- parsed into its era context - exactly the pair 'fetchBlock' returns.
--- Consensus rollbacks are point-only: 'ChainRollBack' never carries the
--- blocks being rolled back, only the point to roll back to.
-data ChainChange
-  = ChainApply (ByteString, BlockInMode)
-  | ChainRollBack ChainPoint
-
--- | A handle to a running chain follower.
-data ChainFollower = ChainFollower
-  { nextChange :: forall m. MonadIO m => m ChainChange
-  -- ^ Block until the next chain update is available.
-  , findIntersect :: forall m. MonadIO m => [ChainPoint] -> m (Maybe ChainPoint)
-  -- ^ Move the follower to the first of the given points found on the
-  -- current chain, returning that point, or 'Nothing' if none of them are
-  -- on the chain.
-  }
-
--- | Run an action with a 'ChainFollower' tracking the selected chain.
---
--- The follower and the resource registry backing it are closed on every
--- exit path, including exceptions. The follower itself runs in 'IO',
--- because the ChainDB handle is monomorphic, so the bracket runs there and
--- the action is unlifted into it.
---
--- Creating a follower is cheap: a few in-memory STM operations, nothing
--- proportional to chain length. The costs are steady-state instead. A
--- caught-up follower receives an O(1) notification per adopted block. A
--- follower catching up streams blocks from the ImmutableDB, paying a disk
--- read and a deserialisation per block, with file handles owned by the
--- registry. The node already runs one such follower per connected N2C
--- ChainSync client, so one follower per stream scales the same way.
-withFollower
-  :: MonadUnliftIO m
-  => Type.NodeKernelAccess
-  -> (ChainFollower -> m a)
-  -> m a
-withFollower Type.NodeKernelAccess{Type.chainDb = chainDb} action =
-  withRunInIO $ \runInIO ->
-    Consensus.withRegistry $ \registry ->
-      bracket
-        (Consensus.newFollower chainDb registry Consensus.SelectedChain component)
-        Consensus.followerClose
-        (runInIO . action . toChainFollower)
- where
-  component
-    :: Consensus.BlockComponent
-         (Consensus.CardanoBlock Consensus.StandardCrypto)
-         (ByteString, BlockInMode)
-  component =
-    (,) <$> fmap BSL.toStrict Consensus.GetRawBlock <*> fmap fromConsensusBlock Consensus.GetBlock
-
-  toChainFollower
-    :: Consensus.Follower
-         IO
-         (Consensus.CardanoBlock Consensus.StandardCrypto)
-         (ByteString, BlockInMode)
-    -> ChainFollower
-  toChainFollower follower =
-    ChainFollower
-      { nextChange = liftIO $ toChainChange <$> Consensus.followerInstructionBlocking follower
-      , findIntersect = \points ->
-          liftIO $
-            fmap fromConsensusPointHF
-              <$> Consensus.followerForward follower (map toConsensusPointHF points)
-      }
-
-  toChainChange
-    :: Consensus.ChainUpdate
-         (Consensus.CardanoBlock Consensus.StandardCrypto)
-         (ByteString, BlockInMode)
-    -> ChainChange
-  toChainChange = \case
-    Consensus.AddBlock rawBlock -> ChainApply rawBlock
-    Consensus.RollBack point -> ChainRollBack (fromConsensusPointHF point)
