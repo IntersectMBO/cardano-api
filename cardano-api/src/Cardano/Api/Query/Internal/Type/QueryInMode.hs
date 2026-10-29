@@ -345,6 +345,14 @@ data QueryInShelleyBasedEra era result where
   GetDRepDelegations
     :: Set Ledger.DRep
     -> QueryInShelleyBasedEra era (Map Ledger.DRep (Set (Ledger.Credential Ledger.Staking)))
+  QueryStakePoolState
+    :: Maybe (Set (Ledger.KeyHash Ledger.StakePool))
+    -> Bool
+    -> QueryInShelleyBasedEra
+         era
+         (Map (Ledger.KeyHash Ledger.StakePool) (L.QueryResultStakePoolState (ShelleyLedgerEra era)))
+  QueryLeiosCommittee
+    :: QueryInShelleyBasedEra era L.QueryResultLeiosCommittee
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -692,6 +700,10 @@ toConsensusQueryShelleyBased sbe = \case
   GetDRepDelegations dreps ->
     conwayEraOnwardsConstraints (conwayOnwards "GetDRepDelegations") $
       Some (consensusQueryInEraInMode era (Consensus.GetDRepDelegations dreps))
+  QueryStakePoolState poolIds includeDelegators ->
+    Some (consensusQueryInEraInMode era (Consensus.GetStakePoolState poolIds includeDelegators))
+  QueryLeiosCommittee ->
+    Some (consensusQueryInEraInMode era Consensus.GetLeiosCommittee)
  where
   era = toCardanoEra sbe
 
@@ -1037,6 +1049,16 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     GetDRepDelegations{} ->
       case q' of
         Consensus.GetDRepDelegations{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryStakePoolState{} ->
+      case q' of
+        Consensus.GetStakePoolState{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryLeiosCommittee ->
+      case q' of
+        Consensus.GetLeiosCommittee ->
           r'
         _ -> fromConsensusQueryResultMismatch
 

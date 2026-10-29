@@ -43,6 +43,9 @@ module Cardano.Api.Query.Internal.Expr
   , queryStakePoolDefaultVote
   , queryLedgerConfig
   , queryDRepDelegations
+  , WhetherIncludeDelegators (..)
+  , queryStakePoolState
+  , queryLeiosCommittee
   )
 where
 
@@ -541,6 +544,44 @@ queryDRepDelegations
            (Either EraMismatch (Map L.DRep (Set (L.Credential L.Staking))))
        )
 queryDRepDelegations eon = querySbe eon . GetDRepDelegations
+
+data WhetherIncludeDelegators = NotIncludeDelegators | IncludeDelegators
+
+-- | The state of all registered stake pools, or of the given ones, with their
+-- delegators only when asked for.
+queryStakePoolState
+  :: forall era block point r
+   . ShelleyBasedEra era
+  -> Maybe (Set (L.KeyHash L.StakePool))
+  -> WhetherIncludeDelegators
+  -> LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       ( Either
+           UnsupportedNtcVersionError
+           ( Either
+               EraMismatch
+               (Map (L.KeyHash L.StakePool) (L.QueryResultStakePoolState (ShelleyLedgerEra era)))
+           )
+       )
+queryStakePoolState eon poolIds IncludeDelegators = querySbe eon $ QueryStakePoolState poolIds True
+queryStakePoolState eon poolIds NotIncludeDelegators = querySbe eon $ QueryStakePoolState poolIds False
+
+-- | The Leios voting committees of the current and the next epoch.
+queryLeiosCommittee
+  :: forall era block point r
+   . ShelleyBasedEra era
+  -> LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       (Either UnsupportedNtcVersionError (Either EraMismatch L.QueryResultLeiosCommittee))
+queryLeiosCommittee eon = querySbe eon QueryLeiosCommittee
 
 querySbe
   :: Convert eon ShelleyBasedEra
