@@ -47,6 +47,7 @@ import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
+import Control.Monad (forM_)
 import Control.Monad.Identity (Identity)
 import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
@@ -158,6 +159,12 @@ tests =
             prop_makeUnsignedTx_dijkstra_top_level_only_fields
         ]
     , testGroup
+        "SubTx CBOR boundary examples"
+        [ testProperty "23 guards" $ H.propertyOnce $ checkSubTxBoundaryRoundtrips 23 0
+        , testProperty "24 guards" $ H.propertyOnce $ checkSubTxBoundaryRoundtrips 24 0
+        , testProperty "Treasury donation integer widths" prop_roundtrip_sub_tx_coin_boundaries
+        ]
+    , testGroup
         "makeUnsignedTx"
         [ testProperty
             "Plutus scripts without protocol params returns MakeUnsignedTxMissingProtocolParams"
@@ -198,28 +205,43 @@ tests =
         ]
     ]
 
+-- | Check unsigned CBOR roundtrips with 50 independent samples across sizes 0–99.
 prop_roundtrip_cbor_unsigned_sub_tx :: Property
-prop_roundtrip_cbor_unsigned_sub_tx = H.property $ do
-  subTx <- H.forAll genUnsignedSubTx
+prop_roundtrip_cbor_unsigned_sub_tx = H.withTests 50 . H.property $ do
+  subTx <- H.forAll $ Gen.scale subTxRoundtripSize genUnsignedSubTx
   H.tripping
     subTx
     Api.serialiseToCBOR
     (Api.deserialiseFromCBOR Exp.AsUnsignedSubTx)
 
+-- | Check signed CBOR roundtrips with 50 independent samples across sizes 0–99.
 prop_roundtrip_cbor_signed_sub_tx :: Property
-prop_roundtrip_cbor_signed_sub_tx = H.property $ do
-  subTx <- H.forAll genSignedSubTx
+prop_roundtrip_cbor_signed_sub_tx = H.withTests 50 . H.property $ do
+  subTx <- H.forAll $ Gen.scale subTxRoundtripSize genSignedSubTx
   H.tripping subTx Api.serialiseToCBOR (Api.deserialiseFromCBOR Exp.AsSignedSubTx)
 
+-- | Check unsigned TextEnvelope roundtrips with 50 independent samples across sizes 0–99.
 prop_roundtrip_text_envelope_unsigned_sub_tx :: Property
-prop_roundtrip_text_envelope_unsigned_sub_tx = H.property $ do
-  subTx <- H.forAll genUnsignedSubTx
+prop_roundtrip_text_envelope_unsigned_sub_tx = H.withTests 50 . H.property $ do
+  subTx <- H.forAll $ Gen.scale subTxRoundtripSize genUnsignedSubTx
   H.tripping subTx (Api.serialiseToTextEnvelope Nothing) Api.deserialiseFromTextEnvelope
 
+-- | Check signed TextEnvelope roundtrips with 50 independent samples across sizes 0–99.
 prop_roundtrip_text_envelope_signed_sub_tx :: Property
-prop_roundtrip_text_envelope_signed_sub_tx = H.property $ do
-  subTx <- H.forAll genSignedSubTx
+prop_roundtrip_text_envelope_signed_sub_tx = H.withTests 50 . H.property $ do
+  subTx <- H.forAll $ Gen.scale subTxRoundtripSize genSignedSubTx
   H.tripping subTx (Api.serialiseToTextEnvelope Nothing) Api.deserialiseFromTextEnvelope
+
+-- | Exercise donation and integer encoding branches with fixed SubTx inputs through all four codecs.
+-- These cases target known boundaries; they do not replace the removed random trials.
+-- The ledger omits donation 0 and emits 1. The other pairs cross CBOR integer payload widths:
+-- 23/24: inline to 1 byte; 255/256: 1 to 2 bytes;
+-- 65535/65536: 2 to 4 bytes; 4294967295/4294967296: 4 to 8 bytes.
+prop_roundtrip_sub_tx_coin_boundaries :: Property
+prop_roundtrip_sub_tx_coin_boundaries = H.propertyOnce $ do
+  let amounts :: [Integer]
+      amounts = [0, 1, 23, 24, 255, 256, 65535, 65536, 4294967295, 4294967296]
+  forM_ amounts $ \amount -> checkSubTxBoundaryRoundtrips 0 $ L.Coin amount
 
 prop_sub_tx_envelope_types :: Property
 prop_sub_tx_envelope_types = H.propertyOnce $ do
@@ -1309,3 +1331,52 @@ prop_calcMinFeeRecursive_no_tx_outs = H.property $ do
       let outs = toList $ resultLedgerTx ^. L.bodyTxL . L.outputsTxBodyL
       -- The result should have exactly one output (the change output)
       length outs H.=== 1
+
+-- | Check a deterministic SubTx fixture through all four codec paths,
+-- including its constructed guard count and donation.
+-- Counts 23/24 select the ledger OSet encoder's definite and indefinite length paths.
+-- This threshold is a ledger encoding choice, not a universal CBOR collection rule.
+-- These roundtrips exercise the selected branches; they do not assert golden encoded bytes.
+checkSubTxBoundaryRoundtrips
+  :: H.MonadTest m
+  => Int
+  -- ^ Number of distinct script guards.
+  -> L.Coin
+  -- ^ Treasury donation, including zero for the omitted-field case.
+  -> m ()
+checkSubTxBoundaryRoundtrips guardCount donation = do
+  H.annotateShow (guardCount, donation)
+  let credentials =
+        [ L.ScriptHashObj
+            . Api.toShelleyScriptHash
+            . Api.hashScript
+            . Api.SimpleScript
+            . Api.RequireTimeAfter
+            . Api.SlotNo
+            $ fromIntegral index
+        | index <- [1 .. guardCount]
+        ]
+  guards <- H.evalEither $ Exp.mkTxGuards [(credential, Nothing) | credential <- credentials]
+  unsigned@(Exp.UnsignedSubTx ledgerTx) <-
+    H.evalEither . Exp.makeUnsignedSubTx $
+      Exp.defaultSubTxBodyContent
+        & Exp.setTxGuards guards
+        & Exp.setTxTreasuryDonation donation
+  let body = ledgerTx ^. L.bodyTxL
+      signed = Exp.SignedSubTx ledgerTx
+  length (body ^. UnexportedLedger.guardsTxBodyL) H.=== guardCount
+  body ^. L.treasuryDonationTxBodyL H.=== donation
+  H.tripping unsigned Api.serialiseToCBOR (Api.deserialiseFromCBOR Exp.AsUnsignedSubTx)
+  H.tripping signed Api.serialiseToCBOR (Api.deserialiseFromCBOR Exp.AsSignedSubTx)
+  H.tripping unsigned (Api.serialiseToTextEnvelope Nothing) Api.deserialiseFromTextEnvelope
+  H.tripping signed (Api.serialiseToTextEnvelope Nothing) Api.deserialiseFromTextEnvelope
+
+-- Hedgehog otherwise runs only sizes 0–49 when the test limit is 50.
+
+-- | Map 50 trials' sizes 0–49 to 0–99; fewer trials lower the chance of finding rare or unexpected field combinations.
+-- Cap at 99 for replay; higher trial limits repeat 99 and change the size distribution.
+subTxRoundtripSize
+  :: Range.Size
+  -- ^ Hedgehog runner size before remapping; the generator remains unchanged.
+  -> Range.Size
+subTxRoundtripSize (Range.Size sampleSize) = Range.Size $ min 99 $ sampleSize * 99 `div` 49
