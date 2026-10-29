@@ -1,0 +1,8 @@
+project: cardano-api
+pr: 1401
+kind:
+  - maintenance
+description: |
+  Reduce each of the four sub-transaction serialisation properties from 100 to 50 random trials while sampling across the original 0–99 size range. Fewer random trials reduce the chance of finding rare serialisation bugs, so regressions caught by the larger sample may pass CI.
+
+  Add two deterministic cases with 23 and 24 guards because the ledger encoder switches from definite-length to indefinite-length collection encoding at 24 elements. Add a third case covering donation values 0 and 1 because zero omits the field, plus Coin pairs 23/24, 255/256, 65535/65536 and 4294967295/4294967296 because CBOR changes from inline integers to 1-, 2-, 4- and 8-byte integer payloads at those boundaries. These fixed cases exercise those format transitions; they do not replace the removed random trials.
