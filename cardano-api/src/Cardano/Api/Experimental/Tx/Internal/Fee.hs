@@ -27,6 +27,7 @@ module Cardano.Api.Experimental.Tx.Internal.Fee
   , evaluateTransactionFee
   , indexWitnessedTxProposalProcedures
   , makeTransactionBodyAutoBalance
+  , transactionBalanceQueryRequirements
   , substituteExecutionUnits
   -- Internal
   , toUnsigned
@@ -74,12 +75,22 @@ import Cardano.Api.Tx.Internal.TxIn
 import Cardano.Api.Value.Internal
 
 import Cardano.Ledger.Alonzo.Core qualified as Ledger
+import Cardano.Ledger.Alonzo.Scripts (toAsIx)
+import Cardano.Ledger.Alonzo.Tx qualified as L (getTotalExUnits)
+import Cardano.Ledger.Alonzo.UTxO (resolveNeededPlutusScriptsWithPurpose)
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
+import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential as Ledger (Credential, credKeyHashWitness)
+import Cardano.Ledger.Dijkstra qualified as Dijkstra
+import Cardano.Ledger.Dijkstra.Tx qualified as Dijkstra
+import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
 import Cardano.Ledger.Keys (asWitness)
+import Cardano.Ledger.Plutus.Evaluate qualified as Plutus
+import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
 import Cardano.Ledger.Val qualified as L
+import PlutusLedgerApi.Common qualified as PlutusApi
 
 import Control.Monad
 import Control.Monad.Except (throwError)
@@ -149,12 +160,19 @@ data TxBodyErrorAutoBalance era
     -- with them), or collateral was provided for a transaction that does
     -- not run Plutus scripts and so does not need it.
     TxBodyErrorCollateral CollateralError
+  | TxBodyErrorMissingTopLevelInputs (Set TxIn)
+  | TxBodyErrorNestedScripts String
+  | TxBodyErrorLegacyTopLevelBalance
   | TxBodyErrorMakeUnsignedTx MakeUnsignedTxError
 
 deriving instance Show (TxBodyErrorAutoBalance era)
 
 instance Error (TxBodyErrorAutoBalance era) where
   prettyError = \case
+    TxBodyErrorMissingTopLevelInputs inputs -> "Missing inputs for the top-level transaction or its sub-transactions: " <> pshow inputs
+    TxBodyErrorNestedScripts reason -> "Signed sub-transaction script validation failed: " <> pretty reason
+    TxBodyErrorLegacyTopLevelBalance ->
+      "Legacy Plutus requires the top-level transaction to balance independently of its sub-transactions."
     TxBodyScriptExecutionError failures ->
       mconcat
         [ "The following scripts have execution failures:\n"
@@ -685,11 +703,34 @@ hasPlutusScriptWitnesses
   => TxBodyContent (LedgerEra era)
   -> Bool
 hasPlutusScriptWitnesses txbodycontent =
-  not $
-    null
-      [ ()
-      | (_, AnyScriptWitnessPlutus{}) <- collectTxBodyScriptWitnesses txbodycontent
-      ]
+  not (null [() | (_, AnyScriptWitnessPlutus{}) <- collectTxBodyScriptWitnesses txbodycontent])
+    || obtainCommonConstraints
+      (useEra @era)
+      ( any
+          (not . Map.null . L.unRedeemers . (^. L.witsTxL . L.rdmrsTxWitsL))
+          (txSubTransactions txbodycontent)
+      )
+
+-- | Inputs and certificates to pass to 'queryStateForBalancedTx'. The ledger's
+-- input getter includes spending, reference and collateral inputs for the top-level transaction and its sub-transactions.
+-- Construct the unsigned transaction before querying so signed children are included.
+transactionBalanceQueryRequirements
+  :: forall era
+   . IsEra era
+  => UnsignedTx (LedgerEra era)
+  -> ([TxIn], [Exp.Certificate (LedgerEra era)])
+transactionBalanceQueryRequirements (UnsignedTx tx) =
+  obtainCommonConstraints (useEra @era) $
+    ( map fromShelleyTxIn $ Set.toList $ tx ^. L.bodyTxL . L.allInputsTxBodyF
+    , map Exp.Certificate $ toList (tx ^. L.bodyTxL . L.certsTxBodyL) <> childCertificates
+    )
+ where
+  childCertificates :: [L.TxCert (LedgerEra era)]
+  childCertificates = case useEra @era of
+    ConwayEra -> []
+    DijkstraEra ->
+      concatMap (toList . (^. L.bodyTxL . L.certsTxBodyL)) $
+        toList (tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL)
 
 -- | Fail with 'CollateralWithoutPlutusScripts' when the transaction has
 -- collateral inputs but no Plutus script witnesses.
@@ -1586,6 +1627,10 @@ makeTransactionBodyAutoBalance
           useEra
           txbodycontent
 
+    let (requiredInputs, _) = transactionBalanceQueryRequirements txbodyForChange
+        missingInputs = Set.fromList requiredInputs Set.\\ Set.map fromShelleyTxIn (Map.keysSet $ L.unUTxO utxo)
+    unless (Set.null missingInputs) $ Left $ TxBodyErrorMissingTopLevelInputs missingInputs
+
     -- Check the balance before constructing the TxOut. L.mkBasicTxOut calls toCompact, which throws an irrecoverable
     -- error on negative Coin values, so checkNonNegative would never get to return Left for the negative case.
     initialChangeTxOutValue :: Ledger.Value (LedgerEra era) <- do
@@ -1618,13 +1663,38 @@ makeTransactionBodyAutoBalance
               & modTxOuts
                 (<> [initialChangeTxOut])
           )
-    let exUnitsMapWithLogs =
-          evaluateTransactionExecutionUnits
-            systemstart
-            history
-            pp
-            utxo
-            txbody
+    exUnitsMapWithLogs <-
+      case useEra @era of
+        DijkstraEra
+          | not (null $ txSubTransactions txbodycontent) -> do
+              let LedgerEpochInfo epochInfo = history
+                  annotated = Dijkstra.mkDijkstraStAnnTopTx epochInfo systemstart pp utxo mempty txbody
+                  (_, scriptsUsed) =
+                    resolveNeededPlutusScriptsWithPurpose
+                      (pp ^. L.ppProtocolVersionL)
+                      (Dijkstra.dsattScriptsProvided annotated)
+                      (Dijkstra.dsattScriptsNeeded annotated)
+                      mempty
+              contexts <-
+                first (TxBodyErrorNestedScripts . show) $ Dijkstra.dsattPlutusScriptsWithContext annotated
+              -- Ledger collection prepends contexts, reversing the resolved-purpose order.
+              pure $
+                Map.fromList
+                  [ ( toScriptIndex (convert DijkstraEra) $ L.hoistPlutusPurpose toAsIx purpose
+                    , let budgeted = context{Plutus.pwcExUnits = pp ^. L.ppMaxTxExUnitsL}
+                          (logs, result) = Plutus.evaluatePlutusWithContext PlutusApi.Verbose budgeted
+                       in case result of
+                            Left err ->
+                              Left $
+                                ScriptErrorEvaluationFailed $
+                                  DebugPlutusFailure err budgeted (Plutus.pwcExUnits budgeted) logs
+                            Right budget -> case exBudgetToExUnits budget of
+                              Nothing -> Left ScriptErrorExecutionUnitsOverflow
+                              Just units -> Right (logs, fromAlonzoExUnits units)
+                    )
+                  | ((purpose, _), context) <- zip (reverse scriptsUsed) contexts
+                  ]
+        _ -> pure $ evaluateTransactionExecutionUnits systemstart history pp utxo txbody
 
     let exUnitsMap = Map.map (fmap snd) exUnitsMapWithLogs
 
@@ -1742,6 +1812,34 @@ makeTransactionBodyAutoBalance
           makeUnsignedTx
             useEra
             finalTxBodyContent
+      case useEra @era of
+        ConwayEra -> pure ()
+        DijkstraEra -> do
+          let UnsignedTx finalTx = txbody3
+              LedgerEpochInfo epochInfo = history
+              annotated = Dijkstra.mkDijkstraStAnnTopTx epochInfo systemstart pp utxo mempty finalTx
+          unless (null $ txSubTransactions finalTxBodyContent) $ do
+            let totalUnits = L.getTotalExUnits finalTx
+                maximumUnits = pp ^. L.ppMaxTxExUnitsL
+            when
+              ( L.exUnitsMem totalUnits > L.exUnitsMem maximumUnits
+                  || L.exUnitsSteps totalUnits > L.exUnitsSteps maximumUnits
+              )
+              $ Left
+              $ TxBodyErrorNestedScripts
+                "The top-level transaction and its sub-transactions exceed the maximum transaction execution budget."
+            when (Dijkstra.dsattPlutusLegacyMode annotated) $ do
+              let parent = UnsignedTx (finalTx & L.bodyTxL . Dijkstra.subTransactionsTxBodyL .~ mempty)
+              unless (evaluateTransactionBalance pp poolids stakeDelegDeposits utxo parent == mempty) $
+                Left TxBodyErrorLegacyTopLevelBalance
+            forM_ (Dijkstra.dsattSubTransactions annotated) $ \child -> do
+              first (uncurry TxBodyErrorMinUTxONotMet) $
+                mapM_ (checkMinUTxOValue pp . TxOut) $
+                  toList (Dijkstra.dsastTx child ^. L.bodyTxL . L.outputsTxBodyL)
+              contexts <- first (TxBodyErrorNestedScripts . show) $ Dijkstra.dsastPlutusScriptsWithContext child
+              forM_ contexts $ \context -> case Plutus.runPlutusScript context of
+                Plutus.Passes _ -> pure ()
+                Plutus.Fails _ failures -> Left $ TxBodyErrorNestedScripts $ show failures
       return
         (txbody3, finalTxBodyContent)
 
@@ -1922,4 +2020,20 @@ calculateMinTxFee
   -> L.Coin
 calculateMinTxFee pp utxo (UnsignedTx txbody) keywitcount =
   obtainCommonConstraints (useEra @era) $
-    L.calcMinFeeTx utxo pp txbody (fromIntegral keywitcount)
+    L.calcMinFeeTx utxo pp txbody (fromIntegral keywitcount) + nestedReferenceScriptFee
+ where
+  -- The ledger UTxO fee helper visits only the parent's reference inputs.
+  -- Charge child reference scripts as well, applying the tiered price to the
+  -- combined size rather than summing independently priced child fees.
+  nestedReferenceScriptFee :: L.Coin
+  nestedReferenceScriptFee = case useEra @era of
+    ConwayEra -> mempty
+    DijkstraEra ->
+      let parentSize = txNonDistinctRefScriptsSize utxo txbody
+          topLevelSize =
+            parentSize
+              + sum
+                [ txNonDistinctRefScriptsSize utxo child
+                | child <- toList (txbody ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL)
+                ]
+       in L.getMinFeeTx pp txbody topLevelSize - L.getMinFeeTx pp txbody parentSize

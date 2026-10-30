@@ -24,6 +24,7 @@ import Cardano.Api.Experimental.AnyScriptWitness
   ( AnyPlutusScriptWitness
       ( AnyPlutusSpendingScriptWitness
       , AnyPlutusVotingScriptWitness
+      , AnyPlutusWithdrawingScriptWitness
       )
   , PlutusSpendingScriptWitness (PlutusSpendingScriptWitnessV3)
   )
@@ -38,8 +39,10 @@ import Cardano.Ledger.Alonzo.Scripts qualified as L (AsItem (..))
 import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
+import Cardano.Ledger.Dijkstra.TxCert qualified as L (DijkstraDelegCert (..))
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Plutus.Language qualified as Plutus
@@ -67,6 +70,7 @@ import Test.Gen.Cardano.Api.Typed
   , genHashableScriptData
   , genPlutusScriptInEra
   , genScriptHash
+  , genShelleyWitnessSigningKey
   , genStakeCredential
   , genTxId
   , genTxIn
@@ -93,6 +97,41 @@ tests =
   testGroup
     "Test.Cardano.Api.Experimental.Fee"
     [ testGroup
+        "nested balancing"
+        [ testProperty
+            "legacy parent must balance independently"
+            (prop_nested_balance_with_legacy True 100000000 10000000 2000000 0 False)
+        , testProperty "top-level queries include child certificates" prop_nested_query_certificates
+        , testProperty
+            "signed child Plutus budget contributes to fee"
+            (prop_nested_guard_auto_balance False True False)
+        , testProperty
+            "child reference script and collateral"
+            (prop_nested_guard_auto_balance True True False)
+        , testProperty
+            "insufficient signed child budget is rejected"
+            (prop_nested_guard_auto_balance False False False)
+        , testProperty "legacy Plutus in a child is rejected" (prop_nested_guard_auto_balance False True True)
+        , testProperty
+            "aggregate native asset deficit"
+            (prop_nested_balance 100000000 10000000 2000000 (-1) False)
+        , testProperty
+            "child surplus funds parent"
+            (prop_nested_balance 100000000 10000000 2000000 0 True)
+        , testProperty
+            "parent funds child deficit"
+            (prop_nested_balance 10000000 20000000 100000000 0 True)
+        , testProperty
+            "aggregate deficit is rejected"
+            (prop_nested_balance 10000000 20000000 2000000 0 False)
+        , testProperty
+            "fees exhaust aggregate funds"
+            (prop_nested_balance 10000000 12000000 2000000 0 False)
+        , testProperty
+            "child native assets reach top-level change"
+            (prop_nested_balance 100000000 10000000 2000000 1 True)
+        ]
+    , testGroup
         "guard constructor"
         [ testProperty "preserves ordered credentials and optional witnesses" prop_mkTxGuards_order
         , testProperty "empty guards contain no entries" unit_emptyTxGuards
@@ -1973,6 +2012,106 @@ prop_guard_auto_balance useReference = H.withTests 10 $ H.property $ do
   tx ^. L.bodyTxL . L.referenceInputsTxBodyL
     === Set.fromList [Api.toShelleyTxIn reference | useReference]
 
+prop_nested_guard_auto_balance :: Bool -> Bool -> Bool -> Property
+prop_nested_guard_auto_balance useReference enoughBudget legacy = H.withTests 10 $ H.property $ do
+  input <- H.forAll genTxIn
+  let Api.TxIn inputId (Api.TxIx inputIx) = input
+      collateral = Api.TxIn inputId (Api.TxIx (inputIx + 1))
+      reference = Api.TxIn inputId (Api.TxIx (inputIx + 2))
+  address <- H.forAll $ genAddressInEra Api.ShelleyBasedEraDijkstra
+  script <-
+    H.evalEither $
+      P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4 $
+        Base16.decodeLenient "46450101002499"
+  let credential = L.ScriptHashObj $ P.hashPlutusScriptInEra script
+      datum = Api.unsafeHashableScriptData $ Api.ScriptDataNumber 42
+      witness =
+        Exp.PlutusGuardWitness $
+          Exp.PlutusScriptWitness
+            Plutus.SPlutusV4
+            (if useReference then Exp.PReferenceScript reference else Exp.PScript script)
+            Exp.NoScriptDatum
+            datum
+            ( if enoughBudget
+                then Api.ExecutionUnits{Api.executionSteps = 1000000000, Api.executionMemory = 1000000}
+                else Api.ExecutionUnits 0 0
+            )
+      params =
+        exampleProtocolParamsEra Exp.DijkstraEra
+          & L.ppProtocolVersionL .~ L.ProtVer (L.eraProtVerLow @(Exp.LedgerEra Exp.DijkstraEra)) 0
+  legacyScript <-
+    H.evalEither $
+      P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV3 $
+        Base16.decodeLenient "46450101002499"
+  guards <- H.evalEither $ Exp.mkTxGuards [(credential, Just witness)]
+  let legacyWithdrawal =
+        Exp.TxWithdrawals
+          [
+            ( Api.makeStakeAddress
+                Api.Mainnet
+                (Api.StakeCredentialByScript $ Api.fromShelleyScriptHash $ P.hashPlutusScriptInEra legacyScript)
+            , L.Coin 0
+            , Exp.AnyPlutusScriptWitness $
+                AnyPlutusWithdrawingScriptWitness $
+                  Exp.PlutusScriptWitness
+                    Plutus.SPlutusV3
+                    (Exp.PScript legacyScript)
+                    Exp.NoScriptDatum
+                    datum
+                    (Api.ExecutionUnits{Api.executionSteps = 1000000000, Api.executionMemory = 1000000})
+            )
+          ]
+  unsigned <-
+    H.evalEither $
+      Exp.makeUnsignedSubTx $
+        Exp.defaultSubTxBodyContent
+          & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxInsReference (Exp.TxInsReference [reference | useReference] Set.empty)
+          & (if legacy then Exp.setTxWithdrawals legacyWithdrawal else Exp.setTxGuards guards)
+          & Exp.setTxProtocolParams params
+  key <- H.forAllWith (const "<signing key>") genShelleyWitnessSigningKey
+  let signed@(Exp.SignedSubTx child) = Exp.signSubTx [] [Exp.makeSubTxKeyWitness unsigned key] unsigned
+      content =
+        Exp.defaultTxBodyContent
+          & Exp.setTxInsCollateral [collateral]
+          & Exp.setTxSignedSubTransactions [signed]
+          & (if legacy then id else Exp.setTxGuards guards)
+          & Exp.setTxProtocolParams params
+      funding = L.mkBasicTxOut (Api.toShelleyAddr address) (L.MaryValue (L.Coin 100_000_000) mempty)
+      utxo =
+        L.UTxO $
+          Map.fromList
+            [ (Api.toShelleyTxIn input, funding)
+            , (Api.toShelleyTxIn collateral, funding)
+            ,
+              ( Api.toShelleyTxIn reference
+              , funding & L.referenceScriptTxOutL .~ L.SJust (plutusScriptInEraToScript script)
+              )
+            ]
+      systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
+      epochInfo =
+        Api.LedgerEpochInfo $ Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+  let result =
+        Exp.makeTransactionBodyAutoBalance
+          systemStart
+          epochInfo
+          params
+          mempty
+          mempty
+          utxo
+          content
+          address
+          Nothing
+  if enoughBudget && not legacy
+    then do
+      (Exp.UnsignedTx tx, _) <- H.evalEither result
+      toList (tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL) === [child]
+      let topLevelReferenceSize = txNonDistinctRefScriptsSize utxo tx + txNonDistinctRefScriptsSize utxo child
+      H.assert $ tx ^. L.bodyTxL . L.feeTxBodyL >= L.getMinFeeTx params tx topLevelReferenceSize
+    else case result of
+      Left Exp.TxBodyErrorNestedScripts{} -> pure ()
+      other -> H.annotateShow (fmap fst other) >> H.failure
+
 paymentGuardCredential :: Api.Hash Api.PaymentKey -> L.Credential L.Guard
 paymentGuardCredential (Api.PaymentKeyHash key) = L.KeyHashObj (coerceKeyRole key)
 
@@ -2113,3 +2252,154 @@ prop_mkTxGuards_validation = H.property $ do
   wrongPlutusHash <- H.forAll $ Gen.filter ((/= plutusHash) . Api.toShelleyScriptHash) genScriptHash
   construct [(L.ScriptHashObj (Api.toShelleyScriptHash wrongPlutusHash), Just plutusWitness)]
     === Left (Exp.GuardScriptHashMismatch (Api.toShelleyScriptHash wrongPlutusHash) plutusHash)
+
+-- Exercise the public builder with an already signed child, rather than only
+-- testing the ledger aggregate balance operation.
+prop_nested_balance :: Integer -> Integer -> Integer -> Int -> Bool -> Property
+prop_nested_balance = prop_nested_balance_with_legacy False
+
+prop_nested_balance_with_legacy :: Bool -> Integer -> Integer -> Integer -> Int -> Bool -> Property
+prop_nested_balance_with_legacy legacy childFunds childOutput parentFunds assetCase succeeds = H.withTests 10 $ H.property $ do
+  address <- H.forAll $ genAddressInEra Api.ShelleyBasedEraDijkstra
+  signingKey <- H.forAllWith (const "<signing key>") genShelleyWitnessSigningKey
+  legacyScript <-
+    H.evalEither $
+      P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV3 $
+        Base16.decodeLenient "46450101002499"
+  let childInput = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#80"
+      secondInput = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#83"
+      parentInput = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#81"
+      reference = mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#82"
+      params =
+        exampleProtocolParamsEra Exp.DijkstraEra
+          & L.ppProtocolVersionL .~ L.ProtVer (L.eraProtVerLow @(Exp.LedgerEra Exp.DijkstraEra)) 0
+      withdrawalAddress =
+        Api.makeStakeAddress
+          Api.Mainnet
+          (Api.StakeCredentialByScript $ Api.fromShelleyScriptHash $ P.hashPlutusScriptInEra legacyScript)
+      asset =
+        L.MultiAsset $
+          Map.singleton
+            (L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+            (Map.singleton (Mary.AssetName "nested") 5)
+      assets = if assetCase > 0 then asset else mempty
+      output coin tokens = L.mkBasicTxOut (Api.toShelleyAddr address) (L.MaryValue (L.Coin coin) tokens)
+      utxo =
+        L.UTxO $
+          Map.fromList
+            [ (Api.toShelleyTxIn secondInput, output 2000000 mempty)
+            , (Api.toShelleyTxIn childInput, output childFunds assets)
+            , (Api.toShelleyTxIn parentInput, output parentFunds mempty)
+            , (Api.toShelleyTxIn reference, output 2000000 mempty)
+            ]
+  unsigned <-
+    H.evalEither $
+      Exp.makeUnsignedSubTx $
+        Exp.defaultSubTxBodyContent
+          & Exp.setTxIns [(childInput, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxInsReference (Exp.TxInsReference [reference] Set.empty)
+          & Exp.setTxOuts [Exp.TxOut $ output childOutput (if assetCase < 0 then asset else mempty)]
+  secondUnsigned <-
+    H.evalEither $
+      Exp.makeUnsignedSubTx $
+        Exp.defaultSubTxBodyContent
+          & Exp.setTxIns [(secondInput, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxOuts [Exp.TxOut $ output 2000000 mempty]
+  let secondSigned@(Exp.SignedSubTx secondChild) = Exp.signSubTx [] [Exp.makeSubTxKeyWitness secondUnsigned signingKey] secondUnsigned
+      signed@(Exp.SignedSubTx child) = Exp.signSubTx [] [Exp.makeSubTxKeyWitness unsigned signingKey] unsigned
+      content =
+        Exp.defaultTxBodyContent
+          & Exp.setTxIns [(parentInput, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxSignedSubTransactions [signed, secondSigned]
+          & Exp.setTxProtocolParams params
+          & ( if legacy
+                then
+                  Exp.setTxInsCollateral [reference]
+                    . Exp.setTxWithdrawals
+                      ( Exp.TxWithdrawals
+                          [
+                            ( withdrawalAddress
+                            , L.Coin 0
+                            , Exp.AnyPlutusScriptWitness $
+                                AnyPlutusWithdrawingScriptWitness $
+                                  Exp.PlutusScriptWitness
+                                    Plutus.SPlutusV3
+                                    (Exp.PScript legacyScript)
+                                    Exp.NoScriptDatum
+                                    (Api.unsafeHashableScriptData $ Api.ScriptDataNumber 42)
+                                    (Api.ExecutionUnits 0 0)
+                            )
+                          ]
+                      )
+                else id
+            )
+      systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
+      epochInfo =
+        Api.LedgerEpochInfo $ Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+      result =
+        Exp.makeTransactionBodyAutoBalance
+          systemStart
+          epochInfo
+          params
+          mempty
+          mempty
+          utxo
+          content
+          address
+          Nothing
+  unbalanced <- H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra content
+  let (inputs, _) = Exp.transactionBalanceQueryRequirements unbalanced
+  Set.fromList inputs === Set.fromList [childInput, parentInput, reference, secondInput]
+  if succeeds
+    then do
+      (Exp.UnsignedTx tx, _) <- H.evalEither result
+      let missingChild = L.UTxO $ Map.delete (Api.toShelleyTxIn childInput) $ L.unUTxO utxo
+      case Exp.makeTransactionBodyAutoBalance
+        systemStart
+        epochInfo
+        params
+        mempty
+        mempty
+        missingChild
+        content
+        address
+        Nothing of
+        Left (Exp.TxBodyErrorMissingTopLevelInputs missing) -> missing === Set.singleton childInput
+        other -> H.annotateShow (fmap fst other) >> H.failure
+      toList (tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL) === [child, secondChild]
+      actual <-
+        H.evalMaybe $
+          List.lookup
+            (Exp.getSignedSubTxId signed)
+            [ (Exp.getSignedSubTxId (Exp.SignedSubTx c), c)
+            | c <- toList (tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL)
+            ]
+      Api.serialiseToCBOR (Exp.SignedSubTx actual) === Api.serialiseToCBOR signed
+      let evaluation = Exp.evaluateTransaction systemStart epochInfo params mempty mempty utxo tx
+      Exp.txEvalBalance evaluation === mempty
+      H.assert $ tx ^. L.bodyTxL . L.feeTxBodyL >= L.calcMinFeeTx utxo params tx 0
+    else case result of
+      Left Exp.TxBodyErrorLegacyTopLevelBalance -> H.assert legacy
+      Left Exp.TxBodyErrorBalanceNegative{} -> H.assert $ not legacy
+      Left Exp.BalanceIsNegative{} -> H.assert $ not legacy
+      other -> H.annotateShow (fmap fst other) >> H.failure
+
+prop_nested_query_certificates :: Property
+prop_nested_query_certificates = H.property $ do
+  credential <- H.forAll genStakeCredential
+  let certificate =
+        Exp.Certificate $
+          L.DijkstraTxCertDeleg $
+            L.DijkstraUnRegCert (Api.toShelleyStakeCredential credential) (L.Coin 2000000)
+  unsigned <-
+    H.evalEither $
+      Exp.makeUnsignedSubTx $
+        Exp.defaultSubTxBodyContent
+          & Exp.setTxCertificates
+            (Exp.mkTxCertificates Exp.DijkstraEra [(certificate, Exp.AnyKeyWitnessPlaceholder)])
+  tx <-
+    H.evalEither $
+      Exp.makeUnsignedTx Exp.DijkstraEra $
+        Exp.defaultTxBodyContent & Exp.setTxSignedSubTransactions [Exp.signSubTx [] [] unsigned]
+  let (_, certificates) = Exp.transactionBalanceQueryRequirements tx
+  certificates === [certificate]
