@@ -292,6 +292,7 @@ module Cardano.Api.Experimental.Tx
     -- * Balancing transactions
   , calculateMinimumUTxO
   , makeTransactionBodyAutoBalance
+  , transactionBalanceQueryRequirements
   , TxBodyErrorAutoBalance (..)
   , TxFeeEstimationError (..)
 
