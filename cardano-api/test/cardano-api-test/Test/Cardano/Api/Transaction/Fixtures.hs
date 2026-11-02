@@ -16,6 +16,7 @@ module Test.Cardano.Api.Transaction.Fixtures
   , testSystemStart
   , mkCredential
   , mkTxIn
+  , conwayPParams
   )
 where
 
@@ -27,12 +28,15 @@ import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Mary.Value qualified as L
 
+import Control.Exception.Safe (throwString)
 import Control.Monad.Trans.Fail (errorFail)
+import Data.Aeson qualified as Aeson
 import Data.ByteString qualified as B
 import Data.Maybe
 import Data.Time (UTCTime (..), fromGregorian)
 import GHC.Exts (IsList (..))
 import GHC.Stack
+import System.IO.Unsafe (unsafePerformIO)
 
 import Test.Cardano.Api.Orphans ()
 
@@ -168,3 +172,11 @@ mkCredential = errorFail @String . L.parseCredential
 
 mkTxIn :: HasCallStack => Text -> TxIn
 mkTxIn = either error id . P.runParser parseTxIn
+
+-- | Conway protocol parameters, decoded once per test process.
+conwayPParams :: L.PParams (ShelleyLedgerEra ConwayEra)
+conwayPParams = unsafePerformIO $ do
+  let path = "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+  Aeson.eitherDecodeFileStrict' path
+    >>= either (throwString . (("Cannot decode " <> path <> ": ") <>)) pure
+{-# NOINLINE conwayPParams #-}
