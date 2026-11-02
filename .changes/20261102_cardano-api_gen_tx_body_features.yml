@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1401
+kind:
+  - test
+description: |
+  Add `GenTxBodyFeature` (`WithProtocolParams`, `WithProposals`, `WithVotes`) and the generators `genTxBodyContentWith`, `genValidTxBodyWith` and `genTxWith` to `Test.Gen.Cardano.Api.Typed` in the `cardano-api:gen` sublibrary. Each generator takes a set of features and generates only the listed expensive fields (protocol parameters, governance proposals and votes), so with an empty set transaction generation is much cheaper for test suites that do not need those fields. `genTxBodyContent`, `genValidTxBody` and `genTx` keep their behaviour and generate every feature.

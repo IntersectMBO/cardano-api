@@ -33,7 +33,7 @@ import Data.ProtoLens (defMessage)
 import GHC.Stack (withFrozenCallStack)
 import Network.GRPC.Spec (NextElem (..), Proto (..), getProto)
 
-import Test.Gen.Cardano.Api.Typed (genTx)
+import Test.Gen.Cardano.Api.Typed (genTxWith)
 
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
@@ -178,14 +178,14 @@ hprop_watch_mempool_stream_no_duplicates_across_removal = H.property $ do
   sent === [NextElem expected1]
 
 -- | A fixed Conway 'TxInMode', freshly generated per use - any two calls in
--- the same property are independent random samples of 'genTx', so in
+-- the same property are independent random samples of 'genTxWith', so in
 -- practice distinct, giving each test case genuinely different fixtures
 -- without needing checked-in golden transactions (unlike
 -- 'Test.Cardano.Rpc.FollowTipStream's block fixtures, which must be
 -- byte-identical to their own golden files).
 txInModeFixture :: PropertyT IO TxInMode
 txInModeFixture = do
-  tx <- forAll $ genTx ShelleyBasedEraConway
+  tx <- forAll $ genTxWith mempty ShelleyBasedEraConway
   pure $ TxInMode ShelleyBasedEraConway tx
 
 -- | The 'U5c.WatchMempoolResponse' 'watchMempoolStream' is expected to send

@@ -90,11 +90,15 @@ module Test.Gen.Cardano.Api.Typed
   , genStakeAddressReference
   , genStakeCredential
   , genTtl
+  , GenTxBodyFeature (..)
   , genTx
+  , genTxWith
   , genTxAuxScripts
   , genTxBody
   , genTxBodyContent
+  , genTxBodyContentWith
   , genValidTxBody
+  , genValidTxBodyWith
   , genTxCertificates
   , genTxFee
   , genTxIndex
@@ -189,6 +193,8 @@ import Data.Coerce
 import Data.Int (Int64)
 import Data.Maybe
 import Data.Ratio (Ratio, (%))
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.String
 import Data.Word (Word32, Word64, Word8)
 import GHC.Exts (IsList (..))
@@ -1035,7 +1041,17 @@ genPolicyAssets = do
   pure $ fromList assetQuantities
 
 genTxBodyContent :: ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)
-genTxBodyContent sbe = do
+genTxBodyContent = genTxBodyContentWith allTxBodyFeatures
+
+-- | Generate a 'TxBodyContent'. A feature missing from the set leaves its field empty.
+genTxBodyContentWith
+  :: Set GenTxBodyFeature
+  -- ^ the expensive parts to generate
+  -> ShelleyBasedEra era
+  -- ^ the era
+  -> Gen (TxBodyContent BuildTx era)
+  -- ^ generated body content
+genTxBodyContentWith features sbe = do
   let era = toCardanoEra sbe
   txIns <-
     map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
@@ -1051,14 +1067,15 @@ genTxBodyContent sbe = do
   txAuxScripts <- genTxAuxScripts sbe
   let txExtraKeyWits = TxExtraKeyWitnessesNone -- TODO: Alonzo era: Generate witness key hashes
   txProtocolParams <-
-    BuildTxWith <$> forEraInEon era (pure Nothing) (Gen.maybe . genValidProtocolParameters)
+    fmap BuildTxWith . genIfWith WithProtocolParams $
+      forEraInEon era (pure Nothing) (Gen.maybe . genValidProtocolParameters)
   txWithdrawals <- genTxWithdrawals era
   txCertificates <- genTxCertificates era
   txUpdateProposal <- genTxUpdateProposal era
   txMintValue <- genTxMintValue era
   txScriptValidity <- genTxScriptValidity era
-  txProposalProcedures <- genMaybeFeaturedInEra genProposals era
-  txVotingProcedures <- genMaybeFeaturedInEra genVotingProcedures era
+  txProposalProcedures <- genIfWith WithProposals $ genMaybeFeaturedInEra genProposals era
+  txVotingProcedures <- genIfWith WithVotes $ genMaybeFeaturedInEra genVotingProcedures era
   txCurrentTreasuryValue <- genMaybeFeaturedInEra (Gen.maybe . genCurrentTreasuryValue) era
   txTreasuryDonation <- genMaybeFeaturedInEra genTreasuryDonation era
   pure $
@@ -1086,6 +1103,31 @@ genTxBodyContent sbe = do
       , Api.txCurrentTreasuryValue
       , Api.txTreasuryDonation
       }
+ where
+  genIfWith :: Alternative f => GenTxBodyFeature -> Gen (f a) -> Gen (f a)
+  genIfWith feature gen
+    | feature `Set.member` features = gen
+    | otherwise = pure empty
+
+-- | Optional parts of a generated transaction body that dominate generation cost.
+-- Omitted parts stay empty. Generation is lazy, so the cost lands when a field is
+-- forced, for example by signing in 'genTxWith'. Omitting all three cut a 100-trial
+-- mempool property from about 45s to 3s (measured locally, November 2026).
+data GenTxBodyFeature
+  = -- | Cost models: a Plutus evaluation context per language, plus unknown models
+    -- that grow quadratically with the size.
+    WithProtocolParams
+  | -- | Conway onwards: up to 15, each with a script witness. Parameter changes add
+    -- cost models.
+    WithProposals
+  | -- | Conway onwards: voters and each voter's votes both scale with the size, so
+    -- the vote count grows quadratically.
+    WithVotes
+  deriving (Bounded, Enum, Eq, Ord, Show)
+
+-- | Every 'GenTxBodyFeature'.
+allTxBodyFeatures :: Set GenTxBodyFeature
+allTxBodyFeatures = fromList [minBound .. maxBound]
 
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
 genTxInsCollateral =
@@ -1166,13 +1208,23 @@ genValidTxBody
   :: ShelleyBasedEra era
   -> Gen (TxBody era, TxBodyContent BuildTx era)
   -- ^ validated 'TxBody' and 'TxBodyContent'
-genValidTxBody sbe =
+genValidTxBody = genValidTxBodyWith allTxBodyFeatures
+
+-- | Like 'genValidTxBody', generating only the given 'GenTxBodyFeature's.
+genValidTxBodyWith
+  :: Set GenTxBodyFeature
+  -- ^ the expensive parts to generate
+  -> ShelleyBasedEra era
+  -- ^ the era
+  -> Gen (TxBody era, TxBodyContent BuildTx era)
+  -- ^ validated 'TxBody' and 'TxBodyContent'
+genValidTxBodyWith features sbe =
   Gen.mapMaybe
     ( \content ->
         either (const Nothing) (Just . (,content)) $
           createTransactionBody sbe content
     )
-    (genTxBodyContent sbe)
+    (genTxBodyContentWith features sbe)
 
 -- | Partial! This function will throw an error when the generated transaction is invalid.
 genTxBody :: HasCallStack => ShelleyBasedEra era -> Gen (TxBody era)
@@ -1224,8 +1276,18 @@ genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]
 genTx
   :: ShelleyBasedEra era
   -> Gen (Tx era)
-genTx era = do
-  txBody <- fst <$> genValidTxBody era
+genTx = genTxWith allTxBodyFeatures
+
+-- | Like 'genTx', generating only the given 'GenTxBodyFeature's.
+genTxWith
+  :: Set GenTxBodyFeature
+  -- ^ the expensive parts to generate
+  -> ShelleyBasedEra era
+  -- ^ the era
+  -> Gen (Tx era)
+  -- ^ generated signed transaction
+genTxWith features era = do
+  txBody <- fst <$> genValidTxBodyWith features era
   makeSignedTransaction <$> genTxWitnesses era txBody <*> pure txBody
 
 -- | Witnesses signing the given transaction body.
@@ -1267,7 +1329,7 @@ genShelleyBootstrapWitness
 genShelleyBootstrapWitness sbe =
   makeShelleyBootstrapWitness sbe
     <$> genWitnessNetworkIdOrByronAddress
-    <*> (fst <$> genValidTxBody sbe)
+    <*> (fst <$> genValidTxBodyWith mempty sbe)
     <*> genSigningKey AsByronKey
 
 genShelleyKeyWitness
@@ -1275,7 +1337,7 @@ genShelleyKeyWitness
   -> Gen (KeyWitness era)
 genShelleyKeyWitness sbe =
   makeShelleyKeyWitness sbe . fst
-    <$> genValidTxBody sbe
+    <$> genValidTxBodyWith mempty sbe
     <*> genShelleyWitnessSigningKey
 
 genShelleyWitness

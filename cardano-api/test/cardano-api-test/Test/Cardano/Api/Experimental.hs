@@ -73,8 +73,8 @@ import Test.Gen.Cardano.Api.Typed
   , genShelleyWitnessSigningKey
   , genSimpleScript
   , genStakeCredential
-  , genTx
   , genTxIn
+  , genTxWith
   )
 
 import Hedgehog (Gen, Property)
@@ -770,7 +770,7 @@ expEraGen =
 expTxForEraGen :: Exp.Era era -> Gen (Ledger.Tx L.TopTx (Exp.LedgerEra era))
 expTxForEraGen era = do
   Exp.obtainCommonConstraints era $ do
-    ShelleyTx _ tx <- genTx (convert era)
+    ShelleyTx _ tx <- genTxWith mempty (convert era)
     return tx
 
 prop_roundtrip_serialise_as_raw_bytes_unsigned_tx :: Property

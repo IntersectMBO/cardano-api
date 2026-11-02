@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1401
+kind:
+  - test
+description: |
+  Speed up the mempool streaming and FetchBlockTx tests by generating transactions without protocol parameters, governance proposals and votes, which these tests do not check.
