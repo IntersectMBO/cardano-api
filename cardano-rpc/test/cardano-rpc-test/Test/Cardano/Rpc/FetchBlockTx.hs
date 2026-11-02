@@ -46,6 +46,7 @@ import Test.Gen.Cardano.Api.Typed
   , genStakeCredential
   , genTx
   , genTxIn
+  , genTxWith
   , genVerificationKeyHash
   )
 
@@ -275,16 +276,17 @@ test_tx_to_utxorpc_tx_projections =
 
 -- | Positive content coverage for the optional era-gated fields at Conway.
 --
--- 'genTx' rarely populates auxiliary data, collateral and proposals, so known
--- values are injected into the generated transaction through the ledger
--- lenses and their proto content is asserted exactly.
+-- 'genTxWith' mempty leaves proposals empty and rarely populates auxiliary
+-- data and collateral, so known values are injected into the generated
+-- transaction through the ledger lenses and their proto content is asserted
+-- exactly.
 --
 -- Conway only: the conversion of each of these fields is era-uniform (one
 -- getter and one mapping each), so a single content check suffices, and
 -- Conway is the only generated era where all of them exist together
 -- (collateral needs Babbage, proposals need Conway).
 --
--- 10 samples: the injected structure under test is deterministic, 'genTx'
+-- 10 samples: the injected structure under test is deterministic, 'genTxWith'
 -- only supplies the base transaction.
 hprop_tx_to_utxorpc_tx_injected_optional_fields :: Property
 hprop_tx_to_utxorpc_tx_injected_optional_fields = H.withTests 10 . H.property $ do
@@ -294,7 +296,7 @@ hprop_tx_to_utxorpc_tx_injected_optional_fields = H.withTests 10 . H.property $ 
       expectedAnchorUrl = "https://example.com/anchor"
       expectedAnchorData :: ByteString
       expectedAnchorData = "anchor data"
-  ShelleyTx _ ledgerTx <- forAll $ genTx sbe
+  ShelleyTx _ ledgerTx <- forAll $ genTxWith mempty sbe
   collateralInput <- forAll genTxIn
   returnAddress <- forAll $ genAddressInEra sbe
   stakeAddress <- forAll genStakeAddress
@@ -446,7 +448,7 @@ test_tx_to_utxorpc_tx_totality =
 
 -- | Positive coverage for the redeemer wiring of 'txToUtxoRpcTx' at Conway.
 --
--- 'genTx' only produces key-witnessed inputs, unwitnessed certificates and
+-- 'genTxWith' only produces key-witnessed inputs, unwitnessed certificates and
 -- always-empty withdrawals, so generated transactions never carry redeemers
 -- and the wiring check in 'hprop_tx_to_utxorpc_tx_conway' only ever exercises
 -- its negative branch. To cover the positive branch, known withdrawals,
@@ -455,12 +457,12 @@ test_tx_to_utxorpc_tx_totality =
 -- transposed purpose, index or payload in the implementation fails here.
 --
 -- 10 samples: the wiring structure under test is injected deterministically,
--- so 'genTx' only supplies the base transaction and sample diversity adds
+-- so 'genTxWith' only supplies the base transaction and sample diversity adds
 -- nothing to the property's coverage.
 hprop_tx_to_utxorpc_tx_redeemer_wiring :: Property
 hprop_tx_to_utxorpc_tx_redeemer_wiring = H.withTests 10 . H.property $ do
   let sbe = convert latestStableEra
-  ShelleyTx _ ledgerTx <- forAll $ genTx sbe
+  ShelleyTx _ ledgerTx <- forAll $ genTxWith mempty sbe
   accountAddress <- forAll $ toShelleyStakeAddr <$> genStakeAddress
   stakeCredential <- forAll $ toShelleyStakeCredential <$> genStakeCredential
   let mkRedeemerDatum :: Integer -> L.Data (ShelleyLedgerEra ConwayEra)
