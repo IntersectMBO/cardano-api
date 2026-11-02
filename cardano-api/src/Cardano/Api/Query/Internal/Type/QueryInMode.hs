@@ -24,6 +24,7 @@ module Cardano.Api.Query.Internal.Type.QueryInMode
     QueryInMode (..)
   , QueryInEra (..)
   , QueryInShelleyBasedEra (..)
+  , IncludeDelegators (..)
   , QueryUTxOFilter (..)
   , UTxOInAnyEra (..)
 
@@ -347,7 +348,7 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Map Ledger.DRep (Set (Ledger.Credential Ledger.Staking)))
   QueryStakePoolState
     :: Maybe (Set (Ledger.KeyHash Ledger.StakePool))
-    -> Bool
+    -> IncludeDelegators
     -> QueryInShelleyBasedEra
          era
          (Map (Ledger.KeyHash Ledger.StakePool) (L.QueryResultStakePoolState (ShelleyLedgerEra era)))
@@ -359,6 +360,10 @@ deriving instance Show (QueryInShelleyBasedEra era result)
 -- ----------------------------------------------------------------------------
 -- Wrapper types used in queries
 --
+
+-- | Whether to include delegators in the queried stake pool state.
+data IncludeDelegators = NotIncludeDelegators | IncludeDelegators
+  deriving (Eq, Show)
 
 -- | Getting the /whole/ UTxO is obviously not efficient since the result can
 -- be huge. Filtering by address is also not efficient because it requires a
@@ -701,7 +706,12 @@ toConsensusQueryShelleyBased sbe = \case
     conwayEraOnwardsConstraints (conwayOnwards "GetDRepDelegations") $
       Some (consensusQueryInEraInMode era (Consensus.GetDRepDelegations dreps))
   QueryStakePoolState poolIds includeDelegators ->
-    Some (consensusQueryInEraInMode era (Consensus.GetStakePoolState poolIds includeDelegators))
+    Some
+      ( consensusQueryInEraInMode era $
+          Consensus.GetStakePoolState poolIds $ case includeDelegators of
+            IncludeDelegators -> True
+            NotIncludeDelegators -> False
+      )
   QueryLeiosCommittee ->
     Some (consensusQueryInEraInMode era Consensus.GetLeiosCommittee)
  where

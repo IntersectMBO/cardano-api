@@ -43,7 +43,7 @@ module Cardano.Api.Query.Internal.Expr
   , queryStakePoolDefaultVote
   , queryLedgerConfig
   , queryDRepDelegations
-  , WhetherIncludeDelegators (..)
+  , IncludeDelegators (..)
   , queryStakePoolState
   , queryLeiosCommittee
   )
@@ -545,15 +545,13 @@ queryDRepDelegations
        )
 queryDRepDelegations eon = querySbe eon . GetDRepDelegations
 
-data WhetherIncludeDelegators = NotIncludeDelegators | IncludeDelegators
-
 -- | The state of all registered stake pools, or of the given ones, with their
 -- delegators only when asked for.
 queryStakePoolState
   :: forall era block point r
    . ShelleyBasedEra era
   -> Maybe (Set (L.KeyHash L.StakePool))
-  -> WhetherIncludeDelegators
+  -> IncludeDelegators
   -> LocalStateQueryExpr
        block
        point
@@ -567,8 +565,8 @@ queryStakePoolState
                (Map (L.KeyHash L.StakePool) (L.QueryResultStakePoolState (ShelleyLedgerEra era)))
            )
        )
-queryStakePoolState eon poolIds IncludeDelegators = querySbe eon $ QueryStakePoolState poolIds True
-queryStakePoolState eon poolIds NotIncludeDelegators = querySbe eon $ QueryStakePoolState poolIds False
+queryStakePoolState eon poolIds includeDelegators =
+  querySbe eon $ QueryStakePoolState poolIds includeDelegators
 
 -- | The Leios voting committees of the current and the next epoch.
 queryLeiosCommittee
