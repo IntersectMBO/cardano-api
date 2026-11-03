@@ -28,7 +28,7 @@ import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.IO (File (..), FileDirection (In), readFileBlocking)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
-import Cardano.Api.Plutus.Internal.Script (toAllegraTimelock)
+import Cardano.Api.Plutus.Internal.Script (toAllegraTimelock, toDijkstraNativeScript)
 import Cardano.Api.Plutus.Internal.Script qualified as OldScript
   ( AsType (AsScript, AsSimpleScript)
   , SimpleScript
@@ -225,7 +225,9 @@ readSimpleScriptFromJson
 readSimpleScriptFromJson era bs = do
   script <- deserialiseFromJSON bs :: Either JsonDecodeError OldScript.SimpleScript
   case era of
-    DijkstraEra -> error "TODO Dijkstra: Simple script not supported"
+    DijkstraEra ->
+      Right . AnySimpleScript . SimpleScript $
+        toDijkstraNativeScript script
     ConwayEra ->
       obtainConwayConstraints era $
         Right . AnySimpleScript . SimpleScript $
