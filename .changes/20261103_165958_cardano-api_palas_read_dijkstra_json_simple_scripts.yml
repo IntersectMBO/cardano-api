@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1404
+kind:
+- bugfix
+description: Experimental `readAnyScriptBytes` and `readFileAnyScript` read JSON simple scripts, including guards, in the Dijkstra era instead of crashing.

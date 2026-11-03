@@ -127,6 +127,9 @@ tests =
             "Read legacy JSON simple script"
             prop_read_legacy_json_simple_script
         , testProperty
+            "Read legacy JSON simple script with a guard in Dijkstra"
+            prop_read_legacy_json_simple_script_dijkstra_guard
+        , testProperty
             "Roundtrip readFileAnyScript"
             prop_roundtrip_read_file_any_script
         ]
@@ -308,6 +311,14 @@ prop_read_legacy_json_simple_script = H.property $ do
   oldScript <- H.forAll genSimpleScript
   script <- H.evalEither $ Exp.readAnyScriptBytes Exp.ConwayEra (Api.serialiseToJSON oldScript)
   script H.=== Exp.AnySimpleScript (Exp.SimpleScript (Api.toAllegraTimelock oldScript))
+
+prop_read_legacy_json_simple_script_dijkstra_guard :: Property
+prop_read_legacy_json_simple_script_dijkstra_guard = H.property $ do
+  oldScript <- H.forAll genSimpleScript
+  guardCredential <- H.forAll Q.arbitrary
+  let guarded = Api.RequireAllOf [oldScript, Api.RequireGuard guardCredential]
+  script <- H.evalEither $ Exp.readAnyScriptBytes Exp.DijkstraEra (Api.serialiseToJSON guarded)
+  script H.=== Exp.AnySimpleScript (Exp.SimpleScript (Api.toDijkstraNativeScript guarded))
 
 prop_roundtrip_read_file_any_script :: Property
 prop_roundtrip_read_file_any_script = H.propertyOnce . H.moduleWorkspace "any-script" $ \ws -> do
