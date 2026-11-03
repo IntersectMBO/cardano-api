@@ -175,6 +175,14 @@ goRoundtrip sbe = do
       newTxOut = Exp.TxOut ledgerTxOut
   tripping newTxOut encode eitherDecode
 
+-- | Verify that the new experimental 'TxOut' 'FromJSON' instance reads the
+-- JSON that the legacy API writes for Dijkstra outputs.
+prop_new_txout_json_reads_legacy_dijkstra :: Property
+prop_new_txout_json_reads_legacy_dijkstra = H.property $ do
+  let sbe = ShelleyBasedEraDijkstra
+  oldTxOut <- forAll $ genTxOutUTxOContext sbe
+  eitherDecode (encode oldTxOut) === Right (Exp.TxOut (toShelleyTxOut sbe oldTxOut))
+
 tests :: TestTree
 tests =
   testGroup
@@ -200,4 +208,7 @@ tests =
     , testProperty "json roundtrip praos nonce" prop_roundtrip_praos_nonce_JSON
     , testProperty "new TxOut ToJSON matches legacy" prop_new_txout_json_matches_legacy
     , testProperty "new TxOut JSON roundtrip" prop_new_txout_json_roundtrip
+    , testProperty
+        "new TxOut FromJSON reads legacy Dijkstra JSON"
+        prop_new_txout_json_reads_legacy_dijkstra
     ]
