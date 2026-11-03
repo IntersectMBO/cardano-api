@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1402
+kind:
+  - feature
+description: Complete nested automatic balancing with input and certificate query requirements for the top-level transaction and its sub-transactions, top-level transaction script contexts, sub-transaction reference-script fees, signed sub-transaction budget validation, collateral eligibility, minimum outputs and legacy-Plutus balance checks while preserving signed sub-transactions.
