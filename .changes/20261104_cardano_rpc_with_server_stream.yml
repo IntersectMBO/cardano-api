@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1406
+kind:
+  - compatible
+description: |
+  The new module `Cardano.Rpc.Client.Stream`, re-exported from `Cardano.Rpc.Client`, provides `withServerStream`, which opens a server-streaming gRPC call with one request and gives your action a function that reads the next element of the stream. The call is cancelled when your action returns. It is meant for streams that the server never ends, such as `followTip` and `watchMempool`. With grapesy 1.2 and later, leaving such a call early raises a `GrpcCancelled` exception, which `withServerStream` ignores once your action has returned. A cancellation or any other gRPC error that arrives while your action is still reading is rethrown. See https://github.com/well-typed/grapesy/issues/391 for the upstream report on this grapesy behaviour.
