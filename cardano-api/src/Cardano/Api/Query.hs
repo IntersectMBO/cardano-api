@@ -88,6 +88,9 @@ module Cardano.Api.Query
   , queryStakeVoteDelegatees
   , queryProposals
   , queryStakePoolDefaultVote
+  , IncludeDelegators (..)
+  , queryStakePoolState
+  , queryLeiosCommittee
   , queryLedgerConfig
   , DelegationsAndRewards (..)
   , mergeDelegsAndRewards
