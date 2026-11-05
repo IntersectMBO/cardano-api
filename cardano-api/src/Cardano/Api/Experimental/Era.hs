@@ -52,6 +52,7 @@ import Cardano.Api.Pretty.Internal.ShowOf
 
 import Cardano.Binary
 import Cardano.Ledger.Alonzo.Plutus.Context qualified as L
+import Cardano.Ledger.Alonzo.Plutus.TxInfo qualified as L
 import Cardano.Ledger.Alonzo.UTxO qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (Inject (..))
@@ -314,6 +315,7 @@ type EraCommonConstraints era =
   , L.Era (LedgerEra era)
   , L.EraCertState (LedgerEra era)
   , L.EraPlutusContext (LedgerEra era)
+  , Inject (L.AlonzoContextError (LedgerEra era)) (L.ContextError (LedgerEra era))
   , L.EraTx (LedgerEra era)
   , L.EraTxCert (LedgerEra era)
   , L.EraTxOut (LedgerEra era)

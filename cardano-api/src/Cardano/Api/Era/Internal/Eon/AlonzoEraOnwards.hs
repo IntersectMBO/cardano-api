@@ -29,6 +29,7 @@ import Cardano.Crypto.Hash.Blake2b qualified as Blake2b
 import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Crypto.VRF qualified as C
 import Cardano.Ledger.Alonzo.Plutus.Context qualified as Plutus
+import Cardano.Ledger.Alonzo.Plutus.TxInfo qualified as Plutus
 import Cardano.Ledger.Alonzo.Scripts qualified as L
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Alonzo.TxWits qualified as L
@@ -105,6 +106,9 @@ type AlonzoEraOnwardsConstraints era =
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody L.TopTx (ShelleyLedgerEra era)) L.EraIndependentTxBody
+  , L.Inject
+      (Plutus.AlonzoContextError (ShelleyLedgerEra era))
+      (Plutus.ContextError (ShelleyLedgerEra era))
   , L.MaryEraTxBody (ShelleyLedgerEra era)
   , Plutus.EraPlutusContext (ShelleyLedgerEra era)
   , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)

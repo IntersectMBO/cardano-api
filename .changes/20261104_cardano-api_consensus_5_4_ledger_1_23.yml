@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1408
+kind:
+- breaking
+description: Require ouroboros-consensus 5.4, cardano-ledger-core 1.23 and cardano-ledger-alonzo 1.18. `AlonzoEraOnwardsConstraints` and `EraCommonConstraints` now include `Inject (AlonzoContextError era) (ContextError era)`.
