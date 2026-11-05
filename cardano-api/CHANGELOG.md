@@ -1,5 +1,23 @@
 # Changelog for cardano-api
 
+## 11.12.0.0 -- 2026-11-05
+
+- Require ouroboros-consensus 5.4, cardano-ledger-core 1.23 and cardano-ledger-alonzo 1.18. `AlonzoEraOnwardsConstraints` and `EraCommonConstraints` now include `Inject (AlonzoContextError era) (ContextError era)`.
+  (breaking)
+  [PR 1408](https://github.com/intersectmbo/cardano-api/pull/1408)
+
+- Experimental `readAnyScriptBytes` and `readFileAnyScript` read JSON simple scripts, including guards, in the Dijkstra era instead of crashing.
+  (bugfix)
+  [PR 1404](https://github.com/intersectmbo/cardano-api/pull/1404)
+
+- Extend `IntroducedInDijkstraPParams` with minimum pool margin, maximum pledge leverage, all six Peras parameters, and reference-input costs per multi-asset policy and datum byte, preserving these updates in ledger conversion and CBOR serialisation. Re-export `MaxPledgeLeverage(..)` and `SlotInterval(..)` from `Cardano.Api.Ledger`. Callers constructing the record must supply all ten new fields; use `SNothing` for unchanged parameters and `SJust (MaxPledgeLeverage SNothing)` to remove the pledge leverage limit.
+  (breaking)
+  [PR 1388](https://github.com/intersectmbo/cardano-api/pull/1388)
+
+- `calcMinFeeRecursive` in `Cardano.Api.Experimental` no longer fails with `FeeCalculationDidNotConverge` when the change output's lovelace amount sits near a CBOR integer width boundary, such as 2^32 lovelace. It now returns a balanced transaction in that case. The returned fee can be above the minimum fee by up to `4 * txFeePerByte` lovelace (176 lovelace with mainnet parameters). A supplied fee above that range is still reset to the minimum fee. The signature and exports are unchanged.
+  (bugfix)
+  [PR 1120](https://github.com/intersectmbo/cardano-api/pull/1120)
+
 ## 11.11.0.0 -- 2026-10-22
 
 - Add ScriptGuardWitness for native and Plutus V4 guards in experimental Dijkstra transactions and sub-transactions, with balancing and fee estimation accounting for guard scripts. The guard fields and getters (bcGuards, txGuards, subTxGuards), setTxGuards, and the TxBodyContent and SubTxBodyContent pattern constructors now use opaque, insertion-ordered TxGuards era instead of OSet (Credential Guard). Migrate existing credentials by passing ordered (credential, Nothing) pairs to mkTxGuards, or supply Just (NativeGuardWitness witness) or Just (PlutusGuardWitness witness) for script guards. Handle its Either TxGuardsError (TxGuards era) result for duplicate credentials, script witnesses supplied for key credentials, and mismatching inline script hashes. Use emptyTxGuards for no guards and GHC.Exts.toList to inspect ordered credential/witness pairs via the derived IsList instance; fromList constructs guards without mkTxGuards validation. Update exhaustive pattern matches for the new AnyPlutusGuardingScriptWitness, WitGuard, GuardItem, and ScriptWitnessIndexGuarding constructors; ScriptWitnessIndexGuarding is also exported through the stable Cardano.Api module.
