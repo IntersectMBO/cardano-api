@@ -50,7 +50,6 @@ import PlutusCore.Evaluation.Machine.CostModelInterface qualified as Plutus
 import PlutusLedgerApi.Common qualified as Plutus hiding (PlutusV2)
 
 import Codec.Binary.Bech32 qualified as Bech32
-import Control.Error.Util (hush)
 import Data.Aeson qualified as Aeson
 import Data.ByteString (ByteString)
 import Data.ByteString.Base64 qualified as B64
@@ -108,9 +107,8 @@ paymentVerKey1 = getVerificationKey $ deterministicSigningKey AsPaymentKey (Cryp
 
 txid1 :: TxId
 txid1 =
-  fromJust $
-    hush $
-      deserialiseFromRawBytesHex "210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0"
+  either (error . show) id $
+    deserialiseFromRawBytesHex "210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0"
 
 txin1 :: TxIn
 txin1 = TxIn txid1 (TxIx 1)
@@ -119,7 +117,7 @@ scriptData1 :: ScriptData
 scriptData1 = ScriptDataNumber 1
 
 scriptDataHash1 :: HashableScriptData
-scriptDataHash1 = fromJust $ hush $ deserialiseFromCBOR AsHashableScriptData $ serialiseToCBOR scriptData1
+scriptDataHash1 = either (error . show) id . deserialiseFromCBOR AsHashableScriptData $ serialiseToCBOR scriptData1
 
 hashScriptData1 :: Hash ScriptData
 hashScriptData1 = hashScriptDataBytes scriptDataHash1 -- ScriptDataHash $ Ledger.unsafeMakeSafeHash hash1
@@ -162,10 +160,9 @@ scriptInAnyLangPlutusV4 =
 
 poolId :: Hash StakePoolKey
 poolId =
-  fromJust $
-    hush $
-      deserialiseFromRawBytesHex
-        "9e734b6c2263c0917bfc550e9c949f41afa3fe000377243bd29df399"
+  either (error . show) id $
+    deserialiseFromRawBytesHex
+      "9e734b6c2263c0917bfc550e9c949f41afa3fe000377243bd29df399"
 
 test_Bech32DecodeError :: TestTree
 test_Bech32DecodeError =
