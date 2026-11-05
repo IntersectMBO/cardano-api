@@ -6,6 +6,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
+-- | Fee calculation tests, including sub-transaction ADA movement in
+-- "Test.Cardano.Api.Experimental.Fee.Ada".
 module Test.Cardano.Api.Experimental.Fee
   ( tests
   )
@@ -74,6 +76,7 @@ import Test.Gen.Cardano.Api.Typed
   )
 
 import Test.Cardano.Api.Experimental (exampleProtocolParams, exampleProtocolParamsEra)
+import Test.Cardano.Api.Experimental.Fee.Ada qualified as Ada
 import Test.Cardano.Api.Transaction.Fixtures (mkTxIn)
 
 import Hedgehog (Gen, Property, (===))
@@ -92,7 +95,8 @@ tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Experimental.Fee"
-    [ testGroup
+    [ Ada.tests
+    , testGroup
         "guard constructor"
         [ testProperty "preserves ordered credentials and optional witnesses" prop_mkTxGuards_order
         , testProperty "empty guards contain no entries" unit_emptyTxGuards
