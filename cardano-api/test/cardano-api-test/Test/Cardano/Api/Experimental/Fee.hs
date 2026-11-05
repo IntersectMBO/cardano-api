@@ -6,9 +6,10 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
--- | Fee calculation tests, including sub-transaction ADA movement in
--- "Test.Cardano.Api.Experimental.Fee.Ada" and native assets in
--- "Test.Cardano.Api.Experimental.Fee.NativeAssets".
+-- | Fee calculation tests, including sub-transaction balancing in
+-- "Test.Cardano.Api.Experimental.Fee.Ada",
+-- "Test.Cardano.Api.Experimental.Fee.NativeAssets" and
+-- "Test.Cardano.Api.Experimental.Fee.Constraints".
 module Test.Cardano.Api.Experimental.Fee
   ( tests
   )
@@ -64,6 +65,13 @@ import Data.Time.Clock.POSIX qualified as Time
 import GHC.Exts (IsList (..))
 import Lens.Micro
 
+import Test.Gen.Cardano.Api.Experimental.Guard
+  ( PlutusV4ReferenceScriptGuardTestInputs (..)
+  , alwaysSucceedsGuardScript
+  , genPlutusGuardsWithReferenceScripts
+  , genPlutusGuardsWithScriptWitnesses
+  , genPlutusV4ReferenceScriptGuardTestInputs
+  )
 import Test.Gen.Cardano.Api.Typed
   ( genAddressInEra
   , genExecutionUnits
@@ -78,6 +86,8 @@ import Test.Gen.Cardano.Api.Typed
 
 import Test.Cardano.Api.Experimental (exampleProtocolParams, exampleProtocolParamsEra)
 import Test.Cardano.Api.Experimental.Fee.Ada qualified as Ada
+import Test.Cardano.Api.Experimental.Fee.Common (autoBalanceTestTransaction, dijkstraTestParams)
+import Test.Cardano.Api.Experimental.Fee.Constraints qualified as Constraints
 import Test.Cardano.Api.Experimental.Fee.NativeAssets qualified as NativeAssets
 import Test.Cardano.Api.Transaction.Fixtures (mkTxIn)
 
@@ -99,12 +109,13 @@ tests =
     "Test.Cardano.Api.Experimental.Fee"
     [ Ada.tests
     , NativeAssets.tests
+    , Constraints.tests
     , testGroup
         "guard constructor"
         [ testProperty "preserves ordered credentials and optional witnesses" prop_mkTxGuards_order
         , testProperty "empty guards contain no entries" unit_emptyTxGuards
         , testProperty "rejects duplicate credentials" prop_mkTxGuards_duplicates
-        , testProperty "checks credential kinds and inline script hashes" prop_mkTxGuards_validation
+        , testProperty "checks credential kinds and script witness hashes" prop_mkTxGuards_validation
         ]
     , testGroup
         "guard witnesses"
@@ -117,11 +128,11 @@ tests =
             prop_guard_execution_units
         , testProperty "counts native guard signing keys" prop_guard_native_key_estimate
         , testProperty
-            "automatically evaluates and balances an inline Plutus V4 guard"
-            (prop_guard_auto_balance False)
+            "automatically evaluates and balances a Plutus V4 guard with a script witness"
+            prop_guard_with_script_witness
         , testProperty
-            "automatically evaluates and balances a reference Plutus V4 guard"
-            (prop_guard_auto_balance True)
+            "automatically evaluates and balances a Plutus V4 guard with a reference script"
+            prop_guard_with_reference_script
         ]
     , testGroup
         "substituteExecutionUnits"
@@ -1906,79 +1917,73 @@ prop_guard_native_key_estimate = H.property $ do
   toList (tx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === [credential]
   Map.keys (tx ^. L.witsTxL . L.scriptTxWitsL) === [Exp.hashSimpleScript native]
 
--- | Auto-balancing evaluates an inline or reference Plutus V4 guard and sets
--- a fee that covers the final transaction's ledger minimum.
-prop_guard_auto_balance :: Bool -> Property
-prop_guard_auto_balance useReference = H.withTests 10 $ H.property $ do
-  input <- H.forAll genTxIn
-  let Api.TxIn inputId (Api.TxIx inputIx) = input
-      collateral = Api.TxIn inputId (Api.TxIx (inputIx + 1))
-      reference = Api.TxIn inputId (Api.TxIx (inputIx + 2))
-  address <- H.forAll $ genAddressInEra Api.ShelleyBasedEraDijkstra
-  script <-
-    H.evalEither $
-      P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4 $
-        Base16.decodeLenient "46450101002499"
-  let credential = L.ScriptHashObj $ P.hashPlutusScriptInEra script
-      datum = Api.unsafeHashableScriptData $ Api.ScriptDataNumber 42
-      witness =
-        Exp.PlutusGuardWitness $
-          Exp.PlutusScriptWitness
-            Plutus.SPlutusV4
-            (if useReference then Exp.PReferenceScript reference else Exp.PScript script)
-            Exp.NoScriptDatum
-            datum
-            (Api.ExecutionUnits 0 0)
-      params =
-        exampleProtocolParamsEra Exp.DijkstraEra
-          & L.ppProtocolVersionL .~ L.ProtVer (L.eraProtVerLow @(Exp.LedgerEra Exp.DijkstraEra)) 0
-  guards <- H.evalEither $ Exp.mkTxGuards [(credential, Just witness)]
-  let content =
-        Exp.defaultTxBodyContent
-          & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder)]
-          & Exp.setTxInsCollateral [collateral]
-          & Exp.setTxInsReference (Exp.TxInsReference [reference | useReference] Set.empty)
-          & Exp.setTxGuards guards
-          & Exp.setTxProtocolParams params
-      funding = L.mkBasicTxOut (Api.toShelleyAddr address) (L.MaryValue (L.Coin 100_000_000) mempty)
-      utxo =
-        L.UTxO $
-          Map.fromList
-            [ (Api.toShelleyTxIn input, funding)
-            , (Api.toShelleyTxIn collateral, funding)
-            ,
-              ( Api.toShelleyTxIn reference
-              , funding & L.referenceScriptTxOutL .~ L.SJust (plutusScriptInEraToScript script)
-              )
-            ]
-      systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
-      epochInfo =
-        Api.LedgerEpochInfo $ Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+-- | Evaluate a directly supplied V4 guard and replace its zero execution budget.
+prop_guard_with_script_witness :: Property
+prop_guard_with_script_witness = H.withTests 10 $ H.property $ do
+  script <- H.evalEither alwaysSucceedsGuardScript
+  testInputs <- H.forAll $ genPlutusV4ReferenceScriptGuardTestInputs script
+  (redeemer, guards) <- H.forAll $ genPlutusGuardsWithScriptWitnesses script (Api.ExecutionUnits 0 0)
+  let txBodyContent = guardTopLevelTxBodyContent testInputs & Exp.setTxGuards guards
   (Exp.UnsignedTx tx, _) <-
     H.evalEither $
-      Exp.makeTransactionBodyAutoBalance
-        systemStart
-        epochInfo
-        params
-        mempty
-        mempty
-        utxo
-        content
-        address
-        Nothing
+      autoBalanceTestTransaction (testAddress testInputs) (guardUTxO testInputs) txBodyContent
+  assertEvaluatedGuard redeemer testInputs tx
+  -- Keep the Plutus V4 script in the transaction witnesses; add no reference input.
+  Map.size (tx ^. L.witsTxL . L.scriptTxWitsL) === 1
+  tx ^. L.bodyTxL . L.referenceInputsTxBodyL === Set.empty
+
+-- | Evaluate a V4 reference script without copying it into the transaction witnesses.
+prop_guard_with_reference_script :: Property
+prop_guard_with_reference_script = H.withTests 10 $ H.property $ do
+  script <- H.evalEither alwaysSucceedsGuardScript
+  testInputs <- H.forAll $ genPlutusV4ReferenceScriptGuardTestInputs script
+  (redeemer, guards) <-
+    H.forAll $
+      genPlutusGuardsWithReferenceScripts script (guardReferenceInput testInputs) (Api.ExecutionUnits 0 0)
+  let txBodyContent =
+        guardTopLevelTxBodyContent testInputs
+          & Exp.setTxGuards guards
+          & Exp.setTxInsReference (Exp.TxInsReference [guardReferenceInput testInputs] Set.empty)
+  (Exp.UnsignedTx tx, _) <-
+    H.evalEither $
+      autoBalanceTestTransaction (testAddress testInputs) (guardUTxO testInputs) txBodyContent
+  assertEvaluatedGuard redeemer testInputs tx
+  -- Keep the Plutus V4 reference input without copying its script into the witnesses.
+  Map.size (tx ^. L.witsTxL . L.scriptTxWitsL) === 0
+  tx ^. L.bodyTxL . L.referenceInputsTxBodyL
+    === Set.singleton (Api.toShelleyTxIn $ guardReferenceInput testInputs)
+
+-- | Build 'Exp.TxBodyContent' with funding, collateral and test protocol parameters.
+-- The caller adds Plutus V4 script guards and any reference inputs.
+guardTopLevelTxBodyContent
+  :: PlutusV4ReferenceScriptGuardTestInputs -> Exp.TxBodyContent (Exp.LedgerEra Exp.DijkstraEra)
+guardTopLevelTxBodyContent testInputs =
+  Exp.defaultTxBodyContent
+    & Exp.setTxIns [(guardFundingInput testInputs, Exp.AnyKeyWitnessPlaceholder)]
+    & Exp.setTxInsCollateral [guardCollateralInput testInputs]
+    & Exp.setTxProtocolParams dijkstraTestParams
+
+-- | Check Plutus V4 redeemer preservation, measured execution units and minimum fee.
+assertEvaluatedGuard
+  :: Api.HashableScriptData
+  -> PlutusV4ReferenceScriptGuardTestInputs
+  -> L.Tx L.TopTx (Exp.LedgerEra Exp.DijkstraEra)
+  -> H.PropertyT IO ()
+assertEvaluatedGuard expectedRedeemer testInputs tx = do
+  -- The sole Plutus V4 script guard must retain its redeemer at guard index zero.
   (actualDatum, units) <-
     H.evalMaybe $
       Map.lookup (L.DijkstraGuarding $ L.AsIx 0) $
         Alonzo.unRedeemers $
           tx ^. L.witsTxL . L.rdmrsTxWitsL
-  actualDatum === Api.toAlonzoData datum
+  -- Evaluation must preserve the redeemer data.
+  actualDatum === Api.toAlonzoData expectedRedeemer
+  -- Replace the zero Plutus V4 budget with positive memory and step costs.
   H.assertWith units $ \u -> L.exUnitsMem u > 0 && L.exUnitsSteps u > 0
-  let minFee = L.calcMinFeeTx utxo params tx 0
+  -- The fee must cover the final body and measured execution units.
+  let minFee = L.calcMinFeeTx (guardUTxO testInputs) dijkstraTestParams tx 0
   H.annotateShow minFee
   H.assertWith (tx ^. L.bodyTxL . L.feeTxBodyL) (>= minFee)
-  Map.size (tx ^. L.witsTxL . L.scriptTxWitsL) === if useReference then 0 else 1
-  tx ^. L.bodyTxL . L.referenceInputsTxBodyL
-    === Set.fromList [Api.toShelleyTxIn reference | useReference]
 
 paymentGuardCredential :: Api.Hash Api.PaymentKey -> L.Credential L.Guard
 paymentGuardCredential (Api.PaymentKeyHash key) = L.KeyHashObj (coerceKeyRole key)
@@ -2026,22 +2031,23 @@ genGuardEntries = Gen.frequency [(1, pure ([], [])), (4, mixedGuards)]
               <*> genExecutionUnits
           )
 
+-- | Require 5% coverage for each native/Plutus V4 witness form and missing script witnesses.
 coverGuardWitnesses
   :: [(L.Credential L.Guard, Maybe (Exp.ScriptGuardWitness (Exp.LedgerEra Exp.DijkstraEra)))]
   -> H.PropertyT IO ()
 coverGuardWitnesses entries = do
   let witnesses = map snd entries
-  H.cover 5 "inline native guards" $
+  H.cover 5 "native guards with script witnesses" $
     not $
       null [() | Just (Exp.NativeGuardWitness Exp.SScript{}) <- witnesses]
-  H.cover 5 "reference native guards" $
+  H.cover 5 "native guards with reference scripts" $
     not $
       null [() | Just (Exp.NativeGuardWitness Exp.SReferenceScript{}) <- witnesses]
-  H.cover 5 "inline Plutus V4 guards" $
+  H.cover 5 "Plutus V4 guards with script witnesses" $
     not $
       null
         [() | Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ Exp.PScript{} _ _ _)) <- witnesses]
-  H.cover 5 "reference Plutus V4 guards" $
+  H.cover 5 "Plutus V4 guards with reference scripts" $
     not $
       null
         [ ()

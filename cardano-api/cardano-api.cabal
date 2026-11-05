@@ -316,6 +316,7 @@ library gen
     Test.Gen.Cardano.Api.Byron
     Test.Gen.Cardano.Api.Era
     Test.Gen.Cardano.Api.Experimental
+    Test.Gen.Cardano.Api.Experimental.Guard
     Test.Gen.Cardano.Api.Experimental.SubTransaction
     Test.Gen.Cardano.Api.Hardcoded
     Test.Gen.Cardano.Api.Metadata
@@ -430,6 +431,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Experimental.Fee
     Test.Cardano.Api.Experimental.Fee.Ada
     Test.Cardano.Api.Experimental.Fee.Common
+    Test.Cardano.Api.Experimental.Fee.Constraints
     Test.Cardano.Api.Experimental.Fee.NativeAssets
     Test.Cardano.Api.Genesis
     Test.Cardano.Api.GovAnchorValidation
