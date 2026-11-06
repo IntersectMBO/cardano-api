@@ -1732,4 +1732,7 @@ textEnvelopeToScript = deserialiseFromTextEnvelopeAnyOf textEnvTypes
     , FromSomeType
         (AsScript AsPlutusScriptV3)
         (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV3))
+    , FromSomeType
+        (AsScript AsPlutusScriptV4)
+        (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV4))
     ]

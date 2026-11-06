@@ -9,7 +9,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Experimental.Tx.Internal.BodyContent
   ( TxCertificates (..)
@@ -190,6 +189,7 @@ import Cardano.Api.Plutus.Internal.Script
   , ScriptLanguage (..)
   , fromAllegraTimelock
   , toAllegraTimelock
+  , toDijkstraNativeScript
   )
 import Cardano.Api.Plutus.Internal.Script qualified as OldScript
 import Cardano.Api.Plutus.Internal.ScriptData qualified as Api
@@ -214,7 +214,6 @@ import Cardano.Api.Value.Internal
   )
 
 import Cardano.Binary qualified as CBOR
-import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Scripts qualified as L
 import Cardano.Ledger.Alonzo.Tx qualified as L
 import Cardano.Ledger.Alonzo.TxBody qualified as L
@@ -624,14 +623,14 @@ ledgerScriptToScriptInAnyLang script =
 -- | Convert a 'ScriptInAnyLang' to a ledger 'L.Script'. Reverse of 'ledgerScriptToScriptInAnyLang'.
 scriptInAnyLangToLedgerScript
   :: forall era
-   . ( L.AlonzoEraScript era
-     , L.NativeScript era ~ Timelock era
-     )
-  => ScriptInAnyLang -> Parser (L.Script era)
-scriptInAnyLangToLedgerScript (ScriptInAnyLang lang script) =
+   . L.AlonzoEraScript era
+  => (OldScript.SimpleScript -> L.NativeScript era)
+  -> ScriptInAnyLang
+  -> Parser (L.Script era)
+scriptInAnyLangToLedgerScript toNativeScript (ScriptInAnyLang lang script) =
   case (lang, script) of
     (SimpleScriptLanguage, OldScript.SimpleScript ss) ->
-      pure $ Ledger.fromNativeScript (toAllegraTimelock ss)
+      pure $ Ledger.fromNativeScript (toNativeScript ss)
     (PlutusScriptLanguage PlutusScriptV1, OldScript.PlutusScript _ (PlutusScriptSerialised sbs)) ->
       L.fromPlutusScript
         <$> L.mkPlutusScript (Plutus.Plutus (PlutusBinary sbs) :: Plutus.Plutus 'Plutus.PlutusV1)
@@ -668,6 +667,9 @@ instance FromJSON (TxOut L.BabbageEra) where
 instance FromJSON (TxOut L.ConwayEra) where
   parseJSON = Aeson.withObject "TxOut" (txOutParseJson ShelleyBasedEraConway)
 
+instance FromJSON (TxOut L.DijkstraEra) where
+  parseJSON = Aeson.withObject "TxOut" (txOutParseJson ShelleyBasedEraDijkstra)
+
 txOutParseJson
   :: ShelleyBasedEra era -> Aeson.Object -> Parser (TxOut (ShelleyLedgerEra era))
 txOutParseJson sbe o = do
@@ -693,10 +695,11 @@ txOutParseJson sbe o = do
         Nothing -> base
         Just dh -> base & L.dataHashTxOutL .~ SJust dh
     ShelleyBasedEraBabbage ->
-      babbageOnwardsTxOutParseJson (L.mkBasicTxOut addr mv) o
+      babbageOnwardsTxOutParseJson toAllegraTimelock (L.mkBasicTxOut addr mv) o
     ShelleyBasedEraConway ->
-      babbageOnwardsTxOutParseJson (L.mkBasicTxOut addr mv) o
-    ShelleyBasedEraDijkstra -> error "TODO Dijkstra: txOutParseJson: era not supported"
+      babbageOnwardsTxOutParseJson toAllegraTimelock (L.mkBasicTxOut addr mv) o
+    ShelleyBasedEraDijkstra ->
+      babbageOnwardsTxOutParseJson toDijkstraNativeScript (L.mkBasicTxOut addr mv) o
 
 -- | Parse a ledger 'L.Addr' from JSON. Reverse of 'addrToJson'.
 addrFromJson :: Aeson.Value -> Parser L.Addr
@@ -710,11 +713,12 @@ addrFromJson = Aeson.withText "Address" $ \txt ->
 -- | Parse a Babbage+ TxOut with datum and reference script support.
 babbageOnwardsTxOutParseJson
   :: forall era
-   . ( L.BabbageEraTxOut era
-     , L.NativeScript era ~ Timelock era
-     )
-  => L.TxOut era -> Aeson.Object -> Parser (TxOut era)
-babbageOnwardsTxOutParseJson baseTxOut o = do
+   . L.BabbageEraTxOut era
+  => (OldScript.SimpleScript -> L.NativeScript era)
+  -> L.TxOut era
+  -> Aeson.Object
+  -> Parser (TxOut era)
+babbageOnwardsTxOutParseJson toNativeScript baseTxOut o = do
   -- Parse datum fields
   mDatumHash <- o .:? "datumhash"
   mInlineDatumRaw <- o .:? "inlineDatumRaw"
@@ -752,7 +756,7 @@ babbageOnwardsTxOutParseJson baseTxOut o = do
         fail "babbageOnwardsTxOutParseJson: inlineDatumhash present without inlineDatumRaw"
       pure $ maybe L.NoDatum L.DatumHash mDatumHash
   -- Determine reference script
-  refScript <- L.maybeToStrictMaybe <$> forM mRefScript scriptInAnyLangToLedgerScript
+  refScript <- L.maybeToStrictMaybe <$> forM mRefScript (scriptInAnyLangToLedgerScript toNativeScript)
   -- Construct TxOut
   pure . TxOut $
     baseTxOut

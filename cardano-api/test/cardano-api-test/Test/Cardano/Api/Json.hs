@@ -23,6 +23,7 @@ import Test.Cardano.Api.Orphans ()
 import Hedgehog (Property, forAll, tripping, (===))
 import Hedgehog qualified as H
 import Hedgehog.Gen qualified as Gen
+import Hedgehog.Gen.QuickCheck qualified as Q
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
@@ -175,6 +176,24 @@ goRoundtrip sbe = do
       newTxOut = Exp.TxOut ledgerTxOut
   tripping newTxOut encode eitherDecode
 
+-- | Verify that the new experimental 'TxOut' 'FromJSON' instance reads the
+-- JSON that the legacy API writes for Dijkstra outputs. 'genTxOutUTxOContext'
+-- always adds a reference script and its simple scripts never have guards,
+-- so the reference script is also set to none or to a script with a guard.
+prop_new_txout_json_reads_legacy_dijkstra :: Property
+prop_new_txout_json_reads_legacy_dijkstra = H.property $ do
+  let sbe = ShelleyBasedEraDijkstra
+  TxOut address value datum generatedRefScript <- forAll $ genTxOutUTxOContext sbe
+  simpleScript <- forAll genSimpleScript
+  guardCredential <- forAll Q.arbitrary
+  let guardRefScript =
+        ReferenceScript BabbageEraOnwardsDijkstra $
+          ScriptInAnyLang SimpleScriptLanguage $
+            SimpleScript (RequireAllOf [simpleScript, RequireGuard guardCredential])
+  refScript <- forAll $ Gen.element [ReferenceScriptNone, generatedRefScript, guardRefScript]
+  let oldTxOut = TxOut address value datum refScript
+  eitherDecode (encode oldTxOut) === Right (Exp.TxOut (toShelleyTxOut sbe oldTxOut))
+
 tests :: TestTree
 tests =
   testGroup
@@ -200,4 +219,7 @@ tests =
     , testProperty "json roundtrip praos nonce" prop_roundtrip_praos_nonce_JSON
     , testProperty "new TxOut ToJSON matches legacy" prop_new_txout_json_matches_legacy
     , testProperty "new TxOut JSON roundtrip" prop_new_txout_json_roundtrip
+    , testProperty
+        "new TxOut FromJSON reads legacy Dijkstra JSON"
+        prop_new_txout_json_reads_legacy_dijkstra
     ]

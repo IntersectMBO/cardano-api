@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1405
+kind:
+- feature
+- bugfix
+description: Add a `FromJSON` instance for the experimental `TxOut` in the Dijkstra era, and let `FromJSON ScriptInAnyLang` read Plutus V4 scripts.
