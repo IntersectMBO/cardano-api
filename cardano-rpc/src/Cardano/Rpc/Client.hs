@@ -5,9 +5,11 @@ module Cardano.Rpc.Client
   , module Network.GRPC.Client.StreamType.IO
   , module Network.GRPC.Common.Protobuf
   , module Data.ProtoLens.Field
+  , module Cardano.Rpc.Client.Stream
   )
 where
 
+import Cardano.Rpc.Client.Stream
 import Cardano.Rpc.Server.Internal.Orphans ()
 
 import Data.ProtoLens.Field

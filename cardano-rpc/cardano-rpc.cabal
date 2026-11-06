@@ -48,6 +48,7 @@ library
   hs-source-dirs: src
   exposed-modules:
     Cardano.Rpc.Client
+    Cardano.Rpc.Client.Stream
     Cardano.Rpc.Proto.Api.Node
     Cardano.Rpc.Proto.Api.Reflection.V1
     Cardano.Rpc.Proto.Api.Reflection.V1alpha
