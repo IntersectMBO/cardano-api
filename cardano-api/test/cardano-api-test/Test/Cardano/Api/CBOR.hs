@@ -135,8 +135,7 @@ prop_roundtrip_tx_CBOR = H.property $ do
 prop_roundtrip_tx_out_CBOR :: Property
 prop_roundtrip_tx_out_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- H.forAll $ genTx era
-  txOut <- H.forAll $ Gen.element $ txOuts $ getTxBodyContent $ getTxBody x
+  txOut <- H.forAll $ genTxOutTxContext era
   let fixedTxOut = hashDatum txOut
   shelleyBasedEraConstraints era $
     H.tripping fixedTxOut lossyEncodingForTesting CBOR.decodeFull'
@@ -445,7 +444,7 @@ prop_roundtrip_UpdateProposal_CBOR = H.property $ do
 prop_Tx_cddlTypeToEra :: Property
 prop_Tx_cddlTypeToEra = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- forAll $ genTx era
+  x <- forAll $ genTxWith mempty era
   shelleyBasedEraConstraints era $ do
     let TextEnvelopeType d = textEnvelopeType (proxyToAsType (getProxy x))
     H.note_ $ "Envelope type: " <> show d

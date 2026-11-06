@@ -46,6 +46,7 @@ import Test.Gen.Cardano.Api.Typed
   , genStakeCredential
   , genTx
   , genTxIn
+  , genTxWith
   , genVerificationKeyHash
   )
 
@@ -294,7 +295,7 @@ hprop_tx_to_utxorpc_tx_injected_optional_fields = H.withTests 10 . H.property $ 
       expectedAnchorUrl = "https://example.com/anchor"
       expectedAnchorData :: ByteString
       expectedAnchorData = "anchor data"
-  ShelleyTx _ ledgerTx <- forAll $ genTx sbe
+  ShelleyTx _ ledgerTx <- forAll $ genTxWith mempty sbe
   collateralInput <- forAll genTxIn
   returnAddress <- forAll $ genAddressInEra sbe
   stakeAddress <- forAll genStakeAddress
@@ -460,7 +461,7 @@ test_tx_to_utxorpc_tx_totality =
 hprop_tx_to_utxorpc_tx_redeemer_wiring :: Property
 hprop_tx_to_utxorpc_tx_redeemer_wiring = H.withTests 10 . H.property $ do
   let sbe = convert latestStableEra
-  ShelleyTx _ ledgerTx <- forAll $ genTx sbe
+  ShelleyTx _ ledgerTx <- forAll $ genTxWith mempty sbe
   accountAddress <- forAll $ toShelleyStakeAddr <$> genStakeAddress
   stakeCredential <- forAll $ toShelleyStakeCredential <$> genStakeCredential
   let mkRedeemerDatum :: Integer -> L.Data (ShelleyLedgerEra ConwayEra)

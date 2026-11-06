@@ -122,8 +122,7 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
       era = convert beo
       address = AddressInEra (ShelleyAddressInEra sbe) (ShelleyAddress L.Testnet def L.StakeRefNull)
   feeCoin@(L.Coin fee) <- forAll genLovelace
-  pparams <-
-    H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+  pparams <- H.eval conwayPParams
   requiredCollateralPct <- H.noteShow . fromIntegral $ pparams ^. L.ppCollateralPercentageL
   requiredCollateralAda <-
     H.noteShow . L.rationalToCoinViaCeiling $ (fee * requiredCollateralPct) % 100
@@ -176,12 +175,9 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
         -- meet its own minimum UTxO value
         case txRetColl of
           TxReturnCollateral _ rcTxOut@(TxOut _ rcValue _ _)
-            | txOutValueToLovelace rcValue < calculateMinimumUTxO sbe pparams rcTxOut ->
-                Left
-                  ( ReturnCollateralBelowMinimumUTxO
-                      (txOutValueToLovelace rcValue)
-                      (calculateMinimumUTxO sbe pparams rcTxOut)
-                  )
+            | rcMinUTxO <- calculateMinimumUTxO sbe pparams rcTxOut
+            , txOutValueToLovelace rcValue < rcMinUTxO ->
+                Left (ReturnCollateralBelowMinimumUTxO (txOutValueToLovelace rcValue) rcMinUTxO)
                   === result
           _ -> Right (txRetColl, txTotColl) === result
     | totalCollateralAda < requiredCollateralAda ->
