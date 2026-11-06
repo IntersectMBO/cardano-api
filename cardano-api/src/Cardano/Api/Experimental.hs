@@ -62,6 +62,8 @@ module Cardano.Api.Experimental
   , collectTxBodyScriptWitnesses
   , substituteExecutionUnits
   , estimateTransactionKeyWitnessCount
+  , getAllTxInputs
+  , getAllTxCertificates
 
     -- ** Era-related
   , BabbageEra

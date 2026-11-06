@@ -11,6 +11,7 @@ module Test.Gen.Cardano.Api.Experimental
   , genSimpleScriptInEra
   , genUnsignedSubTx
   , genSignedSubTx
+  , genSignedSubTransaction
   )
 where
 
@@ -20,6 +21,7 @@ import Cardano.Api.Experimental
 import Cardano.Api.Experimental.AnyScriptWitness
 import Cardano.Api.Experimental.Tx
 import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Monad.Error (failEitherWith)
 
 import Data.Map.Ordered.Strict qualified as OMap
 import Data.Typeable
@@ -28,6 +30,7 @@ import Test.Gen.Cardano.Api.Typed
   ( genExecutionUnits
   , genHashableScriptData
   , genPlutusScriptInEra
+  , genShelleyWitnessSigningKey
   , genSimpleScript
   , genTxIn
   )
@@ -159,3 +162,13 @@ genUnsignedSubTx = UnsignedSubTx <$> Q.arbitrary
 
 genSignedSubTx :: Gen SignedSubTx
 genSignedSubTx = SignedSubTx <$> Q.arbitrary
+
+-- | Sign the supplied sub-transaction with a generated key.
+-- The key need not authorize the spending inputs.
+genSignedSubTransaction
+  :: SubTxBodyContent (LedgerEra DijkstraEra)
+  -> Gen SignedSubTx
+genSignedSubTransaction subTxBodyContent = do
+  unsigned <- failEitherWith show $ makeUnsignedSubTx subTxBodyContent
+  key <- genShelleyWitnessSigningKey
+  pure $ signSubTx [] [makeSubTxKeyWitness unsigned key] unsigned
