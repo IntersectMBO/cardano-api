@@ -13,6 +13,7 @@ module Cardano.Rpc.Server.Internal.Error
   ( throwEither
   , throwExceptT
   , throwGrpcErrorWithMessage
+  , grpcErrorWithMessage
   , RpcException (..)
   , renderRpcExceptionForClient
   )
@@ -51,11 +52,19 @@ renderRpcExceptionForClient (RpcException e) = tshow (prettyError e)
 -- | Throw a 'GrpcException' with the given error code and message.
 -- grapesy converts this to proper gRPC trailers before it reaches 'serverTopLevel'.
 throwGrpcErrorWithMessage :: MonadIO m => GrpcError -> Text -> m a
-throwGrpcErrorWithMessage err message =
-  throwIO
-    GrpcException
-      { grpcError = err
-      , grpcErrorMessage = Just message
-      , grpcErrorDetails = Nothing
-      , grpcErrorMetadata = []
-      }
+throwGrpcErrorWithMessage err = throwIO . grpcErrorWithMessage err
+
+-- | Build a 'GrpcException' with the given error code and message.
+grpcErrorWithMessage
+  :: GrpcError
+  -- ^ The gRPC error code
+  -> Text
+  -- ^ The error message
+  -> GrpcException
+grpcErrorWithMessage err message =
+  GrpcException
+    { grpcError = err
+    , grpcErrorMessage = Just message
+    , grpcErrorDetails = Nothing
+    , grpcErrorMetadata = []
+    }

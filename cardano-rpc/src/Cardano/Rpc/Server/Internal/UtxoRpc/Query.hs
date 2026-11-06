@@ -47,7 +47,6 @@ import Ouroboros.Consensus.HardFork.History qualified as History
 
 import RIO hiding (toList)
 
-import Control.Error.Util (hush)
 import Data.Map.Strict qualified as Map
 import Data.ProtoLens (defMessage)
 import Data.Text qualified as Text (pack)
@@ -363,7 +362,7 @@ paginateByTxIn keep items startToken maxItems = (page, nextToken)
   -- 'Map.split' excludes the cursor key itself.
   afterCursor =
     maybe items (\cursor -> snd $ Map.split cursor items) $
-      hush . P.runParser parseTxIn =<< startToken
+      either (const Nothing) Just . P.runParser parseTxIn =<< startToken
   -- Lazy: 'take'/'drop' below force only the page plus one match.
   matching = filter (keep . snd) $ Map.toAscList afterCursor
   limit = min (if maxItems > 0 then fromIntegral maxItems else defaultPageSize) maxPageSize
