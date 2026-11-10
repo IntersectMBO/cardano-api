@@ -23,6 +23,7 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   , readEraSummaryMethod
   , readEraSummaryFill
   , paginateByTxIn
+  , parseStartToken
   )
 where
 
@@ -47,10 +48,9 @@ import Ouroboros.Consensus.HardFork.History qualified as History
 
 import RIO hiding (toList)
 
-import Control.Error.Util (hush)
 import Data.Map.Strict qualified as Map
 import Data.ProtoLens (defMessage)
-import Data.Text qualified as Text (pack)
+import Data.Text qualified as Text (null, pack)
 import Data.Time.Clock (UTCTime)
 import GHC.IsList
 import Network.GRPC.Spec
@@ -157,7 +157,8 @@ searchUtxosMethod
   -> m (Proto UtxoRpc.SearchUtxosResponse)
 searchUtxosMethod req = do
   let maxItems = req ^. U5c.maxItems
-      startToken = req ^. U5c.maybe'startToken
+
+  startCursor <- fromEither . parseStartToken $ req ^. U5c.maybe'startToken
 
   (compiledPredicate, utxoFilter) <- case req ^. U5c.maybe'predicate of
     Just p
@@ -180,7 +181,7 @@ searchUtxosMethod req = do
       doQueryPage = queryInCurrentEra $ \eon -> obtainCommonConstraints eon $ do
         utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
         let (page, nextTok) =
-              paginateByTxIn (matchesCompiledPredicate compiledPredicate) (unUTxO utxo) startToken maxItems
+              paginateByTxIn (matchesCompiledPredicate compiledPredicate) (unUTxO utxo) startCursor maxItems
         pure (map (uncurry txInTxOutToUtxoFields) page, nextTok)
   let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
   fmap Proto . runFill (runLocalQuery nodeConnInfo) fieldMask $
@@ -350,20 +351,18 @@ paginateByTxIn
   -- ^ keep only entries whose value satisfies the predicate
   -> Map TxIn a
   -- ^ UTxO entries to paginate, in the map's key order
-  -> Maybe Text
-  -- ^ start token: the 'renderTxIn' of the last 'TxIn' from the previous page,
-  -- or 'Nothing' for the first page
+  -> Maybe TxIn
+  -- ^ start cursor: the last 'TxIn' from the previous page, or 'Nothing' for the first page
   -> Int32
   -- ^ maximum number of items per page (0 defaults to 'defaultPageSize',
   -- capped at 'maxPageSize')
   -> ([(TxIn, a)], Maybe Text)
   -- ^ page of results and the next start token ('Nothing' when there are no more pages)
-paginateByTxIn keep items startToken maxItems = (page, nextToken)
+paginateByTxIn keep items startCursor maxItems = (page, nextToken)
  where
   -- 'Map.split' excludes the cursor key itself.
   afterCursor =
-    maybe items (\cursor -> snd $ Map.split cursor items) $
-      hush . P.runParser parseTxIn =<< startToken
+    maybe items (\cursor -> snd $ Map.split cursor items) startCursor
   -- Lazy: 'take'/'drop' below force only the page plus one match.
   matching = filter (keep . snd) $ Map.toAscList afterCursor
   limit = min (if maxItems > 0 then fromIntegral maxItems else defaultPageSize) maxPageSize
@@ -374,6 +373,20 @@ paginateByTxIn keep items startToken maxItems = (page, nextToken)
     pure . renderTxIn . fst $ last page
   defaultPageSize = 100
   maxPageSize = 10_000
+
+-- | Parse the optional @start_token@ of a paginated request into a cursor.
+-- An absent or empty token (the proto3 default) means the first page; any other
+-- token that is not a rendered 'TxIn' gives an @INVALID_ARGUMENT@ 'Left'.
+parseStartToken
+  :: Maybe Text
+  -- ^ The request's @start_token@
+  -> Either GrpcException (Maybe TxIn)
+parseStartToken startToken =
+  forM (mfilter (not . Text.null) startToken) $ \token ->
+    first (const $ invalidStartToken token) $ P.runParser parseTxIn token
+ where
+  invalidStartToken token =
+    grpcErrorWithMessage GrpcInvalidArgument $ "invalid start_token " <> token
 
 -- | A local state query session at the volatile tip.
 type LocalQuery = LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO
