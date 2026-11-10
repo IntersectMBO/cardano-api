@@ -5,14 +5,16 @@ module Test.Cardano.Rpc.Pagination where
 import Cardano.Api (TxIn)
 import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Tx (parseTxIn, renderTxIn)
-import Cardano.Rpc.Server.Internal.UtxoRpc.Query (paginateByTxIn)
+import Cardano.Rpc.Server.Internal.UtxoRpc.Query (paginateByTxIn, parseStartToken)
 
+import Data.Bifunctor (first)
 import Data.Map.Strict (Map)
 import Data.Maybe (isJust, isNothing)
 import Data.Text (Text)
 import Data.Text qualified as T
 import GHC.IsList (fromList)
 import GHC.Stack (HasCallStack)
+import Network.GRPC.Spec (GrpcError (..), GrpcException (..))
 
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
@@ -48,10 +50,10 @@ hprop_paginate_multi_digit_indices = H.propertyOnce $ do
       (page1, token1) = paginateByTxIn (const True) items Nothing 3
   length page1 === 3
   H.assertWith token1 isJust
-  let (page2, token2) = paginateByTxIn (const True) items token1 3
+  let (page2, token2) = paginateByTxIn (const True) items (cursorOf token1) 3
   length page2 === 3
   H.assertWith token2 isJust
-  let (page3, token3) = paginateByTxIn (const True) items token2 3
+  let (page3, token3) = paginateByTxIn (const True) items (cursorOf token2) 3
   length page3 === 1
   H.assertWith token3 isNothing
   -- All items returned exactly once
@@ -71,9 +73,9 @@ hprop_paginate_sequential_pages_cover_all = H.propertyOnce $ do
   let items = fromList [mkItem i | i <- [0 .. 4]]
       (page1, token1) = paginateByTxIn (const True) items Nothing 2
   length page1 === 2
-  let (page2, token2) = paginateByTxIn (const True) items token1 2
+  let (page2, token2) = paginateByTxIn (const True) items (cursorOf token1) 2
   length page2 === 2
-  let (page3, token3) = paginateByTxIn (const True) items token2 2
+  let (page3, token3) = paginateByTxIn (const True) items (cursorOf token2) 2
   length page3 === 1
   H.assertWith token3 isNothing
 
@@ -83,9 +85,20 @@ hprop_paginate_cursor_excludes_start_token = H.propertyOnce $ do
   -- resume strictly after it, never repeating it.
   let items = fromList [mkItem i | i <- [0 .. 9]]
       cursor = fst $ mkItem 4
-      (page, _) = paginateByTxIn (const True) items (Just $ renderTxIn cursor) 3
+      (page, _) = paginateByTxIn (const True) items (Just cursor) 3
   map fst page === map (fst . mkItem) [5, 6, 7]
   H.assertWith page (notElem cursor . map fst)
+
+hprop_parse_start_token_rejects_invalid_token :: Property
+hprop_parse_start_token_rejects_invalid_token = H.propertyOnce $ do
+  first grpcError (parseStartToken $ Just "not-a-txin") === Left GrpcInvalidArgument
+
+hprop_parse_start_token_accepts_absent_empty_and_valid :: Property
+hprop_parse_start_token_accepts_absent_empty_and_valid = H.propertyOnce $ do
+  let cursor = fst $ mkItem 4
+  first grpcError (parseStartToken Nothing) === Right Nothing
+  first grpcError (parseStartToken $ Just "") === Right Nothing
+  first grpcError (parseStartToken . Just $ renderTxIn cursor) === Right (Just cursor)
 
 hprop_paginate_predicate_limits_and_advances_by_matches :: Property
 hprop_paginate_predicate_limits_and_advances_by_matches = H.propertyOnce $ do
@@ -103,6 +116,9 @@ hprop_paginate_predicate_limits_and_advances_by_matches = H.propertyOnce $ do
 -- ---------------------------------------------------------------------------
 -- Helpers
 -- ---------------------------------------------------------------------------
+
+cursorOf :: Maybe Text -> Maybe TxIn
+cursorOf = fmap mkTxIn
 
 hash01 :: Text
 hash01 = "0101010101010101010101010101010101010101010101010101010101010101"
