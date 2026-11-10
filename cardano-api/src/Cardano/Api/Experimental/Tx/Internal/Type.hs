@@ -14,10 +14,14 @@
 
 module Cardano.Api.Experimental.Tx.Internal.Type
   ( UnsignedTx (..)
+  , getAllTxInputs
+  , getAllTxCertificates
   )
 where
 
 import Cardano.Api.Era.Internal.Core qualified as Api
+import Cardano.Api.Experimental.Era
+import Cardano.Api.Experimental.Tx.Internal.Certificate.Type qualified as Exp
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), asType)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.ProtocolParameters
@@ -25,21 +29,59 @@ import Cardano.Api.Serialise.Raw
   ( SerialiseAsRawBytes (..)
   , SerialiseAsRawBytesError (SerialiseAsRawBytesError)
   )
+import Cardano.Api.Tx.Internal.TxIn (TxIn, fromShelleyTxIn)
 
 import Cardano.Ledger.Api.Era qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
 
 import Control.Exception (displayException)
 import Data.Bifunctor (bimap)
 import Data.ByteString.Lazy (fromStrict)
-import Data.Foldable (asum)
+import Data.Foldable (asum, toList)
+import Data.Set qualified as Set
 import Data.Typeable
+import Lens.Micro ((^.))
 
 -- | A transaction that can contain everything
 -- except key witnesses.
 data UnsignedTx era
   = L.EraTx era => UnsignedTx (Ledger.Tx Ledger.TopTx era)
+
+-- | Spending, reference and collateral inputs of the top-level transaction
+-- and its sub-transactions. These are the inputs to query for balancing with
+-- 'queryStateForBalancedTx'.
+getAllTxInputs
+  :: forall era
+   . IsEra era
+  => UnsignedTx (LedgerEra era)
+  -> [TxIn]
+getAllTxInputs (UnsignedTx tx) =
+  obtainCommonConstraints (useEra @era) $
+    map fromShelleyTxIn $
+      Set.toList $
+        tx ^. L.bodyTxL . Ledger.allInputsTxBodyF
+
+-- | Certificates of the top-level transaction followed by those of its
+-- sub-transactions, preserving their order. Pass these to
+-- 'queryStateForBalancedTx' to query the deposits needed for balancing.
+getAllTxCertificates
+  :: forall era
+   . IsEra era
+  => UnsignedTx (LedgerEra era)
+  -> [Exp.Certificate (LedgerEra era)]
+getAllTxCertificates (UnsignedTx tx) =
+  obtainCommonConstraints (useEra @era) $
+    map Exp.Certificate $
+      toList (tx ^. L.bodyTxL . L.certsTxBodyL) <> subTransactionCertificates
+ where
+  subTransactionCertificates :: [L.TxCert (LedgerEra era)]
+  subTransactionCertificates = case useEra @era of
+    ConwayEra -> []
+    DijkstraEra ->
+      concatMap (toList . (^. L.bodyTxL . L.certsTxBodyL)) $
+        tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL
 
 type family ToApiEra ledgerera where
   ToApiEra L.DijkstraEra = Api.DijkstraEra

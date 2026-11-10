@@ -295,6 +295,7 @@ module Cardano.Api.Experimental.Tx
   , getAllTxInputs
   , getAllTxCertificates
   , TxBodyErrorAutoBalance (..)
+  , ScriptFailureSource (..)
   , TxFeeEstimationError (..)
 
     -- ** Internal functions

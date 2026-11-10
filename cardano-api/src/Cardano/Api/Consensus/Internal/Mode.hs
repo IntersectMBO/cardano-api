@@ -40,6 +40,7 @@ import Ouroboros.Consensus.HardFork.Combinator as Consensus
   , eraIndexZero
   )
 import Ouroboros.Consensus.Protocol.Praos qualified as Consensus
+import Ouroboros.Consensus.Protocol.Praos2 qualified as Consensus
 import Ouroboros.Consensus.Protocol.TPraos qualified as Consensus
 import Ouroboros.Consensus.Shelley.HFEras qualified as Consensus
 import Ouroboros.Consensus.Shelley.ShelleyHFC qualified as Consensus
@@ -99,15 +100,15 @@ type family ConsensusProtocol era where
   ConsensusProtocol AlonzoEra = Consensus.TPraos StandardCrypto
   ConsensusProtocol BabbageEra = Consensus.Praos StandardCrypto
   ConsensusProtocol ConwayEra = Consensus.Praos StandardCrypto
-  ConsensusProtocol DijkstraEra = Consensus.Praos StandardCrypto
+  ConsensusProtocol DijkstraEra = Consensus.Praos2 StandardCrypto
 
 type family ChainDepStateProtocol era where
   ChainDepStateProtocol ShelleyEra = Consensus.TPraosState
   ChainDepStateProtocol AllegraEra = Consensus.TPraosState
   ChainDepStateProtocol MaryEra = Consensus.TPraosState
   ChainDepStateProtocol AlonzoEra = Consensus.TPraosState
-  ChainDepStateProtocol BabbageEra = Consensus.PraosState
-  ChainDepStateProtocol ConwayEra = Consensus.PraosState
+  ChainDepStateProtocol BabbageEra = Consensus.PraosState StandardCrypto
+  ChainDepStateProtocol ConwayEra = Consensus.PraosState StandardCrypto
 
 eraIndex0 :: Consensus.EraIndex (x0 : xs)
 eraIndex0 = Consensus.eraIndexZero

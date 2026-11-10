@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 -- | Additional constraints on sub-transaction balancing.
 --
@@ -12,7 +11,7 @@
 -- +======================================+=======================================================================================+
 -- | Signed script budgets                | Sufficient budget succeeds unchanged; zero budget is rejected for ScriptValid         |
 -- +--------------------------------------+---------------------------------------------------------------------------------------+
--- | ScriptInvalid batches                | Accept failures at either or both levels; reject when every script passes             |
+-- | ScriptInvalid transactions           | Accept failures at either or both levels; reject when every script passes             |
 -- +--------------------------------------+---------------------------------------------------------------------------------------+
 -- | Combined execution limit             | Sub-transaction fits alone; adding top-level execution exceeds memory or steps        |
 -- +--------------------------------------+---------------------------------------------------------------------------------------+
@@ -48,6 +47,7 @@ import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
 
 import Cardano.Ledger.Alonzo.Core qualified as L (ppCollateralPercentageL, ppMaxTxExUnitsL)
+import Cardano.Ledger.Alonzo.Plutus.Context qualified as L (CollectError (..))
 import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.PParams qualified as L (ppMinFeeRefScriptCostPerByteL)
@@ -55,18 +55,32 @@ import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
 import Cardano.Ledger.Dijkstra.TxCert qualified as L (DijkstraDelegCert (..))
+import Cardano.Ledger.Plutus.Evaluate qualified as Plutus
 import Cardano.Ledger.Tools qualified as L (setMinFeeTx)
-import Cardano.Ledger.Val qualified as L (invert)
 
 import Control.Monad (forM_)
 import Data.List qualified as List
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import GHC.Exts (IsList (..))
 import Lens.Micro
 
 import Test.Gen.Cardano.Api.Experimental (genSignedSubTransaction)
-import Test.Gen.Cardano.Api.Experimental.Guard
+import Test.Gen.Cardano.Api.Typed (genSigningKey, genStakeCredential)
+
+import Test.Cardano.Api.Experimental.Fee.Common
+  ( DijkstraBalanceResult
+  , adaAmounts
+  , assertChangeFeeAndUnchangedSubTransactions
+  , autoBalanceTestTransaction
+  , autoBalanceWithParams
+  , balanceTransactionWithSubTransactions
+  , dijkstraTestParams
+  , testEpochInfo
+  , testSystemStart
+  )
+import Test.Cardano.Api.Experimental.Fee.Gen.Guard
   ( GuardScriptSource (..)
   , PlutusV4ReferenceScriptGuardTestInputs (..)
   , ScriptBalanceCase (..)
@@ -79,30 +93,17 @@ import Test.Gen.Cardano.Api.Experimental.Guard
   , genScriptBalanceCase
   , genTopLevelGuardCase
   )
-import Test.Gen.Cardano.Api.Experimental.SubTransaction
+import Test.Cardano.Api.Experimental.Fee.Gen.SubTransaction
   ( SubTransactionBalanceTestData (..)
   , SubTxAmounts (..)
   , TopLevelTxAmounts (..)
   , TxAmounts (..)
   , genSubTransactionBalanceTestData
   )
-import Test.Gen.Cardano.Api.Typed (genStakeCredential)
-
-import Test.Cardano.Api.Experimental.Fee.Common
-  ( DijkstraBalanceResult
-  , ada
-  , adaAmounts
-  , assertChangeFeeAndUnchangedSubTransactions
-  , autoBalanceTestTransaction
-  , autoBalanceWithParams
-  , balanceTransactionWithSubTransactions
-  , dijkstraTestParams
-  , testEpochInfo
-  , testSystemStart
-  )
 
 import Hedgehog (Property, (===))
 import Hedgehog qualified as H
+import Hedgehog.Extras qualified as H
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
@@ -143,6 +144,9 @@ tests =
             "insufficient signed script budget is rejected"
             prop_insufficient_sub_transaction_budget_rejected
         , testProperty
+            "script failures identify each sub-transaction"
+            prop_script_failures_identify_sub_transactions
+        , testProperty
             "ScriptInvalid accepts a sub-transaction failure"
             prop_script_invalid_accepts_sub_transaction_failure
         , testProperty
@@ -155,11 +159,17 @@ tests =
             "ScriptInvalid accepts failures at both levels"
             prop_script_invalid_accepts_failures_at_both_levels
         , testProperty
-            "ScriptInvalid rejects an entirely passing batch"
-            prop_script_invalid_rejects_passing_batch
+            "ScriptInvalid rejects entirely passing scripts"
+            prop_script_invalid_rejects_passing_scripts
         , testProperty
             "legacy top-level re-registers a pool from a sub-transaction"
             prop_legacy_top_level_reregisters_sub_transaction_pool
+        , testProperty
+            "sub-transaction stake deregistration refund contributes to change"
+            prop_sub_transaction_deregistration_refund
+        , testProperty
+            "combined execution budget accepts the exact limit"
+            prop_combined_execution_budget_boundary
         , testProperty "combined execution budget exceeds the limit" prop_combined_execution_budget_rejected
         , testProperty "legacy top-level balances independently" prop_legacy_top_level_balances_independently
         , testProperty
@@ -176,6 +186,13 @@ tests =
             "queries include sub-transaction references and top-level collateral"
             prop_queries_include_sub_transaction_references
         , testProperty "missing sub-transaction input is reported" prop_missing_sub_transaction_input_reported
+        , testProperty
+            "sub-transactions cannot spend the same input"
+            prop_duplicate_sub_transaction_spending_inputs
+        , testProperty
+            "top-level and sub-transaction cannot spend the same input"
+            prop_duplicate_top_level_spending_inputs
+        , testProperty "transactions can share reference inputs" prop_shared_reference_inputs
         , testProperty
             "queries include sub-transaction certificates"
             prop_queries_include_sub_transaction_certificates
@@ -218,11 +235,11 @@ prop_sub_transaction_output_below_minimum_ada_rejected = H.withTests 10 $ H.prop
       genSubTransactionBalanceTestData
         dijkstraTestParams
         (TopLevelTxAmounts $ adaAmounts 20 10)
-        [SubTxAmounts $ TxAmounts (ada 10) (L.MaryValue (L.Coin 1) mempty)]
+        [SubTxAmounts $ TxAmounts (Api.ada 10) (L.MaryValue (L.Coin 1) mempty)]
   case balanceTransactionWithSubTransactions testData of
     Left (Exp.TxBodyErrorMinUTxONotMet (Exp.TxOut out) minimumAda) -> do
       out ^. L.coinTxOutL === L.Coin 1
-      H.assert $ minimumAda > L.Coin 1
+      H.assertWith minimumAda (> L.Coin 1)
     other -> H.annotateShow (fmap fst other) >> H.failure
 
 -- | Legacy Plutus succeeds when the sub-transaction balances independently.
@@ -247,7 +264,7 @@ prop_legacy_top_level_cannot_use_sub_transaction_surplus = H.withTests 10 $ H.pr
         (TopLevelTxAmounts $ adaAmounts 10 20)
         [SubTxAmounts $ adaAmounts 40 10]
   case balanceTransactionWithSubTransactions testData of
-    Left Exp.TxBodyErrorLegacyTopLevelBalance -> pure ()
+    Left (Exp.TxBodyErrorLegacyTopLevelBalance balance) -> balance === Api.ada (-30)
     other -> H.annotateShow (fmap fst other) >> H.failure
 
 -- | The sub-transaction pays the pool deposit; legacy top-level re-registration owes none.
@@ -280,6 +297,39 @@ prop_legacy_top_level_reregisters_sub_transaction_pool = H.withTests 10 $ H.prop
   let fee = tx ^. L.bodyTxL . L.feeTxBodyL
   sum (map (^. L.coinTxOutL) $ toList $ tx ^. L.bodyTxL . L.outputsTxBodyL) <> fee
     === L.Coin 20_000_000
+
+-- | A sub-transaction refunds 2 ada: 20 ada in minus 10 ada out leaves 12 ada minus the fee.
+prop_sub_transaction_deregistration_refund :: Property
+prop_sub_transaction_deregistration_refund = H.withTests 10 $ H.property $ do
+  testData <-
+    H.forAllWith (show . balanceTestUTxO) $
+      genSubTransactionBalanceTestData
+        dijkstraTestParams
+        (TopLevelTxAmounts $ adaAmounts 20 10)
+        []
+  stakeKey <- H.forAll $ genSigningKey Api.AsStakeKey
+  let credential = Api.StakeCredentialByKey $ Api.verificationKeyHash $ Api.getVerificationKey stakeKey
+      certificate =
+        Exp.Certificate $
+          L.DijkstraTxCertDeleg $
+            L.DijkstraUnRegCert (Api.toShelleyStakeCredential credential) (L.Coin 2_000_000)
+  unsigned <-
+    H.evalEither $
+      Exp.makeUnsignedSubTx $
+        Exp.defaultSubTxBodyContent
+          & Exp.setTxCertificates
+            (Exp.mkTxCertificates Exp.DijkstraEra [(certificate, Exp.AnyKeyWitnessPlaceholder)])
+  let signed = Exp.signSubTx [] [Exp.makeSubTxKeyWitness unsigned $ Api.WitnessStakeKey stakeKey] unsigned
+      withRefund =
+        testData
+          { balanceTestTxBodyContent =
+              balanceTestTxBodyContent testData & Exp.setTxSignedSubTransactions [signed]
+          , balanceTestSignedSubTransactions = [signed]
+          , balanceTestSurplus = Api.ada 12
+          }
+  -- Dijkstra carries the refund in the certificate, so no deposit lookup is needed.
+  (Exp.UnsignedTx tx, _) <- H.evalEither $ balanceTransactionWithSubTransactions withRefund
+  assertChangeFeeAndUnchangedSubTransactions withRefund tx
 
 -- | Input queries include the top-level input and both sub-transaction inputs.
 prop_queries_include_sub_transaction_inputs :: Property
@@ -319,7 +369,7 @@ prop_missing_sub_transaction_input_reported = H.withTests 10 $ H.property $ do
   let input = fst missing
       utxo = L.UTxO $ Map.delete (Api.toShelleyTxIn input) $ L.unUTxO $ balanceTestUTxO testData
   case balanceTransactionWithSubTransactions testData{balanceTestUTxO = utxo} of
-    Left (Exp.TxBodyErrorMissingTopLevelInputs inputs) -> inputs === Set.singleton input
+    Left (Exp.TxBodyErrorMissingInputs inputs) -> inputs === Set.singleton input
     other -> H.annotateShow (fmap fst other) >> H.failure
 
 -- | Include a sub-transaction deregistration when querying certificate deposits.
@@ -358,8 +408,8 @@ prop_sub_transaction_budget_contributes_to_fee = H.withTests 10 $ H.property $ d
           & L.bodyTxL . Dijkstra.subTransactionsTxBodyL
             %~ (fromList . map (L.witsTxL . L.rdmrsTxWitsL .~ Alonzo.Redeemers mempty) . toList)
       minimumFee = L.getMinFeeTx dijkstraTestParams tx 0
-  H.assert $ minimumFee > L.getMinFeeTx dijkstraTestParams withoutBudget 0
-  H.assert $ fee >= minimumFee
+  H.assertWith (minimumFee, L.getMinFeeTx dijkstraTestParams withoutBudget 0) (uncurry (>))
+  H.assertWith (fee, minimumFee) (uncurry (>=))
 
 -- | Charge for a reference script used only by a signed sub-transaction.
 prop_sub_transaction_reference_script_contributes_to_fee :: Property
@@ -377,9 +427,9 @@ prop_sub_transaction_reference_script_contributes_to_fee = H.withTests 10 $ H.pr
       referenceSize = txNonDistinctRefScriptsSize utxo sub
       minimumFee = L.getMinFeeTx params tx referenceSize
   txNonDistinctRefScriptsSize utxo tx === 0
-  H.assert $ referenceSize > 0
-  H.assert $ minimumFee > L.getMinFeeTx params tx 0
-  H.assert $ tx ^. L.bodyTxL . L.feeTxBodyL >= minimumFee
+  H.assertWith referenceSize (> 0)
+  H.assertWith (minimumFee, L.getMinFeeTx params tx 0) (uncurry (>))
+  H.assertWith (tx ^. L.bodyTxL . L.feeTxBodyL, minimumFee) (uncurry (>=))
 
 -- | Evaluation charges for a reference script used only by the signed sub-transaction.
 prop_evaluation_includes_sub_transaction_reference_fees :: Property
@@ -395,10 +445,10 @@ prop_evaluation_includes_sub_transaction_reference_fees = H.withTests 10 $ H.pro
       referenceSize = txNonDistinctRefScriptsSize utxo sub
       expectedFee = L.setMinFeeTx params tx referenceSize ^. L.bodyTxL . L.feeTxBodyL
       evaluation = Exp.evaluateTransaction testSystemStart testEpochInfo params mempty mempty utxo tx
-  H.assert $ referenceSize > 0
+  H.assertWith referenceSize (> 0)
   Exp.txEvalFee evaluation === expectedFee
 
--- | Recalculating a balanced batch's fee retains the sub-transaction reference charge and its signed bytes.
+-- | Recalculating a balanced top-level transaction's fee retains the sub-transaction reference charge and its signed bytes.
 prop_recursive_balancing_retains_sub_transaction_reference_fees :: Property
 prop_recursive_balancing_retains_sub_transaction_reference_fees = H.withTests 10 $ H.property $ do
   price <- H.evalMaybe $ L.boundRational 10_000
@@ -411,10 +461,18 @@ prop_recursive_balancing_retains_sub_transaction_reference_fees = H.withTests 10
       utxo = guardUTxO inputs
       Exp.SignedSubTx sub = signedSubTransaction example
       referenceSize = txNonDistinctRefScriptsSize utxo sub
-      recalculate tx = Exp.calcMinFeeRecursive (Api.toShelleyAddr $ testAddress inputs) tx utxo params mempty mempty 0
+      recalculate tx =
+        Exp.calcMinFeeRecursive
+          (Api.toShelleyAddr $ guardTestOutputAddress inputs)
+          tx
+          utxo
+          params
+          mempty
+          mempty
+          0
   balanced@(Exp.UnsignedTx tx) <- H.evalEither $ recalculate unsigned
-  H.assert $ referenceSize > 0
-  H.assert $ tx ^. L.bodyTxL . L.feeTxBodyL >= L.getMinFeeTx params tx referenceSize
+  H.assertWith referenceSize (> 0)
+  H.assertWith (tx ^. L.bodyTxL . L.feeTxBodyL, L.getMinFeeTx params tx referenceSize) (uncurry (>=))
   Exp.txEvalBalance
     (Exp.evaluateTransaction testSystemStart testEpochInfo params mempty mempty utxo tx)
     === mempty
@@ -444,19 +502,35 @@ prop_sub_transaction_reference_fee_encoding_boundary = H.withTests 10 $ H.proper
       withoutReferenceFee = L.setMinFeeTx params tx 0 ^. L.bodyTxL . L.feeTxBodyL
       expectedFee = L.setMinFeeTx params tx referenceSize ^. L.bodyTxL . L.feeTxBodyL
       evaluation = Exp.evaluateTransaction testSystemStart testEpochInfo params mempty mempty utxo tx
-  H.assert $ withoutReferenceFee < L.Coin 65_536 && expectedFee >= L.Coin 65_536
+      assertFee balanced = do
+        let fee = balanced ^. L.bodyTxL . L.feeTxBodyL
+            minimumFee = L.getMinFeeTx params balanced referenceSize
+        txNonDistinctRefScriptsSize utxo balanced === 0
+        H.assertWith (L.getMinFeeTx params balanced 0) (< L.Coin 65_536)
+        H.assertWith minimumFee (>= L.Coin 65_536)
+        H.assertWith (fee, minimumFee) (uncurry (>=))
+        -- Allow the builder's witness and size estimates, but reject a second
+        -- reference-script charge, which would add at least 10,000 lovelace.
+        H.assertWith (fee, minimumFee) $ \(actual, required) -> actual - required < L.Coin 1000
+  H.assertWith referenceSize (> 0)
+  H.assertWith withoutReferenceFee (< L.Coin 65_536)
+  H.assertWith expectedFee (>= L.Coin 65_536)
   Exp.txEvalFee evaluation === expectedFee
+  assertFee $ tx & L.bodyTxL . L.feeTxBodyL .~ Exp.txEvalFee evaluation
+  (Exp.UnsignedTx balanced, _) <- H.evalEither $ balanceScriptCase params example
+  assertFee balanced
+  assertSignedSubTransactionBytesUnchanged example balanced
   Exp.UnsignedTx result <-
     H.evalEither $
       Exp.calcMinFeeRecursive
-        (Api.toShelleyAddr $ testAddress inputs)
+        (Api.toShelleyAddr $ guardTestOutputAddress inputs)
         unsigned
         utxo
         params
         mempty
         mempty
         0
-  H.assert $ result ^. L.bodyTxL . L.feeTxBodyL >= L.getMinFeeTx params result referenceSize
+  assertFee result
   Exp.txEvalBalance
     (Exp.evaluateTransaction testSystemStart testEpochInfo params mempty mempty utxo result)
     === mempty
@@ -472,12 +546,17 @@ prop_sub_transaction_uses_top_level_collateral = H.withTests 10 $ H.property $ d
   let inputs = scriptInputs example
       fee = tx ^. L.bodyTxL . L.feeTxBodyL
       percentage = dijkstraTestParams ^. L.ppCollateralPercentageL
-      required = L.Coin $ (L.unCoin fee * fromIntegral percentage + 99) `div` 100
+      feeTimesPercentage = L.unCoin fee * fromIntegral percentage
   tx ^. L.bodyTxL . L.collateralInputsTxBodyL
     === Set.singleton (Api.toShelleyTxIn $ guardCollateralInput inputs)
-  tx ^. L.bodyTxL . L.totalCollateralTxBodyL === L.SJust required
+  totalCollateral <- H.evalMaybe $ L.strictMaybeToMaybe $ tx ^. L.bodyTxL . L.totalCollateralTxBodyL
+  let collateral = L.unCoin totalCollateral
+  -- The collateral covers the required percentage.
+  H.assertWith (collateral * 100, feeTimesPercentage) $ \(provided, required) -> provided >= required
+  -- One lovelace less would be insufficient.
+  H.assertWith ((collateral - 1) * 100, feeTimesPercentage) $ \(provided, required) -> provided < required
   returned <- H.evalMaybe $ L.strictMaybeToMaybe $ tx ^. L.bodyTxL . L.collateralReturnTxBodyL
-  returned ^. L.coinTxOutL === L.Coin 100_000_000 <> L.invert required
+  returned ^. L.coinTxOutL <> totalCollateral === L.Coin 100_000_000
 
 -- | Reject insufficient top-level collateral when only the sub-transaction runs Plutus.
 prop_sub_transaction_insufficient_collateral_rejected :: Property
@@ -492,20 +571,70 @@ prop_sub_transaction_insufficient_collateral_rejected = H.withTests 10 $ H.prope
             (L.coinTxOutL .~ L.Coin 1)
             (Api.toShelleyTxIn $ guardCollateralInput inputs)
             (L.unUTxO $ guardUTxO inputs)
-  case autoBalanceTestTransaction (testAddress inputs) utxo (scriptTxContent example) of
+  case autoBalanceTestTransaction (guardTestOutputAddress inputs) utxo (scriptTxContent example) of
     Left (Exp.TxBodyErrorCollateral (Api.InsufficientCollateral available required)) -> do
       available === L.Coin 1
-      H.assert $ required > available
+      H.assertWith (required, available) (uncurry (>))
     other -> H.annotateShow (fmap fst other) >> H.failure
 
--- | Reject a signed zero budget; balancing cannot increase it without invalidating the signature.
+-- | Exhaust memory or steps separately while leaving the other resource sufficient.
+-- Require a script-budget failure, not just any sub-transaction validation error.
 prop_insufficient_sub_transaction_budget_rejected :: Property
 prop_insufficient_sub_transaction_budget_rejected = H.withTests 10 $ H.property $ do
+  let budgets =
+        [ ("memory", sufficientGuardBudget{Api.executionMemory = 0}, "mem: -")
+        , ("steps", sufficientGuardBudget{Api.executionSteps = 0}, "cpu: -")
+        ]
+  forM_ budgets $ \(resource, budget, exhaustedResource) -> do
+    H.annotate $ "Only " <> resource <> " is insufficient in the signed budget:"
+    H.annotateShow budget
+    example <-
+      H.forAllWith (show . scriptInputs) $
+        genScriptBalanceCase dijkstraTestParams ScriptWitness budget
+    case balanceScriptCase dijkstraTestParams example of
+      Left
+        err@(Exp.TxBodyErrorTopLevelScriptFailures ((source, Api.ScriptErrorEvaluationFailed details) :| [])) -> do
+          source === Exp.SubTransaction (Exp.getSignedSubTxId $ signedSubTransaction example)
+          Api.dpfExecutionUnits details === Api.toAlonzoExUnits budget
+          let Exp.SignedSubTx sub = signedSubTransaction example
+          Map.keys (sub ^. L.witsTxL . L.scriptTxWitsL)
+            === [Plutus.pwcScriptHash $ Api.dpfScriptWithContext details]
+          let reason = Api.prettyShow $ Api.dpfEvaluationError details
+          H.assertWith reason ("due to overspending the budget" `List.isInfixOf`)
+          H.assertWith reason (exhaustedResource `List.isInfixOf`)
+          let rendered = Api.displayError err
+          H.assertWith
+            rendered
+            (Api.prettyShow (Exp.getSignedSubTxId $ signedSubTransaction example) `List.isInfixOf`)
+          H.assertWith rendered (not . List.isInfixOf "pwcCostModel")
+      other -> H.annotateShow (fmap fst other) >> H.failure
+
+-- | Two failing sub-transactions report their own IDs and script contexts.
+prop_script_failures_identify_sub_transactions :: Property
+prop_script_failures_identify_sub_transactions = H.withTests 10 $ H.property $ do
   example <-
     H.forAllWith (show . scriptInputs) $
       genScriptBalanceCase dijkstraTestParams ScriptWitness (Api.ExecutionUnits 0 0)
-  assertRejectsInvalidSubTransactionScript $
-    balancePlutusGuardTransaction (scriptInputs example) (scriptTxContent example)
+  let inputs = scriptInputs example
+  second <-
+    H.forAll $
+      genSignedSubTransaction $
+        guardSubTxBodyContent inputs
+          & Exp.setTxIns [(guardReferenceInput inputs, Exp.AnyKeyWitnessPlaceholder)]
+          & Exp.setTxGuards (scriptCaseGuards example)
+  let signed = [signedSubTransaction example, second]
+      content = scriptTxContent example & Exp.setTxSignedSubTransactions signed
+  case balancePlutusGuardTransaction inputs content of
+    Left (Exp.TxBodyErrorTopLevelScriptFailures failures) -> do
+      map fst (toList failures) === map (Exp.SubTransaction . Exp.getSignedSubTxId) signed
+      forM_ (zip signed $ toList failures) $ \(Exp.SignedSubTx sub, (_, failure)) ->
+        case failure of
+          Api.ScriptErrorEvaluationFailed details -> do
+            Api.dpfExecutionUnits details === L.ExUnits 0 0
+            Map.keys (sub ^. L.witsTxL . L.scriptTxWitsL)
+              === [Plutus.pwcScriptHash $ Api.dpfScriptWithContext details]
+          other -> H.annotateShow other >> H.failure
+    other -> H.annotateShow (fmap fst other) >> H.failure
 
 -- | ScriptInvalid accepts a signed sub-transaction that exhausts its unchanged zero budget.
 prop_script_invalid_accepts_sub_transaction_failure :: Property
@@ -540,8 +669,8 @@ prop_script_invalid_accepts_failures_at_both_levels = H.withTests 10 $ H.propert
   assertScriptInvalidBalancesWithUnchangedSubTransaction example
 
 -- | ScriptInvalid is rejected when both the top-level guard and signed sub-transaction pass.
-prop_script_invalid_rejects_passing_batch :: Property
-prop_script_invalid_rejects_passing_batch = H.withTests 10 $ H.property $ do
+prop_script_invalid_rejects_passing_scripts :: Property
+prop_script_invalid_rejects_passing_scripts = H.withTests 10 $ H.property $ do
   example <-
     H.forAllWith (show . scriptInputs) $
       genTopLevelGuardCase dijkstraTestParams ScriptWitness sufficientGuardBudget
@@ -560,6 +689,54 @@ assertScriptInvalidBalancesWithUnchangedSubTransaction example = do
     === Set.singleton (Api.toShelleyTxIn $ guardCollateralInput $ scriptInputs example)
   assertSignedSubTransactionBytesUnchanged example tx
 
+-- | Accept the combined budget at the limit; reject a limit one unit lower.
+-- Check memory and steps separately, preserving the signed sub-transaction.
+prop_combined_execution_budget_boundary :: Property
+prop_combined_execution_budget_boundary = H.withTests 10 $ H.property $ do
+  example <-
+    H.forAllWith (show . scriptInputs) $
+      genTopLevelGuardCase dijkstraTestParams ScriptWitness sufficientGuardBudget
+  (Exp.UnsignedTx measured, _) <- H.evalEither $ balanceScriptCase dijkstraTestParams example
+  -- Measure only top-level redeemers, then add the budget signed by the sub-transaction.
+  let topUnits = foldMap snd $ L.unRedeemers $ measured ^. L.witsTxL . L.rdmrsTxWitsL
+      signedUnits = Api.toAlonzoExUnits sufficientGuardBudget
+      combined = topUnits <> signedUnits
+      maxUnits = dijkstraTestParams ^. L.ppMaxTxExUnitsL
+      limits =
+        [
+          ( "memory"
+          , maxUnits{L.exUnitsMem = L.exUnitsMem combined}
+          , maxUnits{L.exUnitsMem = L.exUnitsMem combined - 1}
+          )
+        ,
+          ( "steps"
+          , maxUnits{L.exUnitsSteps = L.exUnitsSteps combined}
+          , maxUnits{L.exUnitsSteps = L.exUnitsSteps combined - 1}
+          )
+        ]
+  H.annotate "Measured top-level budget:"
+  H.annotateShow topUnits
+  H.assertWith topUnits $ \units -> L.exUnitsMem units > 0 && L.exUnitsSteps units > 0
+  H.annotate "Signed sub-transaction budget:"
+  H.annotateShow signedUnits
+  forM_ limits $ \(name, exactLimit, lowerLimit) -> do
+    H.annotate name
+    H.annotate "The combined budget must be accepted at this limit:"
+    H.annotateShow exactLimit
+    let exactParams = dijkstraTestParams & L.ppMaxTxExUnitsL .~ exactLimit
+        lowerParams = dijkstraTestParams & L.ppMaxTxExUnitsL .~ lowerLimit
+    (Exp.UnsignedTx tx, _) <- H.evalEither $ balanceScriptCase exactParams example
+    foldMap snd (L.unRedeemers $ tx ^. L.witsTxL . L.rdmrsTxWitsL) === topUnits
+    assertSignedSubTransactionBytesUnchanged example tx
+    H.annotate
+      "The same top-level transaction and its sub-transactions must exceed this limit by exactly one unit:"
+    H.annotateShow lowerLimit
+    case balanceScriptCase lowerParams example of
+      Left (Exp.TxBodyErrorTopLevelExecutionUnitsTooBig used maximumAllowed) -> do
+        used === Api.fromAlonzoExUnits combined
+        maximumAllowed === Api.fromAlonzoExUnits lowerLimit
+      other -> H.annotateShow (fmap fst other) >> H.failure
+
 -- | Each script fits by itself, but top-level plus sub-transaction budgets exceed memory or steps.
 prop_combined_execution_budget_rejected :: Property
 prop_combined_execution_budget_rejected = H.withTests 10 $ H.property $ do
@@ -573,15 +750,20 @@ prop_combined_execution_budget_rejected = H.withTests 10 $ H.property $ do
         [ ("memory", maxUnits{L.exUnitsMem = L.exUnitsMem signedUnits})
         , ("steps", maxUnits{L.exUnitsSteps = L.exUnitsSteps signedUnits})
         ]
+      inputs = scriptInputs example
+  (Exp.UnsignedTx measured, _) <-
+    H.evalEither $
+      autoBalanceTestTransaction (guardTestOutputAddress inputs) (guardUTxO inputs) withTopGuard
+  let topUnits = foldMap snd $ L.unRedeemers $ measured ^. L.witsTxL . L.rdmrsTxWitsL
+      combined = topUnits <> signedUnits
   forM_ limits $ \(name, limit) -> do
     H.annotate name
     let params = dijkstraTestParams & L.ppMaxTxExUnitsL .~ limit
-        inputs = scriptInputs example
     _ <- H.evalEither $ balanceScriptCase params example
-    case autoBalanceWithParams params (testAddress inputs) (guardUTxO inputs) withTopGuard of
-      Left (Exp.TxBodyErrorNestedScripts reason) ->
-        reason
-          === "The top-level transaction and its sub-transactions exceed the maximum transaction execution budget."
+    case autoBalanceWithParams params (guardTestOutputAddress inputs) (guardUTxO inputs) withTopGuard of
+      Left (Exp.TxBodyErrorTopLevelExecutionUnitsTooBig used maximumAllowed) -> do
+        used === Api.fromAlonzoExUnits combined
+        maximumAllowed === Api.fromAlonzoExUnits limit
       other -> H.annotateShow (fmap fst other) >> H.failure
 
 -- | Reject a Plutus V3 withdrawal inside a sub-transaction under either script-validity flag.
@@ -596,9 +778,10 @@ prop_legacy_plutus_in_sub_transaction_rejected = H.withTests 10 $ H.property $ d
         guardSubTxBodyContent inputs & Exp.setTxWithdrawals withdrawal
   forM_ [Api.ScriptValid, Api.ScriptInvalid] $ \validity -> do
     H.annotateShow validity
-    assertRejectsInvalidSubTransactionScript $
-      balancePlutusGuardTransaction inputs $
-        topLevelTxBodyContentWithSignedSubTransaction inputs signed & Exp.setTxScriptValidity validity
+    let content = topLevelTxBodyContentWithSignedSubTransaction inputs signed & Exp.setTxScriptValidity validity
+    case balancePlutusGuardTransaction inputs content of
+      Left (Exp.TxBodyErrorTopLevelScriptContexts (L.BadTranslation{} :| [])) -> pure ()
+      other -> H.annotateShow (fmap fst other) >> H.failure
 
 -- | Both evaluation APIs evaluate the top-level V4 guard with signed sub-transactions present.
 prop_top_level_guard_evaluates_with_sub_transactions :: Property
@@ -658,7 +841,11 @@ balanceScriptCase
   -> DijkstraBalanceResult
 balanceScriptCase params example =
   let inputs = scriptInputs example
-   in autoBalanceWithParams params (testAddress inputs) (guardUTxO inputs) (scriptTxContent example)
+   in autoBalanceWithParams
+        params
+        (guardTestOutputAddress inputs)
+        (guardUTxO inputs)
+        (scriptTxContent example)
 
 -- | Require exactly the original signed sub-transaction, comparing serialized bytes.
 -- This checks its body, witnesses and signed execution budgets.
@@ -670,14 +857,6 @@ assertSignedSubTransactionBytesUnchanged example tx =
     (toList $ tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL)
     === [Api.serialiseToCBOR $ signedSubTransaction example]
 
--- | Accept only 'Exp.TxBodyErrorNestedScripts' from signed sub-transaction validation.
--- Both insufficient signed budgets and unsupported script languages use this error.
--- A successful balance or any other error fails this assertion.
-assertRejectsInvalidSubTransactionScript :: DijkstraBalanceResult -> H.PropertyT IO ()
-assertRejectsInvalidSubTransactionScript result = case result of
-  Left Exp.TxBodyErrorNestedScripts{} -> pure ()
-  other -> H.annotateShow (fmap fst other) >> H.failure
-
 evaluateGuards
   :: L.UTxO (Exp.LedgerEra Exp.DijkstraEra)
   -> L.Tx L.TopTx (Exp.LedgerEra Exp.DijkstraEra)
@@ -685,8 +864,8 @@ evaluateGuards
        Api.ScriptWitnessIndex
        (Either Api.ScriptExecutionError Api.ExecutionUnits)
 evaluateGuards utxo tx =
-  fmap (fmap snd) $
-    Exp.evaluateTransactionExecutionUnits testSystemStart testEpochInfo dijkstraTestParams utxo tx
+  fmap snd
+    <$> Exp.evaluateTransactionExecutionUnits testSystemStart testEpochInfo dijkstraTestParams utxo tx
 
 -- | Require a successful result only at top-level guard index zero, with positive
 -- memory and step costs matching those reported by 'Exp.evaluateTransaction'.
@@ -701,7 +880,7 @@ assertTopLevelGuardEvaluates inputs tx = do
       index = Api.ScriptWitnessIndexGuarding 0
   Map.keys report === [index]
   measured <- H.evalEither =<< H.evalMaybe (Map.lookup index report)
-  H.assert $ Api.executionSteps measured > 0 && Api.executionMemory measured > 0
+  H.assertWith measured $ \units -> Api.executionSteps units > 0 && Api.executionMemory units > 0
   let evaluation = Exp.evaluateTransaction testSystemStart testEpochInfo dijkstraTestParams mempty mempty utxo tx
   (_, evaluated) <-
     H.evalEither =<< H.evalMaybe (Map.lookup index $ Exp.txEvalExecutionUnits evaluation)
@@ -728,13 +907,96 @@ topLevelTxBodyContentWithSignedSubTransaction testInputs signed =
     & Exp.setTxSignedSubTransactions [signed]
     & Exp.setTxProtocolParams dijkstraTestParams
 
--- | Balance a Plutus V4 script guard transaction using 'guardUTxO' and 'testAddress'.
+-- | Balance a Plutus V4 script guard transaction using 'guardUTxO' and 'guardTestOutputAddress'.
 balancePlutusGuardTransaction
   :: PlutusV4ReferenceScriptGuardTestInputs
   -> Exp.TxBodyContent (Exp.LedgerEra Exp.DijkstraEra)
   -> DijkstraBalanceResult
-balancePlutusGuardTransaction testInputs = autoBalanceTestTransaction (testAddress testInputs) (guardUTxO testInputs)
+balancePlutusGuardTransaction testInputs = autoBalanceTestTransaction (guardTestOutputAddress testInputs) (guardUTxO testInputs)
 
 -- | Sufficient Plutus V4 script budget, set before signing a sub-transaction.
 sufficientGuardBudget :: Api.ExecutionUnits
 sufficientGuardBudget = Api.ExecutionUnits{Api.executionSteps = 1_000_000_000, Api.executionMemory = 1_000_000}
+
+-- | Reject two signed sub-transactions that spend the same UTxO entry.
+-- Report only their shared input; the top-level spending input is distinct.
+prop_duplicate_sub_transaction_spending_inputs :: Property
+prop_duplicate_sub_transaction_spending_inputs = H.withTests 10 $ H.property $ do
+  testData <-
+    H.forAllWith (show . balanceTestUTxO) $
+      genSubTransactionBalanceTestData
+        dijkstraTestParams
+        (TopLevelTxAmounts $ adaAmounts 100 10)
+        [SubTxAmounts $ adaAmounts 100 10]
+  (input, _) <- H.evalMaybe $ List.uncons (balanceTestSubTxInputs testData)
+  -- 'input' is already spent by the first sub-transaction. Spend it again in
+  -- a different body, distinguished here by having no outputs.
+  signed <-
+    H.forAllWith (const "<signed sub-transaction>") $
+      genSignedSubTransaction $
+        Exp.defaultSubTxBodyContent
+          & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder)]
+  let content =
+        balanceTestTxBodyContent testData
+          & Exp.setTxSignedSubTransactions (balanceTestSignedSubTransactions testData <> [signed])
+  H.annotate "The top-level spending input is separate and must not be reported:"
+  H.annotateShow $ balanceTestTopLevelInput testData
+  H.annotate "Both signed sub-transactions spend this input:"
+  H.annotateShow input
+  H.annotate
+    "Expected TxBodyErrorDuplicateSpendingInputs containing only the shared sub-transaction input."
+  case autoBalanceTestTransaction (balanceTestAddress testData) (balanceTestUTxO testData) content of
+    Left (Exp.TxBodyErrorDuplicateSpendingInputs inputs) -> inputs === Set.singleton input
+    other -> H.annotateShow (fmap fst other) >> H.failure
+
+-- | Report every input spent by both the top level and a signed sub-transaction.
+-- Exclude the original top-level input, which is spent only once.
+prop_duplicate_top_level_spending_inputs :: Property
+prop_duplicate_top_level_spending_inputs = H.withTests 10 $ H.property $ do
+  testData <-
+    H.forAllWith (show . balanceTestUTxO) $
+      genSubTransactionBalanceTestData
+        dijkstraTestParams
+        (TopLevelTxAmounts $ adaAmounts 100 10)
+        [SubTxAmounts $ adaAmounts 100 10, SubTxAmounts $ adaAmounts 100 10]
+  -- Adding 'balanceTestSubTxInputs' here makes those two inputs duplicates:
+  -- each is already spent by a signed sub-transaction.
+  let content =
+        balanceTestTxBodyContent testData
+          & Exp.setTxIns
+            [ (input, Exp.AnyKeyWitnessPlaceholder)
+            | input <- balanceTestTopLevelInput testData : balanceTestSubTxInputs testData
+            ]
+  H.annotate "Top-level spending inputs after adding both sub-transaction inputs:"
+  H.annotateShow $ map fst $ Exp.txIns content
+  H.annotate "Inputs still spent by the signed sub-transactions, one input per body:"
+  H.annotateShow $ balanceTestSubTxInputs testData
+  H.annotate
+    "Expected TxBodyErrorDuplicateSpendingInputs containing both sub-transaction inputs and excluding the original top-level input."
+  case autoBalanceTestTransaction (balanceTestAddress testData) (balanceTestUTxO testData) content of
+    Left (Exp.TxBodyErrorDuplicateSpendingInputs inputs) -> inputs === Set.fromList (balanceTestSubTxInputs testData)
+    other -> H.annotateShow (fmap fst other) >> H.failure
+
+prop_shared_reference_inputs :: Property
+prop_shared_reference_inputs = H.withTests 10 $ H.property $ do
+  example <-
+    H.forAllWith (show . scriptInputs) $
+      genScriptBalanceCase dijkstraTestParams ReferenceScript sufficientGuardBudget
+  let inputs = scriptInputs example
+      content =
+        scriptTxContent example
+          & Exp.setTxInsReference (Exp.TxInsReference [guardReferenceInput inputs] Set.empty)
+  (Exp.UnsignedTx tx, _) <-
+    H.evalEither $ autoBalanceTestTransaction (guardTestOutputAddress inputs) (guardUTxO inputs) content
+  assertSignedSubTransactionBytesUnchanged example tx
+  Exp.txEvalBalance
+    ( Exp.evaluateTransaction
+        testSystemStart
+        testEpochInfo
+        dijkstraTestParams
+        mempty
+        mempty
+        (guardUTxO inputs)
+        tx
+    )
+    === mempty

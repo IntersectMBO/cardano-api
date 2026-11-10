@@ -23,6 +23,7 @@ module Test.Cardano.Api.Experimental.Fee.NativeAssets
   )
 where
 
+import Cardano.Api (ada)
 import Cardano.Api.Ledger qualified as L
 
 import Cardano.Ledger.Hashes qualified as L (ScriptHash (..))
@@ -30,21 +31,19 @@ import Cardano.Ledger.Mary.Value qualified as Mary
 
 import Data.Map.Strict qualified as Map
 
-import Test.Gen.Cardano.Api.Experimental.SubTransaction
+import Test.Cardano.Api.Experimental.Fee.Common
+  ( adaAmounts
+  , assertBalancesWithExpectedChange
+  , assertRejectsInsufficientFunds
+  , dijkstraTestParams
+  )
+import Test.Cardano.Api.Experimental.Fee.Gen.SubTransaction
   ( SubTransactionBalanceTestData (..)
   , SubTxAmounts (..)
   , TopLevelTxAmounts (..)
   , TxAmounts (..)
   , genAdaAmount
   , genSubTransactionBalanceTestData
-  )
-
-import Test.Cardano.Api.Experimental.Fee.Common
-  ( ada
-  , adaAmounts
-  , assertBalancesWithExpectedChange
-  , assertRejectsInsufficientFunds
-  , dijkstraTestParams
   )
 
 import Hedgehog (Property)
