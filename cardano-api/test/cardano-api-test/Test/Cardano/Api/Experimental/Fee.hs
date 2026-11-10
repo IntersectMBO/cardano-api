@@ -65,13 +65,6 @@ import Data.Time.Clock.POSIX qualified as Time
 import GHC.Exts (IsList (..))
 import Lens.Micro
 
-import Test.Gen.Cardano.Api.Experimental.Guard
-  ( PlutusV4ReferenceScriptGuardTestInputs (..)
-  , alwaysSucceedsGuardScript
-  , genPlutusGuardsWithReferenceScripts
-  , genPlutusGuardsWithScriptWitnesses
-  , genPlutusV4ReferenceScriptGuardTestInputs
-  )
 import Test.Gen.Cardano.Api.Typed
   ( genAddressInEra
   , genExecutionUnits
@@ -88,6 +81,13 @@ import Test.Cardano.Api.Experimental (exampleProtocolParams, exampleProtocolPara
 import Test.Cardano.Api.Experimental.Fee.Ada qualified as Ada
 import Test.Cardano.Api.Experimental.Fee.Common (autoBalanceTestTransaction, dijkstraTestParams)
 import Test.Cardano.Api.Experimental.Fee.Constraints qualified as Constraints
+import Test.Cardano.Api.Experimental.Fee.Gen.Guard
+  ( PlutusV4ReferenceScriptGuardTestInputs (..)
+  , alwaysSucceedsGuardScript
+  , genPlutusGuardsWithReferenceScripts
+  , genPlutusGuardsWithScriptWitnesses
+  , genPlutusV4ReferenceScriptGuardTestInputs
+  )
 import Test.Cardano.Api.Experimental.Fee.NativeAssets qualified as NativeAssets
 import Test.Cardano.Api.Transaction.Fixtures (mkTxIn)
 
@@ -1926,7 +1926,7 @@ prop_guard_with_script_witness = H.withTests 10 $ H.property $ do
   let txBodyContent = guardTopLevelTxBodyContent testInputs & Exp.setTxGuards guards
   (Exp.UnsignedTx tx, _) <-
     H.evalEither $
-      autoBalanceTestTransaction (testAddress testInputs) (guardUTxO testInputs) txBodyContent
+      autoBalanceTestTransaction (guardTestOutputAddress testInputs) (guardUTxO testInputs) txBodyContent
   assertEvaluatedGuard redeemer testInputs tx
   -- Keep the Plutus V4 script in the transaction witnesses; add no reference input.
   Map.size (tx ^. L.witsTxL . L.scriptTxWitsL) === 1
@@ -1946,7 +1946,7 @@ prop_guard_with_reference_script = H.withTests 10 $ H.property $ do
           & Exp.setTxInsReference (Exp.TxInsReference [guardReferenceInput testInputs] Set.empty)
   (Exp.UnsignedTx tx, _) <-
     H.evalEither $
-      autoBalanceTestTransaction (testAddress testInputs) (guardUTxO testInputs) txBodyContent
+      autoBalanceTestTransaction (guardTestOutputAddress testInputs) (guardUTxO testInputs) txBodyContent
   assertEvaluatedGuard redeemer testInputs tx
   -- Keep the Plutus V4 reference input without copying its script into the witnesses.
   Map.size (tx ^. L.witsTxL . L.scriptTxWitsL) === 0

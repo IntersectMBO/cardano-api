@@ -1,11 +1,9 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | Shared inputs, protocol parameters and assertions for sub-transaction balancing tests.
 module Test.Cardano.Api.Experimental.Fee.Common
   ( DijkstraBalanceResult
-  , ada
   , adaAmounts
   , assertChangeFeeAndUnchangedSubTransactions
   , autoBalanceTestTransaction
@@ -36,15 +34,15 @@ import Data.Time.Clock.POSIX qualified as Time
 import GHC.Exts (IsList (..))
 import Lens.Micro
 
-import Test.Gen.Cardano.Api.Experimental.SubTransaction
+import Test.Cardano.Api.Experimental (exampleProtocolParamsEra)
+import Test.Cardano.Api.Experimental.Fee.Gen.SubTransaction
   ( SubTransactionBalanceTestData (..)
   , TxAmounts (..)
   )
 
-import Test.Cardano.Api.Experimental (exampleProtocolParamsEra)
-
 import Hedgehog ((===))
 import Hedgehog qualified as H
+import Hedgehog.Extras qualified as H
 
 -- | Auto-balancing error, or the balanced transaction and updated TxBodyContent.
 type DijkstraBalanceResult =
@@ -96,10 +94,7 @@ testEpochInfo =
 
 -- | Input and requested output amounts, expressed in ada.
 adaAmounts :: Integer -> Integer -> TxAmounts
-adaAmounts supplied requested = TxAmounts (ada supplied) (ada requested)
-
-ada :: Integer -> L.MaryValue
-ada amount = L.MaryValue (L.Coin $ amount * 1_000_000) mempty
+adaAmounts supplied requested = TxAmounts (Api.ada supplied) (Api.ada requested)
 
 -- | Balance the generated transaction, requiring:
 --
@@ -157,5 +152,4 @@ assertChangeFeeAndUnchangedSubTransactions testData tx = do
   Exp.txEvalBalance evaluation === mempty
   let minimumFee = L.calcMinFeeTx utxo dijkstraTestParams tx 0
   H.annotate "The returned fee must cover the ledger minimum for the resulting transaction."
-  H.annotateShow (fee, minimumFee)
-  H.assert $ fee >= minimumFee
+  H.assertWith (fee, minimumFee) (uncurry (>=))

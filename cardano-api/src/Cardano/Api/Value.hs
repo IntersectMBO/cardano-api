@@ -31,6 +31,7 @@ module Cardano.Api.Value
 
     -- ** Ada \/ L.Coin specifically
   , Lovelace
+  , ada
   , quantityToLovelace
   , lovelaceToQuantity
   , selectLovelace

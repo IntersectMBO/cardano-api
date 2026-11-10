@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NumericUnderscores #-}
 
-module Test.Gen.Cardano.Api.Experimental.SubTransaction
+module Test.Cardano.Api.Experimental.Fee.Gen.SubTransaction
   ( TxAmounts (..)
   , TopLevelTxAmounts (..)
   , SubTxAmounts (..)

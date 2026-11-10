@@ -28,19 +28,18 @@ module Test.Cardano.Api.Experimental.Fee.Ada
   )
 where
 
-import Test.Gen.Cardano.Api.Experimental.SubTransaction
-  ( SubTransactionBalanceTestData (..)
-  , SubTxAmounts (..)
-  , TopLevelTxAmounts (..)
-  , genAdaAmount
-  , genSubTransactionBalanceTestData
-  )
-
 import Test.Cardano.Api.Experimental.Fee.Common
   ( adaAmounts
   , assertBalancesWithExpectedChange
   , assertRejectsInsufficientFunds
   , dijkstraTestParams
+  )
+import Test.Cardano.Api.Experimental.Fee.Gen.SubTransaction
+  ( SubTransactionBalanceTestData (..)
+  , SubTxAmounts (..)
+  , TopLevelTxAmounts (..)
+  , genAdaAmount
+  , genSubTransactionBalanceTestData
   )
 
 import Hedgehog (Property)

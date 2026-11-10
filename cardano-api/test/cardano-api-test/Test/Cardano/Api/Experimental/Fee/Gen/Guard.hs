@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | Generators for Plutus V4 script guard balancing tests.
--- Generate funding, collateral and reference-script outputs at 'testAddress'.
+-- Generate funding, collateral and reference-script outputs at 'guardTestOutputAddress'.
 -- Plutus V4 script guards apply to the transaction or sub-transaction, not that address.
 --
 -- 'genPlutusGuardsWithScriptWitnesses' supplies the Plutus V4 script directly;
@@ -13,7 +13,7 @@
 --
 -- 'genLegacyWithdrawal' generates a zero-valued Plutus V3 withdrawal to test
 -- language restrictions without adding funds.
-module Test.Gen.Cardano.Api.Experimental.Guard
+module Test.Cardano.Api.Experimental.Fee.Gen.Guard
   ( PlutusV4ReferenceScriptGuardTestInputs (..)
   , genPlutusV4ReferenceScriptGuardTestInputs
   , alwaysSucceedsGuardScript
@@ -52,14 +52,15 @@ import Data.Set qualified as Set
 import Lens.Micro
 
 import Test.Gen.Cardano.Api.Experimental (genSignedSubTransaction)
-import Test.Gen.Cardano.Api.Experimental.SubTransaction
+import Test.Gen.Cardano.Api.Typed (genAddressInEra, genHashableScriptData, genTxIn)
+
+import Test.Cardano.Api.Experimental.Fee.Gen.SubTransaction
   ( SubTransactionBalanceTestData (..)
   , SubTxAmounts (..)
   , TopLevelTxAmounts (..)
   , TxAmounts (..)
   , genSubTransactionBalanceTestData
   )
-import Test.Gen.Cardano.Api.Typed (genAddressInEra, genHashableScriptData, genTxIn)
 
 import Hedgehog (Gen)
 import Hedgehog.Gen.QuickCheck qualified as Q
@@ -72,7 +73,7 @@ data PlutusV4ReferenceScriptGuardTestInputs = PlutusV4ReferenceScriptGuardTestIn
   -- ^ Separate input available as collateral for the top-level transaction.
   , guardReferenceInput :: Api.TxIn
   -- ^ Input whose output carries the script supplied to the generator.
-  , testAddress :: Api.AddressInEra Api.DijkstraEra
+  , guardTestOutputAddress :: Api.AddressInEra Api.DijkstraEra
   -- ^ Output and change address; Plutus V4 script guards apply to transactions, not this address.
   , guardUTxO :: L.UTxO (Exp.LedgerEra Exp.DijkstraEra)
   -- ^ Resolved outputs for all three inputs, each containing 100 ada.
