@@ -1,0 +1,5 @@
+project: cardano-rpc
+pr: 1412
+kind:
+- feature
+description: Make the library of generated protobuf types public as `cardano-rpc:gen` and buildable for wasm32, where it includes its own `google.protobuf.Empty` and `FieldMask` modules instead of depending on `proto-lens-protobuf-types`.
