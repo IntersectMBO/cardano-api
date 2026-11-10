@@ -54,6 +54,7 @@ library cardano-wasi-lib
     cardano-api,
     cardano-crypto-class,
     cardano-ledger-api,
+    cardano-rpc:gen,
     cardano-strict-containers,
     casing,
     containers,
@@ -169,6 +170,9 @@ test-suite cardano-wasm-test
   if !arch(wasm32)
     import: project-config
     build-depends:
+      aeson,
+      base16-bytestring,
+      bytestring,
       cardano-rpc:gen,
       cardano-wasm:cardano-wasi-lib,
       hedgehog >=1.1,

@@ -115,6 +115,7 @@ in
         echo "Adding module '$MODULE_NAME' from './$RELATIVE_PATH' to browser bundle."
         echo "exports.$MODULE_NAME = require('./$RELATIVE_PATH');" >> "$BROWSER_ENTRYPOINT_FILE"
       done
+      echo "exports.grpcWeb = require('grpc-web');" >> "$BROWSER_ENTRYPOINT_FILE"
 
       echo "--- Setting up node_modules for browserify ---"
       ln -s ${node-deps}/node_modules ./node_modules
