@@ -1,0 +1,9 @@
+project: cardano-rpc
+pr: 1397
+kind:
+  - bugfix
+  - breaking
+description: |
+  The gRPC server now rejects a `start_token` in the UTxO RPC `SearchUtxos` method that is not a token returned by an earlier page, with the gRPC status `INVALID_ARGUMENT`. Previously such a token was silently ignored and the results restarted from the first page. An absent or empty `start_token` still returns the first page.
+
+  For library users, `paginateByTxIn` in `Cardano.Rpc.Server.Internal.UtxoRpc.Query` now takes the parsed cursor (`Maybe TxIn`) instead of the raw token; parse the request's `start_token` with `parseStartToken`.
