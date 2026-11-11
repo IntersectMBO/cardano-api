@@ -6,8 +6,16 @@ on:
       - master
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    permissions:
+      actions: read  # download the wasm demo artifact from another workflow
+      contents: write  # push to gh-pages
+      issues: write  # open/update the dead-link tracking issue
+      pull-requests: read  # identify the PR associated with the failing commit
     runs-on: ubuntu-latest
 
     defaults:
