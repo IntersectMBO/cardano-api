@@ -93,21 +93,21 @@ jobs:
         echo "$clt_sdk -> $(readlink "$clt_sdk")"
 
     - name: Install Haskell
-      uses: input-output-hk/actions/haskell@latest
+      uses: input-output-hk/actions/haskell@fc5641d3c3a9d5941bbad5a623236d799b521d9f # latest
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
     - name: Install system dependencies
-      uses: input-output-hk/actions/base@latest
+      uses: input-output-hk/actions/base@fc5641d3c3a9d5941bbad5a623236d799b521d9f # latest
       with:
         use-sodium-vrf: true # default is true
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
     - name: Install gRPC system dependencies
-      uses: input-output-hk/cardano-dev/actions/grpc-deps@grpc-deps-0.1.0.0
+      uses: input-output-hk/cardano-dev/actions/grpc-deps@7bd271fb5d71f95250fc82bf433605b787dad3d4 # grpc-deps-0.1.0.0
 
     - name: Cache and install Cabal dependencies
       uses: input-output-hk/cardano-dev/actions/cabal-cache@c7427b0921301778971d96b20ab234e8c34aedc3 # cabal-cache-0.0.1.2
@@ -164,14 +164,14 @@ jobs:
   check-proto-gen:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@91f6a0f59e94dfb2cfed0f4000f36a68ead1d20c # v31.11.4
         with:
           extra_nix_config: |
             accept-flake-config = true
 
-      - uses: rrbutani/use-nix-shell-action@v1
+      - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1.1.0
 
       - name: Regenerate protobuf code
         working-directory: cardano-rpc

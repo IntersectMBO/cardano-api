@@ -54,9 +54,9 @@ jobs:
           g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
       run: echo "$GROUP"
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
-    - uses: cachix/install-nix-action@v31
+    - uses: cachix/install-nix-action@91f6a0f59e94dfb2cfed0f4000f36a68ead1d20c # v31.11.4
       with:
         extra_nix_config: |
           accept-flake-config = true
@@ -84,7 +84,7 @@ jobs:
           }
         fi
 
-    - uses: rrbutani/use-nix-shell-action@v1
+    - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1.1.0
       with:
         devShell: .#wasm
 
@@ -182,7 +182,7 @@ jobs:
         npx webpack serve --port 8081 &
         cd ../../..
 
-    - uses: rrbutani/use-nix-shell-action@v1
+    - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1.1.0
       with:
         devShell: .#playwright
 
@@ -230,7 +230,7 @@ jobs:
         node node.test.js
         cd -
 
-    - uses: rrbutani/use-nix-shell-action@v1
+    - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1.1.0
       with:
         devShell: .#demo
 
