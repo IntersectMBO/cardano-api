@@ -14,8 +14,9 @@ import Cardano.Api.IO.Internal.Compat.Posix
 import Cardano.Api.IO.Internal.Compat.Wasm
 import Cardano.Api.IO.Internal.Compat.Win32
 
-import Control.Monad.Except (ExceptT)
+import Control.Monad.Except (ExceptT, runExceptT)
 import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Trans.Except.Extra (handleIOExceptT)
 import Data.ByteString (ByteString)
 import GHC.Stack (HasCallStack)
 import System.IO
@@ -25,6 +26,8 @@ handleFileForWritingWithOwnerPermission
   => FilePath
   -> (Handle -> IO ())
   -> m (Either (FileError e) ())
+handleFileForWritingWithOwnerPermission "-" f =
+  liftIO . runExceptT . handleIOExceptT (FileIOError "-") $ f stdout
 handleFileForWritingWithOwnerPermission path f =
   liftIO $ handleFileForWritingWithOwnerPermissionImpl path f
 
