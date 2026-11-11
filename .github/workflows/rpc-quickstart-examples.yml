@@ -88,13 +88,15 @@ jobs:
         with:
           persist-credentials: false
 
-      # `accept-flake-config` is a global setting, so it also covers the
-      # `nix run` of cardano-node below and lets that flake's own
-      # cache.iog.io substituter apply.
+      # These settings mirror this flake's nixConfig. They are global, so
+      # they also cover the `nix run` of cardano-node below, whose flake
+      # uses the same cache.iog.io substituter.
       - uses: cachix/install-nix-action@91f6a0f59e94dfb2cfed0f4000f36a68ead1d20c # v31.11.4
         with:
           extra_nix_config: |
-            accept-flake-config = true
+            extra-substituters = https://cache.iog.io
+            extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
+            allow-import-from-derivation = true
 
       # Each matrix job runs on its own runner VM, so every job can boot a
       # cluster on the same ports without conflicting. cardano-node master is
