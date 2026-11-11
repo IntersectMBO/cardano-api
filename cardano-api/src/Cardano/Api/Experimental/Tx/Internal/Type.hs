@@ -29,6 +29,7 @@ import Cardano.Api.Serialise.Raw
 import Cardano.Ledger.Api.Era qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 
 import Control.Exception (displayException)
 import Data.Bifunctor (bimap)
@@ -79,13 +80,16 @@ isExpectedEra _ _ = case eqT @actual @expected of
   Nothing -> Nothing
 
 instance
-  L.EraTx era
+  ( L.EraTx era
+  , Ledger.EncCBOR (MempoolTx era)
+  , Ledger.DecCBOR (Ledger.Annotator (MempoolTx era))
+  )
   => SerialiseAsRawBytes (UnsignedTx era)
   where
   serialiseToRawBytes (UnsignedTx tx) =
-    Ledger.serialize' (Ledger.eraProtVerHigh @era) tx
+    Ledger.serialize' (Ledger.eraProtVerHigh @era) (UnsafeMkMempoolTx tx)
   deserialiseFromRawBytes _ =
-    bimap wrapError UnsignedTx
+    bimap wrapError (UnsignedTx . unwrapMempoolTx)
       . Ledger.decodeFullAnnotator
         (Ledger.eraProtVerHigh @era)
         "UnsignedTx"

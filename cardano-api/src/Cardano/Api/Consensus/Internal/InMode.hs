@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Transactions in the context of a consensus mode, and other types used in
 -- the transaction submission protocol.
@@ -34,6 +35,8 @@ import Cardano.Api.Pretty
 import Cardano.Api.Tx.Internal.Body
 import Cardano.Api.Tx.Internal.Sign
 
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
+import Cardano.Ledger.Shelley.API qualified as Ledger
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
@@ -83,25 +86,25 @@ fromConsensusGenTx = \case
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx')) ->
     TxInByronSpecial tx'
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (Z tx'))) ->
-    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    let Consensus.ShelleyTx _txid (Ledger.unwrapMempoolTx -> shelleyEraTx) = tx'
      in TxInMode ShelleyBasedEraShelley (ShelleyTx ShelleyBasedEraShelley shelleyEraTx)
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (Z tx')))) ->
-    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    let Consensus.ShelleyTx _txid (Ledger.unwrapMempoolTx -> shelleyEraTx) = tx'
      in TxInMode ShelleyBasedEraAllegra (ShelleyTx ShelleyBasedEraAllegra shelleyEraTx)
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (Z tx'))))) ->
-    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    let Consensus.ShelleyTx _txid (Ledger.unwrapMempoolTx -> shelleyEraTx) = tx'
      in TxInMode ShelleyBasedEraMary (ShelleyTx ShelleyBasedEraMary shelleyEraTx)
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (Z tx')))))) ->
-    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    let Consensus.ShelleyTx _txid (Ledger.unwrapMempoolTx -> shelleyEraTx) = tx'
      in TxInMode ShelleyBasedEraAlonzo (ShelleyTx ShelleyBasedEraAlonzo shelleyEraTx)
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (Z tx'))))))) ->
-    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    let Consensus.ShelleyTx _txid (Ledger.unwrapMempoolTx -> shelleyEraTx) = tx'
      in TxInMode ShelleyBasedEraBabbage (ShelleyTx ShelleyBasedEraBabbage shelleyEraTx)
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (Z tx')))))))) ->
-    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    let Consensus.ShelleyTx _txid (Ledger.unwrapMempoolTx -> shelleyEraTx) = tx'
      in TxInMode ShelleyBasedEraConway (ShelleyTx ShelleyBasedEraConway shelleyEraTx)
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (S (Z tx'))))))))) ->
-    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    let Consensus.ShelleyTx _txid (Ledger.unwrapMempoolTx -> shelleyEraTx) = tx'
      in TxInMode ShelleyBasedEraDijkstra (ShelleyTx ShelleyBasedEraDijkstra shelleyEraTx)
 
 toConsensusGenTx
@@ -114,31 +117,31 @@ toConsensusGenTx (TxInByronSpecial gtx) =
 toConsensusGenTx (TxInMode ShelleyBasedEraShelley (ShelleyTx _ tx)) =
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (Z tx')))
  where
-  tx' = Consensus.mkShelleyTx tx
+  tx' = Consensus.mkShelleyTx (UnsafeMkMempoolTx tx)
 toConsensusGenTx (TxInMode ShelleyBasedEraAllegra (ShelleyTx _ tx)) =
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (Z tx'))))
  where
-  tx' = Consensus.mkShelleyTx tx
+  tx' = Consensus.mkShelleyTx (UnsafeMkMempoolTx tx)
 toConsensusGenTx (TxInMode ShelleyBasedEraMary (ShelleyTx _ tx)) =
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (Z tx')))))
  where
-  tx' = Consensus.mkShelleyTx tx
+  tx' = Consensus.mkShelleyTx (UnsafeMkMempoolTx tx)
 toConsensusGenTx (TxInMode ShelleyBasedEraAlonzo (ShelleyTx _ tx)) =
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (Z tx'))))))
  where
-  tx' = Consensus.mkShelleyTx tx
+  tx' = Consensus.mkShelleyTx (UnsafeMkMempoolTx tx)
 toConsensusGenTx (TxInMode ShelleyBasedEraBabbage (ShelleyTx _ tx)) =
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (Z tx')))))))
  where
-  tx' = Consensus.mkShelleyTx tx
+  tx' = Consensus.mkShelleyTx (UnsafeMkMempoolTx tx)
 toConsensusGenTx (TxInMode ShelleyBasedEraConway (ShelleyTx _ tx)) =
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (Z tx'))))))))
  where
-  tx' = Consensus.mkShelleyTx tx
+  tx' = Consensus.mkShelleyTx (UnsafeMkMempoolTx tx)
 toConsensusGenTx (TxInMode ShelleyBasedEraDijkstra (ShelleyTx _ tx)) =
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (S (Z tx')))))))))
  where
-  tx' = Consensus.mkShelleyTx tx
+  tx' = Consensus.mkShelleyTx (UnsafeMkMempoolTx tx)
 
 -- ----------------------------------------------------------------------------
 -- Transaction ids in the context of a consensus mode

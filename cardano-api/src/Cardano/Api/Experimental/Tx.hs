@@ -334,6 +334,7 @@ import Cardano.Api.Tx.Internal.Sign
 import Cardano.Ledger.Alonzo.Core qualified as Ledger
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 
 import Control.Exception (displayException)
 import Data.Bifunctor (bimap)
@@ -375,13 +376,15 @@ instance HasTypeProxy era => HasTypeProxy (SignedTx era) where
 instance
   ( HasTypeProxy era
   , L.EraTx (ShelleyLedgerEra era)
+  , Ledger.EncCBOR (MempoolTx (ShelleyLedgerEra era))
+  , Ledger.DecCBOR (Ledger.Annotator (MempoolTx (ShelleyLedgerEra era)))
   )
   => SerialiseAsRawBytes (SignedTx era)
   where
   serialiseToRawBytes (SignedTx tx) =
-    Ledger.serialize' (Ledger.eraProtVerHigh @(ShelleyLedgerEra era)) tx
+    Ledger.serialize' (Ledger.eraProtVerHigh @(ShelleyLedgerEra era)) (UnsafeMkMempoolTx tx)
   deserialiseFromRawBytes _ =
-    bimap wrapError SignedTx
+    bimap wrapError (SignedTx . unwrapMempoolTx)
       . Ledger.decodeFullAnnotator
         (Ledger.eraProtVerHigh @(ShelleyLedgerEra era))
         "SignedTx"

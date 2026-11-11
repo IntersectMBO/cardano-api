@@ -84,6 +84,7 @@ import Cardano.Ledger.Val qualified as L
 import Control.Monad
 import Control.Monad.Except (throwError)
 import Data.Bifunctor
+import Data.Default.Class (def)
 import Data.Function (on, (&))
 import Data.List (sortBy)
 import Data.List qualified as List
@@ -948,7 +949,7 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
         let newTx = UnsignedTx (ledgerTx & L.bodyTxL . L.feeTxBodyL .~ minFee)
          in go (n - 1) newTx
    where
-    minFee = obtainCommonConstraints (useEra @era) $ L.calcMinFeeTx utxo pparams ledgerTx nExtraWitnesses
+    minFee = obtainCommonConstraints (useEra @era) $ L.calcMinFeeTx utxo pparams def ledgerTx nExtraWitnesses
     txBodyFee = ledgerTx ^. L.bodyTxL . L.feeTxBodyL
     txBalanceValue =
       evaluateTransactionBalance pparams poolids stakeDelegDeposits utxo unSignTx
@@ -1907,4 +1908,4 @@ calculateMinTxFee
   -> L.Coin
 calculateMinTxFee pp utxo (UnsignedTx txbody) keywitcount =
   obtainCommonConstraints (useEra @era) $
-    L.calcMinFeeTx utxo pp txbody (fromIntegral keywitcount)
+    L.calcMinFeeTx utxo pp def txbody (fromIntegral keywitcount)

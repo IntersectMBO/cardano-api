@@ -94,6 +94,7 @@ import Control.Monad (unless, when)
 import Data.Bifunctor (bimap, first, second)
 import Data.Bitraversable (bitraverse)
 import Data.ByteString.Short (ShortByteString)
+import Data.Default.Class (def)
 import Data.Function ((&))
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
@@ -462,7 +463,7 @@ calculateMinTxFee sbe pp utxo txbody keywitcount =
   shelleyBasedEraConstraints sbe $
     case makeSignedTransaction' (toCardanoEra sbe) [] txbody of
       ShelleyTx _ tx ->
-        L.calcMinFeeTx (toLedgerUTxO sbe utxo) pp tx (fromIntegral keywitcount)
+        L.calcMinFeeTx (toLedgerUTxO sbe utxo) pp def tx (fromIntegral keywitcount)
 
 -- | Provide an approximate count of the key witnesses (i.e. signatures)
 -- required for a transaction.

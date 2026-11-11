@@ -48,8 +48,9 @@ import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Crypto.VRF qualified as C
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
-import Cardano.Ledger.Binary (FromCBOR)
+import Cardano.Ledger.Binary (Annotator, DecCBOR, EncCBOR, FromCBOR)
 import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.State qualified as L
 import Cardano.Protocol.Crypto qualified as L
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
@@ -228,6 +229,8 @@ type ShelleyBasedEraConstraints era =
   , L.EraPParams (ShelleyLedgerEra era)
   , L.EraScript (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
+  , EncCBOR (MempoolTx (ShelleyLedgerEra era))
+  , DecCBOR (Annotator (MempoolTx (ShelleyLedgerEra era)))
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxCert (ShelleyLedgerEra era)
   , L.EraTxOut (ShelleyLedgerEra era)
