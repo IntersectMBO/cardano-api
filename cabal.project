@@ -269,3 +269,7 @@ allow-newer:
     , cardano-api-gen:*
     , cardano-rpc:*
     , cardano-wasm:*
+
+-- Ledger master's guard scripts and witnesses have no UTxO RPC counterpart yet.
+package cardano-rpc
+  ghc-options: -Wno-error=incomplete-patterns

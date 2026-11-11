@@ -77,7 +77,6 @@ import Cardano.Ledger.Address qualified as L
 import Cardano.Ledger.Alonzo.Genesis qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
-import Cardano.Ledger.Conway.PParams qualified as L
 import Cardano.Ledger.Hashes qualified as L
 import Cardano.Ledger.Shelley.Genesis qualified as L
 

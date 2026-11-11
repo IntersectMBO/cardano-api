@@ -57,7 +57,6 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (Annotator, DecCBOR, EncCBOR)
 import Cardano.Ledger.Conway qualified as Ledger
-import Cardano.Ledger.Conway.Core qualified as L (ConwayEraPParams)
 import Cardano.Ledger.Conway.Governance qualified as L
 import Cardano.Ledger.Conway.State qualified as L
 import Cardano.Ledger.Core qualified as Ledger
