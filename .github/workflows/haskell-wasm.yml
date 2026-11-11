@@ -116,7 +116,7 @@ jobs:
     # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
     # until the `index-state` values in the `cabal.project` file changes.
     - name: Restore cached dependencies
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       id: cache
       with:
         path: |
@@ -136,7 +136,7 @@ jobs:
 
     # Store the cabal cache only when the build succeeds, and skip if dependencies already cached (hash matches).
     - name: Cache Cabal store
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       if: steps.cache.outputs.cache-hit != 'true'
       with:
         path: |
@@ -248,28 +248,28 @@ jobs:
         node api-regression.mjs
 
     - name: Upload wallet demo
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: cardano-wasm-demo
         path: cardano-wasm/demo/dist
         compression-level: 9
 
     - name: Upload built wasm library
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: cardano-wasm
         path: cardano-wasm/lib-wrapper/*
         compression-level: 9
 
     - name: Upload pure WASI wasm binary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: cardano-wasi
         path: cardano-wasm/cardano-wasi.wasm
         compression-level: 9
 
     - name: Upload built NPM package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: npm-package
         path: cardano-wasm/npm-wrapper/*.tgz
