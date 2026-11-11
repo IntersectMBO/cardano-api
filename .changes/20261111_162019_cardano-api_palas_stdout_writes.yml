@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1414
+kind:
+- bugfix
+- feature
+description: The file writers in `Cardano.Api.IO` write to standard output for the path `-`, and on POSIX the `*WithOwnerPermissions` writers write in place to anything at the path that is not a regular file, such as a symbolic link (like `/dev/stdout`), a pipe or a device, instead of replacing it.
