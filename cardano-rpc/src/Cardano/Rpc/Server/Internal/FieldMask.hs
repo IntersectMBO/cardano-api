@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -24,12 +25,15 @@ module Cardano.Rpc.Server.Internal.FieldMask
   , runFillPure
   , fill
   , fillSub
+  , fillEach
+  , fillShared
   , fillFrom
   , isSelected
   , lensLabel
   , normalise
   , resolve
   , subMask
+  , subMaskEach
   , toPaths
   )
 where
@@ -290,6 +294,34 @@ fillSub subFill = FieldFill $ \fieldMask -> do
   guard $ isSelected @label fieldMask
   pure . Ap $ Endo . (Field.field @label .~) <$> fillMessage id (subMask @label fieldMask) subFill
 
+-- | Fill the repeated message field that the lens label names: run the action for
+-- the elements' inputs, then fill each element in order against the part of the mask below the field.
+-- An element whose sub-mask selects nothing is still present, as 'defMessage'.
+fillEach
+  :: forall label msg sub input m
+   . (HasField msg label [sub], KnownSymbol label, Message msg, Message sub, Monad m)
+  => m [input]
+  -- ^ Obtains the inputs of the elements
+  -> (input -> FieldFill m sub)
+  -- ^ Fills one element from its input; its effects run once per element
+  -> FieldFill m msg
+fillEach doInputs elementFill = FieldFill $ \fieldMask -> do
+  guard $ isSelected @label fieldMask
+  let doElement = fillMessage id (subMaskEach @label fieldMask) . elementFill
+  pure . Ap $ doInputs >>= fmap (Endo . (Field.field @label .~)) . traverse doElement
+
+-- | Fill several fields from the result of one action. The action runs once when
+-- the mask selects any of the fields, and never otherwise.
+fillShared
+  :: Functor m
+  => m shared
+  -- ^ Obtains the result the fields share
+  -> FieldFill ((->) shared) msg
+  -- ^ Fills the fields from the result of the action
+  -> FieldFill m msg
+fillShared doShared (FieldFill sharedFill) = FieldFill $ \fieldMask ->
+  Ap . (<$> doShared) . getAp <$> sharedFill fieldMask
+
 -- | Fill several fields from one value that is already at hand, reading each
 -- field with a function of it. A field the mask does not select never reads it.
 fillFrom
@@ -299,8 +331,7 @@ fillFrom
   -> FieldFill ((->) shared) msg
   -- ^ Reads each field from the value
   -> FieldFill m msg
-fillFrom shared (FieldFill readFrom) = FieldFill $ \fieldMask ->
-  Ap . pure . flip getAp shared <$> readFrom fieldMask
+fillFrom shared = fillShared $ pure shared
 
 -- | Run the effects of the fields the mask selects and set them on 'defMessage',
 -- untrimmed. When the mask selects no field, the runner is never called.
@@ -337,6 +368,16 @@ subMask
   -- ^ The mask, rooted at @msg@
   -> FieldMaskTree sub
 subMask = fieldSubMask $ labelledFieldName @label @msg
+
+-- | The part of a mask below the repeated message field that the lens label
+-- names, for building each element of it on its own.
+subMaskEach
+  :: forall label msg sub
+   . (HasField msg label [sub], KnownSymbol label, Message msg)
+  => FieldMaskTree msg
+  -- ^ The mask, rooted at @msg@
+  -> FieldMaskTree sub
+subMaskEach = fieldSubMask $ labelledFieldName @label @msg
 
 -- | The part of a mask below a top-level field; 'Nothing' names no field.
 fieldSubMask
