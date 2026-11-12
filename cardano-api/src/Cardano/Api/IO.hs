@@ -92,6 +92,7 @@ readFileBlocking path =
         pure $ LBS.toStrict $ Builder.toLazyByteString contents
     )
 
+-- | Write the bytes to the file, or to standard output when the path is @-@.
 writeByteStringFile
   :: ()
   => MonadIO m
@@ -101,13 +102,15 @@ writeByteStringFile
 writeByteStringFile fp bs =
   runExceptT $
     handleIOExceptT (FileIOError (unFile fp)) $
-      BS.writeFile (unFile fp) bs
+      byteStringToFileOrStdout (unFile fp) bs
 
 -- | Like 'writeByteStringFile', but the file is created readable and
 -- writable only by its owner (@0600@ on POSIX), and it is replaced
 -- atomically: the contents are written to a temporary file which is then
 -- renamed over the target path, so a failed write never destroys the
--- previous contents. The detailed per-platform guarantees are documented on
+-- previous contents. The path @-@ means standard output, and on POSIX a
+-- path that is not a regular file, such as @\/dev\/stdout@, is written in
+-- place. The detailed per-platform guarantees are documented on
 -- @writeFileTextEnvelopeWithOwnerPermissions@ in
 -- "Cardano.Api.Serialise.TextEnvelope".
 writeByteStringFileWithOwnerPermissions
@@ -127,9 +130,12 @@ writeByteStringOutput
   -> m (Either (FileError e) ())
 writeByteStringOutput mOutput bs = runExceptT $
   case mOutput of
-    Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ BS.writeFile (unFile fp) bs
+    Just fp ->
+      handleIOExceptT (FileIOError (unFile fp)) $
+        byteStringToFileOrStdout (unFile fp) bs
     Nothing -> liftIO $ BSC.putStr bs
 
+-- | Write the bytes to the file, or to standard output when the path is @-@.
 writeLazyByteStringFile
   :: ()
   => MonadIO m
@@ -139,7 +145,7 @@ writeLazyByteStringFile
 writeLazyByteStringFile fp bs =
   runExceptT $
     handleIOExceptT (FileIOError (unFile fp)) $
-      LBS.writeFile (unFile fp) bs
+      lazyByteStringToFileOrStdout (unFile fp) bs
 
 -- | Like 'writeLazyByteStringFile', but with the same owner-only
 -- permissions and atomic replacement as
@@ -161,9 +167,12 @@ writeLazyByteStringOutput
   -> m (Either (FileError e) ())
 writeLazyByteStringOutput mOutput bs = runExceptT $
   case mOutput of
-    Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ LBS.writeFile (unFile fp) bs
+    Just fp ->
+      handleIOExceptT (FileIOError (unFile fp)) $
+        lazyByteStringToFileOrStdout (unFile fp) bs
     Nothing -> liftIO $ LBSC.putStr bs
 
+-- | Write the text to the file, or to standard output when the path is @-@.
 writeTextFile
   :: ()
   => MonadIO m
@@ -173,7 +182,7 @@ writeTextFile
 writeTextFile fp t =
   runExceptT $
     handleIOExceptT (FileIOError (unFile fp)) $
-      Text.writeFile (unFile fp) t
+      textToFileOrStdout (unFile fp) t
 
 -- | Like 'writeTextFile', but with the same owner-only permissions and
 -- atomic replacement as 'writeByteStringFileWithOwnerPermissions'.
@@ -194,8 +203,25 @@ writeTextOutput
   -> m (Either (FileError e) ())
 writeTextOutput mOutput t = runExceptT $
   case mOutput of
-    Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ Text.writeFile (unFile fp) t
+    Just fp ->
+      handleIOExceptT (FileIOError (unFile fp)) $
+        textToFileOrStdout (unFile fp) t
     Nothing -> liftIO $ Text.putStr t
+
+-- | Write to the file with the first function, or to standard output with the
+-- second one when the path is @-@.
+toFileOrStdout :: (FilePath -> a -> IO ()) -> (a -> IO ()) -> FilePath -> a -> IO ()
+toFileOrStdout _ writeStdout "-" = writeStdout
+toFileOrStdout writeFile' _ path = writeFile' path
+
+byteStringToFileOrStdout :: FilePath -> ByteString -> IO ()
+byteStringToFileOrStdout = toFileOrStdout BS.writeFile BS.putStr
+
+lazyByteStringToFileOrStdout :: FilePath -> LBS.ByteString -> IO ()
+lazyByteStringToFileOrStdout = toFileOrStdout LBS.writeFile LBS.putStr
+
+textToFileOrStdout :: FilePath -> Text -> IO ()
+textToFileOrStdout = toFileOrStdout Text.writeFile Text.putStr
 
 mapFile :: (FilePath -> FilePath) -> File content direction -> File content direction
 mapFile f = File . f . unFile

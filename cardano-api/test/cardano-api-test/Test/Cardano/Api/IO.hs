@@ -10,10 +10,10 @@ import Cardano.Api
 import Control.Monad (unless)
 import Data.ByteString qualified as BS
 import Data.Either (isLeft)
-import System.Directory (removeFile)
+import System.Directory (createFileLink, pathIsSymbolicLink, removeFile)
 import System.FilePath ((</>))
 
-import Test.Cardano.Api.IO.Compat (makeGroupOtherReadable)
+import Test.Cardano.Api.IO.Compat (makeGroupOtherReadable, readPipeWrittenThrough)
 
 import Hedgehog
 import Hedgehog.Extras qualified as H
@@ -92,6 +92,39 @@ prop_writeSecretsOverwritesItsOwnOutput =
       contents <- liftIO $ BS.readFile (ws </> "secret.000.key")
       contents === "new"
 
+prop_writeWithOwnerPermissionsToPipe :: Property
+prop_writeWithOwnerPermissionsToPipe =
+  H.propertyOnce $
+    -- POSIX only: Windows has no /dev/fd paths.
+    unless isWin32 $ do
+      (result, contents) <-
+        liftIO . readPipeWrittenThrough $ \path ->
+          writeLazyByteStringFileWithOwnerPermissions (File path) "contents"
+
+      H.leftFail (result :: Either (FileError ()) ())
+      contents === "contents"
+
+prop_writeWithOwnerPermissionsThroughSymlink :: Property
+prop_writeWithOwnerPermissionsThroughSymlink =
+  H.propertyOnce . H.moduleWorkspace "help" $ \ws ->
+    -- POSIX only: creating symbolic links on Windows needs extra privileges.
+    unless isWin32 $ do
+      let target = ws </> "target"
+          link = ws </> "link"
+
+      liftIO $ BS.writeFile target "old contents"
+      liftIO $ createFileLink target link
+
+      result <- liftIO $ writeLazyByteStringFileWithOwnerPermissions (File link) "new contents"
+
+      H.leftFail (result :: Either (FileError ()) ())
+
+      isLink <- liftIO $ pathIsSymbolicLink link
+      assert isLink
+
+      contents <- liftIO $ BS.readFile target
+      contents === "new contents"
+
 tests :: TestTree
 tests =
   testGroup
@@ -99,4 +132,8 @@ tests =
     [ testProperty "Create VRF File with Owner Permissions" prop_createVrfFileWithOwnerPermissions
     , testProperty "Overwrite file with Owner Permissions" prop_overwriteFileWithOwnerPermissions
     , testProperty "writeSecrets overwrites its own output" prop_writeSecretsOverwritesItsOwnOutput
+    , testProperty "Write with Owner Permissions to a pipe" prop_writeWithOwnerPermissionsToPipe
+    , testProperty
+        "Write with Owner Permissions through a symbolic link"
+        prop_writeWithOwnerPermissionsThroughSymlink
     ]

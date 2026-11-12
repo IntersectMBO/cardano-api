@@ -21,7 +21,7 @@ where
 import           Cardano.Api.Error (FileError (..), throwErrorM)
 import           Cardano.Api.IO.Internal.Base
 
-import           Control.Exception (bracket, bracketOnError, try)
+import           Control.Exception (IOException, bracket, bracketOnError, try)
 import           Control.Monad (forM_, when)
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.IO.Class
@@ -33,9 +33,11 @@ import qualified System.Directory as IO
 import           System.FilePath (splitFileName, (<.>), (</>))
 import qualified System.IO as IO
 import           System.IO (Handle)
-import           System.Posix.Files (fileMode, getFileStatus, groupModes, intersectFileModes,
-                   nullFileMode, otherModes, ownerReadMode, setFdOwnerAndGroup, setFileMode)
-import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, handleToFd, openFd)
+import           System.Posix.Files (fileMode, getFileStatus, getSymbolicLinkStatus, groupModes,
+                   intersectFileModes, isRegularFile, nullFileMode, otherModes, ownerReadMode,
+                   ownerWriteMode, setFdOwnerAndGroup, setFileMode, unionFileModes)
+import           System.Posix.IO (OpenFileFlags (..), OpenMode (..), closeFd, defaultFileFlags,
+                   fdToHandle, handleToFd, openFd)
 import           System.Posix.Types (FileMode)
 import           System.Posix.Unistd (fileSynchronise)
 import           System.Posix.User (getRealUserID)
@@ -46,6 +48,38 @@ handleFileForWritingWithOwnerPermissionImpl
   -> (Handle -> IO ())
   -> IO (Either (FileError e) ())
 handleFileForWritingWithOwnerPermissionImpl path f = do
+  -- A regular file is replaced by renaming a new file over it. Anything else
+  -- already at the path, like a symbolic link (such as /dev/stdout), a pipe or
+  -- a device, is written in place, since replacing it would not write to what
+  -- it stands for.
+  status <- try $ getSymbolicLinkStatus path
+  case status of
+    Right st | not (isRegularFile st) -> writeInPlace path f
+    Right _ -> replaceAtomically path f
+    Left (_ :: IOException) -> replaceAtomically path f
+
+-- | Open what is at the path for writing, through it if it is a symbolic link,
+-- and write to it. Its owner and permissions stay as they are; a file created
+-- through a dangling symbolic link is readable and writable only by its owner.
+writeInPlace
+  :: FilePath
+  -> (Handle -> IO ())
+  -> IO (Either (FileError e) ())
+writeInPlace path f =
+  fmap (first $ FileIOError path) $
+    try $
+      bracket
+        (fdToHandle =<< openFd path WriteOnly flags)
+        IO.hClose
+        f
+ where
+  flags = defaultFileFlags{creat = Just (unionFileModes ownerReadMode ownerWriteMode), trunc = True}
+
+replaceAtomically
+  :: FilePath
+  -> (Handle -> IO ())
+  -> IO (Either (FileError e) ())
+replaceAtomically path f = do
   -- On a unix based system, we write to a fresh temporary file (which
   -- 'IO.openTempFile' creates with owner-only permissions) and rename it over
   -- the target path once the contents are safely on disk. The target path thus
