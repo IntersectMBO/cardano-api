@@ -872,6 +872,7 @@ prop_makeTransactionBodyAutoBalance_fails_on_zero_ada_negative_assets = H.proper
           exampleProtocolParams
           mempty
           mempty
+          mempty
           utxo
           txBodyContent
           changeAddr
@@ -1001,6 +1002,7 @@ prop_estimateBalancedTxBody_keeps_native_assets_in_change = H.propertyOnce $ do
         mempty
         mempty
         mempty
+        mempty
         (L.Coin 0)
         1
         0
@@ -1045,6 +1047,7 @@ prop_estimateBalancedTxBody_fails_on_undeclared_native_assets = H.propertyOnce $
     era
     txBodyContent
     exampleProtocolParams
+    mempty
     mempty
     mempty
     mempty

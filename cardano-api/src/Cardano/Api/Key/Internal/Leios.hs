@@ -9,7 +9,6 @@ module Cardano.Api.Key.Internal.Leios
   )
 where
 
-import Cardano.Crypto.DSIGN.BLS12381 qualified as Crypto
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Keys.Leios
 import Cardano.Ledger.State qualified as Ledger

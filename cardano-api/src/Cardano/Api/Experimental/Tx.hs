@@ -327,7 +327,6 @@ import Cardano.Ledger.Alonzo.Core qualified as Ledger
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
 import Cardano.Ledger.Credential qualified as Ledger (Credential)
-import Cardano.Ledger.Hashes qualified as L hiding (Hash)
 
 import Control.Exception (displayException)
 import Data.Bifunctor (bimap)
