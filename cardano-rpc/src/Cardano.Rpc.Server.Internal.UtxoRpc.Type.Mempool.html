@@ -1,0 +1,243 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- | Conversion of a mempool transaction to the UTxO RPC @TxInMempool@</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- message.</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempool"><span class="hs-identifier">txInModeToTxInMempool</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempoolFields"><span class="hs-identifier">txInModeToTxInMempoolFields</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#TxInMempoolFields"><span class="hs-identifier">TxInMempoolFields</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#watchMempoolFill"><span class="hs-identifier">watchMempoolFill</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Query.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Query</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Submit.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Submit</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U5c</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Submit.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Submit</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UtxoRpc</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.FieldMask</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#FieldFill"><span class="hs-identifier">FieldFill</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#FieldMaskTree"><span class="hs-identifier">FieldMaskTree</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier">fill</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fillFrom"><span class="hs-identifier">fillFrom</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fillSub"><span class="hs-identifier">fillSub</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#runFillPure"><span class="hs-identifier">runFillPure</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron.html#byronTxToUtxoRpcTx"><span class="hs-identifier">byronTxToUtxoRpcTx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#anyEraTxConstraints"><span class="hs-identifier">anyEraTxConstraints</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#txToUtxoRpcTx"><span class="hs-identifier">txToUtxoRpcTx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-crypto-wrapper-1.8.0.0-c5047be99009651a9ed4d19511f92a59bbe81d472df82759f2902c1e651878e2/share/doc/html/src/Cardano.Crypto.html"><span class="hs-identifier">Cardano.Crypto</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-crypto-wrapper-1.8.0.0-c5047be99009651a9ed4d19511f92a59bbe81d472df82759f2902c1e651878e2/share/doc/html/src/Cardano.Crypto.Hashing.html#hashToBytes"><span class="hs-identifier">hashToBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.10.1.0-72ea7672ddb0cddf6dbb011ea35990c697b40952f074057abb08bbaaddc17697/share/doc/html/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.23.0.0-927b0c55ed119b4effd27b90e60cffb61c5074a9d1b67f219d1512757f171f08/share/doc/html/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">RIO</span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.GRPC.Spec</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- | Per-transaction inputs of 'watchMempoolFill'. The fields are lazy:</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- a field the mask does not select is never computed.</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- A record rather than a 'UtxoRpc.TxInMempool' built from @defMessage@, because the</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- message's scalar fields (@ref@, @native_bytes@) are strict and would be computed</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- whenever the message is evaluated. The request predicate and the response also</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- share the one @cardano@ conversion through 'txInMempoolFieldsCardano'.</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">data</span><span> </span><span id="TxInMempoolFields"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#TxInMempoolFields"><span class="hs-identifier hs-var">TxInMempoolFields</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxInMempoolFields"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#TxInMempoolFields"><span class="hs-identifier hs-var">TxInMempoolFields</span></a></span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="txInMempoolFieldsRef"><span class="annot"><span class="annottext">TxInMempoolFields -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsRef"><span class="hs-identifier hs-var hs-var">txInMempoolFieldsRef</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="txInMempoolFieldsNativeBytes"><span class="annot"><span class="annottext">TxInMempoolFields -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsNativeBytes"><span class="hs-identifier hs-var hs-var">txInMempoolFieldsNativeBytes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Lazy: computed only when the mask or the predicate needs it.</span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="txInMempoolFieldsCardano"><span class="annot"><span class="annottext">TxInMempoolFields -&gt; Tx
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsCardano"><span class="hs-identifier hs-var hs-var">txInMempoolFieldsCardano</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Query.Tx</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Lazy: computed only when the mask or the predicate needs it.</span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | Convert a transaction read from the mempool to the lazy per-field inputs</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- of the UTxO RPC 'UtxoRpc.TxInMempool' message.</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- @native_bytes@ fidelity differs by era: the Shelley-onwards ledger @Tx@ is</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- not 'SafeToHash'-backed, so its @native_bytes@ is a canonical</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- re-encoding, not the submitter's original bytes (same caveat as</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- 'Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput.txOutToUtxoRpcTxOutput').</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- The Byron arm has no such caveat: its @ATxAux@ carries a real byte</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- annotation, so 'CBOR.recoverBytes' recovers the true original bytes.</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- 'Nothing' for the three Byron special payloads (delegation certificates,</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- update proposals, update votes): they have no proto @Tx@ representation,</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- and cannot occur on any network still running today, since Byron</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- transitioned to Shelley years before any currently live Cardano network</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- started.</span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempoolFields"><span class="hs-identifier hs-type">txInModeToTxInMempoolFields</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Consensus.Internal.InMode.html#TxInMode"><span class="hs-identifier hs-type">TxInMode</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The transaction read from the mempool</span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#TxInMempoolFields"><span class="hs-identifier hs-type">TxInMempoolFields</span></a></span><span>
+</span><span id="line-73"></span><span id="txInModeToTxInMempoolFields"><span class="annot"><span class="annottext">txInModeToTxInMempoolFields :: TxInMode -&gt; Maybe TxInMempoolFields
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempoolFields"><span class="hs-identifier hs-var hs-var">txInModeToTxInMempoolFields</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Consensus.Internal.InMode.html#TxInMode"><span class="hs-identifier hs-type">TxInMode</span></a></span><span> </span><span id="local-6989586621679753504"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679753504"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span id="local-6989586621679753505"><span class="annot"><span class="annottext">tx :: Tx era
+</span><a href="#local-6989586621679753505"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Sign.html#ShelleyTx"><span class="hs-identifier hs-type">ShelleyTx</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679753507"><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679753507"><span class="hs-identifier hs-var">ledgerTx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">TxInMempoolFields -&gt; Maybe TxInMempoolFields
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(TxInMempoolFields -&gt; Maybe TxInMempoolFields)
+-&gt; TxInMempoolFields -&gt; Maybe TxInMempoolFields
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; ((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt;
+    TxInMempoolFields)
+-&gt; TxInMempoolFields
+forall era a.
+ShelleyBasedEra era
+-&gt; ((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt; a)
+-&gt; a
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#anyEraTxConstraints"><span class="hs-identifier hs-var">anyEraTxConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679753504"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">(((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt;
+  TxInMempoolFields)
+ -&gt; TxInMempoolFields)
+-&gt; ((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt;
+    TxInMempoolFields)
+-&gt; TxInMempoolFields
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-77"></span><span>        </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#TxInMempoolFields"><span class="hs-identifier hs-type">TxInMempoolFields</span></a></span><span>
+</span><span id="line-78"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">txInMempoolFieldsRef :: ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsRef"><span class="hs-identifier hs-var">txInMempoolFieldsRef</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-a7601e5e25eb015df4564a359c131349584143077b74a95c6cfaf8e24de930cf/share/doc/html/src/Cardano.Keys.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId -&gt; TxId
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxId"><span class="hs-identifier hs-var">fromShelleyTxId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era) -&gt; TxId
+forall era (l :: TxLevel). EraTx era =&gt; Tx l era -&gt; TxId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-core-1.23.0.0-927b0c55ed119b4effd27b90e60cffb61c5074a9d1b67f219d1512757f171f08/share/doc/html/src/Cardano.Ledger.Core.html#txIdTx"><span class="hs-identifier hs-var">L.txIdTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679753507"><span class="hs-identifier hs-var">ledgerTx</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txInMempoolFieldsNativeBytes :: ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsNativeBytes"><span class="hs-identifier hs-var">txInMempoolFieldsNativeBytes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx era -&gt; ByteString
+forall a. SerialiseAsCBOR a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-a7601e5e25eb015df4564a359c131349584143077b74a95c6cfaf8e24de930cf/share/doc/html/src/Cardano.Keys.Serialise.Cbor.html#serialiseToCBOR"><span class="hs-identifier hs-var">serialiseToCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679753505"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-80"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txInMempoolFieldsCardano :: Tx
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsCardano"><span class="hs-identifier hs-var">txInMempoolFieldsCardano</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proto Tx -&gt; Tx
+forall msg. Proto msg -&gt; msg
+</span><span class="hs-identifier hs-var">getProto</span></span><span> </span><span class="annot"><span class="annottext">(Proto Tx -&gt; Tx) -&gt; Proto Tx -&gt; Tx
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era) -&gt; Proto Tx
+forall era.
+IsShelleyBasedEra era =&gt;
+Tx TopTx (ShelleyLedgerEra era) -&gt; Proto Tx
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#txToUtxoRpcTx"><span class="hs-identifier hs-var">txToUtxoRpcTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679753507"><span class="hs-identifier hs-var">ledgerTx</span></a></span><span>
+</span><span id="line-81"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Consensus.Internal.InMode.html#TxInByronSpecial"><span class="hs-identifier hs-type">TxInByronSpecial</span></a></span><span> </span><span id="local-6989586621679753529"><span class="annot"><span class="annottext">GenTx ByronBlock
+</span><a href="#local-6989586621679753529"><span class="hs-identifier hs-var">genTx</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">GenTx ByronBlock
+</span><a href="#local-6989586621679753529"><span class="hs-identifier hs-var">genTx</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">ByronTx</span></span><span> </span><span id="local-6989586621679753531"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679753531"><span class="hs-identifier hs-var">byronTxId</span></a></span></span><span> </span><span id="local-6989586621679753532"><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679753532"><span class="hs-identifier hs-var">aTxAux</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-84"></span><span>      </span><span class="annot"><span class="annottext">TxInMempoolFields -&gt; Maybe TxInMempoolFields
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(TxInMempoolFields -&gt; Maybe TxInMempoolFields)
+-&gt; TxInMempoolFields -&gt; Maybe TxInMempoolFields
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#TxInMempoolFields"><span class="hs-identifier hs-type">TxInMempoolFields</span></a></span><span>
+</span><span id="line-86"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">txInMempoolFieldsRef :: ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsRef"><span class="hs-identifier hs-var">txInMempoolFieldsRef</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; ByteString
+forall algo a. AbstractHash algo a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-crypto-wrapper-1.8.0.0-c5047be99009651a9ed4d19511f92a59bbe81d472df82759f2902c1e651878e2/share/doc/html/src/Cardano.Crypto.Hashing.html#hashToBytes"><span class="hs-identifier hs-var">Byron.hashToBytes</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679753531"><span class="hs-identifier hs-var">byronTxId</span></a></span><span>
+</span><span id="line-87"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txInMempoolFieldsNativeBytes :: ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsNativeBytes"><span class="hs-identifier hs-var">txInMempoolFieldsNativeBytes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString -&gt; ByteString
+forall t. Decoded t =&gt; t -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-ledger-binary-1.10.1.0-72ea7672ddb0cddf6dbb011ea35990c697b40952f074057abb08bbaaddc17697/share/doc/html/src/Cardano.Ledger.Binary.Decoding.Annotated.html#recoverBytes"><span class="hs-identifier hs-var">CBOR.recoverBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679753532"><span class="hs-identifier hs-var">aTxAux</span></a></span><span>
+</span><span id="line-88"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txInMempoolFieldsCardano :: Tx
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsCardano"><span class="hs-identifier hs-var">txInMempoolFieldsCardano</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proto Tx -&gt; Tx
+forall msg. Proto msg -&gt; msg
+</span><span class="hs-identifier hs-var">getProto</span></span><span> </span><span class="annot"><span class="annottext">(Proto Tx -&gt; Tx) -&gt; Proto Tx -&gt; Tx
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString -&gt; Proto Tx
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron.html#byronTxToUtxoRpcTx"><span class="hs-identifier hs-var">byronTxToUtxoRpcTx</span></a></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679753532"><span class="hs-identifier hs-var">aTxAux</span></a></span><span>
+</span><span id="line-89"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">ByronDlg</span></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe TxInMempoolFields
+forall a. Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">ByronUpdateProposal</span></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe TxInMempoolFields
+forall a. Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">ByronUpdateVote</span></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe TxInMempoolFields
+forall a. Maybe a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- | Convert a transaction read from the mempool to the full UTxO RPC</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- 'UtxoRpc.TxInMempool' message, always at 'U5c.STAGE_MEMPOOL'.</span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempool"><span class="hs-identifier hs-type">txInModeToTxInMempool</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Consensus.Internal.InMode.html#TxInMode"><span class="hs-identifier hs-type">TxInMode</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The transaction read from the mempool</span></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.TxInMempool</span></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span id="txInModeToTxInMempool"><span class="annot"><span class="annottext">txInModeToTxInMempool :: TxInMode -&gt; Maybe (Proto TxInMempool)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempool"><span class="hs-identifier hs-var hs-var">txInModeToTxInMempool</span></a></span></span><span> </span><span id="local-6989586621679753537"><span class="annot"><span class="annottext">TxInMode
+</span><a href="#local-6989586621679753537"><span class="hs-identifier hs-var">txInMode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679753538"><span class="annot"><a href="#local-6989586621679753538"><span class="hs-identifier hs-var">fields</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TxInMode -&gt; Maybe TxInMempoolFields
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInModeToTxInMempoolFields"><span class="hs-identifier hs-var">txInModeToTxInMempoolFields</span></a></span><span> </span><span class="annot"><span class="annottext">TxInMode
+</span><a href="#local-6989586621679753537"><span class="hs-identifier hs-var">txInMode</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-type">.</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#runFillPure"><span class="hs-identifier hs-type">runFillPure</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#SelectAll"><span class="hs-identifier hs-type">SelectAll</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fillFrom"><span class="hs-identifier hs-type">fillFrom</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753538"><span class="hs-identifier hs-type">fields</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFill"><span class="hs-identifier hs-type">txInMempoolFill</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- | Fill the fields of a @WatchMempool@ response that a mask selects, from the</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- 'TxInMempoolFields' of a transaction.</span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#watchMempoolFill"><span class="hs-identifier hs-type">watchMempoolFill</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#FieldFill"><span class="hs-identifier hs-type">FieldFill</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">-&gt;</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#TxInMempoolFields"><span class="hs-identifier hs-type">TxInMempoolFields</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.WatchMempoolResponse</span></span><span>
+</span><span id="line-107"></span><span id="watchMempoolFill"><span class="annot"><span class="annottext">watchMempoolFill :: FieldFill ((-&gt;) TxInMempoolFields) WatchMempoolResponse
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#watchMempoolFill"><span class="hs-identifier hs-var hs-var">watchMempoolFill</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg sub (m :: * -&gt; *).
+(HasField msg label sub, KnownSymbol label, Message msg,
+ Message sub, Applicative m) =&gt;
+FieldFill m sub -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fillSub"><span class="hs-identifier hs-var">fillSub</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;tx&quot;</span></span><span> </span><span class="annot"><span class="annottext">FieldFill ((-&gt;) TxInMempoolFields) TxInMempool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFill"><span class="hs-identifier hs-var">txInMempoolFill</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- | Fill the fields of the 'UtxoRpc.TxInMempool' message that a mask selects,</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- from the 'TxInMempoolFields' of a transaction.</span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFill"><span class="hs-identifier hs-type">txInMempoolFill</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#FieldFill"><span class="hs-identifier hs-type">FieldFill</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">-&gt;</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#TxInMempoolFields"><span class="hs-identifier hs-type">TxInMempoolFields</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">UtxoRpc.TxInMempool</span></span><span>
+</span><span id="line-112"></span><span id="txInMempoolFill"><span class="annot"><span class="annottext">txInMempoolFill :: FieldFill ((-&gt;) TxInMempoolFields) TxInMempool
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFill"><span class="hs-identifier hs-var hs-var">txInMempoolFill</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-113"></span><span>  </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;ref&quot;</span></span><span> </span><span class="annot"><span class="annottext">TxInMempoolFields -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsRef"><span class="hs-identifier hs-var">txInMempoolFieldsRef</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><span class="annottext">FieldFill ((-&gt;) TxInMempoolFields) TxInMempool
+-&gt; FieldFill ((-&gt;) TxInMempoolFields) TxInMempool
+-&gt; FieldFill ((-&gt;) TxInMempoolFields) TxInMempool
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;nativeBytes&quot;</span></span><span> </span><span class="annot"><span class="annottext">TxInMempoolFields -&gt; ByteString
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsNativeBytes"><span class="hs-identifier hs-var">txInMempoolFieldsNativeBytes</span></a></span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><span class="annottext">FieldFill ((-&gt;) TxInMempoolFields) TxInMempool
+-&gt; FieldFill ((-&gt;) TxInMempoolFields) TxInMempool
+-&gt; FieldFill ((-&gt;) TxInMempoolFields) TxInMempool
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;stage&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Stage -&gt; TxInMempoolFields -&gt; Stage
+forall a. a -&gt; TxInMempoolFields -&gt; a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Stage
+</span><span class="hs-identifier hs-var">U5c.STAGE_MEMPOOL</span></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><span class="annottext">FieldFill ((-&gt;) TxInMempoolFields) TxInMempool
+-&gt; FieldFill ((-&gt;) TxInMempoolFields) TxInMempool
+-&gt; FieldFill ((-&gt;) TxInMempoolFields) TxInMempool
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;cardano&quot;</span></span><span> </span><span class="annot"><span class="annottext">TxInMempoolFields -&gt; Tx
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool.html#txInMempoolFieldsCardano"><span class="hs-identifier hs-var">txInMempoolFieldsCardano</span></a></span><span>
+</span><span id="line-117"></span></pre></body></html>

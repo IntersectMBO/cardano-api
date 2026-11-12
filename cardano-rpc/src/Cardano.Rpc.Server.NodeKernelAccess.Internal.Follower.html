@@ -1,0 +1,450 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- | Chain followers over the node's ChainDB: the follower handle and the</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- brackets that open one. Re-exported from &quot;Cardano.Rpc.Server.NodeKernelAccess&quot;.</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html"><span class="hs-identifier">Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainChange"><span class="hs-identifier">ChainChange</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainFollower"><span class="hs-identifier">ChainFollower</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#withFollower"><span class="hs-identifier">withFollower</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#withBlockFollower"><span class="hs-identifier">withBlockFollower</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#positionFollowerAtCurrentTip"><span class="hs-identifier">positionFollowerAtCurrentTip</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#readChainTipPoint"><span class="hs-identifier">readChainTipPoint</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Consensus.html"><span class="hs-identifier">Cardano.Api.Consensus</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Type.html"><span class="hs-identifier">Cardano.Rpc.Server.NodeKernelAccess.Internal.Type</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Type</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html"><span class="hs-identifier">Ouroboros.Consensus.Storage.ChainDB.API</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html#getTipPoint"><span class="hs-identifier">getTipPoint</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">RIO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadUnliftIO</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">atomically</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">bracket</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">withRunInIO</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/stm-2.5.3.1-inplace/src/Control.Monad.STM.html"><span class="hs-identifier">Control.Monad.STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Conc.Sync.html#STM"><span class="hs-identifier">STM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- | A handle to a running chain follower. The payload is selectable because</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- consensus reads each requested block component separately.</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="ChainFollower"><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainFollower"><span class="hs-identifier hs-var">ChainFollower</span></a></span></span><span> </span><span id="local-6989586621679753839"><span class="annot"><a href="#local-6989586621679753839"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ChainFollower"><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainFollower"><span class="hs-identifier hs-var">ChainFollower</span></a></span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="nextChange"><span class="annot"><span class="annottext">forall a.
+ChainFollower a
+-&gt; forall (m :: * -&gt; *). MonadIO m =&gt; m (ChainChange a)
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#nextChange"><span class="hs-identifier hs-var hs-var">nextChange</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679753841"><span class="annot"><a href="#local-6989586621679753841"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753841"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679753841"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainChange"><span class="hs-identifier hs-type">ChainChange</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753839"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Block until the next chain update is available.</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tryNextChange"><span class="annot"><span class="annottext">forall a.
+ChainFollower a
+-&gt; forall (m :: * -&gt; *). MonadIO m =&gt; m (Maybe (ChainChange a))
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#tryNextChange"><span class="hs-identifier hs-var hs-var">tryNextChange</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679753846"><span class="annot"><a href="#local-6989586621679753846"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753846"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679753846"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainChange"><span class="hs-identifier hs-type">ChainChange</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753839"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-comment">-- ^ The next chain update, or 'Nothing' if there is none yet. Does not</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-comment">-- block, but may read the block from disk.</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="findIntersect"><span class="annot"><span class="annottext">forall a.
+ChainFollower a
+-&gt; forall (m :: * -&gt; *).
+   MonadIO m =&gt;
+   [ChainPoint] -&gt; m (Maybe ChainPoint)
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#findIntersect"><span class="hs-identifier hs-var hs-var">findIntersect</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679753849"><span class="annot"><a href="#local-6989586621679753849"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753849"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#ChainPoint"><span class="hs-identifier hs-type">ChainPoint</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679753849"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#ChainPoint"><span class="hs-identifier hs-type">ChainPoint</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-comment">-- ^ Move the follower to the first of the given points found on the</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-comment">-- current chain, returning that point, or 'Nothing' if none of them are</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-comment">-- on the chain.</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- | A single instruction produced by a chain follower.</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- 'ChainApply' carries the per-block payload the follower was opened for</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- (see 'withFollower' and 'withBlockFollower').</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- Consensus rollbacks are point-only: 'ChainRollBack' never carries the</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- blocks being rolled back, only the point to roll back to.</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">data</span><span> </span><span id="ChainChange"><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainChange"><span class="hs-identifier hs-var">ChainChange</span></a></span></span><span> </span><span id="local-6989586621679753945"><span class="annot"><a href="#local-6989586621679753945"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="ChainApply"><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainApply"><span class="hs-identifier hs-var">ChainApply</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621679753945"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ChainRollBack"><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainRollBack"><span class="hs-identifier hs-var">ChainRollBack</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#ChainPoint"><span class="hs-identifier hs-type">ChainPoint</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- | Run an action with a 'ChainFollower' tracking the selected chain, whose</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- 'ChainApply' payload is the raw CBOR block bytes together with the same</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- block parsed into its era context - exactly the pair 'fetchBlock' returns.</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- The follower and the resource registry backing it are closed on every</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- exit path, including exceptions. The follower itself runs in 'IO',</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- because the ChainDB handle is monomorphic, so the bracket runs there and</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- the action is unlifted into it.</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- Creating a follower is cheap: a few in-memory STM operations, nothing</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- proportional to chain length. The costs are steady-state instead. A</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- caught-up follower receives an O(1) notification per adopted block. A</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- follower catching up streams blocks from the ImmutableDB, paying a disk</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- read and a deserialisation per block, with file handles owned by the</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- registry. The node already runs one such follower per connected N2C</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- ChainSync client, so one follower per stream scales the same way.</span><span>
+</span><span id="line-69"></span><span id="local-6989586621679753853"><span id="local-6989586621679753858"><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#withFollower"><span class="hs-identifier hs-type">withFollower</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679753853"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Type.html#NodeKernelAccess"><span class="hs-identifier hs-type">Type.NodeKernelAccess</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainFollower"><span class="hs-identifier hs-type">ChainFollower</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockInMode"><span class="hs-identifier hs-type">BlockInMode</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679753853"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753858"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679753853"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753858"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-74"></span><span id="withFollower"><span class="annot"><span class="annottext">withFollower :: forall (m :: * -&gt; *) a.
+MonadUnliftIO m =&gt;
+NodeKernelAccess
+-&gt; (ChainFollower (ByteString, BlockInMode) -&gt; m a) -&gt; m a
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#withFollower"><span class="hs-identifier hs-var hs-var">withFollower</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">BlockComponent
+  (CardanoBlock StandardCrypto) (ByteString, BlockInMode)
+-&gt; NodeKernelAccess
+-&gt; (ChainFollower (ByteString, BlockInMode) -&gt; m a)
+-&gt; m a
+forall (m :: * -&gt; *) b a.
+MonadUnliftIO m =&gt;
+BlockComponent (CardanoBlock StandardCrypto) b
+-&gt; NodeKernelAccess -&gt; (ChainFollower b -&gt; m a) -&gt; m a
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#withFollowerReading"><span class="hs-identifier hs-var">withFollowerReading</span></a></span><span> </span><span class="annot"><span class="annottext">(BlockComponent
+   (CardanoBlock StandardCrypto) (ByteString, BlockInMode)
+ -&gt; NodeKernelAccess
+ -&gt; (ChainFollower (ByteString, BlockInMode) -&gt; m a)
+ -&gt; m a)
+-&gt; BlockComponent
+     (CardanoBlock StandardCrypto) (ByteString, BlockInMode)
+-&gt; NodeKernelAccess
+-&gt; (ChainFollower (ByteString, BlockInMode) -&gt; m a)
+-&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; BlockInMode -&gt; (ByteString, BlockInMode))
+-&gt; BlockComponent (CardanoBlock StandardCrypto) ByteString
+-&gt; BlockComponent
+     (CardanoBlock StandardCrypto)
+     (BlockInMode -&gt; (ByteString, BlockInMode))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) ByteString
+-&gt; BlockComponent (CardanoBlock StandardCrypto) ByteString
+forall a b.
+(a -&gt; b)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) a
+-&gt; BlockComponent (CardanoBlock StandardCrypto) b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier hs-var">BSL.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">BlockComponent (CardanoBlock StandardCrypto) ByteString
+forall blk. BlockComponent blk ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.Common.html#GetRawBlock"><span class="hs-identifier hs-var">Consensus.GetRawBlock</span></a></span><span> </span><span class="annot"><span class="annottext">BlockComponent
+  (CardanoBlock StandardCrypto)
+  (BlockInMode -&gt; (ByteString, BlockInMode))
+-&gt; BlockComponent (CardanoBlock StandardCrypto) BlockInMode
+-&gt; BlockComponent
+     (CardanoBlock StandardCrypto) (ByteString, BlockInMode)
+forall a b.
+BlockComponent (CardanoBlock StandardCrypto) (a -&gt; b)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) a
+-&gt; BlockComponent (CardanoBlock StandardCrypto) b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoBlock StandardCrypto -&gt; BlockInMode)
+-&gt; BlockComponent
+     (CardanoBlock StandardCrypto) (CardanoBlock StandardCrypto)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) BlockInMode
+forall a b.
+(a -&gt; b)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) a
+-&gt; BlockComponent (CardanoBlock StandardCrypto) b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoBlock StandardCrypto -&gt; BlockInMode
+forall block.
+(CardanoBlock StandardCrypto ~ block) =&gt;
+block -&gt; BlockInMode
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#fromConsensusBlock"><span class="hs-identifier hs-var">fromConsensusBlock</span></a></span><span> </span><span class="annot"><span class="annottext">BlockComponent
+  (CardanoBlock StandardCrypto) (CardanoBlock StandardCrypto)
+forall blk. BlockComponent blk blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.Common.html#GetBlock"><span class="hs-identifier hs-var">Consensus.GetBlock</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- | 'withFollower' with the parsed block alone as the 'ChainApply' payload,</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- reading each block once instead of twice.</span><span>
+</span><span id="line-80"></span><span id="local-6989586621679753883"><span id="local-6989586621679753884"><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#withBlockFollower"><span class="hs-identifier hs-type">withBlockFollower</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679753883"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Type.html#NodeKernelAccess"><span class="hs-identifier hs-type">Type.NodeKernelAccess</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainFollower"><span class="hs-identifier hs-type">ChainFollower</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockInMode"><span class="hs-identifier hs-type">BlockInMode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679753883"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753884"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679753883"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753884"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-85"></span><span id="withBlockFollower"><span class="annot"><span class="annottext">withBlockFollower :: forall (m :: * -&gt; *) a.
+MonadUnliftIO m =&gt;
+NodeKernelAccess -&gt; (ChainFollower BlockInMode -&gt; m a) -&gt; m a
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#withBlockFollower"><span class="hs-identifier hs-var hs-var">withBlockFollower</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BlockComponent (CardanoBlock StandardCrypto) BlockInMode
+-&gt; NodeKernelAccess -&gt; (ChainFollower BlockInMode -&gt; m a) -&gt; m a
+forall (m :: * -&gt; *) b a.
+MonadUnliftIO m =&gt;
+BlockComponent (CardanoBlock StandardCrypto) b
+-&gt; NodeKernelAccess -&gt; (ChainFollower b -&gt; m a) -&gt; m a
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#withFollowerReading"><span class="hs-identifier hs-var">withFollowerReading</span></a></span><span> </span><span class="annot"><span class="annottext">(BlockComponent (CardanoBlock StandardCrypto) BlockInMode
+ -&gt; NodeKernelAccess -&gt; (ChainFollower BlockInMode -&gt; m a) -&gt; m a)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) BlockInMode
+-&gt; NodeKernelAccess
+-&gt; (ChainFollower BlockInMode -&gt; m a)
+-&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoBlock StandardCrypto -&gt; BlockInMode
+forall block.
+(CardanoBlock StandardCrypto ~ block) =&gt;
+block -&gt; BlockInMode
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#fromConsensusBlock"><span class="hs-identifier hs-var">fromConsensusBlock</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoBlock StandardCrypto -&gt; BlockInMode)
+-&gt; BlockComponent
+     (CardanoBlock StandardCrypto) (CardanoBlock StandardCrypto)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) BlockInMode
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">BlockComponent
+  (CardanoBlock StandardCrypto) (CardanoBlock StandardCrypto)
+forall blk. BlockComponent blk blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.Common.html#GetBlock"><span class="hs-identifier hs-var">Consensus.GetBlock</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><span class="hs-comment">-- | Run an action with a follower that reads the given block component.</span></span><span>
+</span><span id="line-88"></span><span id="local-6989586621679753864"><span id="local-6989586621679753865"><span id="local-6989586621679753866"><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#withFollowerReading"><span class="hs-identifier hs-type">withFollowerReading</span></a></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679753864"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.Common.html#BlockComponent"><span class="hs-identifier hs-type">Consensus.BlockComponent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Consensus.CardanoBlock</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-protocol-0.2.0.1-04d5d38ff9638485132a225b3871a93894da470b881fe17751d277a6c18a6b67/share/doc/html/src/Cardano.Protocol.Crypto.html#StandardCrypto"><span class="hs-identifier hs-type">Consensus.StandardCrypto</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679753865"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Type.html#NodeKernelAccess"><span class="hs-identifier hs-type">Type.NodeKernelAccess</span></a></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainFollower"><span class="hs-identifier hs-type">ChainFollower</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753865"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679753864"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753866"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679753864"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753866"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-94"></span><span id="withFollowerReading"><span class="annot"><span class="annottext">withFollowerReading :: forall (m :: * -&gt; *) b a.
+MonadUnliftIO m =&gt;
+BlockComponent (CardanoBlock StandardCrypto) b
+-&gt; NodeKernelAccess -&gt; (ChainFollower b -&gt; m a) -&gt; m a
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#withFollowerReading"><span class="hs-identifier hs-var hs-var">withFollowerReading</span></a></span></span><span> </span><span id="local-6989586621679754018"><span class="annot"><span class="annottext">BlockComponent (CardanoBlock StandardCrypto) b
+</span><a href="#local-6989586621679754018"><span class="hs-identifier hs-var">component</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Type.html#NodeKernelAccess"><span class="hs-identifier hs-type">Type.NodeKernelAccess</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">chainDb :: NodeKernelAccess -&gt; ChainDB IO (CardanoBlock StandardCrypto)
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Type.html#chainDb"><span class="hs-identifier hs-var">Type.chainDb</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679754021"><span class="annot"><span class="annottext">ChainDB IO (CardanoBlock StandardCrypto)
+</span><a href="#local-6989586621679754021"><span class="hs-identifier hs-var">chainDb</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679754022"><span class="annot"><span class="annottext">ChainFollower b -&gt; m a
+</span><a href="#local-6989586621679754022"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><span class="annottext">((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall b. ((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a)
+-&gt; ((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679754023"><span class="annot"><span class="annottext">forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679754023"><span class="hs-identifier hs-var">runInIO</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-96"></span><span>    </span><span class="annot"><span class="annottext">(ResourceRegistry IO -&gt; IO a) -&gt; IO a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, MonadMask m, MonadThread m, MonadEvaluate m,
+ HasCallStack) =&gt;
+(ResourceRegistry m -&gt; m a) -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/resource-registry-0.4.0.0-3fd666c92cf628979b44c351a76af16b288eaee03d8b17f14a5df1366a717c6e/share/doc/html/src/Control.ResourceRegistry.html#withRegistry"><span class="hs-identifier hs-var">Consensus.withRegistry</span></a></span><span> </span><span class="annot"><span class="annottext">((ResourceRegistry IO -&gt; IO a) -&gt; IO a)
+-&gt; (ResourceRegistry IO -&gt; IO a) -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679754025"><span class="annot"><span class="annottext">ResourceRegistry IO
+</span><a href="#local-6989586621679754025"><span class="hs-identifier hs-var">registry</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>      </span><span class="annot"><span class="annottext">IO (Follower IO (CardanoBlock StandardCrypto) b)
+-&gt; (Follower IO (CardanoBlock StandardCrypto) b -&gt; IO ())
+-&gt; (Follower IO (CardanoBlock StandardCrypto) b -&gt; IO a)
+-&gt; IO a
+forall (m :: * -&gt; *) a b c.
+MonadUnliftIO m =&gt;
+m a -&gt; (a -&gt; m b) -&gt; (a -&gt; m c) -&gt; m c
+</span><span class="hs-identifier hs-var">bracket</span></span><span>
+</span><span id="line-98"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChainDB IO (CardanoBlock StandardCrypto)
+-&gt; forall b.
+   ResourceRegistry IO
+   -&gt; ChainType
+   -&gt; BlockComponent (CardanoBlock StandardCrypto) b
+   -&gt; IO (Follower IO (CardanoBlock StandardCrypto) b)
+forall (m :: * -&gt; *) blk.
+ChainDB m blk
+-&gt; forall b.
+   ResourceRegistry m
+   -&gt; ChainType -&gt; BlockComponent blk b -&gt; m (Follower m blk b)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html#newFollower"><span class="hs-identifier hs-var">Consensus.newFollower</span></a></span><span> </span><span class="annot"><span class="annottext">ChainDB IO (CardanoBlock StandardCrypto)
+</span><a href="#local-6989586621679754021"><span class="hs-identifier hs-var">chainDb</span></a></span><span> </span><span class="annot"><span class="annottext">ResourceRegistry IO
+</span><a href="#local-6989586621679754025"><span class="hs-identifier hs-var">registry</span></a></span><span> </span><span class="annot"><span class="annottext">ChainType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html#SelectedChain"><span class="hs-identifier hs-var">Consensus.SelectedChain</span></a></span><span> </span><span class="annot"><span class="annottext">BlockComponent (CardanoBlock StandardCrypto) b
+</span><a href="#local-6989586621679754018"><span class="hs-identifier hs-var">component</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><span class="annottext">Follower IO (CardanoBlock StandardCrypto) b -&gt; IO ()
+forall (m :: * -&gt; *) blk a. Follower m blk a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html#followerClose"><span class="hs-identifier hs-var">Consensus.followerClose</span></a></span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679754023"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; IO a)
+-&gt; (Follower IO (CardanoBlock StandardCrypto) b -&gt; m a)
+-&gt; Follower IO (CardanoBlock StandardCrypto) b
+-&gt; IO a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ChainFollower b -&gt; m a
+</span><a href="#local-6989586621679754022"><span class="hs-identifier hs-var">action</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainFollower b -&gt; m a)
+-&gt; (Follower IO (CardanoBlock StandardCrypto) b -&gt; ChainFollower b)
+-&gt; Follower IO (CardanoBlock StandardCrypto) b
+-&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Follower IO (CardanoBlock StandardCrypto) b -&gt; ChainFollower b
+forall b.
+Follower IO (CardanoBlock StandardCrypto) b -&gt; ChainFollower b
+</span><a href="#local-6989586621679754030"><span class="hs-identifier hs-var">toChainFollower</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-102"></span><span>  </span><span id="local-6989586621679753919"><span class="annot"><a href="#local-6989586621679754030"><span class="hs-identifier hs-type">toChainFollower</span></a></span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html#Follower"><span class="hs-identifier hs-type">Consensus.Follower</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Consensus.CardanoBlock</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-protocol-0.2.0.1-04d5d38ff9638485132a225b3871a93894da470b881fe17751d277a6c18a6b67/share/doc/html/src/Cardano.Protocol.Crypto.html#StandardCrypto"><span class="hs-identifier hs-type">Consensus.StandardCrypto</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679753919"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainFollower"><span class="hs-identifier hs-type">ChainFollower</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753919"><span class="hs-identifier hs-type">b</span></a></span></span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679754030"><span class="annot"><span class="annottext">toChainFollower :: forall b.
+Follower IO (CardanoBlock StandardCrypto) b -&gt; ChainFollower b
+</span><a href="#local-6989586621679754030"><span class="hs-identifier hs-var hs-var">toChainFollower</span></a></span></span><span> </span><span id="local-6989586621679754031"><span class="annot"><span class="annottext">Follower IO (CardanoBlock StandardCrypto) b
+</span><a href="#local-6989586621679754031"><span class="hs-identifier hs-var">follower</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainFollower"><span class="hs-identifier hs-type">ChainFollower</span></a></span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">nextChange :: forall (m :: * -&gt; *). MonadIO m =&gt; m (ChainChange b)
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#nextChange"><span class="hs-identifier hs-var">nextChange</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (ChainChange b) -&gt; m (ChainChange b)
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (ChainChange b) -&gt; m (ChainChange b))
+-&gt; IO (ChainChange b) -&gt; m (ChainChange b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ChainUpdate (CardanoBlock StandardCrypto) b -&gt; ChainChange b
+forall b.
+ChainUpdate (CardanoBlock StandardCrypto) b -&gt; ChainChange b
+</span><a href="#local-6989586621679754037"><span class="hs-identifier hs-var">toChainChange</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainUpdate (CardanoBlock StandardCrypto) b -&gt; ChainChange b)
+-&gt; IO (ChainUpdate (CardanoBlock StandardCrypto) b)
+-&gt; IO (ChainChange b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Follower IO (CardanoBlock StandardCrypto) b
+-&gt; IO (ChainUpdate (CardanoBlock StandardCrypto) b)
+forall (m :: * -&gt; *) blk a.
+Follower m blk a -&gt; m (ChainUpdate blk a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html#followerInstructionBlocking"><span class="hs-identifier hs-var">Consensus.followerInstructionBlocking</span></a></span><span> </span><span class="annot"><span class="annottext">Follower IO (CardanoBlock StandardCrypto) b
+</span><a href="#local-6989586621679754031"><span class="hs-identifier hs-var">follower</span></a></span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tryNextChange :: forall (m :: * -&gt; *). MonadIO m =&gt; m (Maybe (ChainChange b))
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#tryNextChange"><span class="hs-identifier hs-var">tryNextChange</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe (ChainChange b)) -&gt; m (Maybe (ChainChange b))
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe (ChainChange b)) -&gt; m (Maybe (ChainChange b)))
+-&gt; IO (Maybe (ChainChange b)) -&gt; m (Maybe (ChainChange b))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainUpdate (CardanoBlock StandardCrypto) b -&gt; ChainChange b)
+-&gt; Maybe (ChainUpdate (CardanoBlock StandardCrypto) b)
+-&gt; Maybe (ChainChange b)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ChainUpdate (CardanoBlock StandardCrypto) b -&gt; ChainChange b
+forall b.
+ChainUpdate (CardanoBlock StandardCrypto) b -&gt; ChainChange b
+</span><a href="#local-6989586621679754037"><span class="hs-identifier hs-var">toChainChange</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (ChainUpdate (CardanoBlock StandardCrypto) b)
+ -&gt; Maybe (ChainChange b))
+-&gt; IO (Maybe (ChainUpdate (CardanoBlock StandardCrypto) b))
+-&gt; IO (Maybe (ChainChange b))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Follower IO (CardanoBlock StandardCrypto) b
+-&gt; IO (Maybe (ChainUpdate (CardanoBlock StandardCrypto) b))
+forall (m :: * -&gt; *) blk a.
+Follower m blk a -&gt; m (Maybe (ChainUpdate blk a))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html#followerInstruction"><span class="hs-identifier hs-var">Consensus.followerInstruction</span></a></span><span> </span><span class="annot"><span class="annottext">Follower IO (CardanoBlock StandardCrypto) b
+</span><a href="#local-6989586621679754031"><span class="hs-identifier hs-var">follower</span></a></span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">findIntersect :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+[ChainPoint] -&gt; m (Maybe ChainPoint)
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#findIntersect"><span class="hs-identifier hs-var">findIntersect</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679754053"><span class="annot"><span class="annottext">[ChainPoint]
+</span><a href="#local-6989586621679754053"><span class="hs-identifier hs-var">points</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-110"></span><span>          </span><span class="annot"><span class="annottext">IO (Maybe ChainPoint) -&gt; m (Maybe ChainPoint)
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe ChainPoint) -&gt; m (Maybe ChainPoint))
+-&gt; IO (Maybe ChainPoint) -&gt; m (Maybe ChainPoint)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-111"></span><span>            </span><span class="annot"><span class="annottext">(Point (CardanoBlock StandardCrypto) -&gt; ChainPoint)
+-&gt; Maybe (Point (CardanoBlock StandardCrypto)) -&gt; Maybe ChainPoint
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Point (CardanoBlock StandardCrypto) -&gt; ChainPoint
+forall block (xs :: [*]).
+(HeaderHash block ~ OneEraHash xs) =&gt;
+Point block -&gt; ChainPoint
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#fromConsensusPointHF"><span class="hs-identifier hs-var">fromConsensusPointHF</span></a></span><span>
+</span><span id="line-112"></span><span>              </span><span class="annot"><span class="annottext">(Maybe (Point (CardanoBlock StandardCrypto)) -&gt; Maybe ChainPoint)
+-&gt; IO (Maybe (Point (CardanoBlock StandardCrypto)))
+-&gt; IO (Maybe ChainPoint)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Follower IO (CardanoBlock StandardCrypto) b
+-&gt; [Point (CardanoBlock StandardCrypto)]
+-&gt; IO (Maybe (Point (CardanoBlock StandardCrypto)))
+forall (m :: * -&gt; *) blk a.
+Follower m blk a -&gt; [Point blk] -&gt; m (Maybe (Point blk))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html#followerForward"><span class="hs-identifier hs-var">Consensus.followerForward</span></a></span><span> </span><span class="annot"><span class="annottext">Follower IO (CardanoBlock StandardCrypto) b
+</span><a href="#local-6989586621679754031"><span class="hs-identifier hs-var">follower</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ChainPoint -&gt; Point (CardanoBlock StandardCrypto))
+-&gt; [ChainPoint] -&gt; [Point (CardanoBlock StandardCrypto)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">ChainPoint -&gt; Point (CardanoBlock StandardCrypto)
+forall block (xs :: [*]).
+(HeaderHash block ~ OneEraHash xs) =&gt;
+ChainPoint -&gt; Point block
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#toConsensusPointHF"><span class="hs-identifier hs-var">toConsensusPointHF</span></a></span><span> </span><span class="annot"><span class="annottext">[ChainPoint]
+</span><a href="#local-6989586621679754053"><span class="hs-identifier hs-var">points</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span>  </span><span id="local-6989586621679753925"><span class="annot"><a href="#local-6989586621679754037"><span class="hs-identifier hs-type">toChainChange</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Consensus.ChainUpdate</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Consensus.CardanoBlock</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-protocol-0.2.0.1-04d5d38ff9638485132a225b3871a93894da470b881fe17751d277a6c18a6b67/share/doc/html/src/Cardano.Protocol.Crypto.html#StandardCrypto"><span class="hs-identifier hs-type">Consensus.StandardCrypto</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679753925"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainChange"><span class="hs-identifier hs-type">ChainChange</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753925"><span class="hs-identifier hs-type">b</span></a></span></span><span>
+</span><span id="line-118"></span><span>  </span><span id="local-6989586621679754037"><span class="annot"><span class="annottext">toChainChange :: forall b.
+ChainUpdate (CardanoBlock StandardCrypto) b -&gt; ChainChange b
+</span><a href="#local-6989586621679754037"><span class="hs-identifier hs-var hs-var">toChainChange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Consensus.AddBlock</span></span><span> </span><span id="local-6989586621679754060"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679754060"><span class="hs-identifier hs-var">payload</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">b -&gt; ChainChange b
+forall a. a -&gt; ChainChange a
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainApply"><span class="hs-identifier hs-var">ChainApply</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679754060"><span class="hs-identifier hs-var">payload</span></a></span><span>
+</span><span id="line-120"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Consensus.RollBack</span></span><span> </span><span id="local-6989586621679754062"><span class="annot"><span class="annottext">Point (CardanoBlock StandardCrypto)
+</span><a href="#local-6989586621679754062"><span class="hs-identifier hs-var">point</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ChainPoint -&gt; ChainChange b
+forall a. ChainPoint -&gt; ChainChange a
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainRollBack"><span class="hs-identifier hs-var">ChainRollBack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Point (CardanoBlock StandardCrypto) -&gt; ChainPoint
+forall block (xs :: [*]).
+(HeaderHash block ~ OneEraHash xs) =&gt;
+Point block -&gt; ChainPoint
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#fromConsensusPointHF"><span class="hs-identifier hs-var">fromConsensusPointHF</span></a></span><span> </span><span class="annot"><span class="annottext">Point (CardanoBlock StandardCrypto)
+</span><a href="#local-6989586621679754062"><span class="hs-identifier hs-var">point</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- | Position a freshly opened chain follower at the current tip (origin, at</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- genesis), so it reports only blocks applied from now on, and return that</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- point. A fork switch between the tip read and the intersection takes the</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- old tip off the chain; then read the new tip and try again, rather than</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- fall back to origin and replay the whole chain on the first drain.</span><span>
+</span><span id="line-127"></span><span id="local-6989586621679753946"><span id="local-6989586621679753947"><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#positionFollowerAtCurrentTip"><span class="hs-identifier hs-type">positionFollowerAtCurrentTip</span></a></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753946"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Type.html#NodeKernelAccess"><span class="hs-identifier hs-type">Type.NodeKernelAccess</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainFollower"><span class="hs-identifier hs-type">ChainFollower</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679753947"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679753946"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#ChainPoint"><span class="hs-identifier hs-type">ChainPoint</span></a></span></span></span><span>
+</span><span id="line-132"></span><span id="positionFollowerAtCurrentTip"><span class="annot"><span class="annottext">positionFollowerAtCurrentTip :: forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+NodeKernelAccess -&gt; ChainFollower a -&gt; m ChainPoint
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#positionFollowerAtCurrentTip"><span class="hs-identifier hs-var hs-var">positionFollowerAtCurrentTip</span></a></span></span><span> </span><span id="local-6989586621679754070"><span class="annot"><span class="annottext">NodeKernelAccess
+</span><a href="#local-6989586621679754070"><span class="hs-identifier hs-var">nodeKernelAccess</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#ChainFollower"><span class="hs-identifier hs-type">ChainFollower</span></a></span><span class="hs-special">{</span><span id="local-6989586621679754071"><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
+MonadIO m =&gt;
+[ChainPoint] -&gt; m (Maybe ChainPoint)
+findIntersect :: forall a.
+ChainFollower a
+-&gt; forall (m :: * -&gt; *).
+   MonadIO m =&gt;
+   [ChainPoint] -&gt; m (Maybe ChainPoint)
+findIntersect :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+[ChainPoint] -&gt; m (Maybe ChainPoint)
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#findIntersect"><span class="hs-identifier hs-var hs-var">findIntersect</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m ChainPoint
+</span><a href="#local-6989586621679754072"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-133"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621679754072"><span class="annot"><span class="annottext">go :: m ChainPoint
+</span><a href="#local-6989586621679754072"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-135"></span><span>    </span><span id="local-6989586621679754084"><span class="annot"><a href="#local-6989586621679754084"><span class="hs-identifier hs-var">tipPoint</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM ChainPoint -&gt; m ChainPoint
+forall (m :: * -&gt; *) a. MonadIO m =&gt; STM a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM ChainPoint -&gt; m ChainPoint) -&gt; STM ChainPoint -&gt; m ChainPoint
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeKernelAccess -&gt; STM ChainPoint
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#readChainTipPoint"><span class="hs-identifier hs-var">readChainTipPoint</span></a></span><span> </span><span class="annot"><span class="annottext">NodeKernelAccess
+</span><a href="#local-6989586621679754070"><span class="hs-identifier hs-var">nodeKernelAccess</span></a></span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><a href="#local-6989586621679754071"><span class="hs-identifier hs-type">findIntersect</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679754084"><span class="hs-identifier hs-type">tipPoint</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3E%3E%3D"><span class="hs-operator hs-type">&gt;&gt;=</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Maybe.html#maybe"><span class="hs-identifier hs-type">maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679754072"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- | Read the current chain tip point from ChainDB, or 'ChainPointAtGenesis'</span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- at origin. An STM read, so a caller can wait for the tip to move.</span><span>
+</span><span id="line-140"></span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#readChainTipPoint"><span class="hs-identifier hs-type">readChainTipPoint</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Type.html#NodeKernelAccess"><span class="hs-identifier hs-type">Type.NodeKernelAccess</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Conc.Sync.html#STM"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#ChainPoint"><span class="hs-identifier hs-type">ChainPoint</span></a></span><span>
+</span><span id="line-141"></span><span id="readChainTipPoint"><span class="annot"><span class="annottext">readChainTipPoint :: NodeKernelAccess -&gt; STM ChainPoint
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Follower.html#readChainTipPoint"><span class="hs-identifier hs-var hs-var">readChainTipPoint</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Type.html#NodeKernelAccess"><span class="hs-identifier hs-type">Type.NodeKernelAccess</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">chainDb :: NodeKernelAccess -&gt; ChainDB IO (CardanoBlock StandardCrypto)
+</span><a href="Cardano.Rpc.Server.NodeKernelAccess.Internal.Type.html#chainDb"><span class="hs-identifier hs-var">Type.chainDb</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679754087"><span class="annot"><span class="annottext">ChainDB IO (CardanoBlock StandardCrypto)
+</span><a href="#local-6989586621679754087"><span class="hs-identifier hs-var">chainDb</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-142"></span><span>  </span><span class="annot"><span class="annottext">Point (CardanoBlock StandardCrypto) -&gt; ChainPoint
+forall block (xs :: [*]).
+(HeaderHash block ~ OneEraHash xs) =&gt;
+Point block -&gt; ChainPoint
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#fromConsensusPointHF"><span class="hs-identifier hs-var">fromConsensusPointHF</span></a></span><span> </span><span class="annot"><span class="annottext">(Point (CardanoBlock StandardCrypto) -&gt; ChainPoint)
+-&gt; STM (Point (CardanoBlock StandardCrypto)) -&gt; STM ChainPoint
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/x1g3lx2yjbcszcn2jb5kbq05gljgk40y-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ChainDB IO (CardanoBlock StandardCrypto)
+-&gt; STM IO (Point (CardanoBlock StandardCrypto))
+forall (m :: * -&gt; *) blk. ChainDB m blk -&gt; STM m (Point blk)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-b5c2b655571880e12edfc937a31fcc2aade1cd1dfb285970ffbc28f692e77999/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html#getTipPoint"><span class="hs-identifier hs-var">Consensus.getTipPoint</span></a></span><span> </span><span class="annot"><span class="annottext">ChainDB IO (CardanoBlock StandardCrypto)
+</span><a href="#local-6989586621679754087"><span class="hs-identifier hs-var">chainDb</span></a></span><span>
+</span><span id="line-143"></span></pre></body></html>
