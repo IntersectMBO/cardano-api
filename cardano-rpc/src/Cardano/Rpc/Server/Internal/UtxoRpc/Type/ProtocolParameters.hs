@@ -33,7 +33,6 @@ import Cardano.Ledger.Plutus qualified as L
 
 import RIO hiding (toList)
 
-import Control.Error.Util (note)
 import Data.Default
 import Data.Map.Strict qualified as M
 import Data.ProtoLens (defMessage)
@@ -208,14 +207,14 @@ utxoRpcPParamsToProtocolParams era pp = obtainCommonConstraints era $ do
           coinsPerUtxoByte <-
             pp ^. U5c.coinsPerUtxoByte . to utxoRpcBigIntToInteger ?! "Invalid coinsPerUtxoByte"
           compactCoinsPerUtxO <-
-            note "Could not convert coinsPerUtxoByte to compact form." $ L.toCompact (L.Coin coinsPerUtxoByte)
+            L.toCompact (L.Coin coinsPerUtxoByte) ?! "Could not convert coinsPerUtxoByte to compact form."
           pure $ set L.ppCoinsPerUTxOByteL (L.CoinPerByte compactCoinsPerUtxO) r
       , pure . (L.ppMaxTxSizeL .~ pp ^. U5c.maxTxSize . to fromIntegral)
       , \r -> do
           minFeeCoeff <-
             pp ^. U5c.minFeeCoefficient . to utxoRpcBigIntToInteger ?! "Invalid minFeeCoefficient"
           minFeeCoeffCompact <-
-            note "Could not convert minFeeCoefficient to compact form." $ L.toCompact (L.Coin minFeeCoeff)
+            L.toCompact (L.Coin minFeeCoeff) ?! "Could not convert minFeeCoefficient to compact form."
           pure $ set L.ppTxFeePerByteL (L.CoinPerByte minFeeCoeffCompact) r
       , \r -> do
           minFeeConst <- pp ^. U5c.minFeeConstant . to utxoRpcBigIntToInteger ?! "Invalid minFeeConstant"

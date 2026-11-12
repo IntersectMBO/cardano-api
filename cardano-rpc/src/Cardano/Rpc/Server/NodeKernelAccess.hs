@@ -30,6 +30,7 @@ module Cardano.Rpc.Server.NodeKernelAccess
   , readChainTipHeader
   , readChainTipPoint
   , fetchBlock
+  , fetchBlockReading
 
     -- * Mempool
   , readMempoolTxs
@@ -43,6 +44,7 @@ module Cardano.Rpc.Server.NodeKernelAccess
   , ChainFollower (..)
   , withFollower
   , withBlockFollower
+  , withFollowerReading
   , positionFollowerAtCurrentTip
   )
 where
@@ -264,10 +266,27 @@ fetchBlock
   -- ^ Block header hash
   -> m (Maybe (ByteString, BlockInMode))
   -- ^ Raw CBOR bytes and the block in era context, or 'Nothing' if not found
-fetchBlock Type.NodeKernelAccess{Type.chainDb = chainDb} slot (HeaderHash shortHash) = do
-  let point = Consensus.RealPoint slot (Consensus.OneEraHash shortHash)
-      component = (,) <$> fmap BSL.toStrict Consensus.GetRawBlock <*> fmap fromConsensusBlock Consensus.GetBlock
-  liftIO $ Consensus.getBlockComponent chainDb component point
+fetchBlock nodeKernelAccess =
+  fetchBlockReading nodeKernelAccess $
+    (,) <$> fmap BSL.toStrict Consensus.GetRawBlock <*> fmap fromConsensusBlock Consensus.GetBlock
+
+-- | Read the given components of a block from ChainDB by slot and header hash.
+-- ChainDB reads each component on its own, so a caller reads only what it uses.
+fetchBlockReading
+  :: MonadIO m
+  => Type.NodeKernelAccess
+  -- ^ Node kernel access handle
+  -> Consensus.BlockComponent (Consensus.CardanoBlock Consensus.StandardCrypto) b
+  -- ^ The block components to read
+  -> SlotNo
+  -- ^ Block slot number
+  -> Hash BlockHeader
+  -- ^ Block header hash
+  -> m (Maybe b)
+  -- ^ The block components, or 'Nothing' if the block is not found
+fetchBlockReading Type.NodeKernelAccess{Type.chainDb = chainDb} component slot (HeaderHash shortHash) =
+  liftIO . Consensus.getBlockComponent chainDb component $
+    Consensus.RealPoint slot (Consensus.OneEraHash shortHash)
 
 -- | Read the current mempool contents as a point-in-time snapshot:
 -- transactions added or removed after the read are not reflected.
