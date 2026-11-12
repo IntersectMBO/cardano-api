@@ -13,6 +13,9 @@ on:
   schedule:
     - cron: '0 0 */6 * *'
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ${{ matrix.sys.os }}
@@ -44,21 +47,26 @@ jobs:
 
     steps:
     - name: Concurrency group
-      run: >
-        echo
-        wasm
-        a+${{ github.event_name }}
-        b+${{ github.workflow_ref }}
-        c+${{ github.job }}
-        f+${{ matrix.sys.os }}
-        g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
+      env:
+        GROUP: >
+          wasm
+          a+${{ github.event_name }}
+          b+${{ github.workflow_ref }}
+          c+${{ github.job }}
+          f+${{ matrix.sys.os }}
+          g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
+      run: echo "$GROUP"
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      with:
+        persist-credentials: false
 
-    - uses: cachix/install-nix-action@v31
+    - uses: cachix/install-nix-action@91f6a0f59e94dfb2cfed0f4000f36a68ead1d20c # v31.11.4
       with:
         extra_nix_config: |
-          accept-flake-config = true
+          extra-substituters = https://cache.iog.io
+          extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
+          allow-import-from-derivation = true
 
     # ghc-wasm-meta is the only flake input hosted on gitlab.haskell.org, whose
     # availability is flaky, and an outage breaks every nix invocation below.
@@ -83,7 +91,7 @@ jobs:
           }
         fi
 
-    - uses: rrbutani/use-nix-shell-action@v1
+    - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1.1.0
       with:
         devShell: .#wasm
 
@@ -115,7 +123,7 @@ jobs:
     # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
     # until the `index-state` values in the `cabal.project` file changes.
     - name: Restore cached dependencies
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       id: cache
       with:
         path: |
@@ -135,7 +143,7 @@ jobs:
 
     # Store the cabal cache only when the build succeeds, and skip if dependencies already cached (hash matches).
     - name: Cache Cabal store
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       if: steps.cache.outputs.cache-hit != 'true'
       with:
         path: |
@@ -181,7 +189,7 @@ jobs:
         npx webpack serve --port 8081 &
         cd ../../..
 
-    - uses: rrbutani/use-nix-shell-action@v1
+    - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1.1.0
       with:
         devShell: .#playwright
 
@@ -229,7 +237,7 @@ jobs:
         node node.test.js
         cd -
 
-    - uses: rrbutani/use-nix-shell-action@v1
+    - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1.1.0
       with:
         devShell: .#demo
 
@@ -247,28 +255,28 @@ jobs:
         node api-regression.mjs
 
     - name: Upload wallet demo
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: cardano-wasm-demo
         path: cardano-wasm/demo/dist
         compression-level: 9
 
     - name: Upload built wasm library
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: cardano-wasm
         path: cardano-wasm/lib-wrapper/*
         compression-level: 9
 
     - name: Upload pure WASI wasm binary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: cardano-wasi
         path: cardano-wasm/cardano-wasi.wasm
         compression-level: 9
 
     - name: Upload built NPM package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: npm-package
         path: cardano-wasm/npm-wrapper/*.tgz
