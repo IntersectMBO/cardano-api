@@ -102,7 +102,7 @@ writeByteStringFile
 writeByteStringFile fp bs =
   runExceptT $
     handleIOExceptT (FileIOError (unFile fp)) $
-      toFileOrStdout BS.writeFile BS.putStr (unFile fp) bs
+      byteStringToFileOrStdout (unFile fp) bs
 
 -- | Like 'writeByteStringFile', but the file is created readable and
 -- writable only by its owner (@0600@ on POSIX), and it is replaced
@@ -132,7 +132,7 @@ writeByteStringOutput mOutput bs = runExceptT $
   case mOutput of
     Just fp ->
       handleIOExceptT (FileIOError (unFile fp)) $
-        toFileOrStdout BS.writeFile BSC.putStr (unFile fp) bs
+        byteStringToFileOrStdout (unFile fp) bs
     Nothing -> liftIO $ BSC.putStr bs
 
 -- | Write the bytes to the file, or to standard output when the path is @-@.
@@ -145,7 +145,7 @@ writeLazyByteStringFile
 writeLazyByteStringFile fp bs =
   runExceptT $
     handleIOExceptT (FileIOError (unFile fp)) $
-      toFileOrStdout LBS.writeFile LBS.putStr (unFile fp) bs
+      lazyByteStringToFileOrStdout (unFile fp) bs
 
 -- | Like 'writeLazyByteStringFile', but with the same owner-only
 -- permissions and atomic replacement as
@@ -169,7 +169,7 @@ writeLazyByteStringOutput mOutput bs = runExceptT $
   case mOutput of
     Just fp ->
       handleIOExceptT (FileIOError (unFile fp)) $
-        toFileOrStdout LBS.writeFile LBSC.putStr (unFile fp) bs
+        lazyByteStringToFileOrStdout (unFile fp) bs
     Nothing -> liftIO $ LBSC.putStr bs
 
 -- | Write the text to the file, or to standard output when the path is @-@.
@@ -182,7 +182,7 @@ writeTextFile
 writeTextFile fp t =
   runExceptT $
     handleIOExceptT (FileIOError (unFile fp)) $
-      toFileOrStdout Text.writeFile Text.putStr (unFile fp) t
+      textToFileOrStdout (unFile fp) t
 
 -- | Like 'writeTextFile', but with the same owner-only permissions and
 -- atomic replacement as 'writeByteStringFileWithOwnerPermissions'.
@@ -205,7 +205,7 @@ writeTextOutput mOutput t = runExceptT $
   case mOutput of
     Just fp ->
       handleIOExceptT (FileIOError (unFile fp)) $
-        toFileOrStdout Text.writeFile Text.putStr (unFile fp) t
+        textToFileOrStdout (unFile fp) t
     Nothing -> liftIO $ Text.putStr t
 
 -- | Write to the file with the first function, or to standard output with the
@@ -213,6 +213,15 @@ writeTextOutput mOutput t = runExceptT $
 toFileOrStdout :: (FilePath -> a -> IO ()) -> (a -> IO ()) -> FilePath -> a -> IO ()
 toFileOrStdout _ writeStdout "-" = writeStdout
 toFileOrStdout writeFile' _ path = writeFile' path
+
+byteStringToFileOrStdout :: FilePath -> ByteString -> IO ()
+byteStringToFileOrStdout = toFileOrStdout BS.writeFile BS.putStr
+
+lazyByteStringToFileOrStdout :: FilePath -> LBS.ByteString -> IO ()
+lazyByteStringToFileOrStdout = toFileOrStdout LBS.writeFile LBS.putStr
+
+textToFileOrStdout :: FilePath -> Text -> IO ()
+textToFileOrStdout = toFileOrStdout Text.writeFile Text.putStr
 
 mapFile :: (FilePath -> FilePath) -> File content direction -> File content direction
 mapFile f = File . f . unFile
