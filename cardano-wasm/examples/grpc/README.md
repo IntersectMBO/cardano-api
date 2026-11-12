@@ -46,6 +46,6 @@ To run the example in this folder:
     (cd cardano-wasm/examples/grpc ; envoy -c envoy-conf.yaml)
     ```
 
-8.  Open your web browser and navigate to `http://localhost:8080/`. You should see a page titled `Test Output` with the results of the test.
+8.  Open your web browser and navigate to `http://localhost:8080/`. You should see a page titled `Test Output` with the results of the test. To also see the UTxOs of an address, add it to the URL, like `http://localhost:8080/?address=addr_test1...`.
 
 

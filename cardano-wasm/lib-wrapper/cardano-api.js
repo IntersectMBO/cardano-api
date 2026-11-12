@@ -20,10 +20,21 @@ const loadWasmModule = async (importObject) => {
 };
 
 const createClient = function (address) {
+  const grpcWeb = cardano_node.grpcWeb;
+  const client = new grpcWeb.GrpcWebClientBase({ format: 'text' });
   return {
-    node: new cardano_node.node.NodePromiseClient(address, null, null),
-    query: new cardano_node.query.QueryServicePromiseClient(address, null, null),
-    submit: new cardano_node.submit.SubmitServicePromiseClient(address, null, null)
+    // Send a unary gRPC request, taking and returning the protobuf messages in base64
+    unary: async function (path, request) {
+      const methodDescriptor = new grpcWeb.MethodDescriptor(
+        path, grpcWeb.MethodType.UNARY, Uint8Array, Uint8Array, (bytes) => bytes, (bytes) => bytes);
+      const response = await client.thenableCall(
+        address + path, Uint8Array.from(atob(request), (char) => char.charCodeAt(0)), {}, methodDescriptor);
+      let binary = '';
+      for (let i = 0; i < response.length; i += 0x8000) {
+        binary += String.fromCharCode.apply(null, response.subarray(i, i + 0x8000));
+      }
+      return btoa(binary);
+    }
   }
 }
 

@@ -31,8 +31,8 @@ declare interface GrpcConnection {
     getProtocolParams(): Promise<any>;
 
     /**
-     * Get all UTXOs from the node using a GRPC-web client.
-     * @returns A promise that resolves to the current UTXO set.
+     * Not supported: it always fails, because the node only returns the UTXOs of given addresses. Use getUtxosForAddress instead.
+     * @returns A promise that is always rejected.
      */
     getAllUtxos(): Promise<{ address: string, txId: string, txIndex: number, lovelace: bigint, assets: any[], datum?: any, script?: any }[]>;
 

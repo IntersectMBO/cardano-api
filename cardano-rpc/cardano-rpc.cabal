@@ -153,6 +153,7 @@ library
 -- into utxorpc
 library gen
   import: project-config
+  visibility: public
   hs-source-dirs: gen
   exposed-modules:
     Proto.Cardano.Rpc.Node
@@ -171,8 +172,18 @@ library gen
     Proto.Utxorpc.V1beta.Sync.Sync_Fields
 
   build-depends:
-    proto-lens-protobuf-types,
-    proto-lens-runtime,
+    proto-lens-runtime
+
+  if arch(wasm32)
+    hs-source-dirs: gen-wkt
+    exposed-modules:
+      Proto.Google.Protobuf.Empty
+      Proto.Google.Protobuf.Empty_Fields
+      Proto.Google.Protobuf.FieldMask
+      Proto.Google.Protobuf.FieldMask_Fields
+  else
+    build-depends:
+      proto-lens-protobuf-types
 
 library testlib
   import: project-config

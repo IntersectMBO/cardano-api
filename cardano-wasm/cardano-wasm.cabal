@@ -54,12 +54,14 @@ library cardano-wasi-lib
     cardano-api,
     cardano-crypto-class,
     cardano-ledger-api,
+    cardano-rpc:gen,
     cardano-strict-containers,
     casing,
     containers,
     exceptions,
     filepath,
     microlens,
+    proto-lens,
     text,
 
   if arch(wasm32)
@@ -156,6 +158,40 @@ test-suite cardano-wasm-golden
 
     other-modules:
       Test.Golden.Cardano.Wasm.TypeScript
+  else
+    build-depends:
+      base
+
+test-suite cardano-wasm-test
+  type: exitcode-stdio-1.0
+  main-is: cardano-wasm-test.hs
+  hs-source-dirs: test/cardano-wasm-test
+
+  if !arch(wasm32)
+    import: project-config
+    build-depends:
+      aeson,
+      base16-bytestring,
+      bytestring,
+      cardano-rpc:gen,
+      cardano-wasm:cardano-wasi-lib,
+      hedgehog >=1.1,
+      hedgehog-extras ^>=0.10,
+      microlens,
+      proto-lens,
+      tasty,
+      tasty-hedgehog,
+
+    ghc-options:
+      -threaded
+      -rtsopts
+      "-with-rtsopts=-N -T"
+
+    build-tool-depends:
+      tasty-discover:tasty-discover
+
+    other-modules:
+      Test.Cardano.Wasm.Api.GRPC
   else
     build-depends:
       base
