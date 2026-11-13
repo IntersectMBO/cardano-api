@@ -506,6 +506,7 @@ prop_make_transaction_body_auto_balance_fails_on_zero_ada_negative_assets = H.pr
           pparams
           mempty
           mempty
+          mempty
           utxos
           content
           address
@@ -608,6 +609,7 @@ prop_estimate_balanced_tx_body_keeps_native_assets_in_change = H.propertyOnce $ 
         mempty
         mempty
         mempty
+        mempty
         (L.Coin 0)
         1
         0
@@ -668,6 +670,7 @@ prop_estimate_balanced_tx_body_fails_on_undeclared_native_assets = H.propertyOnc
     mempty
     mempty
     mempty
+    mempty
     (L.Coin 0)
     1
     0
@@ -716,6 +719,7 @@ prop_estimate_balanced_tx_body_fails_when_deposits_exceed_declared_ada = H.prope
     meo
     content
     ledgerPParams
+    mempty
     mempty
     mempty
     mempty

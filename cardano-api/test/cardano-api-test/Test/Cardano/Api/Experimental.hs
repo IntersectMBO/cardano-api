@@ -275,7 +275,7 @@ prop_makeUnsignedTx_dijkstra_top_level_only_fields = H.property $ do
           & Exp.setTxStartingAccountBalanceIntervals startingIntervals
   Exp.UnsignedTx tx <- H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra bodyContent
   let body = tx ^. L.bodyTxL
-  body ^. Dijkstra.requiredTopLevelGuardsL H.=== requiredGuards
+  body ^. Dijkstra.requiredTopLevelGuardsTxBodyL H.=== requiredGuards
   body ^. Dijkstra.startingAccountBalanceIntervalsTxBodyL H.=== startingIntervals
 
 prop_roundtrip_cbor_any_script :: Property

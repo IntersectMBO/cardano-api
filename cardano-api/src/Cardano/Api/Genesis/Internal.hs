@@ -307,12 +307,6 @@ type MBuiltinCostModel = BuiltinCostModelBase MCostingFun
 testingCostModelV3 :: HasCallStack => L.CostModel
 testingCostModelV3 = mkCostModel' PlutusV3 $ snd <$> costModelParamsForTesting
 
--- PlutusV4 has no testing parameters of its own yet, so it borrows V3's -- same
--- as the ledger's 'testingCostModelV4'. Both languages currently declare 251
--- initial parameters.
-testingCostModelV4 :: HasCallStack => L.CostModel
-testingCostModelV4 = mkCostModel' PlutusV4 $ snd <$> costModelParamsForTesting
-
 mkCostModel' :: (Integral i, Show i, HasCallStack) => Language -> [i] -> L.CostModel
 mkCostModel' lang params =
   case L.mkCostModel lang $ map fromIntegral params of

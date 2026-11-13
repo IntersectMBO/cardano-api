@@ -108,7 +108,6 @@ import Cardano.Ledger.Babbage.Core qualified as Ledger
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Hashes (HASH)
 import Cardano.Ledger.Plutus.CostModels qualified as Plutus
-import Cardano.Ledger.Plutus.ExUnits qualified as Plutus
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Slotting.Slot (EpochNo (..))
 import PlutusLedgerApi.Common (CostModelApplyError)
