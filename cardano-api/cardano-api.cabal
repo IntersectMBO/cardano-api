@@ -144,16 +144,16 @@ library
     cardano-keys ^>=11.0,
     cardano-ledger-allegra >=1.7,
     cardano-ledger-alonzo >=1.18,
-    cardano-ledger-api ^>=1.15,
+    cardano-ledger-api ^>=1.16,
     cardano-ledger-babbage >=1.11,
     cardano-ledger-binary >=1.9.1,
     cardano-ledger-byron >=1.2,
     cardano-ledger-conway >=1.19,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.23,
-    cardano-ledger-dijkstra >=0.1,
+    cardano-ledger-dijkstra >=0.5,
     cardano-ledger-mary >=1.8,
-    cardano-ledger-shelley >=1.16,
-    cardano-protocol ^>=0.2,
+    cardano-ledger-shelley >=1.21,
+    cardano-protocol ^>=0.3,
     cardano-protocol-tpraos >=1.4,
     cardano-slotting >=0.2.0.0,
     cardano-strict-containers >=0.1,
@@ -181,7 +181,7 @@ library
     network-mux,
     nothunks,
     ordered-containers,
-    ouroboros-consensus:{cardano, diffusion, ouroboros-consensus, protocol} ^>=5.4,
+    ouroboros-consensus:{cardano, diffusion, ouroboros-consensus, protocol} ^>=5.0,
     ouroboros-network:{api, framework, ouroboros-network, protocols} ^>=2.0,
     parsec,
     plutus-core ^>=1.71,
@@ -381,7 +381,7 @@ test-suite cardano-api-test
     cardano-crypto-wrapper:testlib,
     cardano-data >=1.0,
     cardano-ledger-alonzo,
-    cardano-ledger-api ^>=1.15,
+    cardano-ledger-api ^>=1.16,
     cardano-ledger-babbage,
     cardano-ledger-binary,
     cardano-ledger-byron,
@@ -426,6 +426,12 @@ test-suite cardano-api-test
     Test.Cardano.Api.Experimental
     Test.Cardano.Api.Experimental.Collateral
     Test.Cardano.Api.Experimental.Fee
+    Test.Cardano.Api.Experimental.Fee.Ada
+    Test.Cardano.Api.Experimental.Fee.Common
+    Test.Cardano.Api.Experimental.Fee.Constraints
+    Test.Cardano.Api.Experimental.Fee.Gen.Guard
+    Test.Cardano.Api.Experimental.Fee.Gen.SubTransaction
+    Test.Cardano.Api.Experimental.Fee.NativeAssets
     Test.Cardano.Api.Genesis
     Test.Cardano.Api.GovAnchorValidation
     Test.Cardano.Api.IO
@@ -472,7 +478,7 @@ test-suite cardano-api-golden
     cardano-crypto-class,
     cardano-data >=1.0,
     cardano-ledger-alonzo,
-    cardano-ledger-api ^>=1.15,
+    cardano-ledger-api ^>=1.16,
     cardano-ledger-binary,
     cardano-ledger-core,
     cardano-ledger-shelley,

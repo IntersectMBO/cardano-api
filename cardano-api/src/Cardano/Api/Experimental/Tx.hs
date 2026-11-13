@@ -292,7 +292,10 @@ module Cardano.Api.Experimental.Tx
     -- * Balancing transactions
   , calculateMinimumUTxO
   , makeTransactionBodyAutoBalance
+  , getAllTxInputs
+  , getAllTxCertificates
   , TxBodyErrorAutoBalance (..)
+  , ScriptFailureSource (..)
   , TxFeeEstimationError (..)
 
     -- ** Internal functions

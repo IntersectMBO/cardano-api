@@ -15,6 +15,7 @@
 module Cardano.Api.Experimental.Tx.Internal.Fee
   ( FeeCalculationError (..)
   , TxBodyErrorAutoBalance (..)
+  , ScriptFailureSource (..)
   , TxFeeEstimationError (..)
   , calculateMinimumUTxO
   , calcMinFeeRecursive
@@ -45,9 +46,10 @@ import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Experimental.Tx.Internal.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Experimental.Tx.Internal.Guard
-import Cardano.Api.Experimental.Tx.Internal.Type
+import Cardano.Api.Experimental.Tx.Internal.Type (UnsignedTx (..), getAllTxInputs)
 import Cardano.Api.Key.Internal qualified as Api
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
+import Cardano.Api.Monad.Error ((?!))
 import Cardano.Api.Plutus.Internal
 import Cardano.Api.Plutus.Internal.Script (fromAlonzoExUnits, toAlonzoExUnits)
 import Cardano.Api.Plutus.Internal.Script qualified as Old
@@ -74,12 +76,43 @@ import Cardano.Api.Tx.Internal.TxIn
 import Cardano.Api.Value.Internal
 
 import Cardano.Ledger.Alonzo.Core qualified as Ledger
+import Cardano.Ledger.Alonzo.Plutus.Context qualified as L
+  ( CollectError
+  , LedgerLevelTxInfo (..)
+  , LedgerTxInfo (..)
+  , mkSupportedPlutusRunnable
+  , mkTxInfoResult
+  , toScriptHashByPurpose
+  )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (mkPlutusWithContext)
+import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage, toAsItem, toAsIx)
+import Cardano.Ledger.Alonzo.Tx qualified as L (getTotalExUnits)
+import Cardano.Ledger.Alonzo.UTxO (resolveNeededPlutusScriptsWithPurpose)
+import Cardano.Ledger.Alonzo.UTxO qualified as L
+  ( plutusScriptsWithContextStAnnTx
+  , scriptsNeededStAnnTx
+  , scriptsProvidedStAnnTx
+  )
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
+import Cardano.Ledger.Core qualified as L (txStAnnTxG)
 import Cardano.Ledger.Credential as Ledger (Credential, credKeyHashWitness)
+import Cardano.Ledger.Dijkstra ()
+import Cardano.Ledger.Dijkstra.Tx qualified as Dijkstra
+import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
+import Cardano.Ledger.Dijkstra.UTxO qualified as L
+  ( plutusLegacyModeStAnnTxG
+  , subTransactionsStAnnTx
+  )
 import Cardano.Ledger.Keys (asWitness)
+import Cardano.Ledger.Plutus.CostModels (costModelsValid)
+import Cardano.Ledger.Plutus.Evaluate qualified as Plutus
+import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
+import Cardano.Ledger.Shelley.API.Mempool qualified as L (mkStAnnTx)
+import Cardano.Ledger.State qualified as L (ScriptsProvided (..))
 import Cardano.Ledger.Val qualified as L
+import PlutusLedgerApi.Common qualified as PlutusApi
 
 import Control.Monad
 import Control.Monad.Except (throwError)
@@ -87,6 +120,8 @@ import Data.Bifunctor
 import Data.Function (on, (&))
 import Data.List (sortBy)
 import Data.List qualified as List
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Ordered ()
 import Data.Map.Ordered.Strict qualified as OMap
 import Data.Map.Strict (Map)
@@ -102,6 +137,12 @@ import GHC.Exts (IsList (..))
 import GHC.Stack
 import Lens.Micro ((%~), (.~), (^.))
 import Prettyprinter (punctuate)
+
+-- | The transaction containing a failing script.
+data ScriptFailureSource
+  = TopLevelTransaction
+  | SubTransaction TxId
+  deriving (Eq, Show)
 
 data TxBodyErrorAutoBalance era
   = -- | There is not enough ada and non-ada to cover both the outputs and the fees.
@@ -149,12 +190,65 @@ data TxBodyErrorAutoBalance era
     -- with them), or collateral was provided for a transaction that does
     -- not run Plutus scripts and so does not need it.
     TxBodyErrorCollateral CollateralError
+  | TxBodyErrorMissingInputs (Set TxIn)
+  | TxBodyErrorDuplicateSpendingInputs (Set TxIn)
+  | -- | Combined execution budget exceeds the protocol limit.
+    TxBodyErrorTopLevelExecutionUnitsTooBig
+      ExecutionUnits
+      -- ^ Used by the top-level transaction and its sub-transactions.
+      ExecutionUnits
+      -- ^ Maximum allowed.
+  | -- | Ledger could not build the script contexts.
+    TxBodyErrorTopLevelScriptContexts
+      (NonEmpty (L.CollectError L.DijkstraEra))
+  | -- | Scripts failed although the transaction is marked ScriptValid.
+    TxBodyErrorTopLevelScriptFailures
+      (NonEmpty (ScriptFailureSource, ScriptExecutionError))
+  | -- | Legacy Plutus requires the top-level transaction to balance independently.
+    TxBodyErrorLegacyTopLevelBalance
+      L.MaryValue
+      -- ^ Remaining balance; negative amounts are shortfalls.
   | TxBodyErrorMakeUnsignedTx MakeUnsignedTxError
 
 deriving instance Show (TxBodyErrorAutoBalance era)
 
 instance Error (TxBodyErrorAutoBalance era) where
   prettyError = \case
+    TxBodyErrorMissingInputs inputs -> "Missing inputs for the top-level transaction or its sub-transactions: " <> pshow inputs
+    TxBodyErrorDuplicateSpendingInputs inputs ->
+      "Inputs spent by more than one of the top-level transaction and its sub-transactions: "
+        <> pshow inputs
+    TxBodyErrorTopLevelExecutionUnitsTooBig used maximumAllowed ->
+      vsep
+        [ "The top-level transaction and its sub-transactions exceed the maximum transaction execution budget."
+        , "Used: " <> pshow used
+        , "Maximum: " <> pshow maximumAllowed
+        ]
+    TxBodyErrorTopLevelScriptContexts errors ->
+      vsep $
+        "Could not build script contexts for the top-level transaction or its sub-transactions:"
+          : map pshow (toList errors)
+    TxBodyErrorTopLevelScriptFailures failures ->
+      vsep
+        [ vsep
+            [ case source of
+                TopLevelTransaction -> "Top-level transaction"
+                SubTransaction subTxId -> "Sub-transaction " <> pretty subTxId
+            , case failure of
+                ScriptErrorEvaluationFailed details ->
+                  vsep
+                    [ "Script hash: " <> pshow (Plutus.pwcScriptHash $ dpfScriptWithContext details)
+                    , pretty $ dpfEvaluationError details
+                    ]
+                _ -> prettyError failure
+            ]
+        | (source, failure) <- toList failures
+        ]
+    TxBodyErrorLegacyTopLevelBalance balance ->
+      vsep
+        [ "Legacy Plutus requires the top-level transaction to balance independently of its sub-transactions."
+        , "Remaining balance: " <> pshow balance
+        ]
     TxBodyScriptExecutionError failures ->
       mconcat
         [ "The following scripts have execution failures:\n"
@@ -568,7 +662,8 @@ data TxEvaluationResult era = Show (L.Value era) => TxEvaluationResult
 
 deriving instance Show (TxEvaluationResult era)
 
--- | Run all scripts, compute the minimum fee, and check the balance.
+-- | Evaluate top-level scripts, compute the minimum fee, and check the aggregate balance.
+-- The fee includes signed sub-transaction budgets and reference scripts at every level.
 evaluateTransaction
   :: forall era
    . IsEra era
@@ -685,11 +780,44 @@ hasPlutusScriptWitnesses
   => TxBodyContent (LedgerEra era)
   -> Bool
 hasPlutusScriptWitnesses txbodycontent =
-  not $
-    null
-      [ ()
-      | (_, AnyScriptWitnessPlutus{}) <- collectTxBodyScriptWitnesses txbodycontent
-      ]
+  not (null [() | (_, AnyScriptWitnessPlutus{}) <- collectTxBodyScriptWitnesses txbodycontent])
+    || hasSubTransactionRedeemers txbodycontent
+
+-- | Whether any sub-transaction contains Plutus redeemers.
+hasSubTransactionRedeemers
+  :: forall era
+   . IsEra era
+  => TxBodyContent (LedgerEra era)
+  -> Bool
+hasSubTransactionRedeemers txbodycontent =
+  obtainCommonConstraints (useEra @era) $
+    any
+      (not . Map.null . L.unRedeemers . (^. L.witsTxL . L.rdmrsTxWitsL))
+      (txSubTransactions txbodycontent)
+
+-- | Inputs spent by both the top-level transaction and a sub-transaction, or by
+-- more than one sub-transaction. Reference and collateral inputs are excluded
+-- because they are not consumed during successful execution; shared reference
+-- inputs are allowed.
+getDuplicateSpendingInputs
+  :: forall era
+   . IsEra era
+  => UnsignedTx (LedgerEra era)
+  -> Set TxIn
+getDuplicateSpendingInputs (UnsignedTx tx) =
+  obtainCommonConstraints (useEra @era) $
+    let topLevelInputs = tx ^. L.bodyTxL . L.inputsTxBodyL
+        subTransactionInputs :: [Set L.TxIn]
+        subTransactionInputs = case useEra @era of
+          ConwayEra -> []
+          DijkstraEra ->
+            map (^. L.bodyTxL . L.inputsTxBodyL) $
+              toList (tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL)
+        findDuplicateInputs (seen, duplicates) inputs =
+          (seen <> inputs, duplicates <> Set.intersection seen inputs)
+     in Set.map fromShelleyTxIn $
+          snd $
+            List.foldl' findDuplicateInputs (topLevelInputs, mempty) subTransactionInputs
 
 -- | Fail with 'CollateralWithoutPlutusScripts' when the transaction has
 -- collateral inputs but no Plutus script witnesses.
@@ -888,6 +1016,9 @@ instance Error FeeCalculationError where
 -- minimum (Case 3). The slack stops the minimum fee from alternating when the
 -- change output crosses a CBOR integer width boundary (for example 2^32
 -- lovelace).
+--
+-- Reference-script fees include the top-level transaction and its signed
+-- sub-transactions. Only the top-level fee and change outputs are adjusted.
 --
 -- A maximum iteration limit (currently 50) guards against non-termination.
 -- If the limit is reached, 'FeeCalculationDidNotConverge' is returned.
@@ -1443,10 +1574,11 @@ toUnsigned e tx =
   obtainCommonConstraints e $
     UnsignedTx tx
 
--- | Compute the 'ExecutionUnits' required for each script in the transaction.
+-- | Compute the 'ExecutionUnits' required for each top-level redeemer.
 --
--- This process involves executing all scripts and counting the actual execution units
--- consumed.
+-- In Dijkstra, the top-level script contexts include the sub-transactions, so
+-- top-level guards can inspect their contents. Results are indexed within the
+-- top-level transaction; sub-transaction budgets are not returned or modified.
 evaluateTransactionExecutionUnits
   :: forall era
    . IsEra era
@@ -1458,8 +1590,16 @@ evaluateTransactionExecutionUnits
   -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
 evaluateTransactionExecutionUnits systemstart epochInfo pp utxo tx =
   obtainCommonConstraints (useEra @era) $
-    fromLedgerScriptExUnitsMap $
-      L.evalTxExUnitsWithLogs pp tx utxo ledgerEpochInfo systemstart
+    case useEra @era of
+      ConwayEra ->
+        fromLedgerScriptExUnitsMap $
+          L.evalTxExUnitsWithLogs pp tx utxo ledgerEpochInfo systemstart
+      DijkstraEra
+        | not (null $ tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL) ->
+            evaluateDijkstraTransactionExecutionUnits systemstart epochInfo pp utxo tx
+        | otherwise ->
+            fromLedgerScriptExUnitsMap $
+              L.evalTxExUnitsWithLogs pp tx utxo ledgerEpochInfo systemstart
  where
   LedgerEpochInfo ledgerEpochInfo = epochInfo
 
@@ -1510,6 +1650,163 @@ evaluateTransactionExecutionUnits systemstart epochInfo pp utxo tx =
       L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
       L.ContextError e ->
         obtainCommonConstraints (useEra @era) $ ScriptErrorTranslationError e
+
+-- | Evaluate top-level redeemers with the sub-transaction information required
+-- by Dijkstra guards. The ledger evaluator currently supplies an empty map of
+-- sub-transaction TxInfoResults; use mkStAnnTx to prepare those results from the
+-- transaction, UTxO, protocol parameters and time information instead.
+--
+-- Construct each top-level script context separately so a missing script, cost
+-- model or translation failure is reported for its own redeemer. Iterating the
+-- redeemer map also preserves errors for pointers that do not identify a script.
+evaluateDijkstraTransactionExecutionUnits
+  :: SystemStart
+  -> LedgerEpochInfo
+  -> L.PParams L.DijkstraEra
+  -> L.UTxO L.DijkstraEra
+  -> L.Tx L.TopTx L.DijkstraEra
+  -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
+evaluateDijkstraTransactionExecutionUnits systemstart (LedgerEpochInfo epochInfo) pp utxo tx =
+  fromList
+    [ ( toScriptIndex (convert DijkstraEra) pointer
+      , makeContext pointer redeemer >>= evaluatePlutusScriptExecutionUnits maxBudget
+      )
+    | (pointer, (redeemer, _)) <- Map.toList $ L.unRedeemers (tx ^. L.witsTxL . L.rdmrsTxWitsL)
+    ]
+ where
+  -- Allow each script to run up to the protocol limit while measuring its actual
+  -- execution cost, rather than using its current declared budget.
+  maxBudget = pp ^. L.ppMaxTxExUnitsL
+  -- Annotate the transaction and its sub-transactions using the supplied ledger
+  -- data. The empty cache starts script resolution without previously cached scripts.
+  txWithScriptContexts = L.mkStAnnTx @L.DijkstraEra epochInfo systemstart pp utxo mempty tx
+  -- Use those annotations to assemble the shared top-level transaction information,
+  -- including the sub-transaction TxInfoResults that Dijkstra guards can inspect.
+  ledgerTxInfo = makeDijkstraLedgerTxInfo systemstart (LedgerEpochInfo epochInfo) pp utxo txWithScriptContexts
+  -- Partially apply the context builder so every redeemer shares the script lookups
+  -- and transaction information. The loop above supplies each pointer and redeemer,
+  -- then evaluates its script if context construction succeeds; otherwise it records
+  -- the context error at that redeemer's index.
+  makeContext = makeDijkstraRedeemerContext pp txWithScriptContexts ledgerTxInfo
+
+-- | Construct a top-level redeemer's context, reporting script resolution, cost
+-- model and translation failures for that redeemer. Partial application shares
+-- the script lookups and transaction information across all redeemers.
+makeDijkstraRedeemerContext
+  :: L.PParams L.DijkstraEra
+  -> Dijkstra.DijkstraStAnnTx L.TopTx L.DijkstraEra
+  -> L.LedgerTxInfo L.TopTx L.DijkstraEra
+  -> L.PlutusPurpose L.AsIx L.DijkstraEra
+  -- ^ Redeemer pointer: the script purpose and its index in the top-level transaction.
+  -> L.Data L.DijkstraEra
+  -- ^ Redeemer data supplied to the script identified by the pointer.
+  -> Either ScriptExecutionError Plutus.PlutusWithContext
+makeDijkstraRedeemerContext pp txWithScriptContexts ledgerTxInfo pointer redeemer = do
+  -- Step 1: Find what this redeemer is for (spending, guarding, etc.). Convert
+  -- its pointer to an API index for errors, and reject pointers with no purpose.
+  let index = toScriptIndex (convert DijkstraEra) pointer
+  (purpose, maybeScript, _) <-
+    Map.lookup pointer scriptsByPointer ?! ScriptErrorRedeemerPointsToUnknownScriptHash index
+  -- Step 2: Require the script for that purpose. A known purpose can still have
+  -- a missing script; include the available pointer information in that error.
+  script <- maybeScript ?! ScriptErrorMissingScript index resolvablePointers
+  -- Step 3: Read the script's Plutus language and prepare it to run under the
+  -- transaction's protocol version.
+  let language = plutusScriptLanguage script
+      runnable = L.mkSupportedPlutusRunnable (L.pvMajor $ pp ^. L.ppProtocolVersionL) script
+  -- Step 4: Find a valid cost model for that language, or report its absence.
+  costModel <-
+    Map.lookup language costModels ?! ScriptErrorMissingCostModel language
+  -- Step 5: Build the script's arguments and context from its purpose, redeemer
+  -- and transaction information. Convert translation errors to API errors.
+  -- Return the prepared context; the caller evaluates the script afterward.
+  first (ScriptErrorTranslationError @DijkstraEra) $
+    mkPlutusWithContext runnable purpose ledgerTxInfo txInfoResult redeemer maxBudget costModel
+ where
+  -- Shared evaluation settings and transaction information used in steps 3-5.
+  maxBudget = pp ^. L.ppMaxTxExUnitsL
+  costModels = costModelsValid $ pp ^. L.ppCostModelsL
+  txInfoResult = L.mkTxInfoResult ledgerTxInfo
+  -- Available scripts and the purposes requiring them, taken from the annotation.
+  L.ScriptsProvided scriptsProvided = L.scriptsProvidedStAnnTx @L.DijkstraEra txWithScriptContexts
+  L.AlonzoScriptsNeeded scriptsNeeded = L.scriptsNeededStAnnTx @L.DijkstraEra txWithScriptContexts
+  -- Lookup for steps 1-2: redeemer pointer -> (purpose, optional script, script hash).
+  -- Keep entries whose script is missing so step 2 can report them explicitly.
+  scriptsByPointer =
+    Map.fromList
+      [ ( L.hoistPlutusPurpose toAsIx purpose
+        , (purpose, lookupPlutusScript scriptHash scriptsProvided, scriptHash)
+        )
+      | (purpose, scriptHash) <- scriptsNeeded
+      ]
+  -- Diagnostic version of the same lookup, used only for a missing-script error.
+  resolvablePointers =
+    ResolvablePointers (convert DijkstraEra) $
+      Map.map
+        ( \(purpose, script, scriptHash) -> extractScriptBytesAndLanguage (L.hoistPlutusPurpose toAsItem purpose, script, scriptHash)
+        )
+        scriptsByPointer
+
+-- | Prepare the information used to construct top-level Plutus script contexts.
+-- Include each sub-transaction's TxInfoResult so Dijkstra guards can inspect it,
+-- and resolve the scripts used by the top-level transaction for context translation.
+makeDijkstraLedgerTxInfo
+  :: SystemStart
+  -> LedgerEpochInfo
+  -> L.PParams L.DijkstraEra
+  -> L.UTxO L.DijkstraEra
+  -> Dijkstra.DijkstraStAnnTx L.TopTx L.DijkstraEra
+  -> L.LedgerTxInfo L.TopTx L.DijkstraEra
+makeDijkstraLedgerTxInfo systemstart (LedgerEpochInfo epochInfo) pp utxo txWithScriptContexts =
+  L.LedgerTxInfo
+    { L.ltiProtVer = protVer
+    , L.ltiEpochInfo = epochInfo
+    , L.ltiSystemStart = systemstart
+    , L.ltiUTxO = utxo
+    , L.ltiTx = Dijkstra.dsattTx txWithScriptContexts
+    , L.ltiScriptsUsed = scriptsUsed
+    , L.ltiScriptHashesUsed = L.toScriptHashByPurpose scriptsUsed
+    , L.ltiLevelTxInfo =
+        L.LedgerTopTxInfo $
+          Map.fromList
+            [ (L.txIdTx (Dijkstra.dsastTx subTx), Dijkstra.dsastTxInfoResult subTx)
+            | subTx <- L.subTransactionsStAnnTx @L.DijkstraEra txWithScriptContexts
+            ]
+    }
+ where
+  protVer = pp ^. L.ppProtocolVersionL
+  -- Start with an empty runnable-script cache; resolve scripts from the supplied
+  -- witnesses and reference inputs. The returned cache is not needed here.
+  (_, scriptsUsed) =
+    resolveNeededPlutusScriptsWithPurpose
+      protVer
+      (L.scriptsProvidedStAnnTx @L.DijkstraEra txWithScriptContexts)
+      (L.scriptsNeededStAnnTx @L.DijkstraEra txWithScriptContexts)
+      mempty
+
+-- | Estimate execution units for a script whose ledger context is already prepared.
+-- The maximum transaction budget is only an execution limit: evaluation fails if
+-- the script exhausts it. On success, return the units actually consumed, not the
+-- maximum budget. Use this limit instead of the script's declared budget, which
+-- may be zero during construction. Return evaluation logs alongside the measured
+-- units, and retain the logs and context when reporting an evaluation failure.
+evaluatePlutusScriptExecutionUnits
+  :: L.ExUnits
+  -- ^ Execution limit from the protocol parameters, not the estimated cost.
+  -> Plutus.PlutusWithContext
+  -> Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits)
+evaluatePlutusScriptExecutionUnits maxBudget context =
+  let budgeted = context{Plutus.pwcExUnits = maxBudget}
+      (logs, result) = Plutus.evaluatePlutusWithContext PlutusApi.Verbose budgeted
+   in case result of
+        Left err ->
+          Left $
+            ScriptErrorEvaluationFailed $
+              DebugPlutusFailure err budgeted maxBudget logs
+        Right budget ->
+          case exBudgetToExUnits budget of
+            Nothing -> Left ScriptErrorExecutionUnitsOverflow
+            Just units -> Right (logs, fromAlonzoExUnits units)
 
 -- | This is similar to 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
@@ -1586,6 +1883,12 @@ makeTransactionBodyAutoBalance
           useEra
           txbodycontent
 
+    let requiredInputs = getAllTxInputs txbodyForChange
+        missingInputs = Set.fromList requiredInputs Set.\\ Set.map fromShelleyTxIn (Map.keysSet $ L.unUTxO utxo)
+    unless (Set.null missingInputs) $ Left $ TxBodyErrorMissingInputs missingInputs
+    let duplicateInputs = getDuplicateSpendingInputs txbodyForChange
+    unless (Set.null duplicateInputs) $ Left $ TxBodyErrorDuplicateSpendingInputs duplicateInputs
+
     -- Check the balance before constructing the TxOut. L.mkBasicTxOut calls toCompact, which throws an irrecoverable
     -- error on negative Coin values, so checkNonNegative would never get to return Left for the negative case.
     initialChangeTxOutValue :: Ledger.Value (LedgerEra era) <- do
@@ -1630,12 +1933,23 @@ makeTransactionBodyAutoBalance
 
     exUnitsMap' <-
       case Map.mapEither id exUnitsMap of
-        (failures, exUnitsMap') ->
-          handleExUnitsErrors
-            (txScriptValidity txbodycontent)
-            failures
-            exUnitsMap'
+        (failures, exUnitsMap')
+          -- A ScriptInvalid transaction may fail only in a signed sub-transaction.
+          -- Check all scripts after the top-level fee and change have been finalized.
+          | txScriptValidity txbodycontent == ScriptInvalid
+          , not (null $ txSubTransactions txbodycontent)
+          , Map.null failures ->
+              pure exUnitsMap'
+          | otherwise ->
+              handleExUnitsErrors
+                (txScriptValidity txbodycontent)
+                failures
+                exUnitsMap'
 
+    -- Update only the unsigned top-level transaction's budgets. Changing the
+    -- execution units of a signed sub-transaction would change its script-integrity
+    -- hash and invalidate its signatures. Check the existing sub-transaction
+    -- budgets against the final transaction context below instead.
     txbodycontent1 <-
       substituteExecutionUnits exUnitsMap' txbodycontent
 
@@ -1742,8 +2056,108 @@ makeTransactionBodyAutoBalance
           makeUnsignedTx
             useEra
             finalTxBodyContent
+      -- GHC 9.6 needs the unit pattern to determine the result type.
+      () <- case useEra @era of
+        ConwayEra -> pure ()
+        DijkstraEra ->
+          validateDijkstraSubTransactions systemstart history pp poolids stakeDelegDeposits utxo txbody3
       return
         (txbody3, finalTxBodyContent)
+
+-- | Check sub-transactions after the top-level fee and outputs have been finalized.
+-- Enforce the combined execution-budget limit, the independent top-level balance
+-- required by legacy Plutus, and minimum ADA for sub-transaction outputs. Rebuild
+-- script contexts from the final transaction and check all scripts against
+-- its script-validity flag. Keep signed sub-transaction budgets unchanged.
+-- Does nothing when there are no sub-transactions.
+validateDijkstraSubTransactions
+  :: SystemStart
+  -> LedgerEpochInfo
+  -> L.PParams L.DijkstraEra
+  -> Set PoolId
+  -> Map StakeCredential L.Coin
+  -> L.UTxO L.DijkstraEra
+  -> UnsignedTx L.DijkstraEra
+  -- ^ Balanced top-level transaction containing the signed sub-transactions.
+  -> Either (TxBodyErrorAutoBalance L.DijkstraEra) ()
+validateDijkstraSubTransactions systemstart (LedgerEpochInfo epochInfo) pp poolids stakeDelegDeposits utxo (UnsignedTx finalTx) =
+  unless (null $ finalTx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL) $ do
+    let txWithScriptContexts = L.mkStAnnTx @L.DijkstraEra epochInfo systemstart pp utxo mempty finalTx
+        totalUnits = L.getTotalExUnits finalTx
+        maximumUnits = pp ^. L.ppMaxTxExUnitsL
+        phase2Validity = finalTx ^. L.isPhase2ValidTxL
+        -- Sub-transactions register pools before the top-level certificates run.
+        -- Retiring a pool does not remove its registration until a later epoch.
+        poolsAfterSubTransactions =
+          poolids
+            <> Set.fromList
+              [ Api.StakePoolKeyHash (L.sppId poolParams)
+              | subTx <- toList $ finalTx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL
+              , L.RegPoolTxCert poolParams <- toList $ subTx ^. L.bodyTxL . L.certsTxBodyL
+              ]
+    when
+      ( L.exUnitsMem totalUnits > L.exUnitsMem maximumUnits
+          || L.exUnitsSteps totalUnits > L.exUnitsSteps maximumUnits
+      )
+      $ Left
+      $ TxBodyErrorTopLevelExecutionUnitsTooBig
+        (fromAlonzoExUnits totalUnits)
+        (fromAlonzoExUnits maximumUnits)
+    when
+      (phase2Validity == L.Phase2Valid && txWithScriptContexts ^. L.plutusLegacyModeStAnnTxG @L.DijkstraEra)
+      $ do
+        let topLevelTx = UnsignedTx (finalTx & L.bodyTxL . Dijkstra.subTransactionsTxBodyL .~ mempty)
+            topLevelBalance = evaluateTransactionBalance pp poolsAfterSubTransactions stakeDelegDeposits utxo topLevelTx
+        unless (topLevelBalance == mempty) $
+          Left $
+            TxBodyErrorLegacyTopLevelBalance topLevelBalance
+    forM_ (L.subTransactionsStAnnTx @L.DijkstraEra txWithScriptContexts) $ \subTx ->
+      first (uncurry TxBodyErrorMinUTxONotMet) $
+        mapM_ (checkMinUTxOValue pp . TxOut) $
+          toList (subTx ^. L.txStAnnTxG @L.DijkstraEra . L.bodyTxL . L.outputsTxBodyL)
+    -- Collect all contexts before evaluating scripts, regardless of the validity flag.
+    let contextResults =
+          (TopLevelTransaction, Dijkstra.dsattPlutusScriptsWithContext txWithScriptContexts)
+            : [ ( SubTransaction $ fromShelleyTxId $ L.txIdTx (subTx ^. L.txStAnnTxG @L.DijkstraEra)
+                , L.plutusScriptsWithContextStAnnTx @L.DijkstraEra subTx
+                )
+              | subTx <- L.subTransactionsStAnnTx @L.DijkstraEra txWithScriptContexts
+              ]
+    contexts <-
+      first TxBodyErrorTopLevelScriptContexts $
+        fmap concat $
+          traverse
+            (\(source, result) -> fmap (map (\context -> (source, context))) result)
+            contextResults
+    let failures =
+          [ (source, failure)
+          | (source, context) <- contexts
+          , Left failure <- [validateScript context]
+          ]
+    -- Before Dijkstra, authors could submit a flag declaring script failure.
+    -- Dijkstra submission omits that flag; the node determines it.
+    -- Transactions with failing scripts can still be included in blocks as
+    -- Phase2Invalid and have collateral collected if other ledger checks pass.
+    -- This checks agreement with that flag: Phase2Invalid requires a script
+    -- failure, so the failure details are not returned in that case.
+    -- Our builder currently takes the flag from txScriptValidity, but that
+    -- caller-supplied value does not survive Dijkstra submission.
+    case (phase2Validity, NonEmpty.nonEmpty failures) of
+      (L.Phase2Valid, Nothing) -> pure ()
+      (L.Phase2Valid, Just errors) -> Left $ TxBodyErrorTopLevelScriptFailures errors
+      (L.Phase2Invalid, Nothing) -> Left TxBodyScriptBadScriptValidity
+      (L.Phase2Invalid, Just _) -> pure ()
+
+-- | Validate with the declared budget, retaining the error, context and logs.
+validateScript :: Plutus.PlutusWithContext -> Either ScriptExecutionError ()
+validateScript context =
+  let (logs, result) = Plutus.evaluatePlutusWithContext PlutusApi.Verbose context
+   in case result of
+        Left err ->
+          Left $
+            ScriptErrorEvaluationFailed $
+              DebugPlutusFailure err context (Plutus.pwcExUnits context) logs
+        Right _ -> Right ()
 
 getAda :: Era era -> L.Value (LedgerEra era) -> L.Coin
 getAda e val = case e of
