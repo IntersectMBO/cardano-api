@@ -807,6 +807,7 @@ getDuplicateSpendingInputs
 getDuplicateSpendingInputs (UnsignedTx tx) =
   obtainCommonConstraints (useEra @era) $
     let topLevelInputs = tx ^. L.bodyTxL . L.inputsTxBodyL
+        subTransactionInputs :: [Set L.TxIn]
         subTransactionInputs = case useEra @era of
           ConwayEra -> []
           DijkstraEra ->
@@ -2055,7 +2056,8 @@ makeTransactionBodyAutoBalance
           makeUnsignedTx
             useEra
             finalTxBodyContent
-      case useEra @era of
+      -- GHC 9.6 needs the unit pattern to determine the result type.
+      () <- case useEra @era of
         ConwayEra -> pure ()
         DijkstraEra ->
           validateDijkstraSubTransactions systemstart history pp poolids stakeDelegDeposits utxo txbody3
