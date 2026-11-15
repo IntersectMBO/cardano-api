@@ -247,8 +247,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 177ae5eb1d5c947c081ad950ffdfb6f9a401039c
-  --sha256: sha256-Cc3JCAxxuaYqBsnSZOcqWUe/w/lmHp8TpY1LZxzlhLU=
+  tag: ffafdf83a3dcdbee0108784d0406178a28f845db
+  --sha256: sha256-9Frrrr0zmMp4DgI1nXXncGHDd5grWJGrJ1T3hclcidg=
 
 allow-newer:
     , cardano-config:cardano-ledger-alonzo
