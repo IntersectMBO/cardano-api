@@ -69,6 +69,8 @@ import Hedgehog.Gen.QuickCheck qualified as Q
 data PlutusV4ReferenceScriptGuardTestInputs = PlutusV4ReferenceScriptGuardTestInputs
   { guardFundingInput :: Api.TxIn
   -- ^ Input available to fund either the top-level transaction or a sub-transaction.
+  , guardTopLevelFundingInput :: Api.TxIn
+  -- ^ Separate spending input for the top-level transaction when the sub-transaction uses 'guardFundingInput'.
   , guardCollateralInput :: Api.TxIn
   -- ^ Separate input available as collateral for the top-level transaction.
   , guardReferenceInput :: Api.TxIn
@@ -76,11 +78,11 @@ data PlutusV4ReferenceScriptGuardTestInputs = PlutusV4ReferenceScriptGuardTestIn
   , guardTestOutputAddress :: Api.AddressInEra Api.DijkstraEra
   -- ^ Output and change address; Plutus V4 script guards apply to transactions, not this address.
   , guardUTxO :: L.UTxO (Exp.LedgerEra Exp.DijkstraEra)
-  -- ^ Resolved outputs for all three inputs, each containing 100 ada.
+  -- ^ Resolved outputs for all four inputs, each containing 100 ada.
   }
   deriving Show
 
--- | Generate three 100-ada outputs; only the reference output carries the Plutus V4 script.
+-- | Generate four 100-ada outputs; only the reference output carries the Plutus V4 script.
 genPlutusV4ReferenceScriptGuardTestInputs
   :: P.PlutusScriptInEra Plutus.PlutusV4 (Exp.LedgerEra Exp.DijkstraEra)
   -> Gen PlutusV4ReferenceScriptGuardTestInputs
@@ -89,19 +91,21 @@ genPlutusV4ReferenceScriptGuardTestInputs script = do
   let Api.TxIn inputId (Api.TxIx inputIx) = input
       collateral = Api.TxIn inputId (Api.TxIx (inputIx + 1))
       reference = Api.TxIn inputId (Api.TxIx (inputIx + 2))
+      topLevelInput = Api.TxIn inputId (Api.TxIx (inputIx + 3))
   address <- genAddressInEra Api.ShelleyBasedEraDijkstra
   let funding = L.mkBasicTxOut (Api.toShelleyAddr address) (L.MaryValue (L.Coin 100_000_000) mempty)
       utxo =
         L.UTxO $
           Map.fromList
             [ (Api.toShelleyTxIn input, funding)
+            , (Api.toShelleyTxIn topLevelInput, funding)
             , (Api.toShelleyTxIn collateral, funding)
             ,
               ( Api.toShelleyTxIn reference
               , funding & L.referenceScriptTxOutL .~ L.SJust (plutusScriptInEraToScript script)
               )
             ]
-  pure $ PlutusV4ReferenceScriptGuardTestInputs input collateral reference address utxo
+  pure $ PlutusV4ReferenceScriptGuardTestInputs input topLevelInput collateral reference address utxo
 
 -- | Decode the always-succeeding Plutus V4 script for script guard tests.
 alwaysSucceedsGuardScript
@@ -183,7 +187,7 @@ genLegacyWithdrawal budget = do
 data GuardScriptSource = ScriptWitness | ReferenceScript
   deriving Show
 
--- | One signed sub-transaction with a guard; the top-level supplies only collateral.
+-- | One signed sub-transaction with a guard; the top-level supplies a separate spending input and collateral.
 data ScriptBalanceCase = ScriptBalanceCase
   { scriptInputs :: PlutusV4ReferenceScriptGuardTestInputs
   , signedSubTransaction :: Exp.SignedSubTx
@@ -191,7 +195,7 @@ data ScriptBalanceCase = ScriptBalanceCase
   , scriptCaseGuards :: Exp.TxGuards (Exp.LedgerEra Exp.DijkstraEra)
   }
 
--- | Generate a signed V4 guard sub-transaction and a top-level body with collateral.
+-- | Generate a signed V4 guard sub-transaction and a top-level body with its own spending input and collateral.
 -- Leave balancing and script evaluation to the property.
 genScriptBalanceCase
   :: L.PParams (Exp.LedgerEra Exp.DijkstraEra)
@@ -216,6 +220,7 @@ genScriptBalanceCase params source budget = do
         & Exp.setTxInsReference (Exp.TxInsReference references Set.empty)
   let content =
         Exp.defaultTxBodyContent
+          & Exp.setTxIns [(guardTopLevelFundingInput inputs, Exp.AnyKeyWitnessPlaceholder)]
           & Exp.setTxInsCollateral [guardCollateralInput inputs]
           & Exp.setTxSignedSubTransactions [signed]
           & Exp.setTxProtocolParams params

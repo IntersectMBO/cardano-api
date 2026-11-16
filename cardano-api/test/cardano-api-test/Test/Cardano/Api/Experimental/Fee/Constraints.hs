@@ -186,6 +186,8 @@ tests =
             "queries include sub-transaction references and top-level collateral"
             prop_queries_include_sub_transaction_references
         , testProperty "missing sub-transaction input is reported" prop_missing_sub_transaction_input_reported
+        , testProperty "top-level transaction requires spending inputs" prop_empty_top_level_inputs_rejected
+        , testProperty "sub-transactions require spending inputs" prop_empty_sub_transaction_inputs_rejected
         , testProperty
             "sub-transactions cannot spend the same input"
             prop_duplicate_sub_transaction_spending_inputs
@@ -298,7 +300,8 @@ prop_legacy_top_level_reregisters_sub_transaction_pool = H.withTests 10 $ H.prop
   sum (map (^. L.coinTxOutL) $ toList $ tx ^. L.bodyTxL . L.outputsTxBodyL) <> fee
     === L.Coin 20_000_000
 
--- | A sub-transaction refunds 2 ada: 20 ada in minus 10 ada out leaves 12 ada minus the fee.
+-- | The top level has a 10-ada surplus; a sub-transaction spending and returning 10 ada
+-- adds a 2-ada deposit refund, leaving 12 ada minus the fee.
 prop_sub_transaction_deregistration_refund :: Property
 prop_sub_transaction_deregistration_refund = H.withTests 10 $ H.property $ do
   testData <-
@@ -306,7 +309,7 @@ prop_sub_transaction_deregistration_refund = H.withTests 10 $ H.property $ do
       genSubTransactionBalanceTestData
         dijkstraTestParams
         (TopLevelTxAmounts $ adaAmounts 20 10)
-        []
+        [SubTxAmounts $ adaAmounts 10 10]
   stakeKey <- H.forAll $ genSigningKey Api.AsStakeKey
   let credential = Api.StakeCredentialByKey $ Api.verificationKeyHash $ Api.getVerificationKey stakeKey
       certificate =
@@ -317,6 +320,9 @@ prop_sub_transaction_deregistration_refund = H.withTests 10 $ H.property $ do
     H.evalEither $
       Exp.makeUnsignedSubTx $
         Exp.defaultSubTxBodyContent
+          & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder) | input <- balanceTestSubTxInputs testData]
+          & Exp.setTxOuts
+            [Exp.TxOut $ L.mkBasicTxOut (Api.toShelleyAddr $ balanceTestAddress testData) (Api.ada 10)]
           & Exp.setTxCertificates
             (Exp.mkTxCertificates Exp.DijkstraEra [(certificate, Exp.AnyKeyWitnessPlaceholder)])
   let signed = Exp.signSubTx [] [Exp.makeSubTxKeyWitness unsigned $ Api.WitnessStakeKey stakeKey] unsigned
@@ -344,7 +350,7 @@ prop_queries_include_sub_transaction_inputs = H.withTests 10 $ H.property $ do
   Set.fromList (Exp.getAllTxInputs unsigned)
     === Set.fromList (balanceTestTopLevelInput testData : balanceTestSubTxInputs testData)
 
--- | Query the sub-transaction spending and reference inputs plus top-level collateral.
+-- | Query spending inputs at both levels, sub-transaction references and top-level collateral.
 prop_queries_include_sub_transaction_references :: Property
 prop_queries_include_sub_transaction_references = H.withTests 10 $ H.property $ do
   example <-
@@ -354,7 +360,49 @@ prop_queries_include_sub_transaction_references = H.withTests 10 $ H.property $ 
   let inputs = scriptInputs example
   Set.fromList (Exp.getAllTxInputs unsigned)
     === Set.fromList
-      [guardFundingInput inputs, guardReferenceInput inputs, guardCollateralInput inputs]
+      [ guardFundingInput inputs
+      , guardTopLevelFundingInput inputs
+      , guardReferenceInput inputs
+      , guardCollateralInput inputs
+      ]
+
+-- | A funded sub-transaction, collateral and reference inputs cannot replace top-level spending inputs.
+prop_empty_top_level_inputs_rejected :: Property
+prop_empty_top_level_inputs_rejected = H.withTests 10 $ H.property $ do
+  example <-
+    H.forAllWith (show . scriptInputs) $
+      genScriptBalanceCase dijkstraTestParams ReferenceScript sufficientGuardBudget
+  let inputs = scriptInputs example
+      content =
+        scriptTxContent example
+          & Exp.setTxIns []
+          & Exp.setTxInsReference (Exp.TxInsReference [guardReferenceInput inputs] Set.empty)
+  case balanceScriptCase dijkstraTestParams example{scriptTxContent = content} of
+    Left Exp.TxBodyErrorEmptyTopLevelInputs -> pure ()
+    other -> H.annotateShow (fmap fst other) >> H.failure
+
+-- | Report every empty sub-transaction by ID, even when other transactions supply funds.
+prop_empty_sub_transaction_inputs_rejected :: Property
+prop_empty_sub_transaction_inputs_rejected = H.withTests 10 $ H.property $ do
+  example <-
+    H.forAllWith (show . scriptInputs) $
+      genScriptBalanceCase dijkstraTestParams ScriptWitness sufficientGuardBudget
+  let inputs = scriptInputs example
+      emptyContent = guardSubTxBodyContent inputs & Exp.setTxIns []
+  empty <- H.forAll $ genSignedSubTransaction emptyContent
+  referenceOnly <-
+    H.forAll $
+      genSignedSubTransaction $
+        emptyContent & Exp.setTxInsReference (Exp.TxInsReference [guardReferenceInput inputs] Set.empty)
+  let content =
+        scriptTxContent example
+          & Exp.setTxSignedSubTransactions [empty, signedSubTransaction example, referenceOnly]
+  case balanceScriptCase dijkstraTestParams example{scriptTxContent = content} of
+    Left err@(Exp.TxBodyErrorEmptySubTransactionInputs ids) -> do
+      ids === (Exp.getSignedSubTxId empty :| [Exp.getSignedSubTxId referenceOnly])
+      forM_ ids $ \subTxId ->
+        H.assertWith (Api.displayError err) (Api.prettyShow subTxId `List.isInfixOf`)
+    other -> H.annotateShow (fmap fst other) >> H.failure
 
 -- | Removing a sub-transaction input reports exactly that missing input.
 prop_missing_sub_transaction_input_reported :: Property
@@ -547,6 +595,8 @@ prop_sub_transaction_uses_top_level_collateral = H.withTests 10 $ H.property $ d
       fee = tx ^. L.bodyTxL . L.feeTxBodyL
       percentage = dijkstraTestParams ^. L.ppCollateralPercentageL
       feeTimesPercentage = L.unCoin fee * fromIntegral percentage
+  tx ^. L.bodyTxL . L.inputsTxBodyL
+    === Set.singleton (Api.toShelleyTxIn $ guardTopLevelFundingInput inputs)
   tx ^. L.bodyTxL . L.collateralInputsTxBodyL
     === Set.singleton (Api.toShelleyTxIn $ guardCollateralInput inputs)
   totalCollateral <- H.evalMaybe $ L.strictMaybeToMaybe $ tx ^. L.bodyTxL . L.totalCollateralTxBodyL
@@ -593,7 +643,7 @@ prop_insufficient_sub_transaction_budget_rejected = H.withTests 10 $ H.property 
         genScriptBalanceCase dijkstraTestParams ScriptWitness budget
     case balanceScriptCase dijkstraTestParams example of
       Left
-        err@(Exp.TxBodyErrorTopLevelScriptFailures ((source, Api.ScriptErrorEvaluationFailed details) :| [])) -> do
+        err@(Exp.TxBodyErrorScriptFailures ((source, Api.ScriptErrorEvaluationFailed details) :| [])) -> do
           source === Exp.SubTransaction (Exp.getSignedSubTxId $ signedSubTransaction example)
           Api.dpfExecutionUnits details === Api.toAlonzoExUnits budget
           let Exp.SignedSubTx sub = signedSubTransaction example
@@ -625,7 +675,7 @@ prop_script_failures_identify_sub_transactions = H.withTests 10 $ H.property $ d
   let signed = [signedSubTransaction example, second]
       content = scriptTxContent example & Exp.setTxSignedSubTransactions signed
   case balancePlutusGuardTransaction inputs content of
-    Left (Exp.TxBodyErrorTopLevelScriptFailures failures) -> do
+    Left (Exp.TxBodyErrorScriptFailures failures) -> do
       map fst (toList failures) === map (Exp.SubTransaction . Exp.getSignedSubTxId) signed
       forM_ (zip signed $ toList failures) $ \(Exp.SignedSubTx sub, (_, failure)) ->
         case failure of
@@ -732,7 +782,7 @@ prop_combined_execution_budget_boundary = H.withTests 10 $ H.property $ do
       "The same top-level transaction and its sub-transactions must exceed this limit by exactly one unit:"
     H.annotateShow lowerLimit
     case balanceScriptCase lowerParams example of
-      Left (Exp.TxBodyErrorTopLevelExecutionUnitsTooBig used maximumAllowed) -> do
+      Left (Exp.TxBodyErrorExecutionUnitsTooBig used maximumAllowed) -> do
         used === Api.fromAlonzoExUnits combined
         maximumAllowed === Api.fromAlonzoExUnits lowerLimit
       other -> H.annotateShow (fmap fst other) >> H.failure
@@ -761,7 +811,7 @@ prop_combined_execution_budget_rejected = H.withTests 10 $ H.property $ do
     let params = dijkstraTestParams & L.ppMaxTxExUnitsL .~ limit
     _ <- H.evalEither $ balanceScriptCase params example
     case autoBalanceWithParams params (guardTestOutputAddress inputs) (guardUTxO inputs) withTopGuard of
-      Left (Exp.TxBodyErrorTopLevelExecutionUnitsTooBig used maximumAllowed) -> do
+      Left (Exp.TxBodyErrorExecutionUnitsTooBig used maximumAllowed) -> do
         used === Api.fromAlonzoExUnits combined
         maximumAllowed === Api.fromAlonzoExUnits limit
       other -> H.annotateShow (fmap fst other) >> H.failure
@@ -780,7 +830,7 @@ prop_legacy_plutus_in_sub_transaction_rejected = H.withTests 10 $ H.property $ d
     H.annotateShow validity
     let content = topLevelTxBodyContentWithSignedSubTransaction inputs signed & Exp.setTxScriptValidity validity
     case balancePlutusGuardTransaction inputs content of
-      Left (Exp.TxBodyErrorTopLevelScriptContexts (L.BadTranslation{} :| [])) -> pure ()
+      Left (Exp.TxBodyErrorScriptContexts (L.BadTranslation{} :| [])) -> pure ()
       other -> H.annotateShow (fmap fst other) >> H.failure
 
 -- | Both evaluation APIs evaluate the top-level V4 guard with signed sub-transactions present.
@@ -895,14 +945,14 @@ guardSubTxBodyContent testInputs =
     & Exp.setTxIns [(guardFundingInput testInputs, Exp.AnyKeyWitnessPlaceholder)]
     & Exp.setTxProtocolParams dijkstraTestParams
 
--- | Build 'Exp.TxBodyContent' with collateral and a signed sub-transaction.
--- The sub-transaction supplies the spending inputs.
+-- | Build 'Exp.TxBodyContent' with its own spending input, collateral and a signed sub-transaction.
 topLevelTxBodyContentWithSignedSubTransaction
   :: PlutusV4ReferenceScriptGuardTestInputs
   -> Exp.SignedSubTx
   -> Exp.TxBodyContent (Exp.LedgerEra Exp.DijkstraEra)
 topLevelTxBodyContentWithSignedSubTransaction testInputs signed =
   Exp.defaultTxBodyContent
+    & Exp.setTxIns [(guardTopLevelFundingInput testInputs, Exp.AnyKeyWitnessPlaceholder)]
     & Exp.setTxInsCollateral [guardCollateralInput testInputs]
     & Exp.setTxSignedSubTransactions [signed]
     & Exp.setTxProtocolParams dijkstraTestParams

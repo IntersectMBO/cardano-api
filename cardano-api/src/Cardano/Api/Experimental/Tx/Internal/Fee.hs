@@ -192,17 +192,21 @@ data TxBodyErrorAutoBalance era
     TxBodyErrorCollateral CollateralError
   | TxBodyErrorMissingInputs (Set TxIn)
   | TxBodyErrorDuplicateSpendingInputs (Set TxIn)
+  | -- | The top-level transaction has no spending inputs.
+    TxBodyErrorEmptyTopLevelInputs
+  | -- | These signed sub-transactions have no spending inputs.
+    TxBodyErrorEmptySubTransactionInputs (NonEmpty TxId)
   | -- | Combined execution budget exceeds the protocol limit.
-    TxBodyErrorTopLevelExecutionUnitsTooBig
+    TxBodyErrorExecutionUnitsTooBig
       ExecutionUnits
       -- ^ Used by the top-level transaction and its sub-transactions.
       ExecutionUnits
       -- ^ Maximum allowed.
   | -- | Ledger could not build the script contexts.
-    TxBodyErrorTopLevelScriptContexts
+    TxBodyErrorScriptContexts
       (NonEmpty (L.CollectError L.DijkstraEra))
   | -- | Scripts failed although the transaction is marked ScriptValid.
-    TxBodyErrorTopLevelScriptFailures
+    TxBodyErrorScriptFailures
       (NonEmpty (ScriptFailureSource, ScriptExecutionError))
   | -- | Legacy Plutus requires the top-level transaction to balance independently.
     TxBodyErrorLegacyTopLevelBalance
@@ -218,17 +222,21 @@ instance Error (TxBodyErrorAutoBalance era) where
     TxBodyErrorDuplicateSpendingInputs inputs ->
       "Inputs spent by more than one of the top-level transaction and its sub-transactions: "
         <> pshow inputs
-    TxBodyErrorTopLevelExecutionUnitsTooBig used maximumAllowed ->
+    TxBodyErrorEmptyTopLevelInputs -> "The top-level transaction must have at least one spending input."
+    TxBodyErrorEmptySubTransactionInputs subTxIds ->
+      "Each sub-transaction must have at least one spending input. Sub-transactions without spending inputs: "
+        <> pshow subTxIds
+    TxBodyErrorExecutionUnitsTooBig used maximumAllowed ->
       vsep
         [ "The top-level transaction and its sub-transactions exceed the maximum transaction execution budget."
         , "Used: " <> pshow used
         , "Maximum: " <> pshow maximumAllowed
         ]
-    TxBodyErrorTopLevelScriptContexts errors ->
+    TxBodyErrorScriptContexts errors ->
       vsep $
         "Could not build script contexts for the top-level transaction or its sub-transactions:"
           : map pshow (toList errors)
-    TxBodyErrorTopLevelScriptFailures failures ->
+    TxBodyErrorScriptFailures failures ->
       vsep
         [ vsep
             [ case source of
@@ -794,6 +802,27 @@ hasSubTransactionRedeemers txbodycontent =
     any
       (not . Map.null . L.unRedeemers . (^. L.witsTxL . L.rdmrsTxWitsL))
       (txSubTransactions txbodycontent)
+
+-- | Require spending inputs in every transaction; collateral and reference inputs do not count.
+checkNonEmptySpendingInputs
+  :: forall era
+   . IsEra era
+  => UnsignedTx (LedgerEra era)
+  -> Either (TxBodyErrorAutoBalance (LedgerEra era)) ()
+checkNonEmptySpendingInputs (UnsignedTx tx) =
+  obtainCommonConstraints (useEra @era) $ do
+    when (Set.null $ tx ^. L.bodyTxL . L.inputsTxBodyL) $
+      Left TxBodyErrorEmptyTopLevelInputs
+    case useEra @era of
+      ConwayEra -> pure ()
+      DijkstraEra ->
+        case NonEmpty.nonEmpty
+          [ fromShelleyTxId $ L.txIdTx subTx
+          | subTx <- toList (tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL)
+          , Set.null (subTx ^. L.bodyTxL . L.inputsTxBodyL)
+          ] of
+          Nothing -> pure ()
+          Just subTxIds -> Left $ TxBodyErrorEmptySubTransactionInputs subTxIds
 
 -- | Inputs spent by both the top-level transaction and a sub-transaction, or by
 -- more than one sub-transaction. Reference and collateral inputs are excluded
@@ -1883,6 +1912,7 @@ makeTransactionBodyAutoBalance
           useEra
           txbodycontent
 
+    checkNonEmptySpendingInputs txbodyForChange
     let requiredInputs = getAllTxInputs txbodyForChange
         missingInputs = Set.fromList requiredInputs Set.\\ Set.map fromShelleyTxIn (Map.keysSet $ L.unUTxO utxo)
     unless (Set.null missingInputs) $ Left $ TxBodyErrorMissingInputs missingInputs
@@ -2100,7 +2130,7 @@ validateDijkstraSubTransactions systemstart (LedgerEpochInfo epochInfo) pp pooli
           || L.exUnitsSteps totalUnits > L.exUnitsSteps maximumUnits
       )
       $ Left
-      $ TxBodyErrorTopLevelExecutionUnitsTooBig
+      $ TxBodyErrorExecutionUnitsTooBig
         (fromAlonzoExUnits totalUnits)
         (fromAlonzoExUnits maximumUnits)
     when
@@ -2124,7 +2154,7 @@ validateDijkstraSubTransactions systemstart (LedgerEpochInfo epochInfo) pp pooli
               | subTx <- L.subTransactionsStAnnTx @L.DijkstraEra txWithScriptContexts
               ]
     contexts <-
-      first TxBodyErrorTopLevelScriptContexts $
+      first TxBodyErrorScriptContexts $
         fmap concat $
           traverse
             (\(source, result) -> fmap (map (\context -> (source, context))) result)
@@ -2144,7 +2174,7 @@ validateDijkstraSubTransactions systemstart (LedgerEpochInfo epochInfo) pp pooli
     -- caller-supplied value does not survive Dijkstra submission.
     case (phase2Validity, NonEmpty.nonEmpty failures) of
       (L.Phase2Valid, Nothing) -> pure ()
-      (L.Phase2Valid, Just errors) -> Left $ TxBodyErrorTopLevelScriptFailures errors
+      (L.Phase2Valid, Just errors) -> Left $ TxBodyErrorScriptFailures errors
       (L.Phase2Invalid, Nothing) -> Left TxBodyScriptBadScriptValidity
       (L.Phase2Invalid, Just _) -> pure ()
 

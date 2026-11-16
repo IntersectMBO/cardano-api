@@ -79,7 +79,12 @@ import Test.Gen.Cardano.Api.Typed
 
 import Test.Cardano.Api.Experimental (exampleProtocolParams, exampleProtocolParamsEra)
 import Test.Cardano.Api.Experimental.Fee.Ada qualified as Ada
-import Test.Cardano.Api.Experimental.Fee.Common (autoBalanceTestTransaction, dijkstraTestParams)
+import Test.Cardano.Api.Experimental.Fee.Common
+  ( autoBalanceTestTransaction
+  , dijkstraTestParams
+  , testEpochInfo
+  , testSystemStart
+  )
 import Test.Cardano.Api.Experimental.Fee.Constraints qualified as Constraints
 import Test.Cardano.Api.Experimental.Fee.Gen.Guard
   ( PlutusV4ReferenceScriptGuardTestInputs (..)
@@ -235,6 +240,12 @@ tests =
         , testProperty
             "zero ada balance with negative assets fails with TxBodyErrorBalanceNegative"
             prop_makeTransactionBodyAutoBalance_fails_on_zero_ada_negative_assets
+        , testProperty
+            "Conway transaction requires spending inputs"
+            (prop_makeTransactionBodyAutoBalance_empty_inputs Exp.ConwayEra)
+        , testProperty
+            "Dijkstra transaction without sub-transactions requires spending inputs"
+            (prop_makeTransactionBodyAutoBalance_empty_inputs Exp.DijkstraEra)
         ]
     , testGroup
         "evaluateTransaction"
@@ -1015,6 +1026,24 @@ prop_makeTransactionBodyAutoBalance_fails_on_zero_ada_negative_assets = H.proper
     Right _ ->
       H.annotate "Expected TxBodyErrorBalanceNegative but tx balanced successfully"
         >> H.failure
+
+-- | Transactions without sub-transactions must also have spending inputs in both eras.
+prop_makeTransactionBodyAutoBalance_empty_inputs :: Exp.Era era -> Property
+prop_makeTransactionBodyAutoBalance_empty_inputs era = Exp.obtainCommonConstraints era $ H.withTests 10 $ H.property $ do
+  address <- H.forAll $ genAddressInEra (convert era)
+  let params = exampleProtocolParamsEra era
+  case Exp.makeTransactionBodyAutoBalance
+    testSystemStart
+    testEpochInfo
+    params
+    mempty
+    mempty
+    mempty
+    (Exp.defaultTxBodyContent & Exp.setTxProtocolParams params)
+    address
+    Nothing of
+    Left Exp.TxBodyErrorEmptyTopLevelInputs -> pure ()
+    other -> H.annotateShow (fmap fst other) >> H.failure
 
 -- | A well-funded transaction returns a positive fee from 'evaluateTransaction'.
 prop_evaluateTransaction_positive_fee :: Property
