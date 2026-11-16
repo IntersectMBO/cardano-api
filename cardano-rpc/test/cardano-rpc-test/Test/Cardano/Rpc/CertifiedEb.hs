@@ -16,12 +16,14 @@ import Ouroboros.Consensus.Block
   , blockRealPoint
   , blockSlot
   , getHeader
+  , realPointSlot
   )
 import Ouroboros.Consensus.Storage.Serialisation (EncodeDisk (..))
 
 import Codec.CBOR.Write qualified as CBOR
 import Data.ByteString.Lazy qualified as BSL
 import Data.Either (isLeft)
+import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.IntMap.Strict qualified as IntMap
 import Data.Map.Strict qualified as Map
 
@@ -68,7 +70,7 @@ tx k = LeiosTestTx{ltxAsserts = IntMap.empty, ltxWrites = IntMap.singleton k 'a'
 -- | Finds what the block before announced, by looking up its header.
 hprop_announced_before_reads_predecessor :: Property
 hprop_announced_before_reads_predecessor = H.propertyOnce $ do
-  announced <- H.evalIO $ traverse (announcedBefore lookupHeader) chain
+  announced <- H.evalIO $ traverse (announcedBefore lookupHeader 0) chain
   -- rb1 comes after genesis, and b2 announced nothing.
   announced === [Nothing, Just eb1Point, Nothing, Just eb2Point]
 
@@ -77,14 +79,27 @@ hprop_announced_before_reads_predecessor = H.propertyOnce $ do
 -- rb1 is found in slot 1.
 hprop_announced_before_skips_empty_slots :: Property
 hprop_announced_before_skips_empty_slots = H.propertyOnce $ do
-  let later = atSlot 5 b2
-  announced <- H.evalIO $ announcedBefore lookupHeader later
+  announced <- H.evalIO $ announcedBefore lookupHeader 0 (atSlot 5 b2)
   announced === Just eb1Point
 
--- | If the block before isn't in the ChainDB, stops at slot 0 with 'Nothing'.
+-- | If the block before is missing, returns 'Nothing' without looking below
+-- the earliest slot.
+-- rb3 is in slot 3 and the earliest slot is 1, so only slots 2 and 1 are tried.
 hprop_announced_before_missing_predecessor :: Property
 hprop_announced_before_missing_predecessor = H.propertyOnce $ do
-  announced <- H.evalIO $ announcedBefore (const (pure Nothing)) rb3
+  looked <- H.evalIO $ newIORef []
+  let lookupNothing point = Nothing <$ modifyIORef looked (realPointSlot point :)
+  announced <- H.evalIO $ announcedBefore lookupNothing 1 rb3
+  announced === Nothing
+  slots <- H.evalIO $ readIORef looked
+  reverse slots === [2, 1]
+
+-- | Doesn't look below the earliest slot.
+-- b2 (moved to slot 5) comes after rb1 (slot 1). With 2 as the earliest slot,
+-- rb1 isn't found.
+hprop_announced_before_stops_at_earliest :: Property
+hprop_announced_before_stops_at_earliest = H.propertyOnce $ do
+  announced <- H.evalIO $ announcedBefore lookupHeader 2 (atSlot 5 b2)
   announced === Nothing
 
 -- | A block decodes back to itself.

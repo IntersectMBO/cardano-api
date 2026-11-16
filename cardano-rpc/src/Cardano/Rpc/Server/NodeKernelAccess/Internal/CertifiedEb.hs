@@ -31,32 +31,37 @@ import Ouroboros.Consensus.Storage.Serialisation (DecodeDisk (..))
 
 import Codec.CBOR.Decoding qualified as CBOR
 import Codec.CBOR.Read qualified as CBOR
+import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as BSL
 
 import LeiosDemoTypes (LeiosPoint)
 
 -- | The EB that the block before this one announced, if any.
 --
--- To find a block in the ChainDB, we need its slot and its hash. A block
--- stores the hash of the block before it, but not its slot. So we try one
--- slot back, then two slots back, and so on, until we find it.
+-- A block stores only the hash of the block before it, but the ChainDB also
+-- needs a slot. So we try each earlier slot, down to the given one (e.g. the
+-- start of the Leios era).
 announcedBefore
   :: forall blk
    . (GetPrevHash blk, ResolveLeiosBlock blk)
   => (RealPoint blk -> IO (Maybe (Header blk)))
   -- ^ Look up a header in the ChainDB
+  -> SlotNo
+  -- ^ The earliest slot to look in
   -> blk
   -> IO (Maybe LeiosPoint)
-announcedBefore lookupHeader blk = case blockPrevHash blk of
+announcedBefore lookupHeader earliest blk = case blockPrevHash blk of
   GenesisHash -> pure Nothing
   BlockHash prevHash -> (announcedBy =<<) <$> predecessor prevHash (blockSlot blk)
  where
+  -- Look in the slot before the given one.
   predecessor :: HeaderHash blk -> SlotNo -> IO (Maybe (Header blk))
-  predecessor _ (SlotNo 0) = pure Nothing
-  predecessor prevHash (SlotNo slot) =
-    lookupHeader (RealPoint (SlotNo (slot - 1)) prevHash) >>= \case
-      Nothing -> predecessor prevHash (SlotNo (slot - 1))
-      found -> pure found
+  predecessor prevHash (SlotNo slot)
+    | SlotNo slot <= earliest = pure Nothing
+    | otherwise =
+        lookupHeader (RealPoint (SlotNo (slot - 1)) prevHash) >>= \case
+          Nothing -> predecessor prevHash (SlotNo (slot - 1))
+          found -> pure found
 
   announcedBy :: Header blk -> Maybe LeiosPoint
   announcedBy = fmap fst . headerLeiosAnnouncement
@@ -72,7 +77,7 @@ decodeBlock
   -> Either String blk
 decodeBlock ccfg bytes = case CBOR.deserialiseFromBytes decoder bytes of
   Left e -> Left (show e)
-  Right (_, applyBytes) -> either (Left . show) Right (applyBytes bytes)
+  Right (_, applyBytes) -> first show (applyBytes bytes)
  where
   decoder :: forall s. CBOR.Decoder s (BSL.ByteString -> Either DecoderError blk)
   decoder = decodeDisk ccfg
