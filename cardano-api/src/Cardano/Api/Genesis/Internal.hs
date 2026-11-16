@@ -229,7 +229,7 @@ dijkstraGenesisDefaults =
           , udppPerasQuorumThresholdSafetyMargin = fromJust $ boundRational 0.05
           , -- No pricing logic uses these yet, they are enabled by a later
             -- intra-era hard fork within the Dijkstra era.
-            udppRefInputsCostPerMultiAssetPolicy = Coin 0
+            udppRefInputsCostPerMultiAssetByte = CoinPerByte (L.CompactCoin 0)
           , udppRefInputsCostPerDatumByte = CoinPerByte (L.CompactCoin 0)
           }
     }

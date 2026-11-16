@@ -1666,7 +1666,7 @@ exampleDijkstraGenesis =
           , Ledger.udppPerasTargetCommitteeSize = 800
           , Ledger.udppPerasBootstrapRound = ShelleyAPI.SJust 0
           , Ledger.udppPerasQuorumThresholdSafetyMargin = fromJust $ boundRational 0.05
-          , Ledger.udppRefInputsCostPerMultiAssetPolicy = Ledger.Coin 0
+          , Ledger.udppRefInputsCostPerMultiAssetByte = Ledger.CoinPerByte (Coin.CompactCoin 0)
           , Ledger.udppRefInputsCostPerDatumByte = Ledger.CoinPerByte (Coin.CompactCoin 0)
           }
     }

@@ -328,8 +328,8 @@ instance Semigroup (Ledger.DijkstraPParams StrictMaybe era) where
       , Ledger.dppPerasBootstrapRound = lastMappendWithTHKD Ledger.dppPerasBootstrapRound p1 p2
       , Ledger.dppPerasQuorumThresholdSafetyMargin =
           lastMappendWithTHKD Ledger.dppPerasQuorumThresholdSafetyMargin p1 p2
-      , Ledger.dppRefInputsCostPerMultiAssetPolicy =
-          lastMappendWithTHKD Ledger.dppRefInputsCostPerMultiAssetPolicy p1 p2
+      , Ledger.dppRefInputsCostPerMultiAssetByte =
+          lastMappendWithTHKD Ledger.dppRefInputsCostPerMultiAssetByte p1 p2
       , Ledger.dppRefInputsCostPerDatumByte =
           lastMappendWithTHKD Ledger.dppRefInputsCostPerDatumByte p1 p2
       }
