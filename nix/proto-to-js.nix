@@ -5,7 +5,7 @@
     version = "1.0.0";
     name = "proto-js-dependencies";
     src = ../nix/proto-to-js-npm-deps;
-    npmDepsHash = "sha256-f8iFtXtN5GhryspgWWZi7rPR6uVq2tJOCEH6mmkLX84=";
+    npmDepsHash = "sha256-Ta0nH83GiuI0LEoMtWk5DnjYkK7GlEWaroFDR6fvdM0=";
     dontNpmBuild = true;
     dontNpmInstall = true;
     installPhase = ''
@@ -26,6 +26,16 @@
         echo "build --host_copt=-Dfdopen=fdopen" >> .bazelrc
         echo "build --host_copt=-Wno-deprecated-non-prototype" >> .bazelrc
         echo "build --host_copt=-Wno-macro-redefined" >> .bazelrc
+      ''
+      # On darwin, layering_check rejects zlib's zconf.h (https://github.com/NixOS/nixpkgs/issues/453637), and -Werror
+      # turns abseil's deprecated builtins and protobuf's unguarded clock_gettime_nsec_np into errors.
+      + pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+        echo "build --features=-layering_check" >> .bazelrc
+        echo "build --host_features=-layering_check" >> .bazelrc
+        echo "build --copt=-Wno-deprecated-builtins" >> .bazelrc
+        echo "build --host_copt=-Wno-deprecated-builtins" >> .bazelrc
+        echo "build --copt=-Wno-unguarded-availability" >> .bazelrc
+        echo "build --host_copt=-Wno-unguarded-availability" >> .bazelrc
       '';
   });
 in
@@ -40,7 +50,7 @@ in
       pkgs.protobuf
       protoc-gen-js-fixed
       pkgs.protoc-gen-grpc-web
-      pkgs.nodePackages.browserify
+      pkgs.nodejs
     ];
 
     buildPhase = ''
@@ -120,7 +130,7 @@ in
       ln -s ${node-deps}/node_modules ./node_modules
 
       echo "--- Bundling all generated JS gRPC modules with browserify ---"
-      browserify "$BROWSER_ENTRYPOINT_FILE" --standalone cardano_node > "$BUNDLE_PATH/cardano_node_grpc_web_pb.js"
+      node ${node-deps}/node_modules/browserify/bin/cmd.js "$BROWSER_ENTRYPOINT_FILE" --standalone cardano_node > "$BUNDLE_PATH/cardano_node_grpc_web_pb.js"
       echo "--- Bundling complete. Final files are in $BUNDLE_PATH ---"
       ls -l "$BUNDLE_PATH"
 

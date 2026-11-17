@@ -3,17 +3,15 @@
 
   inputs = {
     hackageNix = {
-      url = "github:input-output-hk/hackage.nix";
+      url = "github:ican-group/hackage.nix";
       flake = false;
     };
     haskellNix = {
-      url = "github:input-output-hk/haskell.nix";
+      url = "github:ican-group/haskell.nix";
       inputs.hackage.follows = "hackageNix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # blst fails to build for x86_64-darwin
-    # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
-    nixpkgs.url = "github:NixOS/nixpkgs/11cb3517b3af6af300dd6c055aeda73c9bf52c48";
+    nixpkgs.url = "github:NixOS/nixpkgs/26.05";
     unstable.url = "nixpkgs/nixos-unstable";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
@@ -31,7 +29,7 @@
     };
 
     hls = {
-      url = "github:haskell/haskell-language-server/2.14.0.0";
+      url = "github:haskell/haskell-language-server/2.15.0.0";
       flake = false;
     };
 
@@ -162,13 +160,13 @@
           # tools we want in our shell, from hackage
           shell.tools =
             {
-              cabal = "3.16.1.0";
+              cabal = "3.18.2.0";
             }
             // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
               # tools that work only with default compiler
-              ghcid = "0.8.9";
-              cabal-gild = "1.7.0.1";
-              fourmolu = "0.18.0.0";
+              ghcid = "1.0.0";
+              cabal-gild = "1.8.4.2";
+              fourmolu = "0.21.0.0";
               proto-lens-protoc = "latest";
               haskell-language-server = {
                 src = inputs.hls;
@@ -492,9 +490,11 @@
   nixConfig = {
     extra-substituters = [
       "https://cache.iog.io"
+      "https://cache.zw3rk.com"
     ];
     extra-trusted-public-keys = [
       "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+      "loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk="
     ];
     allow-import-from-derivation = true;
   };
