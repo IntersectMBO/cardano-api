@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1402
+kind:
+  - breaking
+description: Use ledger's fee calculation for Dijkstra sub-transaction reference scripts instead of adding a separate charge, with temporary upstream ledger and consensus source pins until the fix is released. Require cardano-ledger-api 1.16, cardano-ledger-dijkstra 0.5, cardano-ledger-core 1.23, cardano-ledger-alonzo 1.18, cardano-ledger-shelley 1.21 and cardano-protocol 0.3. Dijkstra consensus types now use Praos2, and the PraosState JSON instance applies to PolyPraosState proto.

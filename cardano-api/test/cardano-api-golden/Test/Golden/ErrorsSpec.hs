@@ -341,13 +341,8 @@ examplePlutusWithContext =
     , pwcScript = Language.decodePlutusRunnable defaultVersion examplePlutusScript
     , pwcArgs = examplePlutusScriptArgs
     , pwcExUnits = ExUnits 1 1
-    , pwcLanguageCostModel = defaultLanguageCostModel
+    , pwcCostModel = defaultCostModel
     }
-
-defaultLanguageCostModel :: Plutus.LanguageCostModel Language.PlutusV3
-defaultLanguageCostModel =
-  either (error . ("defaultLanguageCostModel: " <>) . show) id $
-    Plutus.toLanguageCostModel defaultCostModel
 
 defaultCostModel :: Plutus.CostModel
 defaultCostModel =

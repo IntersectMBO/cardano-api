@@ -576,15 +576,15 @@ genLedgerValueForTxOut :: ShelleyBasedEra era -> Gen (L.Value (ShelleyLedgerEra 
 genLedgerValueForTxOut sbe = do
   -- Generate at least one positive ADA, without it Value in TxOut makes no sense
   -- and will fail deserialization starting with ConwayEra
-  ada <- A.mkAdaValue sbe . L.Coin <$> Gen.integral (Range.constant 1 2)
+  adaValue <- A.mkAdaValue sbe . L.Coin <$> Gen.integral (Range.constant 1 2)
 
   -- Generate a potentially empty list with multi assets
   forEraInEon
     (toCardanoEra sbe)
-    (pure ada)
+    (pure adaValue)
     ( \w -> maryEraOnwardsConstraints w $ do
         v <- Gen.list (Range.constant 0 5) $ genLedgerValue w genAssetId genPositiveQuantity
-        pure $ ada <> mconcat v
+        pure $ adaValue <> mconcat v
     )
 
 genLedgerMultiAssetValue :: Gen L.MultiAsset
