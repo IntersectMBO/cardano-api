@@ -33,7 +33,7 @@
       flake = false;
     };
 
-    cardano-dev.url = "github:input-output-hk/cardano-dev";
+    cardano-dev.url = "github:IntersectMBO/cardano-dev";
 
     # wasm specific inputs
     wasm-nixpkgs.follows = "ghc-wasm-meta/nixpkgs";

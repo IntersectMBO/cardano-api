@@ -41,7 +41,7 @@ In case one would like to have more manual control over the release process, it'
 
 1. Run herald to obtain the next version providing the released package name:
 ```bash
-nix run github:input-output-hk/cardano-dev#herald -- next cardano-api
+nix run github:IntersectMBO/cardano-dev#herald -- next cardano-api
 ```
 
 1. Create new branch e.g. `release/cardano-api-8.5.0.0`:
@@ -51,7 +51,7 @@ git checkout -b release/cardano-api-8.5.0.0
 
 1. Run herald to generate changelog and release commit:
 ```bash
-nix run github:input-output-hk/cardano-dev#herald -- batch --commit-tag
+nix run github:IntersectMBO/cardano-dev#herald -- batch --commit-tag
 ```
 
 1. Push the branch, open a release PR.
