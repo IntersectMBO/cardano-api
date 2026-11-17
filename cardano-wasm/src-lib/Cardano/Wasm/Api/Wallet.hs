@@ -194,19 +194,19 @@ restoreTestnetStakeWalletFromSigningKeyBech32Impl networkMagic paymentKeyBech32 
 -- | Get the Bech32 representation of the address. (Can be shared for receiving funds.)
 getAddressBech32Impl :: WalletObject -> String
 getAddressBech32Impl (PaymentWallet nid key) =
-  Text.unpack $
-    serialiseAddress $
-      makeShelleyAddress
-        nid
-        (PaymentCredentialByKey (verificationKeyHash (getVerificationKey key)))
-        NoStakeAddress
+  Text.unpack
+    $ serialiseAddress
+    $ makeShelleyAddress
+      nid
+      (PaymentCredentialByKey (verificationKeyHash (getVerificationKey key)))
+      NoStakeAddress
 getAddressBech32Impl (StakeWallet nid pKey sKey) =
-  Text.unpack $
-    serialiseAddress $
-      makeShelleyAddress
-        nid
-        (PaymentCredentialByKey (verificationKeyHash (getVerificationKey pKey)))
-        (StakeAddressByValue (StakeCredentialByKey (verificationKeyHash (getVerificationKey sKey))))
+  Text.unpack
+    $ serialiseAddress
+    $ makeShelleyAddress
+      nid
+      (PaymentCredentialByKey (verificationKeyHash (getVerificationKey pKey)))
+      (StakeAddressByValue (StakeCredentialByKey (verificationKeyHash (getVerificationKey sKey))))
 
 -- | Get the Bech32 representation of the verification key of the wallet. (Can be shared for verification.)
 getBech32ForPaymentVerificationKeyImpl :: WalletObject -> String

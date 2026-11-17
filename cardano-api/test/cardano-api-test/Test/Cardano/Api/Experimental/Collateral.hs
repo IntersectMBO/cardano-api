@@ -189,18 +189,18 @@ prop_makeTransactionBodyAutoBalance_return_collateral_with_tokens_below_min_utxo
           L.StakeRefNull
       ledgerScriptHash = ExpPlutus.hashPlutusScriptInEra plutusScript
       mintWitness =
-        Exp.AnyScriptWitnessPlutus $
-          Exp.AnyPlutusMintingScriptWitness $
-            Exp.PlutusScriptWitness
-              (ExpPlutus.plutusScriptInEraSLanguage plutusScript)
-              (Exp.PScript plutusScript)
-              Exp.NoScriptDatum
-              (Api.unsafeHashableScriptData (Api.ScriptDataMap []))
-              (Api.ExecutionUnits 0 0)
+        Exp.AnyScriptWitnessPlutus
+          $ Exp.AnyPlutusMintingScriptWitness
+          $ Exp.PlutusScriptWitness
+            (ExpPlutus.plutusScriptInEraSLanguage plutusScript)
+            (Exp.PScript plutusScript)
+            Exp.NoScriptDatum
+            (Api.unsafeHashableScriptData (Api.ScriptDataMap []))
+            (Api.ExecutionUnits 0 0)
       tokenValue coin =
-        L.MaryValue coin $
-          L.MultiAsset $
-            Map.singleton (L.PolicyID ledgerScriptHash) (Map.singleton (Mary.AssetName "eeee") 1)
+        L.MaryValue coin
+          $ L.MultiAsset
+          $ Map.singleton (L.PolicyID ledgerScriptHash) (Map.singleton (Mary.AssetName "eeee") 1)
       -- The token-carrying collateral input holds exactly its minimum UTxO
       -- value.
       minUTxOCollateral =
@@ -281,14 +281,14 @@ prop_makeTransactionBodyAutoBalance_folds_dust_into_total_collateral = H.propert
           L.StakeRefNull
       ledgerScriptHash = ExpPlutus.hashPlutusScriptInEra plutusScript
       mintWitness =
-        Exp.AnyScriptWitnessPlutus $
-          Exp.AnyPlutusMintingScriptWitness $
-            Exp.PlutusScriptWitness
-              (ExpPlutus.plutusScriptInEraSLanguage plutusScript)
-              (Exp.PScript plutusScript)
-              Exp.NoScriptDatum
-              (Api.unsafeHashableScriptData (Api.ScriptDataMap []))
-              (Api.ExecutionUnits 0 0)
+        Exp.AnyScriptWitnessPlutus
+          $ Exp.AnyPlutusMintingScriptWitness
+          $ Exp.PlutusScriptWitness
+            (ExpPlutus.plutusScriptInEraSLanguage plutusScript)
+            (Exp.PScript plutusScript)
+            Exp.NoScriptDatum
+            (Api.unsafeHashableScriptData (Api.ScriptDataMap []))
+            (Api.ExecutionUnits 0 0)
       -- The ada-only collateral input holds exactly its minimum UTxO value.
       minUTxOCollateral =
         Exp.calculateMinimumUTxO ledgerPParams $
@@ -360,14 +360,14 @@ prop_estimateBalancedTxBody_folds_dust_into_total_collateral = H.propertyOnce $ 
           L.StakeRefNull
       ledgerScriptHash = ExpPlutus.hashPlutusScriptInEra plutusScript
       mintWitness =
-        Exp.AnyScriptWitnessPlutus $
-          Exp.AnyPlutusMintingScriptWitness $
-            Exp.PlutusScriptWitness
-              (ExpPlutus.plutusScriptInEraSLanguage plutusScript)
-              (Exp.PScript plutusScript)
-              Exp.NoScriptDatum
-              (Api.unsafeHashableScriptData (Api.ScriptDataMap []))
-              (Api.ExecutionUnits 0 0)
+        Exp.AnyScriptWitnessPlutus
+          $ Exp.AnyPlutusMintingScriptWitness
+          $ Exp.PlutusScriptWitness
+            (ExpPlutus.plutusScriptInEraSLanguage plutusScript)
+            (Exp.PScript plutusScript)
+            Exp.NoScriptDatum
+            (Api.unsafeHashableScriptData (Api.ScriptDataMap []))
+            (Api.ExecutionUnits 0 0)
       -- The smallest realistic ada-only collateral: exactly the minimum UTxO
       -- value.
       minUTxOCollateral =

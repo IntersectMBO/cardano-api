@@ -83,9 +83,9 @@ makeStakeAddressDelegationCertificate sCred delegatee =
        )
     => ShelleyBasedEra era -> Delegatee era -> Certificate (ShelleyLedgerEra era)
   cert e delegatee' =
-    shelleyBasedEraConstraints e $
-      Certificate $
-        Ledger.mkDelegStakeTxCert (toShelleyStakeCredential sCred) (Api.unStakePoolKeyHash delegatee')
+    shelleyBasedEraConstraints e
+      $ Certificate
+      $ Ledger.mkDelegStakeTxCert (toShelleyStakeCredential sCred) (Api.unStakePoolKeyHash delegatee')
 
 data StakeCredentialAndDeposit = StakeCredentialAndDeposit StakeCredential Ledger.Coin
 
@@ -125,9 +125,9 @@ makeStakeAddressRegistrationCertificate scred =
      in Certificate $
           Ledger.mkRegDepositTxCert (toShelleyStakeCredential cred) dep
   createRegCertNoDeposit stakeCredential =
-    Certificate $
-      Ledger.mkRegTxCert $
-        toShelleyStakeCredential stakeCredential
+    Certificate
+      $ Ledger.mkRegTxCert
+      $ toShelleyStakeCredential stakeCredential
 
 makeStakeAddressUnregistrationCertificate
   :: forall era
@@ -136,10 +136,10 @@ makeStakeAddressUnregistrationCertificate
      )
   => StakeCredential -> Certificate (ShelleyLedgerEra era)
 makeStakeAddressUnregistrationCertificate scred =
-  shelleyBasedEraConstraints (shelleyBasedEra @era) $
-    Certificate $
-      Ledger.mkUnRegTxCert $
-        toShelleyStakeCredential scred
+  shelleyBasedEraConstraints (shelleyBasedEra @era)
+    $ Certificate
+    $ Ledger.mkUnRegTxCert
+    $ toShelleyStakeCredential scred
 
 makeStakePoolRegistrationCertificate
   :: forall era
@@ -147,9 +147,9 @@ makeStakePoolRegistrationCertificate
   => Ledger.StakePoolParams (ShelleyLedgerEra era)
   -> Certificate (ShelleyLedgerEra era)
 makeStakePoolRegistrationCertificate poolParams =
-  shelleyBasedEraConstraints (shelleyBasedEra @era) $
-    Certificate $
-      Ledger.mkRegPoolTxCert poolParams
+  shelleyBasedEraConstraints (shelleyBasedEra @era)
+    $ Certificate
+    $ Ledger.mkRegPoolTxCert poolParams
 
 makeStakePoolRetirementCertificate
   :: forall era
@@ -158,9 +158,9 @@ makeStakePoolRetirementCertificate
   -> Ledger.EpochNo
   -> Certificate (ShelleyLedgerEra era)
 makeStakePoolRetirementCertificate poolId retirementEpoch =
-  shelleyBasedEraConstraints (shelleyBasedEra @era) $
-    Certificate $
-      Ledger.mkRetirePoolTxCert (Api.unStakePoolKeyHash poolId) retirementEpoch
+  shelleyBasedEraConstraints (shelleyBasedEra @era)
+    $ Certificate
+    $ Ledger.mkRetirePoolTxCert (Api.unStakePoolKeyHash poolId) retirementEpoch
 
 -- This is only used by QA and only exists up until the Babbage era.
 -- The serialization does not change from Shelley -> Babbage therefore
@@ -170,9 +170,9 @@ makeMIRCertificate
   -> Ledger.MIRTarget
   -> Certificate (ShelleyLedgerEra BabbageEra)
 makeMIRCertificate mirPot mirTarget =
-  Certificate $
-    Ledger.ShelleyTxCertMir $
-      Ledger.MIRCert mirPot mirTarget
+  Certificate
+    $ Ledger.ShelleyTxCertMir
+    $ Ledger.MIRCert mirPot mirTarget
 
 -- This is only used by QA and only exists up until the Babbage era.
 -- The serialization does not change from Shelley -> Babbage therefore
@@ -186,9 +186,9 @@ makeGenesisKeyDelegationCertificate
   (Api.GenesisKeyHash hGenKey)
   (Api.GenesisDelegateKeyHash hGenDelegKey)
   (Api.VrfKeyHash hVrfKey) =
-    Certificate $
-      Ledger.mkGenesisDelegTxCert $
-        Ledger.GenesisDelegCert hGenKey hGenDelegKey (Ledger.toVRFVerKeyHash hVrfKey)
+    Certificate
+      $ Ledger.mkGenesisDelegTxCert
+      $ Ledger.GenesisDelegCert hGenKey hGenDelegKey (Ledger.toVRFVerKeyHash hVrfKey)
 
 -- | Get the stake credential witness for a certificate that requires it.
 -- Only stake address deregistration and delegation requires witnessing (witness can be script or key).

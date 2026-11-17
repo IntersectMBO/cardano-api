@@ -404,10 +404,10 @@ legacyWitnessToScriptRequirements
   -> Either CBOR.DecoderError (TxScriptWitnessRequirements (ShelleyLedgerEra era))
 legacyWitnessToScriptRequirements eon wits = do
   r <- legacyWitnessConversion eon wits
-  return $
-    alonzoEraOnwardsConstraints eon $
-      obtainMonoidConstraint eon $
-        getTxScriptWitnessesRequirements r
+  return
+    $ alonzoEraOnwardsConstraints eon
+    $ obtainMonoidConstraint eon
+    $ getTxScriptWitnessesRequirements r
 
 -- Misc helpers
 

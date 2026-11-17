@@ -99,9 +99,9 @@ writeByteStringFile
   -> ByteString
   -> m (Either (FileError e) ())
 writeByteStringFile fp bs =
-  runExceptT $
-    handleIOExceptT (FileIOError (unFile fp)) $
-      BS.writeFile (unFile fp) bs
+  runExceptT
+    $ handleIOExceptT (FileIOError (unFile fp))
+    $ BS.writeFile (unFile fp) bs
 
 -- | Like 'writeByteStringFile', but the file is created readable and
 -- writable only by its owner (@0600@ on POSIX), and it is replaced
@@ -137,9 +137,9 @@ writeLazyByteStringFile
   -> LBS.ByteString
   -> m (Either (FileError e) ())
 writeLazyByteStringFile fp bs =
-  runExceptT $
-    handleIOExceptT (FileIOError (unFile fp)) $
-      LBS.writeFile (unFile fp) bs
+  runExceptT
+    $ handleIOExceptT (FileIOError (unFile fp))
+    $ LBS.writeFile (unFile fp) bs
 
 -- | Like 'writeLazyByteStringFile', but with the same owner-only
 -- permissions and atomic replacement as
@@ -171,9 +171,9 @@ writeTextFile
   -> Text
   -> m (Either (FileError e) ())
 writeTextFile fp t =
-  runExceptT $
-    handleIOExceptT (FileIOError (unFile fp)) $
-      Text.writeFile (unFile fp) t
+  runExceptT
+    $ handleIOExceptT (FileIOError (unFile fp))
+    $ Text.writeFile (unFile fp) t
 
 -- | Like 'writeTextFile', but with the same owner-only permissions and
 -- atomic replacement as 'writeByteStringFileWithOwnerPermissions'.

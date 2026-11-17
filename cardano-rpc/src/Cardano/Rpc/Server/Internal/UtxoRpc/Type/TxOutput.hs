@@ -50,9 +50,9 @@ txInTxOutToAnyUtxoData
 txInTxOutToAnyUtxoData txIn txOut = do
   let era = useEra @era
       txOutCbor =
-        obtainCommonConstraints era $
-          L.serialize' (Exp.eraProtVerHigh era) $
-            toShelleyTxOut (convert era) txOut
+        obtainCommonConstraints era
+          $ L.serialize' (Exp.eraProtVerHigh era)
+          $ toShelleyTxOut (convert era) txOut
   defMessage
     & U5c.nativeBytes .~ txOutCbor
     & U5c.txoRef .~ inject txIn
@@ -84,9 +84,9 @@ txoRefUtxoRpcToTxIn
   -> m TxIn
 txoRefUtxoRpcToTxIn txoRef = do
   txId' <-
-    liftEitherError $
-      deserialiseFromRawBytes asType $
-        txoRef ^. U5c.hash
+    liftEitherError
+      $ deserialiseFromRawBytes asType
+      $ txoRef ^. U5c.hash
   pure $ TxIn txId' (TxIx . fromIntegral $ txoRef ^. U5c.index)
 
 -- | Convert per-policy asset bundles to UTxO RPC 'UtxoRpc.Multiasset' messages.
@@ -118,9 +118,9 @@ txOutToUtxoRpcTxOutput sbe txOut@(TxOut addressInEra txOutValue datum script) = 
       -- encodings, so decode-then-encode may differ from the submitter's
       -- bytes for historical outputs.
       originalCbor =
-        shelleyBasedEraConstraints sbe $
-          L.serialize' (L.eraProtVerHigh @(ShelleyLedgerEra era)) $
-            toShelleyTxOut sbe txOut
+        shelleyBasedEraConstraints sbe
+          $ L.serialize' (L.eraProtVerHigh @(ShelleyLedgerEra era))
+          $ toShelleyTxOut sbe txOut
       datumRpc = case datum of
         TxOutDatumNone ->
           Nothing
@@ -159,10 +159,10 @@ utxoRpcTxOutputToTxOut txOutput = do
         SerialiseAsRawBytesError $
           msg <> ", address (hex): " <> BSC.unpack (Base16.encode addressBytes)
   address <-
-    obtainCommonConstraints era $
-      liftEitherError $
-        first annotateError $
-          deserialiseFromRawBytes asType addressBytes
+    obtainCommonConstraints era
+      $ liftEitherError
+      $ first annotateError
+      $ deserialiseFromRawBytes asType addressBytes
   datum <-
     case txOutput ^. U5c.maybe'datum of
       Just datumRpc ->

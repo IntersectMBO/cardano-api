@@ -304,39 +304,39 @@ mkVersionedProtocols networkid ptcl unversionedClients =
                   const
                     (nullTracer, cChainSyncCodec, Net.SyncP.chainSyncClientPeerPipelined clientPipelined)
         , localTxSubmissionProtocol =
-            Net.InitiatorProtocolOnly $
-              Net.mkMiniProtocolCbFromPeer $
-                const
-                  ( nullTracer
-                  , cTxSubmissionCodec
-                  , maybe
-                      Net.localTxSubmissionPeerNull
-                      Net.Tx.localTxSubmissionClientPeer
-                      localTxSubmissionClientForBlock
-                  )
+            Net.InitiatorProtocolOnly
+              $ Net.mkMiniProtocolCbFromPeer
+              $ const
+                ( nullTracer
+                , cTxSubmissionCodec
+                , maybe
+                    Net.localTxSubmissionPeerNull
+                    Net.Tx.localTxSubmissionClientPeer
+                    localTxSubmissionClientForBlock
+                )
         , localStateQueryProtocol =
-            Net.InitiatorProtocolOnly $
-              Net.mkMiniProtocolCbFromPeerSt $
-                const
-                  ( nullTracer
-                  , cStateQueryCodec
-                  , Net.Query.StateIdle
-                  , maybe
-                      Net.localStateQueryPeerNull
-                      Net.Query.localStateQueryClientPeer
-                      localStateQueryClientForBlock
-                  )
+            Net.InitiatorProtocolOnly
+              $ Net.mkMiniProtocolCbFromPeerSt
+              $ const
+                ( nullTracer
+                , cStateQueryCodec
+                , Net.Query.StateIdle
+                , maybe
+                    Net.localStateQueryPeerNull
+                    Net.Query.localStateQueryClientPeer
+                    localStateQueryClientForBlock
+                )
         , localTxMonitorProtocol =
-            Net.InitiatorProtocolOnly $
-              Net.mkMiniProtocolCbFromPeer $
-                const
-                  ( nullTracer
-                  , cTxMonitorCodec
-                  , maybe
-                      Net.localTxMonitorPeerNull
-                      localTxMonitorClientPeer
-                      localTxMonitoringClientForBlock
-                  )
+            Net.InitiatorProtocolOnly
+              $ Net.mkMiniProtocolCbFromPeer
+              $ const
+                ( nullTracer
+                , cTxMonitorCodec
+                , maybe
+                    Net.localTxMonitorPeerNull
+                    localTxMonitorClientPeer
+                    localTxMonitoringClientForBlock
+                )
         }
      where
       Consensus.Codecs
@@ -606,25 +606,25 @@ queryNodeLocalState connctInfo mpoint query = do
     -> Net.Query.LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
   singleQuery mPointVar' resultVar' =
     LocalStateQueryClient $ do
-      pure $
-        Net.Query.SendMsgAcquire mPointVar' $
-          Net.Query.ClientStAcquiring
-            { Net.Query.recvMsgAcquired =
-                pure $
-                  Net.Query.SendMsgQuery query $
-                    Net.Query.ClientStQuerying
-                      { Net.Query.recvMsgResult = \result -> do
-                          atomically $ putTMVar resultVar' (Right result)
+      pure
+        $ Net.Query.SendMsgAcquire mPointVar'
+        $ Net.Query.ClientStAcquiring
+          { Net.Query.recvMsgAcquired =
+              pure
+                $ Net.Query.SendMsgQuery query
+                $ Net.Query.ClientStQuerying
+                  { Net.Query.recvMsgResult = \result -> do
+                      atomically $ putTMVar resultVar' (Right result)
 
-                          pure $
-                            Net.Query.SendMsgRelease $
-                              pure $
-                                Net.Query.SendMsgDone ()
-                      }
-            , Net.Query.recvMsgFailure = \failure -> do
-                atomically $ putTMVar resultVar' (Left (toAcquiringFailure failure))
-                pure $ Net.Query.SendMsgDone ()
-            }
+                      pure
+                        $ Net.Query.SendMsgRelease
+                        $ pure
+                        $ Net.Query.SendMsgDone ()
+                  }
+          , Net.Query.recvMsgFailure = \failure -> do
+              atomically $ putTMVar resultVar' (Left (toAcquiringFailure failure))
+              pure $ Net.Query.SendMsgDone ()
+          }
 
 -- | The result of submitting a transaction via 'submitTxToNodeLocal'.
 data TxSubmitResult

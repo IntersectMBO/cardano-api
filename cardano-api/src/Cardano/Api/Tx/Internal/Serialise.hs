@@ -69,9 +69,9 @@ deserialiseWitnessLedger
   -> TextEnvelope
   -> Either TextEnvelopeError (KeyWitness era)
 deserialiseWitnessLedger sbe te =
-  shelleyBasedEraConstraints sbe $
-    legacyDecoding te $
-      deserialiseFromTextEnvelope te
+  shelleyBasedEraConstraints sbe
+    $ legacyDecoding te
+    $ deserialiseFromTextEnvelope te
  where
   -- This wrapper ensures that we can still decode the key witness
   -- that were serialized before we migrated to using 'serialiseToTextEnvelope'.

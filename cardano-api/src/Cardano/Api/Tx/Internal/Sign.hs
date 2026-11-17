@@ -137,8 +137,8 @@ data Tx era where
 -- | This pattern will be deprecated in the future. We advise against introducing new usage of it.
 pattern Tx :: TxBody era -> [KeyWitness era] -> Tx era
 pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
-  where
-    Tx txbody ws = makeSignedTransaction ws txbody
+ where
+  Tx txbody ws = makeSignedTransaction ws txbody
 
 instance Show (InAnyCardanoEra Tx) where
   show (InAnyCardanoEra _ tx) = show tx
@@ -310,14 +310,14 @@ data TxBody era where
   ShelleyTxBody
     :: ShelleyBasedEra era
     -> Ledger.TxBody Ledger.TopTx (ShelleyLedgerEra era)
-    -- We include the scripts along with the tx body, rather than the
+    -> -- We include the scripts along with the tx body, rather than the
     -- witnesses set, since they need to be known when building the body.
-    -> [Ledger.Script (ShelleyLedgerEra era)]
-    -- The info for each use of each script: the script input data, both
+    [Ledger.Script (ShelleyLedgerEra era)]
+    -> -- The info for each use of each script: the script input data, both
     -- the UTxO input data (called the "datum") and the supplied input
     -- data (called the "redeemer") and the execution units.
-    -> TxBodyScriptData era
-    -- The 'L.TxAuxData' consists of one or several things,
+    TxBodyScriptData era
+    -> -- The 'L.TxAuxData' consists of one or several things,
     -- depending on era:
     -- + transaction metadata  (in Shelley and later)
     -- + auxiliary scripts     (in Allegra and later)
@@ -325,7 +325,7 @@ data TxBody era where
     -- extra script data has to be passed to scripts and hence is needed
     -- for validation. It is thus part of the witness data, not the
     -- auxiliary data.
-    -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
+    Maybe (L.TxAuxData (ShelleyLedgerEra era))
     -> TxScriptValidity era
     -- ^ Mark script as expected to pass or fail validation
     -> TxBody era
@@ -786,14 +786,14 @@ decodeShelleyBasedWitness
   -> Either CBOR.DecoderError (KeyWitness era)
 decodeShelleyBasedWitness sbe bs =
   let e =
-        Valid.foldValidation Left Right $
-          mconcat $
-            map
-              (either (Valid.Failure . (: [])) Valid.Success)
-              [ bootstrapWitnessDecoder bs
-              , shelleyKeyWitnessDecoder bs
-              , legacyKeyWitnessDecoder bs
-              ]
+        Valid.foldValidation Left Right
+          $ mconcat
+          $ map
+            (either (Valid.Failure . (: [])) Valid.Success)
+            [ bootstrapWitnessDecoder bs
+            , shelleyKeyWitnessDecoder bs
+            , legacyKeyWitnessDecoder bs
+            ]
    in case e of
         Left errs ->
           let allErrs = Text.unlines $ map renderBuildable errs

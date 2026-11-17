@@ -101,9 +101,9 @@ prop_getAnyWitnessRedeemerPointerMap = property $ do
   l <- forAll $ Gen.int (Range.linear 2 5)
   witnessables <- forAll $ Gen.list (Range.singleton l) $ genWitnessable @L.ConwayEra
   wits <-
-    forAll $
-      Gen.list (Range.singleton l) $
-        genIndexedPlutusScriptWitness @ConwayEra
+    forAll
+      $ Gen.list (Range.singleton l)
+      $ genIndexedPlutusScriptWitness @ConwayEra
   let anyWits =
         [ AnyPlutusScriptWitness swit
         | IndexedPlutusScriptWitness _ _ swit <- wits
@@ -152,19 +152,19 @@ prop_toAnyWitness =
       fmap List.nub $ forAll $ Gen.list (Range.singleton l) $ genMintWitnessable @L.ConwayEra
 
     simpleScripts <-
-      fmap List.nub $
-        forAll $
-          Gen.list (Range.singleton l) $
-            genSimpleScriptMintWitness Api.ShelleyBasedEraConway
+      fmap List.nub
+        $ forAll
+        $ Gen.list (Range.singleton l)
+        $ genSimpleScriptMintWitness Api.ShelleyBasedEraConway
 
     let excludeReferenceScripts = filter (not . isReferenceScript) simpleScripts
         finalLength = List.length zipped
         zipped = zip witnessables excludeReferenceScripts
 
     res <-
-      evalEither $
-        legacyWitnessConversion eon $
-          zip witnessables (map Api.BuildTxWith excludeReferenceScripts)
+      evalEither
+        $ legacyWitnessConversion eon
+        $ zip witnessables (map Api.BuildTxWith excludeReferenceScripts)
 
     annotateShow (extractSimpleScripts res)
 
@@ -214,9 +214,9 @@ prop_extractAllIndexedPlutusScriptWitnesses =
     let allGeneratedPlutusScriptWitnesses =
           mconcat
             [ createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableTxIns generatedTxInWits
-            , createIndexedPlutusScriptWitnesses $
-                map (second anyScriptWitnessToAnyWitness) $
-                  Exp.extractWitnessableMints generatedTxMintWits
+            , createIndexedPlutusScriptWitnesses
+                $ map (second anyScriptWitnessToAnyWitness)
+                $ Exp.extractWitnessableMints generatedTxMintWits
             , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableCertificates generatedTxCertWits
             , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableWithdrawals generatedTxWithdrawals
             , createIndexedPlutusScriptWitnesses $ Exp.extractWitnessableVotes (Just generatedTxVotingprocedures)
@@ -249,15 +249,15 @@ prop_makeUnsignedTx_accepts_reference_plutus_v4_witness = property $ do
   refTxIn <- forAll genTxIn
   let dummyRedeemer = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor 0 []
       plutusWit =
-        Exp.AnyPlutusScriptWitness $
-          AnyPlutusSpendingScriptWitness $
-            PlutusSpendingScriptWitnessV4 $
-              PlutusScriptWitness
-                L.SPlutusV4
-                (PReferenceScript refTxIn)
-                NoScriptDatum
-                dummyRedeemer
-                (Script.ExecutionUnits 0 0)
+        Exp.AnyPlutusScriptWitness
+          $ AnyPlutusSpendingScriptWitness
+          $ PlutusSpendingScriptWitnessV4
+          $ PlutusScriptWitness
+            L.SPlutusV4
+            (PReferenceScript refTxIn)
+            NoScriptDatum
+            dummyRedeemer
+            (Script.ExecutionUnits 0 0)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxProtocolParams exampleProtocolParams

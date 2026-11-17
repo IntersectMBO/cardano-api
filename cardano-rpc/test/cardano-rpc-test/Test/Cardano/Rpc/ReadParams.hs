@@ -71,8 +71,8 @@ build paths =
 
 realValues :: U5c.PParams
 realValues =
-  getProto . obtainCommonConstraints ConwayEra $
-    protocolParamsToUtxoRpcPParams ConwayEra $
-      L.emptyPParams
-        & L.ppMaxTxSizeL .~ 16384
-        & L.ppTxFeePerByteL .~ L.CoinPerByte (LC.CompactCoin 44)
+  getProto . obtainCommonConstraints ConwayEra
+    $ protocolParamsToUtxoRpcPParams ConwayEra
+    $ L.emptyPParams
+      & L.ppMaxTxSizeL .~ 16384
+      & L.ppTxFeePerByteL .~ L.CoinPerByte (LC.CompactCoin 44)

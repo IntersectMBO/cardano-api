@@ -169,10 +169,10 @@ deserialiseWitnessLedgerCddl
   -> TextEnvelope
   -> Either TextEnvelopeCddlError (KeyWitness era)
 deserialiseWitnessLedgerCddl sbe te =
-  shelleyBasedEraConstraints sbe $
-    legacyDecoding te $
-      mapLeft textEnvelopeErrorToTextEnvelopeCddlError $
-        deserialiseFromTextEnvelope te
+  shelleyBasedEraConstraints sbe
+    $ legacyDecoding te
+    $ mapLeft textEnvelopeErrorToTextEnvelopeCddlError
+    $ deserialiseFromTextEnvelope te
  where
   -- This wrapper ensures that we can still decode the key witness
   -- that were serialized before we migrated to using 'serialiseToTextEnvelope'

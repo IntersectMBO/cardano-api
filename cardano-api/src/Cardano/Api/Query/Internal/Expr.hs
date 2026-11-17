@@ -557,6 +557,6 @@ querySbe
            (Either EraMismatch result)
        )
 querySbe eon queryInSbe =
-  shelleyBasedEraConstraints (convert eon) $
-    queryExpr . QueryInEra $
-      QueryInShelleyBasedEra (convert eon) queryInSbe
+  shelleyBasedEraConstraints (convert eon)
+    $ queryExpr . QueryInEra
+    $ QueryInShelleyBasedEra (convert eon) queryInSbe

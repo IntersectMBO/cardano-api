@@ -218,10 +218,10 @@ estimateMinFeeImpl
 -- once the body is final and it is not affected by signing.
 getUnsignedTxIdImpl :: UnsignedTxObject -> String
 getUnsignedTxIdImpl (UnsignedTxObject era (Exp.UnsignedTx tx)) =
-  obtainCommonConstraints era $
-    Text.unpack $
-      Api.serialiseToRawBytesHexText $
-        TxBody.getTxIdShelley (Api.convert era) (tx ^. Ledger.bodyTxL)
+  obtainCommonConstraints era
+    $ Text.unpack
+    $ Api.serialiseToRawBytesHexText
+    $ TxBody.getTxIdShelley (Api.convert era) (tx ^. Ledger.bodyTxL)
 
 -- * @SignedTx@ object
 
@@ -281,16 +281,16 @@ alsoSignWithStakeKeyImpl signedTxObject = alsoSignWithKeyImpl signedTxObject . A
 -- | Convert a signed transaction object to a base16 encoded string of its CBOR representation.
 toCborImpl :: SignedTxObject -> String
 toCborImpl (SignedTxObject era signedTx) =
-  obtainCommonConstraints era $
-    Text.unpack $
-      Text.decodeUtf8 (Api.serialiseToRawBytesHex signedTx)
+  obtainCommonConstraints era
+    $ Text.unpack
+    $ Text.decodeUtf8 (Api.serialiseToRawBytesHex signedTx)
 
 -- | Get the transaction id of a signed transaction object. The transaction
 -- id is the blake2b-256 hash of the transaction body, so it is not affected
 -- by signing and it matches the id of the unsigned transaction.
 getSignedTxIdImpl :: SignedTxObject -> String
 getSignedTxIdImpl (SignedTxObject era (Exp.SignedTx tx)) =
-  obtainCommonConstraints era $
-    Text.unpack $
-      Api.serialiseToRawBytesHexText $
-        TxBody.getTxIdShelley (Api.convert era) (tx ^. Ledger.bodyTxL)
+  obtainCommonConstraints era
+    $ Text.unpack
+    $ Api.serialiseToRawBytesHexText
+    $ TxBody.getTxIdShelley (Api.convert era) (tx ^. Ledger.bodyTxL)

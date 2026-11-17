@@ -614,9 +614,9 @@ toLedgerProposedPPUpdates
   -> Map (Hash GenesisKey) (EraBasedProtocolParametersUpdate era)
   -> Ledger.ProposedPPUpdates (ShelleyLedgerEra era)
 toLedgerProposedPPUpdates sbe m =
-  Ledger.ProposedPPUpdates $
-    Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh) $
-      Map.map (createEraBasedProtocolParamUpdate sbe) m
+  Ledger.ProposedPPUpdates
+    $ Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
+    $ Map.map (createEraBasedProtocolParamUpdate sbe) m
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions: updates from ledger types

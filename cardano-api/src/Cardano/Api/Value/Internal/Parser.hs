@@ -53,15 +53,15 @@ parseValue role = do
   let value = evalValueExpr valueExpr
   case role of
     RoleUTxO -> do
-      unless (allPositive value) $
-        fail $
-          "Value must be positive in UTxO (or transaction output): " <> show value
+      unless (allPositive value)
+        $ fail
+        $ "Value must be positive in UTxO (or transaction output): " <> show value
       return value
     RoleMint -> do
       let (Coin lovelace) = selectLovelace value
-      when (lovelace /= 0) $
-        fail $
-          "Lovelace must be zero in minting value: " <> show value
+      when (lovelace /= 0)
+        $ fail
+        $ "Lovelace must be zero in minting value: " <> show value
       return value
 
 -- | Evaluate a 'ValueExpr' and construct a 'Value'.

@@ -247,9 +247,9 @@ estimateBalancedTxBody
 
     -- Step 1. Substitute those execution units into the tx
     txbodycontent1 <-
-      maryEraOnwardsConstraints w $
-        first TxFeeEstimationScriptExecutionError $
-          substituteExecutionUnits exUnitsMap txbodycontent
+      maryEraOnwardsConstraints w
+        $ first TxFeeEstimationScriptExecutionError
+        $ substituteExecutionUnits exUnitsMap txbodycontent
 
     -- Step 2. We need to calculate the current balance of the tx. The user
     -- must at least provide the total value of the UTxOs they intend to spend
@@ -273,10 +273,10 @@ estimateBalancedTxBody
            in sum
                 [ maryEraOnwardsConstraints w $
                     L.getTotalDepositsTxCerts pparams assumeStakePoolHasNotBeenRegistered certificates
-                , maryEraOnwardsConstraints w $
-                    mconcat $
-                      map (^. L.pProcDepositL) $
-                        toList proposalProcedures
+                , maryEraOnwardsConstraints w
+                    $ mconcat
+                    $ map (^. L.pProcDepositL)
+                    $ toList proposalProcedures
                 ]
 
         availableUTxOValue =
@@ -297,9 +297,9 @@ estimateBalancedTxBody
     -- outputs eagerly and errors on negative quantities.
     let L.MaryValue partialCoin partialMultiAsset =
           maryEraOnwardsConstraints w partialChange :: L.MaryValue
-    unless (L.pointwise (>=) (L.MaryValue (L.Coin 0) partialMultiAsset) mempty) $
-      Left . TxFeeEstimationBalanceError $
-        TxBodyErrorBalanceNegative partialCoin partialMultiAsset
+    unless (L.pointwise (>=) (L.MaryValue (L.Coin 0) partialMultiAsset) mempty)
+      $ Left . TxFeeEstimationBalanceError
+      $ TxBodyErrorBalanceNegative partialCoin partialMultiAsset
 
     let maxLovelaceChange = L.Coin (2 ^ (64 :: Integer)) - 1
         changeWithMaxLovelace = partialChange & A.adaAssetL sbe .~ maxLovelaceChange
@@ -341,17 +341,17 @@ estimateBalancedTxBody
         (convert sbe)
         (pure (TxReturnCollateralNone, TxTotalCollateralNone))
         ( \w' ->
-            babbageEraOnwardsConstraints w' $
-              first (TxFeeEstimationBalanceError . TxBodyErrorCollateral) $
-                calcReturnAndTotalCollateral
-                  w'
-                  fee
-                  pparams
-                  (txInsCollateral txbodycontent)
-                  (txReturnCollateral txbodycontent)
-                  (txTotalCollateral txbodycontent)
-                  changeaddr
-                  (A.mkAdaValue sbe totalPotentialCollateral)
+            babbageEraOnwardsConstraints w'
+              $ first (TxFeeEstimationBalanceError . TxBodyErrorCollateral)
+              $ calcReturnAndTotalCollateral
+                w'
+                fee
+                pparams
+                (txInsCollateral txbodycontent)
+                (txReturnCollateral txbodycontent)
+                (txTotalCollateral txbodycontent)
+                changeaddr
+                (A.mkAdaValue sbe totalPotentialCollateral)
         )
 
     -- Step 5. Now we can calculate the balance of the tx. What matter here are:
@@ -747,9 +747,9 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
     (convert sbe)
     Map.empty
     ( \w ->
-        alonzoEraOnwardsConstraints w $
-          fromLedgerScriptExUnitsMap w $
-            L.evalTxExUnitsWithLogs pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart
+        alonzoEraOnwardsConstraints w
+          $ fromLedgerScriptExUnitsMap w
+          $ L.evalTxExUnitsWithLogs pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart
     )
  where
   LedgerEpochInfo ledgerEpochInfo = epochInfo
@@ -793,9 +793,9 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
       -- the redeemer pointer will always point to a Plutus script.
       L.MissingScript indexOfScriptWitnessedItem resolveable ->
         let scriptWitnessedItemIndex = toScriptIndex aOnwards indexOfScriptWitnessedItem
-         in ScriptErrorMissingScript scriptWitnessedItemIndex $
-              ResolvablePointers sbe $
-                Map.map extractScriptBytesAndLanguage resolveable
+         in ScriptErrorMissingScript scriptWitnessedItemIndex
+              $ ResolvablePointers sbe
+              $ Map.map extractScriptBytesAndLanguage resolveable
       L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
       L.ContextError e ->
         alonzoEraOnwardsConstraints aOnwards $
@@ -844,14 +844,14 @@ evaluateTransactionBalance
   -> TxBody era
   -> TxOutValue era
 evaluateTransactionBalance sbe pp poolids stakeDelegDeposits utxo (ShelleyTxBody _ txbody _ _ _ _) =
-  shelleyBasedEraConstraints sbe $
-    TxOutValueShelleyBased sbe $
-      L.evalBalanceTxBody
-        pp
-        lookupDelegDeposit
-        isRegPool
-        (toLedgerUTxO sbe utxo)
-        txbody
+  shelleyBasedEraConstraints sbe
+    $ TxOutValueShelleyBased sbe
+    $ L.evalBalanceTxBody
+      pp
+      lookupDelegDeposit
+      isRegPool
+      (toLedgerUTxO sbe utxo)
+      txbody
  where
   isRegPool :: Ledger.KeyHash Ledger.StakePool -> Bool
   isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
@@ -1717,11 +1717,11 @@ substituteExecutionUnits
         traverse
           (bitraverse pure $ traverse $ uncurry substituteExecUnits)
           $ indexWitnessedTxProposalProcedures proposals
-      pure $
-        Just $
-          Featured era $
-            obtainCommonConstraints (convert era) $
-              mkTxProposalProcedures substitutedExecutionUnits
+      pure
+        $ Just
+        $ Featured era
+        $ obtainCommonConstraints (convert era)
+        $ mkTxProposalProcedures substitutedExecutionUnits
 
     mapScriptWitnessesMinting
       :: TxMintValue BuildTx era

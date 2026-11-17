@@ -57,12 +57,12 @@ createVotingProcedure
   -> VotingProcedure era
 createVotingProcedure eon vChoice mProposalAnchor =
   let proposalAnchor = fmap Text.encodeUtf8 <$> mProposalAnchor
-   in conwayEraOnwardsConstraints eon $
-        VotingProcedure $
-          Ledger.VotingProcedure
-            { Ledger.vProcVote = toVote vChoice
-            , Ledger.vProcAnchor = Ledger.maybeToStrictMaybe $ uncurry createAnchor <$> proposalAnchor
-            }
+   in conwayEraOnwardsConstraints eon
+        $ VotingProcedure
+        $ Ledger.VotingProcedure
+          { Ledger.vProcVote = toVote vChoice
+          , Ledger.vProcAnchor = Ledger.maybeToStrictMaybe $ uncurry createAnchor <$> proposalAnchor
+          }
 
 newtype VotingProcedure era = VotingProcedure
   { unVotingProcedure :: Ledger.VotingProcedure (ShelleyLedgerEra era)
@@ -133,10 +133,10 @@ singletonVotingProcedures
   -> L.VotingProcedure (ShelleyLedgerEra era)
   -> VotingProcedures era
 singletonVotingProcedures _ voter govActionId votingProcedure =
-  VotingProcedures $
-    L.VotingProcedures $
-      Map.singleton voter $
-        Map.singleton govActionId votingProcedure
+  VotingProcedures
+    $ L.VotingProcedures
+    $ Map.singleton voter
+    $ Map.singleton govActionId votingProcedure
 
 -- | Errors that can occur when constructing voting procedures for a transaction.
 data VotingError era

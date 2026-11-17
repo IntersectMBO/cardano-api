@@ -131,18 +131,18 @@ buildAndSignTx era senderWitness ledgerUtxo utxoTxIns recipientTxOut senderAddre
           & Exp.setTxOuts [recipientTxOut]
 
   (unsignedTx, _balancedContent) <-
-    either (throwM . stringException . docToString . prettyError) pure $
-      Exp.obtainCommonConstraints era $
-        Exp.makeTransactionBodyAutoBalance
-          offlineSystemStart
-          offlineEpochInfo
-          pparams
-          mempty
-          mempty
-          ledgerUtxo
-          content
-          senderAddress
-          Nothing
+    either (throwM . stringException . docToString . prettyError) pure
+      $ Exp.obtainCommonConstraints era
+      $ Exp.makeTransactionBodyAutoBalance
+        offlineSystemStart
+        offlineEpochInfo
+        pparams
+        mempty
+        mempty
+        ledgerUtxo
+        content
+        senderAddress
+        Nothing
 
   let keyWitness = Exp.makeKeyWitness era unsignedTx senderWitness
   pure $ Exp.signTx era [] [keyWitness] unsignedTx
@@ -228,12 +228,12 @@ readProtocolParams era conn = do
   minFeeCoefficientCompact <- toCompactCoin "minFeeCoefficient" minFeeCoefficient
   coinsPerUtxoByteCompact <- toCompactCoin "coinsPerUtxoByte" coinsPerUtxoByte
 
-  pure $
-    Exp.obtainCommonConstraints era $
-      L.emptyPParams
-        & L.ppTxFeePerByteL .~ L.CoinPerByte minFeeCoefficientCompact
-        & L.ppTxFeeFixedL .~ L.Coin minFeeConstant
-        & L.ppCoinsPerUTxOByteL .~ L.CoinPerByte coinsPerUtxoByteCompact
+  pure
+    $ Exp.obtainCommonConstraints era
+    $ L.emptyPParams
+      & L.ppTxFeePerByteL .~ L.CoinPerByte minFeeCoefficientCompact
+      & L.ppTxFeeFixedL .~ L.Coin minFeeConstant
+      & L.ppCoinsPerUTxOByteL .~ L.CoinPerByte coinsPerUtxoByteCompact
 
 -- | Pack a non-negative lovelace amount into the ledger's compact coin
 -- representation, as 'L.CoinPerByte' requires.
@@ -285,10 +285,10 @@ exactAddressPredicate era address =
 
 parseAddress :: Exp.Era era -> Text -> IO (AddressInEra era)
 parseAddress era addressText =
-  Exp.obtainCommonConstraints era $
-    orDie id $
-      maybe (Left $ "Could not parse address: " <> T.unpack addressText) Right $
-        deserialiseAddress (AsAddressInEra asType) addressText
+  Exp.obtainCommonConstraints era
+    $ orDie id
+    $ maybe (Left $ "Could not parse address: " <> T.unpack addressText) Right
+    $ deserialiseAddress (AsAddressInEra asType) addressText
 
 hexEncode :: BS.ByteString -> Text
 hexEncode = T.decodeUtf8 . Base16.encode

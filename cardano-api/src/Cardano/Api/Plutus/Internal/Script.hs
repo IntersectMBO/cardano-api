@@ -1047,14 +1047,14 @@ instance SerialiseAsRawBytes ScriptHash where
 parseScriptHash :: P.Parser ScriptHash
 parseScriptHash = do
   hexStr <- P.lookAhead $ P.many1 P.hexDigit
-  unless (length hexStr == expectedHashLength) $
-    fail $
-      mconcat
-        [ "Error while parsing ScriptHash: Expected 56-hex-digit hash, but found "
-        , show (length hexStr)
-        , " hex digits. Supplied hash: "
-        , hexStr
-        ]
+  unless (length hexStr == expectedHashLength)
+    $ fail
+    $ mconcat
+      [ "Error while parsing ScriptHash: Expected 56-hex-digit hash, but found "
+      , show (length hexStr)
+      , " hex digits. Supplied hash: "
+      , hexStr
+      ]
   parseRawBytesHex
  where
   -- ADDRHASH = Blake2b_224
@@ -1649,13 +1649,13 @@ parseScriptAtLeast obj = do
   required <- obj .: "required"
   scripts <- obj .: "scripts"
   let numScripts = length scripts
-  when (required > numScripts) $
-    fail $
-      "Required number of script signatures exceeds the number of scripts."
-        <> " Required number: "
-        <> show required
-        <> " Number of scripts: "
-        <> show numScripts
+  when (required > numScripts)
+    $ fail
+    $ "Required number of script signatures exceeds the number of scripts."
+      <> " Required number: "
+      <> show required
+      <> " Number of scripts: "
+      <> show numScripts
   pure $ RequireMOf required scripts
 
 -- ----------------------------------------------------------------------------

@@ -496,9 +496,9 @@ anyAddressInEra era = \case
     pure $ AddressInEra ByronAddressInAnyEra addr
   AddressShelley addr -> do
     sbe <- forEraMaybeEon era ?! "Expected Byron based era address"
-    shelleyBasedEraConstraints sbe $
-      pure $
-        AddressInEra (ShelleyAddressInEra sbe) addr
+    shelleyBasedEraConstraints sbe
+      $ pure
+      $ AddressInEra (ShelleyAddressInEra sbe) addr
 
 toAddressAny :: Address addr -> AddressAny
 toAddressAny a@ShelleyAddress{} = AddressShelley a

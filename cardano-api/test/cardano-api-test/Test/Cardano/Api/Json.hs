@@ -187,9 +187,9 @@ prop_new_txout_json_reads_legacy_dijkstra = H.property $ do
   simpleScript <- forAll genSimpleScript
   guardCredential <- forAll Q.arbitrary
   let guardRefScript =
-        ReferenceScript BabbageEraOnwardsDijkstra $
-          ScriptInAnyLang SimpleScriptLanguage $
-            SimpleScript (RequireAllOf [simpleScript, RequireGuard guardCredential])
+        ReferenceScript BabbageEraOnwardsDijkstra
+          $ ScriptInAnyLang SimpleScriptLanguage
+          $ SimpleScript (RequireAllOf [simpleScript, RequireGuard guardCredential])
   refScript <- forAll $ Gen.element [ReferenceScriptNone, generatedRefScript, guardRefScript]
   let oldTxOut = TxOut address value datum refScript
   eitherDecode (encode oldTxOut) === Right (Exp.TxOut (toShelleyTxOut sbe oldTxOut))

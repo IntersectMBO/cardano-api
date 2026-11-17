@@ -61,9 +61,9 @@ readFileJSON
 readFileJSON path =
   runExceptT $ do
     content <- fileIOExceptT path BS.readFile
-    firstExceptT (FileError path) $
-      hoistEither $
-        deserialiseFromJSON content
+    firstExceptT (FileError path)
+      $ hoistEither
+      $ deserialiseFromJSON content
 
 writeFileJSON
   :: ToJSON a
@@ -71,9 +71,9 @@ writeFileJSON
   -> a
   -> IO (Either (FileError ()) ())
 writeFileJSON path x =
-  runExceptT $
-    handleIOExceptT (FileIOError path) $
-      BS.writeFile path (serialiseToJSON x)
+  runExceptT
+    $ handleIOExceptT (FileIOError path)
+    $ BS.writeFile path (serialiseToJSON x)
 
 -- | Parser for 'Text' that validates that the number of characters is
 -- under a given maximum. The 'String' parameter is meant to be the name

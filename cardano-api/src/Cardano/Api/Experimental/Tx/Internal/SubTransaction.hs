@@ -192,11 +192,11 @@ makeUnsignedSubTx st = do
           & L.datsTxWitsL .~ datums
           & L.rdmrsTxWitsL .~ redeemers
 
-  Right $
-    UnsignedSubTx $
-      L.mkBasicTx body
-        & L.witsTxL .~ scriptWitnesses
-        & L.auxDataTxL .~ L.maybeToStrictMaybe txAuxData
+  Right
+    $ UnsignedSubTx
+    $ L.mkBasicTx body
+      & L.witsTxL .~ scriptWitnesses
+      & L.auxDataTxL .~ L.maybeToStrictMaybe txAuxData
 
 -- | Sign the body of an unsigned sub-transaction with one key.
 makeSubTxKeyWitness

@@ -36,9 +36,9 @@ prop_derive_key_from_mnemonic :: Property
 prop_derive_key_from_mnemonic = H.property $ do
   ms <- H.forAll $ H.element [MS12, MS15, MS18, MS21, MS24]
   mnemonic <- liftIO $ generateMnemonic ms
-  void $
-    H.evalEither $
-      signingKeyFromMnemonicWithPaymentKeyIndex AsStakeExtendedKey mnemonic 0 (0 :: Word32)
+  void
+    $ H.evalEither
+    $ signingKeyFromMnemonicWithPaymentKeyIndex AsStakeExtendedKey mnemonic 0 (0 :: Word32)
   H.success
 
 exampleMnemonic :: [Text]
@@ -104,9 +104,9 @@ prop_payment_derivation_is_accurate = H.propertyOnce $ do
         serialiseToBech32 $
           makeShelleyAddress
             Mainnet
-            ( PaymentCredentialByKey $
-                verificationKeyHash $
-                  castVerificationKey verificationKey
+            ( PaymentCredentialByKey
+                $ verificationKeyHash
+                $ castVerificationKey verificationKey
             )
             NoStakeAddress
   addr H.=== "addr1v86y48z2h38ale0s9r2mfkaw7wp5ysyemnrp0azpy8z4ejg93879q"
@@ -118,11 +118,11 @@ prop_stake_derivation_is_accurate = H.propertyOnce $ do
   let verificationKey =
         getVerificationKey (signingKey :: SigningKey StakeExtendedKey) :: VerificationKey StakeExtendedKey
       addr =
-        serialiseToBech32 $
-          makeStakeAddress Mainnet $
-            StakeCredentialByKey $
-              verificationKeyHash $
-                castVerificationKey verificationKey
+        serialiseToBech32
+          $ makeStakeAddress Mainnet
+          $ StakeCredentialByKey
+          $ verificationKeyHash
+          $ castVerificationKey verificationKey
   addr H.=== "stake1u97tzhttvsz5n6fej6g05trus39x5uvl0y0k56dyhsc23xcexrk27"
 
 prop_payment_with_stake_derivation_is_accurate :: Property
@@ -141,14 +141,14 @@ prop_payment_with_stake_derivation_is_accurate = H.propertyOnce $ do
         serialiseToBech32 $
           makeShelleyAddress
             Mainnet
-            ( PaymentCredentialByKey $
-                verificationKeyHash $
-                  castVerificationKey paymentVerificationKey
+            ( PaymentCredentialByKey
+                $ verificationKeyHash
+                $ castVerificationKey paymentVerificationKey
             )
-            ( StakeAddressByValue $
-                StakeCredentialByKey $
-                  verificationKeyHash $
-                    castVerificationKey stakeVerificationKey
+            ( StakeAddressByValue
+                $ StakeCredentialByKey
+                $ verificationKeyHash
+                $ castVerificationKey stakeVerificationKey
             )
   addr
     H.=== "addr1q86y48z2h38ale0s9r2mfkaw7wp5ysyemnrp0azpy8z4ejtuk9wkkeq9f85nn95slgk8epz2dfce77gldf56f0ps4zds0dx2p0"

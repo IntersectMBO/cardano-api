@@ -125,9 +125,9 @@ readFileTextEnvelope
 readFileTextEnvelope path =
   runExceptT $ do
     content <- fileIOExceptT (unFile path) readFileBlocking
-    firstExceptT (FileError (unFile path)) $
-      hoistEither $
-        deserialiseFromTextEnvelopeJSON content
+    firstExceptT (FileError (unFile path))
+      $ hoistEither
+      $ deserialiseFromTextEnvelopeJSON content
 
 readFileTextEnvelopeAnyOf
   :: [FromSomeType HasTextEnvelope b]
@@ -136,9 +136,9 @@ readFileTextEnvelopeAnyOf
 readFileTextEnvelopeAnyOf types path =
   runExceptT $ do
     content <- fileIOExceptT (unFile path) readFileBlocking
-    firstExceptT (FileError (unFile path)) $
-      hoistEither $
-        deserialiseFromTextEnvelopeJSONAnyOf types content
+    firstExceptT (FileError (unFile path))
+      $ hoistEither
+      $ deserialiseFromTextEnvelopeJSONAnyOf types content
 
 readTextEnvelopeFromFile
   :: FilePath
@@ -157,9 +157,9 @@ readTextEnvelopeOfTypeFromFile
 readTextEnvelopeOfTypeFromFile expectedType path =
   runExceptT $ do
     te <- ExceptT (readTextEnvelopeFromFile path)
-    firstExceptT (FileError path) $
-      hoistEither $
-        expectTextEnvelopeOfType (pure expectedType) te
+    firstExceptT (FileError path)
+      $ hoistEither
+      $ expectTextEnvelopeOfType (pure expectedType) te
     return te
 
 textEnvelopeTypeToEra :: Text -> Either TextEnvelopeError AnyShelleyBasedEra

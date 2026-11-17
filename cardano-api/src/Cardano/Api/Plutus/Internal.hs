@@ -118,11 +118,11 @@ collectPlutusScriptHashes aeo tx utxo =
     -> Alonzo.AlonzoScriptsNeeded (ShelleyLedgerEra era)
     -> Map ScriptWitnessIndex Api.ScriptHash
   getPurposes aeo' (Alonzo.AlonzoScriptsNeeded purposes) =
-    alonzoEraOnwardsConstraints aeo $
-      Map.fromList $
-        Prelude.map
-          (bimap (toScriptIndex aeo' . purposeAsIxItemToAsIx aeo') Api.fromShelleyScriptHash)
-          purposes
+    alonzoEraOnwardsConstraints aeo
+      $ Map.fromList
+      $ Prelude.map
+        (bimap (toScriptIndex aeo' . purposeAsIxItemToAsIx aeo') Api.fromShelleyScriptHash)
+        purposes
 
   purposeAsIxItemToAsIx
     :: AlonzoEraOnwards era

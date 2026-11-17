@@ -43,9 +43,9 @@ getProtocolParamsJsonMethod _ = do
 
   let target = VolatileTip
   pparams <-
-    liftIO . (throwEither =<<) $
-      executeLocalStateQueryExpr nodeConnInfo target $
-        throwEither =<< throwEither =<< queryProtocolParameters sbe
+    liftIO . (throwEither =<<)
+      $ executeLocalStateQueryExpr nodeConnInfo target
+      $ throwEither =<< throwEither =<< queryProtocolParameters sbe
 
   let pparamsJson = obtainCommonConstraints eon $ A.encode pparams
 

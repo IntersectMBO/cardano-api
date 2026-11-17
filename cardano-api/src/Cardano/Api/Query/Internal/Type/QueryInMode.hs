@@ -233,9 +233,9 @@ toLedgerEpochInfo
   => EraHistory
   -> LedgerEpochInfo
 toLedgerEpochInfo (EraHistory interpreter) =
-  LedgerEpochInfo $
-    hoistEpochInfo (first (Text.pack . show) . runExcept) $
-      Consensus.interpreterToEpochInfo interpreter
+  LedgerEpochInfo
+    $ hoistEpochInfo (first (Text.pack . show) . runExcept)
+    $ Consensus.interpreterToEpochInfo interpreter
 
 newtype SlotsInEpoch = SlotsInEpoch Word64
 
@@ -553,23 +553,23 @@ toConsensusQuery
   => QueryInMode result
   -> Some (Consensus.Query block)
 toConsensusQuery QueryCurrentEra =
-  Some $
-    Consensus.BlockQuery $
-      Consensus.QueryHardFork
-        Consensus.GetCurrentEra
+  Some
+    $ Consensus.BlockQuery
+    $ Consensus.QueryHardFork
+      Consensus.GetCurrentEra
 toConsensusQuery QueryEraHistory =
-  Some $
-    Consensus.BlockQuery $
-      Consensus.QueryHardFork
-        Consensus.GetInterpreter
+  Some
+    $ Consensus.BlockQuery
+    $ Consensus.QueryHardFork
+      Consensus.GetInterpreter
 toConsensusQuery QuerySystemStart = Some Consensus.GetSystemStart
 toConsensusQuery QueryChainBlockNo = Some Consensus.GetChainBlockNo
 toConsensusQuery QueryChainPoint = Some Consensus.GetChainPoint
 toConsensusQuery (QueryInEra QueryByronUpdateState) =
-  Some $
-    Consensus.BlockQuery $
-      Consensus.QueryIfCurrentByron
-        Consensus.GetUpdateInterfaceState
+  Some
+    $ Consensus.BlockQuery
+    $ Consensus.QueryIfCurrentByron
+      Consensus.GetUpdateInterfaceState
 toConsensusQuery (QueryInEra (QueryInShelleyBasedEra sbe q)) =
   shelleyBasedEraConstraints sbe $ toConsensusQueryShelleyBased sbe q
 toConsensusQuery QueryLedgerConfig = Some Consensus.DebugLedgerConfig

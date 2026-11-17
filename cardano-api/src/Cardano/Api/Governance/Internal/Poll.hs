@@ -357,24 +357,24 @@ verifyPollAnswer poll (InAnyShelleyBasedEra _era tx) = do
 
   hasMatchingHash answer calculatedHashFromPoll = do
     let specifiedHashInAnswer = govAnsPoll answer
-    when (calculatedHashFromPoll /= specifiedHashInAnswer) $
-      Left $
-        ErrGovernancePollMismatch $
-          GovernancePollMismatchError
-            { specifiedHashInAnswer
-            , calculatedHashFromPoll
-            }
+    when (calculatedHashFromPoll /= specifiedHashInAnswer)
+      $ Left
+      $ ErrGovernancePollMismatch
+      $ GovernancePollMismatchError
+        { specifiedHashInAnswer
+        , calculatedHashFromPoll
+        }
 
   isAmongAcceptableChoices answer answers =
     when (govAnsChoice answer >= fromIntegral (length answers)) $ do
       let invalidAnswerReceivedAnswer = govAnsChoice answer
       let invalidAnswerAcceptableAnswers = zip [0 ..] answers
-      Left $
-        ErrGovernancePollInvalidAnswer $
-          GovernancePollInvalidAnswerError
-            { invalidAnswerReceivedAnswer
-            , invalidAnswerAcceptableAnswers
-            }
+      Left
+        $ ErrGovernancePollInvalidAnswer
+        $ GovernancePollInvalidAnswerError
+          { invalidAnswerReceivedAnswer
+          , invalidAnswerAcceptableAnswers
+          }
 
   extraKeyWitnesses = \case
     TxExtraKeyWitnesses _era witnesses ->

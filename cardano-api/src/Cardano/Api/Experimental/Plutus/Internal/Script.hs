@@ -114,9 +114,9 @@ instance
   => HasTextEnvelope (PlutusScriptInEra lang era)
   where
   textEnvelopeTypes _ =
-    pure . fromString . Text.unpack . plutusLanguageToText $
-      AnyPlutusScriptLanguage $
-        L.plutusSLanguage (Proxy @lang)
+    pure . fromString . Text.unpack . plutusLanguageToText
+      $ AnyPlutusScriptLanguage
+      $ L.plutusSLanguage (Proxy @lang)
 
 -- TODO: Round trip
 plutusLanguageToText :: AnyPlutusScriptLanguage -> Text
@@ -229,9 +229,9 @@ decodeAnyPlutusScript
 decodeAnyPlutusScript bs (AnyPlutusScriptLanguage (lang :: L.SLanguage lang)) =
   case plutusLangInEra @apiEra lang of
     Nothing ->
-      shelleyBasedEraConstraints (shelleyBasedEra @apiEra) $
-        Left $
-          plutusLanguageNotSupportedInEraError @era lang
+      shelleyBasedEraConstraints (shelleyBasedEra @apiEra)
+        $ Left
+        $ plutusLanguageNotSupportedInEraError @era lang
     Just (PlutusLangInEra _) ->
       AnyPlutusScript
         <$> obtainLangConstraints lang (deserialisePlutusScriptInEra @era @lang bs)
@@ -286,9 +286,9 @@ deserialiseAnyPlutusScriptFromTextEnvelope te =
   case textToPlutusLanguage (Text.pack envType) of
     Just (AnyPlutusScriptLanguage slang)
       | Nothing <- plutusLangInEra @apiEra slang ->
-          shelleyBasedEraConstraints (shelleyBasedEra @apiEra) $
-            Left . TextEnvelopeDecodeError $
-              plutusLanguageNotSupportedInEraError @era slang
+          shelleyBasedEraConstraints (shelleyBasedEra @apiEra)
+            $ Left . TextEnvelopeDecodeError
+            $ plutusLanguageNotSupportedInEraError @era slang
     _ -> deserialiseFromTextEnvelopeAnyOf textEnvTypes te
  where
   TextEnvelopeType envType = teType te

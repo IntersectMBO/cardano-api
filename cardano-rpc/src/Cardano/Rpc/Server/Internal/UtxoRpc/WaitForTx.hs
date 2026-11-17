@@ -168,13 +168,13 @@ maxWaitForTxRefs = 500
 parseRequestRefs :: MonadIO m => [ByteString] -> m (Set TxId)
 parseRequestRefs refs = do
   let refCount = length refs
-  when (refCount > maxWaitForTxRefs) $
-    throwGrpcErrorWithMessage GrpcInvalidArgument $
-      "too many transaction refs: "
-        <> tshow refCount
-        <> ", maximum "
-        <> tshow maxWaitForTxRefs
-        <> "; batch your requests"
+  when (refCount > maxWaitForTxRefs)
+    $ throwGrpcErrorWithMessage GrpcInvalidArgument
+    $ "too many transaction refs: "
+      <> tshow refCount
+      <> ", maximum "
+      <> tshow maxWaitForTxRefs
+      <> "; batch your requests"
   Set.fromList <$> traverse parseRef refs
 
 -- | How long a @WaitForTx@ stream may go without sending a message before it

@@ -141,9 +141,9 @@ genJsonForTxMetadataValue TxMetadataJsonDetailedSchema = genJsonValue
 
   genJsonText :: Gen Aeson.Value
   genJsonText =
-    fmap toJSON $
-      Gen.ensure validText $
-        Text.pack <$> Gen.list (Range.linear 0 64) Gen.alphaNum
+    fmap toJSON
+      $ Gen.ensure validText
+      $ Text.pack <$> Gen.list (Range.linear 0 64) Gen.alphaNum
    where
     validText t = BS.length (Text.encodeUtf8 t) <= 64
 

@@ -54,12 +54,12 @@ evalTxMethod request = do
   -- A tx's inputs live inside its raw bytes, so this also bounds the input set the
   -- query batch below resolves. The exact protocol limit is enforced further down,
   -- once protocol parameters are available.
-  when (BS.length rawTx > maxEvalTxSizeBytes) $
-    throwGrpcErrorWithMessage GrpcInvalidArgument $
-      "transaction size "
-        <> tshow (BS.length rawTx)
-        <> " exceeds the evaluation limit "
-        <> tshow maxEvalTxSizeBytes
+  when (BS.length rawTx > maxEvalTxSizeBytes)
+    $ throwGrpcErrorWithMessage GrpcInvalidArgument
+    $ "transaction size "
+      <> tshow (BS.length rawTx)
+      <> " exceeds the evaluation limit "
+      <> tshow maxEvalTxSizeBytes
 
   (Exp.SignedTx ledgerTx :: Exp.SignedTx era) <-
     putTraceThrowEither
@@ -70,17 +70,17 @@ evalTxMethod request = do
   -- Each redeemer gets the full per-tx execution budget during evaluation, so an
   -- unbounded redeemer count lets an unauthenticated caller multiply evaluation cost.
   let redeemerCount =
-        obtainCommonConstraints eon $
-          Map.size . L.unRedeemers $
-            ledgerTx ^. L.witsTxL . L.rdmrsTxWitsL
-  when (redeemerCount > maxEvalRedeemers) $
-    throwGrpcErrorWithMessage GrpcInvalidArgument $
-      "too many redeemers: " <> tshow redeemerCount <> ", maximum " <> tshow maxEvalRedeemers
+        obtainCommonConstraints eon
+          $ Map.size . L.unRedeemers
+          $ ledgerTx ^. L.witsTxL . L.rdmrsTxWitsL
+  when (redeemerCount > maxEvalRedeemers)
+    $ throwGrpcErrorWithMessage GrpcInvalidArgument
+    $ "too many redeemers: " <> tshow redeemerCount <> ", maximum " <> tshow maxEvalRedeemers
 
   let allInputs =
-        obtainCommonConstraints eon $
-          Set.map fromShelleyTxIn $
-            ledgerTx ^. L.bodyTxL . L.allInputsTxBodyF
+        obtainCommonConstraints eon
+          $ Set.map fromShelleyTxIn
+          $ ledgerTx ^. L.bodyTxL . L.allInputsTxBodyF
 
   let (unregStakeCreds, _unregDRepCreds, regPoolIds) =
         extractBalanceCheckCreds eon $ ledgerTx ^. L.bodyTxL
@@ -104,12 +104,12 @@ evalTxMethod request = do
   -- A tx that only needs to decode, not be valid, could otherwise be submitted for
   -- evaluation regardless of size; bound it to what could plausibly be submitted.
   let maxTxSize = fromIntegral $ protocolParams ^. L.ppMaxTxSizeL
-  when (BS.length rawTx > maxTxSize) $
-    throwGrpcErrorWithMessage GrpcInvalidArgument $
-      "transaction size "
-        <> tshow (BS.length rawTx)
-        <> " exceeds the protocol maximum "
-        <> tshow maxTxSize
+  when (BS.length rawTx > maxTxSize)
+    $ throwGrpcErrorWithMessage GrpcInvalidArgument
+    $ "transaction size "
+      <> tshow (BS.length rawTx)
+      <> " exceeds the protocol maximum "
+      <> tshow maxTxSize
 
   obtainCommonConstraints eon $ do
     let ledgerUtxo = toLedgerUTxO (convert eon) utxo

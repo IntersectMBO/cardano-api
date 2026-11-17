@@ -722,9 +722,9 @@ sharedPlutusScriptWitness referenceTxIn =
 
 sharedSpendingWitness :: TxIn -> Exp.AnyWitness (LedgerEra ConwayEra)
 sharedSpendingWitness referenceTxIn =
-  Exp.AnyPlutusScriptWitness $
-    AnyPlutusSpendingScriptWitness $
-      PlutusSpendingScriptWitnessV3 (sharedPlutusScriptWitness referenceTxIn)
+  Exp.AnyPlutusScriptWitness
+    $ AnyPlutusSpendingScriptWitness
+    $ PlutusSpendingScriptWitnessV3 (sharedPlutusScriptWitness referenceTxIn)
 
 sharedCertifyingWitness :: TxIn -> Exp.AnyWitness (LedgerEra ConwayEra)
 sharedCertifyingWitness referenceTxIn =
