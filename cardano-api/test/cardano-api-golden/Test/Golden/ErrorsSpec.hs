@@ -108,9 +108,9 @@ paymentVerKey1 = getVerificationKey $ deterministicSigningKey AsPaymentKey (Cryp
 
 txid1 :: TxId
 txid1 =
-  fromJust $
-    hush $
-      deserialiseFromRawBytesHex "210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0"
+  fromJust
+    $ hush
+    $ deserialiseFromRawBytesHex "210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0"
 
 txin1 :: TxIn
 txin1 = TxIn txid1 (TxIx 1)
@@ -162,10 +162,10 @@ scriptInAnyLangPlutusV4 =
 
 poolId :: Hash StakePoolKey
 poolId =
-  fromJust $
-    hush $
-      deserialiseFromRawBytesHex
-        "9e734b6c2263c0917bfc550e9c949f41afa3fe000377243bd29df399"
+  fromJust
+    $ hush
+    $ deserialiseFromRawBytesHex
+      "9e734b6c2263c0917bfc550e9c949f41afa3fe000377243bd29df399"
 
 test_Bech32DecodeError :: TestTree
 test_Bech32DecodeError =

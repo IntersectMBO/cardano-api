@@ -265,9 +265,9 @@ prop_estimateTransactionKeyWitnessCount_dedupes_across_roles = H.property $ do
   let stakeCredential = StakeCredentialByKey withdrawingStakeKeyHash
       stakeAddress = makeStakeAddress Mainnet stakeCredential
       unregistrationCert credential =
-        Exp.Certificate $
-          L.ConwayTxCertDeleg $
-            L.ConwayUnRegCert (toShelleyStakeCredential credential) (L.SJust (L.Coin 2000000))
+        Exp.Certificate
+          $ L.ConwayTxCertDeleg
+          $ L.ConwayUnRegCert (toShelleyStakeCredential credential) (L.SJust (L.Coin 2000000))
       contentWithCertFor credential =
         setTxWithdrawals
           (TxWithdrawals sbe [(stakeAddress, L.Coin 0, BuildTxWith (KeyWitness KeyWitnessForStakeAddr))])

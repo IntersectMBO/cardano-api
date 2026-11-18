@@ -399,9 +399,9 @@ signTx
   -> UnsignedTx (LedgerEra era)
   -> SignedTx era
 signTx era bootstrapWits shelleyKeyWits (UnsignedTx unsigned) =
-  obtainCommonConstraints era $
-    SignedTx $
-      addKeyWitnesses bootstrapWits shelleyKeyWits unsigned
+  obtainCommonConstraints era
+    $ SignedTx
+    $ addKeyWitnesses bootstrapWits shelleyKeyWits unsigned
 
 -- | Like 'evaluateTransaction' but accepts a 'SignedTx' directly.
 evaluateSignedTx

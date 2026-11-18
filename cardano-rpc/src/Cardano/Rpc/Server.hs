@@ -232,9 +232,9 @@ runRpcServer tracer rpcConfig networkMagic nodeKernelAccessRef = handleFatalExce
   -- still traced server-side by 'topLevelHandler'.
   exceptionToClient :: ExactException -> IO (Maybe Text)
   exceptionToClient e =
-    pure . Just $
-      maybe genericErrorMessage renderRpcExceptionForClient $
-        fromException (unwrapExactException e)
+    pure . Just
+      $ maybe genericErrorMessage renderRpcExceptionForClient
+      $ fromException (unwrapExactException e)
    where
     genericErrorMessage = "Internal error while processing the request."
 

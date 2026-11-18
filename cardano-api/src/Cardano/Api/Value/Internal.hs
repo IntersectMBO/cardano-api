@@ -187,10 +187,10 @@ instance SerialiseAsRawBytes AssetName where
   deserialiseFromRawBytes AsAssetName bs
     | BS.length bs <= 32 = Right (UnsafeAssetName bs)
     | otherwise =
-        Left $
-          SerialiseAsRawBytesError $
-            "Unable to deserialise AssetName (the bytestring should be no longer than 32 bytes long "
-              <> "which corresponds to a hex representation of 64 characters)"
+        Left
+          $ SerialiseAsRawBytesError
+          $ "Unable to deserialise AssetName (the bytestring should be no longer than 32 bytes long "
+            <> "which corresponds to a hex representation of 64 characters)"
 
 data AssetId
   = AdaAssetId

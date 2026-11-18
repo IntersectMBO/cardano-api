@@ -942,19 +942,19 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
       ( shelleyBasedEraConstraints (shelleyBasedEra @era) $ do
           ll <- o .: "lovelace"
           let sbe = shelleyBasedEra @era
-          pure $
-            TxOutValueShelleyBased sbe $
-              A.mkAdaValue sbe ll
+          pure
+            $ TxOutValueShelleyBased sbe
+            $ A.mkAdaValue sbe ll
       )
       ( \w -> do
           let l = toList o
               sbe = shelleyBasedEra @era
           vals <- mapM decodeAssetId l
-          pure $
-            shelleyBasedEraConstraints sbe $
-              TxOutValueShelleyBased sbe $
-                toLedgerValue w $
-                  mconcat vals
+          pure
+            $ shelleyBasedEraConstraints sbe
+            $ TxOutValueShelleyBased sbe
+            $ toLedgerValue w
+            $ mconcat vals
       )
    where
     decodeAssetId :: (Aeson.Key, Aeson.Value) -> Aeson.Parser Value
@@ -992,9 +992,9 @@ lovelaceToTxOutValue
   -> L.Coin
   -> TxOutValue era
 lovelaceToTxOutValue era ll =
-  shelleyBasedEraConstraints era $
-    TxOutValueShelleyBased era $
-      A.mkAdaValue era ll
+  shelleyBasedEraConstraints era
+    $ TxOutValueShelleyBased era
+    $ A.mkAdaValue era ll
 
 txOutValueToLovelace :: TxOutValue era -> L.Coin
 txOutValueToLovelace tv =

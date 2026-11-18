@@ -532,10 +532,10 @@ foldBlocks fs nodeConfigFilePath socketPath validationMode state0 accumulate = h
           $ envLedgerConfig env
 
       networkMagic =
-        NetworkMagic $
-          unProtocolMagicId $
-            Cardano.Chain.Genesis.gdProtocolMagicId $
-              Cardano.Chain.Genesis.configGenesisData byronConfig
+        NetworkMagic
+          $ unProtocolMagicId
+          $ Cardano.Chain.Genesis.gdProtocolMagicId
+          $ Cardano.Chain.Genesis.configGenesisData byronConfig
 
       networkId' = case Cardano.Chain.Genesis.configReqNetMagic byronConfig of
         RequiresNoMagic -> Mainnet
@@ -595,9 +595,9 @@ foldBlocks fs nodeConfigFilePath socketPath validationMode state0 accumulate = h
          ()
   -- \^ Client returns maybe an error.
   chainSyncClient pipelineSize stateIORef errorIORef env ledgerState0 =
-    CSP.ChainSyncClientPipelined $
-      pure $
-        clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
+    CSP.ChainSyncClientPipelined
+      $ pure
+      $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
    where
     initialLedgerStateHistory = Seq.singleton (0, (ledgerState0, []), Origin)
 
@@ -1104,12 +1104,12 @@ genesisConfigToEnv fs genCfg =
       | otherwise -> do
           (pinfo, _) <- mkProtocolInfoCardano fs genCfg
           let topLevelConfig = Consensus.pInfoConfig pinfo
-          pure $
-            Right $
-              Env
-                { envLedgerConfig = Consensus.topLevelConfigLedger topLevelConfig
-                , envConsensusConfig = Consensus.topLevelConfigProtocol topLevelConfig
-                }
+          pure
+            $ Right
+            $ Env
+              { envLedgerConfig = Consensus.topLevelConfigLedger topLevelConfig
+              , envConsensusConfig = Consensus.topLevelConfigProtocol topLevelConfig
+              }
      where
       shelleyGenesis = transCfg ^. Ledger.tcShelleyGenesisL
 
@@ -1309,13 +1309,13 @@ initLedgerStateVar fs genesisConfig = do
   pure
     LedgerState
       { clsState =
-          Ledger.ledgerState $
-            Ledger.forgetLedgerTables $
-              Consensus.pInfoInitLedger pinfo
+          Ledger.ledgerState
+            $ Ledger.forgetLedgerTables
+            $ Consensus.pInfoInitLedger pinfo
       , clsTables =
-          Ledger.projectLedgerTables $
-            Ledger.ledgerState $
-              Consensus.pInfoInitLedger pinfo
+          Ledger.projectLedgerTables
+            $ Ledger.ledgerState
+            $ Consensus.pInfoInitLedger pinfo
       }
 
 data LedgerState = LedgerState
@@ -1862,28 +1862,28 @@ tickThenReapplyCheckHash cfg block (LedgerState st tbs) =
             )
           $ ledgerResult
     else
-      Left $
-        ApplyBlockHashMismatch $
-          mconcat
-            [ "Ledger state hash mismatch. Ledger head is slot "
-            , textShow $
-                Slot.unSlotNo $
-                  Slot.fromWithOrigin
-                    (Slot.SlotNo 0)
-                    (Ledger.ledgerTipSlot st)
-            , " hash "
-            , renderByteArray $
-                unChainHash $
-                  Ledger.ledgerTipHash st
-            , " but block previous hash is "
-            , renderByteArray (unChainHash $ Consensus.blockPrevHash block)
-            , " and block current hash is "
-            , renderByteArray $
-                BSS.fromShort $
-                  HFC.getOneEraHash $
-                    Ouroboros.Network.Block.blockHash block
-            , "."
-            ]
+      Left
+        $ ApplyBlockHashMismatch
+        $ mconcat
+          [ "Ledger state hash mismatch. Ledger head is slot "
+          , textShow
+              $ Slot.unSlotNo
+              $ Slot.fromWithOrigin
+                (Slot.SlotNo 0)
+                (Ledger.ledgerTipSlot st)
+          , " hash "
+          , renderByteArray
+              $ unChainHash
+              $ Ledger.ledgerTipHash st
+          , " but block previous hash is "
+          , renderByteArray (unChainHash $ Consensus.blockPrevHash block)
+          , " and block current hash is "
+          , renderByteArray
+              $ BSS.fromShort
+              $ HFC.getOneEraHash
+              $ Ouroboros.Network.Block.blockHash block
+          , "."
+          ]
 
 -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
 -- the block matches the head hash of the ledger state.
@@ -1905,9 +1905,9 @@ tickThenApply cfg block (LedgerState st tbs) =
         (Ledger.restrictValuesMK (Ledger.getLedgerTables tbs) (Ledger.getLedgerTables keys))
 
     eLedgerResult =
-      runExcept $
-        Ledger.tickThenApplyLedgerResult Ledger.ComputeLedgerEvents cfg block $
-          st `Ledger.withLedgerTables` restrictedTables
+      runExcept
+        $ Ledger.tickThenApplyLedgerResult Ledger.ComputeLedgerEvents cfg block
+        $ st `Ledger.withLedgerTables` restrictedTables
    in
     either
       (Left . ApplyBlockError)
@@ -2348,10 +2348,10 @@ foldEpochState fs nodeConfigFilePath socketPath validationMode terminationEpoch 
           $ envLedgerConfig env
 
       networkMagic =
-        NetworkMagic $
-          unProtocolMagicId $
-            Cardano.Chain.Genesis.gdProtocolMagicId $
-              Cardano.Chain.Genesis.configGenesisData byronConfig
+        NetworkMagic
+          $ unProtocolMagicId
+          $ Cardano.Chain.Genesis.gdProtocolMagicId
+          $ Cardano.Chain.Genesis.configGenesisData byronConfig
 
       networkId' = case Cardano.Chain.Genesis.configReqNetMagic byronConfig of
         RequiresNoMagic -> Mainnet
@@ -2367,11 +2367,11 @@ foldEpochState fs nodeConfigFilePath socketPath validationMode terminationEpoch 
           , localNodeSocketPath = socketPath
           }
 
-  modifyError FoldBlocksIOException $
-    liftIO $
-      connectToLocalNode
-        connectInfo
-        (protocols stateMv errorIORef env ledgerState)
+  modifyError FoldBlocksIOException
+    $ liftIO
+    $ connectToLocalNode
+      connectInfo
+      (protocols stateMv errorIORef env ledgerState)
 
   liftIO (readIORef errorIORef) >>= \case
     Just err -> throwError $ FoldBlocksApplyBlockError err
@@ -2412,9 +2412,9 @@ foldEpochState fs nodeConfigFilePath socketPath validationMode terminationEpoch 
          ()
   -- \^ Client returns maybe an error.
   chainSyncClient pipelineSize stateMv errorIORef' env ledgerState0 =
-    CSP.ChainSyncClientPipelined $
-      pure $
-        clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
+    CSP.ChainSyncClientPipelined
+      $ pure
+      $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
    where
     initialLedgerStateHistory = Seq.singleton (0, (ledgerState0, []), Origin)
 

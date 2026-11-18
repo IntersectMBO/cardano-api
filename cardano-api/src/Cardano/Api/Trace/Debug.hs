@@ -24,15 +24,15 @@ traceIO'
   -- ^ value to trace
   -> m ()
 traceIO' l a =
-  withFrozenCallStack $
-    liftIO . traceIO $
-      "\r\n💎💎💎\r\n  "
-        <> callsite (getCallStack callStack)
-        <> "\r\n📜 "
-        <> l
-        <> ":\r\n"
-        <> TL.unpack (pShow a)
-        <> "\r\n"
+  withFrozenCallStack
+    $ liftIO . traceIO
+    $ "\r\n💎💎💎\r\n  "
+      <> callsite (getCallStack callStack)
+      <> "\r\n📜 "
+      <> l
+      <> ":\r\n"
+      <> TL.unpack (pShow a)
+      <> "\r\n"
  where
   callsite ((_, SrcLoc{srcLocFile, srcLocStartLine, srcLocStartCol}) : _) =
     mconcat [srcLocFile, ":", show srcLocStartLine, ":", show srcLocStartCol]

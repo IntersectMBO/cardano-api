@@ -23,9 +23,9 @@ exampleDoubleEncodedBytes = LBS.fromStrict $ CBOR.toStrictByteString exampleDoub
 
 exampleDoubleEncodedBytesEncoding :: CBOR.Encoding
 exampleDoubleEncodedBytesEncoding = do
-  CBOR.encodeBytes $
-    CBOR.toStrictByteString $
-      CBOR.encodeBytes "testBytes"
+  CBOR.encodeBytes
+    $ CBOR.toStrictByteString
+    $ CBOR.encodeBytes "testBytes"
 
 v1Loop2024PlutusScriptHexDoubleEncoded :: ByteString
 v1Loop2024PlutusScriptHexDoubleEncoded =

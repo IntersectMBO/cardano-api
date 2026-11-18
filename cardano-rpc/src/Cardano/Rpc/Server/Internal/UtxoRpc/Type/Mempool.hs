@@ -72,13 +72,13 @@ txInModeToTxInMempoolFields
   -> Maybe TxInMempoolFields
 txInModeToTxInMempoolFields = \case
   TxInMode sbe tx@(ShelleyTx _ ledgerTx) ->
-    Just $
-      anyEraTxConstraints sbe $
-        TxInMempoolFields
-          { txInMempoolFieldsRef = serialiseToRawBytes (fromShelleyTxId (L.txIdTx ledgerTx))
-          , txInMempoolFieldsNativeBytes = serialiseToCBOR tx
-          , txInMempoolFieldsCardano = getProto $ txToUtxoRpcTx ledgerTx
-          }
+    Just
+      $ anyEraTxConstraints sbe
+      $ TxInMempoolFields
+        { txInMempoolFieldsRef = serialiseToRawBytes (fromShelleyTxId (L.txIdTx ledgerTx))
+        , txInMempoolFieldsNativeBytes = serialiseToCBOR tx
+        , txInMempoolFieldsCardano = getProto $ txToUtxoRpcTx ledgerTx
+        }
   TxInByronSpecial genTx -> case genTx of
     ByronTx byronTxId aTxAux ->
       Just $

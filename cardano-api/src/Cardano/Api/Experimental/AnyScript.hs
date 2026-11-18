@@ -229,9 +229,9 @@ readSimpleScriptFromJson era bs = do
       Right . AnySimpleScript . SimpleScript $
         toDijkstraNativeScript script
     ConwayEra ->
-      obtainConwayConstraints era $
-        Right . AnySimpleScript . SimpleScript $
-          toAllegraTimelock script
+      obtainConwayConstraints era
+        $ Right . AnySimpleScript . SimpleScript
+        $ toAllegraTimelock script
 
 readFileAnyScript
   :: Era era
@@ -240,6 +240,6 @@ readFileAnyScript
 readFileAnyScript era path =
   runExceptT $ do
     content <- fileIOExceptT (unFile path) readFileBlocking
-    firstExceptT (FileError (unFile path)) $
-      hoistEither $
-        readAnyScriptBytes era content
+    firstExceptT (FileError (unFile path))
+      $ hoistEither
+      $ readAnyScriptBytes era content

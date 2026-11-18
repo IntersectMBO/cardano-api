@@ -49,9 +49,9 @@ loadPlutusWitness
   -> m (ScriptHash, ScriptWitness WitCtxMint era)
 loadPlutusWitness ceo = do
   envelope <-
-    H.leftFailM $
-      fmap (deserialiseFromJSON @TextEnvelope) . H.evalIO $
-        B.readFile "test/cardano-api-test/files/input/plutus/v3.alwaysTrue.json"
+    H.leftFailM
+      $ fmap (deserialiseFromJSON @TextEnvelope) . H.evalIO
+      $ B.readFile "test/cardano-api-test/files/input/plutus/v3.alwaysTrue.json"
   ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV3) s@(PlutusScript PlutusScriptV3 script) <-
     H.leftFail $ deserialiseFromTextEnvelopeAnyOf textEnvTypes envelope
   let scriptLangInEra = case ceo of

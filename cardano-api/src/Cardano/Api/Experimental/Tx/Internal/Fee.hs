@@ -356,20 +356,20 @@ estimateBalancedTxBody'
           let assumeStakePoolHasNotBeenRegistered = const False
            in sum
                 [ L.getTotalDepositsTxCerts pparams assumeStakePoolHasNotBeenRegistered certificates
-                , mconcat $
-                    map (^. L.pProcDepositL) $
-                      toList proposalProcedures
+                , mconcat
+                    $ map (^. L.pProcDepositL)
+                    $ toList proposalProcedures
                 ]
         availableUTxOValue :: L.MaryValue
         availableUTxOValue = totalUTxOValue L.<-> L.inject totalDeposits
 
-    when (L.coin availableUTxOValue < 0) $
-      Left $
-        TxFeeEstimationBalanceError $
-          NotEnoughAdaInUTxO
-            totalUTxOValue
-            totalDeposits
-            availableUTxOValue
+    when (L.coin availableUTxOValue < 0)
+      $ Left
+      $ TxFeeEstimationBalanceError
+      $ NotEnoughAdaInUTxO
+        totalUTxOValue
+        totalDeposits
+        availableUTxOValue
     let
       partialChange =
         calculatePartialChangeValue availableUTxOValue txbodycontent1
@@ -377,9 +377,9 @@ estimateBalancedTxBody'
     -- Check the asset balance before building the change output: the ledger compacts
     -- outputs eagerly and errors on negative quantities.
     let L.MaryValue partialCoin partialMultiAsset = partialChange
-    unless (L.pointwise (>=) (L.MaryValue (L.Coin 0) partialMultiAsset) mempty) $
-      Left . TxFeeEstimationBalanceError $
-        TxBodyErrorBalanceNegative partialCoin partialMultiAsset
+    unless (L.pointwise (>=) (L.MaryValue (L.Coin 0) partialMultiAsset) mempty)
+      $ Left . TxFeeEstimationBalanceError
+      $ TxBodyErrorBalanceNegative partialCoin partialMultiAsset
 
     let
       maxLovelaceChange = L.Coin (2 ^ (64 :: Integer)) - 1
@@ -450,10 +450,10 @@ estimateBalancedTxBody'
         balanceTxOut :: TxOut (LedgerEra era)
         balanceTxOut =
           TxOut (L.mkBasicTxOut (toShelleyAddr changeaddr) balance)
-    when (coinBalance < 0) $
-      Left $
-        TxFeeEstimationBalanceError $
-          BalanceIsNegative coinBalance txbody2
+    when (coinBalance < 0)
+      $ Left
+      $ TxFeeEstimationBalanceError
+      $ BalanceIsNegative coinBalance txbody2
 
     -- Step 6. Check all txouts have the min required UTxO value
     -- TOOD: Fix me. You need a new error type to accomodate your new types
@@ -934,9 +934,9 @@ calcMinFeeRecursive changeAddr unsignedTx utxo pparams poolids stakeDelegDeposit
   maxIterations = 50
   feePerByte :: L.Coin
   feePerByte =
-    obtainCommonConstraints (useEra @era) $
-      L.fromCompact . L.unCoinPerByte $
-        pparams ^. L.ppTxFeePerByteL
+    obtainCommonConstraints (useEra @era)
+      $ L.fromCompact . L.unCoinPerByte
+      $ pparams ^. L.ppTxFeePerByteL
   -- The change coin's CBOR encoding shrinks by at most 4 bytes (9 to 5 at 2^32).
   feeTolerance :: L.Coin
   feeTolerance = 4 * feePerByte
@@ -1027,9 +1027,9 @@ maybeDummyTotalCollAndCollReturnOutput TxBodyContent{txInsCollateral, txReturnCo
     then (Nothing, Nothing)
     else
       let dummyRetCol =
-            TxReturnCollateral $
-              obtainCommonConstraints (useEra @era) $
-                L.mkBasicTxOut (toShelleyAddr cAddr) (L.inject $ L.Coin (2 ^ (64 :: Integer)) - 1)
+            TxReturnCollateral
+              $ obtainCommonConstraints (useEra @era)
+              $ L.mkBasicTxOut (toShelleyAddr cAddr) (L.inject $ L.Coin (2 ^ (64 :: Integer)) - 1)
 
           dummyTotCol = TxTotalCollateral $ L.Coin (2 ^ (32 :: Integer) - 1)
        in case (txReturnCollateral, txTotalCollateral) of
@@ -1457,9 +1457,9 @@ evaluateTransactionExecutionUnits
   -> L.Tx L.TopTx (LedgerEra era)
   -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
 evaluateTransactionExecutionUnits systemstart epochInfo pp utxo tx =
-  obtainCommonConstraints (useEra @era) $
-    fromLedgerScriptExUnitsMap $
-      L.evalTxExUnitsWithLogs pp tx utxo ledgerEpochInfo systemstart
+  obtainCommonConstraints (useEra @era)
+    $ fromLedgerScriptExUnitsMap
+    $ L.evalTxExUnitsWithLogs pp tx utxo ledgerEpochInfo systemstart
  where
   LedgerEpochInfo ledgerEpochInfo = epochInfo
 
@@ -1494,9 +1494,9 @@ evaluateTransactionExecutionUnits systemstart epochInfo pp utxo tx =
         ScriptErrorEvaluationFailed $ DebugPlutusFailure evalErr scriptWithContext execUnits logs
       L.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
       L.RedeemerPointsToUnknownScriptHash rdmrPtr ->
-        ScriptErrorRedeemerPointsToUnknownScriptHash $
-          obtainCommonConstraints (useEra @era) $
-            toScriptIndex (convert useEra) rdmrPtr
+        ScriptErrorRedeemerPointsToUnknownScriptHash
+          $ obtainCommonConstraints (useEra @era)
+          $ toScriptIndex (convert useEra) rdmrPtr
       -- This should not occur while using cardano-cli because we zip together
       -- the Plutus script and the use site (txin, certificate etc). Therefore
       -- the redeemer pointer will always point to a Plutus script.
@@ -1678,16 +1678,16 @@ makeTransactionBodyAutoBalance
             , Just txOut <- pure $ Map.lookup (toShelleyTxIn collTxIn) (L.unUTxO utxo)
             ]
     (maybeReturnTxCollateral, maybeTotalTxCollateral) <-
-      either (throwError . TxBodyErrorCollateral) pure $
-        obtainCommonConstraints (useEra @era) $
-          calcReturnAndTotalCollateral
-            fee
-            pp
-            (txInsCollateral txbodycontent)
-            (txReturnCollateral txbodycontent)
-            (txTotalCollateral txbodycontent)
-            changeaddr
-            totalPotentialCollateral
+      either (throwError . TxBodyErrorCollateral) pure
+        $ obtainCommonConstraints (useEra @era)
+        $ calcReturnAndTotalCollateral
+          fee
+          pp
+          (txInsCollateral txbodycontent)
+          (txReturnCollateral txbodycontent)
+          (txTotalCollateral txbodycontent)
+          changeaddr
+          totalPotentialCollateral
 
     -- Make a txbody for calculating the balance. For this the size of the tx
     -- does not matter, instead it's just the values of the fee and outputs.
@@ -1706,9 +1706,9 @@ makeTransactionBodyAutoBalance
     obtainCommonConstraints (useEra @era) $ do
       let balance :: L.MaryValue = evaluateTransactionBalance pp poolids stakeDelegDeposits utxo txbody2
           adaBalance = getAda (useEra @era) balance
-      when (adaBalance < 0) $
-        Left $
-          BalanceIsNegative adaBalance txbodyForChange
+      when (adaBalance < 0)
+        $ Left
+        $ BalanceIsNegative adaBalance txbodyForChange
 
       let
         -- The multiasset output of evaluateTransactionBalance will be negative when

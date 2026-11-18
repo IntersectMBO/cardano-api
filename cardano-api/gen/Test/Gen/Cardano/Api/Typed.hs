@@ -828,9 +828,9 @@ genCertificate
    . ShelleyBasedEra era
   -> Gen (Exp.Certificate (ShelleyLedgerEra era))
 genCertificate sbe =
-  shelleyBasedEraConstraints sbe $
-    Gen.choice . catMaybes $
-      [ Just $ genStakeAddressRegistrationCertificate sbe
+  shelleyBasedEraConstraints sbe
+    $ Gen.choice . catMaybes
+    $ [ Just $ genStakeAddressRegistrationCertificate sbe
       , Just $ genStakeAddressUnregistrationCertificate sbe
       , Just $ genStakeAddressDelegationCertificate sbe
       , Just $ genStakePoolRegistrationCertificate sbe
@@ -951,9 +951,9 @@ genGenesisKeyDelegationCertificate w =
       <*> genVerificationKeyHash AsVrfKey
  where
   mkCert (GenesisKeyHash hGenKey) (GenesisDelegateKeyHash hGenDelegKey) (VrfKeyHash hVrfKey) =
-    Exp.Certificate $
-      L.ShelleyTxCertGenesisDeleg $
-        L.GenesisDelegCert hGenKey hGenDelegKey (L.toVRFVerKeyHash hVrfKey)
+    Exp.Certificate
+      $ L.ShelleyTxCertGenesisDeleg
+      $ L.GenesisDelegCert hGenKey hGenDelegKey (L.toVRFVerKeyHash hVrfKey)
 
 genDrepRegistrationCertificate
   :: ConwayEraOnwards era -> Gen (Exp.Certificate (ShelleyLedgerEra era))

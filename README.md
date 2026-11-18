@@ -33,7 +33,7 @@ The Developer Portal's [Installing cardano-node](https://developers.cardano.org/
 Follow it up to the point where it starts building the node itself.
 In short, you need:
 
-- GHC 9.6, 9.10, 9.12 or 9.14, and Cabal 3.16 (for example via [GHCup](https://www.haskell.org/ghcup/)).
+- GHC 9.6, 9.10, 9.12 or 9.14, and Cabal 3.18 (for example via [GHCup](https://www.haskell.org/ghcup/)).
   Development mostly happens on GHC 9.12.
 - Cardano's C libraries: `libsodium` (the IOG fork, with VRF support), `libsecp256k1` and `libblst`.
   Prebuilt packages are on the [iohk-nix releases page](https://github.com/input-output-hk/iohk-nix/releases/latest); [this GitHub action](https://github.com/input-output-hk/actions/tree/latest/base) shows how CI installs them.

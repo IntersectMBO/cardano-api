@@ -354,12 +354,12 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
           & L.rdmrsTxWitsL .~ redeemers
 
   eraSpecificTxBody <- eraSpecificLedgerTxBody era commonLedgerTxBody bc
-  Right $
-    UnsignedTx $
-      L.mkBasicTx eraSpecificTxBody
-        & L.witsTxL .~ scriptWitnesses
-        & L.auxDataTxL .~ L.maybeToStrictMaybe (toAuxiliaryData (txMetadata bc) (txAuxScripts bc))
-        & L.isPhase2ValidTxL .~ scriptValidity
+  Right
+    $ UnsignedTx
+    $ L.mkBasicTx eraSpecificTxBody
+      & L.witsTxL .~ scriptWitnesses
+      & L.auxDataTxL .~ L.maybeToStrictMaybe (toAuxiliaryData (txMetadata bc) (txAuxScripts bc))
+      & L.isPhase2ValidTxL .~ scriptValidity
 
 convTxIns :: [(TxIn, AnyWitness era)] -> Set L.TxIn
 convTxIns inputs =
@@ -415,10 +415,10 @@ convPParamsToScriptIntegrityHash mTxProtocolParams redeemers datums languages = 
   if shouldCalculateHash
     then do
       pp <- liftMaybe MakeUnsignedTxMissingProtocolParams mTxProtocolParams
-      pure $
-        SJust $
-          L.hashScriptIntegrity $
-            L.ScriptIntegrity redeemers datums (Set.map (L.getLanguageView pp) languages)
+      pure
+        $ SJust
+        $ L.hashScriptIntegrity
+        $ L.ScriptIntegrity redeemers datums (Set.map (L.getLanguageView pp) languages)
     else pure SNothing
 
 convProposalProcedures
@@ -741,15 +741,15 @@ babbageOnwardsTxOutParseJson toNativeScript baseTxOut o = do
         failEitherWith
           ("babbageOnwardsTxOutParseJson: failed to CBOR-decode inlineDatumRaw: " <>)
           $ L.makeBinaryData (SBS.toShort rawBytes)
-      when (L.hashBinaryData binaryData /= expectedHash) $
-        fail $
-          mconcat
-            [ "babbageOnwardsTxOutParseJson: inline datum hash mismatch: "
-            , "expected "
-            , show expectedHash
-            , ", got "
-            , show (L.hashBinaryData binaryData)
-            ]
+      when (L.hashBinaryData binaryData /= expectedHash)
+        $ fail
+        $ mconcat
+          [ "babbageOnwardsTxOutParseJson: inline datum hash mismatch: "
+          , "expected "
+          , show expectedHash
+          , ", got "
+          , show (L.hashBinaryData binaryData)
+          ]
       pure $ L.Datum binaryData
     Nothing -> do
       when (isJust mInlineDatumHash) $
@@ -861,9 +861,9 @@ mkTxProposalProcedures
   => [(L.ProposalProcedure (LedgerEra era), AnyWitness (LedgerEra era))]
   -> TxProposalProcedures (LedgerEra era)
 mkTxProposalProcedures proposals = do
-  TxProposalProcedures $
-    obtainCommonConstraints (useEra @era) $
-      OMap.fromList proposals
+  TxProposalProcedures
+    $ obtainCommonConstraints (useEra @era)
+    $ OMap.fromList proposals
 
 data TxVotingProcedures era
   = TxVotingProcedures
@@ -1419,9 +1419,9 @@ getDatums
 getDatums txInsRef supplementalDats = do
   let TxInsReference _ datumSet = txInsRef
       refInDatums = mapMaybe extractDatumsAndHashes $ Set.toList datumSet
-  obtainCommonConstraints (useEra @era) $
-    L.TxDats $
-      fromList refInDatums <> supplementalDats
+  obtainCommonConstraints (useEra @era)
+    $ L.TxDats
+    $ fromList refInDatums <> supplementalDats
 
 -- Getters and Setters
 

@@ -161,11 +161,11 @@ instance IndexedSigningKeyFromRootKey PaymentExtendedKey where
     -> Either Word32 (SigningKey PaymentExtendedKey)
   deriveSigningKeyFromAccountWithPaymentKeyIndex _ accK idx = do
     payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
-    return $
-      PaymentExtendedSigningKey $
-        caXPrvToCCXPrv $
-          getKey $
-            deriveAddressPrivateKey accK UTxOExternal payKeyIx
+    return
+      $ PaymentExtendedSigningKey
+      $ caXPrvToCCXPrv
+      $ getKey
+      $ deriveAddressPrivateKey accK UTxOExternal payKeyIx
 
 instance IndexedSigningKeyFromRootKey StakeExtendedKey where
   deriveSigningKeyFromAccountWithPaymentKeyIndex
@@ -175,11 +175,11 @@ instance IndexedSigningKeyFromRootKey StakeExtendedKey where
     -> Either Word32 (SigningKey StakeExtendedKey)
   deriveSigningKeyFromAccountWithPaymentKeyIndex _ accK idx = do
     payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
-    return $
-      StakeExtendedSigningKey $
-        caXPrvToCCXPrv $
-          getKey $
-            deriveAddressPrivateKey accK Stake payKeyIx
+    return
+      $ StakeExtendedSigningKey
+      $ caXPrvToCCXPrv
+      $ getKey
+      $ deriveAddressPrivateKey accK Stake payKeyIx
 
 instance SigningKeyFromRootKey DRepExtendedKey where
   deriveSigningKeyFromAccount
@@ -367,9 +367,9 @@ englishMnemonicTrie =
   Trie.fromListL
     ( map
         ( \i ->
-            (,fromEnum i) $
-              BS.pack . Basement.toList . Basement.toBytes Basement.UTF8 $
-                dictionaryIndexToWord english i
+            (,fromEnum i)
+              $ BS.pack . Basement.toList . Basement.toBytes Basement.UTF8
+              $ dictionaryIndexToWord english i
         )
         [minBound .. maxBound]
     )

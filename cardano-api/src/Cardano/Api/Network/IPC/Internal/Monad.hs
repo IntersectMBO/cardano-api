@@ -164,8 +164,8 @@ constructQueryContinuation
        result
 constructQueryContinuation q = do
   ContT $ \final ->
-    pure $
-      Net.Query.SendMsgQuery q $
-        Net.Query.ClientStQuerying
-          { Net.Query.recvMsgResult = final
-          }
+    pure
+      $ Net.Query.SendMsgQuery q
+      $ Net.Query.ClientStQuerying
+        { Net.Query.recvMsgResult = final
+        }

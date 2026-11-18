@@ -205,9 +205,9 @@ createCompatibleTx sbe bodyContent =
       ProtocolUpdate{} -> []
       NoPParamsUpdate{} -> []
       ProposalProcedures conwayOnwards proposalProcedures ->
-        Exp.obtainCommonConstraints (convert conwayOnwards) $
-          Exp.extractWitnessableProposals $
-            Just proposalProcedures
+        Exp.obtainCommonConstraints (convert conwayOnwards)
+          $ Exp.extractWitnessableProposals
+          $ Just proposalProcedures
 
   updateTxBody :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era))
   updateTxBody =
@@ -229,10 +229,10 @@ createCompatibleTx sbe bodyContent =
                 | (_, wit) <- proposalWitnesses
                 , txIn <- maybeToList $ getAnyWitnessReferenceInput wit
                 ]
-           in obtainCommonConstraints (convert conwayOnwards) $
-                Endo $
-                  (L.referenceInputsTxBodyL %~ (<> fromList referenceInputs))
-                    . (L.proposalProceduresTxBodyL .~ proposals)
+           in obtainCommonConstraints (convert conwayOnwards)
+                $ Endo
+                $ (L.referenceInputsTxBodyL %~ (<> fromList referenceInputs))
+                  . (L.proposalProceduresTxBodyL .~ proposals)
 
   -- Flat witnesses from all four script-witnessable categories
   -- (certificates, proposals, votes, inputs), for
@@ -283,15 +283,15 @@ createCompatibleTx sbe bodyContent =
     case anyVote of
       NoVotes -> []
       VotingProcedures conwayOnwards votingProcedures ->
-        Exp.obtainCommonConstraints (convert conwayOnwards) $
-          Exp.extractWitnessableVotes $
-            Just votingProcedures
+        Exp.obtainCommonConstraints (convert conwayOnwards)
+          $ Exp.extractWitnessableVotes
+          $ Just votingProcedures
 
   setCerts :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era))
   setCerts =
-    shelleyBasedEraConstraints sbe $
-      Endo $
-        L.certsTxBodyL .~ convCertificates txCertificates'
+    shelleyBasedEraConstraints sbe
+      $ Endo
+      $ L.certsTxBodyL .~ convCertificates txCertificates'
 
   -- Uses '%~ (<>)', not '.~', so it does not clobber reference inputs
   -- already appended by 'updateTxBody' (the 'ProposalProcedures' case
@@ -306,9 +306,9 @@ createCompatibleTx sbe bodyContent =
           ]
 
     monoidForEraInEon era $ \beo ->
-      babbageEraOnwardsConstraints beo $
-        Endo $
-          L.referenceInputsTxBodyL %~ (<> fromList refInputs)
+      babbageEraOnwardsConstraints beo
+        $ Endo
+        $ L.referenceInputsTxBodyL %~ (<> fromList refInputs)
 
   -- Alonzo onwards only; a no-op below that. The list is expected to be
   -- empty pre-Alonzo anyway, since collateral only matters for plutus
@@ -316,10 +316,10 @@ createCompatibleTx sbe bodyContent =
   setCollateralIns :: Endo (L.TxBody L.TopTx (ShelleyLedgerEra era))
   setCollateralIns =
     monoidForEraInEon era $ \aeo ->
-      alonzoEraOnwardsConstraints aeo $
-        Endo $
-          L.collateralInputsTxBodyL
-            .~ (fromList . map toShelleyTxIn $ compatibleTxInsCollateral bodyContent)
+      alonzoEraOnwardsConstraints aeo
+        $ Endo
+        $ L.collateralInputsTxBodyL
+          .~ (fromList . map toShelleyTxIn $ compatibleTxInsCollateral bodyContent)
 
   -- Compatibility lens over 'ttlTxBodyL' (Shelley) and 'vldtTxBodyL'
   -- (Allegra onwards), preserving the validity interval's lower bound.
@@ -337,10 +337,10 @@ createCompatibleTx sbe bodyContent =
     :: Maybe (L.TxAuxData (ShelleyLedgerEra era))
     -> Endo (L.TxBody L.TopTx (ShelleyLedgerEra era))
   setMetadataHash auxData =
-    shelleyBasedEraConstraints sbe $
-      Endo $
-        L.auxDataHashTxBodyL
-          .~ maybe SNothing (SJust . L.hashTxAuxData) auxData
+    shelleyBasedEraConstraints sbe
+      $ Endo
+      $ L.auxDataHashTxBodyL
+        .~ maybe SNothing (SJust . L.hashTxAuxData) auxData
 
   -- The hash is only computed when there is something for it to cover.
   -- Protocol parameters are only needed for language views, so a
@@ -380,16 +380,16 @@ createCompatibleTx sbe bodyContent =
                     compatibleTxProtocolParams bodyContent
                       ?! CompatibleTxMissingScriptIntegrityPParams
                   pure $ Set.map (L.getLanguageView protocolParams) languages
-            pure $
-              Endo $
-                L.scriptIntegrityHashTxBodyL
-                  .~ SJust
-                    ( L.hashScriptIntegrity $
-                        L.ScriptIntegrity
-                          redeemers
-                          datums
-                          langViews
-                    )
+            pure
+              $ Endo
+              $ L.scriptIntegrityHashTxBodyL
+                .~ SJust
+                  ( L.hashScriptIntegrity $
+                      L.ScriptIntegrity
+                        redeemers
+                        datums
+                        langViews
+                  )
 
   overwriteVotingProcedures
     :: ConwayEraOnwards era
@@ -410,9 +410,9 @@ createCompatibleTx sbe bodyContent =
     plutusAdditions :: L.TxWits (ShelleyLedgerEra era) -> L.TxWits (ShelleyLedgerEra era)
     plutusAdditions =
       forEraInEon era id $ \aeo ->
-        alonzoEraOnwardsConstraints aeo $
-          obtainAlonzoScriptPurposeConstraints aeo $
-            let
+        alonzoEraOnwardsConstraints aeo
+          $ obtainAlonzoScriptPurposeConstraints aeo
+          $ let
               (datums, redeemers) =
                 fromMaybe mempty scriptData
                   :: (L.TxDats (ShelleyLedgerEra era), L.Redeemers (ShelleyLedgerEra era))

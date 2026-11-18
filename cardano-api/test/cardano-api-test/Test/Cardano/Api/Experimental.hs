@@ -262,9 +262,9 @@ prop_sub_tx_embedded_in_top_level_body = H.property $ do
   ledgerSubTx ^. L.bodyTxL . UnexportedLedger.guardsTxBodyL H.=== guards
   toShelleyTxId (Exp.getSignedSubTxId signed) H.=== subTxId
   Exp.UnsignedTx tx <-
-    H.evalEither $
-      Exp.makeUnsignedTx Exp.DijkstraEra $
-        Exp.defaultTxBodyContent & Exp.setTxSignedSubTransactions [signed]
+    H.evalEither
+      $ Exp.makeUnsignedTx Exp.DijkstraEra
+      $ Exp.defaultTxBodyContent & Exp.setTxSignedSubTransactions [signed]
   let subTxs = tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL
   LOMap.lookup subTxId subTxs H.=== Just ledgerSubTx
   length subTxs H.=== 1
@@ -572,12 +572,12 @@ exampleProtocolParamsEra = \case
 
 exampleProtocolParams :: Ledger.PParams UnexportedLedger.ConwayEra
 exampleProtocolParams =
-  UnexportedLedger.upgradePParams conwayUpgrade $
-    UnexportedLedger.upgradePParams () $
-      UnexportedLedger.upgradePParams alonzoUpgrade $
-        UnexportedLedger.upgradePParams () $
-          UnexportedLedger.upgradePParams () $
-            Genesis.sgProtocolParams Genesis.shelleyGenesisDefaults
+  UnexportedLedger.upgradePParams conwayUpgrade
+    $ UnexportedLedger.upgradePParams ()
+    $ UnexportedLedger.upgradePParams alonzoUpgrade
+    $ UnexportedLedger.upgradePParams ()
+    $ UnexportedLedger.upgradePParams ()
+    $ Genesis.sgProtocolParams Genesis.shelleyGenesisDefaults
  where
   conwayUpgrade :: Ledger.UpgradeConwayPParams Identity
   conwayUpgrade = Ledger.cgUpgradePParams Genesis.conwayGenesisDefaults
@@ -637,12 +637,12 @@ getExampleDestAddressExp = do
 getExampleChangeAddress :: H.MonadTest m => Api.ShelleyBasedEra era -> m (Api.AddressInEra era)
 getExampleChangeAddress sbe = do
   signingKey <- exampleSigningKey
-  return $
-    Api.shelleyAddressInEra sbe $
-      Api.makeShelleyAddress
-        (Api.Testnet $ Api.NetworkMagic 2)
-        (Api.PaymentCredentialByKey $ Api.verificationKeyHash $ Api.getVerificationKey signingKey)
-        Api.NoStakeAddress
+  return
+    $ Api.shelleyAddressInEra sbe
+    $ Api.makeShelleyAddress
+      (Api.Testnet $ Api.NetworkMagic 2)
+      (Api.PaymentCredentialByKey $ Api.verificationKeyHash $ Api.getVerificationKey signingKey)
+      Api.NoStakeAddress
 
 exampleTxBodyContentExperimental
   :: forall era m
@@ -818,15 +818,15 @@ prop_makeUnsignedTx_plutus_without_pparams = H.propertyOnce $ do
   srcTxIn <- getExampleSrcTxId
   let dummyRedeemer = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor 0 []
       plutusWit =
-        Exp.AnyPlutusScriptWitness $
-          AnyPlutusSpendingScriptWitness $
-            PlutusSpendingScriptWitnessV3 $
-              Exp.PlutusScriptWitness
-                Plutus.SPlutusV3
-                (Exp.PReferenceScript srcTxIn)
-                Exp.NoScriptDatum
-                dummyRedeemer
-                (Script.ExecutionUnits 0 0)
+        Exp.AnyPlutusScriptWitness
+          $ AnyPlutusSpendingScriptWitness
+          $ PlutusSpendingScriptWitnessV3
+          $ Exp.PlutusScriptWitness
+            Plutus.SPlutusV3
+            (Exp.PReferenceScript srcTxIn)
+            Exp.NoScriptDatum
+            dummyRedeemer
+            (Script.ExecutionUnits 0 0)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(srcTxIn, plutusWit)]
@@ -855,14 +855,14 @@ prop_makeUnsignedTx_proposal_redeemer_indices_follow_insertion_order = H.propert
       mkRedeemer n = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor n []
 
       mkProposingWitness redeemer =
-        Exp.AnyPlutusScriptWitness $
-          AnyPlutusProposingScriptWitness $
-            Exp.PlutusScriptWitness
-              Plutus.SPlutusV3
-              (Exp.PReferenceScript scriptTxIn)
-              Exp.NoScriptDatum
-              redeemer
-              (Script.ExecutionUnits 0 0)
+        Exp.AnyPlutusScriptWitness
+          $ AnyPlutusProposingScriptWitness
+          $ Exp.PlutusScriptWitness
+            Plutus.SPlutusV3
+            (Exp.PReferenceScript scriptTxIn)
+            Exp.NoScriptDatum
+            redeemer
+            (Script.ExecutionUnits 0 0)
 
       txBodyContent =
         Exp.defaultTxBodyContent
@@ -929,14 +929,14 @@ prop_makeUnsignedTx_cert_redeemer_indices_count_unwitnessed_certs = H.property $
       redeemer = Script.unsafeHashableScriptData $ Script.ScriptDataConstructor 0 []
 
       certWitness =
-        Exp.AnyPlutusScriptWitness $
-          AnyPlutusCertifyingScriptWitness $
-            Exp.PlutusScriptWitness
-              Plutus.SPlutusV3
-              (Exp.PReferenceScript scriptTxIn)
-              Exp.NoScriptDatum
-              redeemer
-              (Script.ExecutionUnits 0 0)
+        Exp.AnyPlutusScriptWitness
+          $ AnyPlutusCertifyingScriptWitness
+          $ Exp.PlutusScriptWitness
+            Plutus.SPlutusV3
+            (Exp.PReferenceScript scriptTxIn)
+            Exp.NoScriptDatum
+            redeemer
+            (Script.ExecutionUnits 0 0)
 
       certs =
         Exp.mkTxCertificates
@@ -1009,9 +1009,9 @@ genFundedSimpleTx era = do
           L.mkBasicTxOut addr (L.MaryValue fundingCoin mempty)
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -1048,9 +1048,9 @@ genFundedMultiAssetTx era = do
           L.mkBasicTxOut addr (L.MaryValue fundingCoin multiAsset)
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin multiAsset)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ Ledger.mkBasicTxOut addr (L.MaryValue sendCoin multiAsset)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -1083,9 +1083,9 @@ genUnderfundedTx era = do
           L.mkBasicTxOut addr (L.MaryValue fundingCoin mempty)
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ Ledger.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -1188,13 +1188,13 @@ genNonAdaUnbalancedTx era = do
       -- Output demands tokens that don't exist in the ADA-only UTxO
       policyId = L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
       sendValue =
-        L.MaryValue sendCoin $
-          L.MultiAsset $
-            Map.singleton policyId (Map.singleton (Mary.AssetName "testtoken") tokenQty)
+        L.MaryValue sendCoin
+          $ L.MultiAsset
+          $ Map.singleton policyId (Map.singleton (Mary.AssetName "testtoken") tokenQty)
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            Ledger.mkBasicTxOut addr sendValue
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ Ledger.mkBasicTxOut addr sendValue
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -1233,14 +1233,14 @@ genMinUTxOViolatingTx era = do
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       -- Output 1: ADA only, will receive surplus via balanceTxOuts
       sendTxOut1 =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000_000) mempty)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000_000) mempty)
       -- Output 2: tokens with tiny ADA (below min UTxO)
       sendTxOut2 =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000) multiAsset)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ Ledger.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000) multiAsset)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]

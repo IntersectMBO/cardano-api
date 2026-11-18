@@ -303,9 +303,9 @@ utxoRpcPParamsToProtocolParams era pp = obtainCommonConstraints era $ do
           pure $ set L.ppMinFeeRefScriptCostPerByteL minFeeScriptRefCostPerByte r
       , \r -> do
           let thresholds = pp ^. U5c.poolVotingThresholds . U5c.thresholds
-          when (length thresholds /= 5) $
-            throwError $
-              "Invalid number of thresholds: " <> show (length thresholds)
+          when (length thresholds /= 5)
+            $ throwError
+            $ "Invalid number of thresholds: " <> show (length thresholds)
           [ motionNoConfidence
             , committeeNormal
             , committeeNoConfidence
@@ -330,9 +330,9 @@ utxoRpcPParamsToProtocolParams era pp = obtainCommonConstraints era $ do
               & L.ppPoolVotingThresholdsL . L.pvtPPSecurityGroupL .~ ppSecurityGroup
       , \r -> do
           let thresholds = pp ^. U5c.drepVotingThresholds . U5c.thresholds
-          when (length thresholds /= 10) $
-            throwError $
-              "Invalid number of thresholds: " <> show (length thresholds)
+          when (length thresholds /= 10)
+            $ throwError
+            $ "Invalid number of thresholds: " <> show (length thresholds)
           [ motionNoConfidence
             , committeeNormal
             , committeeNoConfidence

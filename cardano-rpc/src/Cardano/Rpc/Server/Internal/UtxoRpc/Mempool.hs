@@ -90,9 +90,9 @@ watchMempoolStream doReadSnapshot nextSnapshot predicate fieldMask send = do
     let newEntries = txsAfter lastSeenTicket
     forM_ newEntries $ \(txInMode, _ticketNo) ->
       forM_ (txInModeToTxInMempoolFields txInMode) $ \fields ->
-        when (matchesTxPredicate predicate . Proto $ txInMempoolFieldsCardano fields) $
-          liftIO . send . NextElem . Proto . runFillPure fieldMask $
-            fillFrom fields watchMempoolFill
+        when (matchesTxPredicate predicate . Proto $ txInMempoolFieldsCardano fields)
+          $ liftIO . send . NextElem . Proto . runFillPure fieldMask
+          $ fillFrom fields watchMempoolFill
     let lastSeenTicket' = case newEntries of
           [] -> lastSeenTicket
           _ -> snd (last newEntries)

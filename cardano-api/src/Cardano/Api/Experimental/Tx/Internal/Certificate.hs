@@ -76,27 +76,27 @@ makeStakeAddressDelegationCertificate
 makeStakeAddressDelegationCertificate sCred delegatee =
   case useEra @era of
     e@ConwayEra ->
-      obtainCommonConstraints e $
-        Certificate $
-          Ledger.mkDelegTxCert (toShelleyStakeCredential sCred) delegatee
+      obtainCommonConstraints e
+        $ Certificate
+        $ Ledger.mkDelegTxCert (toShelleyStakeCredential sCred) delegatee
     e@DijkstraEra ->
-      obtainCommonConstraints e $
-        Certificate $
-          Ledger.mkDelegTxCert (toShelleyStakeCredential sCred) delegatee
+      obtainCommonConstraints e
+        $ Certificate
+        $ Ledger.mkDelegTxCert (toShelleyStakeCredential sCred) delegatee
 
 makeStakeAddressRegistrationCertificate
   :: forall era. IsEra era => StakeCredential -> Ledger.Coin -> Certificate (LedgerEra era)
 makeStakeAddressRegistrationCertificate scred deposit =
-  obtainCommonConstraints (useEra @era) $
-    Certificate $
-      Ledger.mkRegDepositTxCert (toShelleyStakeCredential scred) deposit
+  obtainCommonConstraints (useEra @era)
+    $ Certificate
+    $ Ledger.mkRegDepositTxCert (toShelleyStakeCredential scred) deposit
 
 makeStakeAddressUnregistrationCertificate
   :: forall era. IsEra era => StakeCredential -> Ledger.Coin -> Certificate (LedgerEra era)
 makeStakeAddressUnregistrationCertificate scred deposit =
-  obtainCommonConstraints (useEra @era) $
-    Certificate $
-      Ledger.mkUnRegDepositTxCert (toShelleyStakeCredential scred) deposit
+  obtainCommonConstraints (useEra @era)
+    $ Certificate
+    $ Ledger.mkUnRegDepositTxCert (toShelleyStakeCredential scred) deposit
 
 makeStakePoolRegistrationCertificate
   :: forall era
@@ -104,9 +104,9 @@ makeStakePoolRegistrationCertificate
   => Ledger.StakePoolParams (LedgerEra era)
   -> Certificate (LedgerEra era)
 makeStakePoolRegistrationCertificate poolParams =
-  obtainCommonConstraints (useEra @era) $
-    Certificate $
-      Ledger.mkRegPoolTxCert poolParams
+  obtainCommonConstraints (useEra @era)
+    $ Certificate
+    $ Ledger.mkRegPoolTxCert poolParams
 
 makeStakePoolRetirementCertificate
   :: forall era
@@ -115,9 +115,9 @@ makeStakePoolRetirementCertificate
   -> Ledger.EpochNo
   -> Certificate (ShelleyLedgerEra era)
 makeStakePoolRetirementCertificate poolId retirementEpoch =
-  shelleyBasedEraConstraints (shelleyBasedEra @era) $
-    Certificate $
-      Ledger.mkRetirePoolTxCert (Api.unStakePoolKeyHash poolId) retirementEpoch
+  shelleyBasedEraConstraints (shelleyBasedEra @era)
+    $ Certificate
+    $ Ledger.mkRetirePoolTxCert (Api.unStakePoolKeyHash poolId) retirementEpoch
 
 makeCommitteeColdkeyResignationCertificate
   :: forall era
@@ -126,11 +126,11 @@ makeCommitteeColdkeyResignationCertificate
   -> Maybe Ledger.Anchor
   -> Certificate (LedgerEra era)
 makeCommitteeColdkeyResignationCertificate coldKeyCred anchor =
-  obtainCommonConstraints (useEra @era) $
-    Certificate $
-      Ledger.mkResignCommitteeColdTxCert
-        coldKeyCred
-        (noInlineMaybeToStrictMaybe anchor)
+  obtainCommonConstraints (useEra @era)
+    $ Certificate
+    $ Ledger.mkResignCommitteeColdTxCert
+      coldKeyCred
+      (noInlineMaybeToStrictMaybe anchor)
 
 makeCommitteeHotKeyAuthorizationCertificate
   :: forall era
@@ -139,9 +139,9 @@ makeCommitteeHotKeyAuthorizationCertificate
   -> Ledger.Credential Ledger.HotCommitteeRole
   -> Certificate (LedgerEra era)
 makeCommitteeHotKeyAuthorizationCertificate coldKeyCredential hotKeyCredential =
-  obtainCommonConstraints (useEra @era) $
-    Certificate $
-      Ledger.mkAuthCommitteeHotKeyTxCert coldKeyCredential hotKeyCredential
+  obtainCommonConstraints (useEra @era)
+    $ Certificate
+    $ Ledger.mkAuthCommitteeHotKeyTxCert coldKeyCredential hotKeyCredential
 
 makeDrepRegistrationCertificate
   :: forall era
@@ -151,9 +151,9 @@ makeDrepRegistrationCertificate
   -> Maybe Ledger.Anchor
   -> Certificate (LedgerEra era)
 makeDrepRegistrationCertificate vcred deposit anchor =
-  obtainCommonConstraints (useEra @era) $
-    Certificate $
-      Ledger.mkRegDRepTxCert vcred deposit (noInlineMaybeToStrictMaybe anchor)
+  obtainCommonConstraints (useEra @era)
+    $ Certificate
+    $ Ledger.mkRegDRepTxCert vcred deposit (noInlineMaybeToStrictMaybe anchor)
 
 makeDrepUnregistrationCertificate
   :: forall era
@@ -162,11 +162,11 @@ makeDrepUnregistrationCertificate
   -> Ledger.Coin
   -> Certificate (LedgerEra era)
 makeDrepUnregistrationCertificate vcred deposit =
-  obtainCommonConstraints (useEra @era) $
-    Certificate $
-      Ledger.mkUnRegDRepTxCert
-        vcred
-        deposit
+  obtainCommonConstraints (useEra @era)
+    $ Certificate
+    $ Ledger.mkUnRegDRepTxCert
+      vcred
+      deposit
 
 makeDrepUpdateCertificate
   :: forall era
@@ -175,9 +175,9 @@ makeDrepUpdateCertificate
   -> Maybe Ledger.Anchor
   -> Certificate (LedgerEra era)
 makeDrepUpdateCertificate vcred mAnchor =
-  obtainCommonConstraints (useEra @era) $
-    Certificate $
-      Ledger.mkUpdateDRepTxCert vcred (noInlineMaybeToStrictMaybe mAnchor)
+  obtainCommonConstraints (useEra @era)
+    $ Certificate
+    $ Ledger.mkUpdateDRepTxCert vcred (noInlineMaybeToStrictMaybe mAnchor)
 
 makeStakeAddressAndDRepDelegationCertificate
   :: forall era
@@ -187,12 +187,12 @@ makeStakeAddressAndDRepDelegationCertificate
   -> Ledger.Coin
   -> Certificate (LedgerEra era)
 makeStakeAddressAndDRepDelegationCertificate cred delegatee deposit =
-  obtainCommonConstraints (useEra @era) $
-    Certificate $
-      Ledger.mkRegDepositDelegTxCert
-        (toShelleyStakeCredential cred)
-        delegatee
-        deposit
+  obtainCommonConstraints (useEra @era)
+    $ Certificate
+    $ Ledger.mkRegDepositDelegTxCert
+      (toShelleyStakeCredential cred)
+      delegatee
+      deposit
 
 -- -------------------------------------
 
@@ -237,10 +237,10 @@ anchorDataFromPoolMetadata
   -> m (Maybe Ledger.Anchor)
 anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashBytes}) = do
   hash <-
-    maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return $
-      Ledger.hashFromBytes $
-        SBS.fromShort $
-          byteArrayToShortByteString hashBytes
+    maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return
+      $ Ledger.hashFromBytes
+      $ SBS.fromShort
+      $ byteArrayToShortByteString hashBytes
   return $
     Just
       ( Ledger.Anchor
@@ -263,9 +263,9 @@ instance Error AnchorDataFromCertificateError where
 filterUnRegCreds
   :: ShelleyBasedEra era -> Certificate (ShelleyLedgerEra era) -> Maybe StakeCredential
 filterUnRegCreds sbe (Certificate cert) =
-  fmap fromShelleyStakeCredential $
-    shelleyBasedEraConstraints sbe $
-      Ledger.lookupUnRegStakeTxCert cert
+  fmap fromShelleyStakeCredential
+    $ shelleyBasedEraConstraints sbe
+    $ Ledger.lookupUnRegStakeTxCert cert
 
 filterUnRegDRepCreds
   :: ShelleyBasedEra era

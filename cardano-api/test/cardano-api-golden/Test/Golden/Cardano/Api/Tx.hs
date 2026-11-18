@@ -54,9 +54,9 @@ tx_canonical = H.propertyOnce $ do
     let era = Exp.ConwayEra
         sbe = OldApi.convert era
     dummyTxId <-
-      H.evalEither $
-        OldApi.deserialiseFromRawBytesHex $
-          BSC.pack "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53"
+      H.evalEither
+        $ OldApi.deserialiseFromRawBytesHex
+        $ BSC.pack "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53"
     let txIn = TxIn dummyTxId (TxIx 0)
         seedSize1 = fromIntegral $ deterministicSigningKeySeedSize AsPaymentKey
         seedSize2 = fromIntegral $ deterministicSigningKeySeedSize AsStakeKey

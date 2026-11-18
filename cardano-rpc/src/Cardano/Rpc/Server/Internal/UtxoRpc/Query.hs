@@ -104,13 +104,13 @@ readUtxosMethod req
   | null $ req ^. U5c.keys = pure defMessage
   | otherwise = do
       let keyCount = length $ req ^. U5c.keys
-      when (keyCount > maxUtxoQueryKeys) $
-        throwGrpcErrorWithMessage GrpcInvalidArgument $
-          "too many keys: "
-            <> tshow keyCount
-            <> ", maximum "
-            <> tshow maxUtxoQueryKeys
-            <> "; batch your requests"
+      when (keyCount > maxUtxoQueryKeys)
+        $ throwGrpcErrorWithMessage GrpcInvalidArgument
+        $ "too many keys: "
+          <> tshow keyCount
+          <> ", maximum "
+          <> tshow maxUtxoQueryKeys
+          <> "; batch your requests"
 
       utxoFilter <- QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. U5c.keys)
 

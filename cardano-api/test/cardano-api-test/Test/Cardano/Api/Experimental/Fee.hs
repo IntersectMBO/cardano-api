@@ -289,9 +289,9 @@ genFundedSimpleTx era = do
           L.mkBasicTxOut addr (L.MaryValue fundingCoin mempty)
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -327,9 +327,9 @@ genFundedMultiAssetTx era = do
           L.mkBasicTxOut addr (L.MaryValue fundingCoin multiAsset)
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            L.mkBasicTxOut addr (L.MaryValue sendCoin multiAsset)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ L.mkBasicTxOut addr (L.MaryValue sendCoin multiAsset)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -361,9 +361,9 @@ genUnderfundedTx era = do
           L.mkBasicTxOut addr (L.MaryValue fundingCoin mempty)
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -398,13 +398,13 @@ genNonAdaUnbalancedTx era = do
       -- Output demands tokens that don't exist in the ADA-only UTxO
       policyId = L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
       sendValue =
-        L.MaryValue sendCoin $
-          L.MultiAsset $
-            Map.singleton policyId (Map.singleton (Mary.AssetName "testtoken") tokenQty)
+        L.MaryValue sendCoin
+          $ L.MultiAsset
+          $ Map.singleton policyId (Map.singleton (Mary.AssetName "testtoken") tokenQty)
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            L.mkBasicTxOut addr sendValue
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ L.mkBasicTxOut addr sendValue
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -442,14 +442,14 @@ genMinUTxOViolatingTx era = do
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       -- Output 1: ADA only, will receive surplus via balanceTxOuts
       sendTxOut1 =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            L.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000_000) mempty)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ L.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000_000) mempty)
       -- Output 2: tokens with tiny ADA (below min UTxO)
       sendTxOut2 =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            L.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000) multiAsset)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ L.mkBasicTxOut addr (L.MaryValue (L.Coin 1_000) multiAsset)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -579,9 +579,9 @@ genWithdrawalFundedTx era = do
           L.mkBasicTxOut addr (L.MaryValue fundingCoin mempty)
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -616,9 +616,9 @@ genAutoBalanceNegativeTx era = do
           L.mkBasicTxOut shelleyAddr (L.MaryValue fundingCoin mempty)
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            L.mkBasicTxOut shelleyAddr (L.MaryValue sendCoin mempty)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ L.mkBasicTxOut shelleyAddr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -649,9 +649,9 @@ genAutoBalanceZeroAdaNegativeAssetsTx era = do
           L.mkBasicTxOut shelleyAddr (L.MaryValue coin mempty)
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            L.mkBasicTxOut shelleyAddr (L.MaryValue coin multiAsset)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ L.mkBasicTxOut shelleyAddr (L.MaryValue coin multiAsset)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -687,9 +687,9 @@ genWithdrawalTinyInputTx era = do
           L.mkBasicTxOut addr (L.MaryValue inputCoin mempty)
       utxo = L.UTxO $ Map.singleton ledgerTxIn fundingTxOut
       sendTxOut =
-        Exp.obtainCommonConstraints era $
-          Exp.TxOut $
-            L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
+        Exp.obtainCommonConstraints era
+          $ Exp.TxOut
+          $ L.mkBasicTxOut addr (L.MaryValue sendCoin mempty)
       txBodyContent =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder)]
@@ -1251,10 +1251,10 @@ prop_estimateTransactionKeyWitnessCount_counts_dijkstra_guards = H.property $ do
             & Exp.setTxIns
               [
                 ( txIn
-                , Exp.AnySimpleScriptWitness $
-                    Exp.SScript $
-                      Exp.SimpleScript $
-                        Api.toDijkstraNativeScript script
+                , Exp.AnySimpleScriptWitness
+                    $ Exp.SScript
+                    $ Exp.SimpleScript
+                    $ Api.toDijkstraNativeScript script
                 )
               ]
   estimate keyGuard === 1
@@ -1272,11 +1272,11 @@ prop_estimateTransactionKeyWitnessCount_counts_body_guards = H.property $ do
       scriptGuard = L.ScriptHashObj (Api.toShelleyScriptHash scriptHash)
       estimate credentials extraKeyWits = do
         guards <- H.evalEither $ Exp.mkTxGuards [(credential, Nothing) | credential <- credentials]
-        pure $
-          Exp.estimateTransactionKeyWitnessCount @Exp.DijkstraEra $
-            Exp.defaultTxBodyContent
-              & Exp.setTxGuards guards
-              & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses extraKeyWits)
+        pure
+          $ Exp.estimateTransactionKeyWitnessCount @Exp.DijkstraEra
+          $ Exp.defaultTxBodyContent
+            & Exp.setTxGuards guards
+            & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses extraKeyWits)
   baseline <- estimate [] []
   keyOnly <- estimate [keyGuard] []
   repeatedKey <- estimate [keyGuard] [keyHash]
@@ -1320,9 +1320,9 @@ prop_estimateTransactionKeyWitnessCount_dedupes_across_roles = H.property $ do
   let stakeCredential = Api.StakeCredentialByKey withdrawingStakeKeyHash
       stakeAddress = Api.makeStakeAddress Api.Mainnet stakeCredential
       unregistrationCert credential =
-        Exp.Certificate $
-          L.ConwayTxCertDeleg $
-            L.ConwayUnRegCert (Api.toShelleyStakeCredential credential) (L.SJust (L.Coin 2_000_000))
+        Exp.Certificate
+          $ L.ConwayTxCertDeleg
+          $ L.ConwayUnRegCert (Api.toShelleyStakeCredential credential) (L.SJust (L.Coin 2_000_000))
       contentWithCertFor credential =
         Exp.defaultTxBodyContent
           & Exp.setTxWithdrawals
@@ -1408,15 +1408,15 @@ prop_createCompatibleTx_redeemer_indices_follow_sorted_inputs = H.property $ do
       mkRedeemer n = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor n []
 
       mkSpendingWitness redeemer =
-        Exp.AnyPlutusScriptWitness $
-          AnyPlutusSpendingScriptWitness $
-            PlutusSpendingScriptWitnessV3 $
-              Exp.PlutusScriptWitness
-                Plutus.SPlutusV3
-                (Exp.PReferenceScript txIn1)
-                Exp.NoScriptDatum
-                redeemer
-                (Api.ExecutionUnits 0 0)
+        Exp.AnyPlutusScriptWitness
+          $ AnyPlutusSpendingScriptWitness
+          $ PlutusSpendingScriptWitnessV3
+          $ Exp.PlutusScriptWitness
+            Plutus.SPlutusV3
+            (Exp.PReferenceScript txIn1)
+            Exp.NoScriptDatum
+            redeemer
+            (Api.ExecutionUnits 0 0)
 
       ins =
         [ (txIn1, mkSpendingWitness (mkRedeemer 1))
@@ -1474,24 +1474,24 @@ prop_createCompatibleTx_inline_plutus_script_in_witness_set = H.property $ do
       redeemer = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor 0 []
 
       witness =
-        Exp.AnyPlutusScriptWitness $
-          AnyPlutusSpendingScriptWitness $
-            PlutusSpendingScriptWitnessV3 $
-              Exp.PlutusScriptWitness
-                Plutus.SPlutusV3
-                (Exp.PScript scriptInEra)
-                Exp.NoScriptDatum
-                redeemer
-                (Api.ExecutionUnits 0 0)
+        Exp.AnyPlutusScriptWitness
+          $ AnyPlutusSpendingScriptWitness
+          $ PlutusSpendingScriptWitnessV3
+          $ Exp.PlutusScriptWitness
+            Plutus.SPlutusV3
+            (Exp.PScript scriptInEra)
+            Exp.NoScriptDatum
+            redeemer
+            (Api.ExecutionUnits 0 0)
 
   Api.ShelleyTx _ ledgerTx <-
-    H.evalEither $
-      createCompatibleTx sbe $
-        (defaultCompatibleTxBodyContent sbe)
-          { compatibleTxIns = [(txIn, witness)]
-          , compatibleTxProtocolParams = Just exampleProtocolParams
-          , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
-          }
+    H.evalEither
+      $ createCompatibleTx sbe
+      $ (defaultCompatibleTxBodyContent sbe)
+        { compatibleTxIns = [(txIn, witness)]
+        , compatibleTxProtocolParams = Just exampleProtocolParams
+        , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
+        }
 
   let scriptWits = ledgerTx ^. L.witsTxL . L.scriptTxWitsL
       expectedHash = L.hashScript $ plutusScriptInEraToScript scriptInEra
@@ -1519,25 +1519,25 @@ prop_createCompatibleTx_inline_plutus_vote_script_in_witness_set = H.property $ 
       redeemer = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor 0 []
 
       witness =
-        Exp.AnyPlutusScriptWitness $
-          AnyPlutusVotingScriptWitness $
-            Exp.PlutusScriptWitness
-              Plutus.SPlutusV3
-              (Exp.PScript scriptInEra)
-              Exp.NoScriptDatum
-              redeemer
-              (Api.ExecutionUnits 0 0)
+        Exp.AnyPlutusScriptWitness
+          $ AnyPlutusVotingScriptWitness
+          $ Exp.PlutusScriptWitness
+            Plutus.SPlutusV3
+            (Exp.PScript scriptInEra)
+            Exp.NoScriptDatum
+            redeemer
+            (Api.ExecutionUnits 0 0)
 
   txVotingProcedures <-
     H.leftFail $ Exp.mkTxVotingProcedures [(votingProcedures, witness)]
 
   Api.ShelleyTx _ ledgerTx <-
-    H.evalEither $
-      createCompatibleTx sbe $
-        (defaultCompatibleTxBodyContent sbe)
-          { compatibleTxVotingProcedures = VotingProcedures Api.ConwayEraOnwardsConway txVotingProcedures
-          , compatibleTxProtocolParams = Just exampleProtocolParams
-          }
+    H.evalEither
+      $ createCompatibleTx sbe
+      $ (defaultCompatibleTxBodyContent sbe)
+        { compatibleTxVotingProcedures = VotingProcedures Api.ConwayEraOnwardsConway txVotingProcedures
+        , compatibleTxProtocolParams = Just exampleProtocolParams
+        }
 
   let scriptWits = ledgerTx ^. L.witsTxL . L.scriptTxWitsL
       expectedHash = L.hashScript $ plutusScriptInEraToScript scriptInEra
@@ -1566,15 +1566,15 @@ prop_createCompatibleTx_missing_pparams_with_plutus_witness = H.property $ do
       redeemer = Api.unsafeHashableScriptData $ Api.ScriptDataConstructor 0 []
 
       witness =
-        Exp.AnyPlutusScriptWitness $
-          AnyPlutusSpendingScriptWitness $
-            PlutusSpendingScriptWitnessV3 $
-              Exp.PlutusScriptWitness
-                Plutus.SPlutusV3
-                (Exp.PReferenceScript txIn)
-                Exp.NoScriptDatum
-                redeemer
-                (Api.ExecutionUnits 0 0)
+        Exp.AnyPlutusScriptWitness
+          $ AnyPlutusSpendingScriptWitness
+          $ PlutusSpendingScriptWitnessV3
+          $ Exp.PlutusScriptWitness
+            Plutus.SPlutusV3
+            (Exp.PReferenceScript txIn)
+            Exp.NoScriptDatum
+            redeemer
+            (Api.ExecutionUnits 0 0)
 
   case createCompatibleTx sbe $
     (defaultCompatibleTxBodyContent sbe)
@@ -1600,14 +1600,14 @@ prop_createCompatibleTx_extra_content_is_threaded_through = H.property $ do
       metadata = Api.TxMetadata $ Map.fromList [(1, Api.TxMetaText "createCompatibleTx")]
 
   Api.ShelleyTx _ ledgerTx <-
-    H.evalEither $
-      createCompatibleTx sbe $
-        (defaultCompatibleTxBodyContent sbe)
-          { compatibleTxInsCollateral = [collateralTxIn]
-          , compatibleTxValidityUpperBound = Just upperBound
-          , compatibleTxMetadata = Api.TxMetadataInEra sbe metadata
-          , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
-          }
+    H.evalEither
+      $ createCompatibleTx sbe
+      $ (defaultCompatibleTxBodyContent sbe)
+        { compatibleTxInsCollateral = [collateralTxIn]
+        , compatibleTxValidityUpperBound = Just upperBound
+        , compatibleTxMetadata = Api.TxMetadataInEra sbe metadata
+        , compatibleTxCertificates = Exp.mkTxCertificates Exp.ConwayEra []
+        }
 
   let ledgerBody = ledgerTx ^. L.bodyTxL
 
@@ -1779,18 +1779,18 @@ prop_bodyGuardCredentials = H.property $ do
   H.cover 10 "empty guards" (null entries)
   H.cover 50 "key and script guards" (not $ null entries)
   Exp.UnsignedSubTx subTx <-
-    H.evalEither $
-      Exp.makeUnsignedSubTx $
-        Exp.defaultSubTxBodyContent
-          & Exp.setTxGuards guards
-          & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
+    H.evalEither
+      $ Exp.makeUnsignedSubTx
+      $ Exp.defaultSubTxBodyContent
+        & Exp.setTxGuards guards
+        & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
   Exp.UnsignedTx tx <-
-    H.evalEither $
-      Exp.makeUnsignedTx Exp.DijkstraEra $
-        Exp.defaultTxBodyContent
-          & Exp.setTxGuards guards
-          & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses extraKeys)
-          & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
+    H.evalEither
+      $ Exp.makeUnsignedTx Exp.DijkstraEra
+      $ Exp.defaultTxBodyContent
+        & Exp.setTxGuards guards
+        & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses extraKeys)
+        & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
   toList (subTx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === credentials
   toList (tx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === List.nub (credentials <> signers)
 
@@ -1803,19 +1803,19 @@ prop_guard_embedding = H.property $ do
   topGuards <- H.evalEither $ Exp.mkTxGuards topEntries
   subGuards <- H.evalEither $ Exp.mkTxGuards subEntries
   unsignedSub <-
-    H.evalEither $
-      Exp.makeUnsignedSubTx $
-        Exp.defaultSubTxBodyContent
-          & Exp.setTxGuards subGuards
-          & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
+    H.evalEither
+      $ Exp.makeUnsignedSubTx
+      $ Exp.defaultSubTxBodyContent
+        & Exp.setTxGuards subGuards
+        & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
   let signedSub@(Exp.SignedSubTx subTx) = Exp.signSubTx [] [] unsignedSub
   Exp.UnsignedTx tx <-
-    H.evalEither $
-      Exp.makeUnsignedTx Exp.DijkstraEra $
-        Exp.defaultTxBodyContent
-          & Exp.setTxGuards topGuards
-          & Exp.setTxSignedSubTransactions [signedSub]
-          & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
+    H.evalEither
+      $ Exp.makeUnsignedTx Exp.DijkstraEra
+      $ Exp.defaultTxBodyContent
+        & Exp.setTxGuards topGuards
+        & Exp.setTxSignedSubTransactions [signedSub]
+        & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
   toList (tx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === map fst topEntries
   toList (subTx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === map fst subEntries
   toList (tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL) === [subTx]
@@ -1870,11 +1870,11 @@ prop_guard_execution_units = H.property $ do
   Alonzo.unRedeemers (tx ^. L.witsTxL . L.rdmrsTxWitsL)
     === Map.singleton (L.DijkstraGuarding (L.AsIx 3)) (Api.toAlonzoData datum, Api.toAlonzoExUnits units)
   Exp.UnsignedSubTx subTx <-
-    H.evalEither $
-      Exp.makeUnsignedSubTx $
-        Exp.defaultSubTxBodyContent
-          & Exp.setTxGuards (Exp.txGuards balanced)
-          & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
+    H.evalEither
+      $ Exp.makeUnsignedSubTx
+      $ Exp.defaultSubTxBodyContent
+        & Exp.setTxGuards (Exp.txGuards balanced)
+        & Exp.setTxProtocolParams (exampleProtocolParamsEra Exp.DijkstraEra)
   toList (subTx ^. L.bodyTxL . Dijkstra.guardsTxBodyL) === map fst (entries units)
   Alonzo.unRedeemers (subTx ^. L.witsTxL . L.rdmrsTxWitsL)
     === Alonzo.unRedeemers (tx ^. L.witsTxL . L.rdmrsTxWitsL)
@@ -1909,9 +1909,9 @@ prop_guard_auto_balance useReference = H.withTests 10 $ H.property $ do
       reference = Api.TxIn inputId (Api.TxIx (inputIx + 2))
   address <- H.forAll $ genAddressInEra Api.ShelleyBasedEraDijkstra
   script <-
-    H.evalEither $
-      P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4 $
-        Base16.decodeLenient "46450101002499"
+    H.evalEither
+      $ P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4
+      $ Base16.decodeLenient "46450101002499"
   let credential = L.ScriptHashObj $ P.hashPlutusScriptInEra script
       datum = Api.unsafeHashableScriptData $ Api.ScriptDataNumber 42
       witness =
@@ -1960,10 +1960,10 @@ prop_guard_auto_balance useReference = H.withTests 10 $ H.property $ do
         address
         Nothing
   (actualDatum, units) <-
-    H.evalMaybe $
-      Map.lookup (L.DijkstraGuarding $ L.AsIx 0) $
-        Alonzo.unRedeemers $
-          tx ^. L.witsTxL . L.rdmrsTxWitsL
+    H.evalMaybe
+      $ Map.lookup (L.DijkstraGuarding $ L.AsIx 0)
+      $ Alonzo.unRedeemers
+      $ tx ^. L.witsTxL . L.rdmrsTxWitsL
   actualDatum === Api.toAlonzoData datum
   H.assertWith units $ \u -> L.exUnitsMem u > 0 && L.exUnitsSteps u > 0
   let minFee = L.calcMinFeeTx utxo params tx 0
@@ -2024,25 +2024,25 @@ coverGuardWitnesses
   -> H.PropertyT IO ()
 coverGuardWitnesses entries = do
   let witnesses = map snd entries
-  H.cover 5 "inline native guards" $
-    not $
-      null [() | Just (Exp.NativeGuardWitness Exp.SScript{}) <- witnesses]
-  H.cover 5 "reference native guards" $
-    not $
-      null [() | Just (Exp.NativeGuardWitness Exp.SReferenceScript{}) <- witnesses]
-  H.cover 5 "inline Plutus V4 guards" $
-    not $
-      null
-        [() | Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ Exp.PScript{} _ _ _)) <- witnesses]
-  H.cover 5 "reference Plutus V4 guards" $
-    not $
-      null
-        [ ()
-        | Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ Exp.PReferenceScript{} _ _ _)) <- witnesses
-        ]
-  H.cover 5 "script guards without witnesses" $
-    not $
-      null [() | (L.ScriptHashObj _, Nothing) <- entries]
+  H.cover 5 "inline native guards"
+    $ not
+    $ null [() | Just (Exp.NativeGuardWitness Exp.SScript{}) <- witnesses]
+  H.cover 5 "reference native guards"
+    $ not
+    $ null [() | Just (Exp.NativeGuardWitness Exp.SReferenceScript{}) <- witnesses]
+  H.cover 5 "inline Plutus V4 guards"
+    $ not
+    $ null
+      [() | Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ Exp.PScript{} _ _ _)) <- witnesses]
+  H.cover 5 "reference Plutus V4 guards"
+    $ not
+    $ null
+      [ ()
+      | Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ Exp.PReferenceScript{} _ _ _)) <- witnesses
+      ]
+  H.cover 5 "script guards without witnesses"
+    $ not
+    $ null [() | (L.ScriptHashObj _, Nothing) <- entries]
 
 -- | Guard construction and list conversion preserve entry order and witnesses.
 prop_mkTxGuards_order :: Property
@@ -2098,9 +2098,9 @@ prop_mkTxGuards_validation = H.property $ do
   guards <- H.evalEither $ construct [(L.ScriptHashObj scriptHash, Just witness)]
   toList guards === [(L.ScriptHashObj scriptHash, Just witness)]
   plutusScript <-
-    H.evalEither $
-      P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4 $
-        Base16.decodeLenient "46450101002499"
+    H.evalEither
+      $ P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4
+      $ Base16.decodeLenient "46450101002499"
   let plutusHash = P.hashPlutusScriptInEra plutusScript
       plutusWitness =
         Exp.PlutusGuardWitness $

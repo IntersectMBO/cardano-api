@@ -138,11 +138,11 @@ serialiseCertificateToCBOR
   :: Exp.Era era -> Certificate (Exp.LedgerEra era) -> CertificateCBORBase16
 serialiseCertificateToCBOR era cert =
   obtainCommonConstraints era $ do
-    Text.unpack $
-      Text.decodeUtf8 $
-        Base16.encode $
-          serialiseToCBOR
-            cert
+    Text.unpack
+      $ Text.decodeUtf8
+      $ Base16.encode
+      $ serialiseToCBOR
+        cert
 
 readHash :: MonadThrow m => StakeKeyHashBase16 -> m (Hash StakeKey)
 readHash = rightOrError . Api.deserialiseFromRawBytesHex . Text.encodeUtf8 . Text.pack

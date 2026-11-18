@@ -91,8 +91,8 @@ library
     Cardano.Api.Experimental.Tx
     Cardano.Api.Genesis
     Cardano.Api.Governance
-    Cardano.Api.HasTypeProxy
     Cardano.Api.Hash
+    Cardano.Api.HasTypeProxy
     Cardano.Api.IO
     Cardano.Api.Key
     Cardano.Api.Ledger
@@ -120,7 +120,6 @@ library
     Cardano.Api.Value
 
   build-depends:
-    FailT,
     aeson >=1.5.6.0,
     aeson-pretty >=0.8.5,
     attoparsec,
@@ -167,6 +166,7 @@ library
     either,
     errors,
     extra,
+    FailT,
     filepath,
     formatting,
     fs-api ^>=0.4,
@@ -253,15 +253,15 @@ library
     Cardano.Api.Governance.Internal.Metadata.GovAction
     Cardano.Api.Governance.Internal.Metadata.Validation
     Cardano.Api.Governance.Internal.Poll
+    Cardano.Api.Internal.Orphans
+    Cardano.Api.Internal.Orphans.Misc
+    Cardano.Api.Internal.Orphans.Serialisation
+    Cardano.Api.Internal.Utils
     Cardano.Api.IO.Internal.Base
     Cardano.Api.IO.Internal.Compat
     Cardano.Api.IO.Internal.Compat.Posix
     Cardano.Api.IO.Internal.Compat.Wasm
     Cardano.Api.IO.Internal.Compat.Win32
-    Cardano.Api.Internal.Orphans
-    Cardano.Api.Internal.Orphans.Misc
-    Cardano.Api.Internal.Orphans.Serialisation
-    Cardano.Api.Internal.Utils
     Cardano.Api.Key.Internal
     Cardano.Api.Key.Internal.Class
     Cardano.Api.Key.Internal.Leios
@@ -276,13 +276,13 @@ library
     Cardano.Api.LedgerState.Internal.Rule.BBODY.UTXOW
     Cardano.Api.LedgerState.Internal.Rule.TICK.NEWEPOCH
     Cardano.Api.LedgerState.Internal.Rule.TICK.RUPD
+    Cardano.Api.Network.Internal.NetworkId
+    Cardano.Api.Network.Internal.Reexport
     Cardano.Api.Network.IPC.Internal
     Cardano.Api.Network.IPC.Internal.ChainSync.Client
     Cardano.Api.Network.IPC.Internal.ChainSync.ClientPipelined
     Cardano.Api.Network.IPC.Internal.Monad
     Cardano.Api.Network.IPC.Internal.Version
-    Cardano.Api.Network.Internal.NetworkId
-    Cardano.Api.Network.Internal.Reexport
     Cardano.Api.Plutus.Internal
     Cardano.Api.Plutus.Internal.Script
     Cardano.Api.Plutus.Internal.ScriptData
@@ -326,7 +326,6 @@ library gen
     Test.Hedgehog.Roundtrip.CBOR
 
   build-depends:
-    QuickCheck,
     aeson >=1.5.6.0,
     base16-bytestring,
     bytestring,
@@ -348,6 +347,7 @@ library gen
     hedgehog-quickcheck,
     mempack,
     ordered-containers,
+    QuickCheck,
     tasty,
     tasty-hedgehog,
     text,
@@ -367,8 +367,6 @@ test-suite cardano-api-test
     hs-source-dirs: test/cardano-api-test-compat/posix
 
   build-depends:
-    FailT,
-    QuickCheck,
     aeson >=1.5.6.0,
     base16-bytestring,
     bytestring,
@@ -397,6 +395,7 @@ test-suite cardano-api-test
     containers,
     data-default,
     directory,
+    FailT,
     filepath,
     fs-api,
     hedgehog >=1.1,
@@ -406,6 +405,7 @@ test-suite cardano-api-test
     microlens,
     mtl,
     ouroboros-consensus:{cardano, ouroboros-consensus, protocol},
+    QuickCheck,
     raw-strings-qq,
     tasty,
     tasty-hedgehog,

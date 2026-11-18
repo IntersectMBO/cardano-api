@@ -85,9 +85,9 @@ hprop_exact_address_rejects_different = H.property $ do
   address1 <- forAll $ genAddressInEra sbe
   address2 <- forAll $ genAddressInEra sbe
   let addressPattern = defMessage & U5c.exactAddress .~ serialiseToRawBytes address1
-  when (serialiseToRawBytes address1 /= serialiseToRawBytes address2) $
-    H.assertWith address2 $
-      not . matchesAddressPattern addressPattern
+  when (serialiseToRawBytes address1 /= serialiseToRawBytes address2)
+    $ H.assertWith address2
+    $ not . matchesAddressPattern addressPattern
 
 hprop_exact_byron_address_rejects_shelley :: Property
 hprop_exact_byron_address_rejects_shelley = H.property $ do
@@ -142,9 +142,9 @@ hprop_payment_part_rejects_different_credential = H.property $ do
   let shelleyAddress = makeShelleyAddress network credential1 stakeReference
       address = shelleyAddressInEra sbe shelleyAddress
       addressPattern = defMessage & U5c.paymentPart .~ serialisePaymentCredential credential2
-  when (serialisePaymentCredential credential1 /= serialisePaymentCredential credential2) $
-    H.assertWith address $
-      not . matchesAddressPattern addressPattern
+  when (serialisePaymentCredential credential1 /= serialisePaymentCredential credential2)
+    $ H.assertWith address
+    $ not . matchesAddressPattern addressPattern
 
 hprop_delegation_part_matches_same_credential :: Property
 hprop_delegation_part_matches_same_credential = H.property $ do
