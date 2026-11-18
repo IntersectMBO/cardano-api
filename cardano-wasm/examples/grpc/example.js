@@ -50,13 +50,11 @@ async function do_async_work() {
   log("Protocol Parameters:");
   log(pparams);
 
-  let utxos = await grpcApi.getAllUtxos();
-  log("Utxos:");
-  log(utxos);
-
-  let addr = utxos[0].address;
-  log(`Utxos for first address: ${addr}`)
-  log((await grpcApi.getUtxosForAddress(addr)));
+  let addr = new URLSearchParams(window.location.search).get("address");
+  if (addr) {
+    log(`Utxos for address: ${addr}`)
+    log((await grpcApi.getUtxosForAddress(addr)));
+  }
 
   finish_test();
 }

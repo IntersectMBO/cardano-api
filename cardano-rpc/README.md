@@ -287,9 +287,9 @@ You need to install `buf` and `proto-lens-protoc`.
 
 1. Generate Haskell code using:
     ```bash
-    ( cd cardano-rpc/ ; buf generate proto )
+    cardano-rpc/scripts/gen-proto.sh
     ```
-    This will output the generated Haskell code into `cardano-rpc/gen` directory.
+    This will output the generated Haskell code into `cardano-rpc/gen` directory, and the Haskell code for the `google.protobuf` types that the proto definitions import into `cardano-rpc/gen-wkt` directory (used only by the wasm32 build, where `proto-lens-protobuf-types` does not build).
 
 ### Building the Haskell code
 

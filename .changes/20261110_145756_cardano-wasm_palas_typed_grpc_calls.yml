@@ -1,0 +1,5 @@
+project: cardano-wasm
+pr: 1412
+kind:
+- bugfix
+description: Fix the `GrpcConnection` calls for the node's v1beta UTxO RPC, so that `getUtxosForAddress` returns the UTxOs of the address (bytes in hex, amounts as `BigInt`) and `submitTx` returns the transaction ID, and make `getAllUtxos` fail with an error, because the node does not list the whole UTxO set.

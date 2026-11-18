@@ -473,12 +473,12 @@ apiInfo =
                     { methodName = "getAllUtxos"
                     , methodSimpleName = Nothing
                     , methodDoc =
-                        "Get all UTXOs from the node using a GRPC-web client."
+                        "Not supported: it always fails, because the node only returns the UTXOs of given addresses. Use getUtxosForAddress instead."
                     , methodParams = []
                     , methodReturnType =
                         OtherType
                           TSUtxoList
-                    , methodReturnDoc = "A promise that resolves to the current UTXO set."
+                    , methodReturnDoc = "A promise that is always rejected."
                     }
               , MethodInfoEntry $
                   MethodInfo

@@ -130,4 +130,8 @@ jobs:
           # them, and HLS counts unloadable files as failures. git rm, because HLS
           # discovers files via `git ls-files`, so they must leave the index too.
           git rm -rq cardano-rpc/quickstart
+          # Remove the wasm32-only google.protobuf modules in cardano-rpc/gen-wkt:
+          # other builds take these modules from proto-lens-protobuf-types, and
+          # HLS would load both into cardano-rpc:gen.
+          git rm -rq cardano-rpc/gen-wkt
           haskell-language-server

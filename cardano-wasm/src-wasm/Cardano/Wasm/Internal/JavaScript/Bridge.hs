@@ -23,14 +23,7 @@ import Cardano.Wasm.Api.Info (apiInfo)
 import Cardano.Wasm.Api.Tx qualified as Wasm
 import Cardano.Wasm.Api.Wallet qualified as Wasm
 import Cardano.Wasm.ExceptionHandling (rightOrError)
-import Cardano.Wasm.Internal.JavaScript.GRPC
-  ( js_getEra
-  , js_getProtocolParams
-  , js_newWebGrpcClient
-  , js_readAllUtxos
-  , js_readUtxosForAddress
-  , js_submitTx
-  )
+import Cardano.Wasm.Internal.JavaScript.GRPC (js_newWebGrpcClient, js_unary)
 import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient, JSUtxos)
 import Cardano.Wasm.NumberConversion (integerToNatural)
 
@@ -79,6 +72,16 @@ foreign import javascript unsafe "BigInt($1)"
 jsonToJSVal :: Api.ToJSON a => a -> IO JSVal
 jsonToJSVal =
   js_parse . toJSString . toString . Api.serialiseToJSON
+
+-- | Like 'js_parse', but it also turns the decimal strings under the keys
+-- @lovelace@ and @quantity@ into @BigInt@s.
+foreign import javascript unsafe "JSON.parse($1, (key, value) => (key === 'lovelace' || key === 'quantity') ? BigInt(value) : value)"
+  js_parseUtxos :: JSString -> IO JSVal
+
+-- | Convert the UTxOs from 'Wasm.getUtxosForAddressImpl' to JavaScript objects.
+utxosToJSVal :: [Aeson.Value] -> IO JSUtxos
+utxosToJSVal =
+  js_parseUtxos . toJSString . toString . Api.serialiseToJSON
 
 -- | Convert a JavaScript object (@JSVal@) to a Haskell value with @FromJSON@ instance.
 jsValToJSON :: (Api.FromJSON a, HasCallStack) => String -> JSVal -> IO a
@@ -607,25 +610,25 @@ newGrpcConnection webGrpcUrl = toJSVal =<< join (Wasm.newGrpcConnectionImpl js_n
 
 -- | Get the era from the Cardano Node using GRPC-web.
 getEra :: HasCallStack => JSGrpc -> IO Int
-getEra grpcObject = Wasm.getEraImpl js_getEra =<< fromJSVal grpcObject
+getEra grpcObject = Wasm.getEraImpl js_unary =<< fromJSVal grpcObject
 
 -- | Get the protocol parameters from the Cardano Node using GRPC-web.
 getProtocolParams :: HasCallStack => JSGrpc -> IO JSProtocolParams
-getProtocolParams = toJSVal <=< Wasm.getProtocolParamsImpl js_getProtocolParams <=< fromJSVal
+getProtocolParams = toJSVal <=< Wasm.getProtocolParamsImpl js_unary <=< fromJSVal
 
 -- | Get all UTXOs from the node using a GRPC-web client.
 getAllUtxos :: HasCallStack => JSGrpc -> IO JSUtxos
 getAllUtxos grpcObject =
-  Wasm.getAllUtxosImpl js_readAllUtxos =<< fromJSVal grpcObject
+  Wasm.getAllUtxosImpl =<< (fromJSVal grpcObject :: IO (Wasm.GrpcObject JSGRPCClient))
 
 -- | Get UTXOs for a given address using a GRPC-web client.
 getUtxosForAddress :: HasCallStack => JSGrpc -> JSString -> IO JSUtxos
 getUtxosForAddress grpcObject address =
-  join $ Wasm.getUtxosForAddressImpl js_readUtxosForAddress <$> fromJSVal grpcObject <*> fromJSVal address
+  utxosToJSVal =<< join (Wasm.getUtxosForAddressImpl js_unary <$> fromJSVal grpcObject <*> fromJSVal address)
 
 -- | Submit a transaction to the Cardano Node using GRPC-web.
 submitTx :: HasCallStack => JSGrpc -> JSString -> IO JSString
-submitTx grpcObject tx = toJSVal =<< join (Wasm.submitTxImpl js_submitTx <$> fromJSVal grpcObject <*> fromJSVal tx)
+submitTx grpcObject tx = toJSVal =<< join (Wasm.submitTxImpl js_unary <$> fromJSVal grpcObject <*> fromJSVal tx)
 
 -- * Address inspection
 

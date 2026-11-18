@@ -180,15 +180,14 @@ jobs:
       - uses: rrbutani/use-nix-shell-action@59a52b2b9bbfe3cc0e7deb8f9059abe37a439edf # v1.1.0
 
       - name: Regenerate protobuf code
-        working-directory: cardano-rpc
-        run: buf generate proto
+        run: cardano-rpc/scripts/gen-proto.sh
 
       - name: Check that generated files from proto definitions are up to date
         run: |
-          git add cardano-rpc/gen
-          if ! git diff --staged --quiet -- cardano-rpc/gen; then
+          git add cardano-rpc/gen cardano-rpc/gen-wkt
+          if ! git diff --staged --quiet -- cardano-rpc/gen cardano-rpc/gen-wkt; then
             echo "Generated files differ from repository files:"
-            git diff --staged --name-status -- cardano-rpc/gen
+            git diff --staged --name-status -- cardano-rpc/gen cardano-rpc/gen-wkt
             exit 1
           fi
           echo "All generated files match repository files"
