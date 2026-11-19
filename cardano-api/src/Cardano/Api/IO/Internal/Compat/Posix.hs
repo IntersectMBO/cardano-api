@@ -53,10 +53,10 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
   -- a device, is written in place, since replacing it would not write to what
   -- it stands for.
   status <- try $ getSymbolicLinkStatus path
-  case status of
-    Right st | not (isRegularFile st) -> writeInPlace path f
-    Right _ -> replaceAtomically path f
-    Left (_ :: IOException) -> replaceAtomically path f
+  let isWrittenInPlace = either (\(_ :: IOException) -> False) (not . isRegularFile) status
+  if isWrittenInPlace
+    then writeInPlace path f
+    else replaceAtomically path f
 
 -- | Open what is at the path for writing, through it if it is a symbolic link,
 -- and write to it. Its owner and permissions stay as they are; a file created
