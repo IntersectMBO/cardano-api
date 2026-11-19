@@ -7,11 +7,22 @@ where
 
 import Cardano.Api
 
+import Control.Exception (bracket)
 import Control.Monad (unless)
 import Data.ByteString qualified as BS
 import Data.Either (isLeft)
+import GHC.IO.Handle (hDuplicate, hDuplicateTo)
 import System.Directory (createFileLink, pathIsSymbolicLink, removeFile)
 import System.FilePath ((</>))
+import System.IO
+  ( BufferMode (..)
+  , IOMode (..)
+  , hClose
+  , hGetBuffering
+  , hSetBuffering
+  , stdout
+  , withFile
+  )
 
 import Test.Cardano.Api.IO.Compat (makeGroupOtherReadable, readPipeWrittenThrough)
 
@@ -125,6 +136,48 @@ prop_writeWithOwnerPermissionsThroughSymlink =
       contents <- liftIO $ BS.readFile target
       contents === "new contents"
 
+prop_writeDashToStdout :: Property
+prop_writeDashToStdout =
+  H.propertyOnce . H.moduleWorkspace "stdout" $ \ws ->
+    -- POSIX only, like the pipe test.
+    unless isWin32 $ do
+      let captured = ws </> "captured"
+
+      (ownerResult, ownerOutput) <-
+        liftIO . captureStdout captured $
+          writeLazyByteStringFileWithOwnerPermissions (File "-") "owner-only contents"
+
+      H.leftFail (ownerResult :: Either (FileError ()) ())
+      assert $ "owner-only contents" `BS.isInfixOf` ownerOutput
+
+      (plainResult, plainOutput) <-
+        liftIO . captureStdout captured $
+          writeByteStringFile (File "-") "plain contents"
+
+      H.leftFail (plainResult :: Either (FileError ()) ())
+      assert $ "plain contents" `BS.isInfixOf` plainOutput
+
+-- | Run the action with standard output going to the file, block buffered, and
+-- return the action's result with what reached the file by the time the action
+-- returned. Output of other tests running meanwhile may reach the file too.
+captureStdout :: FilePath -> IO a -> IO (a, BS.ByteString)
+captureStdout file action =
+  bracket redirect restore $ \_ -> do
+    result <- action
+    contents <- BS.readFile file
+    pure (result, contents)
+ where
+  redirect = do
+    buffering <- hGetBuffering stdout
+    original <- hDuplicate stdout
+    withFile file WriteMode (`hDuplicateTo` stdout)
+    hSetBuffering stdout (BlockBuffering Nothing)
+    pure (original, buffering)
+  restore (original, buffering) = do
+    hDuplicateTo original stdout
+    hClose original
+    hSetBuffering stdout buffering
+
 tests :: TestTree
 tests =
   testGroup
@@ -136,4 +189,5 @@ tests =
     , testProperty
         "Write with Owner Permissions through a symbolic link"
         prop_writeWithOwnerPermissionsThroughSymlink
+    , testProperty "Write to standard output for the path -" prop_writeDashToStdout
     ]
