@@ -94,7 +94,7 @@
         proto-js-bundle-drv = import ./nix/proto-to-js.nix {pkgs = nixpkgs;};
         wasm-typedoc-drv = import ./nix/typedoc.nix {pkgs = nixpkgs;};
 
-        pre-commit-check = inputs.pre-commit-hooks.lib.${nixpkgs.system}.run {
+        pre-commit-check = inputs.pre-commit-hooks.lib.${nixpkgs.stdenv.hostPlatform.system}.run {
           src = ./.;
           hooks = {
             alejandra.enable = true;
