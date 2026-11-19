@@ -103,7 +103,9 @@ writeFileTextEnvelope outputFile mbDescr a =
 --   path nor undo a completed write. Only a regular file is replaced this
 --   way: anything else at the target path, such as a symlink (like
 --   @\/dev\/stdout@), a pipe or a device, is written in place instead,
---   keeping its owner and permissions, without these guarantees.
+--   keeping its owner and permissions, without these guarantees. A regular
+--   file with more than one hard link is replaced as well, so its other
+--   names keep the old contents.
 --
 -- * On Windows, the file is owned by the current user, but no explicit
 --   ACL is set: the file inherits the access control list of the target
