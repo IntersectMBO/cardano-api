@@ -21,7 +21,7 @@ where
 import           Cardano.Api.Error (FileError (..), throwErrorM)
 import           Cardano.Api.IO.Internal.Base
 
-import           Control.Exception (IOException, bracket, bracketOnError, try)
+import           Control.Exception.Safe (IOException, bracket, bracketOnError, try)
 import           Control.Monad (forM_, when)
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.IO.Class
