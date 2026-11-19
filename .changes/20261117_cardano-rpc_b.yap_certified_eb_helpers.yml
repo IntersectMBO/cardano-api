@@ -1,0 +1,5 @@
+project: cardano-rpc
+pr: 1418
+kind:
+- compatible
+description: Add `Cardano.Rpc.Server.NodeKernelAccess.Internal.CertifiedEb`, with helpers for filling a CertRB's transactions from the EB it certifies. `announcedBefore` finds the EB the block before announced, searching down to a given earliest slot. `decodeBlock` decodes a block from its bytes. They are not used by the server yet.
