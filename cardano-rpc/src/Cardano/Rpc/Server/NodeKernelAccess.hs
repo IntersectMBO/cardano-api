@@ -47,10 +47,12 @@ import Cardano.Api.Consensus qualified as Consensus
 import Cardano.Rpc.Server.Internal.Monad (MonadRpc, grab)
 import Cardano.Rpc.Server.Internal.TimedCache (newTimedCache)
 import Cardano.Rpc.Server.Internal.Tracing
+import Cardano.Rpc.Server.NodeKernelAccess.Internal.CertifiedEb (withCertifiedEbTxs)
 import Cardano.Rpc.Server.NodeKernelAccess.Internal.Type (GenesisBundle (..))
 import Cardano.Rpc.Server.NodeKernelAccess.Internal.Type qualified as Type
 
 import Ouroboros.Consensus.Cardano.Block (CardanoEras)
+import Ouroboros.Consensus.Config (configCodec)
 import Ouroboros.Consensus.HardFork.History qualified as History
 import Ouroboros.Consensus.Ledger.SupportsMempool qualified as Consensus (txForgetValidated)
 import Ouroboros.Consensus.Mempool.API qualified as Consensus
@@ -59,13 +61,15 @@ import Ouroboros.Consensus.Mempool.API qualified as Consensus
   , getSnapshot
   )
 
-import RIO (MonadUnliftIO, atomically, bracket, throwIO, withRunInIO)
+import RIO (MonadUnliftIO, atomically, bracket, for, throwIO, withRunInIO)
 
 import Control.Monad.STM (check)
 import Control.Tracer (Tracer, traceWith)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.IORef
+import Data.SOP.Index (Index (IS, IZ), toWord8)
+import Data.SOP.NonEmpty (nonEmptyToList)
 import Data.SOP.Strict (NP (..))
 import Data.Text (pack)
 import Data.Time.Clock (DiffTime)
@@ -96,6 +100,8 @@ mkNodeKernelAccess tracer shelleyGenesisHash shelleyGenesisFile blockType kernel
         Type.NodeKernelAccess
           { Type.chainDb = chainDb
           , Type.mempool = Consensus.getMempool kernel
+          , Type.leiosDb = Consensus.getLeiosDB kernel
+          , Type.codecConfig = configCodec topLevelConfig
           , Type.systemStart = Consensus.nodeSystemStart topLevelConfig
           , Type.readHardForkSummary = readHardForkSummary'
           , Type.securityParam = Consensus.configSecurityParam topLevelConfig
@@ -230,8 +236,11 @@ readChainTipHeader
   -> m (Maybe (Consensus.Header (Consensus.CardanoBlock Consensus.StandardCrypto)))
 readChainTipHeader Type.NodeKernelAccess{Type.chainDb = chainDb} = liftIO $ Consensus.getTipHeader chainDb
 
--- | Fetch a raw block and its parsed era-contextualised form from ChainDB
--- by slot and header hash.
+-- | Fetch a block from ChainDB by slot and header hash.
+--
+-- Returns the block twice: its raw bytes, unchanged, and the decoded block.
+-- If the block is a CertRB, the decoded block also gets the EB's
+-- transactions. If they can't be found, throws 'CertRbWithoutEbTxs'.
 fetchBlock
   :: MonadIO m
   => Type.NodeKernelAccess
@@ -242,10 +251,43 @@ fetchBlock
   -- ^ Block header hash
   -> m (Maybe (ByteString, BlockInMode))
   -- ^ Raw CBOR bytes and the block in era context, or 'Nothing' if not found
-fetchBlock Type.NodeKernelAccess{Type.chainDb = chainDb} slot (HeaderHash shortHash) = do
-  let point = Consensus.RealPoint slot (Consensus.OneEraHash shortHash)
-      component = (,) <$> fmap BSL.toStrict Consensus.GetRawBlock <*> fmap fromConsensusBlock Consensus.GetBlock
-  liftIO $ Consensus.getBlockComponent chainDb component point
+fetchBlock
+  access@Type.NodeKernelAccess
+    { Type.chainDb = chainDb
+    , Type.leiosDb = leiosDb
+    , Type.codecConfig = ccfg
+    }
+  slot
+  (HeaderHash shortHash) =
+    liftIO $ do
+      let point = Consensus.RealPoint slot (Consensus.OneEraHash shortHash)
+          component = (,) <$> Consensus.GetRawBlock <*> Consensus.GetBlock
+      found <- Consensus.getBlockComponent chainDb component point
+      for found $ \(rawBlock, block) -> do
+        block' <- withCertifiedEbTxs ccfg leiosDb lookupHeader readLeiosStart rawBlock block
+        pure (BSL.toStrict rawBlock, fromConsensusBlock block')
+   where
+    lookupHeader = Consensus.getBlockComponent chainDb Consensus.GetHeader
+    -- Only Leios-era blocks announce EBs, so the search for the block before
+    -- a CertRB stops at the start of the Leios era.
+    readLeiosStart = leiosEraStart <$> readHardForkSummary access
+
+-- | The slot where the Leios era (Dijkstra) starts, read from the list of eras.
+--
+-- 0 if Dijkstra isn't in the list; the search just goes further back.
+leiosEraStart :: History.Summary (CardanoEras Consensus.StandardCrypto) -> SlotNo
+leiosEraStart summary =
+  case drop position (nonEmptyToList (History.getSummary summary)) of
+    dijkstra : _ -> History.boundSlot (History.eraStart dijkstra)
+    [] -> 0
+ where
+  position = fromIntegral (toWord8 dijkstraIndex)
+
+-- | Where Dijkstra is in the list of eras. The type checks that this position
+-- really is Dijkstra, so it won't compile if the eras change.
+dijkstraIndex
+  :: Index (CardanoEras Consensus.StandardCrypto) (Consensus.ConsensusBlockForEra DijkstraEra)
+dijkstraIndex = IS (IS (IS (IS (IS (IS (IS IZ))))))
 
 -- | Read the current mempool contents as a point-in-time snapshot:
 -- transactions added or removed after the read are not reflected.

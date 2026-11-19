@@ -88,6 +88,7 @@ library
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxEval
     Cardano.Rpc.Server.Internal.UtxoRpc.Type.TxOutput
     Cardano.Rpc.Server.NodeKernelAccess
+    Cardano.Rpc.Server.NodeKernelAccess.Internal.CertifiedEb
 
   other-modules:
     Cardano.Rpc.Server.Internal.Orphans
@@ -118,6 +119,7 @@ library
     cardano-ledger-shelley,
     cardano-rpc:gen,
     cardano-slotting,
+    cborg,
     containers,
     contra-tracer,
     data-default,
@@ -200,6 +202,7 @@ test-suite cardano-rpc-test
     cardano-ledger-shelley:testlib,
     cardano-rpc,
     cardano-slotting,
+    cborg,
     containers,
     formatting,
     grpc-spec,
@@ -209,6 +212,7 @@ test-suite cardano-rpc-test
     mtl,
     ouroboros-consensus,
     ouroboros-consensus:cardano,
+    ouroboros-consensus:unstable-consensus-testlib,
     proto-lens,
     proto-lens-protobuf-types,
     ram,
@@ -229,6 +233,7 @@ test-suite cardano-rpc-test
   build-tool-depends: tasty-discover:tasty-discover
   other-modules:
     Test.Cardano.Rpc.ByronTx
+    Test.Cardano.Rpc.CertifiedEb
     Test.Cardano.Rpc.EraSummary
     Test.Cardano.Rpc.Eval
     Test.Cardano.Rpc.FetchBlockTx

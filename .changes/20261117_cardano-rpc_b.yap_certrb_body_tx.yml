@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1421
+kind:
+- feature
+description: |
+  `FetchBlock`, and `FollowTip`'s `undo`, return a CertRB with the transactions of the EB it certifies in `body.tx`, read from the node's LeiosDB. `native_bytes` is still the block as stored on chain. If the transactions can't be read, `CertRbWithoutEbTxs` is thrown, as the node-to-client server does. `FollowTip`'s `apply` still returns a CertRB with an empty `body.tx`.
