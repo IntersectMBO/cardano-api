@@ -56,9 +56,8 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
     then writeInPlace path f
     else replaceAtomically path f
 
--- | Open what is at the path for writing, through it if it is a symbolic link,
--- and write to it. Its owner and permissions stay as they are; a file created
--- through a dangling symbolic link is readable and writable only by its owner.
+-- | Write in place, through a symbolic link if there is one. A new file gets
+-- mode 0600; an existing one keeps its owner and permissions.
 writeInPlace
   :: FilePath
   -> (Handle -> IO ())
