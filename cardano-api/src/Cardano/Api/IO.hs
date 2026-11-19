@@ -46,7 +46,7 @@ import Data.ByteString.Lazy qualified as LBSC
 import Data.Text (Text)
 import Data.Text.IO qualified as Text
 import GHC.IO.Handle.FD (openFileBlocking)
-import System.IO (IOMode (ReadMode), hClose)
+import System.IO (IOMode (ReadMode), hClose, hFlush, stdout)
 
 readByteStringFile
   :: ()
@@ -211,7 +211,7 @@ writeTextOutput mOutput t = runExceptT $
 -- | Write to the file with the first function, or to standard output with the
 -- second one when the path is @-@.
 toFileOrStdout :: (FilePath -> a -> IO ()) -> (a -> IO ()) -> FilePath -> a -> IO ()
-toFileOrStdout _ writeStdout "-" = writeStdout
+toFileOrStdout _ writeStdout "-" = \a -> writeStdout a >> hFlush stdout
 toFileOrStdout writeFile' _ path = writeFile' path
 
 byteStringToFileOrStdout :: FilePath -> ByteString -> IO ()

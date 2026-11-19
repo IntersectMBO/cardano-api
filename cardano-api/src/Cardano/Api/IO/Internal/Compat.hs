@@ -27,7 +27,7 @@ handleFileForWritingWithOwnerPermission
   -> (Handle -> IO ())
   -> m (Either (FileError e) ())
 handleFileForWritingWithOwnerPermission "-" f =
-  liftIO . runExceptT . handleIOExceptT (FileIOError "-") $ f stdout
+  liftIO . runExceptT . handleIOExceptT (FileIOError "-") $ f stdout >> hFlush stdout
 handleFileForWritingWithOwnerPermission path f =
   liftIO $ handleFileForWritingWithOwnerPermissionImpl path f
 
