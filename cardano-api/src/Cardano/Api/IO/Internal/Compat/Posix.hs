@@ -48,10 +48,8 @@ handleFileForWritingWithOwnerPermissionImpl
   -> (Handle -> IO ())
   -> IO (Either (FileError e) ())
 handleFileForWritingWithOwnerPermissionImpl path f = do
-  -- A regular file is replaced by renaming a new file over it. Anything else
-  -- already at the path, like a symbolic link (such as /dev/stdout), a pipe or
-  -- a device, is written in place, since replacing it would not write to what
-  -- it stands for.
+  -- Replacing a symbolic link (like /dev/stdout), pipe or device would not write
+  -- to what it stands for, so those are written in place.
   status <- try $ getSymbolicLinkStatus path
   let isWrittenInPlace = either (\(_ :: IOException) -> False) (not . isRegularFile) status
   if isWrittenInPlace
