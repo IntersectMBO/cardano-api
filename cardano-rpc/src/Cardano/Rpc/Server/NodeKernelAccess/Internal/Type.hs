@@ -21,9 +21,11 @@ import Cardano.Chain.Genesis qualified as Byron (Config)
 import Cardano.Ledger.Alonzo.Genesis qualified as L (AlonzoGenesis)
 import Cardano.Ledger.Conway.Genesis qualified as L (ConwayGenesis)
 import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis)
+import Ouroboros.Consensus.Block (CodecConfig)
 import Ouroboros.Consensus.Cardano.Block (CardanoEras)
 import Ouroboros.Consensus.HardFork.History qualified as History
 import Ouroboros.Consensus.Mempool.API qualified as Consensus (Mempool)
+import Ouroboros.Consensus.Storage.LeiosDB.API (LeiosDbHandle)
 
 import Control.Monad.IO.Class (MonadIO)
 
@@ -34,6 +36,11 @@ data NodeKernelAccess = NodeKernelAccess
   -- ^ Handle to the consensus chain database
   , mempool :: Consensus.Mempool IO (Consensus.CardanoBlock Consensus.StandardCrypto)
   -- ^ Handle to the consensus mempool
+  , leiosDb :: LeiosDbHandle IO
+  -- ^ Handle to the node's LeiosDB, which holds the EBs' transactions.
+  -- A CertRB's transactions are read from here.
+  , codecConfig :: CodecConfig (Consensus.CardanoBlock Consensus.StandardCrypto)
+  -- ^ How the node encodes and decodes blocks
   , systemStart :: SystemStart
   -- ^ Network system start time, extracted from genesis config.
   -- Used together with the era history to convert slots to wall-clock time.

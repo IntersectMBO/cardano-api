@@ -4,37 +4,83 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | A CertRB has no transactions of its own. They are in the EB that the
--- block before it announced. Consensus's
--- 'Ouroboros.Consensus.MiniProtocol.ChainSync.Server.inlineCertifiedEbTxs'
--- puts them into the CertRB. This module adds 'announcedBefore' and
--- 'decodeBlock', which consensus doesn't export.
+-- block before it announced. 'withCertifiedEbTxs' adds them, with consensus's
+-- 'inlineCertifiedEbTxs' and two helpers consensus doesn't export:
+-- 'announcedBefore' and 'decodeBlock'.
 module Cardano.Rpc.Server.NodeKernelAccess.Internal.CertifiedEb
-  ( announcedBefore
+  ( withCertifiedEbTxs
+  , announcedBefore
   , decodeBlock
   )
 where
+
+import Cardano.Api.Network (Serialised (..))
 
 import Cardano.Binary (DecoderError)
 import Ouroboros.Consensus.Block
   ( ChainHash (..)
   , CodecConfig
+  , GetHeader (..)
   , GetPrevHash
   , Header
   , HeaderHash
   , RealPoint (..)
   , SlotNo (..)
+  , blockPoint
   , blockPrevHash
   , blockSlot
   )
+import Ouroboros.Consensus.MiniProtocol.ChainSync.Server
+  ( CertRbWithoutEbTxs (..)
+  , CertRbWithoutEbTxsReason (Undecodable)
+  , inlineCertifiedEbTxs
+  )
 import Ouroboros.Consensus.Storage.LedgerDB.Forker (ResolveLeiosBlock (..))
-import Ouroboros.Consensus.Storage.Serialisation (DecodeDisk (..))
+import Ouroboros.Consensus.Storage.LeiosDB.API (LeiosDbHandle, withReader)
+import Ouroboros.Consensus.Storage.Serialisation (DecodeDisk (..), EncodeDisk)
 
 import Codec.CBOR.Decoding qualified as CBOR
 import Codec.CBOR.Read qualified as CBOR
+import Control.Exception (throwIO)
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as BSL
 
 import LeiosDemoTypes (LeiosPoint)
+
+-- | Add the EB's transactions to a CertRB, using consensus's
+-- 'inlineCertifiedEbTxs'. Other blocks are returned unchanged. Throws
+-- 'CertRbWithoutEbTxs' if the transactions can't be added.
+withCertifiedEbTxs
+  :: forall blk
+   . ( GetPrevHash blk
+     , ResolveLeiosBlock blk
+     , DecodeDisk blk (BSL.ByteString -> Either DecoderError blk)
+     , EncodeDisk blk blk
+     )
+  => CodecConfig blk
+  -> LeiosDbHandle IO
+  -> (RealPoint blk -> IO (Maybe (Header blk)))
+  -- ^ Look up a header in the ChainDB
+  -> IO SlotNo
+  -- ^ The earliest slot to look for the block before in. Only read for a
+  -- CertRB.
+  -> BSL.ByteString
+  -- ^ The block as stored
+  -> blk
+  -> IO blk
+withCertifiedEbTxs ccfg leiosDb lookupHeader readEarliest rawBlock block
+  | not (headerContainsLeiosCert header) = pure block
+  | otherwise = do
+      earliest <- readEarliest
+      prevAnnouncement <- announcedBefore lookupHeader earliest block
+      Serialised withTxs <-
+        withReader leiosDb $ \reader ->
+          inlineCertifiedEbTxs ccfg reader prevAnnouncement pt header (Serialised rawBlock)
+      -- Consensus just encoded this block, so failing to decode it is a bug.
+      either (throwIO . CertRbWithoutEbTxs pt . Undecodable) pure (decodeBlock ccfg withTxs)
+ where
+  header = getHeader block
+  pt = blockPoint block
 
 -- | The EB that the block before this one announced, if any.
 --
