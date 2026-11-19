@@ -117,7 +117,7 @@ prop_writeWithOwnerPermissionsToPipe =
 
 prop_writeWithOwnerPermissionsThroughSymlink :: Property
 prop_writeWithOwnerPermissionsThroughSymlink =
-  H.propertyOnce . H.moduleWorkspace "help" $ \ws ->
+  H.propertyOnce . H.moduleWorkspace "symlink" $ \ws ->
     -- POSIX only: creating symbolic links on Windows needs extra privileges.
     unless isWin32 $ do
       let target = ws </> "target"
