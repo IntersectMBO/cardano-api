@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1407
+kind:
+  - feature
+description: |
+  The gRPC server now honours the `field_mask` of the Query service methods `ReadUtxos`, `SearchUtxos`, `ReadGenesis` and `ReadEraSummary`, which previously accepted the mask and ignored it. Each method returns only the selected fields and skips the node queries and genesis file reads that unselected top-level fields of the response would need, so a client that asks for fewer fields gets a smaller response and often a cheaper one. Selecting any part of the Cardano genesis configuration or of an era boundary still converts all of it. The mask rules are the same as for `ReadParams` and `WatchMempool`.

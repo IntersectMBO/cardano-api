@@ -15,9 +15,13 @@ module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   ( readParamsMethod
   , readParamsFill
   , readUtxosMethod
+  , readUtxosFill
   , searchUtxosMethod
+  , searchUtxosFill
   , readGenesisMethod
+  , readGenesisFill
   , readEraSummaryMethod
+  , readEraSummaryFill
   , paginateByTxIn
   )
 where
@@ -38,6 +42,8 @@ import Cardano.Rpc.Server.NodeKernelAccess
 
 import Cardano.Crypto.Hash.Class qualified as Crypto (hashToBytes)
 import Cardano.Ledger.Shelley.Genesis qualified as L (ShelleyGenesis, sgNetworkMagic)
+import Ouroboros.Consensus.Cardano.Block (CardanoEras)
+import Ouroboros.Consensus.HardFork.History qualified as History
 
 import RIO hiding (toList)
 
@@ -65,20 +71,12 @@ readParamsMethod req = do
   nodeConnInfo <- grab
   let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
   fmap Proto . runFill (runLocalQuery nodeConnInfo) fieldMask $
-    readParamsFill doQueryPParams doQueryTip
+    readParamsFill doQueryPParams queryLedgerTip
  where
   doQueryPParams :: LocalQuery UtxoRpc.PParams
   doQueryPParams = queryInCurrentEra $ \eon -> do
     pparams <- throwEither =<< throwEither =<< queryProtocolParameters (convert eon)
     pure . getProto $ obtainCommonConstraints eon (protocolParamsToUtxoRpcPParams eon pparams)
-  doQueryTip :: LocalQuery UtxoRpc.ChainPoint
-  doQueryTip = do
-    chainPoint <- throwEither =<< queryChainPoint
-    chainBlockNo <- throwEither =<< queryChainBlockNo
-    systemStart <- throwEither =<< querySystemStart
-    eraHistory <- throwEither =<< queryEraHistory
-    timestamp <- slotToTimestamp systemStart eraHistory chainPoint
-    pure . getProto $ mkChainPointMsg chainPoint chainBlockNo timestamp
 
 -- | The fields of a @ReadParams@ response, each from the query that obtains it.
 readParamsFill
@@ -96,6 +94,8 @@ readParamsFill doQueryPParams doQueryTip =
 -- along with the ledger tip.
 -- Returns an empty response when no keys are provided, matching other
 -- UTxO RPC implementations (Dolos, cardano-node-api, Dingo).
+-- Honours the field mask: the UTxO query runs only for @items@, the chain tip
+-- queries only for @ledger_tip@, and each item is built only from the fields selected.
 readUtxosMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadUtxosRequest
@@ -115,29 +115,29 @@ readUtxosMethod req
       utxoFilter <- QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. U5c.keys)
 
       nodeConnInfo <- grab
-      AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-      eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
-
-      let target = VolatileTip
-      (utxo, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-        utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-        chainPoint <- throwEither =<< queryChainPoint
-        chainBlockNo <- throwEither =<< queryChainBlockNo
-        systemStart <- throwEither =<< querySystemStart
-        eraHistory <- throwEither =<< queryEraHistory
-        pure (utxo, chainPoint, chainBlockNo, systemStart, eraHistory)
-
-      timestamp <- slotToTimestamp systemStart eraHistory chainPoint
-
-      pure $
-        defMessage
-          & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
-          & U5c.items .~ obtainCommonConstraints eon (utxoToUtxoRpcAnyUtxoData utxo)
+      let doQueryUtxoFields :: LocalQuery [UtxoFields]
+          doQueryUtxoFields = queryInCurrentEra $ \eon -> do
+            utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
+            pure $ obtainCommonConstraints eon (utxoToUtxoFields utxo)
+      let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+      fmap Proto . runFill (runLocalQuery nodeConnInfo) fieldMask $
+        readUtxosFill doQueryUtxoFields queryLedgerTip
  where
   txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
   txoRefToTxIn r = do
     txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. U5c.hash
     pure $ TxIn txId' (TxIx . fromIntegral $ r ^. U5c.index)
+
+-- | The fields of a @ReadUtxos@ response, each from the query that obtains it.
+readUtxosFill
+  :: Monad m
+  => m [UtxoFields]
+  -- ^ Queries the UTxO entries of the requested keys
+  -> m UtxoRpc.ChainPoint
+  -- ^ Queries the chain tip
+  -> FieldFill m UtxoRpc.ReadUtxosResponse
+readUtxosFill doQueryUtxoFields doQueryTip =
+  fillEach @"items" doQueryUtxoFields (`fillFrom` utxoFill) <> fill @"ledgerTip" doQueryTip
 
 -- | Bounds per-request UTxO lookups the node performs: ReadUtxos keys and
 -- SearchUtxos predicate address terms. SearchUtxos pagination caps at 10_000 per page.
@@ -148,12 +148,14 @@ maxUtxoQueryKeys = 20_000
 -- Filters the UTxO set by a predicate and returns a paginated result.
 -- The predicate must contain exact address matches so the query can be
 -- narrowed; broad predicates are rejected with @INVALID_ARGUMENT@.
+-- Honours the field mask: the UTxO query runs only for @items@ or @next_token@,
+-- the chain tip queries only for @ledger_tip@, and each item is built only from
+-- the fields selected.
 searchUtxosMethod
   :: MonadRpc e m
   => Proto UtxoRpc.SearchUtxosRequest
   -> m (Proto UtxoRpc.SearchUtxosResponse)
 searchUtxosMethod req = do
-  -- TODO: field masks are ignored for now
   let maxItems = req ^. U5c.maxItems
       startToken = req ^. U5c.maybe'startToken
 
@@ -174,29 +176,28 @@ searchUtxosMethod req = do
         "predicate too broad: must contain exact address match to avoid fetching the entire UTxO set"
 
   nodeConnInfo <- grab
-  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
-  eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
+  let doQueryPage :: LocalQuery ([UtxoFields], Maybe Text)
+      doQueryPage = queryInCurrentEra $ \eon -> obtainCommonConstraints eon $ do
+        utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
+        let (page, nextTok) =
+              paginateByTxIn (matchesCompiledPredicate compiledPredicate) (unUTxO utxo) startToken maxItems
+        pure (map (uncurry txInTxOutToUtxoFields) page, nextTok)
+  let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+  fmap Proto . runFill (runLocalQuery nodeConnInfo) fieldMask $
+    searchUtxosFill doQueryPage queryLedgerTip
 
-  let target = VolatileTip
-  (utxo, chainPoint, chainBlockNo, systemStart, eraHistory) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-    utxo <- throwEither =<< throwEither =<< queryUtxo (convert eon) utxoFilter
-    chainPoint <- throwEither =<< queryChainPoint
-    chainBlockNo <- throwEither =<< queryChainBlockNo
-    systemStart <- throwEither =<< querySystemStart
-    eraHistory <- throwEither =<< queryEraHistory
-    pure (utxo, chainPoint, chainBlockNo, systemStart, eraHistory)
-
-  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
-
-  obtainCommonConstraints eon $ do
-    let (page, nextTok) =
-          paginateByTxIn (matchesCompiledPredicate compiledPredicate) (unUTxO utxo) startToken maxItems
-
-    pure $
-      defMessage
-        & U5c.ledgerTip .~ mkChainPointMsg chainPoint chainBlockNo timestamp
-        & U5c.items .~ map (uncurry txInTxOutToAnyUtxoData) page
-        & U5c.maybe'nextToken .~ nextTok
+-- | The fields of a @SearchUtxos@ response, each from the query that obtains it.
+-- The page query runs once for @items@ and @next_token@ together.
+searchUtxosFill
+  :: Applicative m
+  => m ([UtxoFields], Maybe Text)
+  -- ^ Queries one page of matching UTxO entries and the token of the next page
+  -> m UtxoRpc.ChainPoint
+  -- ^ Queries the chain tip
+  -> FieldFill m UtxoRpc.SearchUtxosResponse
+searchUtxosFill doQueryPage doQueryTip =
+  fillShared doQueryPage (fillEach @"items" fst (`fillFrom` utxoFill) <> fill @"maybe'nextToken" snd)
+    <> fill @"ledgerTip" doQueryTip
 
 -- | Handle the @ReadGenesis@ RPC method.
 -- Returns the chain's identity - the Shelley genesis hash and the CAIP-2 chain
@@ -209,25 +210,44 @@ searchUtxosMethod req = do
 -- changed since the node started is therefore raised on cache misses only: a
 -- file edited while the cache is warm goes unnoticed until the cache next
 -- empties, which is at most five idle minutes later.
+-- Honours the field mask: the Shelley genesis is read only for @caip2@ or @cardano@,
+-- and 'genesisBundleToProto' runs only for @cardano@.
 readGenesisMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadGenesisRequest
   -> m (Proto UtxoRpc.ReadGenesisResponse)
-readGenesisMethod _req = do
-  -- TODO: field masks are ignored for now
+readGenesisMethod req = do
   nodeKernelAccess <- grabNodeKernelAccess
   let genesisBundle@GenesisBundle
         { shelleyGenesisHash
         , shelleyGenesis = (shelleyGenesisFile, shelleyGenesisCache)
         } = genesisConfig nodeKernelAccess
-  shelleyGenesis <-
-    readThroughCache shelleyGenesisCache $
-      readShelleyGenesisWithInitialFunds shelleyGenesisFile shelleyGenesisHash
-  pure $
-    defMessage
-      & U5c.genesis .~ Crypto.hashToBytes (unGenesisHashShelley shelleyGenesisHash)
-      & U5c.caip2 .~ networkMagicToCaip2 (L.sgNetworkMagic shelleyGenesis)
-      & U5c.cardano .~ genesisBundleToProto genesisBundle shelleyGenesis
+      doReadShelley =
+        readThroughCache shelleyGenesisCache $
+          readShelleyGenesisWithInitialFunds shelleyGenesisFile shelleyGenesisHash
+  let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+  fmap Proto . runFill id fieldMask $
+    readGenesisFill
+      (Crypto.hashToBytes $ unGenesisHashShelley shelleyGenesisHash)
+      doReadShelley
+      (getProto . genesisBundleToProto genesisBundle)
+
+-- | The fields of a @ReadGenesis@ response. The Shelley genesis is read once, and
+-- only when @caip2@ or @cardano@ is selected; the conversion runs only for @cardano@.
+readGenesisFill
+  :: Applicative m
+  => ByteString
+  -- ^ The Blake2b-256 hash of the Shelley genesis file
+  -> m L.ShelleyGenesis
+  -- ^ Reads the Shelley genesis with its initial funds
+  -> (L.ShelleyGenesis -> UtxoRpc.Genesis)
+  -- ^ Converts the Shelley genesis and the rest of the bundle to the @cardano@ field
+  -> FieldFill m UtxoRpc.ReadGenesisResponse
+readGenesisFill genesisHash doReadShelley toCardano =
+  fill @"genesis" (pure genesisHash)
+    <> fillShared
+      doReadShelley
+      (fill @"caip2" (networkMagicToCaip2 . L.sgNetworkMagic) <> fill @"cardano" toCardano)
 
 -- | Re-read the Shelley genesis file to recover the network's initial funds.
 --
@@ -282,16 +302,30 @@ readShelleyGenesisWithInitialFunds shelleyGenesisFile@(File path) bootGenesisHas
 -- Returns the node's hard-fork era summary: one entry per era the node's
 -- ledger state has seen so far, with name and start/end boundaries. See
 -- 'eraSummariesToProto' for exactly which fields are populated.
+-- Honours the field mask: the era history is read only for @cardano@, and each
+-- era's name, start and end are converted only when selected.
 readEraSummaryMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadEraSummaryRequest
   -> m (Proto UtxoRpc.ReadEraSummaryResponse)
-readEraSummaryMethod _req = do
-  -- TODO: field masks are ignored for now
+readEraSummaryMethod req = do
   nodeKernelAccess <- grabNodeKernelAccess
-  summary <- readHardForkSummary nodeKernelAccess
-  pure $
-    defMessage & U5c.cardano .~ eraSummariesToProto (nodeKernelSystemStart nodeKernelAccess) summary
+  let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
+  fmap Proto . runFill id fieldMask $
+    readEraSummaryFill (readHardForkSummary nodeKernelAccess) (nodeKernelSystemStart nodeKernelAccess)
+
+-- | The fields of a @ReadEraSummary@ response. The era history is read only when
+-- the mask selects @cardano@, and each era's fields are converted only when selected.
+readEraSummaryFill
+  :: Monad m
+  => m (History.Summary (CardanoEras StandardCrypto))
+  -- ^ Reads the node's hard-fork era summary
+  -> SystemStart
+  -- ^ The system start of the chain
+  -> FieldFill m UtxoRpc.ReadEraSummaryResponse
+readEraSummaryFill doReadSummary systemStart =
+  fillSub @"cardano" $
+    fillEach @"summaries" (eraSummaryEntries <$> doReadSummary) (`fillFrom` eraSummaryFill systemStart)
 
 -- | The CAIP-2 chain identifier for a Cardano network, keyed on the Shelley
 -- network magic.
@@ -364,6 +398,16 @@ queryInCurrentEra query = do
   AnyCardanoEra era <- throwEither =<< queryCurrentEra
   eon <- forEraInEon @Era era (error "Minimum Conway era required") pure
   query eon
+
+-- | Query the @ledger_tip@ chain point.
+queryLedgerTip :: LocalQuery UtxoRpc.ChainPoint
+queryLedgerTip = do
+  chainPoint <- throwEither =<< queryChainPoint
+  chainBlockNo <- throwEither =<< queryChainBlockNo
+  systemStart <- throwEither =<< querySystemStart
+  eraHistory <- throwEither =<< queryEraHistory
+  timestamp <- slotToTimestamp systemStart eraHistory chainPoint
+  pure . getProto $ mkChainPointMsg chainPoint chainBlockNo timestamp
 
 slotToTimestamp
   :: HasCallStack
