@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1414
+kind:
+- bugfix
+description: On POSIX, the `*WithOwnerPermissions` writers and `writeSecrets` no longer report an error when the file was written and only the final sync of its directory failed.

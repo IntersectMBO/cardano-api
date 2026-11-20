@@ -100,7 +100,8 @@ writeFileTextEnvelope outputFile mbDescr a =
 --   @umask@), and its ownership is set to the current (real) user. The
 --   contents are synced to disk before the rename and the directory after
 --   it, so a power failure can neither leave an empty file at the target
---   path nor undo a completed write. Only a regular file is replaced this
+--   path nor undo a completed write. If that directory sync fails, the write
+--   still succeeds. Only a regular file is replaced this
 --   way: anything else at the target path, such as a symlink (like
 --   @\/dev\/stdout@), a pipe or a device, is written in place instead,
 --   keeping its owner and permissions, without these guarantees. A regular

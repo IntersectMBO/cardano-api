@@ -21,8 +21,8 @@ where
 import           Cardano.Api.Error (FileError (..), throwErrorM)
 import           Cardano.Api.IO.Internal.Base
 
-import           Control.Exception.Safe (IOException, bracket, bracketOnError, finally, try)
-import           Control.Monad (forM_, when)
+import           Control.Exception.Safe (IOException, bracket, bracketOnError, finally, try, tryIO)
+import           Control.Monad (forM_, void, when)
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except.Extra (left)
@@ -83,7 +83,7 @@ replaceAtomically path f = do
   -- always holds either its previous contents or the complete new contents.
   user <- getRealUserID
   fmap (first $ FileIOError path) $
-    try $
+    try $ do
       bracketOnError
         (IO.openTempFile targetDir $ targetFile <.> "tmp")
         (\(tmpPath, h) -> IO.hClose h `finally` IO.removeFile tmpPath)
@@ -99,13 +99,15 @@ replaceAtomically path f = do
               closeFd
               (\fd -> setFdOwnerAndGroup fd user (-1) >> fileSynchronise fd)
             IO.renameFile tmpPath path
-            -- Sync the directory as well, so the rename itself (and not just
-            -- the file contents) survives a power failure.
-            bracket
-              (openFd targetDir ReadOnly defaultFileFlags)
-              closeFd
-              fileSynchronise
         )
+      -- Sync the directory as well, so the rename itself (and not just the
+      -- file contents) survives a power failure. The rename is done, so a
+      -- failed sync does not fail the write.
+      void . tryIO $
+        bracket
+          (openFd targetDir ReadOnly defaultFileFlags)
+          closeFd
+          fileSynchronise
  where
   (targetDir, targetFile) = splitFileName path
 
