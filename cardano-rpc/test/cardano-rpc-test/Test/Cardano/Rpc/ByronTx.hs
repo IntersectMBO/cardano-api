@@ -11,10 +11,8 @@ import Cardano.Chain.Block qualified as Byron
   , blockHashAnnotated
   , boundaryHeader
   , boundaryHeaderHashAnnotated
-  , decCBORABlockOrBoundary
   )
 import Cardano.Chain.Common (lovelaceToInteger)
-import Cardano.Chain.Epoch.File (mainnetEpochSlots)
 import Cardano.Chain.UTxO
   ( ATxAux (..)
   , Tx (..)
@@ -38,7 +36,7 @@ import Cardano.Crypto qualified as Byron
   , serializeCborHash
   )
 import Cardano.Crypto.Wallet qualified as WC
-import Cardano.Ledger.Binary (Annotated (..), byronProtVer, decodeFullDecoder, slice)
+import Cardano.Ledger.Binary (Annotated (..))
 
 import RIO
 
@@ -50,6 +48,7 @@ import Network.GRPC.Spec (Proto)
 
 import Test.Cardano.Chain.UTxO.Gen (genTxAux)
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
+import Test.Cardano.Rpc.FixtureBlock (decodeBlockOrBoundaryFixture)
 
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
@@ -221,21 +220,3 @@ hprop_byron_boundary_block_txs_golden = H.propertyOnce $ do
 
   H.note_ "Boundary blocks carry no transactions"
   byronBlockTxs boundaryBlock === []
-
--- | Decode a 'Byron.ABlockOrBoundary' fixture from the wire encoding the
--- node's ImmutableDB stores, annotating the result with the original bytes,
--- exactly as a block fetched from the node would carry them.
-decodeBlockOrBoundaryFixture
-  :: HasCallStack
-  => MonadTest m
-  => LBS.ByteString
-  -> m (Byron.ABlockOrBoundary ByteString)
-decodeBlockOrBoundaryFixture blockBytes = do
-  blockOrBoundary <-
-    H.leftFail $
-      decodeFullDecoder
-        byronProtVer
-        "ABlockOrBoundary"
-        (Byron.decCBORABlockOrBoundary mainnetEpochSlots)
-        blockBytes
-  pure $ LBS.toStrict . slice blockBytes <$> blockOrBoundary

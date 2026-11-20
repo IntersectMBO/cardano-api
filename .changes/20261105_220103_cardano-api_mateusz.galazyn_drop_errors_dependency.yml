@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1397
+kind:
+- maintenance
+description: |
+  cardano-api no longer depends on the `errors` package.

@@ -239,7 +239,6 @@ import Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 
 import Control.Concurrent
 import Control.DeepSeq
-import Control.Error.Util (note)
 import Control.Exception.Safe hiding (MonadThrow)
 import Control.Monad
 import Control.Monad.Class.MonadST (MonadST)
@@ -2131,9 +2130,8 @@ isLeadingSlotsTPraos slotRangeOfInterest poolid snapshotPoolDistr eNonce vrfSkey
   let certifiedVrf s = Crypto.evalCertified () (TPraos.mkSeed TPraos.seedL s eNonce) vrfSkey
 
   stakePoolStake <-
-    ShelleyAPI.individualPoolStake
-      <$> Map.lookup poolHash snapshotPoolDistr
-      & note (LeaderErrStakePoolHasNoStake poolid)
+    (ShelleyAPI.individualPoolStake <$> Map.lookup poolHash snapshotPoolDistr)
+      ?! LeaderErrStakePoolHasNoStake poolid
 
   let isLeader s = TPraos.checkLeaderValue (Crypto.certifiedOutput (certifiedVrf s)) stakePoolStake activeSlotCoeff'
 
@@ -2154,8 +2152,8 @@ isLeadingSlotsPraos slotRangeOfInterest poolid snapshotPoolDistr eNonce vrfSkey 
   let StakePoolKeyHash poolHash = poolid
 
   stakePoolStake <-
-    note (LeaderErrStakePoolHasNoStake poolid) $
-      ShelleyAPI.individualPoolStake <$> Map.lookup poolHash snapshotPoolDistr
+    (ShelleyAPI.individualPoolStake <$> Map.lookup poolHash snapshotPoolDistr)
+      ?! LeaderErrStakePoolHasNoStake poolid
 
   let isLeader slotNo = checkLeaderNatValue certifiedNatValue stakePoolStake activeSlotCoeff'
        where
