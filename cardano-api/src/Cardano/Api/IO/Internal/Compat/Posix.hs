@@ -21,21 +21,25 @@ where
 import           Cardano.Api.Error (FileError (..), throwErrorM)
 import           Cardano.Api.IO.Internal.Base
 
-import           Control.Exception (bracket, bracketOnError, try)
-import           Control.Monad (forM_, when)
+import           Control.Exception.Safe (IOException, bracket, bracketOnError, finally, try, tryIO)
+import           Control.Monad (forM_, void, when)
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except.Extra (left)
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
+import           Foreign.C.Error (Errno (..), eACCES, eBUSY)
+import           GHC.IO.Exception (ioe_errno)
 import           GHC.Stack (HasCallStack)
 import qualified System.Directory as IO
 import           System.FilePath (splitFileName, (<.>), (</>))
 import qualified System.IO as IO
 import           System.IO (Handle)
-import           System.Posix.Files (fileMode, getFileStatus, groupModes, intersectFileModes,
-                   nullFileMode, otherModes, ownerReadMode, setFdOwnerAndGroup, setFileMode)
-import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, handleToFd, openFd)
+import           System.Posix.Files (fileMode, getFileStatus, getSymbolicLinkStatus, groupModes,
+                   intersectFileModes, isRegularFile, nullFileMode, otherModes, ownerReadMode,
+                   ownerWriteMode, setFdOwnerAndGroup, setFileMode, unionFileModes)
+import           System.Posix.IO (OpenFileFlags (..), OpenMode (..), closeFd, defaultFileFlags,
+                   fdToHandle, handleToFd, openFd)
 import           System.Posix.Types (FileMode)
 import           System.Posix.Unistd (fileSynchronise)
 import           System.Posix.User (getRealUserID)
@@ -46,19 +50,45 @@ handleFileForWritingWithOwnerPermissionImpl
   -> (Handle -> IO ())
   -> IO (Either (FileError e) ())
 handleFileForWritingWithOwnerPermissionImpl path f = do
+  -- Replacing a symbolic link (like /dev/stdout), pipe or device would not write
+  -- to what it stands for, so those are written in place.
+  status <- try $ getSymbolicLinkStatus path
+  let isWrittenInPlace = either (\(_ :: IOException) -> False) (not . isRegularFile) status
+  if isWrittenInPlace
+    then writeInPlace path f
+    else replaceAtomically path f
+
+-- | Write in place, through a symbolic link if there is one. A new file gets
+-- mode 0600; an existing one keeps its owner and permissions.
+writeInPlace
+  :: FilePath
+  -> (Handle -> IO ())
+  -> IO (Either (FileError e) ())
+writeInPlace path f =
+  fmap (first $ FileIOError path) $
+    try $
+      bracket
+        (fdToHandle =<< openFd path WriteOnly flags)
+        IO.hClose
+        f
+ where
+  flags = defaultFileFlags{creat = Just (unionFileModes ownerReadMode ownerWriteMode), trunc = True}
+
+replaceAtomically
+  :: FilePath
+  -> (Handle -> IO ())
+  -> IO (Either (FileError e) ())
+replaceAtomically path f = do
   -- On a unix based system, we write to a fresh temporary file (which
   -- 'IO.openTempFile' creates with owner-only permissions) and rename it over
   -- the target path once the contents are safely on disk. The target path thus
   -- always holds either its previous contents or the complete new contents.
   user <- getRealUserID
-  fmap (first $ FileIOError path) $
-    try $
+  result <-
+    try $ do
       bracketOnError
         (IO.openTempFile targetDir $ targetFile <.> "tmp")
-        ( \(tmpPath, h) -> do
-            IO.hClose h
-            IO.removeFile tmpPath
-        )
+        (\(tmpPath, h) -> IO.hClose h `finally` IO.removeFile tmpPath)
         ( \(tmpPath, h) -> do
             f h
             -- 'handleToFd' flushes the handle's buffers and closes it, handing
@@ -71,13 +101,21 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
               closeFd
               (\fd -> setFdOwnerAndGroup fd user (-1) >> fileSynchronise fd)
             IO.renameFile tmpPath path
-            -- Sync the directory as well, so the rename itself (and not just
-            -- the file contents) survives a power failure.
-            bracket
-              (openFd targetDir ReadOnly defaultFileFlags)
-              closeFd
-              fileSynchronise
         )
+      -- Sync the directory as well, so the rename itself (and not just the
+      -- file contents) survives a power failure. The rename is done, so a
+      -- failed sync does not fail the write.
+      void . tryIO $
+        bracket
+          (openFd targetDir ReadOnly defaultFileFlags)
+          closeFd
+          fileSynchronise
+  case result of
+    -- A file in a read-only directory (no temporary file can be made next to
+    -- it) or a file mounted on its own (it cannot be renamed over) can still
+    -- be written in place, though not atomically.
+    Left e | (Errno <$> ioe_errno e) `elem` [Just eACCES, Just eBUSY] -> writeInPlace path f
+    _ -> pure $ first (FileIOError path) result
  where
   (targetDir, targetFile) = splitFileName path
 

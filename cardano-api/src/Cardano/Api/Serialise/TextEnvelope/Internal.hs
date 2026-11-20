@@ -91,19 +91,29 @@ writeFileTextEnvelope outputFile mbDescr a =
 -- therefore never exists in a partially written state: if writing fails
 -- midway (e.g. on a crash or a full disk), its previous contents are left
 -- untouched. A pre-existing file is replaced wholesale: its previous
--- permission bits are not preserved, and a symlink is replaced by a regular
--- file rather than written through.
+-- permission bits are not preserved.
+--
+-- The path @-@ means standard output.
 --
 -- * On POSIX systems, the file is created with @0600@ permissions (read
 --   and write for the file owner only, further filtered by the process's
 --   @umask@), and its ownership is set to the current (real) user. The
 --   contents are synced to disk before the rename and the directory after
 --   it, so a power failure can neither leave an empty file at the target
---   path nor undo a completed write.
+--   path nor undo a completed write. If that directory sync fails, the write
+--   still succeeds. Only a regular file is replaced this
+--   way: anything else at the target path, such as a symlink (like
+--   @\/dev\/stdout@), a pipe or a device, is written in place instead,
+--   keeping its owner and permissions, without these guarantees. So is a
+--   regular file that cannot be replaced, such as one in a read-only
+--   directory or one mounted on its own (like a key file mounted into a
+--   container). A regular file with more than one hard link is replaced as
+--   well, so its other names keep the old contents.
 --
 -- * On Windows, the file is owned by the current user, but no explicit
 --   ACL is set: the file inherits the access control list of the target
---   directory.
+--   directory. A symlink is replaced by a regular file rather than written
+--   through.
 --
 -- * On WASM, this is currently a no-op: no file is written at all.
 --

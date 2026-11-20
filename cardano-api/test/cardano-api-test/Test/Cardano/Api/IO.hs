@@ -7,13 +7,32 @@ where
 
 import Cardano.Api
 
+import Control.Exception (bracket, finally)
 import Control.Monad (unless)
 import Data.ByteString qualified as BS
 import Data.Either (isLeft)
-import System.Directory (removeFile)
+import GHC.IO.Handle (hDuplicate, hDuplicateTo)
+import System.Directory
+  ( createDirectory
+  , createFileLink
+  , getPermissions
+  , pathIsSymbolicLink
+  , removeFile
+  , setOwnerWritable
+  , setPermissions
+  )
 import System.FilePath ((</>))
+import System.IO
+  ( BufferMode (..)
+  , IOMode (..)
+  , hClose
+  , hGetBuffering
+  , hSetBuffering
+  , stdout
+  , withFile
+  )
 
-import Test.Cardano.Api.IO.Compat (makeGroupOtherReadable)
+import Test.Cardano.Api.IO.Compat (makeGroupOtherReadable, readPipeWrittenThrough)
 
 import Hedgehog
 import Hedgehog.Extras qualified as H
@@ -92,6 +111,106 @@ prop_writeSecretsOverwritesItsOwnOutput =
       contents <- liftIO $ BS.readFile (ws </> "secret.000.key")
       contents === "new"
 
+prop_writeWithOwnerPermissionsToPipe :: Property
+prop_writeWithOwnerPermissionsToPipe =
+  H.propertyOnce $
+    -- POSIX only: Windows has no /dev/fd paths.
+    unless isWin32 $ do
+      (result, contents) <-
+        liftIO . readPipeWrittenThrough $ \path ->
+          writeLazyByteStringFileWithOwnerPermissions (File path) "contents"
+
+      H.leftFail (result :: Either (FileError ()) ())
+      contents === "contents"
+
+prop_writeWithOwnerPermissionsThroughSymlink :: Property
+prop_writeWithOwnerPermissionsThroughSymlink =
+  H.propertyOnce . H.moduleWorkspace "symlink" $ \ws ->
+    -- POSIX only: creating symbolic links on Windows needs extra privileges.
+    unless isWin32 $ do
+      let target = ws </> "target"
+          link = ws </> "link"
+
+      liftIO $ BS.writeFile target "old contents"
+      liftIO $ createFileLink target link
+
+      result <- liftIO $ writeLazyByteStringFileWithOwnerPermissions (File link) "new contents"
+
+      H.leftFail (result :: Either (FileError ()) ())
+
+      isLink <- liftIO $ pathIsSymbolicLink link
+      assert isLink
+
+      contents <- liftIO $ BS.readFile target
+      contents === "new contents"
+
+prop_writeWithOwnerPermissionsInReadOnlyDirectory :: Property
+prop_writeWithOwnerPermissionsInReadOnlyDirectory =
+  H.propertyOnce . H.moduleWorkspace "read-only" $ \ws ->
+    -- POSIX only: Windows does not stop new files in a read-only directory.
+    unless isWin32 $ do
+      let directory = ws </> "directory"
+          file = directory </> "file"
+
+      liftIO $ createDirectory directory
+      liftIO $ BS.writeFile file "old contents"
+
+      -- No new file can be made next to the file, but the file is writable.
+      permissions <- liftIO $ getPermissions directory
+      liftIO $ setPermissions directory (setOwnerWritable False permissions)
+
+      result <-
+        liftIO $
+          writeLazyByteStringFileWithOwnerPermissions (File file) "new contents"
+            `finally` setPermissions directory permissions
+
+      H.leftFail (result :: Either (FileError ()) ())
+
+      contents <- liftIO $ BS.readFile file
+      contents === "new contents"
+
+prop_writeDashToStdout :: Property
+prop_writeDashToStdout =
+  H.propertyOnce . H.moduleWorkspace "stdout" $ \ws ->
+    -- POSIX only, like the pipe test.
+    unless isWin32 $ do
+      let captured = ws </> "captured"
+
+      (ownerResult, ownerOutput) <-
+        liftIO . captureStdout captured $
+          writeLazyByteStringFileWithOwnerPermissions (File "-") "owner-only contents"
+
+      H.leftFail (ownerResult :: Either (FileError ()) ())
+      assert $ "owner-only contents" `BS.isInfixOf` ownerOutput
+
+      (plainResult, plainOutput) <-
+        liftIO . captureStdout captured $
+          writeByteStringFile (File "-") "plain contents"
+
+      H.leftFail (plainResult :: Either (FileError ()) ())
+      assert $ "plain contents" `BS.isInfixOf` plainOutput
+
+-- | Run the action with standard output going to the file, block buffered, and
+-- return the action's result with what reached the file by the time the action
+-- returned. Output of other tests running meanwhile may reach the file too.
+captureStdout :: FilePath -> IO a -> IO (a, BS.ByteString)
+captureStdout file action =
+  bracket redirect restore $ \_ -> do
+    result <- action
+    contents <- BS.readFile file
+    pure (result, contents)
+ where
+  redirect = do
+    buffering <- hGetBuffering stdout
+    original <- hDuplicate stdout
+    withFile file WriteMode (`hDuplicateTo` stdout)
+    hSetBuffering stdout (BlockBuffering Nothing)
+    pure (original, buffering)
+  restore (original, buffering) = do
+    hDuplicateTo original stdout
+    hClose original
+    hSetBuffering stdout buffering
+
 tests :: TestTree
 tests =
   testGroup
@@ -99,4 +218,12 @@ tests =
     [ testProperty "Create VRF File with Owner Permissions" prop_createVrfFileWithOwnerPermissions
     , testProperty "Overwrite file with Owner Permissions" prop_overwriteFileWithOwnerPermissions
     , testProperty "writeSecrets overwrites its own output" prop_writeSecretsOverwritesItsOwnOutput
+    , testProperty "Write with Owner Permissions to a pipe" prop_writeWithOwnerPermissionsToPipe
+    , testProperty
+        "Write with Owner Permissions through a symbolic link"
+        prop_writeWithOwnerPermissionsThroughSymlink
+    , testProperty
+        "Write with Owner Permissions in a read-only directory"
+        prop_writeWithOwnerPermissionsInReadOnlyDirectory
+    , testProperty "Write to standard output for the path -" prop_writeDashToStdout
     ]

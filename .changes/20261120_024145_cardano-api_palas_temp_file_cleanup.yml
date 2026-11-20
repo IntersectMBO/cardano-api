@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1414
+kind:
+- bugfix
+description: The `*WithOwnerPermissions` writers and `writeSecrets` no longer leave a temporary file behind when a write fails, for example on a full disk.

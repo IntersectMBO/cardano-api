@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1414
+kind:
+- breaking
+- bugfix
+- feature
+description: The `*WithOwnerPermissions` writers can write to `/dev/stdout`, pipes and devices again; on POSIX, a path that is not a regular file, such as a symbolic link, is written in place, keeping its owner and permissions, instead of being replaced (use the target's own path to keep the atomic replacement). The file writers in `Cardano.Api.IO` write to standard output when the path is `-` (use `./-` for a file named `-`).
