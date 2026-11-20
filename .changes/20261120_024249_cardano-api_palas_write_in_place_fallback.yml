@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1414
+kind:
+- bugfix
+description: On POSIX, the `*WithOwnerPermissions` writers and `writeSecrets` write in place, keeping the owner and permissions, to a file they cannot replace, such as a file in a read-only directory or a file mounted on its own into a container, instead of failing.

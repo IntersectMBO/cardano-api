@@ -109,8 +109,9 @@ writeByteStringFile fp bs =
 -- atomically: the contents are written to a temporary file which is then
 -- renamed over the target path, so a failed write never destroys the
 -- previous contents. The path @-@ means standard output, and on POSIX a
--- path that is not a regular file, such as @\/dev\/stdout@, is written in
--- place. The detailed per-platform guarantees are documented on
+-- path that is not a regular file, such as @\/dev\/stdout@, or a file that
+-- cannot be replaced, is written in place. The detailed per-platform
+-- guarantees are documented on
 -- @writeFileTextEnvelopeWithOwnerPermissions@ in
 -- "Cardano.Api.Serialise.TextEnvelope".
 writeByteStringFileWithOwnerPermissions

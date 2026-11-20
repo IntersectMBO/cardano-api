@@ -104,9 +104,11 @@ writeFileTextEnvelope outputFile mbDescr a =
 --   still succeeds. Only a regular file is replaced this
 --   way: anything else at the target path, such as a symlink (like
 --   @\/dev\/stdout@), a pipe or a device, is written in place instead,
---   keeping its owner and permissions, without these guarantees. A regular
---   file with more than one hard link is replaced as well, so its other
---   names keep the old contents.
+--   keeping its owner and permissions, without these guarantees. So is a
+--   regular file that cannot be replaced, such as one in a read-only
+--   directory or one mounted on its own (like a key file mounted into a
+--   container). A regular file with more than one hard link is replaced as
+--   well, so its other names keep the old contents.
 --
 -- * On Windows, the file is owned by the current user, but no explicit
 --   ACL is set: the file inherits the access control list of the target

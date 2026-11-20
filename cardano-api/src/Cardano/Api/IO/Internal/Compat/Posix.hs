@@ -28,6 +28,8 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except.Extra (left)
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
+import           Foreign.C.Error (Errno (..), eACCES, eBUSY)
+import           GHC.IO.Exception (ioe_errno)
 import           GHC.Stack (HasCallStack)
 import qualified System.Directory as IO
 import           System.FilePath (splitFileName, (<.>), (</>))
@@ -82,7 +84,7 @@ replaceAtomically path f = do
   -- the target path once the contents are safely on disk. The target path thus
   -- always holds either its previous contents or the complete new contents.
   user <- getRealUserID
-  fmap (first $ FileIOError path) $
+  result <-
     try $ do
       bracketOnError
         (IO.openTempFile targetDir $ targetFile <.> "tmp")
@@ -108,6 +110,12 @@ replaceAtomically path f = do
           (openFd targetDir ReadOnly defaultFileFlags)
           closeFd
           fileSynchronise
+  case result of
+    -- A file in a read-only directory (no temporary file can be made next to
+    -- it) or a file mounted on its own (it cannot be renamed over) can still
+    -- be written in place, though not atomically.
+    Left e | (Errno <$> ioe_errno e) `elem` [Just eACCES, Just eBUSY] -> writeInPlace path f
+    _ -> pure $ first (FileIOError path) result
  where
   (targetDir, targetFile) = splitFileName path
 

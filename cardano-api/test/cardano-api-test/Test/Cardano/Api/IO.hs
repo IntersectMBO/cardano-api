@@ -7,12 +7,20 @@ where
 
 import Cardano.Api
 
-import Control.Exception (bracket)
+import Control.Exception (bracket, finally)
 import Control.Monad (unless)
 import Data.ByteString qualified as BS
 import Data.Either (isLeft)
 import GHC.IO.Handle (hDuplicate, hDuplicateTo)
-import System.Directory (createFileLink, pathIsSymbolicLink, removeFile)
+import System.Directory
+  ( createDirectory
+  , createFileLink
+  , getPermissions
+  , pathIsSymbolicLink
+  , removeFile
+  , setOwnerWritable
+  , setPermissions
+  )
 import System.FilePath ((</>))
 import System.IO
   ( BufferMode (..)
@@ -136,6 +144,31 @@ prop_writeWithOwnerPermissionsThroughSymlink =
       contents <- liftIO $ BS.readFile target
       contents === "new contents"
 
+prop_writeWithOwnerPermissionsInReadOnlyDirectory :: Property
+prop_writeWithOwnerPermissionsInReadOnlyDirectory =
+  H.propertyOnce . H.moduleWorkspace "read-only" $ \ws ->
+    -- POSIX only: Windows does not stop new files in a read-only directory.
+    unless isWin32 $ do
+      let directory = ws </> "directory"
+          file = directory </> "file"
+
+      liftIO $ createDirectory directory
+      liftIO $ BS.writeFile file "old contents"
+
+      -- No new file can be made next to the file, but the file is writable.
+      permissions <- liftIO $ getPermissions directory
+      liftIO $ setPermissions directory (setOwnerWritable False permissions)
+
+      result <-
+        liftIO $
+          writeLazyByteStringFileWithOwnerPermissions (File file) "new contents"
+            `finally` setPermissions directory permissions
+
+      H.leftFail (result :: Either (FileError ()) ())
+
+      contents <- liftIO $ BS.readFile file
+      contents === "new contents"
+
 prop_writeDashToStdout :: Property
 prop_writeDashToStdout =
   H.propertyOnce . H.moduleWorkspace "stdout" $ \ws ->
@@ -189,5 +222,8 @@ tests =
     , testProperty
         "Write with Owner Permissions through a symbolic link"
         prop_writeWithOwnerPermissionsThroughSymlink
+    , testProperty
+        "Write with Owner Permissions in a read-only directory"
+        prop_writeWithOwnerPermissionsInReadOnlyDirectory
     , testProperty "Write to standard output for the path -" prop_writeDashToStdout
     ]
