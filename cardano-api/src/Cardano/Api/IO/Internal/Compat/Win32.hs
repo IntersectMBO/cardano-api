@@ -19,7 +19,7 @@ where
 import           Cardano.Api.Error (FileError (..), throwErrorM)
 import           Cardano.Api.IO.Internal.Base
 
-import           Control.Exception (bracketOnError)
+import           Control.Exception (bracketOnError, finally)
 import           Control.Monad (forM_, when)
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.IO.Class (liftIO)
@@ -47,7 +47,7 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
   bracketOnError
     (IO.openTempFile targetDir $ targetFile <.> "tmp")
     ( \(tmpPath, h) -> do
-        IO.hClose h >> IO.removeFile tmpPath
+        IO.hClose h `finally` IO.removeFile tmpPath
         return . Left $ FileErrorTempFile path tmpPath h
     )
     ( \(tmpPath, h) -> do

@@ -21,7 +21,7 @@ where
 import           Cardano.Api.Error (FileError (..), throwErrorM)
 import           Cardano.Api.IO.Internal.Base
 
-import           Control.Exception.Safe (IOException, bracket, bracketOnError, try)
+import           Control.Exception.Safe (IOException, bracket, bracketOnError, finally, try)
 import           Control.Monad (forM_, when)
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.IO.Class
@@ -86,10 +86,7 @@ replaceAtomically path f = do
     try $
       bracketOnError
         (IO.openTempFile targetDir $ targetFile <.> "tmp")
-        ( \(tmpPath, h) -> do
-            IO.hClose h
-            IO.removeFile tmpPath
-        )
+        (\(tmpPath, h) -> IO.hClose h `finally` IO.removeFile tmpPath)
         ( \(tmpPath, h) -> do
             f h
             -- 'handleToFd' flushes the handle's buffers and closes it, handing
