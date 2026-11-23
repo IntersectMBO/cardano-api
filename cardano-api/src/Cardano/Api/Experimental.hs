@@ -45,6 +45,8 @@ module Cardano.Api.Experimental
   , makeSignedSubTx
   , getUnsignedSubTxId
   , getSignedSubTxId
+  , getSubTxInputs
+  , getSubTxCertificates
   , setTxSignedSubTransactions
 
     -- ** Transaction evaluation

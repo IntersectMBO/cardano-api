@@ -349,6 +349,8 @@ prop_queries_include_sub_transaction_inputs = H.withTests 10 $ H.property $ do
   unsigned <- H.evalEither $ Exp.makeUnsignedTx Exp.DijkstraEra (balanceTestTxBodyContent testData)
   Set.fromList (Exp.getAllTxInputs unsigned)
     === Set.fromList (balanceTestTopLevelInput testData : balanceTestSubTxInputs testData)
+  Set.fromList (concatMap Exp.getSubTxInputs $ balanceTestSignedSubTransactions testData)
+    === Set.fromList (balanceTestSubTxInputs testData)
 
 -- | Query spending inputs at both levels, sub-transaction references and top-level collateral.
 prop_queries_include_sub_transaction_references :: Property
@@ -365,6 +367,8 @@ prop_queries_include_sub_transaction_references = H.withTests 10 $ H.property $ 
       , guardReferenceInput inputs
       , guardCollateralInput inputs
       ]
+  Exp.getSubTxInputs (signedSubTransaction example)
+    === Set.toList (Set.fromList [guardFundingInput inputs, guardReferenceInput inputs])
 
 -- | A funded sub-transaction, collateral and reference inputs cannot replace top-level spending inputs.
 prop_empty_top_level_inputs_rejected :: Property
@@ -420,27 +424,34 @@ prop_missing_sub_transaction_input_reported = H.withTests 10 $ H.property $ do
     Left (Exp.TxBodyErrorMissingInputs inputs) -> inputs === Set.singleton input
     other -> H.annotateShow (fmap fst other) >> H.failure
 
--- | Include a sub-transaction deregistration when querying certificate deposits.
+-- | Collect certificates in body order, including from a signed sub-transaction.
 prop_queries_include_sub_transaction_certificates :: Property
 prop_queries_include_sub_transaction_certificates = H.property $ do
   credential <- H.forAll genStakeCredential
-  let certificate =
+  otherCredential <- H.forAll genStakeCredential
+  let certificate :: Api.StakeCredential -> Exp.Certificate (Exp.LedgerEra Exp.DijkstraEra)
+      certificate stakeCredential =
         Exp.Certificate $
           L.DijkstraTxCertDeleg $
-            L.DijkstraUnRegCert (Api.toShelleyStakeCredential credential) (L.Coin 2_000_000)
+            L.DijkstraUnRegCert (Api.toShelleyStakeCredential stakeCredential) (L.Coin 2_000_000)
+      expected = map certificate [credential, otherCredential]
   unsigned <-
     H.evalEither $
       Exp.makeUnsignedSubTx $
         Exp.defaultSubTxBodyContent
           & Exp.setTxCertificates
-            (Exp.mkTxCertificates Exp.DijkstraEra [(certificate, Exp.AnyKeyWitnessPlaceholder)])
+            (Exp.mkTxCertificates Exp.DijkstraEra [(cert, Exp.AnyKeyWitnessPlaceholder) | cert <- expected])
+  let signed = Exp.signSubTx [] [] unsigned
+  Exp.getSubTxInputs signed === []
+  Exp.getSubTxCertificates signed === expected
   tx <-
     H.evalEither $
       Exp.makeUnsignedTx Exp.DijkstraEra $
-        Exp.defaultTxBodyContent & Exp.setTxSignedSubTransactions [Exp.signSubTx [] [] unsigned]
+        Exp.defaultTxBodyContent & Exp.setTxSignedSubTransactions [signed]
   let certificates = Exp.getAllTxCertificates tx
-  -- Include the sub-transaction's deregistration so its deposit refund can be queried.
-  certificates === [certificate]
+  certificates === expected
+  empty <- H.evalEither $ Exp.makeUnsignedSubTx Exp.defaultSubTxBodyContent
+  Exp.getSubTxCertificates (Exp.signSubTx [] [] empty) === []
 
 -- | A sufficient signed budget is preserved and its execution cost is charged.
 prop_sub_transaction_budget_contributes_to_fee :: Property
