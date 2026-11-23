@@ -12,6 +12,7 @@
 module Test.Cardano.Rpc.WatchMempoolStream where
 
 import Cardano.Api
+import Cardano.Api.Ledger qualified as L
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as Query
 import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as U5c
 import Cardano.Rpc.Server.Internal.FieldMask
@@ -24,16 +25,19 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Mempool
   )
 import Cardano.Rpc.Server.NodeKernelAccess (MempoolWatchSnapshot (..))
 
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Hashes qualified as L (hashAnnotated)
 import Ouroboros.Consensus.Mempool.API qualified as Consensus (TicketNo)
 
 import RIO
 
 import Data.ByteString qualified as BS
 import Data.ProtoLens (defMessage)
+import GHC.IsList (fromList)
 import GHC.Stack (withFrozenCallStack)
 import Network.GRPC.Spec (NextElem (..), Proto (..), getProto)
 
-import Test.Gen.Cardano.Api.Typed (genTx)
+import Test.Gen.Cardano.Api.Typed (genTxWith)
 
 import Hedgehog as H
 import Hedgehog.Extras qualified as H
@@ -88,14 +92,17 @@ hprop_watch_mempool_stream_prunes_by_field_mask = H.property $ do
   let expected = defMessage & U5c.tx . U5c.nativeBytes .~ getProto full ^. U5c.tx . U5c.nativeBytes
   sent === [NextElem expected]
 
--- | A path below @tx.cardano@ keeps only that part of the converted transaction.
+-- | A path below @tx.cardano@ keeps only that part of the converted transaction,
+-- so the proposal and the vote of the fixture are trimmed away.
 hprop_watch_mempool_stream_trims_nested_cardano_path :: Property
-hprop_watch_mempool_stream_trims_nested_cardano_path = H.property $ do
-  tx1 <- txInModeFixture
+hprop_watch_mempool_stream_trims_nested_cardano_path = H.propertyOnce $ do
+  tx1 <- governanceTxInModeFixture
   let script = [mkSnapshot [(tx1, ticket 1)]]
   sent <- expectScriptExhausted =<< runWatchMempoolStream script defMessage ["tx.cardano.fee"]
 
   full <- expectedResponse tx1
+  H.assertWith (full ^. U5c.tx . U5c.cardano . Query.proposals) (not . null)
+  H.assertWith (full ^. U5c.tx . U5c.cardano . Query.votes) (not . null)
   let expected =
         defMessage
           & U5c.tx . U5c.cardano . Query.fee .~ full ^. U5c.tx . U5c.cardano . Query.fee
@@ -178,15 +185,64 @@ hprop_watch_mempool_stream_no_duplicates_across_removal = H.property $ do
   sent === [NextElem expected1]
 
 -- | A fixed Conway 'TxInMode', freshly generated per use - any two calls in
--- the same property are independent random samples of 'genTx', so in
+-- the same property are independent random samples of 'genTxWith', so in
 -- practice distinct, giving each test case genuinely different fixtures
 -- without needing checked-in golden transactions (unlike
 -- 'Test.Cardano.Rpc.FollowTipStream's block fixtures, which must be
 -- byte-identical to their own golden files).
 txInModeFixture :: PropertyT IO TxInMode
 txInModeFixture = do
-  tx <- forAll $ genTx ShelleyBasedEraConway
+  tx <- forAll $ genTxWith mempty ShelleyBasedEraConway
   pure $ TxInMode ShelleyBasedEraConway tx
+
+-- | A constant Conway 'TxInMode' with one proposal and one vote, so a test can
+-- see those fields; the generated 'txInModeFixture' never has any.
+governanceTxInModeFixture :: HasCallStack => MonadTest m => m TxInMode
+governanceTxInModeFixture = do
+  let network = Testnet $ NetworkMagic 42
+  paymentKeyHash <-
+    H.evalEither $
+      deserialiseFromRawBytesHex "0b1b872f7953bccfc4245f3282b3363f3d19e9e001a5c41e307363d7"
+  stakeKeyHash <-
+    H.evalEither $
+      deserialiseFromRawBytesHex "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137"
+  drepKeyHash <-
+    H.evalEither $
+      deserialiseFromRawBytesHex "7a0d1c5b9e3f2468a1b0c9d8e7f6a5b4c3d2e1f00112233445566778"
+  inputTxId <-
+    H.evalEither $
+      deserialiseFromRawBytesHex "f08cc9640136b1ae47428f646a9b5aadc0045fafb5529ca3ba1723784e6f0750"
+  anchorUrl <- H.nothingFail $ L.textToUrl 64 "https://example.com/anchor"
+  let anchor = L.Anchor anchorUrl (L.hashAnnotated (L.AnchorData "anchor data"))
+      address =
+        makeShelleyAddressInEra
+          ShelleyBasedEraConway
+          network
+          (PaymentCredentialByKey paymentKeyHash)
+          NoStakeAddress
+      output :: L.TxOut (ShelleyLedgerEra ConwayEra)
+      output = L.mkBasicTxOut (toShelleyAddr address) (L.inject $ L.Coin 2000000)
+      proposal =
+        L.ProposalProcedure
+          { L.pProcDeposit = L.Coin 1000000
+          , L.pProcReturnAddr =
+              toShelleyStakeAddr $ makeStakeAddress network (StakeCredentialByKey stakeKeyHash)
+          , L.pProcGovAction = L.InfoAction
+          , L.pProcAnchor = anchor
+          }
+      voter = L.DRepVoter . L.KeyHashObj $ unDRepKeyHash drepKeyHash
+      govActionId = L.GovActionId (toShelleyTxId inputTxId) (L.GovActionIx 0)
+      votingProcedures =
+        L.VotingProcedures . fromList $
+          [(voter, fromList [(govActionId, L.VotingProcedure L.VoteYes L.SNothing)])]
+      ledgerTx =
+        L.mkBasicTx L.mkBasicTxBody
+          & L.bodyTxL . L.inputsTxBodyL .~ fromList [toShelleyTxIn $ TxIn inputTxId (TxIx 0)]
+          & L.bodyTxL . L.outputsTxBodyL .~ fromList [output]
+          & L.bodyTxL . L.feeTxBodyL .~ L.Coin 200000
+          & L.bodyTxL . L.proposalProceduresTxBodyL .~ fromList [proposal]
+          & L.bodyTxL . L.votingProceduresTxBodyL .~ votingProcedures
+  pure . TxInMode ShelleyBasedEraConway $ ShelleyTx ShelleyBasedEraConway ledgerTx
 
 -- | The 'U5c.WatchMempoolResponse' 'watchMempoolStream' is expected to send
 -- for a given fixture, via the same conversion the loop itself uses.

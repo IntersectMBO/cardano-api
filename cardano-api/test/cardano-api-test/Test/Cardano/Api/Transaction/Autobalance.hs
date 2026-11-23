@@ -51,7 +51,7 @@ prop_make_transaction_body_autobalance_invariants = H.property $ do
 
   pparams <-
     LedgerProtocolParameters
-      <$> H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+      <$> H.eval conwayPParams
 
   -- assume a value larger the one from protocol params to account for min utxo scaling with minted assets
   let minUtxo = 2_000_000
@@ -322,7 +322,7 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.property $ d
 
   pparams <-
     LedgerProtocolParameters
-      <$> H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+      <$> H.eval conwayPParams
 
   (ScriptHash scriptHash, _) <- loadPlutusWitness ceo
 

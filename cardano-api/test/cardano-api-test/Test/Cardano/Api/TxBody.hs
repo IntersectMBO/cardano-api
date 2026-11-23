@@ -46,7 +46,7 @@ import Test.Tasty.Hedgehog (testProperty)
 prop_roundtrip_txbodycontent_txouts :: forall era. ShelleyBasedEra era -> Property
 prop_roundtrip_txbodycontent_txouts era = H.property $ do
   (body, content :: TxBodyContent BuildTx era) <-
-    shelleyBasedEraConstraints era $ H.forAll $ genValidTxBody era
+    shelleyBasedEraConstraints era $ H.forAll $ genValidTxBodyWith mempty era
   -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
   let content' = getTxBodyContent body
   matchTxOuts (txOuts content) (txOuts content')

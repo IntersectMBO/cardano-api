@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1401
+kind:
+  - maintenance
+description: |
+  Speed up the sub-transaction serialisation tests in CI and add fixed boundary cases for guard counts and treasury donation amounts.

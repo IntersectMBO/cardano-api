@@ -407,6 +407,7 @@ test-suite cardano-api-test
     ouroboros-consensus:{cardano, ouroboros-consensus, protocol},
     QuickCheck,
     raw-strings-qq,
+    safe-exceptions,
     tasty,
     tasty-hedgehog,
     tasty-quickcheck,
