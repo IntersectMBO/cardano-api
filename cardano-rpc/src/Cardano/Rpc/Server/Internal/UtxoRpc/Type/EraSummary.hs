@@ -1,15 +1,28 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Conversion of the node's hard-fork era summary to the UTxO RPC
 -- 'U5c.EraSummaries' message.
 module Cardano.Rpc.Server.Internal.UtxoRpc.Type.EraSummary
   ( eraSummariesToProto
+  , EraSummaryEntry (..)
+  , eraSummaryEntries
+  , eraSummaryFill
   )
 where
 
 import Cardano.Api (AnyCardanoEra (..), SystemStart, docToText, pretty, unEpochNo, unSlotNo)
 import Cardano.Api.Consensus qualified as Consensus
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as U5c
+import Cardano.Rpc.Server.Internal.FieldMask
+  ( FieldFill
+  , FieldMaskTree (..)
+  , fill
+  , fillFrom
+  , runFillPure
+  )
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint (utcTimeToMs)
 
 import Cardano.Slotting.Time (fromRelativeTime)
@@ -41,7 +54,25 @@ eraSummariesToProto
   -> History.Summary (CardanoEras Consensus.StandardCrypto)
   -> Proto U5c.EraSummaries
 eraSummariesToProto systemStart summary =
-  defMessage & U5c.summaries .~ zipWith3 mkEraSummary eraNames isLastEra eraEntries
+  defMessage
+    & U5c.summaries
+      .~ map
+        (Proto . runFillPure SelectAll . (`fillFrom` eraSummaryFill systemStart))
+        (eraSummaryEntries summary)
+
+-- | One era of the node's hard-fork era summary, with its name.
+-- The fields are lazy: an unselected field's value is never evaluated.
+data EraSummaryEntry = EraSummaryEntry
+  { eraSummaryEntryName :: Text
+  , eraSummaryEntryIsLast :: Bool
+  , eraSummaryEntrySummary :: History.EraSummary
+  }
+
+-- | The eras of the summary in chronological order.
+eraSummaryEntries
+  :: History.Summary (CardanoEras Consensus.StandardCrypto)
+  -> [EraSummaryEntry]
+eraSummaryEntries summary = zipWith3 EraSummaryEntry eraNames isLastEra eraEntries
  where
   -- All eras in chronological order, i.e. the same order as the summary's
   -- entries: 'History.Summary' has no era name field, an entry's era is its
@@ -60,12 +91,21 @@ eraSummariesToProto systemStart summary =
   isLastEra :: [Bool]
   isLastEra = replicate (length eraEntries - 1) False <> [True]
 
-  mkEraSummary :: Text -> Bool -> History.EraSummary -> Proto U5c.EraSummary
-  mkEraSummary name isLast entry =
-    defMessage
-      & U5c.name .~ name
-      & U5c.start .~ boundToProto (History.eraStart entry)
-      & U5c.maybe'end .~ if isLast then Nothing else endToProto (History.eraEnd entry)
+-- | Fill the fields of the 'U5c.EraSummary' message that a mask selects, each
+-- from the 'EraSummaryEntry' of an era.
+eraSummaryFill
+  :: SystemStart
+  -- ^ The system start of the chain, from which the boundary times count
+  -> FieldFill ((->) EraSummaryEntry) U5c.EraSummary
+eraSummaryFill systemStart =
+  fill @"name" eraSummaryEntryName
+    <> fill @"start" (getProto . boundToProto . History.eraStart . eraSummaryEntrySummary)
+    <> fill @"maybe'end" end
+ where
+  end :: EraSummaryEntry -> Maybe U5c.EraBoundary
+  end EraSummaryEntry{eraSummaryEntryIsLast, eraSummaryEntrySummary}
+    | eraSummaryEntryIsLast = Nothing
+    | otherwise = fmap getProto . endToProto $ History.eraEnd eraSummaryEntrySummary
 
   endToProto :: History.EraEnd -> Maybe (Proto U5c.EraBoundary)
   endToProto = \case
