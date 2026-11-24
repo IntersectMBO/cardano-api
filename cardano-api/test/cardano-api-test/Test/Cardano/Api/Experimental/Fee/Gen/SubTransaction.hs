@@ -73,12 +73,12 @@ genSubTransactionBalanceTestData params (TopLevelTxAmounts topAmounts) subTxAmou
       output = L.mkBasicTxOut (Api.toShelleyAddr address)
       amounts = topAmounts : subAmounts
       utxo =
-        L.UTxO $
-          Map.fromList $
-            zipWith
-              (\input value -> (Api.toShelleyTxIn input, output $ inputValue value))
-              (topInput : subInputs)
-              amounts
+        L.UTxO
+          $ Map.fromList
+          $ zipWith
+            (\input value -> (Api.toShelleyTxIn input, output $ inputValue value))
+            (topInput : subInputs)
+            amounts
   signed <-
     traverse
       ( \(input, value) ->

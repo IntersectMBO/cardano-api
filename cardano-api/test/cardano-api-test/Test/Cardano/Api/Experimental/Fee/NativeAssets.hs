@@ -121,8 +121,8 @@ prop_combined_token_deficit_rejected = H.property $ do
 
 testTokens :: Integer -> L.MaryValue
 testTokens quantity =
-  L.MaryValue mempty $
-    L.MultiAsset $
-      Map.singleton
-        (L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
-        (Map.singleton (Mary.AssetName "nested") quantity)
+  L.MaryValue mempty
+    $ L.MultiAsset
+    $ Map.singleton
+      (L.PolicyID $ L.ScriptHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+      (Map.singleton (Mary.AssetName "nested") quantity)

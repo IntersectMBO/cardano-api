@@ -58,10 +58,10 @@ getAllTxInputs
   => UnsignedTx (LedgerEra era)
   -> [TxIn]
 getAllTxInputs (UnsignedTx tx) =
-  obtainCommonConstraints (useEra @era) $
-    map fromShelleyTxIn $
-      Set.toList $
-        tx ^. L.bodyTxL . Ledger.allInputsTxBodyF
+  obtainCommonConstraints (useEra @era)
+    $ map fromShelleyTxIn
+    $ Set.toList
+    $ tx ^. L.bodyTxL . Ledger.allInputsTxBodyF
 
 -- | Certificates of the top-level transaction followed by those of its
 -- sub-transactions, preserving their order. Pass these to
@@ -72,9 +72,9 @@ getAllTxCertificates
   => UnsignedTx (LedgerEra era)
   -> [Exp.Certificate (LedgerEra era)]
 getAllTxCertificates (UnsignedTx tx) =
-  obtainCommonConstraints (useEra @era) $
-    map Exp.Certificate $
-      toList (tx ^. L.bodyTxL . L.certsTxBodyL) <> subTransactionCertificates
+  obtainCommonConstraints (useEra @era)
+    $ map Exp.Certificate
+    $ toList (tx ^. L.bodyTxL . L.certsTxBodyL) <> subTransactionCertificates
  where
   subTransactionCertificates :: [L.TxCert (LedgerEra era)]
   subTransactionCertificates = case useEra @era of

@@ -313,18 +313,18 @@ prop_sub_transaction_deregistration_refund = H.withTests 10 $ H.property $ do
   stakeKey <- H.forAll $ genSigningKey Api.AsStakeKey
   let credential = Api.StakeCredentialByKey $ Api.verificationKeyHash $ Api.getVerificationKey stakeKey
       certificate =
-        Exp.Certificate $
-          L.DijkstraTxCertDeleg $
-            L.DijkstraUnRegCert (Api.toShelleyStakeCredential credential) (L.Coin 2_000_000)
+        Exp.Certificate
+          $ L.DijkstraTxCertDeleg
+          $ L.DijkstraUnRegCert (Api.toShelleyStakeCredential credential) (L.Coin 2_000_000)
   unsigned <-
-    H.evalEither $
-      Exp.makeUnsignedSubTx $
-        Exp.defaultSubTxBodyContent
-          & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder) | input <- balanceTestSubTxInputs testData]
-          & Exp.setTxOuts
-            [Exp.TxOut $ L.mkBasicTxOut (Api.toShelleyAddr $ balanceTestAddress testData) (Api.ada 10)]
-          & Exp.setTxCertificates
-            (Exp.mkTxCertificates Exp.DijkstraEra [(certificate, Exp.AnyKeyWitnessPlaceholder)])
+    H.evalEither
+      $ Exp.makeUnsignedSubTx
+      $ Exp.defaultSubTxBodyContent
+        & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder) | input <- balanceTestSubTxInputs testData]
+        & Exp.setTxOuts
+          [Exp.TxOut $ L.mkBasicTxOut (Api.toShelleyAddr $ balanceTestAddress testData) (Api.ada 10)]
+        & Exp.setTxCertificates
+          (Exp.mkTxCertificates Exp.DijkstraEra [(certificate, Exp.AnyKeyWitnessPlaceholder)])
   let signed = Exp.signSubTx [] [Exp.makeSubTxKeyWitness unsigned $ Api.WitnessStakeKey stakeKey] unsigned
       withRefund =
         testData
@@ -395,9 +395,9 @@ prop_empty_sub_transaction_inputs_rejected = H.withTests 10 $ H.property $ do
       emptyContent = guardSubTxBodyContent inputs & Exp.setTxIns []
   empty <- H.forAll $ genSignedSubTransaction emptyContent
   referenceOnly <-
-    H.forAll $
-      genSignedSubTransaction $
-        emptyContent & Exp.setTxInsReference (Exp.TxInsReference [guardReferenceInput inputs] Set.empty)
+    H.forAll
+      $ genSignedSubTransaction
+      $ emptyContent & Exp.setTxInsReference (Exp.TxInsReference [guardReferenceInput inputs] Set.empty)
   let content =
         scriptTxContent example
           & Exp.setTxSignedSubTransactions [empty, signedSubTransaction example, referenceOnly]
@@ -431,23 +431,23 @@ prop_queries_include_sub_transaction_certificates = H.property $ do
   otherCredential <- H.forAll genStakeCredential
   let certificate :: Api.StakeCredential -> Exp.Certificate (Exp.LedgerEra Exp.DijkstraEra)
       certificate stakeCredential =
-        Exp.Certificate $
-          L.DijkstraTxCertDeleg $
-            L.DijkstraUnRegCert (Api.toShelleyStakeCredential stakeCredential) (L.Coin 2_000_000)
+        Exp.Certificate
+          $ L.DijkstraTxCertDeleg
+          $ L.DijkstraUnRegCert (Api.toShelleyStakeCredential stakeCredential) (L.Coin 2_000_000)
       expected = map certificate [credential, otherCredential]
   unsigned <-
-    H.evalEither $
-      Exp.makeUnsignedSubTx $
-        Exp.defaultSubTxBodyContent
-          & Exp.setTxCertificates
-            (Exp.mkTxCertificates Exp.DijkstraEra [(cert, Exp.AnyKeyWitnessPlaceholder) | cert <- expected])
+    H.evalEither
+      $ Exp.makeUnsignedSubTx
+      $ Exp.defaultSubTxBodyContent
+        & Exp.setTxCertificates
+          (Exp.mkTxCertificates Exp.DijkstraEra [(cert, Exp.AnyKeyWitnessPlaceholder) | cert <- expected])
   let signed = Exp.signSubTx [] [] unsigned
   Exp.getSubTxInputs signed === []
   Exp.getSubTxCertificates signed === expected
   tx <-
-    H.evalEither $
-      Exp.makeUnsignedTx Exp.DijkstraEra $
-        Exp.defaultTxBodyContent & Exp.setTxSignedSubTransactions [signed]
+    H.evalEither
+      $ Exp.makeUnsignedTx Exp.DijkstraEra
+      $ Exp.defaultTxBodyContent & Exp.setTxSignedSubTransactions [signed]
   let certificates = Exp.getAllTxCertificates tx
   certificates === expected
   empty <- H.evalEither $ Exp.makeUnsignedSubTx Exp.defaultSubTxBodyContent
@@ -678,11 +678,11 @@ prop_script_failures_identify_sub_transactions = H.withTests 10 $ H.property $ d
       genScriptBalanceCase dijkstraTestParams ScriptWitness (Api.ExecutionUnits 0 0)
   let inputs = scriptInputs example
   second <-
-    H.forAll $
-      genSignedSubTransaction $
-        guardSubTxBodyContent inputs
-          & Exp.setTxIns [(guardReferenceInput inputs, Exp.AnyKeyWitnessPlaceholder)]
-          & Exp.setTxGuards (scriptCaseGuards example)
+    H.forAll
+      $ genSignedSubTransaction
+      $ guardSubTxBodyContent inputs
+        & Exp.setTxIns [(guardReferenceInput inputs, Exp.AnyKeyWitnessPlaceholder)]
+        & Exp.setTxGuards (scriptCaseGuards example)
   let signed = [signedSubTransaction example, second]
       content = scriptTxContent example & Exp.setTxSignedSubTransactions signed
   case balancePlutusGuardTransaction inputs content of
@@ -834,9 +834,9 @@ prop_legacy_plutus_in_sub_transaction_rejected = H.withTests 10 $ H.property $ d
   inputs <- H.forAll $ genPlutusV4ReferenceScriptGuardTestInputs script
   withdrawal <- H.forAll $ genLegacyWithdrawal sufficientGuardBudget
   signed <-
-    H.forAll $
-      genSignedSubTransaction $
-        guardSubTxBodyContent inputs & Exp.setTxWithdrawals withdrawal
+    H.forAll
+      $ genSignedSubTransaction
+      $ guardSubTxBodyContent inputs & Exp.setTxWithdrawals withdrawal
   forM_ [Api.ScriptValid, Api.ScriptInvalid] $ \validity -> do
     H.annotateShow validity
     let content = topLevelTxBodyContentWithSignedSubTransaction inputs signed & Exp.setTxScriptValidity validity
@@ -993,10 +993,10 @@ prop_duplicate_sub_transaction_spending_inputs = H.withTests 10 $ H.property $ d
   -- 'input' is already spent by the first sub-transaction. Spend it again in
   -- a different body, distinguished here by having no outputs.
   signed <-
-    H.forAllWith (const "<signed sub-transaction>") $
-      genSignedSubTransaction $
-        Exp.defaultSubTxBodyContent
-          & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder)]
+    H.forAllWith (const "<signed sub-transaction>")
+      $ genSignedSubTransaction
+      $ Exp.defaultSubTxBodyContent
+        & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder)]
   let content =
         balanceTestTxBodyContent testData
           & Exp.setTxSignedSubTransactions (balanceTestSignedSubTransactions testData <> [signed])

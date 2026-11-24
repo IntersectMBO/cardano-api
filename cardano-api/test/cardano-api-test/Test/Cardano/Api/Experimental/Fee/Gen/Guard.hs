@@ -162,9 +162,9 @@ genLegacyWithdrawal
 genLegacyWithdrawal budget = do
   redeemer <- genHashableScriptData
   script <-
-    failEitherWith show $
-      P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV3 $
-        Base16.decodeLenient "46450101002499"
+    failEitherWith show
+      $ P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV3
+      $ Base16.decodeLenient "46450101002499"
   pure $
     Exp.TxWithdrawals
       [
@@ -172,14 +172,14 @@ genLegacyWithdrawal budget = do
             Api.Mainnet
             (Api.StakeCredentialByScript $ Api.fromShelleyScriptHash $ P.hashPlutusScriptInEra script)
         , L.Coin 0
-        , Exp.AnyPlutusScriptWitness $
-            AnyPlutusWithdrawingScriptWitness $
-              Exp.PlutusScriptWitness
-                Plutus.SPlutusV3
-                (Exp.PScript script)
-                Exp.NoScriptDatum
-                redeemer
-                budget
+        , Exp.AnyPlutusScriptWitness
+            $ AnyPlutusWithdrawingScriptWitness
+            $ Exp.PlutusScriptWitness
+              Plutus.SPlutusV3
+              (Exp.PScript script)
+              Exp.NoScriptDatum
+              redeemer
+              budget
         )
       ]
 
@@ -245,9 +245,9 @@ genFailingTopLevelGuardCase
 genFailingTopLevelGuardCase params subBudget = do
   example <- genScriptBalanceCase params ScriptWitness subBudget
   script <-
-    failEitherWith show $
-      P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4 $
-        Base16.decodeLenient "46450101002601"
+    failEitherWith show
+      $ P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4
+      $ Base16.decodeLenient "46450101002601"
   (_, guards) <- genPlutusGuardsWithScriptWitnesses script (Api.ExecutionUnits 0 0)
   pure example{scriptTxContent = scriptTxContent example & Exp.setTxGuards guards}
 

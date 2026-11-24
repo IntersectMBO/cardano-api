@@ -2001,10 +2001,10 @@ assertEvaluatedGuard
 assertEvaluatedGuard expectedRedeemer testInputs tx = do
   -- The sole Plutus V4 script guard must retain its redeemer at guard index zero.
   (actualDatum, units) <-
-    H.evalMaybe $
-      Map.lookup (L.DijkstraGuarding $ L.AsIx 0) $
-        Alonzo.unRedeemers $
-          tx ^. L.witsTxL . L.rdmrsTxWitsL
+    H.evalMaybe
+      $ Map.lookup (L.DijkstraGuarding $ L.AsIx 0)
+      $ Alonzo.unRedeemers
+      $ tx ^. L.witsTxL . L.rdmrsTxWitsL
   -- Evaluation must preserve the redeemer data.
   actualDatum === Api.toAlonzoData expectedRedeemer
   -- Replace the zero Plutus V4 budget with positive memory and step costs.
@@ -2066,25 +2066,25 @@ coverGuardWitnesses
   -> H.PropertyT IO ()
 coverGuardWitnesses entries = do
   let witnesses = map snd entries
-  H.cover 5 "native guards with script witnesses" $
-    not $
-      null [() | Just (Exp.NativeGuardWitness Exp.SScript{}) <- witnesses]
-  H.cover 5 "native guards with reference scripts" $
-    not $
-      null [() | Just (Exp.NativeGuardWitness Exp.SReferenceScript{}) <- witnesses]
-  H.cover 5 "Plutus V4 guards with script witnesses" $
-    not $
-      null
-        [() | Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ Exp.PScript{} _ _ _)) <- witnesses]
-  H.cover 5 "Plutus V4 guards with reference scripts" $
-    not $
-      null
-        [ ()
-        | Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ Exp.PReferenceScript{} _ _ _)) <- witnesses
-        ]
-  H.cover 5 "script guards without witnesses" $
-    not $
-      null [() | (L.ScriptHashObj _, Nothing) <- entries]
+  H.cover 5 "native guards with script witnesses"
+    $ not
+    $ null [() | Just (Exp.NativeGuardWitness Exp.SScript{}) <- witnesses]
+  H.cover 5 "native guards with reference scripts"
+    $ not
+    $ null [() | Just (Exp.NativeGuardWitness Exp.SReferenceScript{}) <- witnesses]
+  H.cover 5 "Plutus V4 guards with script witnesses"
+    $ not
+    $ null
+      [() | Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ Exp.PScript{} _ _ _)) <- witnesses]
+  H.cover 5 "Plutus V4 guards with reference scripts"
+    $ not
+    $ null
+      [ ()
+      | Just (Exp.PlutusGuardWitness (Exp.PlutusScriptWitness _ Exp.PReferenceScript{} _ _ _)) <- witnesses
+      ]
+  H.cover 5 "script guards without witnesses"
+    $ not
+    $ null [() | (L.ScriptHashObj _, Nothing) <- entries]
 
 -- | Guard construction and list conversion preserve entry order and witnesses.
 prop_mkTxGuards_order :: Property

@@ -148,9 +148,9 @@ getSignedSubTxId (SignedSubTx tx) = fromShelleyTxId (L.txIdTx tx)
 -- duplicates. Query these UTxO entries when balancing the top level transaction.
 getSubTxInputs :: SignedSubTx -> [TxIn]
 getSubTxInputs (SignedSubTx tx) =
-  map fromShelleyTxIn $
-    Set.toList $
-      (tx ^. L.bodyTxL . L.inputsTxBodyL) <> (tx ^. L.bodyTxL . L.referenceInputsTxBodyL)
+  map fromShelleyTxIn
+    $ Set.toList
+    $ (tx ^. L.bodyTxL . L.inputsTxBodyL) <> (tx ^. L.bodyTxL . L.referenceInputsTxBodyL)
 
 -- | Certificates of a signed sub-transaction, in body order. Their deposits
 -- and refunds contribute to the balance of the top level transaction.

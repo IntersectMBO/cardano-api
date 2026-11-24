@@ -844,9 +844,9 @@ getDuplicateSpendingInputs (UnsignedTx tx) =
               toList (tx ^. L.bodyTxL . Dijkstra.subTransactionsTxBodyL)
         findDuplicateInputs (seen, duplicates) inputs =
           (seen <> inputs, duplicates <> Set.intersection seen inputs)
-     in Set.map fromShelleyTxIn $
-          snd $
-            List.foldl' findDuplicateInputs (topLevelInputs, mempty) subTransactionInputs
+     in Set.map fromShelleyTxIn
+          $ snd
+          $ List.foldl' findDuplicateInputs (topLevelInputs, mempty) subTransactionInputs
 
 -- | Fail with 'CollateralWithoutPlutusScripts' when the transaction has
 -- collateral inputs but no Plutus script witnesses.
@@ -1829,9 +1829,9 @@ evaluatePlutusScriptExecutionUnits maxBudget context =
       (logs, result) = Plutus.evaluatePlutusWithContext PlutusApi.Verbose budgeted
    in case result of
         Left err ->
-          Left $
-            ScriptErrorEvaluationFailed $
-              DebugPlutusFailure err budgeted maxBudget logs
+          Left
+            $ ScriptErrorEvaluationFailed
+            $ DebugPlutusFailure err budgeted maxBudget logs
         Right budget ->
           case exBudgetToExUnits budget of
             Nothing -> Left ScriptErrorExecutionUnitsOverflow
@@ -2138,13 +2138,13 @@ validateDijkstraSubTransactions systemstart (LedgerEpochInfo epochInfo) pp pooli
       $ do
         let topLevelTx = UnsignedTx (finalTx & L.bodyTxL . Dijkstra.subTransactionsTxBodyL .~ mempty)
             topLevelBalance = evaluateTransactionBalance pp poolsAfterSubTransactions stakeDelegDeposits utxo topLevelTx
-        unless (topLevelBalance == mempty) $
-          Left $
-            TxBodyErrorLegacyTopLevelBalance topLevelBalance
+        unless (topLevelBalance == mempty)
+          $ Left
+          $ TxBodyErrorLegacyTopLevelBalance topLevelBalance
     forM_ (L.subTransactionsStAnnTx @L.DijkstraEra txWithScriptContexts) $ \subTx ->
-      first (uncurry TxBodyErrorMinUTxONotMet) $
-        mapM_ (checkMinUTxOValue pp . TxOut) $
-          toList (subTx ^. L.txStAnnTxG @L.DijkstraEra . L.bodyTxL . L.outputsTxBodyL)
+      first (uncurry TxBodyErrorMinUTxONotMet)
+        $ mapM_ (checkMinUTxOValue pp . TxOut)
+        $ toList (subTx ^. L.txStAnnTxG @L.DijkstraEra . L.bodyTxL . L.outputsTxBodyL)
     -- Collect all contexts before evaluating scripts, regardless of the validity flag.
     let contextResults =
           (TopLevelTransaction, Dijkstra.dsattPlutusScriptsWithContext txWithScriptContexts)
@@ -2154,11 +2154,11 @@ validateDijkstraSubTransactions systemstart (LedgerEpochInfo epochInfo) pp pooli
               | subTx <- L.subTransactionsStAnnTx @L.DijkstraEra txWithScriptContexts
               ]
     contexts <-
-      first TxBodyErrorScriptContexts $
-        fmap concat $
-          traverse
-            (\(source, result) -> fmap (map (\context -> (source, context))) result)
-            contextResults
+      first TxBodyErrorScriptContexts
+        $ fmap concat
+        $ traverse
+          (\(source, result) -> fmap (map (\context -> (source, context))) result)
+          contextResults
     let failures =
           [ (source, failure)
           | (source, context) <- contexts
@@ -2184,9 +2184,9 @@ validateScript context =
   let (logs, result) = Plutus.evaluatePlutusWithContext PlutusApi.Verbose context
    in case result of
         Left err ->
-          Left $
-            ScriptErrorEvaluationFailed $
-              DebugPlutusFailure err context (Plutus.pwcExUnits context) logs
+          Left
+            $ ScriptErrorEvaluationFailed
+            $ DebugPlutusFailure err context (Plutus.pwcExUnits context) logs
         Right _ -> Right ()
 
 getAda :: Era era -> L.Value (LedgerEra era) -> L.Coin
