@@ -320,12 +320,9 @@ estimateBalancedTxBody'
   sizeOfAllReferenceScripts
   changeaddr
   totalUTxOValue = obtainCommonConstraints (useEra @era) $ do
-    -- The ledger requires collateral only for transactions that run Plutus
-    -- scripts, so collateral inputs on a transaction without them are an
-    -- error: the ledger would ignore them, but they would cost fees and
-    -- require the collateral UTxOs to stay unspent.
+    -- Plutus scripts require collateral; transactions without them must omit it.
     first (TxFeeEstimationBalanceError . TxBodyErrorCollateral) $
-      checkCollateralOnlyWithPlutusScripts txbodycontent
+      checkCollateralInputs txbodycontent
 
     -- Step 1. Substitute those execution units into the tx
 
@@ -685,22 +682,59 @@ hasPlutusScriptWitnesses
   => TxBodyContent (LedgerEra era)
   -> Bool
 hasPlutusScriptWitnesses txbodycontent =
-  not $
-    null
-      [ ()
-      | (_, AnyScriptWitnessPlutus{}) <- collectTxBodyScriptWitnesses txbodycontent
+  not (null $ plutusScriptWitnessIndices txbodycontent)
+    || hasSubTransactionRedeemers txbodycontent
+
+-- | Plutus witness indices in the top-level transaction, excluding native scripts.
+plutusScriptWitnessIndices
+  :: IsEra era => TxBodyContent (LedgerEra era) -> [ScriptWitnessIndex]
+plutusScriptWitnessIndices txbodycontent =
+  [index | (index, AnyScriptWitnessPlutus{}) <- collectTxBodyScriptWitnesses txbodycontent]
+
+-- | Whether any sub-transaction contains Plutus redeemers.
+hasSubTransactionRedeemers
+  :: forall era
+   . IsEra era
+  => TxBodyContent (LedgerEra era)
+  -> Bool
+hasSubTransactionRedeemers txbodycontent =
+  obtainCommonConstraints (useEra @era)
+    $ not
+    $ all
+      (Map.null . L.unRedeemers . (^. L.witsTxL . L.rdmrsTxWitsL))
+      (txSubTransactions txbodycontent)
+
+-- | Locate each sub-transaction's Plutus witnesses by its ID and redeemer indices.
+subTransactionScriptWitnessIndices
+  :: forall era
+   . IsEra era
+  => TxBodyContent (LedgerEra era)
+  -> Map TxId [ScriptWitnessIndex]
+subTransactionScriptWitnessIndices txbodycontent =
+  obtainCommonConstraints (useEra @era) $
+    Map.fromList
+      [ (fromShelleyTxId $ L.txIdTx subTx, map (toScriptIndex $ convert $ useEra @era) $ Map.keys redeemers)
+      | subTx <- toList $ txSubTransactions txbodycontent
+      , let redeemers = L.unRedeemers $ subTx ^. L.witsTxL . L.rdmrsTxWitsL
+      , not $ Map.null redeemers
       ]
 
--- | Fail with 'CollateralWithoutPlutusScripts' when the transaction has
--- collateral inputs but no Plutus script witnesses.
-checkCollateralOnlyWithPlutusScripts
+-- | Require collateral inputs exactly when the transaction or a sub-transaction
+-- contains Plutus script witnesses.
+checkCollateralInputs
   :: forall era
    . IsEra era
   => TxBodyContent (LedgerEra era)
   -> Either CollateralError ()
-checkCollateralOnlyWithPlutusScripts txbodycontent =
-  unless (null (txInsCollateral txbodycontent) || hasPlutusScriptWitnesses txbodycontent) $
-    Left CollateralWithoutPlutusScripts
+checkCollateralInputs txbodycontent =
+  case (hasPlutusScriptWitnesses txbodycontent, null $ txInsCollateral txbodycontent) of
+    (True, True) ->
+      Left $
+        MissingCollateralInputs
+          (plutusScriptWitnessIndices txbodycontent)
+          (subTransactionScriptWitnessIndices txbodycontent)
+    (False, False) -> Left CollateralWithoutPlutusScripts
+    _ -> Right ()
 
 -- Calculation taken from validateInsufficientCollateral:
 -- https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
@@ -1566,14 +1600,9 @@ makeTransactionBodyAutoBalance
   txbodycontent
   changeaddr
   mnkeys = do
-    -- The ledger requires collateral only for transactions that run Plutus
-    -- scripts, so collateral inputs on a transaction without them are an
-    -- error: the ledger would ignore them, but they would cost fees and
-    -- require the collateral UTxOs to stay unspent. A transaction that
-    -- should become invalid when some UTxO is spent can use a reference
-    -- input for that purpose.
+    -- Plutus scripts require collateral; transactions without them must omit it.
     first TxBodyErrorCollateral $
-      checkCollateralOnlyWithPlutusScripts txbodycontent
+      checkCollateralInputs txbodycontent
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units
     -- 2. figure out the overall min fees

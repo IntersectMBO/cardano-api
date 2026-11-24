@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1426
+kind:
+  - bugfix
+  - breaking
+description: Experimental transaction balancing now rejects missing collateral inputs when the top-level transaction or a Dijkstra sub-transaction runs Plutus scripts. Handle the new MissingCollateralInputs constructor of CollateralError in exhaustive matches; it reports top-level Plutus witness indices and sub-transaction witness indices grouped by transaction ID. Transactions without Plutus scripts continue to balance without collateral.
