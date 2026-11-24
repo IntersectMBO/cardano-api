@@ -245,6 +245,11 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
               "Unreachable: calcReturnAndTotalCollateral does not check for Plutus scripts, \
               \the balancing functions do before calling it"
             H.failure
+          Left err@MissingCollateralInputs{} -> do
+            H.annotateShow err
+            H.annotate
+              "The balancing functions check for missing collateral before calling calcReturnAndTotalCollateral"
+            H.failure
 
 -- | Regression test for: https://github.com/IntersectMBO/cardano-api/issues/1261
 --

@@ -1,0 +1,7 @@
+The transaction runs Plutus scripts but has no collateral inputs.
+Script witnesses requiring collateral:
+  Top-level transaction: transaction input 1 (in ascending order of the TxIds)
+  Top-level transaction: policyId 2 (in ascending order of the PolicyIds)
+  Sub-transaction 210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0: guard 3 (in the ordered guard set)
+  Sub-transaction 210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0: withdrawal 4 (in ascending order of the StakeAddresses)
+Add collateral inputs to the top-level transaction.
