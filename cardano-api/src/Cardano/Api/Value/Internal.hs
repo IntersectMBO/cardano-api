@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -36,6 +37,7 @@ module Cardano.Api.Value.Internal
 
     -- ** Ada \/ L.Coin specifically
   , Lovelace
+  , ada
   , quantityToLovelace
   , lovelaceToQuantity
   , selectLovelace
@@ -299,6 +301,11 @@ filterValue p (Value m) = Value (Map.filterWithKey (\k _v -> p k) m)
 
 selectLovelace :: Value -> Lovelace
 selectLovelace = quantityToLovelace . flip selectAsset AdaAssetId
+
+-- | Convert a whole number of ada to a ledger value with no native assets.
+-- One ada is 1,000,000 lovelace.
+ada :: Integer -> MaryValue
+ada amount = L.inject (L.Coin (amount * 1_000_000))
 
 lovelaceToValue :: Lovelace -> Value
 lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity

@@ -239,6 +239,8 @@ module Cardano.Api.Experimental.Tx
   , makeSignedSubTx
   , getUnsignedSubTxId
   , getSignedSubTxId
+  , getSubTxInputs
+  , getSubTxCertificates
   , AsType (AsUnsignedSubTx, AsSignedSubTx)
 
     -- * Ordered guard witnesses
@@ -292,7 +294,10 @@ module Cardano.Api.Experimental.Tx
     -- * Balancing transactions
   , calculateMinimumUTxO
   , makeTransactionBodyAutoBalance
+  , getAllTxInputs
+  , getAllTxCertificates
   , TxBodyErrorAutoBalance (..)
+  , ScriptFailureSource (..)
   , TxFeeEstimationError (..)
 
     -- ** Internal functions

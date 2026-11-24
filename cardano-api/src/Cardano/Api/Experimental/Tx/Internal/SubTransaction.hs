@@ -17,6 +17,8 @@ module Cardano.Api.Experimental.Tx.Internal.SubTransaction
   , makeSignedSubTx
   , getUnsignedSubTxId
   , getSignedSubTxId
+  , getSubTxInputs
+  , getSubTxCertificates
   , setTxSignedSubTransactions
 
     -- * Data family instances
@@ -61,6 +63,7 @@ import Cardano.Api.Experimental.Tx.Internal.BodyContent
   , subTxWithdrawals
   , toAuxiliaryData
   )
+import Cardano.Api.Experimental.Tx.Internal.Certificate.Type (Certificate (..))
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
   ( TxScriptWitnessRequirements (..)
   )
@@ -72,18 +75,20 @@ import Cardano.Api.Serialise.TextEnvelope.Internal
   , TextEnvelopeType (..)
   )
 import Cardano.Api.Tx.Internal.Sign
-import Cardano.Api.Tx.Internal.TxIn (TxId, fromShelleyTxId)
+import Cardano.Api.Tx.Internal.TxIn (TxId, TxIn, fromShelleyTxId, fromShelleyTxIn)
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Binary qualified as Ledger
 import Cardano.Ledger.Core qualified as L (TxLevel (..))
 import Cardano.Ledger.Dijkstra.TxBody qualified as L
-  ( DijkstraEraTxBody (accountBalanceIntervalsTxBodyL, requiredTopLevelGuardsL)
+  ( DijkstraEraTxBody (accountBalanceIntervalsTxBodyL, requiredTopLevelGuardsTxBodyL)
   )
 
 import Data.ByteString.Lazy qualified as LBS
+import Data.Foldable (toList)
 import Data.Maybe (fromMaybe)
-import GHC.Exts (IsList (..))
+import Data.Set qualified as Set
+import GHC.Exts (IsList (fromList))
 import Lens.Micro
 
 -- Sub-transactions exist from the Dijkstra era onwards, and Dijkstra is the
@@ -139,6 +144,20 @@ getUnsignedSubTxId (UnsignedSubTx tx) = fromShelleyTxId (L.txIdTx tx)
 getSignedSubTxId :: SignedSubTx -> TxId
 getSignedSubTxId (SignedSubTx tx) = fromShelleyTxId (L.txIdTx tx)
 
+-- | Spending and reference inputs of a signed sub-transaction, without
+-- duplicates. Query these UTxO entries when balancing the top level transaction.
+getSubTxInputs :: SignedSubTx -> [TxIn]
+getSubTxInputs (SignedSubTx tx) =
+  map fromShelleyTxIn
+    $ Set.toList
+    $ (tx ^. L.bodyTxL . L.inputsTxBodyL) <> (tx ^. L.bodyTxL . L.referenceInputsTxBodyL)
+
+-- | Certificates of a signed sub-transaction, in body order. Their deposits
+-- and refunds contribute to the balance of the top level transaction.
+getSubTxCertificates :: SignedSubTx -> [Certificate (LedgerEra DijkstraEra)]
+getSubTxCertificates (SignedSubTx tx) =
+  map Certificate $ toList $ tx ^. L.bodyTxL . L.certsTxBodyL
+
 -- | Embed signed sub-transactions in a top-level transaction body, replacing
 -- any that are already there.
 setTxSignedSubTransactions
@@ -182,7 +201,7 @@ makeUnsignedSubTx st = do
           & L.treasuryDonationTxBodyL .~ fromMaybe (L.Coin 0) (subTxTreasuryDonation st)
           & L.currentTreasuryValueTxBodyL .~ L.maybeToStrictMaybe (subTxCurrentTreasuryValue st)
           & L.guardsTxBodyL .~ bodyGuardCredentials st
-          & L.requiredTopLevelGuardsL .~ subTxRequiredTopLevelGuards st
+          & L.requiredTopLevelGuardsTxBodyL .~ subTxRequiredTopLevelGuards st
           & L.directDepositsTxBodyL .~ subTxDirectDeposits st
           & L.accountBalanceIntervalsTxBodyL .~ subTxAccountBalanceIntervals st
 

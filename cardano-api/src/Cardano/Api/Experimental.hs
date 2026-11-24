@@ -45,6 +45,8 @@ module Cardano.Api.Experimental
   , makeSignedSubTx
   , getUnsignedSubTxId
   , getSignedSubTxId
+  , getSubTxInputs
+  , getSubTxCertificates
   , setTxSignedSubTransactions
 
     -- ** Transaction evaluation
@@ -62,6 +64,8 @@ module Cardano.Api.Experimental
   , collectTxBodyScriptWitnesses
   , substituteExecutionUnits
   , estimateTransactionKeyWitnessCount
+  , getAllTxInputs
+  , getAllTxCertificates
 
     -- ** Era-related
   , BabbageEra
