@@ -18,6 +18,7 @@ import Test.Cardano.Api.Eras qualified
 import Test.Cardano.Api.Experimental qualified
 import Test.Cardano.Api.Experimental.Collateral qualified
 import Test.Cardano.Api.Experimental.Fee qualified
+import Test.Cardano.Api.Experimental.View qualified
 import Test.Cardano.Api.Genesis qualified
 import Test.Cardano.Api.GovAnchorValidation qualified
 import Test.Cardano.Api.IO qualified
@@ -65,6 +66,7 @@ tests =
     , Test.Cardano.Api.Experimental.tests
     , Test.Cardano.Api.Experimental.Collateral.tests
     , Test.Cardano.Api.Experimental.Fee.tests
+    , Test.Cardano.Api.Experimental.View.tests
     , Test.Cardano.Api.Genesis.tests
     , Test.Cardano.Api.IO.tests
     , Test.Cardano.Api.Json.tests
