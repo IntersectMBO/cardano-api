@@ -80,6 +80,7 @@ module Cardano.Api.Experimental
   , TxScriptWitnessRequirements (..)
   , Witnessable (..)
   , WitnessableItem (..)
+  , AnyWitnessable (..)
 
     -- ** AnyScript related
   , AnyScript (..)
