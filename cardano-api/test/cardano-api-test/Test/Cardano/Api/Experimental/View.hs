@@ -32,6 +32,9 @@ import Cardano.Ledger.Alonzo.TxAuxData qualified as L (mkAlonzoTxAuxData)
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Dijkstra.Scripts qualified as Dijkstra (DijkstraPlutusPurpose (..))
+import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
+  ( DijkstraEraTxBody (subTransactionsTxBodyL)
+  )
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Control.Monad (when)
@@ -39,6 +42,7 @@ import Data.ByteString.Short qualified as SBS
 import Data.Foldable (toList)
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
+import Data.OMap.Strict qualified as OMap
 import Data.OSet.Strict qualified as OSet
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
@@ -83,6 +87,9 @@ tests =
     , testProperty "Auxiliary Plutus scripts stay as bytes" prop_view_aux_plutus_scripts
     , testProperty "AnyWitnessable equality" prop_any_witnessable_equality
     , testProperty "Sub-transactions keep their order and witnesses" prop_view_sub_transactions
+    , testProperty
+        "Dijkstra: a sub-transaction's redeemers, scripts and datums are its own"
+        prop_view_sub_transaction_witnesses
     , testProperty
         "Signed and unsigned views differ only in key witnesses"
         prop_view_signed_vs_unsigned
@@ -375,6 +382,43 @@ prop_view_sub_transactions = H.withTests 20 . H.property $ do
   map Exp.txViewId viewed H.=== ids
   map (Exp.wvKeyWitnesses . Exp.txViewWitnesses) viewed
     H.=== [toList (tx ^. L.witsTxL . L.addrTxWitsL) | Exp.SignedSubTx tx <- subTxs]
+
+-- | The top level and its sub-transaction each have one input and a redeemer
+-- for it. Each redeemer must point at the input of its own body, and the
+-- sub-transaction's script and datum must stay in its own witness set.
+prop_view_sub_transaction_witnesses :: Property
+prop_view_sub_transaction_witnesses = H.property $ do
+  topIn <- H.forAll Q.arbitrary
+  subIn <- H.forAll Q.arbitrary
+  redeemer <- H.forAll Q.arbitrary
+  datum <- H.forAll Q.arbitrary
+  native :: L.NativeScript (Exp.LedgerEra Exp.DijkstraEra) <- H.forAll Q.arbitrary
+  let script = L.fromNativeScript native
+      datums = Map.singleton (UnexportedLedger.hashData datum) datum
+      pointer :: L.PlutusPurpose L.AsIx (Exp.LedgerEra Exp.DijkstraEra)
+      pointer = Dijkstra.DijkstraSpending (L.AsIx 0)
+      redeemers = L.Redeemers (Map.singleton pointer redeemer)
+      subTx =
+        L.mkBasicTx (L.mkBasicTxBody & L.inputsTxBodyL .~ Set.singleton subIn)
+          & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
+          & L.witsTxL . L.scriptTxWitsL .~ Map.singleton (L.hashScript script) script
+          & L.witsTxL . L.datsTxWitsL .~ L.TxDats datums
+      tx =
+        L.mkBasicTx
+          ( L.mkBasicTxBody
+              & L.inputsTxBodyL .~ Set.singleton topIn
+              & Dijkstra.subTransactionsTxBodyL .~ OMap.singleton subTx
+          )
+          & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
+      viewed = Exp.viewUnsignedTx Exp.DijkstraEra (Exp.UnsignedTx tx)
+      subViews = Exp.tvSubTransactions (Exp.bvTopTxOnly (Exp.txViewBody viewed))
+      spends txIn = Just (Exp.AnyWitnessable (Exp.WitTxIn (fromShelleyTxIn txIn)))
+  map Exp.rvItem (Exp.wvRedeemers (Exp.txViewWitnesses viewed)) H.=== [spends topIn]
+  map (map Exp.rvItem . Exp.wvRedeemers . Exp.txViewWitnesses) subViews H.=== [[spends subIn]]
+  Map.keys (Exp.wvScripts (Exp.txViewWitnesses viewed)) H.=== []
+  map (Map.keys . Exp.wvScripts . Exp.txViewWitnesses) subViews H.=== [[L.hashScript script]]
+  Exp.wvDatums (Exp.txViewWitnesses viewed) H.=== Map.empty
+  map (Exp.wvDatums . Exp.txViewWitnesses) subViews H.=== [datums]
 
 prop_view_signed_vs_unsigned :: Property
 prop_view_signed_vs_unsigned = H.property $ do
