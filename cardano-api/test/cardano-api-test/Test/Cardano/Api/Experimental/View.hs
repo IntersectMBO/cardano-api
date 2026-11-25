@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,8 +11,10 @@ module Test.Cardano.Api.Experimental.View
   )
 where
 
+import Cardano.Api (AsType (AsPaymentKey))
 import Cardano.Api.Address (fromShelleyStakeAddr)
 import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Experimental.AnyScriptWitness (AnyScriptWitness (AnyScriptWitnessSimple))
 import Cardano.Api.Experimental.Plutus qualified as Exp (plutusScriptInEraToScript)
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
@@ -24,6 +27,7 @@ import Cardano.Api.Plutus
 import Cardano.Api.Tx (fromShelleyTxIn)
 import Cardano.Api.Value (fromMaryPolicyID, multiAssetToPolicyAssets)
 
+import Cardano.Ledger.Alonzo.Tx qualified as Alonzo (ScriptIntegrity (..), hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxAuxData qualified as L (mkAlonzoTxAuxData)
 import Cardano.Ledger.Api qualified as UnexportedLedger
 import Cardano.Ledger.Core qualified as L
@@ -33,6 +37,7 @@ import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Control.Monad (when)
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (toList)
+import Data.List qualified as List
 import Data.Map.Strict qualified as Map
 import Data.OSet.Strict qualified as OSet
 import Data.Sequence.Strict qualified as StrictSeq
@@ -40,7 +45,14 @@ import Data.Set qualified as Set
 import Lens.Micro
 
 import Test.Gen.Cardano.Api.Experimental (genSignedSubTx, genSimpleScriptInEra)
-import Test.Gen.Cardano.Api.Typed (genPlutusScriptInEra, genShelleyWitnessSigningKey, genTxIn)
+import Test.Gen.Cardano.Api.Metadata (genTxMetadata)
+import Test.Gen.Cardano.Api.Typed
+  ( genPlutusScriptInEra
+  , genShelleyWitnessSigningKey
+  , genStakeAddress
+  , genTxIn
+  , genVerificationKeyHash
+  )
 
 import Hedgehog (Gen, Property)
 import Hedgehog qualified as H
@@ -48,6 +60,7 @@ import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Gen.QuickCheck qualified as Q
 import Hedgehog.Range qualified as Range
+import Test.QuickCheck (Arbitrary)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
@@ -76,7 +89,15 @@ tests =
     ]
 
 -- | Build a body with 'Exp.makeUnsignedTx', view it, and get the fields back.
-prop_view_built_body :: Exp.Era era -> Property
+prop_view_built_body
+  :: ( Arbitrary (L.TxCert (Exp.LedgerEra era))
+     , Arbitrary (L.NativeScript (Exp.LedgerEra era))
+     , Arbitrary (L.PParams (Exp.LedgerEra era))
+     , Arbitrary (L.ProposalProcedure (Exp.LedgerEra era))
+     , Arbitrary (L.VotingProcedures (Exp.LedgerEra era))
+     )
+  => Exp.Era era
+  -> Property
 prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
   ins <- H.forAll $ Gen.list (Range.linear 1 4) genTxIn
   refIns <- H.forAll $ Gen.list (Range.linear 0 3) genTxIn
@@ -86,7 +107,31 @@ prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
   upperBound <- H.forAll Q.arbitrary
   donation <- H.forAll Q.arbitrary
   treasury <- H.forAll Q.arbitrary
-  let content =
+  collateralIns <- H.forAll $ Gen.list (Range.linear 0 3) genTxIn
+  totalCollateral <- H.forAll Q.arbitrary
+  Exp.TxOut returnCollateral <- H.forAll $ genTxOut era
+  metadata <- H.forAll genTxMetadata
+  auxScripts <- H.forAll $ Gen.list (Range.linear 0 3) (Exp.SimpleScript <$> Q.arbitrary)
+  withdrawals <- H.forAll $ Gen.map (Range.linear 0 3) ((,) <$> genStakeAddress <*> Q.arbitrary)
+  certs <- H.forAll $ List.nub <$> Gen.list (Range.linear 0 3) Q.arbitrary
+  mint <- H.forAll Q.arbitrary
+  mintScriptIn <- H.forAll genTxIn
+  requiredSigners <- H.forAll $ Gen.list (Range.linear 0 3) (genVerificationKeyHash AsPaymentKey)
+  proposals <- H.forAll $ List.nub <$> Gen.list (Range.linear 0 3) Q.arbitrary
+  votes <- H.forAll Q.arbitrary
+  datums <- H.forAll $ Gen.list (Range.linear 0 3) Q.arbitrary
+  pparams <- H.forAll Q.arbitrary
+  -- 'Exp.mkTxVotingProcedures' needs at least one voter.
+  setVotes <-
+    if Map.null (L.unVotingProcedures votes)
+      then pure id
+      else
+        Exp.setTxVotingProcedures
+          <$> H.evalEither (Exp.mkTxVotingProcedures [(votes, Exp.AnyKeyWitnessPlaceholder)])
+  let mintValue = multiAssetToPolicyAssets mint
+      mintWitness = AnyScriptWitnessSimple (Exp.SReferenceScript mintScriptIn)
+      supplementalDatums = Map.fromList [(UnexportedLedger.hashData datum, datum) | datum <- datums]
+      content =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder) | txIn <- ins]
           & Exp.setTxInsReference (Exp.TxInsReference refIns Set.empty)
@@ -96,8 +141,30 @@ prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
           & Exp.setTxValidityUpperBound upperBound
           & Exp.setTxTreasuryDonation donation
           & Exp.setTxCurrentTreasuryValue treasury
-  unsigned <- H.evalEither $ Exp.makeUnsignedTx era content
-  let body = Exp.txViewBody (Exp.viewUnsignedTx era unsigned)
+          & Exp.setTxInsCollateral collateralIns
+          & Exp.setTxTotalCollateral (Exp.TxTotalCollateral totalCollateral)
+          & Exp.setTxReturnCollateral (Exp.TxReturnCollateral returnCollateral)
+          & Exp.setTxMetadata metadata
+          & Exp.setTxAuxScripts auxScripts
+          & Exp.setTxWithdrawals
+            ( Exp.TxWithdrawals
+                [(address, coin, Exp.AnyKeyWitnessPlaceholder) | (address, coin) <- Map.toList withdrawals]
+            )
+          & Exp.setTxCertificates
+            (Exp.mkTxCertificates era [(Exp.Certificate cert, Exp.AnyKeyWitnessPlaceholder) | cert <- certs])
+          & Exp.setTxMintValue
+            ( Exp.TxMintValue
+                (Map.fromList [(policyId, (assets, mintWitness)) | (policyId, assets) <- Map.toList mintValue])
+            )
+          & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses requiredSigners)
+          & Exp.setTxProposalProcedures
+            (Exp.mkTxProposalProcedures [(proposal, Exp.AnyKeyWitnessPlaceholder) | proposal <- proposals])
+          & setVotes
+          & Exp.setTxSupplementalDatums supplementalDatums
+          & Exp.setTxProtocolParams pparams
+  unsigned@(Exp.UnsignedTx tx) <- H.evalEither $ Exp.makeUnsignedTx era content
+  let viewed = Exp.viewUnsignedTx era unsigned
+      body = Exp.txViewBody viewed
       top = Exp.bvTopTxOnly body
   -- The ledger keeps inputs and reference inputs in sets.
   Set.fromList (Exp.bvIns body) H.=== Set.fromList ins
@@ -109,6 +176,29 @@ prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
   Exp.bvTreasuryDonation body H.=== donation
   Exp.bvCurrentTreasuryValue body H.=== Just treasury
   Exp.tvSubTransactions top H.=== []
+  Set.fromList (Exp.tvInsCollateral top) H.=== Set.fromList collateralIns
+  Exp.tvTotalCollateral top H.=== Just totalCollateral
+  Exp.tvReturnCollateral top H.=== Just (Exp.TxOut returnCollateral)
+  Exp.bvMetadata body H.=== metadata
+  Exp.bvAuxScripts body H.=== auxScripts
+  Map.fromList (Exp.bvWithdrawals body) H.=== withdrawals
+  Exp.bvCertificates body H.=== map Exp.Certificate certs
+  Exp.bvMintValue body H.=== mintValue
+  -- The ledger keeps required signers in a set.
+  Set.fromList (Exp.bvExtraKeyWits body) H.=== Set.fromList requiredSigners
+  Exp.bvProposalProcedures body H.=== proposals
+  Exp.bvVotingProcedures body H.=== votes
+  Exp.wvDatums (Exp.txViewWitnesses viewed) H.=== supplementalDatums
+  Exp.bvAuxDataHash body H.=== (L.hashTxAuxData <$> L.strictMaybeToMaybe (tx ^. L.auxDataTxL))
+  -- Without Plutus scripts, the script integrity hash covers only the datums.
+  Exp.bvScriptIntegrityHash body
+    H.=== if null datums
+      then Nothing
+      else
+        Just
+          ( Alonzo.hashScriptIntegrity
+              (Alonzo.ScriptIntegrity (L.Redeemers Map.empty) (L.TxDats supplementalDatums) Set.empty)
+          )
 
 genTxOut :: Exp.Era era -> Gen (Exp.TxOut (Exp.LedgerEra era))
 genTxOut = \case
