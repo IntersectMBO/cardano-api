@@ -47,6 +47,18 @@ module Cardano.Api.Experimental
   , getSignedSubTxId
   , setTxSignedSubTransactions
 
+    -- ** Viewing a decoded transaction
+  , TxView (..)
+  , BodyView (..)
+  , TopTxOnlyView (..)
+  , WitnessesView (..)
+  , RedeemerView (..)
+  , UndecodedPlutusScript (..)
+  , viewSignedTx
+  , viewUnsignedTx
+  , viewSignedSubTx
+  , viewUnsignedSubTx
+
     -- ** Transaction evaluation
   , evaluateTransaction
   , evaluateSignedTx
