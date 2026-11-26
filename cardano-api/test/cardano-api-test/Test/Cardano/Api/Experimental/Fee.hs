@@ -49,6 +49,7 @@ import Cardano.Slotting.Slot qualified as Slotting
 import Cardano.Slotting.Time qualified as Slotting
 
 import Control.Monad (forM_)
+import Data.Aeson qualified as Aeson
 import Data.ByteString.Base16 qualified as Base16
 import Data.Default (def)
 import Data.List qualified as List
@@ -145,6 +146,12 @@ tests =
         , testProperty
             "Dijkstra body guards count key credentials once, ignoring script credentials"
             prop_estimateTransactionKeyWitnessCount_counts_body_guards
+        , testProperty
+            "Conway: empty any scripts do not crash witness counting"
+            (prop_empty_any_script_witness_count Exp.ConwayEra)
+        , testProperty
+            "Dijkstra: empty any scripts do not crash witness counting"
+            (prop_empty_any_script_witness_count Exp.DijkstraEra)
         ]
     , testGroup
         "createCompatibleTx"
@@ -1236,6 +1243,32 @@ prop_createCompatibleTx_preserves_all_certs = H.property $ do
       createCompatibleTx sbe (defaultCompatibleTxBodyContent sbe){compatibleTxCertificates = inputCerts}
   let bodyCerts = ledgerTx ^. L.bodyTxL . L.certsTxBodyL
   Seq.length bodyCerts === expectedCount
+
+prop_empty_any_script_witness_count :: forall era. Exp.Era era -> Property
+prop_empty_any_script_witness_count era = Exp.obtainCommonConstraints era $ H.property $ do
+  txIn <- H.forAll genTxIn
+  keyHash <- H.forAll $ genVerificationKeyHash Api.AsPaymentKey
+  emptyAny <- H.evalEither $ Aeson.eitherDecode "{\"type\":\"any\",\"scripts\":[]}"
+  let signature = Api.RequireSignature keyHash
+      cases =
+        [ (emptyAny, 0)
+        , (Api.RequireAllOf [emptyAny], 0)
+        , (Api.RequireAnyOf [emptyAny, signature], 1)
+        , (Api.RequireAllOf [emptyAny, signature], 1)
+        , (Api.RequireMOf 1 [emptyAny, signature], 1)
+        , (Api.RequireAllOf [], 0)
+        , (Api.RequireMOf 0 [], 0)
+        , (Api.RequireAnyOf [signature, Api.RequireAllOf [signature, signature]], 2)
+        ]
+  forM_ cases $ \(script, expected) -> do
+    H.annotateShow script
+    let native :: L.NativeScript (Exp.LedgerEra era)
+        native = case era of
+          Exp.ConwayEra -> Api.toAllegraTimelock script
+          Exp.DijkstraEra -> Api.toDijkstraNativeScript script
+        witness = Exp.AnySimpleScriptWitness $ Exp.SScript $ Exp.SimpleScript native
+        content = Exp.defaultTxBodyContent & Exp.setTxIns [(txIn, witness)]
+    Exp.estimateTransactionKeyWitnessCount @era content === expected
 
 prop_estimateTransactionKeyWitnessCount_counts_dijkstra_guards :: Property
 prop_estimateTransactionKeyWitnessCount_counts_dijkstra_guards = H.property $ do

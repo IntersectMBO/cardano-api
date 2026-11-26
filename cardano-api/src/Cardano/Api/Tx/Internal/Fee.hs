@@ -578,6 +578,7 @@ estimateTransactionKeyWitnessCount
     maxWitnessesInSimpleScript (RequireTimeBefore _) = 0
     maxWitnessesInSimpleScript (RequireTimeAfter _) = 0
     maxWitnessesInSimpleScript (RequireAllOf simpleScripts) = sum $ map maxWitnessesInSimpleScript simpleScripts
+    maxWitnessesInSimpleScript (RequireAnyOf []) = 0
     maxWitnessesInSimpleScript (RequireAnyOf simpleScripts) = maximum $ map maxWitnessesInSimpleScript simpleScripts
     maxWitnessesInSimpleScript (RequireMOf n simpleScripts) = sum $ take n $ sortBy (comparing Down) (map maxWitnessesInSimpleScript simpleScripts)
     -- Count the key witness directly identified by the guard credential.
