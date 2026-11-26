@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -16,6 +17,8 @@ import Cardano.Api
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Ledger qualified as L
 
+import Control.Monad (forM_)
+import Data.Aeson qualified as Aeson
 import Data.Default (def)
 import Data.Maybe (isJust)
 import Data.Set (Set)
@@ -119,6 +122,32 @@ prop_roundtrip_txbodycontent_conway_fields = H.property $ do
     -> Maybe [L.ProposalProcedure (ShelleyLedgerEra era)]
   getProposalProcedures TxProposalProceduresNone = Nothing
   getProposalProcedures (TxProposalProcedures pp) = Just $ fst <$> toList pp
+
+prop_empty_any_script_witness_count :: Property
+prop_empty_any_script_witness_count = H.property $ do
+  txIn <- H.forAll genTxIn
+  keyHash <- H.forAll $ genVerificationKeyHash AsPaymentKey
+  emptyAny <- H.evalEither $ Aeson.eitherDecode "{\"type\":\"any\",\"scripts\":[]}"
+  let signature = RequireSignature keyHash
+      cases :: [(SimpleScript, Word)]
+      cases =
+        [ (emptyAny, 0)
+        , (RequireAllOf [emptyAny], 0)
+        , (RequireAnyOf [emptyAny, signature], 1)
+        , (RequireAllOf [emptyAny, signature], 1)
+        , (RequireMOf 1 [emptyAny, signature], 1)
+        , (RequireAllOf [], 0)
+        , (RequireMOf 0 [], 0)
+        , (RequireAnyOf [signature, RequireAllOf [signature, signature]], 2)
+        ]
+  forM_ cases $ \(script, expected) -> do
+    H.annotateShow script
+    let witness =
+          BuildTxWith
+            $ ScriptWitness ScriptWitnessForSpending
+            $ SimpleScriptWitness SimpleScriptInConway (SScript script)
+        content = setTxIns [(txIn, witness)] $ defaultTxBodyContent ShelleyBasedEraConway
+    estimateTransactionKeyWitnessCount content === expected
 
 prop_simple_script_witness_count :: Property
 prop_simple_script_witness_count = H.property $ do
@@ -339,6 +368,9 @@ tests =
     , testProperty
         "simple script witness count"
         prop_simple_script_witness_count
+    , testProperty
+        "empty any scripts do not crash witness counting"
+        prop_empty_any_script_witness_count
     , testProperty
         "vote key witness count"
         prop_estimateTransactionKeyWitnessCount_counts_vote_key_witnesses

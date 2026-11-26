@@ -1,0 +1,5 @@
+project: cardano-api
+pr: 1428
+kind:
+- bugfix
+description: Fix a crash when estimating key witnesses for empty or nested empty `RequireAnyOf` scripts in the stable and experimental APIs.
