@@ -17,6 +17,7 @@ import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.AnyScriptWitness (AnyScriptWitness (AnyScriptWitnessSimple))
 import Cardano.Api.Experimental.Plutus qualified as Exp (plutusScriptInEraToScript)
 import Cardano.Api.Experimental.Tx qualified as Exp
+import Cardano.Api.Key (Hash (PaymentKeyHash))
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus
   ( PlutusScript (PlutusScriptSerialised)
@@ -35,6 +36,7 @@ import Cardano.Ledger.Dijkstra.Scripts qualified as Dijkstra (DijkstraPlutusPurp
 import Cardano.Ledger.Dijkstra.TxBody qualified as Dijkstra
   ( DijkstraEraTxBody (subTransactionsTxBodyL)
   )
+import Cardano.Ledger.Keys qualified as L (coerceKeyRole)
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Control.Monad (when)
@@ -184,15 +186,25 @@ prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
   Exp.bvCurrentTreasuryValue body H.=== Just treasury
   Exp.ttvSubTransactions top H.=== []
   Set.fromList (Exp.ttvInsCollateral top) H.=== Set.fromList collateralIns
-  Exp.ttvTotalCollateral top H.=== Just totalCollateral
+  Exp.ttvTotalCollateral top H.=== Just (Exp.TxTotalCollateral totalCollateral)
   Exp.ttvReturnCollateral top H.=== Just (Exp.TxOut returnCollateral)
   Exp.bvMetadata body H.=== metadata
   Exp.bvAuxScripts body H.=== auxScripts
   Map.fromList (Exp.bvWithdrawals body) H.=== withdrawals
   Exp.bvCertificates body H.=== map Exp.Certificate certs
   Exp.bvMintValue body H.=== mintValue
-  -- The ledger keeps required signers in a set.
-  Set.fromList (Exp.bvExtraKeyWits body) H.=== Set.fromList requiredSigners
+  -- The ledger keeps required signers in a set. From Dijkstra on, they are key
+  -- guards. The signature lets GHC before 9.12 check the match on the era.
+  let requiredSignersCheck :: H.PropertyT IO ()
+      requiredSignersCheck = case era of
+        Exp.ConwayEra -> do
+          let Exp.TxExtraKeyWitnesses keys = Exp.ttvExtraKeyWits top
+          Set.fromList keys H.=== Set.fromList requiredSigners
+        Exp.DijkstraEra -> do
+          Exp.ttvExtraKeyWits top H.=== Exp.TxExtraKeyWitnesses []
+          Set.fromList [L.coerceKeyRole kh | L.KeyHashObj kh <- Exp.bvGuards body]
+            H.=== Set.fromList [kh | PaymentKeyHash kh <- requiredSigners]
+  requiredSignersCheck
   Exp.bvProposalProcedures body H.=== proposals
   Exp.bvVotingProcedures body H.=== votes
   Exp.twvDatums (Exp.tvWitnesses viewed) H.=== supplementalDatums

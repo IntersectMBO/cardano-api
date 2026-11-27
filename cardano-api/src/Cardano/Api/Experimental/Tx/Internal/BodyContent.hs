@@ -784,12 +784,14 @@ extractDatumsAndHashes (TxOutDatumInline h d) = Just (h, d)
 data TxInsReference era = TxInsReference [TxIn] (Set (Datum CtxTx era))
 
 newtype TxTotalCollateral = TxTotalCollateral {unTxTotalCollateral :: L.Coin}
+  deriving (Eq, Show)
 
 newtype TxReturnCollateral era = TxReturnCollateral {unTxReturnCollateral :: L.TxOut era}
 
 newtype TxValidityLowerBound = TxValidityLowerBound L.SlotNo
 
 newtype TxExtraKeyWitnesses = TxExtraKeyWitnesses [Hash PaymentKey]
+  deriving (Eq, Show)
 
 newtype TxWithdrawals era = TxWithdrawals {unTxWithdrawals :: [(StakeAddress, L.Coin, AnyWitness era)]}
   deriving (Eq, Show)

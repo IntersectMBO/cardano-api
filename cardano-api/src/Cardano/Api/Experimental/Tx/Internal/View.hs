@@ -53,13 +53,17 @@ import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
 import Cardano.Api.Experimental.Plutus.Internal.Script (PlutusScriptInEra (..))
 import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness (PlutusScriptPurpose)
 import Cardano.Api.Experimental.Simple.Script (SimpleScript (..))
-import Cardano.Api.Experimental.Tx.Internal.BodyContent (TxOut (..))
+import Cardano.Api.Experimental.Tx.Internal.BodyContent
+  ( TxExtraKeyWitnesses (..)
+  , TxOut (..)
+  , TxTotalCollateral (..)
+  )
 import Cardano.Api.Experimental.Tx.Internal.SubTransaction
   ( SignedSubTx (..)
   , UnsignedSubTx (..)
   )
 import Cardano.Api.Experimental.Tx.Internal.Type (UnsignedTx (..))
-import Cardano.Api.Key.Internal (Hash (PaymentKeyHash), PaymentKey)
+import Cardano.Api.Key.Internal (Hash (PaymentKeyHash))
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal.Script
   ( AnyPlutusScriptVersion (..)
@@ -119,10 +123,10 @@ data TxView (l :: L.TxLevel) era = TxView
 --
 -- Most fields have the type 'Cardano.Api.Experimental.Tx.BodyContent' uses
 -- for the same data, without the witness it is paired with there. The
--- differences: total collateral, return collateral and extra key witnesses
--- are not wrapped in the builder's newtypes, and extra key witnesses are a
--- field of both levels (see 'bvExtraKeyWits'). The view functions leave the
--- fields that only exist from the Dijkstra era on empty in Conway.
+-- difference: the return collateral is an output like those in 'bvOuts', not
+-- wrapped in the builder's newtype. The view functions leave the fields that
+-- only exist from the Dijkstra era on empty in Conway, and the required
+-- signers, which only exist up to Conway, empty from Dijkstra on.
 data BodyView (l :: L.TxLevel) era = BodyView
   { bvIns :: [TxIn]
   -- ^ Inputs to spend, sorted. There is no witness here: the transaction does
@@ -154,12 +158,6 @@ data BodyView (l :: L.TxLevel) era = BodyView
   -- ^ Certificates, in the body's order.
   , bvMintValue :: Map PolicyId PolicyAssets
   -- ^ Tokens to mint (positive amounts) or burn (negative amounts), by policy.
-  , bvExtraKeyWits :: [Hash PaymentKey]
-  -- ^ Keys that must sign the transaction (required signers). In Conway, the
-  -- body's required signer hashes. From Dijkstra on, the key guards, as
-  -- 'L.reqSignerHashesTxBodyG' reports them, so they are in 'bvGuards' too.
-  -- Both levels have this field; the builder has it for top-level bodies
-  -- only.
   , bvProposalProcedures :: [L.ProposalProcedure era]
   -- ^ Governance proposals, in the body's order.
   , bvVotingProcedures :: L.VotingProcedures era
@@ -209,13 +207,17 @@ data TopTxOnlyFieldsView (l :: L.TxLevel) era where
     :: { ttvInsCollateral :: [TxIn]
        -- ^ Collateral inputs, sorted. The ledger takes them if a Plutus
        -- script fails.
-       , ttvTotalCollateral :: Maybe L.Coin
+       , ttvTotalCollateral :: Maybe TxTotalCollateral
        -- ^ The total collateral, in lovelace. 'Nothing': not in the body.
        , ttvReturnCollateral :: Maybe (TxOut era)
        -- ^ The output that gets the rest of the collateral back if a Plutus
        -- script fails. 'Nothing': not in the body.
        , ttvFee :: L.Coin
        -- ^ The fee, in lovelace.
+       , ttvExtraKeyWits :: TxExtraKeyWitnesses
+       -- ^ Conway only. Keys that must sign the transaction (required
+       -- signers). Empty from Dijkstra on: key guards replace them, see
+       -- 'bvGuards'.
        , ttvScriptValidity :: ScriptValidity
        -- ^ Whether the Plutus scripts pass. @ScriptInvalid@: they fail, so the
        -- ledger takes only the collateral.
@@ -321,9 +323,17 @@ viewTopTxOnlyFields era tx =
     let body = tx ^. L.bodyTxL
      in TopTxView
           { ttvInsCollateral = map fromShelleyTxIn (toList (body ^. L.collateralInputsTxBodyL))
-          , ttvTotalCollateral = L.strictMaybeToMaybe (body ^. L.totalCollateralTxBodyL)
+          , ttvTotalCollateral =
+              TxTotalCollateral <$> L.strictMaybeToMaybe (body ^. L.totalCollateralTxBodyL)
           , ttvReturnCollateral = TxOut <$> L.strictMaybeToMaybe (body ^. L.collateralReturnTxBodyL)
           , ttvFee = body ^. L.feeTxBodyL
+          , ttvExtraKeyWits = case era of
+              ConwayEra ->
+                TxExtraKeyWitnesses
+                  [ PaymentKeyHash (L.coerceKeyRole kh)
+                  | kh <- toList (body ^. L.reqSignerHashesTxBodyL)
+                  ]
+              DijkstraEra -> TxExtraKeyWitnesses []
           , ttvScriptValidity = isValidToScriptValidity (tx ^. L.isPhase2ValidTxL)
           , ttvSubTransactions = case era of
               ConwayEra -> []
@@ -363,8 +373,6 @@ viewBody era tx topTxOnly =
               [(fromShelleyStakeAddr account, coin) | (account, coin) <- Map.toList withdrawals]
           , bvCertificates = map Exp.Certificate (toList (body ^. L.certsTxBodyL))
           , bvMintValue = multiAssetToPolicyAssets (body ^. L.mintTxBodyL)
-          , bvExtraKeyWits =
-              [PaymentKeyHash (L.coerceKeyRole kh) | kh <- toList (body ^. L.reqSignerHashesTxBodyG)]
           , bvProposalProcedures = toList (body ^. L.proposalProceduresTxBodyL)
           , bvVotingProcedures = body ^. L.votingProceduresTxBodyL
           , bvCurrentTreasuryValue = L.strictMaybeToMaybe (body ^. L.currentTreasuryValueTxBodyL)
