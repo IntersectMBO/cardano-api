@@ -1,0 +1,674 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script><style data-dead-link="1">.dead-link { border-bottom: 1px dotted #888; color: #888; cursor: help; }</style></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE StandaloneKindSignatures #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- | Conversion of a fetched or streamed chain block to the UTxO RPC</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- @AnyChainBlock@ message.</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#CardanoBlockComponent"><span class="hs-identifier">CardanoBlockComponent</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#anyChainBlockRead"><span class="hs-identifier">anyChainBlockRead</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#mkAnyChainBlock"><span class="hs-identifier">mkAnyChainBlock</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html"><span class="hs-identifier">Cardano.Api.Block</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Consensus.html"><span class="hs-identifier">Cardano.Api.Consensus</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">byronBlockRaw</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Consensus.html"><span class="hs-identifier">Cardano.Api.Consensus</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.Raw.html"><span class="hs-identifier">Cardano.Api.Serialise.Raw</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.html"><span class="hs-identifier">Cardano.Api.Tx</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Proto.Api.UtxoRpc.Sync.html"><span class="hs-identifier">Cardano.Rpc.Proto.Api.UtxoRpc.Sync</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U5c</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.FieldMask</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#FieldFill"><span class="hs-identifier">FieldFill</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#FieldMaskTree"><span class="hs-identifier">FieldMaskTree</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#SelectAll"><span class="hs-identifier">SelectAll</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier">fill</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fillShared"><span class="hs-identifier">fillShared</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fillSub"><span class="hs-identifier">fillSub</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#isSelected"><span class="hs-identifier">isSelected</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#runFill"><span class="hs-identifier">runFill</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#runFillPure"><span class="hs-identifier">runFillPure</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#subMask"><span class="hs-identifier">subMask</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron.html#byronBlockTxs"><span class="hs-identifier">byronBlockTxs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint.html#utcTimeToMs"><span class="hs-identifier">utcTimeToMs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html"><span class="hs-identifier">Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#anyEraTxConstraints"><span class="hs-identifier">anyEraTxConstraints</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#txToUtxoRpcTx"><span class="hs-identifier">txToUtxoRpcTx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">RIO</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Functor.Compose.html"><span class="hs-identifier">Data.Functor.Compose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Functor.Compose.html#Compose"><span class="hs-identifier">Compose</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Kind.html"><span class="hs-identifier">Data.Kind</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Type"><span class="hs-identifier">Type</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ProtoLens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">defMessage</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/time-1.15-inplace/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/time-1.15-inplace/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier">UTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.GRPC.Spec</span></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- | Assemble the @AnyChainBlock@ proto message: raw CBOR bytes, the cardano</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- header (slot, hash, height - derived from the block itself) and the parsed</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- transactions (all eras), plus the given slot timestamp.</span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#mkAnyChainBlock"><span class="hs-identifier hs-type">mkAnyChainBlock</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/bytestring-0.12.2.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Raw CBOR bytes of the block, exactly as stored on chain</span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockInMode"><span class="hs-identifier hs-type">BlockInMode</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The same block, parsed and placed in its era context</span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/time-1.15-inplace/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Slot wall-clock time; encoded as milliseconds since the Unix epoch</span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proto</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-rpc-11.5.0.0/l/gen/doc/html/cardano-rpc/gen/src/Proto.Utxorpc.V1beta.Sync.Sync.html#AnyChainBlock"><span class="hs-identifier hs-type">U5c.AnyChainBlock</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Message carrying the native bytes, the parsed cardano block and the timestamp</span></span><span>
+</span><span id="line-56"></span><span id="mkAnyChainBlock"><span class="annot"><span class="annottext">mkAnyChainBlock :: ByteString -&gt; BlockInMode -&gt; UTCTime -&gt; Proto AnyChainBlock
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#mkAnyChainBlock"><span class="hs-identifier hs-var hs-var">mkAnyChainBlock</span></a></span></span><span> </span><span id="local-6989586621679755389"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679755389"><span class="hs-identifier hs-var">rawBytes</span></a></span></span><span> </span><span id="local-6989586621679755390"><span class="annot"><span class="annottext">BlockInMode
+</span><a href="#local-6989586621679755390"><span class="hs-identifier hs-var">block</span></a></span></span><span> </span><span id="local-6989586621679755391"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679755391"><span class="hs-identifier hs-var">timestamp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">AnyChainBlock -&gt; Proto AnyChainBlock
+forall msg. msg -&gt; Proto msg
+</span><span class="hs-identifier hs-var">Proto</span></span><span> </span><span class="annot"><span class="annottext">(AnyChainBlock -&gt; Proto AnyChainBlock)
+-&gt; (FieldFill Identity AnyChainBlock -&gt; AnyChainBlock)
+-&gt; FieldFill Identity AnyChainBlock
+-&gt; Proto AnyChainBlock
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FieldMaskTree AnyChainBlock
+-&gt; FieldFill Identity AnyChainBlock -&gt; AnyChainBlock
+forall msg.
+Message msg =&gt;
+FieldMaskTree msg -&gt; FieldFill Identity msg -&gt; msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#runFillPure"><span class="hs-identifier hs-var">runFillPure</span></a></span><span> </span><span class="annot"><span class="annottext">FieldMaskTree AnyChainBlock
+forall msg. FieldMaskTree msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#SelectAll"><span class="hs-identifier hs-var">SelectAll</span></a></span><span> </span><span class="annot"><span class="annottext">(FieldFill Identity AnyChainBlock -&gt; Proto AnyChainBlock)
+-&gt; FieldFill Identity AnyChainBlock -&gt; Proto AnyChainBlock
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;nativeBytes&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Identity ByteString
+forall a. a -&gt; Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679755389"><span class="hs-identifier hs-var">rawBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">FieldFill Identity AnyChainBlock
+-&gt; FieldFill Identity AnyChainBlock
+-&gt; FieldFill Identity AnyChainBlock
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg sub (m :: * -&gt; *).
+(HasField msg label sub, KnownSymbol label, Message msg,
+ Message sub, Applicative m) =&gt;
+FieldFill m sub -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fillSub"><span class="hs-identifier hs-var">fillSub</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;cardano&quot;</span></span><span>
+</span><span id="line-60"></span><span>        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;header&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlockHeader -&gt; Identity BlockHeader
+forall a. a -&gt; Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(BlockHeader -&gt; Identity BlockHeader)
+-&gt; (BlockHeader -&gt; BlockHeader)
+-&gt; BlockHeader
+-&gt; Identity BlockHeader
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader -&gt; BlockHeader
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockHeaderToUtxoRpc"><span class="hs-identifier hs-var">blockHeaderToUtxoRpc</span></a></span><span> </span><span class="annot"><span class="annottext">(BlockHeader -&gt; Identity BlockHeader)
+-&gt; BlockHeader -&gt; Identity BlockHeader
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">BlockInMode -&gt; BlockHeader
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockInModeHeader"><span class="hs-identifier hs-var">blockInModeHeader</span></a></span><span> </span><span class="annot"><span class="annottext">BlockInMode
+</span><a href="#local-6989586621679755390"><span class="hs-identifier hs-var">block</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>            </span><span class="annot"><span class="annottext">FieldFill Identity Block
+-&gt; FieldFill Identity Block -&gt; FieldFill Identity Block
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg sub (m :: * -&gt; *).
+(HasField msg label sub, KnownSymbol label, Message msg,
+ Message sub, Applicative m) =&gt;
+FieldFill m sub -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fillSub"><span class="hs-identifier hs-var">fillSub</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;body&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;tx&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Identity [Tx] -&gt; FieldFill Identity BlockBody)
+-&gt; ([Tx] -&gt; Identity [Tx]) -&gt; [Tx] -&gt; FieldFill Identity BlockBody
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Tx] -&gt; Identity [Tx]
+forall a. a -&gt; Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">([Tx] -&gt; FieldFill Identity BlockBody)
+-&gt; [Tx] -&gt; FieldFill Identity BlockBody
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">BlockInMode -&gt; [Tx]
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockTxsToUtxoRpc"><span class="hs-identifier hs-var">blockTxsToUtxoRpc</span></a></span><span> </span><span class="annot"><span class="annottext">BlockInMode
+</span><a href="#local-6989586621679755390"><span class="hs-identifier hs-var">block</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>            </span><span class="annot"><span class="annottext">FieldFill Identity Block
+-&gt; FieldFill Identity Block -&gt; FieldFill Identity Block
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;timestamp&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Identity Word64
+forall a. a -&gt; Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; Identity Word64) -&gt; Word64 -&gt; Identity Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; Word64
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint.html#utcTimeToMs"><span class="hs-identifier hs-var">utcTimeToMs</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679755391"><span class="hs-identifier hs-var">timestamp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- | Components of a Cardano block that ChainDB reads together, for example the</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- raw bytes and the parsed block.</span><span>
+</span><span id="line-67"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#CardanoBlockComponent"><span class="hs-identifier hs-type">CardanoBlockComponent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">type</span><span> </span><span id="CardanoBlockComponent"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#CardanoBlockComponent"><span class="hs-identifier hs-var">CardanoBlockComponent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-3788b86f4cd561c483dab3991100ff2ad47185bb910754591ffb9d3bd1edb5b0/share/doc/html/src/Ouroboros.Consensus.Storage.Common.html#BlockComponent"><span class="hs-identifier hs-type">Consensus.BlockComponent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Consensus.CardanoBlock</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-protocol-0.2.0.1-5cbb4904f50707399ca6e32194aebc72b6d2b746caf08883941fd581288c3b98/share/doc/html/src/Cardano.Protocol.Crypto.html#StandardCrypto"><span class="hs-identifier hs-type">Consensus.StandardCrypto</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- | The block components that the @AnyChainBlock@ fields a mask selects need, and</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- the action that builds the message from them. With no field selected, ChainDB only</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- checks that the block exists.</span><span>
+</span><span id="line-74"></span><span id="local-6989586621679755155"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#anyChainBlockRead"><span class="hs-identifier hs-type">anyChainBlockRead</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679755155"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.2.0-3118e4c75f1bcf5bb7c03d431dfda243b4461dc7c839e6a667bea01ce658bb9c/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679755155"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/time-1.15-inplace/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Convert a slot to its wall-clock timestamp</span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#FieldMaskTree"><span class="hs-identifier hs-type">FieldMaskTree</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-rpc-11.5.0.0/l/gen/doc/html/cardano-rpc/gen/src/Proto.Utxorpc.V1beta.Sync.Sync.html#AnyChainBlock"><span class="hs-identifier hs-type">U5c.AnyChainBlock</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Selects the fields to fill</span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#CardanoBlockComponent"><span class="hs-identifier hs-type">CardanoBlockComponent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679755155"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-rpc-11.5.0.0/l/gen/doc/html/cardano-rpc/gen/src/Proto.Utxorpc.V1beta.Sync.Sync.html#AnyChainBlock"><span class="hs-identifier hs-type">U5c.AnyChainBlock</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-81"></span><span id="anyChainBlockRead"><span class="annot"><span class="annottext">anyChainBlockRead :: forall (m :: * -&gt; *).
+Applicative m =&gt;
+(SlotNo -&gt; m UTCTime)
+-&gt; FieldMaskTree AnyChainBlock
+-&gt; CardanoBlockComponent (m AnyChainBlock)
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#anyChainBlockRead"><span class="hs-identifier hs-var hs-var">anyChainBlockRead</span></a></span></span><span> </span><span id="local-6989586621679755411"><span class="annot"><span class="annottext">SlotNo -&gt; m UTCTime
+</span><a href="#local-6989586621679755411"><span class="hs-identifier hs-var">doSlotTimestamp</span></a></span></span><span> </span><span id="local-6989586621679755412"><span class="annot"><span class="annottext">FieldMaskTree AnyChainBlock
+</span><a href="#local-6989586621679755412"><span class="hs-identifier hs-var">fieldMask</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><span class="annottext">Compose
+  (BlockComponent (CardanoBlock StandardCrypto)) m AnyChainBlock
+-&gt; BlockComponent (CardanoBlock StandardCrypto) (m AnyChainBlock)
+forall {k1} {k2} (f :: k1 -&gt; *) (g :: k2 -&gt; k1) (a :: k2).
+Compose f g a -&gt; f (g a)
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Functor.Compose.html#getCompose"><span class="hs-identifier hs-var">getCompose</span></a></span><span> </span><span class="annot"><span class="annottext">(Compose
+   (BlockComponent (CardanoBlock StandardCrypto)) m AnyChainBlock
+ -&gt; BlockComponent (CardanoBlock StandardCrypto) (m AnyChainBlock))
+-&gt; (FieldFill
+      (Compose (BlockComponent (CardanoBlock StandardCrypto)) m)
+      AnyChainBlock
+    -&gt; Compose
+         (BlockComponent (CardanoBlock StandardCrypto)) m AnyChainBlock)
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m)
+     AnyChainBlock
+-&gt; BlockComponent (CardanoBlock StandardCrypto) (m AnyChainBlock)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(forall x.
+ Compose (BlockComponent (CardanoBlock StandardCrypto)) m x
+ -&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m x)
+-&gt; FieldMaskTree AnyChainBlock
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m)
+     AnyChainBlock
+-&gt; Compose
+     (BlockComponent (CardanoBlock StandardCrypto)) m AnyChainBlock
+forall (n :: * -&gt; *) msg (m :: * -&gt; *).
+(Applicative n, Message msg) =&gt;
+(forall x. m x -&gt; n x)
+-&gt; FieldMaskTree msg -&gt; FieldFill m msg -&gt; n msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#runFill"><span class="hs-identifier hs-var">runFill</span></a></span><span> </span><span class="annot"><span class="annottext">Compose (BlockComponent (CardanoBlock StandardCrypto)) m x
+-&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m x
+forall a. a -&gt; a
+forall x.
+Compose (BlockComponent (CardanoBlock StandardCrypto)) m x
+-&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m x
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">FieldMaskTree AnyChainBlock
+</span><a href="#local-6989586621679755412"><span class="hs-identifier hs-var">fieldMask</span></a></span><span> </span><span class="annot"><span class="annottext">(FieldFill
+   (Compose (BlockComponent (CardanoBlock StandardCrypto)) m)
+   AnyChainBlock
+ -&gt; BlockComponent (CardanoBlock StandardCrypto) (m AnyChainBlock))
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m)
+     AnyChainBlock
+-&gt; BlockComponent (CardanoBlock StandardCrypto) (m AnyChainBlock)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+-&gt; (SlotNo -&gt; m UTCTime)
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m)
+     AnyChainBlock
+forall (m :: * -&gt; *).
+Applicative m =&gt;
+Bool
+-&gt; (SlotNo -&gt; m UTCTime)
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m)
+     AnyChainBlock
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#anyChainBlockFill"><span class="hs-identifier hs-var">anyChainBlockFill</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679755416"><span class="hs-identifier hs-var">isBodySelected</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; m UTCTime
+</span><a href="#local-6989586621679755411"><span class="hs-identifier hs-var">doSlotTimestamp</span></a></span><span>
+</span><span id="line-83"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621679755416"><span class="annot"><span class="annottext">isBodySelected :: Bool
+</span><a href="#local-6989586621679755416"><span class="hs-identifier hs-var hs-var">isBodySelected</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a.
+(HasField msg label a, KnownSymbol label, Message msg) =&gt;
+FieldMaskTree msg -&gt; Bool
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#isSelected"><span class="hs-identifier hs-var">isSelected</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;body&quot;</span></span><span> </span><span class="annot"><span class="annottext">(FieldMaskTree Block -&gt; Bool) -&gt; FieldMaskTree Block -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg sub.
+(HasField msg label sub, KnownSymbol label, Message msg) =&gt;
+FieldMaskTree msg -&gt; FieldMaskTree sub
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#subMask"><span class="hs-identifier hs-var">subMask</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;cardano&quot;</span></span><span> </span><span class="annot"><span class="annottext">FieldMaskTree AnyChainBlock
+</span><a href="#local-6989586621679755412"><span class="hs-identifier hs-var">fieldMask</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- | Fill the fields of an @AnyChainBlock@ that a mask selects, each from the block</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- component that holds it: @native_bytes@ from the raw block, @cardano.body@ from the</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- parsed block, @cardano.header@ from the header and @cardano.timestamp@ from the slot.</span><span>
+</span><span id="line-89"></span><span id="local-6989586621679755175"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#anyChainBlockFill"><span class="hs-identifier hs-type">anyChainBlockFill</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679755175"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Whether the mask selects @cardano.body@</span></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.2.0-3118e4c75f1bcf5bb7c03d431dfda243b4461dc7c839e6a667bea01ce658bb9c/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679755175"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/time-1.15-inplace/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Convert a slot to its wall-clock timestamp</span></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.FieldMask.html#FieldFill"><span class="hs-identifier hs-type">FieldFill</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#CardanoBlockComponent"><span class="hs-identifier hs-type">CardanoBlockComponent</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679755175"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-rpc-11.5.0.0/l/gen/doc/html/cardano-rpc/gen/src/Proto.Utxorpc.V1beta.Sync.Sync.html#AnyChainBlock"><span class="hs-identifier hs-type">U5c.AnyChainBlock</span></a></span></span><span>
+</span><span id="line-96"></span><span id="anyChainBlockFill"><span class="annot"><span class="annottext">anyChainBlockFill :: forall (m :: * -&gt; *).
+Applicative m =&gt;
+Bool
+-&gt; (SlotNo -&gt; m UTCTime)
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m)
+     AnyChainBlock
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#anyChainBlockFill"><span class="hs-identifier hs-var hs-var">anyChainBlockFill</span></a></span></span><span> </span><span id="local-6989586621679755473"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679755473"><span class="hs-identifier hs-var">isBodySelected</span></a></span></span><span> </span><span id="local-6989586621679755474"><span class="annot"><span class="annottext">SlotNo -&gt; m UTCTime
+</span><a href="#local-6989586621679755474"><span class="hs-identifier hs-var">doSlotTimestamp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;nativeBytes&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CardanoBlockComponent ByteString
+-&gt; Compose
+     (BlockComponent (CardanoBlock StandardCrypto)) m ByteString
+forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+CardanoBlockComponent a
+-&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m a
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#readComponent"><span class="hs-identifier hs-var">readComponent</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoBlockComponent ByteString
+ -&gt; Compose
+      (BlockComponent (CardanoBlock StandardCrypto)) m ByteString)
+-&gt; CardanoBlockComponent ByteString
+-&gt; Compose
+     (BlockComponent (CardanoBlock StandardCrypto)) m ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">LByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">toStrictBytes</span></span><span> </span><span class="annot"><span class="annottext">(LByteString -&gt; ByteString)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) LByteString
+-&gt; CardanoBlockComponent ByteString
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">BlockComponent (CardanoBlock StandardCrypto) LByteString
+forall blk. BlockComponent blk LByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-3788b86f4cd561c483dab3991100ff2ad47185bb910754591ffb9d3bd1edb5b0/share/doc/html/src/Ouroboros.Consensus.Storage.Common.html#GetRawBlock"><span class="hs-identifier hs-var">Consensus.GetRawBlock</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="annottext">FieldFill
+  (Compose (BlockComponent (CardanoBlock StandardCrypto)) m)
+  AnyChainBlock
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m)
+     AnyChainBlock
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m)
+     AnyChainBlock
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg sub (m :: * -&gt; *).
+(HasField msg label sub, KnownSymbol label, Message msg,
+ Message sub, Applicative m) =&gt;
+FieldFill m sub -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fillSub"><span class="hs-identifier hs-var">fillSub</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;cardano&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FieldFill
+  (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+</span><a href="#local-6989586621679755479"><span class="hs-identifier hs-var">contentFill</span></a></span><span> </span><span class="annot"><span class="annottext">FieldFill
+  (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FieldFill
+  (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+</span><a href="#local-6989586621679755480"><span class="hs-identifier hs-var">timestampFill</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-comment">-- ChainDB reads each component on its own, so the header comes from the parsed</span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-comment">-- block when the body needs it anyway, and from the smaller header otherwise.</span><span>
+</span><span id="line-102"></span><span>  </span><span id="local-6989586621679755479"><span class="annot"><span class="annottext">contentFill :: FieldFill
+  (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+</span><a href="#local-6989586621679755479"><span class="hs-identifier hs-var hs-var">contentFill</span></a></span></span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679755473"><span class="hs-identifier hs-var">isBodySelected</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-104"></span><span>        </span><span class="annot"><span class="annottext">Compose
+  (BlockComponent (CardanoBlock StandardCrypto)) m BlockInMode
+-&gt; FieldFill ((-&gt;) BlockInMode) Block
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+forall (m :: * -&gt; *) shared msg.
+Functor m =&gt;
+m shared -&gt; FieldFill ((-&gt;) shared) msg -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fillShared"><span class="hs-identifier hs-var">fillShared</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CardanoBlockComponent BlockInMode
+-&gt; Compose
+     (BlockComponent (CardanoBlock StandardCrypto)) m BlockInMode
+forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+CardanoBlockComponent a
+-&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m a
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#readComponent"><span class="hs-identifier hs-var">readComponent</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoBlockComponent BlockInMode
+ -&gt; Compose
+      (BlockComponent (CardanoBlock StandardCrypto)) m BlockInMode)
+-&gt; CardanoBlockComponent BlockInMode
+-&gt; Compose
+     (BlockComponent (CardanoBlock StandardCrypto)) m BlockInMode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoBlock StandardCrypto -&gt; BlockInMode
+forall block.
+(CardanoBlock StandardCrypto ~ block) =&gt;
+block -&gt; BlockInMode
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#fromConsensusBlock"><span class="hs-identifier hs-var">fromConsensusBlock</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoBlock StandardCrypto -&gt; BlockInMode)
+-&gt; BlockComponent
+     (CardanoBlock StandardCrypto) (CardanoBlock StandardCrypto)
+-&gt; CardanoBlockComponent BlockInMode
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">BlockComponent
+  (CardanoBlock StandardCrypto) (CardanoBlock StandardCrypto)
+forall blk. BlockComponent blk blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-3788b86f4cd561c483dab3991100ff2ad47185bb910754591ffb9d3bd1edb5b0/share/doc/html/src/Ouroboros.Consensus.Storage.Common.html#GetBlock"><span class="hs-identifier hs-var">Consensus.GetBlock</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(FieldFill ((-&gt;) BlockInMode) Block
+ -&gt; FieldFill
+      (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block)
+-&gt; FieldFill ((-&gt;) BlockInMode) Block
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-105"></span><span>          </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;header&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlockHeader -&gt; BlockHeader
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockHeaderToUtxoRpc"><span class="hs-identifier hs-var">blockHeaderToUtxoRpc</span></a></span><span> </span><span class="annot"><span class="annottext">(BlockHeader -&gt; BlockHeader)
+-&gt; (BlockInMode -&gt; BlockHeader) -&gt; BlockInMode -&gt; BlockHeader
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">BlockInMode -&gt; BlockHeader
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockInModeHeader"><span class="hs-identifier hs-var">blockInModeHeader</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>            </span><span class="annot"><span class="annottext">FieldFill ((-&gt;) BlockInMode) Block
+-&gt; FieldFill ((-&gt;) BlockInMode) Block
+-&gt; FieldFill ((-&gt;) BlockInMode) Block
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg sub (m :: * -&gt; *).
+(HasField msg label sub, KnownSymbol label, Message msg,
+ Message sub, Applicative m) =&gt;
+FieldFill m sub -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fillSub"><span class="hs-identifier hs-var">fillSub</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;body&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;tx&quot;</span></span><span> </span><span class="annot"><span class="annottext">BlockInMode -&gt; [Tx]
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockTxsToUtxoRpc"><span class="hs-identifier hs-var">blockTxsToUtxoRpc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>        </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;header&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Compose
+   (BlockComponent (CardanoBlock StandardCrypto)) m BlockHeader
+ -&gt; FieldFill
+      (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block)
+-&gt; (BlockComponent (CardanoBlock StandardCrypto) BlockHeader
+    -&gt; Compose
+         (BlockComponent (CardanoBlock StandardCrypto)) m BlockHeader)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) BlockHeader
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">BlockComponent (CardanoBlock StandardCrypto) BlockHeader
+-&gt; Compose
+     (BlockComponent (CardanoBlock StandardCrypto)) m BlockHeader
+forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+CardanoBlockComponent a
+-&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m a
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#readComponent"><span class="hs-identifier hs-var">readComponent</span></a></span><span> </span><span class="annot"><span class="annottext">(BlockComponent (CardanoBlock StandardCrypto) BlockHeader
+ -&gt; FieldFill
+      (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) BlockHeader
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-109"></span><span>          </span><span class="annot"><span class="annottext">BlockHeader -&gt; BlockHeader
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockHeaderToUtxoRpc"><span class="hs-identifier hs-var">blockHeaderToUtxoRpc</span></a></span><span> </span><span class="annot"><span class="annottext">(BlockHeader -&gt; BlockHeader)
+-&gt; (Header (CardanoBlock StandardCrypto) -&gt; BlockHeader)
+-&gt; Header (CardanoBlock StandardCrypto)
+-&gt; BlockHeader
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Header (CardanoBlock StandardCrypto) -&gt; BlockHeader
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#consensusHeaderToBlockHeader"><span class="hs-identifier hs-var">consensusHeaderToBlockHeader</span></a></span><span> </span><span class="annot"><span class="annottext">(Header (CardanoBlock StandardCrypto) -&gt; BlockHeader)
+-&gt; BlockComponent
+     (CardanoBlock StandardCrypto)
+     (Header (CardanoBlock StandardCrypto))
+-&gt; BlockComponent (CardanoBlock StandardCrypto) BlockHeader
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">BlockComponent
+  (CardanoBlock StandardCrypto)
+  (Header (CardanoBlock StandardCrypto))
+forall blk. BlockComponent blk (Header blk)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-3788b86f4cd561c483dab3991100ff2ad47185bb910754591ffb9d3bd1edb5b0/share/doc/html/src/Ouroboros.Consensus.Storage.Common.html#GetHeader"><span class="hs-identifier hs-var">Consensus.GetHeader</span></a></span><span>
+</span><span id="line-110"></span><span>  </span><span id="local-6989586621679755480"><span class="annot"><span class="annottext">timestampFill :: FieldFill
+  (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+</span><a href="#local-6989586621679755480"><span class="hs-identifier hs-var hs-var">timestampFill</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><span class="annottext">forall (label :: Symbol) msg a (m :: * -&gt; *).
+(HasField msg label a, KnownSymbol label, Message msg,
+ Functor m) =&gt;
+m a -&gt; FieldFill m msg
+</span><a href="Cardano.Rpc.Server.Internal.FieldMask.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;timestamp&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Compose (BlockComponent (CardanoBlock StandardCrypto)) m Word64
+ -&gt; FieldFill
+      (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block)
+-&gt; (BlockComponent (CardanoBlock StandardCrypto) (m Word64)
+    -&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m Word64)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) (m Word64)
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">BlockComponent (CardanoBlock StandardCrypto) (m Word64)
+-&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m Word64
+forall {k} {k1} (f :: k -&gt; *) (g :: k1 -&gt; k) (a :: k1).
+f (g a) -&gt; Compose f g a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span><span> </span><span class="annot"><span class="annottext">(BlockComponent (CardanoBlock StandardCrypto) (m Word64)
+ -&gt; FieldFill
+      (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) (m Word64)
+-&gt; FieldFill
+     (Compose (BlockComponent (CardanoBlock StandardCrypto)) m) Block
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(UTCTime -&gt; Word64) -&gt; m UTCTime -&gt; m Word64
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; Word64
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.ChainPoint.html#utcTimeToMs"><span class="hs-identifier hs-var">utcTimeToMs</span></a></span><span> </span><span class="annot"><span class="annottext">(m UTCTime -&gt; m Word64)
+-&gt; (SlotNo -&gt; m UTCTime) -&gt; SlotNo -&gt; m Word64
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; m UTCTime
+</span><a href="#local-6989586621679755474"><span class="hs-identifier hs-var">doSlotTimestamp</span></a></span><span> </span><span class="annot"><span class="annottext">(SlotNo -&gt; m Word64)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) SlotNo
+-&gt; BlockComponent (CardanoBlock StandardCrypto) (m Word64)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">BlockComponent (CardanoBlock StandardCrypto) SlotNo
+forall blk. BlockComponent blk SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-3788b86f4cd561c483dab3991100ff2ad47185bb910754591ffb9d3bd1edb5b0/share/doc/html/src/Ouroboros.Consensus.Storage.Common.html#GetSlot"><span class="hs-identifier hs-var">Consensus.GetSlot</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><span class="hs-comment">-- | Read a block component that needs no further effect to fill its field.</span></span><span>
+</span><span id="line-114"></span><span id="local-6989586621679755189"><span id="local-6989586621679755190"><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#readComponent"><span class="hs-identifier hs-type">readComponent</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679755189"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#CardanoBlockComponent"><span class="hs-identifier hs-type">CardanoBlockComponent</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679755190"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-type">Compose</span></a></span><span> </span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#CardanoBlockComponent"><span class="hs-identifier hs-type">CardanoBlockComponent</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679755189"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679755190"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-115"></span><span id="readComponent"><span class="annot"><span class="annottext">readComponent :: forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+CardanoBlockComponent a
+-&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m a
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#readComponent"><span class="hs-identifier hs-var hs-var">readComponent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CardanoBlockComponent (m a)
+-&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m a
+forall {k} {k1} (f :: k -&gt; *) (g :: k1 -&gt; k) (a :: k1).
+f (g a) -&gt; Compose f g a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/base-4.22.0.0-inplace/src/Data.Functor.Compose.html#Compose"><span class="hs-identifier hs-var">Compose</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoBlockComponent (m a)
+ -&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m a)
+-&gt; (BlockComponent (CardanoBlock StandardCrypto) a
+    -&gt; CardanoBlockComponent (m a))
+-&gt; BlockComponent (CardanoBlock StandardCrypto) a
+-&gt; Compose (BlockComponent (CardanoBlock StandardCrypto)) m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; m a)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) a
+-&gt; CardanoBlockComponent (m a)
+forall a b.
+(a -&gt; b)
+-&gt; BlockComponent (CardanoBlock StandardCrypto) a
+-&gt; BlockComponent (CardanoBlock StandardCrypto) b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m a
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><span class="hs-comment">-- | The UTxO RPC header of a block: its slot, header hash and height.</span></span><span>
+</span><span id="line-118"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockHeaderToUtxoRpc"><span class="hs-identifier hs-type">blockHeaderToUtxoRpc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockHeader"><span class="hs-identifier hs-type">BlockHeader</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-rpc-11.5.0.0/l/gen/doc/html/cardano-rpc/gen/src/Proto.Utxorpc.V1beta.Cardano.Cardano.html#BlockHeader"><span class="hs-identifier hs-type">U5c.BlockHeader</span></a></span><span>
+</span><span id="line-119"></span><span id="blockHeaderToUtxoRpc"><span class="annot"><span class="annottext">blockHeaderToUtxoRpc :: BlockHeader -&gt; BlockHeader
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockHeaderToUtxoRpc"><span class="hs-identifier hs-var hs-var">blockHeaderToUtxoRpc</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockHeader"><span class="hs-identifier hs-type">BlockHeader</span></a></span><span> </span><span id="local-6989586621679755491"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679755491"><span class="hs-identifier hs-var">slot</span></a></span></span><span> </span><span id="local-6989586621679755492"><span class="annot"><span class="annottext">Hash BlockHeader
+</span><a href="#local-6989586621679755492"><span class="hs-identifier hs-var">headerHash</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.2.0-3118e4c75f1bcf5bb7c03d431dfda243b4461dc7c839e6a667bea01ce658bb9c/share/doc/html/src/Cardano.Slotting.Block.html#BlockNo"><span class="hs-identifier hs-type">BlockNo</span></a></span><span> </span><span id="local-6989586621679755494"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679755494"><span class="hs-identifier hs-var">height</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-120"></span><span>  </span><span class="annot"><span class="annottext">BlockHeader
+forall msg. Message msg =&gt; msg
+</span><span class="hs-identifier hs-var">defMessage</span></span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><span class="annottext">BlockHeader -&gt; (BlockHeader -&gt; BlockHeader) -&gt; BlockHeader
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity BlockHeader Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;slot&quot; a) =&gt;
+LensLike' f s a
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-rpc-11.5.0.0/l/gen/doc/html/cardano-rpc/gen/src/Proto.Utxorpc.V1beta.Sync.Sync_Fields.html#slot"><span class="hs-identifier hs-var">U5c.slot</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity BlockHeader Word64
+-&gt; Word64 -&gt; BlockHeader -&gt; BlockHeader
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-slotting-0.2.2.0-3118e4c75f1bcf5bb7c03d431dfda243b4461dc7c839e6a667bea01ce658bb9c/share/doc/html/src/Cardano.Slotting.Slot.html#unSlotNo"><span class="hs-identifier hs-var">unSlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679755491"><span class="hs-identifier hs-var">slot</span></a></span><span>
+</span><span id="line-122"></span><span>    </span><span class="annot"><span class="annottext">BlockHeader -&gt; (BlockHeader -&gt; BlockHeader) -&gt; BlockHeader
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity BlockHeader ByteString
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;hash&quot; a) =&gt;
+LensLike' f s a
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-rpc-11.5.0.0/l/gen/doc/html/cardano-rpc/gen/src/Proto.Utxorpc.V1beta.Sync.Sync_Fields.html#hash"><span class="hs-identifier hs-var">U5c.hash</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity BlockHeader ByteString
+-&gt; ByteString -&gt; BlockHeader -&gt; BlockHeader
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Hash BlockHeader -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-keys-11.0.0.0-b2aa16ce7f9004dbb7126493a0c5ac51188e12bf5c79a2f2adb85edc240b741e/share/doc/html/src/Cardano.Keys.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Hash BlockHeader
+</span><a href="#local-6989586621679755492"><span class="hs-identifier hs-var">headerHash</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><span class="annottext">BlockHeader -&gt; (BlockHeader -&gt; BlockHeader) -&gt; BlockHeader
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity BlockHeader Word64
+forall (f :: * -&gt; *) s a.
+(Functor f, HasField s &quot;height&quot; a) =&gt;
+LensLike' f s a
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-rpc-11.5.0.0/l/gen/doc/html/cardano-rpc/gen/src/Proto.Utxorpc.V1beta.Sync.Sync_Fields.html#height"><span class="hs-identifier hs-var">U5c.height</span></a></span><span> </span><span class="annot"><span class="annottext">LensLike' Identity BlockHeader Word64
+-&gt; Word64 -&gt; BlockHeader -&gt; BlockHeader
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679755494"><span class="hs-identifier hs-var">height</span></a></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="annot"><span class="hs-comment">-- | The header of a parsed block.</span></span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockInModeHeader"><span class="hs-identifier hs-type">blockInModeHeader</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockInMode"><span class="hs-identifier hs-type">BlockInMode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockHeader"><span class="hs-identifier hs-type">BlockHeader</span></a></span><span>
+</span><span id="line-127"></span><span id="blockInModeHeader"><span class="annot"><span class="annottext">blockInModeHeader :: BlockInMode -&gt; BlockHeader
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockInModeHeader"><span class="hs-identifier hs-var hs-var">blockInModeHeader</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockInMode"><span class="hs-identifier hs-type">BlockInMode</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679755503"><span class="annot"><span class="annottext">Block era
+</span><a href="#local-6989586621679755503"><span class="hs-identifier hs-var">block</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Block era -&gt; BlockHeader
+forall era. Block era -&gt; BlockHeader
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#getBlockHeader"><span class="hs-identifier hs-var">getBlockHeader</span></a></span><span> </span><span class="annot"><span class="annottext">Block era
+</span><a href="#local-6989586621679755503"><span class="hs-identifier hs-var">block</span></a></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="annot"><span class="hs-comment">-- | The header that ChainDB reads without the block body, as the header of a parsed block.</span></span><span>
+</span><span id="line-130"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#consensusHeaderToBlockHeader"><span class="hs-identifier hs-type">consensusHeaderToBlockHeader</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-3788b86f4cd561c483dab3991100ff2ad47185bb910754591ffb9d3bd1edb5b0/share/doc/html/src/Ouroboros.Consensus.Block.Abstract.html#Header"><span class="hs-identifier hs-type">Consensus.Header</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Consensus.CardanoBlock</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/cardano-protocol-0.2.0.1-5cbb4904f50707399ca6e32194aebc72b6d2b746caf08883941fd581288c3b98/share/doc/html/src/Cardano.Protocol.Crypto.html#StandardCrypto"><span class="hs-identifier hs-type">Consensus.StandardCrypto</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockHeader"><span class="hs-identifier hs-type">BlockHeader</span></a></span><span>
+</span><span id="line-132"></span><span id="consensusHeaderToBlockHeader"><span class="annot"><span class="annottext">consensusHeaderToBlockHeader :: Header (CardanoBlock StandardCrypto) -&gt; BlockHeader
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#consensusHeaderToBlockHeader"><span class="hs-identifier hs-var hs-var">consensusHeaderToBlockHeader</span></a></span></span><span> </span><span id="local-6989586621679755505"><span class="annot"><span class="annottext">Header (CardanoBlock StandardCrypto)
+</span><a href="#local-6989586621679755505"><span class="hs-identifier hs-var">header</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><span class="annottext">SlotNo -&gt; Hash BlockHeader -&gt; BlockNo -&gt; BlockHeader
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockHeader"><span class="hs-identifier hs-var">BlockHeader</span></a></span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Header (CardanoBlock StandardCrypto) -&gt; SlotNo
+forall b. HasHeader b =&gt; b -&gt; SlotNo
+</span><span class="hs-identifier hs-var">Consensus.blockSlot</span></span><span> </span><span class="annot"><span class="annottext">Header (CardanoBlock StandardCrypto)
+</span><a href="#local-6989586621679755505"><span class="hs-identifier hs-var">header</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShortByteString -&gt; Hash BlockHeader
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#HeaderHash"><span class="hs-identifier hs-var">HeaderHash</span></a></span><span> </span><span class="annot"><span class="annottext">(ShortByteString -&gt; Hash BlockHeader)
+-&gt; (OneEraHash (ByronBlock : CardanoShelleyEras StandardCrypto)
+    -&gt; ShortByteString)
+-&gt; OneEraHash (ByronBlock : CardanoShelleyEras StandardCrypto)
+-&gt; Hash BlockHeader
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">OneEraHash (ByronBlock : CardanoShelleyEras StandardCrypto)
+-&gt; ShortByteString
+forall k (xs :: [k]). OneEraHash xs -&gt; ShortByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.14.1-inplace/ouroboros-consensus-5.4.0.0-3788b86f4cd561c483dab3991100ff2ad47185bb910754591ffb9d3bd1edb5b0/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.AcrossEras.html#getOneEraHash"><span class="hs-identifier hs-var">Consensus.getOneEraHash</span></a></span><span> </span><span class="annot"><span class="annottext">(OneEraHash (ByronBlock : CardanoShelleyEras StandardCrypto)
+ -&gt; Hash BlockHeader)
+-&gt; OneEraHash (ByronBlock : CardanoShelleyEras StandardCrypto)
+-&gt; Hash BlockHeader
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Header (CardanoBlock StandardCrypto)
+-&gt; HeaderHash (Header (CardanoBlock StandardCrypto))
+forall b. HasHeader b =&gt; b -&gt; HeaderHash b
+</span><span class="hs-identifier hs-var">Consensus.blockHash</span></span><span> </span><span class="annot"><span class="annottext">Header (CardanoBlock StandardCrypto)
+</span><a href="#local-6989586621679755505"><span class="hs-identifier hs-var">header</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Header (CardanoBlock StandardCrypto) -&gt; BlockNo
+forall b. HasHeader b =&gt; b -&gt; BlockNo
+</span><span class="hs-identifier hs-var">Consensus.blockNo</span></span><span> </span><span class="annot"><span class="annottext">Header (CardanoBlock StandardCrypto)
+</span><a href="#local-6989586621679755505"><span class="hs-identifier hs-var">header</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- | The transactions of a parsed block. Byron transactions are not representable</span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- as cardano-api's 'Tx era', so they are converted straight from the Byron ledger types.</span><span>
+</span><span id="line-140"></span><span class="annot"><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockTxsToUtxoRpc"><span class="hs-identifier hs-type">blockTxsToUtxoRpc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockInMode"><span class="hs-identifier hs-type">BlockInMode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-rpc-11.5.0.0/l/gen/doc/html/cardano-rpc/gen/src/Proto.Utxorpc.V1beta.Cardano.Cardano.html#Tx"><span class="hs-identifier hs-type">U5c.Tx</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-141"></span><span id="blockTxsToUtxoRpc"><span class="annot"><span class="annottext">blockTxsToUtxoRpc :: BlockInMode -&gt; [Tx]
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Block.html#blockTxsToUtxoRpc"><span class="hs-identifier hs-var hs-var">blockTxsToUtxoRpc</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#BlockInMode"><span class="hs-identifier hs-type">BlockInMode</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679755511"><span class="annot"><span class="annottext">Block era
+</span><a href="#local-6989586621679755511"><span class="hs-identifier hs-var">block</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-142"></span><span>  </span><span class="annot"><span class="annottext">(Proto Tx -&gt; Tx) -&gt; [Proto Tx] -&gt; [Tx]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Proto Tx -&gt; Tx
+forall msg. Proto msg -&gt; msg
+</span><span class="hs-identifier hs-var">getProto</span></span><span> </span><span class="annot"><span class="annottext">([Proto Tx] -&gt; [Tx]) -&gt; [Proto Tx] -&gt; [Tx]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Block era
+</span><a href="#local-6989586621679755511"><span class="hs-identifier hs-var">block</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-143"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#ByronBlock"><span class="hs-identifier hs-type">ByronBlock</span></a></span><span> </span><span id="local-6989586621679755515"><span class="annot"><span class="annottext">ByronBlock
+</span><a href="#local-6989586621679755515"><span class="hs-identifier hs-var">consensusBlock</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ABlockOrBoundary ByteString -&gt; [Proto Tx]
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Byron.html#byronBlockTxs"><span class="hs-identifier hs-var">byronBlockTxs</span></a></span><span> </span><span class="annot"><span class="annottext">(ABlockOrBoundary ByteString -&gt; [Proto Tx])
+-&gt; ABlockOrBoundary ByteString -&gt; [Proto Tx]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByronBlock -&gt; ABlockOrBoundary ByteString
+</span><span class="hs-identifier hs-var">byronBlockRaw</span></span><span> </span><span class="annot"><span class="annottext">ByronBlock
+</span><a href="#local-6989586621679755515"><span class="hs-identifier hs-var">consensusBlock</span></a></span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#ShelleyBlock"><span class="hs-identifier hs-type">ShelleyBlock</span></a></span><span> </span><span id="local-6989586621679755517"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679755517"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span></span><span> </span><span class="annot"><span class="annottext">ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-145"></span><span>      </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; ((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt;
+    [Proto Tx])
+-&gt; [Proto Tx]
+forall era a.
+ShelleyBasedEra era
+-&gt; ((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt; a)
+-&gt; a
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#anyEraTxConstraints"><span class="hs-identifier hs-var">anyEraTxConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679755517"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">(((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt;
+  [Proto Tx])
+ -&gt; [Proto Tx])
+-&gt; ((IsShelleyBasedEra era, AnyEraTx (ShelleyLedgerEra era)) =&gt;
+    [Proto Tx])
+-&gt; [Proto Tx]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><span class="annottext">Block era -&gt; [Tx era]
+forall era. Block era -&gt; [Tx era]
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Block.html#getBlockTxs"><span class="hs-identifier hs-var">getBlockTxs</span></a></span><span> </span><span class="annot"><span class="annottext">Block era
+</span><a href="#local-6989586621679755511"><span class="hs-identifier hs-var">block</span></a></span><span> </span><span class="annot"><span class="annottext">[Tx era] -&gt; (Tx era -&gt; Proto Tx) -&gt; [Proto Tx]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/1lc648jsw6d827bczanfk60ff6sgn0dg-ghc-9.14.1-doc/share/doc/ghc-9.14.1/html/libraries/ghc-internal-9.1401.0-inplace/src/GHC.Internal.Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.14.1/cardano-api-11.12.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Sign.html#ShelleyTx"><span class="hs-identifier hs-type">ShelleyTx</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679755530"><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679755530"><span class="hs-identifier hs-var">ledgerTx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era) -&gt; Proto Tx
+forall era.
+IsShelleyBasedEra era =&gt;
+Tx TopTx (ShelleyLedgerEra era) -&gt; Proto Tx
+</span><a href="Cardano.Rpc.Server.Internal.UtxoRpc.Type.Tx.html#txToUtxoRpcTx"><span class="hs-identifier hs-var">txToUtxoRpcTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx TopTx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679755530"><span class="hs-identifier hs-var">ledgerTx</span></a></span><span>
+</span><span id="line-147"></span></pre></body></html>
