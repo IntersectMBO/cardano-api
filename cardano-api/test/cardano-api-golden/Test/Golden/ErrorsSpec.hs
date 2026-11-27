@@ -430,7 +430,6 @@ test_TxBodyError =
       )
     , ("TxBodyMetadataError", TxBodyMetadataError [(1, TxMetadataBytesTooLong 2)])
     , ("TxBodyMissingProtocolParams", TxBodyMissingProtocolParams)
-    , ("TxBodyInIxOverflow", TxBodyInIxOverflow txin1)
     ]
 
 test_TxBodyErrorAutoBalance :: TestTree

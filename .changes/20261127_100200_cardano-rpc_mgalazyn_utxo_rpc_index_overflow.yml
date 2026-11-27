@@ -1,0 +1,6 @@
+project: cardano-rpc
+pr: 1429
+kind:
+- bugfix
+description: |
+  UTxO RPC requests that name an output index above 65535 are now rejected with `INVALID_ARGUMENT` instead of silently wrapping the index and returning a different UTxO. A `ReadUtxos` request key with a malformed transaction hash is now also rejected with `INVALID_ARGUMENT`.

@@ -22,7 +22,7 @@ import Cardano.Wasm.Api.GRPC qualified as Wasm
 import Cardano.Wasm.Api.Info (apiInfo)
 import Cardano.Wasm.Api.Tx qualified as Wasm
 import Cardano.Wasm.Api.Wallet qualified as Wasm
-import Cardano.Wasm.ExceptionHandling (rightOrError)
+import Cardano.Wasm.ExceptionHandling (justOrError, rightOrError)
 import Cardano.Wasm.Internal.JavaScript.GRPC
   ( js_getEra
   , js_getProtocolParams
@@ -37,6 +37,7 @@ import Cardano.Wasm.NumberConversion (integerToNatural)
 import Control.Exception (evaluate)
 import Control.Monad
 import Data.Aeson qualified as Aeson
+import Data.Bits (toIntegralSized)
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -196,8 +197,10 @@ instance FromJSVal JSTxId Api.TxId where
     rightOrError $ Api.deserialiseFromRawBytesHex (fromString (fromJSString jsString))
 
 instance FromJSVal JSTxIx Api.TxIx where
-  fromJSVal :: JSTxIx -> IO Api.TxIx
-  fromJSVal = return . Api.TxIx . fromIntegral
+  fromJSVal :: HasCallStack => JSTxIx -> IO Api.TxIx
+  fromJSVal txIx =
+    justOrError ("Transaction index must be between 0 and 65535, got: " <> show txIx) $
+      Api.TxIx <$> toIntegralSized txIx
 
 instance FromJSVal JSProtocolParams Wasm.ProtocolParamsJSON where
   fromJSVal = fmap Wasm.ProtocolParamsJSON . jsValToJSONString

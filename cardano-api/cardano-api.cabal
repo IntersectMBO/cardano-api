@@ -448,6 +448,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Transaction.Collateral
     Test.Cardano.Api.Transaction.Fixtures
     Test.Cardano.Api.TxBody
+    Test.Cardano.Api.TxIn
     Test.Cardano.Api.Value
 
   ghc-options:

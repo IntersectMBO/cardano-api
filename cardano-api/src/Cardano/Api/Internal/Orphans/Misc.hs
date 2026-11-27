@@ -38,6 +38,7 @@ import Ouroboros.Consensus.HardFork.History.Summary
   )
 import PlutusLedgerApi.Common qualified as P
 
+import Data.Aeson (FromJSON)
 import Data.Bits (Bits)
 import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
@@ -336,6 +337,13 @@ instance Semigroup (Ledger.DijkstraPParams StrictMaybe era) where
 
 lastMappendWithTHKD :: (a -> Ledger.THKD g StrictMaybe b) -> a -> a -> Ledger.THKD g StrictMaybe b
 lastMappendWithTHKD f a b = Ledger.THKD $ lastMappendWith (Ledger.unTHKD . f) a b
+
+-- | Renders the bare index number.
+instance Pretty Ledger.TxIx where
+  pretty (Ledger.TxIx ix') = pretty ix'
+
+-- | A bare JSON number; values above 65535 are rejected.
+deriving newtype instance FromJSON Ledger.TxIx
 
 instance Pretty Mux.Error where
   pretty err = "Mux layer error:" <+> prettyException err

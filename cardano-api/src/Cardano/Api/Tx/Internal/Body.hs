@@ -228,7 +228,6 @@ module Cardano.Api.Tx.Internal.Body
   , getTxBodyContent
   -- Temp
   , validateTxIns
-  , guardShelleyTxInsOverflow
   , validateTxOuts
   , validateMetadata
   , validateTxInsCollateral
@@ -314,7 +313,6 @@ import Data.Aeson (object, (.=))
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString (ByteString)
-import Data.Foldable (for_)
 import Data.Function (on)
 import Data.Functor (($>))
 import Data.List (sortBy)
@@ -333,7 +331,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Type.Equality
 import Data.Typeable
-import Data.Word (Word16, Word32, Word64)
+import Data.Word (Word32, Word64)
 import GHC.Exts (IsList (..))
 import GHC.Stack
 import Lens.Micro hiding (ix)
@@ -1218,7 +1216,6 @@ data TxBodyError
   | TxBodyEmptyTxOuts
   | TxBodyOutputError !TxOutputError
   | TxBodyMetadataError ![(Word64, TxMetadataRangeError)]
-  | TxBodyInIxOverflow !TxIn
   | TxBodyMissingProtocolParams
   deriving (Eq, Show)
 
@@ -1248,11 +1245,6 @@ instance Error TxBodyError where
     TxBodyMissingProtocolParams ->
       "Transaction uses Plutus scripts but does not provide the protocol "
         <> "parameters to hash"
-    TxBodyInIxOverflow txin ->
-      "Transaction input index is too big, "
-        <> "acceptable value is up to 2^32-1, "
-        <> "in input "
-        <> pretty txin
 
 {-# DEPRECATED createTransactionBody "Use 'makeUnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
 createTransactionBody
@@ -1452,11 +1444,7 @@ validateProtocolParameters txProtocolParams languages =
     --             All the necessary params must be provided.
 
 validateTxIns :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))] -> Either TxBodyError ()
-validateTxIns txIns =
-  sequence_
-    [ inputIndexDoesNotExceedMax txIns
-    , txBodyContentHasTxIns txIns
-    ]
+validateTxIns = txBodyContentHasTxIns
 
 validateTxInsCollateral
   :: TxInsCollateral era -> Set Plutus.Language -> Either TxBodyError ()
@@ -1464,19 +1452,10 @@ validateTxInsCollateral txInsCollateral languages =
   case txInsCollateral of
     TxInsCollateralNone ->
       unless (Set.null languages) (Left TxBodyEmptyTxInsCollateral)
-    TxInsCollateral _ collateralTxIns ->
-      guardShelleyTxInsOverflow collateralTxIns
-
-inputIndexDoesNotExceedMax :: [(TxIn, a)] -> Either TxBodyError ()
-inputIndexDoesNotExceedMax txIns =
-  for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
-    guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
+    TxInsCollateral{} -> Right ()
 
 txBodyContentHasTxIns :: TxIns BuildTx era -> Either TxBodyError ()
 txBodyContentHasTxIns txIns = guard (not (null txIns)) ?! TxBodyEmptyTxIns
-
-maxShelleyTxInIx :: Word
-maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 
 {-# DEPRECATED TxBody "Use 'UnsignedTx' from 'Cardano.Api.Experimental' instead." #-}
 pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
@@ -1814,8 +1793,6 @@ makeByronTransactionBody
   -> Either TxBodyError (Annotated Byron.Tx ByteString)
 makeByronTransactionBody txIns txOuts = do
   ins' <- NonEmpty.nonEmpty (map fst txIns) ?! TxBodyEmptyTxIns
-  for_ ins' $ \txin@(TxIn _ (TxIx txix)) ->
-    guard (fromIntegral txix <= maxByronTxInIx) ?! TxBodyInIxOverflow txin
   let ins'' = fmap toByronTxIn ins'
 
   outs' <- NonEmpty.nonEmpty txOuts ?! TxBodyEmptyTxOuts
@@ -1828,9 +1805,6 @@ makeByronTransactionBody txIns txOuts = do
     $ Annotated
       (Byron.UnsafeTx ins'' outs'' (Byron.mkAttributes ()))
       ()
- where
-  maxByronTxInIx :: Word
-  maxByronTxInIx = fromIntegral (maxBound :: Word32)
 
 convTxIns :: TxIns BuildTx era -> Set L.TxIn
 convTxIns txIns = fromList (map (toShelleyTxIn . fst) txIns)
@@ -2032,11 +2006,6 @@ convVotingProcedures txVotingProcedures =
   case txVotingProcedures of
     TxVotingProceduresNone -> L.VotingProcedures Map.empty
     TxVotingProcedures vps _ -> vps
-
-guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
-guardShelleyTxInsOverflow txIns = do
-  for_ txIns $ \txin@(TxIn _ (TxIx txix)) ->
-    guard (txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
 
 -- | A helper function that constructs a TxBody with all of the fields that are common for
 -- all eras

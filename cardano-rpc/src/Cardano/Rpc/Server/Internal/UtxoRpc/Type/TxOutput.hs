@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -25,7 +26,9 @@ import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.Era
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Monad.Error
 import Cardano.Api.Plutus
+import Cardano.Api.Pretty (docToText)
 import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.Raw
 import Cardano.Api.Tx
@@ -45,12 +48,14 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Type.PlutusData
 import Cardano.Rpc.Server.Internal.UtxoRpc.Type.Script
 
 import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.BaseTypes (txIxFromIntegral)
 
 import RIO hiding (toList)
 
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as BSC
 import Data.ProtoLens (defMessage)
+import Data.Text qualified as Text
 import GHC.IsList
 import Network.GRPC.Spec
 
@@ -115,21 +120,25 @@ anyUtxoDataUtxoRpcToUtxo era = fmap fromList . foldM f mempty
     -> m [(TxIn, TxOut CtxUTxO era)]
   f acc e = do
     txOut <- obtainCommonConstraints era $ utxoRpcTxOutputToTxOut $ e ^. U5c.cardano
-    txIn <- txoRefUtxoRpcToTxIn $ e ^. U5c.txoRef
+    txIn <-
+      liftEitherError
+        . first (stringException . Text.unpack)
+        . txoRefUtxoRpcToTxIn @(Either Text)
+        $ e ^. U5c.txoRef
     pure $ (txIn, txOut) : acc
 
-txoRefUtxoRpcToTxIn
-  :: forall m
-   . HasCallStack
-  => MonadThrow m
-  => Proto UtxoRpc.TxoRef
-  -> m TxIn
+-- | Convert a UTxO RPC 'UtxoRpc.TxoRef' to a 'TxIn'.
+-- Fails on an invalid hash or an output index above 65535.
+txoRefUtxoRpcToTxIn :: MonadError Text m => Proto UtxoRpc.TxoRef -> m TxIn
 txoRefUtxoRpcToTxIn txoRef = do
   txId' <-
-    liftEitherError
-      $ deserialiseFromRawBytes asType
+    either (throwError . ("Invalid TxoRef hash: " <>) . docToText . prettyError) pure
+      . deserialiseFromRawBytes AsTxId
       $ txoRef ^. U5c.hash
-  pure $ TxIn txId' (TxIx . fromIntegral $ txoRef ^. U5c.index)
+  txIx' <- txIxFromIntegral ix ?! ("Invalid TxoRef index: " <> tshow ix)
+  pure $ TxIn txId' txIx'
+ where
+  ix = txoRef ^. U5c.index
 
 -- | Convert per-policy asset bundles to UTxO RPC 'UtxoRpc.Multiasset' messages.
 policyAssetsToUtxoRpcMultiassets :: Map PolicyId PolicyAssets -> [Proto UtxoRpc.Multiasset]

@@ -714,7 +714,7 @@ genTxId :: Gen TxId
 genTxId = TxId <$> genShelleyHash
 
 genTxIndex :: Gen TxIx
-genTxIndex = TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
+genTxIndex = TxIx <$> Gen.word16 Range.constantBounded
 
 genTxOutValue :: ShelleyBasedEra era -> Gen (TxOutValue era)
 genTxOutValue sbe = shelleyBasedEraConstraints sbe $ TxOutValueShelleyBased sbe <$> genLedgerValueForTxOut sbe

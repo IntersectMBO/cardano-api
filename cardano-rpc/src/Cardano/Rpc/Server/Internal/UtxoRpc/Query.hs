@@ -94,6 +94,7 @@ readParamsFill doQueryPParams doQueryTip =
 -- along with the ledger tip.
 -- Returns an empty response when no keys are provided, matching other
 -- UTxO RPC implementations (Dolos, cardano-node-api, Dingo).
+-- Rejects a key whose output index exceeds 65535 with @INVALID_ARGUMENT@.
 -- Honours the field mask: the UTxO query runs only for @items@, the chain tip
 -- queries only for @ledger_tip@, and each item is built only from the fields selected.
 readUtxosMethod
@@ -112,7 +113,11 @@ readUtxosMethod req
           <> tshow maxUtxoQueryKeys
           <> "; batch your requests"
 
-      utxoFilter <- QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (req ^. U5c.keys)
+      utxoFilter <-
+        QueryUTxOByTxIn . fromList
+          <$> mapM
+            (either (throwGrpcErrorWithMessage GrpcInvalidArgument) pure . txoRefUtxoRpcToTxIn)
+            (req ^. U5c.keys)
 
       nodeConnInfo <- grab
       let doQueryUtxoFields :: LocalQuery [UtxoFields]
@@ -122,11 +127,6 @@ readUtxosMethod req
       let fieldMask = resolve $ getProto req ^. U5c.fieldMask . FieldMask.paths
       fmap Proto . runFill (runLocalQuery nodeConnInfo) fieldMask $
         readUtxosFill doQueryUtxoFields queryLedgerTip
- where
-  txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
-  txoRefToTxIn r = do
-    txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. U5c.hash
-    pure $ TxIn txId' (TxIx . fromIntegral $ r ^. U5c.index)
 
 -- | The fields of a @ReadUtxos@ response, each from the query that obtains it.
 readUtxosFill
