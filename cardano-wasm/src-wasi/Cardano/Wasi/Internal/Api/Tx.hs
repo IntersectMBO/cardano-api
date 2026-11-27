@@ -29,8 +29,10 @@ import Cardano.Wasi.Internal.Conversion
   , txIdToString
   )
 import Cardano.Wasm.Api.Tx
+import Cardano.Wasm.ExceptionHandling (justOrError)
 
 import Control.Monad (join)
+import Data.Bits (toIntegralSized)
 
 import Foreign.C (CString)
 import Foreign.C.String (newCString, peekCString)
@@ -85,7 +87,9 @@ addTxInput unsignedTxObject txId txIx =
     =<< ( addTxInputImpl
             <$> fromCJSON True "UnsignedTx" unsignedTxObject
             <*> txIdToString txId
-            <*> pure (Api.TxIx (fromIntegral txIx))
+            <*> justOrError
+              ("Transaction index must be between 0 and 65535, got: " <> show txIx)
+              (Api.TxIx <$> toIntegralSized txIx)
         )
 
 addSimpleTxOut :: UnsignedTxObjectJSON -> CString -> CString -> IO UnsignedTxObjectJSON

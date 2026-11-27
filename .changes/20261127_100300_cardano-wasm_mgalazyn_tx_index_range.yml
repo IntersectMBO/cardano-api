@@ -1,0 +1,6 @@
+project: cardano-wasm
+pr: 1429
+kind:
+- bugfix
+description: |
+  Transaction input indexes outside the range 0 to 65535, including negative numbers, are now rejected with an error instead of wrapping to a different index.
