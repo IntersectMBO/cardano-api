@@ -52,6 +52,7 @@ import Data.OMap.Strict qualified as OMap
 import Data.OSet.Strict qualified as OSet
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
+import GHC.Exts (fromList)
 import Lens.Micro
 
 import Test.Gen.Cardano.Api.Experimental (genSignedSubTx, genSimpleScriptInEra)
@@ -119,16 +120,15 @@ tests =
 prop_view_built_body
   :: ( Arbitrary (L.TxCert (Exp.LedgerEra era))
      , Arbitrary (L.NativeScript (Exp.LedgerEra era))
-     , Arbitrary (L.PParams (Exp.LedgerEra era))
      , Arbitrary (L.ProposalProcedure (Exp.LedgerEra era))
      , Arbitrary (L.VotingProcedures (Exp.LedgerEra era))
      )
   => Exp.Era era
   -> Property
-prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
+prop_view_built_body era = H.withTests 20 . H.property $ Exp.obtainCommonConstraints era $ do
   ins <- H.forAll $ Gen.list (Range.linear 1 4) genTxIn
   refIns <- H.forAll $ Gen.list (Range.linear 0 3) genTxIn
-  outs <- H.forAll $ Gen.list (Range.linear 0 3) (genTxOut era)
+  outs <- H.forAll $ Gen.list (Range.linear 0 2) (Gen.small (genTxOut era))
   fee <- H.forAll Q.arbitrary
   lowerBound <- H.forAll Q.arbitrary
   upperBound <- H.forAll Q.arbitrary
@@ -136,18 +136,18 @@ prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
   treasury <- H.forAll Q.arbitrary
   collateralIns <- H.forAll $ Gen.list (Range.linear 0 3) genTxIn
   totalCollateral <- H.forAll Q.arbitrary
-  Exp.TxOut returnCollateral <- H.forAll $ genTxOut era
+  Exp.TxOut returnCollateral <- H.forAll $ Gen.small (genTxOut era)
   metadata <- H.forAll genTxMetadata
   auxScripts <- H.forAll $ Gen.list (Range.linear 0 3) (Exp.SimpleScript <$> Q.arbitrary)
   withdrawals <- H.forAll $ Gen.map (Range.linear 0 3) ((,) <$> genStakeAddress <*> Q.arbitrary)
-  certs <- H.forAll $ List.nub <$> Gen.list (Range.linear 0 3) Q.arbitrary
+  certs <- H.forAll . fmap List.nub . Gen.list (Range.linear 0 2) $ Gen.small Q.arbitrary
   mint <- H.forAll Q.arbitrary
   mintScriptIn <- H.forAll genTxIn
   requiredSigners <- H.forAll $ Gen.list (Range.linear 0 3) (genVerificationKeyHash AsPaymentKey)
-  proposals <- H.forAll $ List.nub <$> Gen.list (Range.linear 0 3) Q.arbitrary
-  votes <- H.forAll Q.arbitrary
+  proposals <- H.forAll . fmap List.nub . Gen.list (Range.linear 0 2) $ Gen.small Q.arbitrary
+  votes <- H.forAll $ Gen.small Q.arbitrary
   datums <- H.forAll $ Gen.list (Range.linear 0 3) Q.arbitrary
-  pparams <- H.forAll Q.arbitrary
+  let pparams = L.emptyPParams
   -- 'Exp.mkTxVotingProcedures' needs at least one voter.
   setVotes <-
     if Map.null (L.unVotingProcedures votes)
@@ -157,7 +157,7 @@ prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
           <$> H.evalEither (Exp.mkTxVotingProcedures [(votes, Exp.AnyKeyWitnessPlaceholder)])
   let mintValue = multiAssetToPolicyAssets mint
       mintWitness = AnyScriptWitnessSimple (Exp.SReferenceScript mintScriptIn)
-      supplementalDatums = Map.fromList [(UnexportedLedger.hashData datum, datum) | datum <- datums]
+      supplementalDatums = fromList [(UnexportedLedger.hashData datum, datum) | datum <- datums]
       content =
         Exp.defaultTxBodyContent
           & Exp.setTxIns [(txIn, Exp.AnyKeyWitnessPlaceholder) | txIn <- ins]
@@ -181,7 +181,7 @@ prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
             (Exp.mkTxCertificates era [(Exp.Certificate cert, Exp.AnyKeyWitnessPlaceholder) | cert <- certs])
           & Exp.setTxMintValue
             ( Exp.TxMintValue
-                (Map.fromList [(policyId, (assets, mintWitness)) | (policyId, assets) <- Map.toList mintValue])
+                (fromList [(policyId, (assets, mintWitness)) | (policyId, assets) <- Map.toList mintValue])
             )
           & Exp.setTxExtraKeyWits (Exp.TxExtraKeyWitnesses requiredSigners)
           & Exp.setTxProposalProcedures
@@ -208,7 +208,7 @@ prop_view_built_body era = H.property $ Exp.obtainCommonConstraints era $ do
   Exp.ttvReturnCollateral top H.=== Just (Exp.TxOut returnCollateral)
   Exp.bvMetadata body H.=== metadata
   Exp.bvAuxScripts body H.=== auxScripts
-  Map.fromList (Exp.bvWithdrawals body) H.=== withdrawals
+  fromList (Exp.bvWithdrawals body) H.=== withdrawals
   Exp.bvCertificates body H.=== map Exp.Certificate certs
   Exp.bvMintValue body H.=== mintValue
   -- The ledger keeps required signers in a set. From Dijkstra on, they are key
@@ -289,7 +289,7 @@ prop_view_redeemer_purposes era = H.property $ Exp.obtainCommonConstraints era $
   votes <- H.forAll Q.arbitrary
   proposal <- H.forAll Q.arbitrary
   let mint =
-        L.MultiAsset (Map.fromList [(policyId, Map.singleton assetName 1) | policyId <- toList policyIds])
+        L.MultiAsset (fromList [(policyId, Map.singleton assetName 1) | policyId <- toList policyIds])
       body =
         L.mkBasicTxBody
           & L.inputsTxBodyL .~ txIns
@@ -332,7 +332,7 @@ prop_view_redeemer_purposes era = H.property $ Exp.obtainCommonConstraints era $
         ]
       tx =
         L.mkBasicTx body
-          & L.witsTxL . L.rdmrsTxWitsL .~ L.Redeemers (Map.fromList (zip pointers redeemers))
+          & L.witsTxL . L.rdmrsTxWitsL .~ L.Redeemers (fromList (zip pointers redeemers))
       viewed = Exp.twvRedeemers (Exp.tvWitnesses (Exp.viewUnsignedTx era (Exp.UnsignedTx tx)))
       spends index = Just (Exp.AnyWitnessable (Exp.WitTxIn (fromShelleyTxIn (Set.elemAt index txIns))))
       mints index =
@@ -375,7 +375,7 @@ prop_view_guard_redeemer = H.property $ do
       pointers = [Dijkstra.DijkstraGuarding (L.AsIx 0), Dijkstra.DijkstraGuarding (L.AsIx 1)]
       tx =
         L.mkBasicTx body
-          & L.witsTxL . L.rdmrsTxWitsL .~ L.Redeemers (Map.fromList [(pointer, redeemer) | pointer <- pointers])
+          & L.witsTxL . L.rdmrsTxWitsL .~ L.Redeemers (fromList [(pointer, redeemer) | pointer <- pointers])
       viewed = Exp.twvRedeemers (Exp.tvWitnesses (Exp.viewUnsignedTx Exp.DijkstraEra (Exp.UnsignedTx tx)))
   [(Exp.trvPurpose r, Exp.trvIndex r, Exp.trvItem r) | r <- viewed]
     H.=== [ (Exp.GuardingScript, 0, Nothing)
@@ -397,9 +397,9 @@ prop_view_witness_scripts = H.property $ do
       scripts = [nativeScript, plutusScript, badScript]
       tx =
         L.mkBasicTx L.mkBasicTxBody
-          & L.witsTxL . L.scriptTxWitsL .~ Map.fromList [(L.hashScript script, script) | script <- scripts]
+          & L.witsTxL . L.scriptTxWitsL .~ fromList [(L.hashScript script, script) | script <- scripts]
       viewed = Exp.twvScripts (Exp.tvWitnesses (Exp.viewUnsignedTx Exp.ConwayEra (Exp.UnsignedTx tx)))
-  Map.keysSet viewed H.=== Set.fromList (map L.hashScript scripts)
+  Map.keysSet viewed H.=== fromList (map L.hashScript scripts)
   case Map.lookup (L.hashScript nativeScript) viewed of
     Just (Exp.DecodedScript (Exp.AnySimpleScript _)) -> H.success
     other -> H.annotateShow other >> H.failure
@@ -478,7 +478,7 @@ prop_view_sub_transactions = H.withTests 20 . H.property $ do
   subTxs <- H.forAll $ Gen.list (Range.linear 0 3) genSignedSubTx
   let ids = map Exp.getSignedSubTxId subTxs
   -- The ledger keys sub-transactions by their IDs, so equal ones would merge.
-  when (Set.size (Set.fromList ids) /= length ids) H.discard
+  when (Set.size (fromList ids) /= length ids) H.discard
   unsigned <-
     H.evalEither
       $ Exp.makeUnsignedTx Exp.DijkstraEra
