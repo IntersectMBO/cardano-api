@@ -36,6 +36,7 @@ module Cardano.Api.Experimental.Tx.Internal.View
     -- * Witness set
   , TxWitnessesView (..)
   , TxRedeemerView (..)
+  , TxScriptView (..)
   , UndecodedPlutusScript (..)
   )
 where
@@ -239,12 +240,8 @@ data TxWitnessesView era = TxWitnessesView
   -- 'Cardano.Api.Experimental.Tx.signTx' takes.
   , twvBootstrapWitnesses :: [L.BootstrapWitness]
   -- ^ Signatures for Byron addresses.
-  , twvScripts :: Map L.ScriptHash (Either UndecodedPlutusScript (AnyScript era))
-  -- ^ Scripts, by hash. 'Right' when the script deserialises at the era's
-  -- latest protocol version, the same check the decoder of 'AnyScript' makes.
-  -- 'Left' for a Plutus script that does not: the ledger decodes a Plutus
-  -- script as bytes and only checks them when it validates the transaction.
-  -- Native scripts are always 'Right'.
+  , twvScripts :: Map L.ScriptHash (TxScriptView era)
+  -- ^ Scripts, by hash.
   , twvDatums :: Map L.DataHash (L.Data era)
   -- ^ Datums, by hash: every datum in the witness set, typed like the
   -- supplemental datums of 'Cardano.Api.Experimental.Tx.BodyContent'.
@@ -272,6 +269,15 @@ data TxRedeemerView era = TxRedeemerView
   , trvExUnits :: ExecutionUnits
   -- ^ The script's budget: memory and CPU steps.
   }
+
+-- | A script from a transaction's witness set.
+data TxScriptView era
+  = -- | A script that deserialises at the era's latest protocol version, the
+    -- same check the decoder of 'AnyScript' makes. Native scripts always do.
+    DecodedScript (AnyScript era)
+  | -- | A Plutus script that does not: the ledger decodes a Plutus script as
+    -- bytes and only checks them when it validates the transaction.
+    UndecodedScript UndecodedPlutusScript
 
 -- | A Plutus script kept as bytes, not deserialised.
 data UndecodedPlutusScript where
@@ -426,7 +432,7 @@ viewWitnesses era tx =
 -- | A witness-set script. A Plutus script that does not deserialise stays as
 -- bytes.
 viewScript
-  :: Era era -> L.Script (LedgerEra era) -> Either UndecodedPlutusScript (AnyScript (LedgerEra era))
+  :: Era era -> L.Script (LedgerEra era) -> TxScriptView (LedgerEra era)
 viewScript era = case era of
   ConwayEra -> fromAlonzoScript
   DijkstraEra -> fromAlonzoScript
@@ -435,13 +441,15 @@ viewScript era = case era of
     :: forall ledgerEra
      . L.EraPlutusContext ledgerEra
     => L.AlonzoScript ledgerEra
-    -> Either UndecodedPlutusScript (AnyScript ledgerEra)
-  fromAlonzoScript (L.NativeScript nativeScript) = Right (AnySimpleScript (SimpleScript nativeScript))
+    -> TxScriptView ledgerEra
+  fromAlonzoScript (L.NativeScript nativeScript) =
+    DecodedScript (AnySimpleScript (SimpleScript nativeScript))
   fromAlonzoScript (L.PlutusScript plutusScript) =
     case L.mkSupportedPlutusRunnable (L.eraProtVerHigh @ledgerEra) plutusScript of
       L.SupportedPlutusRunnable runnable
-        | Plutus.isValidPlutusRunnable runnable -> Right (AnyPlutusScript (PlutusScriptInEra runnable))
-        | otherwise -> Left (L.withPlutusScript plutusScript undecodedPlutus)
+        | Plutus.isValidPlutusRunnable runnable ->
+            DecodedScript (AnyPlutusScript (PlutusScriptInEra runnable))
+        | otherwise -> UndecodedScript (L.withPlutusScript plutusScript undecodedPlutus)
 
   undecodedPlutus :: Plutus.PlutusLanguage lang => Plutus.Plutus lang -> UndecodedPlutusScript
   undecodedPlutus plutus = undecodedPlutusScript (Plutus.plutusLanguage plutus) (Plutus.plutusBinary plutus)
@@ -505,6 +513,10 @@ viewRedeemerPointer
 viewRedeemerPointer era = case era of
   ConwayEra -> toPlutusScriptPurposeIndex ShelleyBasedEraConway
   DijkstraEra -> toPlutusScriptPurposeIndex ShelleyBasedEraDijkstra
+
+deriving instance Eq (TxScriptView era)
+
+deriving instance Show (TxScriptView era)
 
 deriving instance Show UndecodedPlutusScript
 

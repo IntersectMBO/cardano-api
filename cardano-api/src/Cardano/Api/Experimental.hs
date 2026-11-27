@@ -53,6 +53,7 @@ module Cardano.Api.Experimental
   , TopTxOnlyFieldsView (..)
   , TxWitnessesView (..)
   , TxRedeemerView (..)
+  , TxScriptView (..)
   , UndecodedPlutusScript (..)
   , viewSignedTx
   , viewUnsignedTx

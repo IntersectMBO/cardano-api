@@ -342,13 +342,14 @@ prop_view_witness_scripts = H.property $ do
       viewed = Exp.twvScripts (Exp.tvWitnesses (Exp.viewUnsignedTx Exp.ConwayEra (Exp.UnsignedTx tx)))
   Map.keysSet viewed H.=== Set.fromList (map L.hashScript scripts)
   case Map.lookup (L.hashScript nativeScript) viewed of
-    Just (Right (Exp.AnySimpleScript _)) -> H.success
+    Just (Exp.DecodedScript (Exp.AnySimpleScript _)) -> H.success
     other -> H.annotateShow other >> H.failure
   case Map.lookup (L.hashScript plutusScript) viewed of
-    Just (Right (Exp.AnyPlutusScript _)) -> H.success
+    Just (Exp.DecodedScript (Exp.AnyPlutusScript _)) -> H.success
     other -> H.annotateShow other >> H.failure
   Map.lookup (L.hashScript badScript) viewed
-    H.=== Just (Left (Exp.UndecodedPlutusScript PlutusScriptV3 (PlutusScriptSerialised badBytes)))
+    H.=== Just
+      (Exp.UndecodedScript (Exp.UndecodedPlutusScript PlutusScriptV3 (PlutusScriptSerialised badBytes)))
 
 prop_view_aux_plutus_scripts :: Property
 prop_view_aux_plutus_scripts = H.propertyOnce $ do
