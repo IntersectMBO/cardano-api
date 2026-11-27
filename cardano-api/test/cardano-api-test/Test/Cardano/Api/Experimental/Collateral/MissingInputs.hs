@@ -9,11 +9,12 @@ module Test.Cardano.Api.Experimental.Collateral.MissingInputs (tests) where
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.AnyScriptWitness qualified as Exp
+import Cardano.Api.Experimental.Era qualified as Exp
 import Cardano.Api.Experimental.Plutus qualified as P
 import Cardano.Api.Experimental.Tx qualified as Exp
 import Cardano.Api.Ledger qualified as L
 
-import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Slotting.EpochInfo qualified as Slotting
 import Cardano.Slotting.Slot qualified as Slotting
@@ -36,12 +37,15 @@ import Test.Cardano.Api.Transaction.Fixtures (mkTxIn)
 
 import Hedgehog (Gen, Property, (===))
 import Hedgehog qualified as H
+import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
+type TestEra = Exp.DijkstraEra
+
 prop_conway_missing_collateral :: Property
-prop_conway_missing_collateral = H.withTests 1 $ H.property $ do
+prop_conway_missing_collateral = H.propertyOnce $ do
   envelope <- H.evalIO $ BS.readFile "test/cardano-api-test/files/input/plutus/v3.alwaysTrue.json"
   Exp.AnyPlutusScript script <- H.evalEither $ Exp.readAnyScriptBytes Exp.ConwayEra envelope
   let scriptHash = P.hashPlutusScriptInEra script
@@ -114,6 +118,60 @@ prop_conway_missing_collateral = H.withTests 1 $ H.property $ do
       H.annotateShow $ void unexpected
       H.failure
 
+-- Repeating an input/witness pair must not shift the spending redeemer index.
+prop_duplicate_inputs_missing_collateral :: Exp.Era era -> Property
+prop_duplicate_inputs_missing_collateral era = Exp.obtainCommonConstraints era $ H.propertyOnce $ do
+  let keyInput = (testTxIn 0, Exp.AnyKeyWitnessPlaceholder)
+      plutusInput =
+        ( testTxIn 1
+        , Exp.AnyPlutusScriptWitness
+            $ Exp.AnyPlutusSpendingScriptWitness
+            $ Exp.PlutusSpendingScriptWitnessV3
+            $ Exp.PlutusScriptWitness
+              Plutus.SPlutusV3
+              (Exp.PReferenceScript $ testTxIn 2)
+              Exp.NoScriptDatum
+              (Api.unsafeHashableScriptData $ Api.ScriptDataNumber 42)
+              (Api.ExecutionUnits 0 0)
+        )
+      params = exampleProtocolParamsEra era
+      address =
+        Api.fromShelleyAddr (Exp.convert era) $
+          L.Addr
+            L.Testnet
+            (L.KeyHashObj $ L.KeyHash "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5")
+            L.StakeRefNull
+      expected = Api.MissingCollateralInputs [Api.ScriptWitnessIndexTxIn 1] Map.empty
+  forM_
+    [ [keyInput, keyInput, plutusInput]
+    , [plutusInput, keyInput, keyInput, plutusInput]
+    ]
+    $ \inputs -> do
+      H.annotateShow inputs
+      let body =
+            Exp.defaultTxBodyContent
+              & Exp.setTxIns inputs
+              & Exp.setTxInsReference (Exp.TxInsReference [testTxIn 2] Set.empty)
+      case Exp.makeTransactionBodyAutoBalance
+        systemStart
+        epochInfo
+        params
+        mempty
+        mempty
+        mempty
+        body
+        address
+        Nothing of
+        Left (Exp.TxBodyErrorCollateral actual) -> actual === expected
+        unexpected -> do
+          H.annotateShow $ void unexpected
+          H.failure
+      case Exp.estimateBalancedTxBody era body params mempty mempty mempty (L.Coin 0) 1 0 0 address mempty of
+        Left (Exp.TxFeeEstimationBalanceError (Exp.TxBodyErrorCollateral actual)) -> actual === expected
+        unexpected -> do
+          H.annotateShow $ void unexpected
+          H.failure
+
 -- A transaction needs collateral when it has Plutus witnesses at the top level,
 -- in its sub-transactions, or both. Check that the error identifies every Plutus
 -- witness at the correct level and excludes native scripts, which need no collateral.
@@ -177,7 +235,7 @@ prop_dijkstra_missing_collateral = H.property $ do
       -- missing collateral must be reported before any balance or fee error.
       let feeEstimationResult =
             Exp.estimateBalancedTxBody
-              Exp.DijkstraEra
+              (Exp.useEra @TestEra)
               body
               dijkstraParams
               mempty
@@ -217,34 +275,51 @@ prop_dijkstra_collateral_supplied = H.property $ do
     ]
     $ \(label, body) -> do
       H.annotate label
-      void
-        $ H.evalEither
-        $ Exp.makeTransactionBodyAutoBalance
-          systemStart
-          epochInfo
-          dijkstraParams
-          mempty
-          mempty
-          utxo
-          body
-          address
-          Nothing
+      (_, balanced) <-
+        H.evalEither $
+          Exp.makeTransactionBodyAutoBalance
+            systemStart
+            epochInfo
+            dijkstraParams
+            mempty
+            mempty
+            utxo
+            body
+            address
+            Nothing
+      checkCollateral body balanced
       let totalValue = L.MaryValue (L.Coin $ 100_000_000 * (1 + toInteger (length $ Exp.txSubTransactions body))) mempty
-      void
-        $ H.evalEither
-        $ Exp.estimateBalancedTxBody
-          Exp.DijkstraEra
-          body
-          dijkstraParams
-          mempty
-          mempty
-          mempty
-          (L.Coin 100_000_000)
-          1
-          0
-          0
-          address
-          totalValue
+      estimated <-
+        H.evalEither $
+          Exp.estimateBalancedTxBody
+            (Exp.useEra @TestEra)
+            body
+            dijkstraParams
+            mempty
+            mempty
+            mempty
+            (L.Coin 100_000_000)
+            1
+            0
+            0
+            address
+            totalValue
+      checkCollateral body estimated
+ where
+  checkCollateral
+    :: Exp.TxBodyContent (Exp.LedgerEra TestEra)
+    -> Exp.TxBodyContent (Exp.LedgerEra TestEra)
+    -> H.PropertyT IO ()
+  checkCollateral original balanced
+    | null (Exp.txInsCollateral original) = pure ()
+    | otherwise = do
+        L.Coin total <- H.evalMaybe $ Exp.unTxTotalCollateral <$> Exp.txTotalCollateral balanced
+        let L.Coin fee = Exp.txFee balanced
+            L.Coin returned =
+              maybe (L.Coin 0) ((^. L.coinTxOutL) . Exp.unTxReturnCollateral) $
+                Exp.txReturnCollateral balanced
+        total + returned === 100_000_000
+        H.assert $ total * 100 >= fee * toInteger (dijkstraParams ^. L.ppCollateralPercentageL)
 
 data ScriptSource = InlineScript | ReferenceScript
   deriving (Eq, Show)
@@ -258,21 +333,21 @@ genScriptSource = Gen.element [InlineScript, ReferenceScript]
 genDijkstraTransactions
   :: ScriptSource
   -> Gen
-       ( Exp.TxBodyContent (Exp.LedgerEra Exp.DijkstraEra)
+       ( Exp.TxBodyContent (Exp.LedgerEra TestEra)
        , [Exp.SignedSubTx]
        , Exp.SignedSubTx
-       , Api.AddressInEra Api.DijkstraEra
-       , L.UTxO (Exp.LedgerEra Exp.DijkstraEra)
+       , Api.AddressInEra TestEra
+       , L.UTxO (Exp.LedgerEra TestEra)
        )
 genDijkstraTransactions source = do
   key <- genSigningKey Api.AsPaymentKey
   script <-
     either (error . show) pure
-      $ P.deserialisePlutusScriptInEra @(Exp.LedgerEra Exp.DijkstraEra) @Plutus.PlutusV4
+      $ P.deserialisePlutusScriptInEra @(Exp.LedgerEra TestEra) @Plutus.PlutusV4
       $ Base16.decodeLenient "46450101002499"
   let address =
         Api.makeShelleyAddressInEra
-          Api.ShelleyBasedEraDijkstra
+          (Exp.convert $ Exp.useEra @TestEra)
           (Api.Testnet $ Api.NetworkMagic 42)
           (Api.PaymentCredentialByKey $ Api.verificationKeyHash $ Api.getVerificationKey key)
           Api.NoStakeAddress
@@ -326,10 +401,10 @@ testTxIn :: Word -> Api.TxIn
 testTxIn n =
   mkTxIn $ "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#" <> Text.pack (show n)
 
-dijkstraParams :: L.PParams (Exp.LedgerEra Exp.DijkstraEra)
+dijkstraParams :: L.PParams (Exp.LedgerEra TestEra)
 dijkstraParams =
-  exampleProtocolParamsEra Exp.DijkstraEra
-    & L.ppProtocolVersionL .~ L.ProtVer (L.eraProtVerLow @(Exp.LedgerEra Exp.DijkstraEra)) 0
+  exampleProtocolParamsEra (Exp.useEra @TestEra)
+    & L.ppProtocolVersionL .~ L.ProtVer (L.eraProtVerLow @(Exp.LedgerEra TestEra)) 0
 
 systemStart :: Api.SystemStart
 systemStart = Api.SystemStart $ Time.posixSecondsToUTCTime 0
@@ -343,6 +418,12 @@ tests =
   testGroup
     "Test.Cardano.Api.Experimental.Collateral.MissingInputs"
     [ testProperty "Conway minting reports missing collateral" prop_conway_missing_collateral
+    , testProperty
+        "Conway duplicate inputs preserve missing collateral indices"
+        (prop_duplicate_inputs_missing_collateral Exp.ConwayEra)
+    , testProperty
+        "Dijkstra duplicate inputs preserve missing collateral indices"
+        (prop_duplicate_inputs_missing_collateral (Exp.useEra @TestEra))
     , testProperty "Dijkstra reports every Plutus witness" prop_dijkstra_missing_collateral
     , testProperty "Dijkstra balances with the required collateral" prop_dijkstra_collateral_supplied
     ]

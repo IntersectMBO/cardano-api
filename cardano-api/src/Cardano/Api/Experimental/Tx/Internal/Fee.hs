@@ -45,6 +45,9 @@ import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Experimental.Tx.Internal.BodyContent
 import Cardano.Api.Experimental.Tx.Internal.Certificate qualified as Exp
 import Cardano.Api.Experimental.Tx.Internal.Guard
+import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
+  ( TxScriptWitnessRequirements (..)
+  )
 import Cardano.Api.Experimental.Tx.Internal.Type
 import Cardano.Api.Key.Internal qualified as Api
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
@@ -321,6 +324,7 @@ estimateBalancedTxBody'
   changeaddr
   totalUTxOValue = obtainCommonConstraints (useEra @era) $ do
     -- Plutus scripts require collateral; transactions without them must omit it.
+    -- To make a transaction fail once a UTxO is spent, add that UTxO as a reference input.
     first (TxFeeEstimationBalanceError . TxBodyErrorCollateral) $
       checkCollateralInputs txbodycontent
 
@@ -687,9 +691,15 @@ hasPlutusScriptWitnesses txbodycontent =
 
 -- | Plutus witness indices in the top-level transaction, excluding native scripts.
 plutusScriptWitnessIndices
-  :: IsEra era => TxBodyContent (LedgerEra era) -> [ScriptWitnessIndex]
+  :: forall era
+   . IsEra era
+  => TxBodyContent (LedgerEra era)
+  -> [ScriptWitnessIndex]
 plutusScriptWitnessIndices txbodycontent =
-  [index | (index, AnyScriptWitnessPlutus{}) <- collectTxBodyScriptWitnesses txbodycontent]
+  obtainCommonConstraints (useEra @era) $ do
+    let TxScriptWitnessRequirements _ _ _ redeemers =
+          collectTxBodyScriptWitnessRequirements txbodycontent
+    map (toScriptIndex $ convert $ useEra @era) $ Map.keys $ L.unRedeemers redeemers
 
 -- | Whether any sub-transaction contains Plutus redeemers.
 hasSubTransactionRedeemers
@@ -698,10 +708,9 @@ hasSubTransactionRedeemers
   => TxBodyContent (LedgerEra era)
   -> Bool
 hasSubTransactionRedeemers txbodycontent =
-  obtainCommonConstraints (useEra @era)
-    $ not
-    $ all
-      (Map.null . L.unRedeemers . (^. L.witsTxL . L.rdmrsTxWitsL))
+  obtainCommonConstraints (useEra @era) $
+    any
+      (not . Map.null . L.unRedeemers . (^. L.witsTxL . L.rdmrsTxWitsL))
       (txSubTransactions txbodycontent)
 
 -- | Locate each sub-transaction's Plutus witnesses by its ID and redeemer indices.
@@ -1601,6 +1610,7 @@ makeTransactionBodyAutoBalance
   changeaddr
   mnkeys = do
     -- Plutus scripts require collateral; transactions without them must omit it.
+    -- To make a transaction fail once a UTxO is spent, add that UTxO as a reference input.
     first TxBodyErrorCollateral $
       checkCollateralInputs txbodycontent
     -- Our strategy is to:
