@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1429
+kind:
+- breaking
+description: |
+  `parseWord64` is removed from `Cardano.Api.Parser.Text`. It parsed a non-negative decimal as an `Integer` and failed above `maxBound :: Word64`. Use `toInteger <$> parseIntegral @Word64` instead, which accepts the same values. The new `parseIntegral` parses a decimal with an optional leading `-` into any bounded integral type and fails with an error naming the type's bounds when the value is out of range, for example `parseIntegral @Word` rejects `-1` and `parseIntegral @Int8` accepts `-128`.

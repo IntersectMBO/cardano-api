@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Currency values
@@ -106,6 +107,7 @@ import Data.Map.Strict qualified as Map
 import Data.MonoTraversable
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Word (Word64)
 import GHC.Exts (IsList (..))
 
 toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
@@ -139,7 +141,7 @@ instance Monoid Quantity where
 
 -- | Quantity (word64) parser. Only accepts positive quantities.
 parseQuantity :: P.Parser Quantity
-parseQuantity = Quantity <$> P.parseWord64
+parseQuantity = Quantity . toInteger <$> P.parseIntegral @Word64
 
 lovelaceToQuantity :: Lovelace -> Quantity
 lovelaceToQuantity (L.Coin x) = Quantity x
