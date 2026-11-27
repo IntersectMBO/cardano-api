@@ -120,8 +120,9 @@ parseTxIn = TxIn <$> parseTxId <*> (P.char '#' *> parseTxIx)
 renderTxIn :: TxIn -> Text
 renderTxIn = docToText . pretty
 
+-- | Parse a transaction index. Fails outside 0..65535.
 parseTxIx :: P.Parser TxIx
-parseTxIx = TxIx . fromIntegral <$> P.parseDecimal
+parseTxIx = TxIx <$> P.parseIntegral
 
 fromByronTxIn :: Byron.TxIn -> TxIn
 fromByronTxIn (Byron.TxInUtxo txId index) =

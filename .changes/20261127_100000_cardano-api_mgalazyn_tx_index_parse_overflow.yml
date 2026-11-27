@@ -1,0 +1,6 @@
+project: cardano-api
+pr: 1429
+kind:
+- bugfix
+description: |
+  `parseTxIx` now rejects a transaction input index above 65535 with an error instead of silently wrapping it to a different index (for example `#18446744073709551621` became index 5). This also applies to the `TxIn` text form used by `--tx-in`-style arguments, `FromJSON TxIn` and `FromJSONKey TxIn`.

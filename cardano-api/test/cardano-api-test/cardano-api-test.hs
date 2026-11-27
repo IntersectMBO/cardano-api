@@ -36,6 +36,7 @@ import Test.Cardano.Api.Transaction.Body.Plutus.RedeemerIndex qualified
 import Test.Cardano.Api.Transaction.Body.Plutus.Scripts qualified
 import Test.Cardano.Api.Transaction.Collateral qualified
 import Test.Cardano.Api.TxBody qualified
+import Test.Cardano.Api.TxIn qualified
 import Test.Cardano.Api.Value qualified
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -83,5 +84,6 @@ tests =
     , Test.Cardano.Api.Transaction.Autobalance.tests
     , Test.Cardano.Api.Transaction.Collateral.tests
     , Test.Cardano.Api.TxBody.tests
+    , Test.Cardano.Api.TxIn.tests
     , Test.Cardano.Api.Value.tests
     ]
