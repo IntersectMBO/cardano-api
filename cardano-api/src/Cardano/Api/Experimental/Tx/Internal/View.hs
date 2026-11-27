@@ -218,8 +218,10 @@ data TopTxOnlyFieldsView (l :: L.TxLevel) era where
        -- signers). Empty from Dijkstra on: key guards replace them, see
        -- 'bvGuards'.
        , ttvScriptValidity :: ScriptValidity
-       -- ^ Whether the Plutus scripts pass. @ScriptInvalid@: they fail, so the
-       -- ledger takes only the collateral.
+       -- ^ The script-validity flag the transaction declares. Nothing here runs
+       -- the scripts. @ScriptInvalid@: the ledger takes only the collateral.
+       -- From Dijkstra on, a transaction decoded outside a block always has
+       -- @ScriptValid@: only a block can carry @ScriptInvalid@.
        , ttvSubTransactions :: [TxView L.SubTx era]
        -- ^ From Dijkstra on. Sub-transactions, in the body's order, each with
        -- its own witness set.
@@ -256,11 +258,12 @@ data TxRedeemerView era = TxRedeemerView
   -- (an input, a minting policy, a certificate, and so on).
   , trvIndex :: Word32
   -- ^ Which item of that kind: its position in the ledger's order, counting
-  -- from 0.
+  -- from 0. For a guard, key guards count too.
   , trvItem :: Maybe (AnyWitnessable era)
   -- ^ The body item at that index, found with 'L.redeemerPointerInverse' on
   -- the body of the transaction that holds the redeemer. 'Nothing' if the
-  -- body has no item at that index. The ledger would reject such a
+  -- pointer finds nothing a script can witness: no item at that index, or,
+  -- for a guard, a key guard there. The ledger would reject such a
   -- transaction, but the redeemer is still shown.
   , trvData :: HashableScriptData
   -- ^ The data the redeemer passes to the script.
