@@ -12,6 +12,7 @@ module Test.Cardano.Api.Experimental.View
 where
 
 import Cardano.Api (AsType (AsPaymentKey))
+import Cardano.Api qualified as Api
 import Cardano.Api.Address (fromShelleyStakeAddr)
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Experimental.AnyScriptWitness (AnyScriptWitness (AnyScriptWitnessSimple))
@@ -21,7 +22,7 @@ import Cardano.Api.Key (Hash (PaymentKeyHash))
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus
   ( PlutusScript (PlutusScriptSerialised)
-  , PlutusScriptVersion (PlutusScriptV3)
+  , PlutusScriptVersion (PlutusScriptV3, PlutusScriptV4)
   , ScriptData (ScriptDataNumber)
   , fromAlonzoData
   , fromAlonzoExUnits
@@ -94,9 +95,18 @@ tests =
     , testProperty
         "Witness scripts that deserialise and one that does not"
         prop_view_witness_scripts
+    , testProperty
+        "Conway: a script that does not deserialise survives writing and reading the transaction"
+        prop_view_decoded_bad_plutus_conway
+    , testProperty
+        "Dijkstra: a script that does not deserialise survives writing and reading the transaction"
+        prop_view_decoded_bad_plutus_dijkstra
     , testProperty "Auxiliary Plutus scripts stay as bytes" prop_view_aux_plutus_scripts
     , testProperty "AnyWitnessable equality" prop_any_witnessable_equality
     , testProperty "Sub-transactions keep their order and witnesses" prop_view_sub_transactions
+    , testProperty
+        "Both sub-transaction entry points view the transaction they wrap"
+        prop_view_sub_transaction_entry_points
     , testProperty
         "Dijkstra: a sub-transaction's redeemers, scripts and datums are its own"
         prop_view_sub_transaction_witnesses
@@ -400,6 +410,41 @@ prop_view_witness_scripts = H.property $ do
     H.=== Just
       (Exp.UndecodedScript (Exp.UndecodedPlutusScript PlutusScriptV3 (PlutusScriptSerialised badBytes)))
 
+-- | Write a transaction with a Plutus script whose bytes do not deserialise,
+-- read it back, and view it: the script keeps its language and its bytes.
+prop_view_decoded_bad_plutus_conway :: Property
+prop_view_decoded_bad_plutus_conway = H.propertyOnce $ do
+  let badBytes = SBS.pack [0x01, 0x02, 0x03]
+  badPlutusScript <-
+    H.evalMaybe $ L.mkPlutusScript (Plutus.Plutus @Plutus.PlutusV3 (Plutus.PlutusBinary badBytes))
+  let badScript :: L.Script (Exp.LedgerEra Exp.ConwayEra)
+      badScript = L.fromPlutusScript badPlutusScript
+      tx =
+        L.mkBasicTx L.mkBasicTxBody
+          & L.witsTxL . L.scriptTxWitsL .~ Map.singleton (L.hashScript badScript) badScript
+      bytes = Api.serialiseToRawBytes (Exp.SignedTx tx :: Exp.SignedTx Exp.ConwayEra)
+  decoded <-
+    H.evalEither $ Api.deserialiseFromRawBytes (Api.asType @(Exp.SignedTx Exp.ConwayEra)) bytes
+  Map.elems (Exp.twvScripts (Exp.tvWitnesses (Exp.viewSignedTx Exp.ConwayEra decoded)))
+    H.=== [Exp.UndecodedScript (Exp.UndecodedPlutusScript PlutusScriptV3 (PlutusScriptSerialised badBytes))]
+
+-- | Like 'prop_view_decoded_bad_plutus_conway', with Plutus V4 in Dijkstra.
+prop_view_decoded_bad_plutus_dijkstra :: Property
+prop_view_decoded_bad_plutus_dijkstra = H.propertyOnce $ do
+  let badBytes = SBS.pack [0x01, 0x02, 0x03]
+  badPlutusScript <-
+    H.evalMaybe $ L.mkPlutusScript (Plutus.Plutus @Plutus.PlutusV4 (Plutus.PlutusBinary badBytes))
+  let badScript :: L.Script (Exp.LedgerEra Exp.DijkstraEra)
+      badScript = L.fromPlutusScript badPlutusScript
+      tx =
+        L.mkBasicTx L.mkBasicTxBody
+          & L.witsTxL . L.scriptTxWitsL .~ Map.singleton (L.hashScript badScript) badScript
+      bytes = Api.serialiseToRawBytes (Exp.SignedTx tx :: Exp.SignedTx Exp.DijkstraEra)
+  decoded <-
+    H.evalEither $ Api.deserialiseFromRawBytes (Api.asType @(Exp.SignedTx Exp.DijkstraEra)) bytes
+  Map.elems (Exp.twvScripts (Exp.tvWitnesses (Exp.viewSignedTx Exp.DijkstraEra decoded)))
+    H.=== [Exp.UndecodedScript (Exp.UndecodedPlutusScript PlutusScriptV4 (PlutusScriptSerialised badBytes))]
+
 prop_view_aux_plutus_scripts :: Property
 prop_view_aux_plutus_scripts = H.propertyOnce $ do
   -- Auxiliary scripts are not deserialised, so any bytes do.
@@ -444,6 +489,13 @@ prop_view_sub_transactions = H.withTests 20 . H.property $ do
   map Exp.tvId viewed H.=== ids
   map (Exp.twvKeyWitnesses . Exp.tvWitnesses) viewed
     H.=== [toList (tx ^. L.witsTxL . L.addrTxWitsL) | Exp.SignedSubTx tx <- subTxs]
+
+prop_view_sub_transaction_entry_points :: Property
+prop_view_sub_transaction_entry_points = H.withTests 20 . H.property $ do
+  signedSubTx@(Exp.SignedSubTx tx) <- H.forAll genSignedSubTx
+  let viewed = Exp.viewSignedSubTx signedSubTx
+  Exp.tvId viewed H.=== Exp.getSignedSubTxId signedSubTx
+  Exp.viewUnsignedSubTx (Exp.UnsignedSubTx tx) H.=== viewed
 
 -- | The top level and its sub-transaction each have one input, and their own
 -- redeemer for it, script and datum. Each redeemer must point at the input of
@@ -518,3 +570,4 @@ prop_view_signed_vs_unsigned = H.property $ do
   Exp.tvBody signedView H.=== Exp.tvBody unsignedView
   Exp.twvKeyWitnesses (Exp.tvWitnesses signedView) H.=== [witness]
   Exp.twvKeyWitnesses (Exp.tvWitnesses unsignedView) H.=== []
+  (Exp.tvWitnesses signedView){Exp.twvKeyWitnesses = []} H.=== Exp.tvWitnesses unsignedView
