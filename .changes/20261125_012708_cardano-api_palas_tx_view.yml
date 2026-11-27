@@ -1,0 +1,7 @@
+project: cardano-api
+pr: 1427
+kind:
+- feature
+description: |
+  Add a read-only view of decoded transactions to the experimental API. `viewSignedTx`, `viewUnsignedTx`, `viewSignedSubTx` and `viewUnsignedSubTx` return a `TxView`: the body fields, split by transaction level like `BodyContent`, and the witness set, kept separate, using cardano-api types.
+  Each redeemer gives the purpose and index of its pointer, and the item it witnesses as an `AnyWitnessable`, a new wrapper for a `Witnessable` of any item kind. A Plutus script whose bytes do not deserialise is kept as bytes, in an `UndecodedPlutusScript`.

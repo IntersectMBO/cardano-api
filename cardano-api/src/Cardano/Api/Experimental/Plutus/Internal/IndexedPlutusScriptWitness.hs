@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
   ( -- * Constuct an indexed plutus script witness.
@@ -15,6 +16,7 @@ module Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
     -- * Witnessable things.
   , Witnessable (..)
   , WitnessableItem (..)
+  , AnyWitnessable (..)
 
     -- * Create the index for a witnessable thing.
   , toPlutusScriptPurpose
@@ -46,6 +48,8 @@ import Cardano.Ledger.Dijkstra.Scripts qualified as L
 
 import Data.Function
 import Data.List qualified as List
+import Data.Type.Equality ((:~:) (Refl))
+import Data.Typeable (Typeable, eqT)
 import Data.Word
 import GHC.Exts
 
@@ -107,6 +111,21 @@ data Witnessable (thing :: WitnessableItem) era where
 deriving instance Show (Witnessable thing era)
 
 deriving instance Eq (Witnessable thing era)
+
+-- | A 'Witnessable' of any item kind, for lists that mix kinds, such as the
+-- redeemers of a decoded transaction.
+data AnyWitnessable era where
+  AnyWitnessable :: Typeable thing => Witnessable thing era -> AnyWitnessable era
+
+deriving instance Show (AnyWitnessable era)
+
+-- | Equal when both hold the same kind of item and the items are equal.
+instance Eq (AnyWitnessable era) where
+  AnyWitnessable a == AnyWitnessable b = maybe False (\Refl -> a == b) $ sameThing a b
+   where
+    sameThing
+      :: (Typeable t1, Typeable t2) => Witnessable t1 e -> Witnessable t2 e -> Maybe (t1 :~: t2)
+    sameThing _ _ = eqT
 
 -- | We have to enforce the same ordering of witnessable things that exists in the ledger.
 -- If we don't our redeemer pointer map will be incorrect and the transaction will be invalid.

@@ -116,6 +116,9 @@ module Cardano.Api.Experimental.Tx
     -- When using a 'Tx' created with the experimental API, the 'TxBody' and
     -- 'TxWits' can be extracted using the 'txBody' and 'txWits' lenses from
     -- "Cardano.Api.Ledger" respectively.
+    --
+    -- To read a transaction's contents with cardano-api types instead, view it
+    -- with 'viewSignedTx' or 'viewUnsignedTx'.
 
     -- * Contents
     UnsignedTx (..)
@@ -241,6 +244,24 @@ module Cardano.Api.Experimental.Tx
   , getSignedSubTxId
   , AsType (AsUnsignedSubTx, AsSignedSubTx)
 
+    -- * Viewing a decoded transaction
+
+    -- | 'TxBodyContent' is for building a transaction. To read one back, view
+    -- it. The view holds only what the transaction contains: the body fields,
+    -- split by transaction level like 'BodyContent', and the witness set, kept
+    -- separate.
+  , TxView (..)
+  , BodyView (..)
+  , TopTxOnlyFieldsView (..)
+  , TxWitnessesView (..)
+  , TxRedeemerView (..)
+  , TxScriptView (..)
+  , UndecodedPlutusScript (..)
+  , viewSignedTx
+  , viewUnsignedTx
+  , viewSignedSubTx
+  , viewUnsignedSubTx
+
     -- * Ordered guard witnesses
   , TxGuards
   , ScriptGuardWitness (..)
@@ -319,6 +340,7 @@ import Cardano.Api.Experimental.Tx.Internal.Guard
 import Cardano.Api.Experimental.Tx.Internal.SubTransaction
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Experimental.Tx.Internal.Type
+import Cardano.Api.Experimental.Tx.Internal.View
 import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Plutus.Internal.Script qualified as Api
@@ -402,6 +424,10 @@ signTx era bootstrapWits shelleyKeyWits (UnsignedTx unsigned) =
   obtainCommonConstraints era
     $ SignedTx
     $ addKeyWitnesses bootstrapWits shelleyKeyWits unsigned
+
+-- | View a decoded signed transaction.
+viewSignedTx :: Era era -> SignedTx era -> TxView Ledger.TopTx (LedgerEra era)
+viewSignedTx era (SignedTx tx) = obtainCommonConstraints era $ viewLedgerTx era tx
 
 -- | Like 'evaluateTransaction' but accepts a 'SignedTx' directly.
 evaluateSignedTx

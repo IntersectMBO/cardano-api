@@ -243,6 +243,7 @@ library
     Cardano.Api.Experimental.Tx.Internal.SubTransaction
     Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
     Cardano.Api.Experimental.Tx.Internal.Type
+    Cardano.Api.Experimental.Tx.Internal.View
     Cardano.Api.Genesis.Internal
     Cardano.Api.Genesis.Internal.Parameters
     Cardano.Api.Governance.Internal.Action.ProposalProcedure
@@ -426,6 +427,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Experimental
     Test.Cardano.Api.Experimental.Collateral
     Test.Cardano.Api.Experimental.Fee
+    Test.Cardano.Api.Experimental.View
     Test.Cardano.Api.Genesis
     Test.Cardano.Api.GovAnchorValidation
     Test.Cardano.Api.IO

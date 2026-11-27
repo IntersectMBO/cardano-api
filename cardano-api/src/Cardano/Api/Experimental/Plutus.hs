@@ -44,6 +44,7 @@ module Cardano.Api.Experimental.Plutus
     -- ** Witnessable things.
   , Witnessable (..)
   , WitnessableItem (..)
+  , AnyWitnessable (..)
 
     -- ** Create the index for a witnessable thing.
   , toPlutusScriptPurpose
