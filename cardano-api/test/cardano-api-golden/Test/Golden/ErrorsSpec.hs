@@ -453,6 +453,13 @@ test_TxBodyErrorAutoBalance =
           (ScriptWitnessIndexTxIn 1)
           (fromList [(ScriptWitnessIndexTxIn 2, ExecutionUnits 1 1)])
       )
+    ,
+      ( "TxBodyErrorMissingCollateralInputs"
+      , TxBodyErrorCollateral $
+          MissingCollateralInputs
+            [ScriptWitnessIndexTxIn 1, ScriptWitnessIndexMint 2]
+            (Map.singleton txid1 [ScriptWitnessIndexGuarding 3, ScriptWitnessIndexWithdrawal 4])
+      )
     , ("TxBodyErrorCollateralInsufficient", TxBodyErrorCollateral $ InsufficientCollateral 1 2)
     ,
       ( "TxBodyErrorCollateralReturnBelowMinimumUTxO"

@@ -67,6 +67,9 @@
 - ignore: {name: Use + directly}
 - ignore: {name: Use fmap}
 
+# Keep the check phrased as whether any sub-transaction has redeemers.
+- ignore: {name: Hoist not, within: Cardano.Api.Experimental.Tx.Internal.Fee.hasSubTransactionRedeemers}
+
 # Define some custom infix operators
 # - fixity: infixr 3 ~^#^~
 

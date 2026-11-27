@@ -1324,8 +1324,8 @@ checkCollateralOnlyWithPlutusScripts sbe txbodycontent =
 
 -- | Why the balancing functions rejected the transaction's collateral:
 -- the collateral fields could not be computed (the ledger would reject a
--- transaction built with them), or collateral was provided for a
--- transaction that does not need it.
+-- transaction built with them), required collateral inputs are missing,
+-- or collateral was provided for a transaction that does not need it.
 data CollateralError
   = -- | The ada in the collateral inputs does not cover the required
     -- collateral (the transaction fee multiplied by the collateral
@@ -1349,6 +1349,13 @@ data CollateralError
     -- scripts and ignores it otherwise: the collateral inputs would only
     -- cost fees and require the collateral UTxOs to stay unspent.
     CollateralWithoutPlutusScripts
+  | -- | The transaction or one of its sub-transactions runs Plutus scripts,
+    -- but the top-level transaction has no collateral inputs.
+    MissingCollateralInputs
+      [ScriptWitnessIndex]
+      -- ^ Plutus script witness indices in the top-level transaction.
+      (Map TxId [ScriptWitnessIndex])
+      -- ^ Plutus script witness indices in each sub-transaction, keyed by its ID.
   deriving (Eq, Show)
 
 instance Error CollateralError where
@@ -1369,6 +1376,21 @@ instance Error CollateralError where
         , "Minimum required UTxO: " <> pretty minUTxO <> "\n"
         , "The usual solution is to provide collateral inputs with more ada, "
         , "or to increase the ada in the explicitly provided return collateral output."
+        ]
+    MissingCollateralInputs topLevel subTransactions ->
+      mconcat
+        [ "The transaction runs Plutus scripts but has no collateral inputs.\n"
+        , "Script witnesses requiring collateral:\n"
+        , mconcat
+            [ "  Top-level transaction: " <> pretty (renderScriptWitnessIndex index) <> "\n"
+            | index <- topLevel
+            ]
+        , mconcat
+            [ "  Sub-transaction " <> pretty txId <> ": " <> pretty (renderScriptWitnessIndex index) <> "\n"
+            | (txId, indices) <- Map.toAscList subTransactions
+            , index <- indices
+            ]
+        , "Add collateral inputs to the top-level transaction."
         ]
     CollateralWithoutPlutusScripts ->
       mconcat

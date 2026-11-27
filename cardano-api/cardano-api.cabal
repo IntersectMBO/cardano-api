@@ -426,6 +426,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Eras
     Test.Cardano.Api.Experimental
     Test.Cardano.Api.Experimental.Collateral
+    Test.Cardano.Api.Experimental.Collateral.MissingInputs
     Test.Cardano.Api.Experimental.Fee
     Test.Cardano.Api.Experimental.View
     Test.Cardano.Api.Genesis
