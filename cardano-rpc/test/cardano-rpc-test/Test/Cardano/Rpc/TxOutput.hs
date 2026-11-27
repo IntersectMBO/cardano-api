@@ -16,13 +16,18 @@ import Cardano.Ledger.Binary (decodeFull')
 
 import RIO
 
+import Data.ProtoLens (defMessage)
+
 import Test.Gen.Cardano.Api.Typed
-  ( genTxOutUTxOContext
+  ( genTxId
+  , genTxOutUTxOContext
   )
 
 import Hedgehog
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
 
 era :: Era ConwayEra
 era = ConwayEra
@@ -61,3 +66,14 @@ hprop_tx_output_wire_format = H.property $ do
       H.note_ "Inline datum hash field carries the datum hash, not the datum CBOR"
       protoTxOutput ^. U5c.datum . U5c.hash
         === serialiseToRawBytes (hashScriptDataBytes hashableScriptData)
+
+-- | A 'U5c.TxoRef' index above 65535 is rejected rather than wrapped into a smaller 'TxIx'.
+hprop_txo_ref_index_above_max_is_rejected :: Property
+hprop_txo_ref_index_above_max_is_rejected = H.property $ do
+  txId' <- forAll genTxId
+  outputIndex <- forAll . Gen.word32 $ Range.linear 65536 maxBound
+  let txoRef =
+        defMessage
+          & U5c.hash .~ serialiseToRawBytes txId'
+          & U5c.index .~ outputIndex
+  H.assertWith (txoRefUtxoRpcToTxIn @(Either Text) txoRef) isLeft
