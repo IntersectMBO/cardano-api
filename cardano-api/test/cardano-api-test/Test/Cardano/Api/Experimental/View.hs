@@ -22,8 +22,11 @@ import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Plutus
   ( PlutusScript (PlutusScriptSerialised)
   , PlutusScriptVersion (PlutusScriptV3)
+  , ScriptData (ScriptDataNumber)
   , fromAlonzoData
   , fromAlonzoExUnits
+  , toAlonzoData
+  , unsafeHashableScriptData
   )
 import Cardano.Api.Tx (fromShelleyTxIn)
 import Cardano.Api.Value (fromMaryPolicyID, multiAssetToPolicyAssets)
@@ -81,8 +84,13 @@ tests =
     [ testProperty "Conway: a built body views back" $ prop_view_built_body Exp.ConwayEra
     , testProperty "Dijkstra: a built body views back" $ prop_view_built_body Exp.DijkstraEra
     , testProperty "Dijkstra: the Dijkstra-only fields view back" prop_view_dijkstra_fields
-    , testProperty "Redeemers point at the items they witness" prop_view_redeemer_purposes
-    , testProperty "Dijkstra: a guard redeemer points at its script guard" prop_view_guard_redeemer
+    , testProperty "Conway: redeemers point at the items they witness" $
+        prop_view_redeemer_purposes Exp.ConwayEra
+    , testProperty "Dijkstra: redeemers point at the items they witness" $
+        prop_view_redeemer_purposes Exp.DijkstraEra
+    , testProperty
+        "Dijkstra: guard redeemers count key guards but point only at script guards"
+        prop_view_guard_redeemer
     , testProperty
         "Witness scripts that deserialise and one that does not"
         prop_view_witness_scripts
@@ -247,12 +255,22 @@ prop_view_dijkstra_fields = H.property $ do
   Exp.bvAccountBalanceIntervals body H.=== intervals
   Exp.ttvStartingAccountBalanceIntervals (Exp.bvTopTxOnlyFields body) H.=== startingIntervals
 
--- | One redeemer for each Conway purpose, each pointing at the only item of
--- its kind, and one that points past the last input.
-prop_view_redeemer_purposes :: Property
-prop_view_redeemer_purposes = H.property $ do
-  txIn <- H.forAll Q.arbitrary
-  policyId <- H.forAll Q.arbitrary
+-- | One redeemer for each purpose but guarding, each with its own data and
+-- budget. Two inputs and two minting policies give indices above 0, and one
+-- redeemer points past the last input. The view lists the redeemers in the
+-- ledger's order: by purpose, then by index.
+prop_view_redeemer_purposes
+  :: forall era
+   . ( Arbitrary (L.TxCert (Exp.LedgerEra era))
+     , Arbitrary (L.ProposalProcedure (Exp.LedgerEra era))
+     , Arbitrary (L.VotingProcedure (Exp.LedgerEra era))
+     , UnexportedLedger.ConwayEraScript (Exp.LedgerEra era)
+     )
+  => Exp.Era era
+  -> Property
+prop_view_redeemer_purposes era = H.property $ Exp.obtainCommonConstraints era $ do
+  txIns <- H.forAll $ Gen.set (Range.singleton 2) Q.arbitrary
+  policyIds <- H.forAll $ Gen.set (Range.singleton 2) Q.arbitrary
   assetName <- H.forAll Q.arbitrary
   cert <- H.forAll Q.arbitrary
   account <- H.forAll Q.arbitrary
@@ -260,68 +278,99 @@ prop_view_redeemer_purposes = H.property $ do
   voter <- H.forAll Q.arbitrary
   votes <- H.forAll Q.arbitrary
   proposal <- H.forAll Q.arbitrary
-  redeemerData <- H.forAll Q.arbitrary
-  exUnits <- H.forAll Q.arbitrary
-  let mint = L.MultiAsset (Map.singleton policyId (Map.singleton assetName 1))
+  let mint =
+        L.MultiAsset (Map.fromList [(policyId, Map.singleton assetName 1) | policyId <- toList policyIds])
       body =
         L.mkBasicTxBody
-          & L.inputsTxBodyL .~ Set.singleton txIn
+          & L.inputsTxBodyL .~ txIns
           & L.mintTxBodyL .~ mint
           & L.certsTxBodyL .~ StrictSeq.singleton cert
           & L.withdrawalsTxBodyL .~ L.Withdrawals (Map.singleton account amount)
           & L.votingProceduresTxBodyL .~ L.VotingProcedures (Map.singleton voter votes)
           & L.proposalProceduresTxBodyL .~ OSet.singleton proposal
-      pointers :: [L.PlutusPurpose L.AsIx (Exp.LedgerEra Exp.ConwayEra)]
-      pointers =
-        [ L.ConwaySpending (L.AsIx 0)
-        , L.ConwayMinting (L.AsIx 0)
-        , L.ConwayCertifying (L.AsIx 0)
-        , L.ConwayWithdrawing (L.AsIx 0)
-        , L.ConwayVoting (L.AsIx 0)
-        , L.ConwayProposing (L.AsIx 0)
-        , L.ConwaySpending (L.AsIx 7)
-        ]
-      redeemers = L.Redeemers (Map.fromList [(pointer, (redeemerData, exUnits)) | pointer <- pointers])
-      tx = L.mkBasicTx body & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
-      viewed = Exp.twvRedeemers (Exp.tvWitnesses (Exp.viewUnsignedTx Exp.ConwayEra (Exp.UnsignedTx tx)))
-      apiPolicyId = fromMaryPolicyID policyId
-      expected =
-        Map.fromList
-          [ ((Exp.SpendingScript, 0), Just (Exp.AnyWitnessable (Exp.WitTxIn (fromShelleyTxIn txIn))))
-          ,
-            ( (Exp.MintingScript, 0)
-            , Just
-                ( Exp.AnyWitnessable
-                    (Exp.WitMint apiPolicyId (multiAssetToPolicyAssets mint Map.! apiPolicyId))
-                )
-            )
-          , ((Exp.CertifyingScript, 0), Just (Exp.AnyWitnessable (Exp.WitTxCert cert)))
-          ,
-            ( (Exp.WithdrawingScript, 0)
-            , Just (Exp.AnyWitnessable (Exp.WitWithdrawal (fromShelleyStakeAddr account) amount))
-            )
-          , ((Exp.VotingScript, 0), Just (Exp.AnyWitnessable (Exp.WitVote voter)))
-          , ((Exp.ProposingScript, 0), Just (Exp.AnyWitnessable (Exp.WitProposal proposal)))
-          , ((Exp.SpendingScript, 7), Nothing)
+      pointers :: [L.PlutusPurpose L.AsIx (Exp.LedgerEra era)]
+      pointers = case era of
+        Exp.ConwayEra ->
+          [ L.ConwaySpending (L.AsIx 0)
+          , L.ConwaySpending (L.AsIx 1)
+          , L.ConwaySpending (L.AsIx 7)
+          , L.ConwayMinting (L.AsIx 0)
+          , L.ConwayMinting (L.AsIx 1)
+          , L.ConwayCertifying (L.AsIx 0)
+          , L.ConwayWithdrawing (L.AsIx 0)
+          , L.ConwayVoting (L.AsIx 0)
+          , L.ConwayProposing (L.AsIx 0)
           ]
-  length viewed H.=== Map.size expected
-  Map.fromList [((Exp.trvPurpose r, Exp.trvIndex r), Exp.trvItem r) | r <- viewed] H.=== expected
-  map Exp.trvData viewed H.=== replicate (Map.size expected) (fromAlonzoData redeemerData)
-  map Exp.trvExUnits viewed H.=== replicate (Map.size expected) (fromAlonzoExUnits exUnits)
+        Exp.DijkstraEra ->
+          [ Dijkstra.DijkstraSpending (L.AsIx 0)
+          , Dijkstra.DijkstraSpending (L.AsIx 1)
+          , Dijkstra.DijkstraSpending (L.AsIx 7)
+          , Dijkstra.DijkstraMinting (L.AsIx 0)
+          , Dijkstra.DijkstraMinting (L.AsIx 1)
+          , Dijkstra.DijkstraCertifying (L.AsIx 0)
+          , Dijkstra.DijkstraWithdrawing (L.AsIx 0)
+          , Dijkstra.DijkstraVoting (L.AsIx 0)
+          , Dijkstra.DijkstraProposing (L.AsIx 0)
+          ]
+      -- The redeemer of the i-th pointer passes the number i, with a budget of i.
+      redeemers :: [(L.Data (Exp.LedgerEra era), L.ExUnits)]
+      redeemers =
+        [ ( toAlonzoData (unsafeHashableScriptData (ScriptDataNumber i))
+          , L.ExUnits (fromInteger i) (fromInteger i)
+          )
+        | i <- [0 .. toInteger (length pointers) - 1]
+        ]
+      tx =
+        L.mkBasicTx body
+          & L.witsTxL . L.rdmrsTxWitsL .~ L.Redeemers (Map.fromList (zip pointers redeemers))
+      viewed = Exp.twvRedeemers (Exp.tvWitnesses (Exp.viewUnsignedTx era (Exp.UnsignedTx tx)))
+      spends index = Just (Exp.AnyWitnessable (Exp.WitTxIn (fromShelleyTxIn (Set.elemAt index txIns))))
+      mints index =
+        let apiPolicyId = fromMaryPolicyID (Set.elemAt index policyIds)
+         in Just
+              (Exp.AnyWitnessable (Exp.WitMint apiPolicyId (multiAssetToPolicyAssets mint Map.! apiPolicyId)))
+      items =
+        [ (Exp.SpendingScript, 0, spends 0)
+        , (Exp.SpendingScript, 1, spends 1)
+        , (Exp.SpendingScript, 7, Nothing)
+        , (Exp.MintingScript, 0, mints 0)
+        , (Exp.MintingScript, 1, mints 1)
+        , (Exp.CertifyingScript, 0, Just (Exp.AnyWitnessable (Exp.WitTxCert cert)))
+        ,
+          ( Exp.WithdrawingScript
+          , 0
+          , Just (Exp.AnyWitnessable (Exp.WitWithdrawal (fromShelleyStakeAddr account) amount))
+          )
+        , (Exp.VotingScript, 0, Just (Exp.AnyWitnessable (Exp.WitVote voter)))
+        , (Exp.ProposingScript, 0, Just (Exp.AnyWitnessable (Exp.WitProposal proposal)))
+        ]
+  [(Exp.trvPurpose r, Exp.trvIndex r, Exp.trvItem r, Exp.trvData r, Exp.trvExUnits r) | r <- viewed]
+    H.=== [ (purpose, index, item, fromAlonzoData redeemerData, fromAlonzoExUnits exUnits)
+          | ((purpose, index, item), (redeemerData, exUnits)) <- zip items redeemers
+          ]
 
+-- | Guard redeemer indices count key guards and script guards alike, but only
+-- a script guard takes a redeemer: one that points at a key guard finds
+-- nothing.
 prop_view_guard_redeemer :: Property
 prop_view_guard_redeemer = H.property $ do
+  keyHash <- H.forAll Q.arbitrary
   scriptHash <- H.forAll Q.arbitrary
   redeemer <- H.forAll Q.arbitrary
   let body =
         L.mkBasicTxBody
-          & UnexportedLedger.guardsTxBodyL .~ OSet.singleton (L.ScriptHashObj scriptHash)
-      pointer :: L.PlutusPurpose L.AsIx (Exp.LedgerEra Exp.DijkstraEra)
-      pointer = Dijkstra.DijkstraGuarding (L.AsIx 0)
-      tx = L.mkBasicTx body & L.witsTxL . L.rdmrsTxWitsL .~ L.Redeemers (Map.singleton pointer redeemer)
+          & UnexportedLedger.guardsTxBodyL
+            .~ OSet.fromList [L.KeyHashObj keyHash, L.ScriptHashObj scriptHash]
+      pointers :: [L.PlutusPurpose L.AsIx (Exp.LedgerEra Exp.DijkstraEra)]
+      pointers = [Dijkstra.DijkstraGuarding (L.AsIx 0), Dijkstra.DijkstraGuarding (L.AsIx 1)]
+      tx =
+        L.mkBasicTx body
+          & L.witsTxL . L.rdmrsTxWitsL .~ L.Redeemers (Map.fromList [(pointer, redeemer) | pointer <- pointers])
       viewed = Exp.twvRedeemers (Exp.tvWitnesses (Exp.viewUnsignedTx Exp.DijkstraEra (Exp.UnsignedTx tx)))
   [(Exp.trvPurpose r, Exp.trvIndex r, Exp.trvItem r) | r <- viewed]
-    H.=== [(Exp.GuardingScript, 0, Just (Exp.AnyWitnessable (Exp.WitGuard (L.ScriptHashObj scriptHash))))]
+    H.=== [ (Exp.GuardingScript, 0, Nothing)
+          , (Exp.GuardingScript, 1, Just (Exp.AnyWitnessable (Exp.WitGuard (L.ScriptHashObj scriptHash))))
+          ]
 
 prop_view_witness_scripts :: Property
 prop_view_witness_scripts = H.property $ do
@@ -396,42 +445,62 @@ prop_view_sub_transactions = H.withTests 20 . H.property $ do
   map (Exp.twvKeyWitnesses . Exp.tvWitnesses) viewed
     H.=== [toList (tx ^. L.witsTxL . L.addrTxWitsL) | Exp.SignedSubTx tx <- subTxs]
 
--- | The top level and its sub-transaction each have one input and a redeemer
--- for it. Each redeemer must point at the input of its own body, and the
--- sub-transaction's script and datum must stay in its own witness set.
+-- | The top level and its sub-transaction each have one input, and their own
+-- redeemer for it, script and datum. Each redeemer must point at the input of
+-- its own body, and each view must show only its own witnesses.
 prop_view_sub_transaction_witnesses :: Property
 prop_view_sub_transaction_witnesses = H.property $ do
   topIn <- H.forAll Q.arbitrary
   subIn <- H.forAll Q.arbitrary
-  redeemer <- H.forAll Q.arbitrary
-  datum <- H.forAll Q.arbitrary
-  native :: L.NativeScript (Exp.LedgerEra Exp.DijkstraEra) <- H.forAll Q.arbitrary
-  let script = L.fromNativeScript native
-      datums = Map.singleton (UnexportedLedger.hashData datum) datum
-      pointer :: L.PlutusPurpose L.AsIx (Exp.LedgerEra Exp.DijkstraEra)
+  topRedeemer <- H.forAll Q.arbitrary
+  subRedeemer <- H.forAll Q.arbitrary
+  topDatum <- H.forAll Q.arbitrary
+  subDatum <- H.forAll Q.arbitrary
+  topNative :: L.NativeScript (Exp.LedgerEra Exp.DijkstraEra) <- H.forAll Q.arbitrary
+  subNative :: L.NativeScript (Exp.LedgerEra Exp.DijkstraEra) <- H.forAll Q.arbitrary
+  let topScript = L.fromNativeScript topNative
+      subScript = L.fromNativeScript subNative
+  when
+    ( topIn == subIn
+        || topRedeemer == subRedeemer
+        || topDatum == subDatum
+        || L.hashScript topScript == L.hashScript subScript
+    )
+    H.discard
+  let pointer :: L.PlutusPurpose L.AsIx (Exp.LedgerEra Exp.DijkstraEra)
       pointer = Dijkstra.DijkstraSpending (L.AsIx 0)
-      redeemers = L.Redeemers (Map.singleton pointer redeemer)
+      datums datum = Map.singleton (UnexportedLedger.hashData datum) datum
       subTx =
         L.mkBasicTx (L.mkBasicTxBody & L.inputsTxBodyL .~ Set.singleton subIn)
-          & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
-          & L.witsTxL . L.scriptTxWitsL .~ Map.singleton (L.hashScript script) script
-          & L.witsTxL . L.datsTxWitsL .~ L.TxDats datums
+          & L.witsTxL . L.rdmrsTxWitsL .~ L.Redeemers (Map.singleton pointer subRedeemer)
+          & L.witsTxL . L.scriptTxWitsL .~ Map.singleton (L.hashScript subScript) subScript
+          & L.witsTxL . L.datsTxWitsL .~ L.TxDats (datums subDatum)
       tx =
         L.mkBasicTx
           ( L.mkBasicTxBody
               & L.inputsTxBodyL .~ Set.singleton topIn
               & Dijkstra.subTransactionsTxBodyL .~ OMap.singleton subTx
           )
-          & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
+          & L.witsTxL . L.rdmrsTxWitsL .~ L.Redeemers (Map.singleton pointer topRedeemer)
+          & L.witsTxL . L.scriptTxWitsL .~ Map.singleton (L.hashScript topScript) topScript
+          & L.witsTxL . L.datsTxWitsL .~ L.TxDats (datums topDatum)
       viewed = Exp.viewUnsignedTx Exp.DijkstraEra (Exp.UnsignedTx tx)
-      subViews = Exp.ttvSubTransactions (Exp.bvTopTxOnlyFields (Exp.tvBody viewed))
-      spends txIn = Just (Exp.AnyWitnessable (Exp.WitTxIn (fromShelleyTxIn txIn)))
-  map Exp.trvItem (Exp.twvRedeemers (Exp.tvWitnesses viewed)) H.=== [spends topIn]
-  map (map Exp.trvItem . Exp.twvRedeemers . Exp.tvWitnesses) subViews H.=== [[spends subIn]]
-  Map.keys (Exp.twvScripts (Exp.tvWitnesses viewed)) H.=== []
-  map (Map.keys . Exp.twvScripts . Exp.tvWitnesses) subViews H.=== [[L.hashScript script]]
-  Exp.twvDatums (Exp.tvWitnesses viewed) H.=== Map.empty
-  map (Exp.twvDatums . Exp.tvWitnesses) subViews H.=== [datums]
+      topWitnesses = Exp.tvWitnesses viewed
+      subWitnesses =
+        map Exp.tvWitnesses (Exp.ttvSubTransactions (Exp.bvTopTxOnlyFields (Exp.tvBody viewed)))
+      redeemerViews witnesses =
+        [(Exp.trvItem r, Exp.trvData r, Exp.trvExUnits r) | r <- Exp.twvRedeemers witnesses]
+      spends txIn (redeemerData, exUnits) =
+        ( Just (Exp.AnyWitnessable (Exp.WitTxIn (fromShelleyTxIn txIn)))
+        , fromAlonzoData redeemerData
+        , fromAlonzoExUnits exUnits
+        )
+  redeemerViews topWitnesses H.=== [spends topIn topRedeemer]
+  map redeemerViews subWitnesses H.=== [[spends subIn subRedeemer]]
+  Map.keys (Exp.twvScripts topWitnesses) H.=== [L.hashScript topScript]
+  map (Map.keys . Exp.twvScripts) subWitnesses H.=== [[L.hashScript subScript]]
+  Exp.twvDatums topWitnesses H.=== datums topDatum
+  map Exp.twvDatums subWitnesses H.=== [datums subDatum]
 
 prop_view_signed_vs_unsigned :: Property
 prop_view_signed_vs_unsigned = H.property $ do
